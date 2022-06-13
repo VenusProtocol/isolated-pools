@@ -1,24 +1,29 @@
-pragma solidity ^0.8.4;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity ^0.8.10;
 
 import "./PriceOracle.sol";
-import "./VBep20.sol";
+import "./CErc20.sol";
 
 contract SimplePriceOracle is PriceOracle {
     mapping(address => uint) prices;
     event PricePosted(address asset, uint previousPriceMantissa, uint requestedPriceMantissa, uint newPriceMantissa);
 
-    function getUnderlyingPrice(VToken vToken) public view returns (uint) {
-        if (compareStrings(vToken.symbol(), "vBNB")) {
-            return 1e18;
-        } else if (compareStrings(vToken.symbol(), "VAI")) {
-            return prices[address(vToken)];
+    function _getUnderlyingAddress(CToken cToken) private view returns (address) {
+        address asset;
+        if (compareStrings(cToken.symbol(), "cETH")) {
+            asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         } else {
-            return prices[address(VBep20(address(vToken)).underlying())];
+            asset = address(CErc20(address(cToken)).underlying());
         }
+        return asset;
     }
 
-    function setUnderlyingPrice(VToken vToken, uint underlyingPriceMantissa) public {
-        address asset = address(VBep20(address(vToken)).underlying());
+    function getUnderlyingPrice(CToken cToken) public override view returns (uint) {
+        return prices[_getUnderlyingAddress(cToken)];
+    }
+
+    function setUnderlyingPrice(CToken cToken, uint underlyingPriceMantissa) public {
+        address asset = _getUnderlyingAddress(cToken);
         emit PricePosted(asset, prices[asset], underlyingPriceMantissa, underlyingPriceMantissa);
         prices[asset] = underlyingPriceMantissa;
     }

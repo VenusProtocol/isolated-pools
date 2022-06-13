@@ -1,10 +1,11 @@
-pragma solidity ^0.8.4;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity ^0.8.10;
 
 /**
  * @title Reservoir Contract
  * @notice Distributes a token to a different contract at a fixed rate.
  * @dev This contract must be poked via the `drip()` function every so often.
- * @author Venus
+ * @author Compound
  */
 contract Reservoir {
 
@@ -68,7 +69,8 @@ contract Reservoir {
   /* Internal helper functions for safe math */
 
   function add(uint a, uint b, string memory errorMessage) internal pure returns (uint) {
-    uint c = a + b;
+    uint c;
+    unchecked { c = a + b; }
     require(c >= a, errorMessage);
     return c;
   }
@@ -83,7 +85,8 @@ contract Reservoir {
     if (a == 0) {
       return 0;
     }
-    uint c = a * b;
+    uint c;
+    unchecked { c = a * b; }
     require(c / a == b, errorMessage);
     return c;
   }

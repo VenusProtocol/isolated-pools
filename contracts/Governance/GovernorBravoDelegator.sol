@@ -1,32 +1,27 @@
-pragma solidity ^0.8.4;
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity ^0.8.10;
 
 import "./GovernorBravoInterfaces.sol";
 
 contract GovernorBravoDelegator is GovernorBravoDelegatorStorage, GovernorBravoEvents {
 	constructor(
 			address timelock_,
-			address xvsVault_,
+			address comp_,
 			address admin_,
 	        address implementation_,
 	        uint votingPeriod_,
 	        uint votingDelay_,
-            uint proposalThreshold_,
-            address guardian_
-    )
-        public
-    {
+            uint proposalThreshold_) public {
 
         // Admin set to msg.sender for initialization
         admin = msg.sender;
 
-        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,uint256,uint256,uint256,address)",
+        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,uint256,uint256,uint256)",
                                                             timelock_,
-                                                            xvsVault_,
+                                                            comp_,
                                                             votingPeriod_,
                                                             votingDelay_,
-                                                            proposalThreshold_,
-                                                            guardian_));
+                                                            proposalThreshold_));
 
         _setImplementation(implementation_);
 
@@ -58,7 +53,7 @@ contract GovernorBravoDelegator is GovernorBravoDelegatorStorage, GovernorBravoE
         (bool success, bytes memory returnData) = callee.delegatecall(data);
         assembly {
             if eq(success, 0) {
-                revert(add(returnData, 0x20), returndatasize)
+                revert(add(returnData, 0x20), returndatasize())
             }
         }
     }
@@ -68,17 +63,17 @@ contract GovernorBravoDelegator is GovernorBravoDelegatorStorage, GovernorBravoE
      * It returns to the external caller whatever the implementation returns
      * or forwards reverts.
      */
-    function () external payable {
+    fallback () external payable {
         // delegate all other functions to current implementation
         (bool success, ) = implementation.delegatecall(msg.data);
 
         assembly {
               let free_mem_ptr := mload(0x40)
-              returndatacopy(free_mem_ptr, 0, returndatasize)
+              returndatacopy(free_mem_ptr, 0, returndatasize())
 
               switch success
-              case 0 { revert(free_mem_ptr, returndatasize) }
-              default { return(free_mem_ptr, returndatasize) }
+              case 0 { revert(free_mem_ptr, returndatasize()) }
+              default { return(free_mem_ptr, returndatasize()) }
         }
     }
 }

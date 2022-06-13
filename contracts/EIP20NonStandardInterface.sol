@@ -1,8 +1,9 @@
-pragma solidity ^0.8.4;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity ^0.8.10;
 
 /**
  * @title EIP20NonStandardInterface
- * @dev Version of BEP20 with no return values for `transfer` and `transferFrom`
+ * @dev Version of ERC20 with no return values for `transfer` and `transferFrom`
  *  See https://medium.com/coinmonks/missing-return-value-bug-at-least-130-tokens-affected-d67bf08521ca
  */
 interface EIP20NonStandardInterface {
@@ -16,13 +17,13 @@ interface EIP20NonStandardInterface {
     /**
      * @notice Gets the balance of the specified address
      * @param owner The address from which the balance will be retrieved
-     * @return The balance
+     * @return balance The balance
      */
     function balanceOf(address owner) external view returns (uint256 balance);
 
     ///
     /// !!!!!!!!!!!!!!
-    /// !!! NOTICE !!! `transfer` does not return a value, in violation of the BEP-20 specification
+    /// !!! NOTICE !!! `transfer` does not return a value, in violation of the ERC-20 specification
     /// !!!!!!!!!!!!!!
     ///
 
@@ -35,7 +36,7 @@ interface EIP20NonStandardInterface {
 
     ///
     /// !!!!!!!!!!!!!!
-    /// !!! NOTICE !!! `transferFrom` does not return a value, in violation of the BEP-20 specification
+    /// !!! NOTICE !!! `transferFrom` does not return a value, in violation of the ERC-20 specification
     /// !!!!!!!!!!!!!!
     ///
 
@@ -50,9 +51,10 @@ interface EIP20NonStandardInterface {
     /**
       * @notice Approve `spender` to transfer up to `amount` from `src`
       * @dev This will overwrite the approval amount for `spender`
+      *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
       * @param spender The address of the account which may transfer tokens
       * @param amount The number of tokens that are approved
-      * @return Whether or not the approval succeeded
+      * @return success Whether or not the approval succeeded
       */
     function approve(address spender, uint256 amount) external returns (bool success);
 
@@ -60,7 +62,7 @@ interface EIP20NonStandardInterface {
       * @notice Get the current allowance from `owner` for `spender`
       * @param owner The address of the account which owns the tokens to be spent
       * @param spender The address of the account which may transfer tokens
-      * @return The number of tokens allowed to be spent
+      * @return remaining The number of tokens allowed to be spent
       */
     function allowance(address owner, address spender) external view returns (uint256 remaining);
 

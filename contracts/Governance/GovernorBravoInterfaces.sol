@@ -1,5 +1,5 @@
-pragma solidity ^0.8.4;
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity ^0.8.10;
 
 
 contract GovernorBravoEvents {
@@ -41,11 +41,11 @@ contract GovernorBravoEvents {
     /// @notice Emitted when pendingAdmin is accepted, which means admin is updated
     event NewAdmin(address oldAdmin, address newAdmin);
 
-    /// @notice Emitted when the new guardian address is set
-    event NewGuardian(address oldGuardian, address newGuardian);
+    /// @notice Emitted when whitelist account expiration is set
+    event WhitelistAccountExpirationSet(address account, uint expiration);
 
-    /// @notice Emitted when the maximum number of operations in one proposal is updated
-    event ProposalMaxOperationsUpdated(uint oldMaxOperations, uint newMaxOperations);
+    /// @notice Emitted when the whitelistGuardian is set
+    event WhitelistGuardianSet(address oldGuardian, address newGuardian);
 }
 
 contract GovernorBravoDelegatorStorage {
@@ -83,11 +83,11 @@ contract GovernorBravoDelegateStorageV1 is GovernorBravoDelegatorStorage {
     /// @notice The total number of proposals
     uint public proposalCount;
 
-    /// @notice The address of the Venus Protocol Timelock
+    /// @notice The address of the Compound Protocol Timelock
     TimelockInterface public timelock;
 
-    /// @notice The address of the Venus governance token
-    XvsVaultInterface public xvsVault;
+    /// @notice The address of the Compound governance token
+    CompInterface public comp;
 
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
@@ -166,12 +166,14 @@ contract GovernorBravoDelegateStorageV1 is GovernorBravoDelegatorStorage {
         Expired,
         Executed
     }
+}
 
-    /// @notice The maximum number of actions that can be included in a proposal
-    uint public proposalMaxOperations;
+contract GovernorBravoDelegateStorageV2 is GovernorBravoDelegateStorageV1 {
+    /// @notice Stores the expiration of account whitelist status as a timestamp
+    mapping (address => uint) public whitelistAccountExpirations;
 
-    /// @notice A privileged role that can cancel any proposal
-    address public guardian;
+    /// @notice Address which manages whitelisted proposals and whitelist accounts
+    address public whitelistGuardian;
 }
 
 interface TimelockInterface {
@@ -184,7 +186,7 @@ interface TimelockInterface {
     function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
 }
 
-interface XvsVaultInterface {
+interface CompInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
 }
 
