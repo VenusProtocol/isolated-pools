@@ -1,4 +1,4 @@
-# Advanced Sample Hardhat Project
+# Venus Isolated Pools
 
 Forked compound commit hash: https://github.com/compound-finance/compound-protocol/tree/a3214f67b73310d547e00fc578e8355911c9d376
 
