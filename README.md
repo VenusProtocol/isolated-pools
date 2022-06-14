@@ -12,7 +12,7 @@ https://github.com/compound-finance/compound-protocol/tree/a3214f67b73310d547e00
 ### Installing
 
 ```
-yarn install
+yarn install --lock-file
 ```
 
 ### Run Tests
