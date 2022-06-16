@@ -67,5 +67,10 @@
   "dependencies": {
     "@solidity-parser/parser": "^0.13.2",
     "eth-saddle": "^0.1.25"
+  },
+  "resolutions": {
+    "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
+    "**/ganache-core": "github:compound-finance/ganache-core.git#jflatow/unbreak-fork",
+    "solidity-parser-antlr": "https://github.com/solidity-parser/parser#0.8.2"
   }
 }
