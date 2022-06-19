@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install solc
-        run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && mv ./solc-static-linux /usr/bin/solc
+        run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
       - name: Version
         run:  solc --version
       - uses: actions/checkout@v2
