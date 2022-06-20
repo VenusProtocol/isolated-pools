@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Install solc
         run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
-      - name: Version
-        run:  solc --version
       - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v2
@@ -22,5 +20,7 @@ jobs:
         run: npm install --global yarn
       - name: Install dependencies
         run: yarn install
-      - name: Run test
+      - name: Run hardhat test
+        run: yarn hardhat:test
+      - name: Run compound test
         run: yarn test
