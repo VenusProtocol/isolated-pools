@@ -29,7 +29,6 @@ import { getInterestRateModelValue, interestRateModelFetchers } from './Value/In
 import { getPriceOracleValue, priceOracleFetchers } from './Value/PriceOracleValue';
 import { getPriceOracleProxyValue, priceOracleProxyFetchers } from './Value/PriceOracleProxyValue';
 import { getAnchoredViewValue, anchoredViewFetchers } from './Value/AnchoredViewValue';
-import { getTimelockValue, timelockFetchers, getTimelockAddress } from './Value/TimelockValue';
 import { getMaximillionValue, maximillionFetchers } from './Value/MaximillionValue';
 import { getCompValue, compFetchers } from './Value/CompValue';
 import { getGovernorValue, governorFetchers } from './Value/GovernorValue';
@@ -933,17 +932,6 @@ const fetchers = [
     [new Arg('res', getAnchoredViewValue, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: anchoredViewFetchers() }
-  ),
-  new Fetcher<{ res: Value }, Value>(
-    `
-      #### Timelock
-
-      * "Timelock ...timeLockArgs" - Returns Timelock value
-    `,
-    'Timelock',
-    [new Arg('res', getTimelockValue, { variadic: true })],
-    async (world, { res }) => res,
-    { subExpressions: timelockFetchers() }
   ),
   new Fetcher<{ res: Value }, Value>(
     `

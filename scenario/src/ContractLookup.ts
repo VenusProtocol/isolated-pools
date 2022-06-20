@@ -15,7 +15,6 @@ import { GovernorBravo } from './Contract/GovernorBravo'
 import { Erc20 } from './Contract/Erc20';
 import { InterestRateModel } from './Contract/InterestRateModel';
 import { PriceOracle } from './Contract/PriceOracle';
-import { Timelock } from './Contract/Timelock';
 import { AnchoredView } from './Contract/AnchoredView';
 
 type ContractDataEl = string | Map<string, object> | undefined;
@@ -72,10 +71,6 @@ export function getWorldContractByAddress<T>(world: World, address: string): T {
   }
 
   return <T>(<unknown>contract);
-}
-
-export async function getTimelock(world: World): Promise<Timelock> {
-  return getWorldContract(world, [['Contracts', 'Timelock']]);
 }
 
 export async function getUnitroller(world: World): Promise<Comptroller> {
