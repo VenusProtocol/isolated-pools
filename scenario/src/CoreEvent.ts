@@ -21,13 +21,9 @@ import { erc20Commands, processErc20Event } from './Event/Erc20Event';
 import { interestRateModelCommands, processInterestRateModelEvent } from './Event/InterestRateModelEvent';
 import { priceOracleCommands, processPriceOracleEvent } from './Event/PriceOracleEvent';
 import { priceOracleProxyCommands, processPriceOracleProxyEvent } from './Event/PriceOracleProxyEvent';
-import { maximillionCommands, processMaximillionEvent } from './Event/MaximillionEvent';
 import { invariantCommands, processInvariantEvent } from './Event/InvariantEvent';
 import { expectationCommands, processExpectationEvent } from './Event/ExpectationEvent';
-import { timelockCommands, processTimelockEvent } from './Event/TimelockEvent';
 import { compCommands, processCompEvent } from './Event/CompEvent';
-import { governorCommands, processGovernorEvent } from './Event/GovernorEvent';
-import { governorBravoCommands, processGovernorBravoEvent } from './Event/GovernorBravoEvent';
 import { processTrxEvent, trxCommands } from './Event/TrxEvent';
 import { getFetchers, getCoreValue } from './CoreValue';
 import { formatEvent } from './Formatter';
@@ -773,36 +769,6 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
 
   new Command<{ event: EventV }>(
     `
-      #### Maximillion
-
-      * "Maximillion ...event" - Runs given Maximillion event
-      * E.g. "Maximillion Deploy (CToken cETH Address)"
-    `,
-    'Maximillion',
-    [new Arg('event', getEventV, { variadic: true })],
-    (world, from, { event }) => {
-      return processMaximillionEvent(world, event.val, from);
-    },
-    { subExpressions: maximillionCommands() }
-  ),
-
-  new Command<{ event: EventV }>(
-    `
-      #### Timelock
-
-      * "Timelock ...event" - Runs given Timelock event
-      * E.g. "Timelock Deploy Geoff 604800"
-    `,
-    'Timelock',
-    [new Arg('event', getEventV, { variadic: true })],
-    (world, from, { event }) => {
-      return processTimelockEvent(world, event.val, from);
-    },
-    { subExpressions: timelockCommands() }
-  ),
-
-  new Command<{ event: EventV }>(
-    `
       #### Comp
 
       * "Comp ...event" - Runs given comp event
@@ -814,36 +780,6 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
       return processCompEvent(world, event.val, from);
     },
     { subExpressions: compCommands() }
-  ),
-
-  new Command<{ event: EventV }>(
-    `
-      #### Governor
-
-      * "Governor ...event" - Runs given governor event
-      * E.g. "Governor Deploy Alpha"
-    `,
-    'Governor',
-    [new Arg('event', getEventV, { variadic: true })],
-    (world, from, { event }) => {
-      return processGovernorEvent(world, event.val, from);
-    },
-    { subExpressions: governorCommands() }
-  ),
-
-  new Command<{ event: EventV }>(
-    `
-      #### GovernorBravo
-
-      * "GovernorBravo ...event" - Runs given governorBravo event
-      * E.g. "GovernorBravo Deploy BravoDelegate"
-    `,
-    'GovernorBravo',
-    [new Arg('event', getEventV, { variadic: true })],
-    (world, from, { event }) => {
-      return processGovernorBravoEvent(world, event.val, from);
-    },
-    { subExpressions: governorBravoCommands() }
   ),
 
   buildContractEvent<Counter>("Counter", false),
