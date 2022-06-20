@@ -30,8 +30,6 @@ import { getPriceOracleValue, priceOracleFetchers } from './Value/PriceOracleVal
 import { getPriceOracleProxyValue, priceOracleProxyFetchers } from './Value/PriceOracleProxyValue';
 import { getAnchoredViewValue, anchoredViewFetchers } from './Value/AnchoredViewValue';
 import { getCompValue, compFetchers } from './Value/CompValue';
-import { getGovernorValue, governorFetchers } from './Value/GovernorValue';
-import { getGovernorBravoValue, governorBravoFetchers } from './Value/GovernorBravoValue';
 import { getAddress } from './ContractLookup';
 import { getCurrentBlockNumber, getCurrentTimestamp, mustArray, sendRPC } from './Utils';
 import { toEncodableNum } from './Encoding';
@@ -953,28 +951,6 @@ const fetchers = [
     [new Arg('res', getCompValue, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: compFetchers() }
-  ),
-  new Fetcher<{ res: Value }, Value>(
-    `
-      #### Governor
-
-      * "Governor ...governorArgs" - Returns Governor value
-    `,
-    'Governor',
-    [new Arg('res', getGovernorValue, { variadic: true })],
-    async (world, { res }) => res,
-    { subExpressions: governorFetchers() }
-  ),
-  new Fetcher<{ res: Value }, Value>(
-    `
-      #### GovernorBravo
-
-      * "GovernorBravo ...governorArgs" - Returns GovernorBravo value
-    `,
-    'GovernorBravo',
-    [new Arg('res', getGovernorBravoValue, { variadic: true })],
-    async (world, { res }) => res,
-    { subExpressions: governorBravoFetchers() }
   ),
 ];
 
