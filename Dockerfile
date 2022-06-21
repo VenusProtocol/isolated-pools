@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 RUN apt -y update
-RUN apt -y install curl git wget
+RUN apt -y install curl git wget make
 SHELL ["/bin/bash", "-c"]
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash
 RUN apt -y install nodejs

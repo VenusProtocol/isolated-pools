@@ -29,7 +29,6 @@ scenario/build/webpack.js
 .solcache
 .solcachecov
 scenario/.tscache
-tests
 spec
 junit.xml
 .build
