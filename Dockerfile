@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 RUN apt -y update
-RUN apt -y install curl git wget make build-essential 
+RUN apt -y install curl git wget make build-essential libusb-1.0-0-dev
 RUN apt install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && apt update && apt install -y python3.8
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 SHELL ["/bin/bash", "-c"]
