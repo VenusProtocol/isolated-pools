@@ -21,7 +21,6 @@ ADD . /compound-protocol
 ENV SADDLE_CONTRACTS="contracts/*.sol contracts/**/*.sol"
 RUN npx saddle compile
 
-RUN apk del build-dependencies
 RUN yarn cache clean
 
 CMD while :; do sleep 2073600; done
