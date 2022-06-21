@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 
 RUN apt -y update
 RUN apt -y install curl git wget make build-essential 
-RUN apt install software-properties-common && add-apt-repository ppa:deadsnakes/ppa && apt update && apt install python3.8
+RUN apt install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && apt update && apt install -y python3.8
 SHELL ["/bin/bash", "-c"]
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash
 RUN apt -y install nodejs
