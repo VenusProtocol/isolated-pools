@@ -13,16 +13,8 @@ RUN mkdir -p /compound-protocol
 WORKDIR /compound-protocol
 
 # First add deps
-ADD ./package.json /compound-protocol
+ADD . /compound-protocol
 RUN npm install -g yarn
 RUN yarn install
-
-# Then rest of code and build
-ADD . /compound-protocol
-
-ENV SADDLE_CONTRACTS="contracts/*.sol contracts/**/*.sol"
-RUN npx saddle compile
-
-RUN yarn cache clean
 
 CMD while :; do sleep 2073600; done
