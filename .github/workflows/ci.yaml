@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build docker
-        run: docker build isolated:${GITHUB_SHA::7}
+        run: docker build -t isolated:${GITHUB_SHA::7} .
       - name: Run container
         run: docker run -d --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} 
       - name: Run tests
