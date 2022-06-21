@@ -8,6 +8,7 @@ WORKDIR /compound-protocol
 
 # First add deps
 ADD ./package.json /compound-protocol
+RUN rm yarn.lock && rm package-lock.json
 RUN yarn install
 
 # Then rest of code and build
