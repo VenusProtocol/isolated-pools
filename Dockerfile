@@ -13,7 +13,6 @@ WORKDIR /compound-protocol
 
 # First add deps
 ADD ./package.json /compound-protocol
-RUN npm install -g yarn
 RUN yarn install
 
 # Then rest of code and build
