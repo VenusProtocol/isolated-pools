@@ -9,18 +9,24 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
-      - name: Install solc
-        run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
-      - uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v2
-        with: 
-          node-version: "12.x"
-      - name: Install yarn
-        run: npm install --global yarn
-      - name: Install dependencies
-        run: yarn install
-      - name: Run hardhat test
-        run: yarn hardhat:test
-      - name: Run compound test
-        run: yarn test
+      - name: Build docker
+        run: docker build isolated:${{ steps.vars.outputs.sha_short }}
+      - name: Run container
+        run: docker run -d --name ${{ steps.vars.outputs.sha_short }} isolated:${{ steps.vars.outputs.sha_short }} 
+      - name: Run tests
+        run: docker exec ${{ steps.vars.outputs.sha_short }} "yarn hardhat:test" 
+      # - name: Install solc
+      #   run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
+      # - uses: actions/checkout@v2
+      # - name: Use Node.js
+      #   uses: actions/setup-node@v2
+      #   with: 
+      #     node-version: "12.x"
+      # - name: Install yarn
+      #   run: npm install --global yarn
+      # - name: Install dependencies
+      #   run: yarn install
+      # - name: Run hardhat test
+      #   run: yarn hardhat:test
+      # - name: Run compound test
+      #   run: yarn test
