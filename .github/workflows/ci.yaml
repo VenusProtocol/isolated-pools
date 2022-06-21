@@ -9,8 +9,6 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
-      - name: Install solc
-        run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
       - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v2
@@ -23,4 +21,8 @@ jobs:
       - name: Run hardhat test
         run: yarn hardhat:test
       - name: Run compound test
-        run: yarn test
+        run: |
+          wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux
+          sudo mv solc-static-linux /usr/bin/solc
+          sudo chmod +x /usr/bin/solc
+          yarn test
