@@ -13,9 +13,9 @@ jobs:
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
       - name: Run container
-        run: docker run -d --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} 
+        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:test"
       - name: Run tests
-        run: docker exec ${GITHUB_SHA::7} "cd .compound-protocol && yarn hardhat:test" 
+        run: docker exec ${GITHUB_SHA::7} "" 
       # - name: Install solc
       #   run: wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux && sudo mv solc-static-linux /usr/bin/solc && sudo chmod +x /usr/bin/solc
       # - uses: actions/checkout@v2
