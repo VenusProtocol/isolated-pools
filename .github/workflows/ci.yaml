@@ -10,6 +10,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
+      - name: Clean
+        run: docker image prune -a
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
       - name: Run hardhat tests
