@@ -9,6 +9,7 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
+      - uses: actions/checkout@v2
       - name: Build docker
         run: docker build isolated:${{ steps.vars.outputs.sha_short }}
       - name: Run container
