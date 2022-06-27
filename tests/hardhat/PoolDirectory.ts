@@ -1,14 +1,16 @@
 import { network, ethers } from "hardhat";
 import { expect } from "chai";
-import { PoolDirectory, Comptroller, SimplePriceOracle } from "../../typechain";
+import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle } from "../../typechain";
 import BigNumber from "bignumber.js"
 
 let poolDirectory:PoolDirectory
 let comptroller:Comptroller
 let simplePriceOracle:SimplePriceOracle
+let mockDAI:MockToken
+let mockWBTC:MockToken
 
 describe('PoolDirectory', async function () {
-  it('Deploy', async function () {
+  it('Deploy Comptroller', async function () {
     const PoolDirectory = await ethers.getContractFactory('PoolDirectory');
     poolDirectory = await PoolDirectory.deploy();
     await poolDirectory.deployed();
@@ -36,5 +38,23 @@ describe('PoolDirectory', async function () {
 
     expect(pool[0].toString()).equal('0')
     expect(pool[1]).not.equal('0x0000000000000000000000000000000000000000')
+  });
+
+  it('Deploy CToken', async function () {
+    const MockDAI = await ethers.getContractFactory('MockToken')
+    mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
+    await mockDAI.faucet();
+
+    const [owner] = await ethers.getSigners();
+    const daiBalance = await mockDAI.balanceOf(owner.address)
+    expect(daiBalance).equal("1000000000000000000000")
+
+    const MockWBTC = await ethers.getContractFactory('MockToken')
+    mockWBTC = await MockWBTC.deploy('Bitcoin', 'BTC', 8)
+    await mockWBTC.faucet()
+
+    const btcBalance = await mockWBTC.balanceOf(owner.address)
+
+    expect(btcBalance).equal("100000000000")
   });
 })
