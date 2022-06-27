@@ -1,6 +1,6 @@
 import { network, ethers } from "hardhat";
 import { expect } from "chai";
-import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle } from "../../typechain";
+import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20, DAIInterestRateModelV3, JumpRateModelV2 } from "../../typechain";
 import BigNumber from "bignumber.js"
 
 let poolDirectory:PoolDirectory
@@ -8,6 +8,10 @@ let comptroller:Comptroller
 let simplePriceOracle:SimplePriceOracle
 let mockDAI:MockToken
 let mockWBTC:MockToken
+let cDAI:CErc20
+let cWBTC:CErc20
+let daiInterest:DAIInterestRateModelV3
+let wbtcInterest:JumpRateModelV2
 
 describe('PoolDirectory', async function () {
   it('Deploy Comptroller', async function () {
@@ -56,5 +60,48 @@ describe('PoolDirectory', async function () {
     const btcBalance = await mockWBTC.balanceOf(owner.address)
 
     expect(btcBalance).equal("100000000000")
+
+    // const DAIInterestRateModelV3 = await ethers.getContractFactory('DAIInterestRateModelV3')
+    // daiInterest = await DAIInterestRateModelV3.deploy(
+    //   '1090000000000000000',
+    //   "800000000000000000",
+    //   owner.address,
+    //   owner.address,
+    //   owner.address
+    // )
+
+    // const CDAI = await ethers.getContractFactory('CErc20')
+    // cDAI = await CDAI.deploy()
+    // await cDAI["initialize(address,address,address,uint256,string,string,uint8)"](
+    //   mockDAI.address,
+    //   comptroller.address,
+    //   daiInterest.address,
+    //   (new BigNumber(1)).times( new BigNumber(10).pow(18) ).toString(),
+    //   'Compound DAI',
+    //   'cDAI',
+    //   18
+    // )
+
+    // const JumpRateModelV2 = await ethers.getContractFactory('JumpRateModelV2')
+    // wbtcInterest = await JumpRateModelV2.deploy(
+    //   0,
+    //   "40000000000000000",
+    //   "1090000000000000000",
+    //   "800000000000000000",
+    //   owner.address
+    // )
+    
+    const CWBTC = await ethers.getContractFactory('CErc20')
+    cWBTC = await CWBTC.deploy()
+
+    await cWBTC["initialize(address,address,address,uint256,string,string,uint8)"](
+      mockWBTC.address,
+      comptroller.address,
+      "0x0000000000000000000000000000000000000000",
+      (new BigNumber(1)).times( new BigNumber(10).pow(18) ).toString(),
+      'Compound WBTC',
+      'cWBTC',
+      8
+    )
   });
 })
