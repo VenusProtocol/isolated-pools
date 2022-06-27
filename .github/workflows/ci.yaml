@@ -11,11 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Clear
-        run: docker ps -a | grep Exit | cut -d ' ' -f 1 | xargs docker rm && docker image prune -f
+        run: docker container prune -f && docker image prune -f
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
       - name: Run hardhat tests
-        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:test"
+        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:test"
       - name: Clear
         run: docker rm ${GITHUB_SHA::7}
       - name: Run compound tests
