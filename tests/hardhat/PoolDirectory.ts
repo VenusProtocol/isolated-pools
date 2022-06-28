@@ -3,6 +3,20 @@ import { expect } from "chai";
 import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle } from "../../typechain";
 import BigNumber from "bignumber.js"
 
+BigNumber.config({
+  FORMAT: {
+    decimalSeparator: '.',
+    groupSize: 0,
+    groupSeparator: '',
+    secondaryGroupSize: 0,
+    fractionGroupSeparator: '',
+    fractionGroupSize: 0,
+  },
+  ROUNDING_MODE: BigNumber.ROUND_DOWN,
+  EXPONENTIAL_AT: 1e9,
+});
+
+
 let poolDirectory:PoolDirectory
 let comptroller:Comptroller
 let simplePriceOracle:SimplePriceOracle
@@ -122,5 +136,37 @@ describe('PoolDirectory', async function () {
 
     expect((await priceOracle.getUnderlyingPrice(cDAI.address)).toString()).equal("1000000000000000000")
     expect((await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()).equal("210340000000000000000000000000000")
+
+    await comptroller._setPriceOracle(priceOracle.address);
+  })
+
+  it('Enter Market', async function () {
+    await comptroller._supportMarket(cDAI.address)
+    await comptroller._supportMarket(cWBTC.address)
+
+    await comptroller._setCollateralFactor(cDAI.address, (new BigNumber(100).times(new BigNumber(10).pow(18))).toString())
+    await comptroller._setCollateralFactor(cWBTC.address, (new BigNumber(70).times(new BigNumber(10).pow(18))).toString())
+
+    const [owner] = await ethers.getSigners();
+    await comptroller.enterMarkets([ cDAI.address, cWBTC.address ])
+    const res = await comptroller.getAssetsIn(owner.address)
+    expect(res[0]).equal(cDAI.address)
+    expect(res[1]).equal(cWBTC.address)
+  })
+
+  it('Lend and Borrow', async function () {
+    const daiAmount = (new BigNumber(1000)).times(new BigNumber(10).pow(18)).toString()
+    await mockDAI.approve(cDAI.address, daiAmount)
+    await cDAI.mint(daiAmount)
+
+    const [, signer] = await ethers.getSigners();
+    await mockWBTC.faucet();
+
+    const btcAmount = (new BigNumber(1)).times(new BigNumber(10).pow(8)).toString()
+    await mockWBTC.approve(cWBTC.address, btcAmount)
+    await cWBTC.mint(btcAmount)
+
+    //Borrow
+    await cDAI.borrow((new BigNumber(150)).times(new BigNumber(10).pow(18)).toString())
   })
 })
