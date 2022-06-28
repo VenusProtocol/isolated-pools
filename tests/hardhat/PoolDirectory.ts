@@ -1,6 +1,6 @@
 import { network, ethers } from "hardhat";
 import { expect } from "chai";
-import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike } from "../../typechain";
+import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle } from "../../typechain";
 import BigNumber from "bignumber.js"
 
 let poolDirectory:PoolDirectory
@@ -14,6 +14,7 @@ let daiInterest:DAIInterestRateModelV3
 let wbtcInterest:JumpRateModelV2
 let potLike:MockPotLike
 let jugLike:MockJugLike
+let priceOracle:MockPriceOracle
 
 describe('PoolDirectory', async function () {
   it('Deploy Comptroller', async function () {
@@ -111,4 +112,15 @@ describe('PoolDirectory', async function () {
       owner.address
     )
   });
+
+  it('Deploy Price Oracle', async function () {
+    const MockPriceOracle = await ethers.getContractFactory('MockPriceOracle')
+    priceOracle = await MockPriceOracle.deploy()
+
+    await priceOracle.setPrice(cDAI.address, "1000000000000000000")
+    await priceOracle.setPrice(cWBTC.address, "210340000000000000000000000000000")
+
+    expect((await priceOracle.getUnderlyingPrice(cDAI.address)).toString()).equal("1000000000000000000")
+    expect((await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()).equal("210340000000000000000000000000000")
+  })
 })
