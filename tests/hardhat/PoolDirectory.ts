@@ -1,4 +1,4 @@
-import { network, ethers } from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle } from "../../typechain";
 import BigNumber from "bignumber.js"
@@ -30,6 +30,10 @@ let potLike:MockPotLike
 let jugLike:MockJugLike
 let priceOracle:MockPriceOracle
 
+const convertToUnit = (amount: string|number, decimals: number) => {
+  return (new BigNumber(amount)).times (new BigNumber(10).pow(decimals)).toString()
+}
+
 describe('PoolDirectory', async function () {
   it('Deploy Comptroller', async function () {
     const PoolDirectory = await ethers.getContractFactory('PoolDirectory');
@@ -42,23 +46,20 @@ describe('PoolDirectory', async function () {
     comptroller = await Comptroller.deploy();
     await comptroller.deployed();
 
-    const closeFactor = (new BigNumber(0.05)).times( (new BigNumber(10)).pow(18) ).toString()
-    const liquidationIncentive = (new BigNumber(1)).times( (new BigNumber(10)).pow(18) ).toString()
+    const closeFactor = convertToUnit(0.05, 18) 
+    const liquidationIncentive = convertToUnit(1, 18)
 
     const SimplePriceOracle = await ethers.getContractFactory('SimplePriceOracle')
     simplePriceOracle = await SimplePriceOracle.deploy()
     await simplePriceOracle.deployed()
 
-    const pool = await poolDirectory.callStatic.deployPool(
+    await poolDirectory.deployPool(
       "Pool 1",
       comptroller.address,
       closeFactor,
       liquidationIncentive,
       simplePriceOracle.address
     )
-
-    expect(pool[0].toString()).equal('0')
-    expect(pool[1]).not.equal('0x0000000000000000000000000000000000000000')
   });
 
   it('Deploy CToken', async function () {
@@ -68,7 +69,7 @@ describe('PoolDirectory', async function () {
 
     const [owner] = await ethers.getSigners();
     const daiBalance = await mockDAI.balanceOf(owner.address)
-    expect(daiBalance).equal("1000000000000000000000")
+    expect(daiBalance).equal(convertToUnit(1000, 18))
 
     const MockWBTC = await ethers.getContractFactory('MockToken')
     mockWBTC = await MockWBTC.deploy('Bitcoin', 'BTC', 8)
@@ -76,7 +77,7 @@ describe('PoolDirectory', async function () {
 
     const btcBalance = await mockWBTC.balanceOf(owner.address)
 
-    expect(btcBalance).equal("100000000000")
+    expect(btcBalance).equal(convertToUnit(1000, 8))
 
     const MockPotLike = await ethers.getContractFactory('MockPotLike')
     potLike = await MockPotLike.deploy();
@@ -98,7 +99,7 @@ describe('PoolDirectory', async function () {
       mockDAI.address,
       comptroller.address,
       daiInterest.address,
-      (new BigNumber(1)).times( new BigNumber(10).pow(18) ).toString(),
+      convertToUnit(1, 18),
       'Compound DAI',
       'cDAI',
       18,
@@ -119,7 +120,7 @@ describe('PoolDirectory', async function () {
       mockWBTC.address,
       comptroller.address,
       wbtcInterest.address,
-      (new BigNumber(1)).times( new BigNumber(10).pow(18) ).toString(),
+      convertToUnit(1, 18),
       'Compound WBTC',
       'cWBTC',
       8,
@@ -131,11 +132,14 @@ describe('PoolDirectory', async function () {
     const MockPriceOracle = await ethers.getContractFactory('MockPriceOracle')
     priceOracle = await MockPriceOracle.deploy()
 
-    await priceOracle.setPrice(cDAI.address, "1000000000000000000")
-    await priceOracle.setPrice(cWBTC.address, "210340000000000000000000000000000")
+    const btcPrice = "21000.34"
+    const daiPrice = "1"
 
-    expect((await priceOracle.getUnderlyingPrice(cDAI.address)).toString()).equal("1000000000000000000")
-    expect((await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()).equal("210340000000000000000000000000000")
+    await priceOracle.setPrice(cDAI.address, convertToUnit(daiPrice, 18))
+    await priceOracle.setPrice(cWBTC.address, convertToUnit(btcPrice, 28))
+
+    expect((await priceOracle.getUnderlyingPrice(cDAI.address)).toString()).equal(convertToUnit(daiPrice, 18))
+    expect((await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()).equal(convertToUnit(btcPrice, 28))
 
     await comptroller._setPriceOracle(priceOracle.address);
   })
@@ -144,29 +148,30 @@ describe('PoolDirectory', async function () {
     await comptroller._supportMarket(cDAI.address)
     await comptroller._supportMarket(cWBTC.address)
 
-    await comptroller._setCollateralFactor(cDAI.address, (new BigNumber(100).times(new BigNumber(10).pow(18))).toString())
-    await comptroller._setCollateralFactor(cWBTC.address, (new BigNumber(70).times(new BigNumber(10).pow(18))).toString())
+    await comptroller._setCollateralFactor(cDAI.address, convertToUnit(1, 18))
+    await comptroller._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
 
-    const [owner] = await ethers.getSigners();
+    const [owner, user] = await ethers.getSigners();
     await comptroller.enterMarkets([ cDAI.address, cWBTC.address ])
+    await comptroller.connect(user).enterMarkets([ cDAI.address, cWBTC.address ])
     const res = await comptroller.getAssetsIn(owner.address)
     expect(res[0]).equal(cDAI.address)
     expect(res[1]).equal(cWBTC.address)
   })
 
   it('Lend and Borrow', async function () {
-    const daiAmount = (new BigNumber(1000)).times(new BigNumber(10).pow(18)).toString()
+    const daiAmount = convertToUnit(1000, 18)
     await mockDAI.approve(cDAI.address, daiAmount)
     await cDAI.mint(daiAmount)
 
-    const [, signer] = await ethers.getSigners();
-    await mockWBTC.faucet();
+    const [, user] = await ethers.getSigners();
+    await mockWBTC.connect(user).faucet();
 
-    const btcAmount = (new BigNumber(1)).times(new BigNumber(10).pow(8)).toString()
-    await mockWBTC.approve(cWBTC.address, btcAmount)
-    await cWBTC.mint(btcAmount)
+    const btcAmount = convertToUnit(1000, 8)
+    await mockWBTC.connect(user).approve(cWBTC.address, btcAmount)
+    await cWBTC.connect(user).mint(btcAmount)
 
-    //Borrow
-    await cDAI.borrow((new BigNumber(150)).times(new BigNumber(10).pow(18)).toString())
+    await cWBTC.borrow(convertToUnit(1, 8));
+    await cDAI.connect(user).borrow(1);
   })
 })
