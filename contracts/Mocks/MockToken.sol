@@ -20,7 +20,7 @@ contract MockToken is ERC20 {
         return DECIMALS;
     }
 
-    function faucet () external {
-        _mint(msg.sender, 1000 * (10 ** decimals()));
+    function faucet (uint256 amount) external {
+        _mint(msg.sender, amount);
     }
 }

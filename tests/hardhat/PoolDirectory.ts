@@ -16,7 +16,6 @@ BigNumber.config({
   EXPONENTIAL_AT: 1e9,
 });
 
-
 let poolDirectory:PoolDirectory
 let comptroller:Comptroller
 let simplePriceOracle:SimplePriceOracle
@@ -60,12 +59,14 @@ describe('PoolDirectory', async function () {
       liquidationIncentive,
       simplePriceOracle.address
     )
+    const pools = await poolDirectory.callStatic.getAllPools()
+    expect(pools[0].name).equal("Pool 1")
   });
 
   it('Deploy CToken', async function () {
     const MockDAI = await ethers.getContractFactory('MockToken')
     mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
-    await mockDAI.faucet();
+    await mockDAI.faucet(convertToUnit(1000, 18));
 
     const [owner] = await ethers.getSigners();
     const daiBalance = await mockDAI.balanceOf(owner.address)
@@ -73,7 +74,7 @@ describe('PoolDirectory', async function () {
 
     const MockWBTC = await ethers.getContractFactory('MockToken')
     mockWBTC = await MockWBTC.deploy('Bitcoin', 'BTC', 8)
-    await mockWBTC.faucet()
+    await mockWBTC.faucet(convertToUnit(1000, 8))
 
     const btcBalance = await mockWBTC.balanceOf(owner.address)
 
@@ -148,7 +149,7 @@ describe('PoolDirectory', async function () {
     await comptroller._supportMarket(cDAI.address)
     await comptroller._supportMarket(cWBTC.address)
 
-    await comptroller._setCollateralFactor(cDAI.address, convertToUnit(1, 18))
+    await comptroller._setCollateralFactor(cDAI.address, convertToUnit(0.7, 18))
     await comptroller._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
 
     const [owner, user] = await ethers.getSigners();
@@ -160,18 +161,21 @@ describe('PoolDirectory', async function () {
   })
 
   it('Lend and Borrow', async function () {
-    const daiAmount = convertToUnit(1000, 18)
+    const daiAmount = convertToUnit(31000, 18)
+    await mockDAI.faucet(daiAmount)
     await mockDAI.approve(cDAI.address, daiAmount)
     await cDAI.mint(daiAmount)
 
-    const [, user] = await ethers.getSigners();
-    await mockWBTC.connect(user).faucet();
+    const [owner, user] = await ethers.getSigners();
+    await mockWBTC.connect(user).faucet(convertToUnit(1000, 8));
 
     const btcAmount = convertToUnit(1000, 8)
     await mockWBTC.connect(user).approve(cWBTC.address, btcAmount)
     await cWBTC.connect(user).mint(btcAmount)
 
-    await cWBTC.borrow(convertToUnit(0.001, 8));
-    await cDAI.connect(user).borrow(1);
+    // console.log((await comptroller.callStatic.getAccountLiquidity(owner.address))[1].toString())
+    // console.log((await comptroller.callStatic.getAccountLiquidity(user.address))[1].toString())
+    await cWBTC.borrow(convertToUnit(1, 8));
+    await cDAI.connect(user).borrow(convertToUnit(100, 18));
   })
 })
