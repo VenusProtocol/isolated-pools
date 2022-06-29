@@ -171,7 +171,7 @@ describe('PoolDirectory', async function () {
     await mockWBTC.connect(user).approve(cWBTC.address, btcAmount)
     await cWBTC.connect(user).mint(btcAmount)
 
-    await cWBTC.borrow(convertToUnit(1, 8));
+    await cWBTC.borrow(convertToUnit(0.001, 8));
     await cDAI.connect(user).borrow(1);
   })
 })
