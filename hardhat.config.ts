@@ -8,7 +8,7 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 
 // Generate using https://iancoleman.io/bip39/
-const { mnemonic } = require('./secrets.json');
+const mnemonic = process.env.MNEMONIC || "";
 
 dotenv.config();
 
