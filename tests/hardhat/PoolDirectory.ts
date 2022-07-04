@@ -2,19 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle } from "../../typechain";
 import BigNumber from "bignumber.js"
-
-BigNumber.config({
-  FORMAT: {
-    decimalSeparator: '.',
-    groupSize: 0,
-    groupSeparator: '',
-    secondaryGroupSize: 0,
-    fractionGroupSeparator: '',
-    fractionGroupSize: 0,
-  },
-  ROUNDING_MODE: BigNumber.ROUND_DOWN,
-  EXPONENTIAL_AT: 1e9,
-});
+import { convertToUnit } from "../../helpers/utils";
 
 let poolDirectory:PoolDirectory
 let comptroller:Comptroller
@@ -28,10 +16,6 @@ let wbtcInterest:JumpRateModelV2
 let potLike:MockPotLike
 let jugLike:MockJugLike
 let priceOracle:MockPriceOracle
-
-const convertToUnit = (amount: string|number, decimals: number) => {
-  return (new BigNumber(amount)).times (new BigNumber(10).pow(decimals)).toString()
-}
 
 describe('PoolDirectory', async function () {
   it('Deploy Comptroller', async function () {
