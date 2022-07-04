@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle } from "../../typechain";
+import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle, Unitroller } from "../../typechain";
 import BigNumber from "bignumber.js"
 import { convertToUnit } from "../../helpers/utils";
 
@@ -16,6 +16,8 @@ let wbtcInterest:JumpRateModelV2
 let potLike:MockPotLike
 let jugLike:MockJugLike
 let priceOracle:MockPriceOracle
+let comptrollerProxy:Comptroller
+let unitroller:Unitroller
 
 describe('PoolDirectory', async function () {
   it('Deploy Comptroller', async function () {
@@ -45,6 +47,11 @@ describe('PoolDirectory', async function () {
     )
     const pools = await poolDirectory.callStatic.getAllPools()
     expect(pools[0].name).equal("Pool 1")
+
+    comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+    unitroller = await ethers.getContractAt("Unitroller", pools[0].comptroller);
+
+    await unitroller._acceptAdmin();
   });
 
   it('Deploy CToken', async function () {
@@ -82,7 +89,7 @@ describe('PoolDirectory', async function () {
     const CDAI = await ethers.getContractFactory('CErc20Immutable')
     cDAI = await CDAI.deploy(
       mockDAI.address,
-      comptroller.address,
+      comptrollerProxy.address,
       daiInterest.address,
       convertToUnit(1, 18),
       'Compound DAI',
@@ -103,7 +110,7 @@ describe('PoolDirectory', async function () {
     const CWBTC = await ethers.getContractFactory('CErc20Immutable')
     cWBTC = await CWBTC.deploy(
       mockWBTC.address,
-      comptroller.address,
+      comptrollerProxy.address,
       wbtcInterest.address,
       convertToUnit(1, 18),
       'Compound WBTC',
@@ -126,20 +133,20 @@ describe('PoolDirectory', async function () {
     expect((await priceOracle.getUnderlyingPrice(cDAI.address)).toString()).equal(convertToUnit(daiPrice, 18))
     expect((await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()).equal(convertToUnit(btcPrice, 28))
 
-    await comptroller._setPriceOracle(priceOracle.address);
+    await comptrollerProxy._setPriceOracle(priceOracle.address);
   })
 
   it('Enter Market', async function () {
-    await comptroller._supportMarket(cDAI.address)
-    await comptroller._supportMarket(cWBTC.address)
+    await comptrollerProxy._supportMarket(cDAI.address)
+    await comptrollerProxy._supportMarket(cWBTC.address)
 
-    await comptroller._setCollateralFactor(cDAI.address, convertToUnit(0.7, 18))
-    await comptroller._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
+    await comptrollerProxy._setCollateralFactor(cDAI.address, convertToUnit(0.7, 18))
+    await comptrollerProxy._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
 
     const [owner, user] = await ethers.getSigners();
-    await comptroller.enterMarkets([ cDAI.address, cWBTC.address ])
-    await comptroller.connect(user).enterMarkets([ cDAI.address, cWBTC.address ])
-    const res = await comptroller.getAssetsIn(owner.address)
+    await comptrollerProxy.enterMarkets([ cDAI.address, cWBTC.address ])
+    await comptrollerProxy.connect(user).enterMarkets([ cDAI.address, cWBTC.address ])
+    const res = await comptrollerProxy.getAssetsIn(owner.address)
     expect(res[0]).equal(cDAI.address)
     expect(res[1]).equal(cWBTC.address)
   })
@@ -157,8 +164,8 @@ describe('PoolDirectory', async function () {
     await mockWBTC.connect(user).approve(cWBTC.address, btcAmount)
     await cWBTC.connect(user).mint(btcAmount)
 
-    // console.log((await comptroller.callStatic.getAccountLiquidity(owner.address))[1].toString())
-    // console.log((await comptroller.callStatic.getAccountLiquidity(user.address))[1].toString())
+    // console.log((await comptrollerProxy.callStatic.getAccountLiquidity(owner.address))[1].toString())
+    // console.log((await comptrollerProxy.callStatic.getAccountLiquidity(user.address))[1].toString())
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
   })

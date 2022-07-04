@@ -46,13 +46,24 @@ async function main() {
   const closeFactor = convertToUnit(0.05, 18) 
   const liquidationIncentive = convertToUnit(1, 18)
 
-  await poolDirectory.deployPool(
+  let tx = await poolDirectory.deployPool(
     "Pool 1",
     comptroller.address,
     closeFactor,
     liquidationIncentive,
     simplePriceOracle.address
   )
+  await tx.wait(1)
+
+  const pools = await poolDirectory.callStatic.getAllPools()
+
+  const comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+  const unitroller = await ethers.getContractAt("Unitroller", pools[0].comptroller);
+
+  await verify(unitroller.address, [], "contracts/Unitroller.sol:Unitroller");
+
+  tx = await unitroller._acceptAdmin();
+  await tx.wait(1)
 
   const MockDAI = await ethers.getContractFactory('MockToken')
   const mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
@@ -95,7 +106,7 @@ async function main() {
   const CDAI = await ethers.getContractFactory('CErc20Immutable')
   const cDAI = await CDAI.deploy(
     mockDAI.address,
-    comptroller.address,
+    comptrollerProxy.address,
     daiInterest.address,
     convertToUnit(1, 18),
     'Compound DAI',
@@ -106,7 +117,7 @@ async function main() {
   await cDAI.deployed()
   await verify(cDAI.address, [
     mockDAI.address,
-    comptroller.address,
+    comptrollerProxy.address,
     daiInterest.address,
     convertToUnit(1, 18),
     'Compound DAI',
@@ -136,7 +147,7 @@ async function main() {
   const CWBTC = await ethers.getContractFactory('CErc20Immutable')
   const cWBTC = await CWBTC.deploy(
     mockWBTC.address,
-    comptroller.address,
+    comptrollerProxy.address,
     wbtcInterest.address,
     convertToUnit(1, 18),
     'Compound WBTC',
@@ -147,7 +158,7 @@ async function main() {
   await cWBTC.deployed()
   await verify(cWBTC.address, [
     mockWBTC.address,
-    comptroller.address,
+    comptrollerProxy.address,
     wbtcInterest.address,
     convertToUnit(1, 18),
     'Compound WBTC',
@@ -164,26 +175,26 @@ async function main() {
   const btcPrice = "21000.34"
   const daiPrice = "1"
 
-  let tx = await priceOracle.setPrice(cDAI.address, convertToUnit(daiPrice, 18))
+  tx = await priceOracle.setPrice(cDAI.address, convertToUnit(daiPrice, 18))
   await tx.wait(1)
   tx = await priceOracle.setPrice(cWBTC.address, convertToUnit(btcPrice, 28))
   await tx.wait(1)
-  tx = await comptroller._setPriceOracle(priceOracle.address);
+  tx = await comptrollerProxy._setPriceOracle(priceOracle.address);
   await tx.wait(1)
 
-  tx = await comptroller._supportMarket(cDAI.address)
+  tx = await comptrollerProxy._supportMarket(cDAI.address)
   await tx.wait(1)
-  tx = await comptroller._supportMarket(cWBTC.address)
+  tx = await comptrollerProxy._supportMarket(cWBTC.address)
   await tx.wait(1)
 
-  tx = await comptroller._setCollateralFactor(cDAI.address, convertToUnit(0.7, 18))
+  tx = await comptrollerProxy._setCollateralFactor(cDAI.address, convertToUnit(0.7, 18))
   await tx.wait(1)
-  tx = await comptroller._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
+  tx = await comptrollerProxy._setCollateralFactor(cWBTC.address, convertToUnit(0.7, 18))
   await tx.wait(1)
 
   console.log("PoolDirectory Address:", poolDirectory.address);
   console.log("Pool Name: Pool 1")
-  console.log("Comptroller Address:", comptroller.address);
+  console.log("Comptroller Proxy Address:", comptrollerProxy.address);
   console.log("MockDAI Address:", mockDAI.address);
   console.log("MockWBTC Address:", mockWBTC.address);
   console.log("cDAI Address:", cDAI.address);
