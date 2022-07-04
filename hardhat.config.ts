@@ -7,6 +7,9 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
+// Generate using https://iancoleman.io/bip39/
+const mnemonic = process.env.MNEMONIC || "";
+
 dotenv.config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -37,13 +40,31 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    testnet: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      chainId: 97,
+      gasPrice: 20000000000,
+      accounts: {mnemonic: mnemonic}
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      testnet: process.env.BSC_API_KEY || "",
+    },
+    customChains: [
+      {
+        network: "testnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api-testnet.bscscan.com/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+    ],
   },
   paths: {
     tests: "./tests/hardhat",
