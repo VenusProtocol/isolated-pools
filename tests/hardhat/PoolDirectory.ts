@@ -169,4 +169,16 @@ describe('PoolDirectory', async function () {
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
   })
+
+  it('Metadata', async function () {
+    await poolDirectory.updatePoolMetadata("Pool 1", {
+      riskRating: "low",
+      category: "Hign market cap",
+      logoURL: "http://venis.io/pool1",
+      description: "An sample description"
+    });
+
+    const metadata = await poolDirectory.getPoolMetadata("Pool 1")
+    expect(metadata.riskRating).equal("low")
+  })
 })

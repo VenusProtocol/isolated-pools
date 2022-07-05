@@ -29,9 +29,9 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @dev Struct for a Fuse interest rate pool.
+     * @dev Struct for a Venus interest rate pool.
      */
-    struct FusePool {
+    struct VenusPool {
         string name;
         address creator;
         address comptroller;
@@ -39,25 +39,37 @@ contract PoolDirectory is OwnableUpgradeable {
         uint256 timestampPosted;
     }
 
-    /**
-     * @dev Array of Fuse interest rate pools.
-     */
-    FusePool[] public pools;
+    struct VenusPoolMetaData {
+        string riskRating;
+        string category;
+        string logoURL;
+        string description;
+    }
 
     /**
-     * @dev Maps Ethereum accounts to arrays of Fuse pool indexes.
+     * @dev Array of Venus interest rate pools.
+     */
+    VenusPool[] public pools;
+
+    /**
+     * @dev Maps venus pool name to metadata
+     */
+    mapping(string => VenusPoolMetaData) metadata;
+
+    /**
+     * @dev Maps Ethereum accounts to arrays of Venus pool indexes.
      */
     mapping(address => uint256[]) private _poolsByAccount;
 
     /**
-     * @dev Maps Fuse pool Comptroller addresses to bools indicating if they have been registered via the directory.
+     * @dev Maps Venus pool Comptroller addresses to bools indicating if they have been registered via the directory.
      */
     mapping(address => bool) public poolExists;
 
     /**
-     * @dev Emitted when a new Fuse pool is added to the directory.
+     * @dev Emitted when a new Venus pool is added to the directory.
      */
-    event PoolRegistered(uint256 index, FusePool pool);
+    event PoolRegistered(uint256 index, VenusPool pool);
 
     /**
      * @dev Booleans indicating if the deployer whitelist is enforced.
@@ -92,10 +104,10 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @dev Adds a new Fuse pool to the directory (without checking msg.sender).
+     * @dev Adds a new Venus pool to the directory (without checking msg.sender).
      * @param name The name of the pool.
      * @param comptroller The pool's Comptroller proxy contract address.
-     * @return The index of the registered Fuse pool.
+     * @return The index of the registered Venus pool.
      */
     function _registerPool(string memory name, address comptroller)
         internal
@@ -110,7 +122,7 @@ contract PoolDirectory is OwnableUpgradeable {
             "Sender is not on deployer whitelist."
         );
         require(bytes(name).length <= 100, "No pool name supplied.");
-        FusePool memory pool = FusePool(
+        VenusPool memory pool = VenusPool(
             name,
             msg.sender,
             comptroller,
@@ -125,13 +137,13 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @dev Deploys a new Fuse pool and adds to the directory.
+     * @dev Deploys a new Venus pool and adds to the directory.
      * @param name The name of the pool.
      * @param implementation The Comptroller implementation contract address.
      * @param closeFactor The pool's close factor (scaled by 1e18).
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
      * @param priceOracle The pool's PriceOracle contract address.
-     * @return The index of the registered Fuse pool and the Unitroller proxy address.
+     * @return The index of the registered Venus pool and the Unitroller proxy address.
      */
     function deployPool(
         string memory name,
@@ -177,19 +189,6 @@ contract PoolDirectory is OwnableUpgradeable {
             "Failed to set pool price oracle."
         );
 
-        // Whitelist
-        // if (enforceWhitelist)
-        //     require(
-        //         comptrollerProxy._setWhitelistEnforcement(true) == 0,
-        //         "Failed to enforce supplier/borrower whitelist."
-        //     );
-
-        // Enable auto-implementation
-        // require(
-        //     comptrollerProxy._toggleAutoImplementations(true) == 0,
-        //     "Failed to enable pool auto implementations."
-        // );
-
         // Make msg.sender the admin
         require(
             unitroller._setPendingAdmin(msg.sender) == 0,
@@ -200,22 +199,31 @@ contract PoolDirectory is OwnableUpgradeable {
         return (_registerPool(name, proxy), proxy);
     }
 
+    // Venus Pool Metadata
+    function updatePoolMetadata(string memory name, VenusPoolMetaData memory _metadata) external onlyOwner {
+        metadata[name] = _metadata;
+    }
+
+    function getPoolMetadata(string memory name) external view returns (VenusPoolMetaData memory) {
+        return metadata[name];
+    }
+
     /**
-     * @notice Returns arrays of all Fuse pools' data.
+     * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() external view returns (FusePool[] memory) {
+    function getAllPools() external view returns (VenusPool[] memory) {
         return pools;
     }
 
     /**
-     * @notice Returns arrays of all public Fuse pool indexes and data.
+     * @notice Returns arrays of all public Venus pool indexes and data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
     function getPublicPools()
         external
         view
-        returns (uint256[] memory, FusePool[] memory)
+        returns (uint256[] memory, VenusPool[] memory)
     {
         uint256 arrayLength = 0;
 
@@ -224,7 +232,7 @@ contract PoolDirectory is OwnableUpgradeable {
         }
 
         uint256[] memory indexes = new uint256[](arrayLength);
-        FusePool[] memory publicPools = new FusePool[](arrayLength);
+        VenusPool[] memory publicPools = new VenusPool[](arrayLength);
         uint256 index = 0;
 
         for (uint256 i = 0; i < pools.length; i++) {
@@ -237,17 +245,17 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of Fuse pool indexes and data created by `account`.
+     * @notice Returns arrays of Venus pool indexes and data created by `account`.
      */
     function getPoolsByAccount(address account)
         external
         view
-        returns (uint256[] memory, FusePool[] memory)
+        returns (uint256[] memory, VenusPool[] memory)
     {
         uint256[] memory indexes = new uint256[](
             _poolsByAccount[account].length
         );
-        FusePool[] memory accountPools = new FusePool[](
+        VenusPool[] memory accountPools = new VenusPool[](
             _poolsByAccount[account].length
         );
 
@@ -260,12 +268,12 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @dev Maps Ethereum accounts to arrays of Fuse pool Comptroller proxy contract addresses.
+     * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
      */
     mapping(address => address[]) private _bookmarks;
 
     /**
-     * @notice Returns arrays of Fuse pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
+     * @notice Returns arrays of Venus pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
      */
     function getBookmarks(address account)
         external
@@ -276,14 +284,14 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @notice Bookmarks a Fuse pool Unitroller (Comptroller proxy) contract addresses.
+     * @notice Bookmarks a Venus pool Unitroller (Comptroller proxy) contract addresses.
      */
     function bookmarkPool(address comptroller) external {
         _bookmarks[msg.sender].push(comptroller);
     }
 
     /**
-     * @notice Modify existing Fuse pool name.
+     * @notice Modify existing Venus pool name.
      */
     function setPoolName(uint256 index, string calldata name) external {
         Comptroller _comptroller = Comptroller(pools[index].comptroller);
@@ -291,7 +299,8 @@ contract PoolDirectory is OwnableUpgradeable {
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
-
+        
+        metadata[name] = metadata[pools[index].name];
         pools[index].name = name;
     }
 
@@ -321,13 +330,13 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of all public Fuse pool indexes and data with whitelisted admins.
+     * @notice Returns arrays of all public Venus pool indexes and data with whitelisted admins.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
     function getPublicPoolsByVerification(bool whitelistedAdmin)
         external
         view
-        returns (uint256[] memory, FusePool[] memory)
+        returns (uint256[] memory, VenusPool[] memory)
     {
         uint256 arrayLength = 0;
 
@@ -337,7 +346,7 @@ contract PoolDirectory is OwnableUpgradeable {
         }
 
         uint256[] memory indexes = new uint256[](arrayLength);
-        FusePool[] memory publicPools = new FusePool[](arrayLength);
+        VenusPool[] memory publicPools = new VenusPool[](arrayLength);
         uint256 index = 0;
 
         for (uint256 i = 0; i < pools.length; i++) {
