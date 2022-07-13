@@ -14,24 +14,17 @@ import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
  */
 contract PoolDirectory is OwnableUpgradeable {
     /**
-     * @dev Initializes a deployer whitelist if desired.
-     * @param _enforceDeployerWhitelist Boolean indicating if the deployer whitelist is to be enforced.
-     * @param _deployerWhitelist Array of Ethereum accounts to be whitelisted.
+     * @dev Initializes the deployer to owner.
      */
     function initialize(
-        bool _enforceDeployerWhitelist,
-        address[] memory _deployerWhitelist
     ) public initializer {
         __Ownable_init();
-        enforceDeployerWhitelist = _enforceDeployerWhitelist;
-        for (uint256 i = 0; i < _deployerWhitelist.length; i++)
-            deployerWhitelist[_deployerWhitelist[i]] = true;
     }
 
     /**
      * @dev Struct for a Fuse interest rate pool.
      */
-    struct FusePool {
+    struct VenusPool {
         string name;
         address creator;
         address comptroller;
@@ -40,56 +33,24 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @dev Array of Fuse interest rate pools.
+     * @dev Array of Venus pools.
      */
-    FusePool[] public pools;
+    VenusPool[] private _poolsByID;
 
     /**
-     * @dev Maps Ethereum accounts to arrays of Fuse pool indexes.
+     * @dev Maps Ethereum accounts to arrays of Venus pool indexes.
      */
     mapping(address => uint256[]) private _poolsByAccount;
 
     /**
-     * @dev Maps Fuse pool Comptroller addresses to bools indicating if they have been registered via the directory.
+     * @dev Maps Venus pool Comptroller addresses to bools indicating if it's registered or not.
      */
-    mapping(address => bool) public poolExists;
+    mapping(address => bool) public isPoolRegistered;
 
     /**
-     * @dev Emitted when a new Fuse pool is added to the directory.
+     * @dev Emitted when a new Venus pool is added to the directory.
      */
-    event PoolRegistered(uint256 index, FusePool pool);
-
-    /**
-     * @dev Booleans indicating if the deployer whitelist is enforced.
-     */
-    bool public enforceDeployerWhitelist;
-
-    /**
-     * @dev Maps Ethereum accounts to booleans indicating if they are allowed to deploy pools.
-     */
-    mapping(address => bool) public deployerWhitelist;
-
-    /**
-     * @dev Controls if the deployer whitelist is to be enforced.
-     * @param enforce Boolean indicating if the deployer whitelist is to be enforced.
-     */
-    function _setDeployerWhitelistEnforcement(bool enforce) external onlyOwner {
-        enforceDeployerWhitelist = enforce;
-    }
-
-    /**
-     * @dev Adds/removes Ethereum accounts to the deployer whitelist.
-     * @param deployers Array of Ethereum accounts to be whitelisted.
-     * @param status Whether to add or remove the accounts.
-     */
-    function _editDeployerWhitelist(address[] calldata deployers, bool status)
-        external
-        onlyOwner
-    {
-        require(deployers.length > 0, "No deployers supplied.");
-        for (uint256 i = 0; i < deployers.length; i++)
-            deployerWhitelist[deployers[i]] = status;
-    }
+    event PoolRegistered(uint256 index, VenusPool pool);
 
     /**
      * @dev Adds a new Fuse pool to the directory (without checking msg.sender).
@@ -102,41 +63,36 @@ contract PoolDirectory is OwnableUpgradeable {
         returns (uint256)
     {
         require(
-            !poolExists[comptroller],
+            !isPoolRegistered[comptroller],
             "Pool already exists in the directory."
         );
-        require(
-            !enforceDeployerWhitelist || deployerWhitelist[msg.sender],
-            "Sender is not on deployer whitelist."
-        );
         require(bytes(name).length <= 100, "No pool name supplied.");
-        FusePool memory pool = FusePool(
+        VenusPool memory pool = VenusPool(
             name,
             msg.sender,
             comptroller,
             block.number,
             block.timestamp
         );
-        pools.push(pool);
-        _poolsByAccount[msg.sender].push(pools.length - 1);
-        poolExists[comptroller] = true;
-        emit PoolRegistered(pools.length - 1, pool);
-        return pools.length - 1;
+        _poolsByID.push(pool);
+        _poolsByAccount[msg.sender].push(_poolsByID.length - 1);
+        isPoolRegistered[comptroller] = true;
+        emit PoolRegistered(_poolsByID.length - 1, pool);
+        return _poolsByID.length - 1;
     }
 
     /**
-     * @dev Deploys a new Fuse pool and adds to the directory.
+     * @dev Deploys a new Venus pool and adds to the directory.
      * @param name The name of the pool.
-     * @param implementation The Comptroller implementation contract address.
+     * @param implementation The Comptroller implementation address.
      * @param closeFactor The pool's close factor (scaled by 1e18).
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
-     * @param priceOracle The pool's PriceOracle contract address.
-     * @return The index of the registered Fuse pool and the Unitroller proxy address.
+     * @param priceOracle The pool's PriceOracle address.
+     * @return The index of the registered Venus pool and the proxy(Unitroller ) address.
      */
-    function deployPool(
+    function createRegistryPool(
         string memory name,
         address implementation,
-        // bool enforceWhitelist,
         uint256 closeFactor,
         uint256 liquidationIncentive,
         address priceOracle
@@ -144,56 +100,43 @@ contract PoolDirectory is OwnableUpgradeable {
         // Input validation
         require(
             implementation != address(0),
-            "No Comptroller implementation contract address specified."
+            "RegistryPool: Invalid Comptroller implementation address."
         );
         require(
             priceOracle != address(0),
-            "No PriceOracle contract address specified."
+            "RegistryPool: Invalid PriceOracle address."
         );
 
-        // Setup Unitroller
+        // Setup Unitroller(Proxy)
         Unitroller unitroller = new Unitroller();
         address proxy = address(unitroller);
         require(
             unitroller._setPendingImplementation(implementation) == 0,
-            "Failed to set pending implementation on Unitroller."
-        ); // Checks Comptroller implementation whitelist
+            "RegistryPool: Failed to set pending implementation in Unitroller."
+        );
         Comptroller comptrollerImplementation = Comptroller(implementation);
         comptrollerImplementation._become(unitroller);
         Comptroller comptrollerProxy = Comptroller(proxy);
 
-        // Set pool parameters
+        // Set Venus pool parameters
         require(
             comptrollerProxy._setCloseFactor(closeFactor) == 0,
-            "Failed to set pool close factor."
+            "RegistryPool: Failed to set close factor of Pool."
         );
         require(
             comptrollerProxy._setLiquidationIncentive(liquidationIncentive) ==
                 0,
-            "Failed to set pool liquidation incentive."
+            "RegistryPool: Failed to set liquidation incentive of Pool."
         );
         require(
             comptrollerProxy._setPriceOracle(PriceOracle(priceOracle)) == 0,
-            "Failed to set pool price oracle."
+            "RegistryPool: Failed to set price oracle of Pool."
         );
-
-        // Whitelist
-        // if (enforceWhitelist)
-        //     require(
-        //         comptrollerProxy._setWhitelistEnforcement(true) == 0,
-        //         "Failed to enforce supplier/borrower whitelist."
-        //     );
-
-        // Enable auto-implementation
-        // require(
-        //     comptrollerProxy._toggleAutoImplementations(true) == 0,
-        //     "Failed to enable pool auto implementations."
-        // );
 
         // Make msg.sender the admin
         require(
             unitroller._setPendingAdmin(msg.sender) == 0,
-            "Failed to set pending admin on Unitroller."
+            "RegistryPool: Failed to set pending admin in Unitroller."
         );
 
         // Register the pool with this PoolDirectory
@@ -201,11 +144,19 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of all Fuse pools' data.
+     * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() external view returns (FusePool[] memory) {
-        return pools;
+    function getAllPools() external view returns (VenusPool[] memory) {
+        return _poolsByID;
+    }
+
+    /**
+     * @notice Returns Venus pool by PoolID.
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     */
+    function getPoolByID(uint256 index) external view returns (VenusPool memory) {
+        return _poolsByID[index];
     }
 
     /**
@@ -215,25 +166,25 @@ contract PoolDirectory is OwnableUpgradeable {
     function getPublicPools()
         external
         view
-        returns (uint256[] memory, FusePool[] memory)
+        returns (uint256[] memory, VenusPool[] memory)
     {
-        uint256 arrayLength = 0;
+        uint256 poolsLength = _poolsByID.length;
 
-        for (uint256 i = 0; i < pools.length; i++) {
-            arrayLength++;
-        }
+        // for (uint256 i = 0; i < pools.length; i++) {
+        //     arrayLength++;
+        // }
 
-        uint256[] memory indexes = new uint256[](arrayLength);
-        FusePool[] memory publicPools = new FusePool[](arrayLength);
+        uint256[] memory PoolIndexes = new uint256[](poolsLength);
+        VenusPool[] memory publicPools = new VenusPool[](poolsLength);
         uint256 index = 0;
 
-        for (uint256 i = 0; i < pools.length; i++) {
-            indexes[index] = i;
-            publicPools[index] = pools[i];
+        for (uint256 i = 0; i < poolsLength; i++) {
+            PoolIndexes[index] = i;
+            publicPools[index] = _poolsByID[i];
             index++;
         }
 
-        return (indexes, publicPools);
+        return (PoolIndexes, publicPools);
     }
 
     /**
@@ -242,18 +193,18 @@ contract PoolDirectory is OwnableUpgradeable {
     function getPoolsByAccount(address account)
         external
         view
-        returns (uint256[] memory, FusePool[] memory)
+        returns (uint256[] memory, VenusPool[] memory)
     {
         uint256[] memory indexes = new uint256[](
             _poolsByAccount[account].length
         );
-        FusePool[] memory accountPools = new FusePool[](
+        VenusPool[] memory accountPools = new VenusPool[](
             _poolsByAccount[account].length
         );
 
         for (uint256 i = 0; i < _poolsByAccount[account].length; i++) {
             indexes[i] = _poolsByAccount[account][i];
-            accountPools[i] = pools[_poolsByAccount[account][i]];
+            accountPools[i] = _poolsByID[_poolsByAccount[account][i]];
         }
 
         return (indexes, accountPools);
@@ -283,70 +234,16 @@ contract PoolDirectory is OwnableUpgradeable {
     }
 
     /**
-     * @notice Modify existing Fuse pool name.
+     * @notice Modify existing Venus pool name.
      */
     function setPoolName(uint256 index, string calldata name) external {
-        Comptroller _comptroller = Comptroller(pools[index].comptroller);
+        Comptroller _comptroller = Comptroller(_poolsByID[index].comptroller);
 
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
 
-        pools[index].name = name;
+        _poolsByID[index].name = name;
     }
 
-    /**
-     * @dev Maps Ethereum accounts to booleans indicating if they are a whitelisted admin.
-     */
-    mapping(address => bool) public adminWhitelist;
-
-    /**
-     * @dev Event emitted when the admin whitelist is updated.
-     */
-    event AdminWhitelistUpdated(address[] admins, bool status);
-
-    /**
-     * @dev Adds/removes Ethereum accounts to the admin whitelist.
-     * @param admins Array of Ethereum accounts to be whitelisted.
-     * @param status Whether to add or remove the accounts.
-     */
-    function _editAdminWhitelist(address[] calldata admins, bool status)
-        external
-        onlyOwner
-    {
-        require(admins.length > 0, "No admins supplied.");
-        for (uint256 i = 0; i < admins.length; i++)
-            adminWhitelist[admins[i]] = status;
-        emit AdminWhitelistUpdated(admins, status);
-    }
-
-    /**
-     * @notice Returns arrays of all public Fuse pool indexes and data with whitelisted admins.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
-     */
-    function getPublicPoolsByVerification(bool whitelistedAdmin)
-        external
-        view
-        returns (uint256[] memory, FusePool[] memory)
-    {
-        uint256 arrayLength = 0;
-
-        for (uint256 i = 0; i < pools.length; i++) {
-            Comptroller comptroller = Comptroller(pools[i].comptroller);
-            arrayLength++;
-        }
-
-        uint256[] memory indexes = new uint256[](arrayLength);
-        FusePool[] memory publicPools = new FusePool[](arrayLength);
-        uint256 index = 0;
-
-        for (uint256 i = 0; i < pools.length; i++) {
-            Comptroller comptroller = Comptroller(pools[i].comptroller);
-            indexes[index] = i;
-            publicPools[index] = pools[i];
-            index++;
-        }
-
-        return (indexes, publicPools);
-    }
 }

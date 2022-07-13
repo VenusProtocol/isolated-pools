@@ -25,7 +25,7 @@ describe('PoolDirectory', async function () {
     poolDirectory = await PoolDirectory.deploy();
     await poolDirectory.deployed();
 
-    await poolDirectory.initialize(false, []);
+    await poolDirectory.initialize();
 
     const Comptroller = await ethers.getContractFactory('Comptroller');
     comptroller = await Comptroller.deploy();
@@ -38,7 +38,7 @@ describe('PoolDirectory', async function () {
     simplePriceOracle = await SimplePriceOracle.deploy()
     await simplePriceOracle.deployed()
 
-    await poolDirectory.deployPool(
+    await poolDirectory.createRegistryPool(
       "Pool 1",
       comptroller.address,
       closeFactor,
