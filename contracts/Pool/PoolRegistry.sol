@@ -9,10 +9,10 @@ import "../PriceOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 /**
- * @title PoolDirectory
- * @notice PoolDirectory is a directory for Venus interest rate pools.
+ * @title PoolRegistry
+ * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolDirectory is OwnableUpgradeable {
+contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
@@ -139,8 +139,21 @@ contract PoolDirectory is OwnableUpgradeable {
             "RegistryPool: Failed to set pending admin in Unitroller."
         );
 
-        // Register the pool with this PoolDirectory
+        // Register the pool with this PoolRegistry
         return (_registerPool(name, proxy), proxy);
+    }
+
+    /**
+     * @notice Modify existing Venus pool name.
+     */
+    function setPoolName(uint256 index, string calldata name) external {
+        Comptroller _comptroller = Comptroller(_poolsByID[index].comptroller);
+
+        // Note: Compiler throws stack to deep if autoformatted with Prettier
+        // prettier-ignore
+        require(msg.sender == _comptroller.admin() || msg.sender == owner());
+
+        _poolsByID[index].name = name;
     }
 
     /**
@@ -169,10 +182,6 @@ contract PoolDirectory is OwnableUpgradeable {
         returns (uint256[] memory, VenusPool[] memory)
     {
         uint256 poolsLength = _poolsByID.length;
-
-        // for (uint256 i = 0; i < pools.length; i++) {
-        //     arrayLength++;
-        // }
 
         uint256[] memory PoolIndexes = new uint256[](poolsLength);
         VenusPool[] memory publicPools = new VenusPool[](poolsLength);
@@ -231,19 +240,6 @@ contract PoolDirectory is OwnableUpgradeable {
      */
     function bookmarkPool(address comptroller) external {
         _bookmarks[msg.sender].push(comptroller);
-    }
-
-    /**
-     * @notice Modify existing Venus pool name.
-     */
-    function setPoolName(uint256 index, string calldata name) external {
-        Comptroller _comptroller = Comptroller(_poolsByID[index].comptroller);
-
-        // Note: Compiler throws stack to deep if autoformatted with Prettier
-        // prettier-ignore
-        require(msg.sender == _comptroller.admin() || msg.sender == owner());
-
-        _poolsByID[index].name = name;
     }
 
 }

@@ -1,10 +1,10 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { MockToken, PoolDirectory, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle, Unitroller } from "../../typechain";
+import { MockToken, PoolRegistry, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle, Unitroller } from "../../typechain";
 import BigNumber from "bignumber.js"
 import { convertToUnit } from "../../helpers/utils";
 
-let poolDirectory:PoolDirectory
+let poolRegistry:PoolRegistry
 let comptroller:Comptroller
 let simplePriceOracle:SimplePriceOracle
 let mockDAI:MockToken
@@ -19,13 +19,13 @@ let priceOracle:MockPriceOracle
 let comptrollerProxy:Comptroller
 let unitroller:Unitroller
 
-describe('PoolDirectory', async function () {
+describe('PoolRegistry', async function () {
   it('Deploy Comptroller', async function () {
-    const PoolDirectory = await ethers.getContractFactory('PoolDirectory');
-    poolDirectory = await PoolDirectory.deploy();
-    await poolDirectory.deployed();
+    const PoolRegistry = await ethers.getContractFactory('PoolRegistry');
+    poolRegistry = await PoolRegistry.deploy();
+    await poolRegistry.deployed();
 
-    await poolDirectory.initialize();
+    await poolRegistry.initialize();
 
     const Comptroller = await ethers.getContractFactory('Comptroller');
     comptroller = await Comptroller.deploy();
@@ -38,14 +38,14 @@ describe('PoolDirectory', async function () {
     simplePriceOracle = await SimplePriceOracle.deploy()
     await simplePriceOracle.deployed()
 
-    await poolDirectory.createRegistryPool(
+    await poolRegistry.createRegistryPool(
       "Pool 1",
       comptroller.address,
       closeFactor,
       liquidationIncentive,
       simplePriceOracle.address
     )
-    const pools = await poolDirectory.callStatic.getAllPools()
+    const pools = await poolRegistry.callStatic.getAllPools()
     expect(pools[0].name).equal("Pool 1")
 
     comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
