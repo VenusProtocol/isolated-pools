@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "../@openzeppelin/Initializable.sol";
-import "../@openzeppelin/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../Comptroller.sol";
 import "../Unitroller.sol";
 import "../PriceOracle.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 /**
  * @title PoolDirectory
