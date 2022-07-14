@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { MockToken, PoolRegistry, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle, Unitroller } from "../../typechain";
+import { MockToken, PoolRegistry, Comptroller, SimplePriceOracle, CErc20Immutable, DAIInterestRateModelV3, JumpRateModelV2, MockPotLike, MockJugLike, MockPriceOracle, Unitroller, CErc20ImmutableFactory, JumpRateModelFactory } from "../../typechain";
 import BigNumber from "bignumber.js"
 import { convertToUnit } from "../../helpers/utils";
 
@@ -18,14 +18,27 @@ let jugLike:MockJugLike
 let priceOracle:MockPriceOracle
 let comptrollerProxy:Comptroller
 let unitroller:Unitroller
+let cTokenFactory:CErc20ImmutableFactory
+let rateFactory:JumpRateModelFactory
 
 describe('PoolRegistry', async function () {
   it('Deploy Comptroller', async function () {
+    const CErc20ImmutableFactory = await ethers.getContractFactory('CErc20ImmutableFactory');
+    cTokenFactory = await CErc20ImmutableFactory.deploy();
+    await cTokenFactory.deployed();
+
+    const JumpRateModelFactory = await ethers.getContractFactory('JumpRateModelFactory');
+    rateFactory = await JumpRateModelFactory.deploy();
+    await rateFactory.deployed();
+
     const PoolRegistry = await ethers.getContractFactory('PoolRegistry');
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
-    await poolRegistry.initialize();
+    await poolRegistry.initialize(
+      cTokenFactory.address,
+      rateFactory.address
+    );
 
     const Comptroller = await ethers.getContractFactory('Comptroller');
     comptroller = await Comptroller.deploy(poolRegistry.address);
