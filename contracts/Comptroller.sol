@@ -86,8 +86,12 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
     // No collateralFactorMantissa may exceed this value
     uint internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
 
-    constructor() {
+    // PoolRegistry
+    address immutable poolRegistry;
+
+    constructor(address _poolRegistry) {
         admin = msg.sender;
+        poolRegistry = _poolRegistry;
     }
 
     /*** Assets You Are In ***/
@@ -866,7 +870,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
       */
     function _setCollateralFactor(CToken cToken, uint newCollateralFactorMantissa) external returns (uint) {
         // Check caller is admin
-        if (msg.sender != admin) {
+        if (msg.sender != admin && msg.sender != poolRegistry) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SET_COLLATERAL_FACTOR_OWNER_CHECK);
         }
 
@@ -930,7 +934,7 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
       * @return uint 0=success, otherwise a failure. (See enum Error for details)
       */
     function _supportMarket(CToken cToken) external returns (uint) {
-        if (msg.sender != admin) {
+        if (msg.sender != admin && msg.sender != poolRegistry) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);
         }
 

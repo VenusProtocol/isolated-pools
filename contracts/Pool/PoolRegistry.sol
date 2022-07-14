@@ -8,20 +8,30 @@ import "../Unitroller.sol";
 import "../PriceOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
-import "../CErc20Immutable.sol";
+import "../Factories/CErc20ImmutableFactory.sol";
+import "../Factories/JumpRateModelFactory.sol";
 import "../JumpRateModelV2.sol";
+import "../CErc20Immutable.sol";
 
 /**
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is OwnableUpgradeable {
+    CErc20ImmutableFactory private cTokenFactory;
+    JumpRateModelFactory private rateFactory;
+
     /**
      * @dev Initializes the deployer to owner.
      */
     function initialize(
+        CErc20ImmutableFactory _cTokenFactory,
+        JumpRateModelFactory _rateFactory
     ) public initializer {
         __Ownable_init();
+
+        cTokenFactory = _cTokenFactory;
+        rateFactory = _rateFactory;
     }
 
     /**
@@ -282,7 +292,7 @@ contract PoolRegistry is OwnableUpgradeable {
     function addMarket(
         AddMarketInput memory input
     ) external {
-        JumpRateModelV2 rate = new JumpRateModelV2(
+        JumpRateModelV2 rate = rateFactory.deployJumpRateModel(
             input.baseRatePerYear,
             input.multiplierPerYear,
             input.jumpMultiplierPerYear,
@@ -292,7 +302,7 @@ contract PoolRegistry is OwnableUpgradeable {
 
         Comptroller comptroller = Comptroller(_poolsByID[input.poolId].comptroller);
 
-        CErc20Immutable cToken = new CErc20Immutable(
+        CErc20Immutable cToken = cTokenFactory.deployCErc20(
             input.asset,
             comptroller,
             rate,

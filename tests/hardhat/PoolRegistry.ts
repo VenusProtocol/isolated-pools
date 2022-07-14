@@ -28,7 +28,7 @@ describe('PoolRegistry', async function () {
     await poolRegistry.initialize();
 
     const Comptroller = await ethers.getContractFactory('Comptroller');
-    comptroller = await Comptroller.deploy();
+    comptroller = await Comptroller.deploy(poolRegistry.address);
     await comptroller.deployed();
 
     const closeFactor = convertToUnit(0.05, 18) 
