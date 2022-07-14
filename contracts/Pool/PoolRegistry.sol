@@ -49,6 +49,11 @@ contract PoolRegistry is OwnableUpgradeable {
     mapping(address => uint256[]) private _poolsByAccount;
 
     /**
+     * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
+     */
+    mapping(address => address[]) private _bookmarks;
+
+    /**
      * @dev Emitted when a new Venus pool is added to the directory.
      */
     event PoolRegistered(uint256 index, VenusPool pool);
@@ -162,6 +167,13 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
+     * @notice Bookmarks a Venus pool Unitroller (Comptroller proxy) contract addresses.
+     */
+    function bookmarkPool(address comptroller) external {
+        _bookmarks[msg.sender].push(comptroller);
+    }
+    
+    /**
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
@@ -188,17 +200,16 @@ contract PoolRegistry is OwnableUpgradeable {
     {
         uint256 poolsLength = _poolsByID.length;
 
-        uint256[] memory PoolIndexes = new uint256[](poolsLength);
+        uint256[] memory poolIndexes = new uint256[](poolsLength);
         VenusPool[] memory publicPools = new VenusPool[](poolsLength);
         uint256 index = 0;
 
         for (uint256 i = 0; i < poolsLength; i++) {
-            PoolIndexes[index] = i;
-            publicPools[index] = _poolsByID[i];
-            index++;
+            poolIndexes[index] = i;
+            publicPools[index++] = _poolsByID[i];
         }
 
-        return (PoolIndexes, publicPools);
+        return (poolIndexes, publicPools);
     }
 
     /**
@@ -209,16 +220,20 @@ contract PoolRegistry is OwnableUpgradeable {
         view
         returns (uint256[] memory, VenusPool[] memory)
     {
+        uint256 poolLength = _poolsByAccount[account].length;
+        
         uint256[] memory indexes = new uint256[](
-            _poolsByAccount[account].length
+            poolLength
         );
+        
         VenusPool[] memory accountPools = new VenusPool[](
-            _poolsByAccount[account].length
+            poolLength
         );
 
-        for (uint256 i = 0; i < _poolsByAccount[account].length; i++) {
-            indexes[i] = _poolsByAccount[account][i];
-            accountPools[i] = _poolsByID[_poolsByAccount[account][i]];
+        for (uint256 i = 0; i < poolLength; i++) {
+            uint256 index = _poolsByAccount[account][i];
+            indexes[i] = index;
+            accountPools[i] = _poolsByID[index];
         }
 
         return (indexes, accountPools);
@@ -236,12 +251,6 @@ contract PoolRegistry is OwnableUpgradeable {
     {
         return _poolsByComptroller[comptroller];   
     }
-    
-
-    /**
-     * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
-     */
-    mapping(address => address[]) private _bookmarks;
 
     /**
      * @notice Returns arrays of Venus pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
@@ -252,13 +261,6 @@ contract PoolRegistry is OwnableUpgradeable {
         returns (address[] memory)
     {
         return _bookmarks[account];
-    }
-
-    /**
-     * @notice Bookmarks a Venus pool Unitroller (Comptroller proxy) contract addresses.
-     */
-    function bookmarkPool(address comptroller) external {
-        _bookmarks[msg.sender].push(comptroller);
     }
 
 }
