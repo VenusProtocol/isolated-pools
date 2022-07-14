@@ -22,7 +22,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @dev Struct for a Fuse interest rate pool.
+     * @dev Struct for a Venus interest rate pool.
      */
     struct VenusPool {
         string name;
@@ -38,14 +38,15 @@ contract PoolRegistry is OwnableUpgradeable {
     VenusPool[] private _poolsByID;
 
     /**
+     * @dev Maps comptroller address to Venus pool.
+     */
+    mapping(address => VenusPool) private _poolsByComptroller;
+
+
+    /**
      * @dev Maps Ethereum accounts to arrays of Venus pool indexes.
      */
     mapping(address => uint256[]) private _poolsByAccount;
-
-    /**
-     * @dev Maps Venus pool Comptroller addresses to bools indicating if it's registered or not.
-     */
-    mapping(address => bool) public isPoolRegistered;
 
     /**
      * @dev Emitted when a new Venus pool is added to the directory.
@@ -53,18 +54,20 @@ contract PoolRegistry is OwnableUpgradeable {
     event PoolRegistered(uint256 index, VenusPool pool);
 
     /**
-     * @dev Adds a new Fuse pool to the directory (without checking msg.sender).
+     * @dev Adds a new Venus pool to the directory (without checking msg.sender).
      * @param name The name of the pool.
      * @param comptroller The pool's Comptroller proxy contract address.
-     * @return The index of the registered Fuse pool.
+     * @return The index of the registered Venus pool.
      */
     function _registerPool(string memory name, address comptroller)
         internal
         returns (uint256)
     {
+        VenusPool memory venusPool = _poolsByComptroller[comptroller];
+        
         require(
-            !isPoolRegistered[comptroller],
-            "Pool already exists in the directory."
+            venusPool.creator == address(0),
+            "RegistryPool: Pool already exists in the directory."
         );
         require(bytes(name).length <= 100, "No pool name supplied.");
         VenusPool memory pool = VenusPool(
@@ -75,10 +78,12 @@ contract PoolRegistry is OwnableUpgradeable {
             block.timestamp
         );
         _poolsByID.push(pool);
-        _poolsByAccount[msg.sender].push(_poolsByID.length - 1);
-        isPoolRegistered[comptroller] = true;
-        emit PoolRegistered(_poolsByID.length - 1, pool);
-        return _poolsByID.length - 1;
+        _poolsByComptroller[comptroller] = pool;
+        uint256 poolsLength = _poolsByID.length;
+        
+        _poolsByAccount[msg.sender].push(poolsLength - 1);
+        emit PoolRegistered(poolsLength - 1, pool);
+        return poolsLength - 1;
     }
 
     /**
@@ -173,7 +178,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of all public Fuse pool indexes and data.
+     * @notice Returns arrays of all public Venus pool indexes and data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
     function getPublicPools()
@@ -197,7 +202,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of Fuse pool indexes and data created by `account`.
+     * @notice Returns arrays of Venus pool indexes and data created by `account`.
      */
     function getPoolsByAccount(address account)
         external
@@ -219,13 +224,27 @@ contract PoolRegistry is OwnableUpgradeable {
         return (indexes, accountPools);
     }
 
+    /** 
+     * @param comptroller The Comptroller implementation address.
+     * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
+     */
+
+    function getPoolsByComptroller(address comptroller)
+        external
+        view
+        returns (VenusPool memory)
+    {
+        return _poolsByComptroller[comptroller];   
+    }
+    
+
     /**
-     * @dev Maps Ethereum accounts to arrays of Fuse pool Comptroller proxy contract addresses.
+     * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
      */
     mapping(address => address[]) private _bookmarks;
 
     /**
-     * @notice Returns arrays of Fuse pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
+     * @notice Returns arrays of Venus pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
      */
     function getBookmarks(address account)
         external
@@ -236,7 +255,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @notice Bookmarks a Fuse pool Unitroller (Comptroller proxy) contract addresses.
+     * @notice Bookmarks a Venus pool Unitroller (Comptroller proxy) contract addresses.
      */
     function bookmarkPool(address comptroller) external {
         _bookmarks[msg.sender].push(comptroller);
