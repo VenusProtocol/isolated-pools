@@ -8,6 +8,9 @@ import "../Unitroller.sol";
 import "../PriceOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
+import "../CErc20Immutable.sol";
+import "../JumpRateModelV2.sol";
+
 /**
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
@@ -52,6 +55,19 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
      */
     mapping(address => address[]) private _bookmarks;
+
+    struct AddMarketInput {
+        uint poolId;      
+        address asset;
+        uint8 decimals;
+        string name;
+        string symbol;
+        uint256 baseRatePerYear;
+        uint256 multiplierPerYear;
+        uint256 jumpMultiplierPerYear;
+        uint256 kink_;
+        uint256 collateralFactor;
+    }
 
     /**
      * @dev Emitted when a new Venus pool is added to the directory.
@@ -263,4 +279,31 @@ contract PoolRegistry is OwnableUpgradeable {
         return _bookmarks[account];
     }
 
+    function addMarket(
+        AddMarketInput memory input
+    ) external {
+        JumpRateModelV2 rate = new JumpRateModelV2(
+            input.baseRatePerYear,
+            input.multiplierPerYear,
+            input.jumpMultiplierPerYear,
+            input.kink_,
+            msg.sender
+        );
+
+        Comptroller comptroller = Comptroller(_poolsByID[input.poolId].comptroller);
+
+        CErc20Immutable cToken = new CErc20Immutable(
+            input.asset,
+            comptroller,
+            rate,
+            10 ** input.decimals,
+            input.name,
+            input.symbol,
+            input.decimals,
+            payable(msg.sender)
+        );
+
+        comptroller._supportMarket(cToken);
+        comptroller._setCollateralFactor(cToken, input.collateralFactor);
+    }
 }
