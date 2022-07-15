@@ -6,14 +6,11 @@ import {
   Comptroller,
   SimplePriceOracle,
   CErc20Immutable,
-  DAIInterestRateModelV3,
-  JumpRateModelV2,
-  MockPotLike,
-  MockJugLike,
   MockPriceOracle,
   Unitroller,
   CErc20ImmutableFactory,
   JumpRateModelFactory,
+  WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
@@ -26,17 +23,14 @@ let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
 let cWBTC: CErc20Immutable;
-let daiInterest: DAIInterestRateModelV3;
-let wbtcInterest: JumpRateModelV2;
-let potLike: MockPotLike;
-let jugLike: MockJugLike;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
-let cTokenFactory:CErc20ImmutableFactory
-let rateFactory:JumpRateModelFactory
+let cTokenFactory:CErc20ImmutableFactory;
+let jumpRateFactory:JumpRateModelFactory;
+let whitePaperRateFactory:WhitePaperInterestRateModelFactory;
 
 describe("PoolRegistry: Tests", async function () {
   /**
@@ -48,8 +42,12 @@ describe("PoolRegistry: Tests", async function () {
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory('JumpRateModelFactory');
-    rateFactory = await JumpRateModelFactory.deploy();
-    await rateFactory.deployed();
+    jumpRateFactory = await JumpRateModelFactory.deploy();
+    await jumpRateFactory.deployed();
+
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory('WhitePaperInterestRateModelFactory');
+    whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+    await whitePaperRateFactory.deployed();
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
     poolRegistry = await PoolRegistry.deploy();
@@ -57,7 +55,8 @@ describe("PoolRegistry: Tests", async function () {
 
     await poolRegistry.initialize(
       cTokenFactory.address,
-      rateFactory.address
+      jumpRateFactory.address,
+      whitePaperRateFactory.address
     );
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
@@ -187,7 +186,7 @@ describe("PoolRegistry: Tests", async function () {
     expect(pool2[0]).equal("Pool 2");
   });
 
-  it("Deploy CToken", async function () {
+  it("Deploy Mock Tokens", async function () {
     const MockDAI = await ethers.getContractFactory("MockToken");
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
@@ -203,57 +202,7 @@ describe("PoolRegistry: Tests", async function () {
     const btcBalance = await mockWBTC.balanceOf(owner.address);
 
     expect(btcBalance).equal(convertToUnit(1000, 8));
-
-    const MockPotLike = await ethers.getContractFactory("MockPotLike");
-    potLike = await MockPotLike.deploy();
-
-    const MockJugLike = await ethers.getContractFactory("MockJugLike");
-    jugLike = await MockJugLike.deploy();
-
-    const DAIInterestRateModelV3 = await ethers.getContractFactory(
-      "DAIInterestRateModelV3"
-    );
-    daiInterest = await DAIInterestRateModelV3.deploy(
-      "1090000000000000000",
-      "800000000000000000",
-      potLike.address,
-      jugLike.address,
-      owner.address
-    );
-
-    const CDAI = await ethers.getContractFactory("CErc20Immutable");
-    cDAI = await CDAI.deploy(
-      mockDAI.address,
-      comptroller1Proxy.address,
-      daiInterest.address,
-      convertToUnit(1, 18),
-      "Compound DAI",
-      "cDAI",
-      18,
-      owner.address
-    );
-
-    const JumpRateModelV2 = await ethers.getContractFactory("JumpRateModelV2");
-    wbtcInterest = await JumpRateModelV2.deploy(
-      0,
-      "40000000000000000",
-      "1090000000000000000",
-      "800000000000000000",
-      owner.address
-    );
-
-    const CWBTC = await ethers.getContractFactory("CErc20Immutable");
-    cWBTC = await CWBTC.deploy(
-      mockWBTC.address,
-      comptroller1Proxy.address,
-      wbtcInterest.address,
-      convertToUnit(1, 18),
-      "Compound WBTC",
-      "cWBTC",
-      8,
-      owner.address
-    );
-  });
+  })
 
   it("Deploy Price Oracle", async function () {
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -262,32 +211,55 @@ describe("PoolRegistry: Tests", async function () {
     const btcPrice = "21000.34";
     const daiPrice = "1";
 
-    await priceOracle.setPrice(cDAI.address, convertToUnit(daiPrice, 18));
-    await priceOracle.setPrice(cWBTC.address, convertToUnit(btcPrice, 28));
-
-    expect(
-      (await priceOracle.getUnderlyingPrice(cDAI.address)).toString()
-    ).equal(convertToUnit(daiPrice, 18));
-    expect(
-      (await priceOracle.getUnderlyingPrice(cWBTC.address)).toString()
-    ).equal(convertToUnit(btcPrice, 28));
+    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
+    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
 
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
   });
 
+  it("Deploy CToken", async function () {
+    await poolRegistry.addMarket({
+      poolId: 0,
+      asset: mockWBTC.address,
+      decimals: 8,
+      name: "Compound WBTC",
+      symbol: "cWBTC",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18)
+    });
+
+    await poolRegistry.addMarket({
+      poolId: 0,
+      asset: mockDAI.address,
+      decimals: 18,
+      name: "Compound DAI",
+      symbol: "cDAI",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18)
+    });
+    
+    const cWBTCAddress = await poolRegistry.getCTokenForAsset(0, mockWBTC.address);
+    const cDAIAddress = await poolRegistry.getCTokenForAsset(0, mockDAI.address);
+
+    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress)
+    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress)
+  });
+
+  // Get all pools that support a given asset
+  it("Get pools with asset", async function () {
+    const pools = await poolRegistry.getPoolsSupportedByAsset(mockWBTC.address);
+    expect(pools[0].toString()).equal("0")
+  });
+
   it("Enter Market", async function () {
-    await comptroller1Proxy._supportMarket(cDAI.address);
-    await comptroller1Proxy._supportMarket(cWBTC.address);
-
-    await comptroller1Proxy._setCollateralFactor(
-      cDAI.address,
-      convertToUnit(0.7, 18)
-    );
-    await comptroller1Proxy._setCollateralFactor(
-      cWBTC.address,
-      convertToUnit(0.7, 18)
-    );
-
     const [owner, user] = await ethers.getSigners();
     await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
     await comptroller1Proxy
@@ -304,7 +276,7 @@ describe("PoolRegistry: Tests", async function () {
     await mockDAI.approve(cDAI.address, daiAmount);
     await cDAI.mint(daiAmount);
 
-    const [owner, user] = await ethers.getSigners();
+    const [, user] = await ethers.getSigners();
     await mockWBTC.connect(user).faucet(convertToUnit(1000, 8));
 
     const btcAmount = convertToUnit(1000, 8);

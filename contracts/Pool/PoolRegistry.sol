@@ -10,8 +10,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 import "../Factories/CErc20ImmutableFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
+import "../Factories/WhitePaperInterestRateModelFactory.sol";
+import "../WhitePaperInterestRateModel.sol";
 import "../JumpRateModelV2.sol";
 import "../CErc20Immutable.sol";
+import "../InterestRateModel.sol";
 
 /**
  * @title PoolRegistry
@@ -19,19 +22,22 @@ import "../CErc20Immutable.sol";
  */
 contract PoolRegistry is OwnableUpgradeable {
     CErc20ImmutableFactory private cTokenFactory;
-    JumpRateModelFactory private rateFactory;
+    JumpRateModelFactory private jumpRateFactory;
+    WhitePaperInterestRateModelFactory private whitePaperFactory;
 
     /**
      * @dev Initializes the deployer to owner.
      */
     function initialize(
         CErc20ImmutableFactory _cTokenFactory,
-        JumpRateModelFactory _rateFactory
+        JumpRateModelFactory _jumpRateFactory,
+        WhitePaperInterestRateModelFactory _whitePaperFactory
     ) public initializer {
         __Ownable_init();
 
         cTokenFactory = _cTokenFactory;
-        rateFactory = _rateFactory;
+        jumpRateFactory = _jumpRateFactory;
+        whitePaperFactory = _whitePaperFactory;
     }
 
     /**
@@ -66,12 +72,28 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     mapping(address => address[]) private _bookmarks;
 
+    /**
+     * @dev Maps pool id to asset to cToken.
+     */
+    mapping(uint => mapping(address => address)) private _cTokens;
+
+    /**
+     * @dev Maps asset to list of supported pools.
+     */
+    mapping(address => uint[]) private _supportedPools;
+
+    enum InterestRateModels {
+        WhitePaper,
+        JumpRate
+    }
+
     struct AddMarketInput {
         uint poolId;      
         address asset;
         uint8 decimals;
         string name;
         string symbol;
+        InterestRateModels rateModel;
         uint256 baseRatePerYear;
         uint256 multiplierPerYear;
         uint256 jumpMultiplierPerYear;
@@ -269,13 +291,22 @@ contract PoolRegistry is OwnableUpgradeable {
     function addMarket(
         AddMarketInput memory input
     ) external {
-        JumpRateModelV2 rate = rateFactory.deployJumpRateModel(
-            input.baseRatePerYear,
-            input.multiplierPerYear,
-            input.jumpMultiplierPerYear,
-            input.kink_,
-            msg.sender
-        );
+        InterestRateModel rate;
+        if(input.rateModel == InterestRateModels.JumpRate) {
+            rate = InterestRateModel(jumpRateFactory.deploy(
+                input.baseRatePerYear,
+                input.multiplierPerYear,
+                input.jumpMultiplierPerYear,
+                input.kink_,
+                msg.sender
+            ));
+        } else {
+            rate = InterestRateModel(whitePaperFactory.deploy(
+                input.baseRatePerYear,
+                input.multiplierPerYear
+            ));
+        }
+        
 
         Comptroller comptroller = Comptroller(_poolsByID[input.poolId].comptroller);
 
@@ -292,5 +323,16 @@ contract PoolRegistry is OwnableUpgradeable {
 
         comptroller._supportMarket(cToken);
         comptroller._setCollateralFactor(cToken, input.collateralFactor);
+
+        _cTokens[input.poolId][input.asset] = address(cToken);
+        _supportedPools[input.asset].push(input.poolId);
+    }
+
+    function getCTokenForAsset(uint poolId, address asset) external view returns (address) {
+        return _cTokens[poolId][asset];
+    }
+
+    function getPoolsSupportedByAsset(address asset) external view returns (uint[] memory) {
+        return _supportedPools[asset];
     }
 }

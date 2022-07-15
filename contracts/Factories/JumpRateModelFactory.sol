@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import "../JumpRateModelV2.sol";
 
 contract JumpRateModelFactory {
-  function deployJumpRateModel(
+  function deploy(
     uint baseRatePerYear, 
     uint multiplierPerYear, 
     uint jumpMultiplierPerYear, 

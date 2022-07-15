@@ -2,20 +2,20 @@
 pragma solidity ^0.8.10;
 
 import "../PriceOracle.sol";
+import "../CErc20.sol";
 
-contract MockPriceOracle is PriceOracle {
+contract MockPriceOracle {
     mapping(address => uint) public assetPrices;
 
     //set price in 6 decimal precision
     constructor() {}
 
-    function setPrice(address cToken, uint price) external {
-        assetPrices[cToken] = price;
+    function setPrice(address asset, uint price) external {
+        assetPrices[asset] = price;
     }
 
     //https://compound.finance/docs/prices
-    function getUnderlyingPrice(CToken cToken) override public view returns (uint) {
-        cToken;
-        return assetPrices[address(cToken)];
+    function getUnderlyingPrice(CErc20 cToken) public view returns (uint) {
+        return assetPrices[cToken.underlying()];
     }
 }
