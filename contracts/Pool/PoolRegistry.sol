@@ -40,7 +40,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Maps comptroller address to Venus pool.
      */
-    mapping(address => VenusPool) private _poolsByComptroller;
+    mapping(address => VenusPool) private _poolByComptroller;
 
 
     /**
@@ -68,7 +68,7 @@ contract PoolRegistry is OwnableUpgradeable {
         internal
         returns (uint256)
     {
-        VenusPool memory venusPool = _poolsByComptroller[comptroller];
+        VenusPool memory venusPool = _poolByComptroller[comptroller];
         
         require(
             venusPool.creator == address(0),
@@ -83,7 +83,7 @@ contract PoolRegistry is OwnableUpgradeable {
             block.timestamp
         );
         _poolsByID.push(pool);
-        _poolsByComptroller[comptroller] = pool;
+        _poolByComptroller[comptroller] = pool;
         uint256 poolsLength = _poolsByID.length;
         
         _poolsByAccount[msg.sender].push(poolsLength - 1);
@@ -190,29 +190,6 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns arrays of all public Venus pool indexes and data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
-     */
-    function getPublicPools()
-        external
-        view
-        returns (uint256[] memory, VenusPool[] memory)
-    {
-        uint256 poolsLength = _poolsByID.length;
-
-        uint256[] memory poolIndexes = new uint256[](poolsLength);
-        VenusPool[] memory publicPools = new VenusPool[](poolsLength);
-        uint256 index = 0;
-
-        for (uint256 i = 0; i < poolsLength; i++) {
-            poolIndexes[index] = i;
-            publicPools[index++] = _poolsByID[i];
-        }
-
-        return (poolIndexes, publicPools);
-    }
-
-    /**
      * @notice Returns arrays of Venus pool indexes and data created by `account`.
      */
     function getPoolsByAccount(address account)
@@ -244,12 +221,12 @@ contract PoolRegistry is OwnableUpgradeable {
      * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
      */
 
-    function getPoolsByComptroller(address comptroller)
+    function getPoolByComptroller(address comptroller)
         external
         view
         returns (VenusPool memory)
     {
-        return _poolsByComptroller[comptroller];   
+        return _poolByComptroller[comptroller];   
     }
 
     /**
