@@ -150,15 +150,6 @@ describe("PoolRegistry: Tests", async function () {
     expect(pool.name).equal("Pool 2");
   });
 
-  // Get all pools by account
-  it("Get pools by account", async function () {
-    const [owner] = await ethers.getSigners();
-    const pools = await poolRegistry.getPoolsByAccount(owner.address);
-
-    expect(pools[1].length).equal(2);
-    expect(pools[1][0].name).equal("Pool 1");
-  });
-
   // Get all pool by the comptroller address.
   it("Get pool by comptroller", async function () {
     const pool1 = await poolRegistry.getPoolByComptroller(

@@ -2,11 +2,10 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
+import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "../Comptroller.sol";
 import "../Unitroller.sol";
 import "../PriceOracle.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 /**
  * @title PoolRegistry
@@ -42,12 +41,6 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     mapping(address => VenusPool) private _poolByComptroller;
 
-
-    /**
-     * @dev Maps Ethereum accounts to arrays of Venus pool indexes.
-     */
-    mapping(address => uint256[]) private _poolsByAccount;
-
     /**
      * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
      */
@@ -57,7 +50,12 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Emitted when a new Venus pool is added to the directory.
      */
     event PoolRegistered(uint256 index, VenusPool pool);
-
+    
+    /**
+     * @dev Emitted when a pool name is set.
+     */
+    event PoolNameSet(uint256 index, string name);
+    
     /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
      * @param name The name of the pool.
@@ -86,7 +84,6 @@ contract PoolRegistry is OwnableUpgradeable {
         _poolByComptroller[comptroller] = pool;
         uint256 poolsLength = _poolsByID.length;
         
-        _poolsByAccount[msg.sender].push(poolsLength - 1);
         emit PoolRegistered(poolsLength - 1, pool);
         return poolsLength - 1;
     }
@@ -106,7 +103,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 closeFactor,
         uint256 liquidationIncentive,
         address priceOracle
-    ) external virtual returns (uint256, address) {
+    ) onlyOwner external virtual returns (uint256, address) {
         // Input validation
         require(
             implementation != address(0),
@@ -164,6 +161,7 @@ contract PoolRegistry is OwnableUpgradeable {
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
 
         _poolsByID[index].name = name;
+        emit PoolNameSet(index, name);
     }
 
     /**
@@ -187,33 +185,6 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function getPoolByID(uint256 index) external view returns (VenusPool memory) {
         return _poolsByID[index];
-    }
-
-    /**
-     * @notice Returns arrays of Venus pool indexes and data created by `account`.
-     */
-    function getPoolsByAccount(address account)
-        external
-        view
-        returns (uint256[] memory, VenusPool[] memory)
-    {
-        uint256 poolLength = _poolsByAccount[account].length;
-        
-        uint256[] memory indexes = new uint256[](
-            poolLength
-        );
-        
-        VenusPool[] memory accountPools = new VenusPool[](
-            poolLength
-        );
-
-        for (uint256 i = 0; i < poolLength; i++) {
-            uint256 index = _poolsByAccount[account][i];
-            indexes[i] = index;
-            accountPools[i] = _poolsByID[index];
-        }
-
-        return (indexes, accountPools);
     }
 
     /** 
