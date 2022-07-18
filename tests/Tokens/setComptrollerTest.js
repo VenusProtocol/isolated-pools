@@ -1,6 +1,7 @@
 const {
   makeComptroller,
-  makeCToken
+  makeCToken,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 describe('CToken', function () {
@@ -11,6 +12,7 @@ describe('CToken', function () {
     cToken = await makeCToken();
     oldComptroller = cToken.comptroller;
     newComptroller = await makeComptroller();
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
     expect(newComptroller._address).not.toEqual(oldComptroller._address);
   });
 

@@ -3,6 +3,7 @@
 Test "Mint then Redeem All"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.005e18 cETH
     -- Check current affairs
     Assert Equal (Erc20 cETH TokenBalance Geoff) 10e8
@@ -18,6 +19,7 @@ Test "Mint then Redeem All"
 Test "Mint then Redeem Part"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.005e18 cETH
     -- Check current affairs
     Assert Equal (Erc20 cETH TokenBalance Geoff) 10e8
@@ -33,6 +35,7 @@ Test "Mint then Redeem Part"
 Test "Mint then Redeem Too Much"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.005e18 cETH
     AllowFailures
     -- Check and hold static
@@ -49,6 +52,7 @@ Test "Mint then Redeem Too Much"
 Test "Mint then Redeem Zero"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.005e18 cETH
     -- Check and hold static
     Invariant Static (CToken cETH ExchangeRateStored)
@@ -62,6 +66,7 @@ Pending "Mint then redeem with interest - no reserves"
     Invariant Success
     NewComptroller
     ListedCToken ZRX cETH initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Invariant Remains (CToken cETH Reserves) Zero
     Prep Geoff 50e18 ZRX cETH
     Mint Geoff 50e18 cETH
@@ -89,6 +94,7 @@ Pending "Mint then redeem part with interest - no reserves"
     Invariant Success
     NewComptroller
     ListedCToken ZRX cETH initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Invariant Remains (CToken cETH Reserves) Zero
     Prep Geoff 50e18 ZRX cETH
     Mint Geoff 50e18 cETH
@@ -114,6 +120,7 @@ Pending "Mint then redeem with reserves and interest"
     Invariant Success
     NewComptroller
     ListedCToken ZRX cETH initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Prep Geoff 50e18 ZRX cETH
     Mint Geoff 50e18 cETH
     Assert Equal (Erc20 cETH TokenBalance Geoff) 500e8
@@ -143,6 +150,7 @@ Pending "Mint then redeem with reserves and interest"
 Test "Two users Mint, one redeems"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.002e18 cETH
     Assert Equal (Erc20 cETH TokenBalance Geoff) 4e8
     Assert Equal (Erc20 cETH TotalSupply) 4e8

@@ -2,7 +2,8 @@ const {
   makeComptroller,
   makeCToken,
   enterMarkets,
-  quickMint
+  quickMint,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 describe('Comptroller', () => {
@@ -23,6 +24,7 @@ describe('Comptroller', () => {
     it("allows a borrow up to collateralFactor, but not more", async () => {
       const collateralFactor = 0.5, underlyingPrice = 1, user = accounts[1], amount = 1e6;
       const cToken = await makeCToken({supportMarket: true, collateralFactor, underlyingPrice});
+      await setMarketSupplyCap(vToken.comptroller, [vToken._address], [100000000000]);
 
       let error, liquidity, shortfall;
 
@@ -55,8 +57,11 @@ describe('Comptroller', () => {
       const cf1 = 0.5, cf2 = 0.666, cf3 = 0, up1 = 3, up2 = 2.718, up3 = 1;
       const c1 = amount1 * cf1 * up1, c2 = amount2 * cf2 * up2, collateral = Math.floor(c1 + c2);
       const cToken1 = await makeCToken({supportMarket: true, collateralFactor: cf1, underlyingPrice: up1});
+      await setMarketSupplyCap(vToken1.comptroller, [vToken1._address], [100000000000]);
       const cToken2 = await makeCToken({supportMarket: true, comptroller: cToken1.comptroller, collateralFactor: cf2, underlyingPrice: up2});
+      await setMarketSupplyCap(vToken2.comptroller, [vToken2._address], [100000000000]);
       const cToken3 = await makeCToken({supportMarket: true, comptroller: cToken1.comptroller, collateralFactor: cf3, underlyingPrice: up3});
+      await setMarketSupplyCap(vToken3.comptroller, [vToken3._address], [100000000000]);
 
       await enterMarkets([cToken1, cToken2, cToken3], user);
       await quickMint(cToken1, user, amount1);
@@ -100,6 +105,8 @@ describe('Comptroller', () => {
   describe("getHypotheticalAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
       const cToken = await makeCToken();
+      await setMarketSupplyCap(vToken.comptroller, [vToken._address], [100000000000]);
+     
       const {0: error, 1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getHypotheticalAccountLiquidity', [accounts[0], cToken._address, 0, 0]);
       expect(error).toEqualNumber(0);
       expect(liquidity).toEqualNumber(0);
@@ -109,6 +116,7 @@ describe('Comptroller', () => {
     it("returns collateral factor times dollar amount of tokens minted in a single market", async () => {
       const collateralFactor = 0.5, exchangeRate = 1, underlyingPrice = 1;
       const cToken = await makeCToken({supportMarket: true, collateralFactor, exchangeRate, underlyingPrice});
+      await setMarketSupplyCap(vToken.comptroller, [vToken._address], [100000000000]);
       const from = accounts[0], balance = 1e7, amount = 1e6;
       await enterMarkets([cToken], from);
       await send(cToken.underlying, 'harnessSetBalance', [from, balance], {from});

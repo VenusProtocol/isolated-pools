@@ -10,7 +10,9 @@ Test "Standard Upgrade"
     Assert Equal (Comptroller MaxAssets) 20
     Assert Equal (Comptroller Implementation) (Address ScenComptrollerG1)
     ListedCToken ZRX cZRX
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     ListedCToken DAI cDAI
+    Comptroller SetMarketSupplyCaps (cDAI) (2e30)
     -- Upgrade to G2
     ComptrollerImpl Deploy StandardG2 StandardComptrollerG2
     Unitroller SetPendingImpl StandardComptrollerG2
@@ -232,6 +234,8 @@ Pending "Keeps all storage"
     ---
     NewCToken ZRX cZRX delegatorType:CErc20Delegator cTokenType:CErc20Delegate
     NewCToken BAT cBAT delegatorType:CErc20Delegator cTokenType:CErc20Delegate
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
+    Comptroller SetMarketSupplyCaps (cBAT) (2e30)
     Give cBAT 10e18 BAT -- Faucet some bat to borrow
     Support cZRX collateralFactor:0.5
     Support cBAT collateralFactor:0.4

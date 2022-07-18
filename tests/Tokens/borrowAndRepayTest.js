@@ -12,7 +12,8 @@ const {
   fastForward,
   setBalance,
   preApprove,
-  pretendBorrow
+  pretendBorrow,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 const borrowAmount = etherUnsigned(10e3);
@@ -71,6 +72,7 @@ describe('CToken', function () {
   beforeEach(async () => {
     [root, borrower, benefactor, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
   });
 
   describe('borrowFresh', () => {

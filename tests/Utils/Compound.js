@@ -454,6 +454,10 @@ async function pretendBorrow(cToken, borrower, accountIndex, marketIndex, princi
   await send(cToken, 'harnessSetBlockNumber', [etherUnsigned(blockNumber)]);
 }
 
+async function setMarketSupplyCap(comptroller, cTokens, supplyCaps) {
+  await send(comptroller, '_setMarketSupplyCaps', [cTokens, supplyCaps]);
+}
+
 module.exports = {
   makeComptroller,
   makeCToken,
@@ -485,5 +489,6 @@ module.exports = {
   setBorrowRate,
   getBorrowRate,
   getSupplyRate,
-  pretendBorrow
+  pretendBorrow,
+  setMarketSupplyCap
 };

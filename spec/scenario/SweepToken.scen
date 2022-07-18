@@ -2,6 +2,7 @@
 Test "Attempt to sweep underlying token"
     NewComptroller price:1.0
     NewCToken ZRX cZRX
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     NewCToken BAT cBAT
     Give cBAT 10e18 BAT -- Faucet some bat to sweep
     Support cZRX collateralFactor:0.5
@@ -14,6 +15,7 @@ Test "Succesfully Sweep standard non-underlying token from CErc20"
     NewComptroller price:1.0
     Erc20 Deploy Standard ZRX "ZRX" 18
     NewCToken BAT cBAT
+    Comptroller SetMarketSupplyCaps (cBAT) (2e30)
     Give cBAT 10e18 ZRX -- Faucet some ZRX to sweep
     Support cBAT collateralFactor:0.5
     cToken cBAT SweepToken ZRX
@@ -23,6 +25,7 @@ Test "Succesfully Sweep non-standard non-underlying token from CErc20"
     NewComptroller price:1.0
     Erc20 Deploy NonStandard USDT "USDT" 18
     NewCToken BAT cBAT
+    Comptroller SetMarketSupplyCaps (cBAT) (2e30)
     Give cBAT 10e18 USDT -- Faucet some USDT to sweep
     Support cBAT collateralFactor:0.5
     cToken cBAT SweepToken USDT

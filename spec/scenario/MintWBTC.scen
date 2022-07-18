@@ -3,6 +3,7 @@
 Test "Mint 1 cWBTC"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Mint Geoff 10e8 cWBTC
     Assert Equal (Erc20 cWBTC TokenBalance Geoff) (Exactly 50e8)
@@ -11,6 +12,7 @@ Test "Mint 1 cWBTC"
 Test "Mint WBTC with insufficient allowance"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff 5e8 WBTC cWBTC allowanceAmount:4.9e8
     AllowFailures
     Mint Geoff 5e8 cWBTC
@@ -21,6 +23,7 @@ Test "Mint WBTC with insufficient allowance"
 Test "Mint WBTC with insufficient balance"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff 4.9e8 WBTC cWBTC allowanceAmount:5e8
     AllowFailures
     Mint Geoff 5e8 cWBTC
@@ -31,6 +34,7 @@ Test "Mint WBTC with insufficient balance"
 Test "Mint two WBTC after minting two WBTC, and then I mint two more"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Mint Geoff 2e8 cWBTC
     Assert Equal (Erc20 cWBTC TokenBalance Geoff) (Exactly 10e8)
@@ -45,6 +49,7 @@ Test "Mint two WBTC after minting two WBTC, and then I mint two more"
 Test "Two users Mint WBTC"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Prep Torrey Some WBTC cWBTC
     Mint Geoff 2e8 cWBTC
@@ -58,6 +63,7 @@ Test "Two users Mint WBTC"
 Test "Mint WBTC accrues no interest without borrows"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Prep Torrey Some WBTC cWBTC
     Mint Geoff 2e8 cWBTC
@@ -70,6 +76,7 @@ Test "Mint WBTC accrues no interest without borrows"
 Test "Mint WBTC transfer in fails due to paused"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:0.2 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Prep Torrey Some WBTC cWBTC
     Invariant Static (Erc20 cWBTC TokenBalance Geoff)
@@ -83,6 +90,7 @@ Test "Mint WBTC transfer in fails due to paused"
 Test "Denied by comptroller because WBTC unlisted"
     NewComptroller
     NewCToken WBTC cWBTC tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2000e18)
     Prep Geoff Some WBTC cWBTC
     Prep Torrey Some WBTC cWBTC
     Invariant Static (Erc20 cWBTC TokenBalance Geoff)

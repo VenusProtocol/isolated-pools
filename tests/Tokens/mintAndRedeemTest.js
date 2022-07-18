@@ -15,7 +15,8 @@ const {
   quickMint,
   preSupply,
   quickRedeem,
-  quickRedeemUnderlying
+  quickRedeemUnderlying,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 const exchangeRate = 50e3;
@@ -63,6 +64,7 @@ describe('CToken', function () {
   beforeEach(async () => {
     [root, minter, redeemer, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}, exchangeRate});
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
   });
 
   describe('mintFresh', () => {

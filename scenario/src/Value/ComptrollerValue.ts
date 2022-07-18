@@ -630,6 +630,19 @@ export function comptrollerFetchers() {
       async (world, {comptroller, CToken}) => {
         return new NumberV(await comptroller.methods.isDeprecated(CToken._address).call());
       }
+    ),
+    new Fetcher<{ comptroller: Comptroller, cToken: CToken }, NumberV>(`
+    #### SupplyCaps
+    * "Comptroller SupplyCaps vZRX
+  `,
+      "SupplyCaps",
+      [
+        new Arg("comptroller", getComptroller, { implicit: true }),
+        new Arg("VToken", getCTokenV),
+      ],
+      async (world, { comptroller, cToken }) => {
+        return new NumberV(await comptroller.methods.supplyCaps(cToken._address).call());
+      }
     )
   ];
 }

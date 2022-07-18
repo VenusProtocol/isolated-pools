@@ -1,6 +1,7 @@
 Test "Add all reserves and verify effects"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Prep Geoff 50e18 ZRX cZRX
     Mint Geoff 50e18 cZRX
     Assert Equal (Erc20 cZRX TokenBalance Geoff) (Exactly 500e8) -- 50e18 / 1e9
@@ -36,6 +37,7 @@ Test "Add all reserves and verify effects"
 Test "Remove and re add reserves and remove again"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Prep Geoff 50e18 ZRX cZRX
     Mint Geoff 50e18 cZRX
     Assert Equal (Erc20 cZRX TokenBalance Geoff) (Exactly 500e8)
@@ -78,6 +80,7 @@ Test "Remove and re add reserves and remove again"
 Test "add reserves to empty contract"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Assert Equal (CToken cZRX ExchangeRate) (Exactly 1e9)
     Erc20 ZRX Faucet Root 3e18
     From Root (Erc20 ZRX Approve cZRX 6e18)
@@ -91,6 +94,7 @@ Test "add reserves to empty contract"
 Test "add reserves failures"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (1000000e18)
     Assert Equal (CToken cZRX ExchangeRate) (Exactly 1e9)
     Assert Equal (CToken cZRX Reserves) (Exactly 0e18)
     Erc20 ZRX Faucet Root 2e18
@@ -106,6 +110,7 @@ Test "add reserves failures"
 Test "Add reserves WBTC when paused"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:1e9 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2e30)
     Prep Geoff 50e18 WBTC cWBTC
     Mint Geoff 50e18 cWBTC
     Assert Equal (Erc20 cWBTC TokenBalance Geoff) (Exactly 500e8)

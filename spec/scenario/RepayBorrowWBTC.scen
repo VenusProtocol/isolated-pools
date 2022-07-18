@@ -3,7 +3,9 @@
 Macro NewBorrow borrowAmount borrowRate
     NewComptroller price:1.0 -- TODO: This should really be a price for a specific asset
     NewCToken ZRX cZRX
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     NewCToken WBTC cWBTC borrowRate 0.1 8 WBTC -- note: cannot use macros with named args right now
+    Comptroller SetMarketSupplyCaps (cWBTC) (2e30)
     Give cWBTC 10e8 WBTC -- Faucet some WBTC to borrow
     Support cZRX collateralFactor:0.5
     Support cWBTC collateralFactor:0.5

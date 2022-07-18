@@ -14,7 +14,8 @@ const {
   adjustBalances,
   pretendBorrow,
   preApprove,
-  enterMarkets
+  enterMarkets,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 const repayAmount = etherExp(10);
@@ -72,6 +73,7 @@ describe('CToken', function () {
     [root, liquidator, borrower, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});
     cTokenCollateral = await makeCToken({comptroller: cToken.comptroller});
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
     expect(await send(cTokenCollateral, 'harnessSetExchangeRate', [exchangeRate])).toSucceed();
   });
 

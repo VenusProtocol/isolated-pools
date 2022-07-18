@@ -61,6 +61,7 @@ Macro NewCTokenBringERC20 erc20 cToken borrowRate=0.000005 initialExchangeRate=2
     InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
     CTokenDelegate Deploy cTokenType cErc20Delegate
     CToken Deploy delegatorType cToken cToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (CTokenDelegate cErc20Delegate Address) becomeImplementationData
+    Comptroller SetMarketSupplyCaps (cToken) (2000e18)
 
 Macro NewCTokenImmutable erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard cTokenType=Scenario admin=Admin
     Erc20 Deploy tokenType erc20 erc20
@@ -74,6 +75,7 @@ Macro NewEtherToken cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=
 Macro ListedCToken erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard delegatorType=CErc20DelegatorScenario cTokenType=CErc20DelegateScenario admin=Admin
     NewCToken erc20 cToken borrowRate initialExchangeRate decimals tokenType delegatorType cTokenType admin
     Comptroller SupportMarket cToken
+    Comptroller SetMarketSupplyCaps (cToken) (2000e18)
 
 Macro ListedCTokenImmutable erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard cTokenType=Scenario admin=Admin
     NewCTokenImmutable erc20 cToken borrowRate initialExchangeRate decimals tokenType cTokenType admin
@@ -88,11 +90,13 @@ Macro ListedEtherToken cToken borrowRate=0.000005 initialExchangeRate=2e9 decima
 Macro ListedEtherTokenMinted cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 admin=Admin
     NewEtherToken cToken borrowRate initialExchangeRate decimals admin
     Comptroller SupportMarket cToken
+    Comptroller SetMarketSupplyCaps (cToken) (2000e18)
     CallMintEth Root 1e18 cToken
 
 Macro SetPriceCF cToken price collateralFactor
     PriceOracle SetPrice cToken price
     Comptroller SetCollateralFactor cToken collateralFactor
+    Comptroller SetMarketSupplyCaps (cToken) (2e30)
 
 Macro Give user amount erc20
     Erc20 erc20 Faucet user amount
@@ -212,6 +216,7 @@ Macro BorrowAndRepayWithInterest erc20 cToken amount interestAmount interestRate
     CToken cToken SetReserveFactor reserveRate
     ListedCToken COLLAT cCOLLAT
     Comptroller SetCollateralFactor cCOLLAT 0.9
+    Comptroller SetMarketSupplyCaps (cCOLLAT) (2e30)
     Prep Torrey 1e30 COLLAT cCOLLAT
     Mint Torrey 1e30 cCOLLAT
     EnterMarkets Torrey cCOLLAT cToken
@@ -238,6 +243,7 @@ Macro BorrowAndRepayEthWithInterest cEther amount interestAmount interestRate bl
     CToken cEther SetReserveFactor reserveRate
     ListedCToken COLLAT cCOLLAT
     Comptroller SetCollateralFactor cCOLLAT 0.9
+    Comptroller SetMarketSupplyCaps (cCOLLAT) (2e30)
     Prep Torrey 1e30 COLLAT cCOLLAT
     Mint Torrey 1e30 cCOLLAT
     EnterMarkets Torrey cCOLLAT cEther
