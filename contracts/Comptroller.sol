@@ -74,6 +74,9 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
     /// @notice Emitted when COMP receivable for a user has been updated.
     event CompReceivableUpdated(address indexed user, uint oldCompReceivable, uint newCompReceivable);
 
+    /// @notice Emitted when minimum liquidatable amount (in USD) for a cToken is changed
+    event NewMinLiquidatableAmount(CToken indexed cToken, uint newMinLiquidatableAmount);
+
     /// @notice The initial COMP index for a market
     uint224 public constant compInitialIndex = 1e36;
 
@@ -475,7 +478,7 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
         address cTokenCollateral,
         address liquidator,
         address borrower,
-        uint repayAmount) override external returns (uint) {
+        uint repayAmount) override external view returns (uint) {
         // Shh - currently unused
         liquidator;
 
@@ -1178,6 +1181,26 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
      */
     function adminOrInitializing() internal view returns (bool) {
         return msg.sender == admin || msg.sender == comptrollerImplementation;
+    }
+        
+    /**
+    * @notice Set the given borrow caps for the given cToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
+    * @dev Admin or borrowCapGuardian function to set the borrow caps. A borrow cap of 0 corresponds to unlimited borrowing.
+    * @param cTokens The addresses of the markets (tokens) to change the borrow caps for
+    * @param newMinLiquidatableAmounts The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
+    */
+    function _setMarketMinLiquidationAmount(CToken[] calldata cTokens, uint[] calldata newMinLiquidatableAmounts) external {
+    	require(adminOrInitializing(), "only admin can update min liquidation amounts");
+
+        uint numMarkets = cTokens.length;
+        uint numMinAmounts = newMinLiquidatableAmounts.length;
+
+        require(numMarkets != 0 && numMarkets == numMinAmounts, "invalid input");
+
+        for(uint i = 0; i < numMarkets; i++) {
+            minimalLiquidatableAmount[address(cTokens[i])] = newMinLiquidatableAmounts[i];
+            emit NewMinLiquidatableAmount(cTokens[i], newMinLiquidatableAmounts[i]);
+        }
     }
 
     /*** Comp Distribution ***/
