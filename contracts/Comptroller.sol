@@ -13,7 +13,7 @@ import "./Governance/Comp.sol";
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerErrorReporter, ExponentialNoError {
+contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerErrorReporter, ExponentialNoError {
     /// @notice Emitted when an admin supports a market
     event MarketListed(CToken cToken);
 
@@ -479,6 +479,11 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
         // Shh - currently unused
         liquidator;
 
+        uint error = validateMinLiquidatableAmountInternal(repayAmount,cTokenCollateral, cTokenBorrowed);
+        if(error != uint(Error.NO_ERROR)){
+            return error;
+        }
+
         if (!markets[cTokenBorrowed].isListed || !markets[cTokenCollateral].isListed) {
             return uint(Error.MARKET_NOT_LISTED);
         }
@@ -665,6 +670,37 @@ contract Comptroller is ComptrollerV7Storage, ComptrollerInterface, ComptrollerE
         Exp exchangeRate;
         Exp oraclePrice;
         Exp tokensToDenom;
+    }
+    
+
+    /**
+     * @notice Determine the current account liquidity wrt collateral requirements
+     * @return (possible error code (semi-opaque),
+                account liquidity in excess of collateral requirements,
+     *          account shortfall below collateral requirements)
+     */
+    function validateMinLiquidatableAmountInternal(uint repayAmount, address cTokenCollateral, address cTokenBorrow) internal view returns (uint) {
+        AccountLiquidityLocalVars memory vars; // Holds all our calculation results
+        CToken repayAsset = CToken(cTokenCollateral);
+
+        // Get the normalized price of the asset
+        vars.oraclePriceMantissa = oracle.getUnderlyingPrice(repayAsset);
+        if (vars.oraclePriceMantissa == 0) {
+            return uint(Error.PRICE_ERROR);
+        }
+        vars.oraclePrice = Exp({mantissa: vars.oraclePriceMantissa});
+        
+        //Calculate the amount to be repayed in USD
+        uint repayAmountInUsd = mul_ScalarTruncate(vars.oraclePrice,repayAmount);
+        uint minLiquidatableAmount = minimalLiquidatableAmount[cTokenBorrow];
+
+        if(minLiquidatableAmount == 0) {
+            return uint(Error.MIN_LIQUIDATABLE_AMOUNT_NOT_SET);
+        } else if(repayAmount < minLiquidatableAmount) {
+            return uint(Error.BELOW_MIN_LIQUIDATABLE_AMOUNT);
+        } else {
+            return uint(Error.NO_ERROR);
+        }
     }
 
     /**

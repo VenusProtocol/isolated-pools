@@ -20,7 +20,9 @@ contract ComptrollerErrorReporter {
         REJECTION,
         SNAPSHOT_ERROR,
         TOO_MANY_ASSETS,
-        TOO_MUCH_REPAY
+        TOO_MUCH_REPAY,
+        BELOW_MIN_LIQUIDATABLE_AMOUNT,
+        MIN_LIQUIDATABLE_AMOUNT_NOT_SET
     }
 
     enum FailureInfo {
