@@ -31,6 +31,26 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 timestampPosted;
     }
 
+    enum RiskRating {
+        VERY_HIGH_RISK,
+        HIGH_RISK,
+        MEDIUM_RISK,
+        LOW_RISK,
+        MINIMAL_RISK
+    }
+    
+    struct VenusPoolMetaData {
+        RiskRating riskRating;
+        string category;
+        string logoURL;
+        string description;
+    }
+
+    /**
+     * @dev Maps venus pool id to metadata
+     */
+    mapping(uint256 => VenusPoolMetaData) public metadata;
+
     /**
      * @dev Array of Venus pools.
      */
@@ -211,4 +231,10 @@ contract PoolRegistry is OwnableUpgradeable {
         return _bookmarks[account];
     }
 
+    /**
+     * @notice Update metadata of an existing pool
+     */
+    function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external onlyOwner {
+        metadata[poolId] = _metadata;
+    }
 }

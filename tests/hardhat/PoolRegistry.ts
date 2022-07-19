@@ -280,7 +280,7 @@ describe("PoolRegistry: Tests", async function () {
     await mockDAI.approve(cDAI.address, daiAmount);
     await cDAI.mint(daiAmount);
 
-    const [owner, user] = await ethers.getSigners();
+    const [, user] = await ethers.getSigners();
     await mockWBTC.connect(user).faucet(convertToUnit(1000, 8));
 
     const btcAmount = convertToUnit(1000, 8);
@@ -291,5 +291,17 @@ describe("PoolRegistry: Tests", async function () {
     // console.log((await comptroller1Proxy.callStatic.getAccountLiquidity(user.address))[1].toString())
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
+  });
+
+  it("Metadata", async function () {
+    await poolRegistry.updatePoolMetadata(0, {
+      riskRating: 2,
+      category: "Hign market cap",
+      logoURL: "http://venis.io/pool1",
+      description: "An sample description",
+    });
+
+    const metadata = await poolRegistry.metadata(0);
+    expect(metadata.riskRating).equal(2);
   });
 });
