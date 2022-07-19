@@ -5,10 +5,10 @@ import "../JumpRateModelV2.sol";
 
 contract JumpRateModelFactory {
   function deploy(
-    uint baseRatePerYear, 
-    uint multiplierPerYear, 
-    uint jumpMultiplierPerYear, 
-    uint kink_, 
+    uint256 baseRatePerYear, 
+    uint256 multiplierPerYear, 
+    uint256 jumpMultiplierPerYear, 
+    uint256 kink_, 
     address owner_
   ) external returns (JumpRateModelV2) {
     JumpRateModelV2 rate = new JumpRateModelV2(

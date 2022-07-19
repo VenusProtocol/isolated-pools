@@ -5,8 +5,8 @@ import "../WhitePaperInterestRateModel.sol";
 
 contract WhitePaperInterestRateModelFactory {
   function deploy(
-    uint baseRatePerYear, 
-    uint multiplierPerYear
+    uint256 baseRatePerYear, 
+    uint256 multiplierPerYear
   ) external returns (WhitePaperInterestRateModel) {
     WhitePaperInterestRateModel rate = new WhitePaperInterestRateModel(
       baseRatePerYear,
