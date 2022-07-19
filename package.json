@@ -64,6 +64,8 @@
   },
   "dependencies": {
     "@solidity-parser/parser": "^0.13.2",
+    "@openzeppelin/contracts": "^4.6.0",
+    "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "eth-saddle": "^0.1.25",
     "ethereum-waffle": "3.4.4",
     "ethers": "5.6.4"

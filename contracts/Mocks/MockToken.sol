@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../@openzeppelin/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockToken is ERC20 {
     uint8 private immutable DECIMALS;
