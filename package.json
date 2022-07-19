@@ -1,0 +1,78 @@
+{
+  "name": "isolated-pools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "./script/compile",
+    "console": "if node -v | grep -E \"v(12|13)\" > /dev/null; then flags=\"-n --experimental-repl-await\"; fi; npx $flags saddle console",
+    "coverage": "./script/coverage",
+    "deploy": "./scenario/script/repl -s ./script/scen/deploy.scen",
+    "lint": "./script/lint",
+    "repl": "./scenario/script/repl",
+    "profile": "yarn test tests/gasProfiler.js",
+    "report": "npx run ./script/saddle/gasReport.js",
+    "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
+    "checksize": "npx run ./script/saddle/comptrollerSize.js",
+    "hardhat:test": "hardhat test",
+    "hardhat:compile": "hardhat compile"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VenusProtocol/isolated-pools.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VenusProtocol/isolated-pools/issues"
+  },
+  "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.5",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@typechain/ethers-v5": "^7.2.0",
+    "@typechain/hardhat": "^2.3.1",
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^12.20.50",
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "bignumber.js": "9.0.0",
+    "chai": "^4.3.6",
+    "dotenv": "^10.0.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.4.1",
+    "eslint-plugin-promise": "^5.2.0",
+    "hardhat": "^2.9.3",
+    "hardhat-gas-reporter": "^1.0.8",
+    "jest-diff": "^26.4.2",
+    "jest-junit": "^11.1.0",
+    "prettier": "^2.6.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.13",
+    "solhint": "^3.3.7",
+    "solidity-coverage": "^0.7.21",
+    "solparse": "^2.2.8",
+    "ts-node": "^10.7.0",
+    "typechain": "^5.2.0",
+    "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "@solidity-parser/parser": "^0.13.2",
+    "@openzeppelin/contracts": "^4.6.0",
+    "@openzeppelin/contracts-upgradeable": "^4.6.0",
+    "eth-saddle": "^0.1.25",
+    "ethereum-waffle": "3.4.4",
+    "ethers": "5.6.4"
+  },
+  "resolutions": {
+    "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
+    "**/ganache-core": "github:compound-finance/ganache-core.git#jflatow/unbreak-fork",
+    "solidity-parser-antlr": "https://github.com/solidity-parser/parser#0.8.2"
+  }
+}
