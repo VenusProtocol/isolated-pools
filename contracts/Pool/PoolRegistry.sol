@@ -49,7 +49,10 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
-
+    
+    /**
+     * @dev Enum for risk rating of Venus interest rate pool.
+     */
     enum RiskRating {
         VERY_HIGH_RISK,
         HIGH_RISK,
@@ -58,6 +61,9 @@ contract PoolRegistry is OwnableUpgradeable {
         MINIMAL_RISK
     }
     
+    /**
+     * @dev Struct for a Venus interest rate pool metadata.
+     */
     struct VenusPoolMetaData {
         RiskRating riskRating;
         string category;
