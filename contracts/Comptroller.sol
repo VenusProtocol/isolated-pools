@@ -482,7 +482,7 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
         // Shh - currently unused
         liquidator;
 
-        uint error = validateMinLiquidatableAmountInternal(repayAmount,cTokenCollateral, cTokenBorrowed);
+        uint error = validateMinLiquidatableAmount(repayAmount,cTokenCollateral, cTokenBorrowed);
         if(error != uint(Error.NO_ERROR)){
             return error;
         }
@@ -682,7 +682,7 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
                 account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
      */
-    function validateMinLiquidatableAmountInternal(uint repayAmount, address cTokenCollateral, address cTokenBorrow) internal view returns (uint) {
+    function validateMinLiquidatableAmount(uint repayAmount, address cTokenCollateral, address cTokenBorrow) public view returns (uint) {
         AccountLiquidityLocalVars memory vars; // Holds all our calculation results
         CToken repayAsset = CToken(cTokenCollateral);
 
