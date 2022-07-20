@@ -43,12 +43,8 @@ describe("Min Liquidation Amount", () => {
 
     cTokenBorrow = await smock.fake<CToken>("CToken");
     cTokenCollateral = await smock.fake<CToken>("CToken");
-
-    errorReporter = await smock.fake<ComptrollerErrorReporter>(
-      "ComptrollerErrorReporter"
-    );
   });
-
+  
   it("should revert if Oracle Price is 0", async () => {
     const [owner, addr1] = await ethers.getSigners();
     var response = await comptroller.validateMinLiquidatableAmount(
