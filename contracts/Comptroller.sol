@@ -478,7 +478,7 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
         address cTokenCollateral,
         address liquidator,
         address borrower,
-        uint repayAmount) override external view returns (uint) {
+        uint repayAmount) override external returns (uint) {
         // Shh - currently unused
         liquidator;
 
@@ -1186,10 +1186,9 @@ contract Comptroller is ComptrollerV8Storage, ComptrollerInterface, ComptrollerE
     }
         
     /**
-    * @notice Set the given borrow caps for the given cToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
-    * @dev Admin or borrowCapGuardian function to set the borrow caps. A borrow cap of 0 corresponds to unlimited borrowing.
-    * @param cTokens The addresses of the markets (tokens) to change the borrow caps for
-    * @param newMinLiquidatableAmounts The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
+    * @notice Set the given min liquidation limit for the given cToken markets. Liquidations with repayAmoun below this threshold will fail.
+    * @param cTokens The addresses of the markets (tokens) to add/change the min liquidation threshold
+    * @param newMinLiquidatableAmounts The new min liquidation amount values (in USD).
     */
     function _setMarketMinLiquidationAmount(CToken[] calldata cTokens, uint[] calldata newMinLiquidatableAmounts) external {
     	require(adminOrInitializing(), "only admin can update min liquidation amounts");
