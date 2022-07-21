@@ -158,3 +158,8 @@ contract ComptrollerV7Storage is ComptrollerV6Storage {
     /// @notice Accounting storage mapping account addresses to how much COMP they owe the protocol.
     mapping(address => uint) public compReceivable;
 }
+
+contract ComptrollerV8Storage is ComptrollerV7Storage {
+    /// @notice Storage for minimum liquidatable amount in USD for each asset
+    mapping(address => uint) public minimalLiquidatableAmount;
+}
