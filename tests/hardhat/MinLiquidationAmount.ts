@@ -31,8 +31,9 @@ describe("Min Liquidation Amount", () => {
   let priceOracle: FakeContract<PriceOracle>;
 
   beforeEach(async () => {
+    const [owner] = await ethers.getSigners();
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    comptroller = await comptrollerFactory.deploy();
+    comptroller = await comptrollerFactory.deploy(owner.address);
     await comptroller.deployed();
 
     priceOracle = await smock.fake<PriceOracle>("PriceOracle");
