@@ -1577,7 +1577,7 @@ contract Comptroller is
      * @dev The automatic getter may be used to access an individual market.
      * @return The list of market addresses
      */
-    function getAllMarkets() public view returns (CToken[] memory) {
+    function getAllMarkets() override public view returns (CToken[] memory) {
         return allMarkets;
     }
 

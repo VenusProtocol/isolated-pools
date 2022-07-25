@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "./PriceOracle.sol";
+import "./CToken.sol";
+
 abstract contract ComptrollerInterface {
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
@@ -69,4 +72,14 @@ abstract contract ComptrollerInterface {
         address cTokenBorrowed,
         address cTokenCollateral,
         uint repayAmount) virtual external view returns (uint, uint);
+
+    function getAllMarkets() virtual external view returns (CToken[] memory);    
+}
+
+abstract contract ComptrollerViewInterface {
+
+    function markets(address) virtual external view returns (bool, uint);
+    function oracle() virtual external view returns (PriceOracle);
+    function getAssetsIn(address) virtual external view returns (CToken[] memory);
+    function compSpeeds(address) virtual external view returns (uint);
 }
