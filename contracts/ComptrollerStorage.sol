@@ -94,14 +94,6 @@ contract ComptrollerV2Storage is ComptrollerV1Storage {
 }
 
 contract ComptrollerV3Storage is ComptrollerV2Storage {
-    struct CompMarketState {
-        // The market's last updated compBorrowIndex or compSupplyIndex
-        uint224 index;
-
-        // The block number the index was last updated at
-        uint32 block;
-    }
-
     /// @notice A list of all markets
     CToken[] public allMarkets;
 
@@ -110,21 +102,6 @@ contract ComptrollerV3Storage is ComptrollerV2Storage {
 
     /// @notice The portion of compRate that each market currently receives
     mapping(address => uint) public compSpeeds;
-
-    /// @notice The COMP market supply state for each market
-    mapping(address => CompMarketState) public compSupplyState;
-
-    /// @notice The COMP market borrow state for each market
-    mapping(address => CompMarketState) public compBorrowState;
-
-    /// @notice The COMP borrow index for each market for each supplier as of the last time they accrued COMP
-    mapping(address => mapping(address => uint)) public compSupplierIndex;
-
-    /// @notice The COMP borrow index for each market for each borrower as of the last time they accrued COMP
-    mapping(address => mapping(address => uint)) public compBorrowerIndex;
-
-    /// @notice The COMP accrued but not yet transferred to each user
-    mapping(address => uint) public compAccrued;
 }
 
 contract ComptrollerV4Storage is ComptrollerV3Storage {
@@ -144,11 +121,7 @@ contract ComptrollerV5Storage is ComptrollerV4Storage {
 }
 
 contract ComptrollerV6Storage is ComptrollerV5Storage {
-    /// @notice The rate at which comp is distributed to the corresponding borrow market (per block)
-    mapping(address => uint) public compBorrowSpeeds;
-
-    /// @notice The rate at which comp is distributed to the corresponding supply market (per block)
-    mapping(address => uint) public compSupplySpeeds;
+    
 }
 
 contract ComptrollerV7Storage is ComptrollerV6Storage {
