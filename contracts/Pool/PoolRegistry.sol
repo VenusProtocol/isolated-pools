@@ -68,12 +68,12 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Maps pool id to asset to cToken.
      */
-    mapping(uint => mapping(address => address)) private _cTokens;
+    mapping(uint256 => mapping(address => address)) private _cTokens;
 
     /**
      * @dev Maps asset to list of supported pools.
      */
-    mapping(address => uint[]) private _supportedPools;
+    mapping(address => uint256[]) private _supportedPools;
 
     enum InterestRateModels {
         WhitePaper,
@@ -81,7 +81,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     struct AddMarketInput {
-        uint poolId;      
+        uint256 poolId;
         address asset;
         uint8 decimals;
         string name;
@@ -98,12 +98,12 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Emitted when a new Venus pool is added to the directory.
      */
     event PoolRegistered(uint256 index, VenusPool pool);
-    
+
     /**
      * @dev Emitted when a pool name is set.
      */
     event PoolNameSet(uint256 index, string name);
-    
+
     /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
      * @param name The name of the pool.
@@ -115,7 +115,7 @@ contract PoolRegistry is OwnableUpgradeable {
         returns (uint256)
     {
         VenusPool memory venusPool = _poolByComptroller[comptroller];
-        
+
         require(
             venusPool.creator == address(0),
             "RegistryPool: Pool already exists in the directory."
@@ -131,7 +131,7 @@ contract PoolRegistry is OwnableUpgradeable {
         _poolsByID.push(pool);
         _poolByComptroller[comptroller] = pool;
         uint256 poolsLength = _poolsByID.length;
-        
+
         emit PoolRegistered(poolsLength - 1, pool);
         return poolsLength - 1;
     }
@@ -151,7 +151,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 closeFactor,
         uint256 liquidationIncentive,
         address priceOracle
-    ) onlyOwner external virtual returns (uint256, address) {
+    ) external virtual onlyOwner returns (uint256, address) {
         // Input validation
         require(
             implementation != address(0),
@@ -218,7 +218,7 @@ contract PoolRegistry is OwnableUpgradeable {
     function bookmarkPool(address comptroller) external {
         _bookmarks[msg.sender].push(comptroller);
     }
-    
+
     /**
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
@@ -231,11 +231,15 @@ contract PoolRegistry is OwnableUpgradeable {
      * @notice Returns Venus pool by PoolID.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getPoolByID(uint256 index) external view returns (VenusPool memory) {
+    function getPoolByID(uint256 index)
+        external
+        view
+        returns (VenusPool memory)
+    {
         return _poolsByID[index];
     }
 
-    /** 
+    /**
      * @param comptroller The Comptroller implementation address.
      * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
      */
@@ -245,7 +249,7 @@ contract PoolRegistry is OwnableUpgradeable {
         view
         returns (VenusPool memory)
     {
-        return _poolByComptroller[comptroller];   
+        return _poolByComptroller[comptroller];
     }
 
     /**
@@ -259,33 +263,36 @@ contract PoolRegistry is OwnableUpgradeable {
         return _bookmarks[account];
     }
 
-    function addMarket(
-        AddMarketInput memory input
-    ) external {
+    function addMarket(AddMarketInput memory input) external {
         InterestRateModel rate;
-        if(input.rateModel == InterestRateModels.JumpRate) {
-            rate = InterestRateModel(jumpRateFactory.deploy(
-                input.baseRatePerYear,
-                input.multiplierPerYear,
-                input.jumpMultiplierPerYear,
-                input.kink_,
-                msg.sender
-            ));
+        if (input.rateModel == InterestRateModels.JumpRate) {
+            rate = InterestRateModel(
+                jumpRateFactory.deploy(
+                    input.baseRatePerYear,
+                    input.multiplierPerYear,
+                    input.jumpMultiplierPerYear,
+                    input.kink_,
+                    msg.sender
+                )
+            );
         } else {
-            rate = InterestRateModel(whitePaperFactory.deploy(
-                input.baseRatePerYear,
-                input.multiplierPerYear
-            ));
+            rate = InterestRateModel(
+                whitePaperFactory.deploy(
+                    input.baseRatePerYear,
+                    input.multiplierPerYear
+                )
+            );
         }
-        
 
-        Comptroller comptroller = Comptroller(_poolsByID[input.poolId].comptroller);
+        Comptroller comptroller = Comptroller(
+            _poolsByID[input.poolId].comptroller
+        );
 
         CErc20Immutable cToken = cTokenFactory.deployCErc20(
             input.asset,
             comptroller,
             rate,
-            10 ** input.decimals,
+            10**input.decimals,
             input.name,
             input.symbol,
             input.decimals,
@@ -299,11 +306,19 @@ contract PoolRegistry is OwnableUpgradeable {
         _supportedPools[input.asset].push(input.poolId);
     }
 
-    function getCTokenForAsset(uint poolId, address asset) external view returns (address) {
+    function getCTokenForAsset(uint256 poolId, address asset)
+        external
+        view
+        returns (address)
+    {
         return _cTokens[poolId][asset];
     }
 
-    function getPoolsSupportedByAsset(address asset) external view returns (uint[] memory) {
+    function getPoolsSupportedByAsset(address asset)
+        external
+        view
+        returns (uint256[] memory)
+    {
         return _supportedPools[asset];
     }
 }

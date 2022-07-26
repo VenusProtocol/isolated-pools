@@ -28,10 +28,16 @@ contract CDaiDelegate is CErc20Delegate {
      * @notice Delegate interface to become the implementation
      * @param data The encoded arguments for becoming
      */
-    function _becomeImplementation(bytes memory data) override public {
-        require(msg.sender == admin, "only the admin may initialize the implementation");
+    function _becomeImplementation(bytes memory data) public override {
+        require(
+            msg.sender == admin,
+            "only the admin may initialize the implementation"
+        );
 
-        (address daiJoinAddress_, address potAddress_) = abi.decode(data, (address, address));
+        (address daiJoinAddress_, address potAddress_) = abi.decode(
+            data,
+            (address, address)
+        );
         return _becomeImplementation(daiJoinAddress_, potAddress_);
     }
 
@@ -40,13 +46,18 @@ contract CDaiDelegate is CErc20Delegate {
      * @param daiJoinAddress_ DAI adapter address
      * @param potAddress_ DAI Savings Rate (DSR) pot address
      */
-    function _becomeImplementation(address daiJoinAddress_, address potAddress_) internal {
+    function _becomeImplementation(address daiJoinAddress_, address potAddress_)
+        internal
+    {
         // Get dai and vat and sanity check the underlying
         DaiJoinLike daiJoin = DaiJoinLike(daiJoinAddress_);
         PotLike pot = PotLike(potAddress_);
         GemLike dai = daiJoin.dai();
         VatLike vat = daiJoin.vat();
-        require(address(dai) == underlying, "DAI must be the same as underlying");
+        require(
+            address(dai) == underlying,
+            "DAI must be the same as underlying"
+        );
 
         // Remember the relevant addresses
         daiJoinAddress = daiJoinAddress_;
@@ -54,7 +65,7 @@ contract CDaiDelegate is CErc20Delegate {
         vatAddress = address(vat);
 
         // Approve moving our DAI into the vat through daiJoin
-        dai.approve(daiJoinAddress, type(uint).max);
+        dai.approve(daiJoinAddress, type(uint256).max);
 
         // Approve the pot to transfer our funds within the vat
         vat.hope(potAddress);
@@ -70,8 +81,11 @@ contract CDaiDelegate is CErc20Delegate {
     /**
      * @notice Delegate interface to resign the implementation
      */
-    function _resignImplementation() override public {
-        require(msg.sender == admin, "only the admin may abandon the implementation");
+    function _resignImplementation() public override {
+        require(
+            msg.sender == admin,
+            "only the admin may abandon the implementation"
+        );
 
         // Transfer all cash out of the DSR - note that this relies on self-transfer
         DaiJoinLike daiJoin = DaiJoinLike(daiJoinAddress);
@@ -82,11 +96,11 @@ contract CDaiDelegate is CErc20Delegate {
         pot.drip();
 
         // Calculate the total amount in the pot, and move it out
-        uint pie = pot.pie(address(this));
+        uint256 pie = pot.pie(address(this));
         pot.exit(pie);
 
         // Checks the actual balance of DAI in the vat after the pot exit
-        uint bal = vat.dai(address(this));
+        uint256 bal = vat.dai(address(this));
 
         // Remove our whole balance
         daiJoin.exit(address(this), bal / RAY);
@@ -95,11 +109,11 @@ contract CDaiDelegate is CErc20Delegate {
     /*** CToken Overrides ***/
 
     /**
-      * @notice Accrues DSR then applies accrued interest to total borrows and reserves
-      * @dev This calculates interest accrued from the last checkpointed block
-      *      up to the current block and writes new checkpoint to storage.
-      */
-    function accrueInterest() override public returns (uint) {
+     * @notice Accrues DSR then applies accrued interest to total borrows and reserves
+     * @dev This calculates interest accrued from the last checkpointed block
+     *      up to the current block and writes new checkpoint to storage.
+     */
+    function accrueInterest() public override returns (uint256) {
         // Accumulate DSR interest
         PotLike(potAddress).drip();
 
@@ -114,9 +128,9 @@ contract CDaiDelegate is CErc20Delegate {
      * @dev This excludes the value of the current message, if any
      * @return The quantity of underlying tokens owned by this contract
      */
-    function getCashPrior() override internal view returns (uint) {
+    function getCashPrior() internal view override returns (uint256) {
         PotLike pot = PotLike(potAddress);
-        uint pie = pot.pie(address(this));
+        uint256 pie = pot.pie(address(this));
         return mul(pot.chi(), pie) / RAY;
     }
 
@@ -126,12 +140,19 @@ contract CDaiDelegate is CErc20Delegate {
      * @param amount Amount of underlying to transfer
      * @return The actual amount that is transferred
      */
-    function doTransferIn(address from, uint amount) override internal returns (uint) {
+    function doTransferIn(address from, uint256 amount)
+        internal
+        override
+        returns (uint256)
+    {
         // Read from storage once
         address underlying_ = underlying;
         // Perform the EIP-20 transfer in
         EIP20Interface token = EIP20Interface(underlying_);
-        require(token.transferFrom(from, address(this), amount), "unexpected EIP-20 transfer in return");
+        require(
+            token.transferFrom(from, address(this), amount),
+            "unexpected EIP-20 transfer in return"
+        );
 
         DaiJoinLike daiJoin = DaiJoinLike(daiJoinAddress);
         GemLike dai = GemLike(underlying_);
@@ -142,11 +163,11 @@ contract CDaiDelegate is CErc20Delegate {
         daiJoin.join(address(this), dai.balanceOf(address(this)));
 
         // Checks the actual balance of DAI in the vat after the join
-        uint bal = vat.dai(address(this));
+        uint256 bal = vat.dai(address(this));
 
         // Calculate the percentage increase to th pot for the entire vat, and move it in
         // Note: We may leave a tiny bit of DAI in the vat...but we do the whole thing every time
-        uint pie = bal / pot.chi();
+        uint256 pie = bal / pot.chi();
         pot.join(pie);
 
         return amount;
@@ -157,13 +178,16 @@ contract CDaiDelegate is CErc20Delegate {
      * @param to Address to transfer funds to
      * @param amount Amount of underlying to transfer
      */
-    function doTransferOut(address payable to, uint amount) override internal {
+    function doTransferOut(address payable to, uint256 amount)
+        internal
+        override
+    {
         DaiJoinLike daiJoin = DaiJoinLike(daiJoinAddress);
         PotLike pot = PotLike(potAddress);
 
         // Calculate the percentage decrease from the pot, and move that much out
         // Note: Use a slightly larger pie size to ensure that we get at least amount in the vat
-        uint pie = add(mul(amount, RAY) / pot.chi(), 1);
+        uint256 pie = add(mul(amount, RAY) / pot.chi(), 1);
         pot.exit(pie);
 
         daiJoin.exit(to, amount);
@@ -171,13 +195,13 @@ contract CDaiDelegate is CErc20Delegate {
 
     /*** Maker Internals ***/
 
-    uint256 constant RAY = 10 ** 27;
+    uint256 constant RAY = 10**27;
 
-    function add(uint x, uint y) internal pure returns (uint z) {
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x, "add-overflow");
     }
 
-    function mul(uint x, uint y) internal pure returns (uint z) {
+    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require(y == 0 || (z = x * y) / y == x, "mul-overflow");
     }
 }
@@ -185,27 +209,41 @@ contract CDaiDelegate is CErc20Delegate {
 /*** Maker Interfaces ***/
 
 interface PotLike {
-    function chi() external view returns (uint);
-    function pie(address) external view returns (uint);
-    function drip() external returns (uint);
-    function join(uint) external;
-    function exit(uint) external;
+    function chi() external view returns (uint256);
+
+    function pie(address) external view returns (uint256);
+
+    function drip() external returns (uint256);
+
+    function join(uint256) external;
+
+    function exit(uint256) external;
 }
 
 interface GemLike {
-    function approve(address, uint) external;
-    function balanceOf(address) external view returns (uint);
-    function transferFrom(address, address, uint) external returns (bool);
+    function approve(address, uint256) external;
+
+    function balanceOf(address) external view returns (uint256);
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external returns (bool);
 }
 
 interface VatLike {
-    function dai(address) external view returns (uint);
+    function dai(address) external view returns (uint256);
+
     function hope(address) external;
 }
 
 interface DaiJoinLike {
     function vat() external returns (VatLike);
+
     function dai() external returns (GemLike);
-    function join(address, uint) external payable;
-    function exit(address, uint) external;
+
+    function join(address, uint256) external payable;
+
+    function exit(address, uint256) external;
 }
