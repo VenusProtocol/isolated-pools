@@ -161,7 +161,7 @@ contract PoolRegistry is OwnableUpgradeable {
         );
         _numberOfPools++;
 
-        _poolsByID[_numberOfPools] = (pool);
+        _poolsByID[_numberOfPools] = pool;
         _poolByComptroller[comptroller] = pool;
 
         emit PoolRegistered(_numberOfPools, pool);
