@@ -79,7 +79,12 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Array of Venus pools.
      */
-    VenusPool[] private _poolsByID;
+    mapping(uint256 => VenusPool) private _poolsByID;
+
+    /**
+    * @dev Total number of pools created.
+    */
+    uint256 private _numberOfPools;
 
     /**
      * @dev Maps comptroller address to Venus pool.
@@ -154,12 +159,13 @@ contract PoolRegistry is OwnableUpgradeable {
             block.number,
             block.timestamp
         );
-        _poolsByID.push(pool);
+        _numberOfPools++;
+
+        _poolsByID[_numberOfPools] = (pool);
         _poolByComptroller[comptroller] = pool;
-        uint256 poolsLength = _poolsByID.length;
         
-        emit PoolRegistered(poolsLength - 1, pool);
-        return poolsLength - 1;
+        emit PoolRegistered(_numberOfPools, pool);
+        return _numberOfPools;
     }
 
     /**
@@ -227,15 +233,15 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Modify existing Venus pool name.
      */
-    function setPoolName(uint256 index, string calldata name) external {
-        Comptroller _comptroller = Comptroller(_poolsByID[index].comptroller);
+    function setPoolName(uint256 poolId, string calldata name) external {
+        Comptroller _comptroller = Comptroller(_poolsByID[poolId].comptroller);
 
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
 
-        _poolsByID[index].name = name;
-        emit PoolNameSet(index, name);
+        _poolsByID[poolId].name = name;
+        emit PoolNameSet(poolId, name);
     }
 
     /**
@@ -250,15 +256,19 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
     function getAllPools() external view returns (VenusPool[] memory) {
-        return _poolsByID;
+        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
+        for(uint256 i=1; i<= _numberOfPools; i++) {
+            _pools[i-1] = (_poolsByID[i]);
+        }
+        return _pools;
     }
 
     /**
      * @notice Returns Venus pool by PoolID.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getPoolByID(uint256 index) external view returns (VenusPool memory) {
-        return _poolsByID[index];
+    function getPoolByID(uint256 poolId) external view returns (VenusPool memory) {
+        return _poolsByID[poolId];
     }
 
     /** 
