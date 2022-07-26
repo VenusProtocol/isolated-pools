@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "../Comptroller.sol";
 import "../Unitroller.sol";
@@ -19,21 +19,16 @@ import "../InterestRateModel.sol";
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is OwnableUpgradeable {
+contract PoolRegistry is Initializable {
     CErc20ImmutableFactory private cTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
 
-    /**
-     * @dev Initializes the deployer to owner.
-     */
     function initialize(
         CErc20ImmutableFactory _cTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory
     ) public initializer {
-        __Ownable_init();
-
         cTokenFactory = _cTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
@@ -157,7 +152,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 closeFactor,
         uint256 liquidationIncentive,
         address priceOracle
-    ) external virtual onlyOwner returns (uint256, address) {
+    ) external virtual returns (uint256, address) {
         // Input validation
         require(
             implementation != address(0),
@@ -212,7 +207,7 @@ contract PoolRegistry is OwnableUpgradeable {
 
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
-        require(msg.sender == _comptroller.admin() || msg.sender == owner());
+        require(msg.sender == _comptroller.admin(), "RegistryPool: Only admin can set pool name.");
 
         _poolsByID[poolId].name = name;
         emit PoolNameSet(poolId, name);
