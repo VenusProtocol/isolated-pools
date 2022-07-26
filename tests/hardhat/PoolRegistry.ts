@@ -17,8 +17,10 @@ import { convertToUnit } from "../../helpers/utils";
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
 let comptroller2: Comptroller;
+let comptroller3: Comptroller;
 let simplePriceOracle1: SimplePriceOracle;
 let simplePriceOracle2: SimplePriceOracle;
+let simplePriceOracle3: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
@@ -28,15 +30,21 @@ let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
+let comptroller3Proxy: Comptroller;
+let unitroller3: Unitroller;
 let cTokenFactory: CErc20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
+const _closeFactor = convertToUnit(0.05, 18);
+const _liquidationIncentive = convertToUnit(1, 18);
 
 describe("PoolRegistry: Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
+    const [, user1] = await ethers.getSigners();
+
     const CErc20ImmutableFactory = await ethers.getContractFactory(
       "CErc20ImmutableFactory"
     );
@@ -82,13 +90,19 @@ describe("PoolRegistry: Tests", async function () {
 
     simplePriceOracle2 = await SimplePriceOracle.deploy();
     await simplePriceOracle2.deployed();
+
+    // Deploying comptroller and simpleOracle with user1 address.
+    comptroller3 = await Comptroller.connect(user1).deploy(
+      poolRegistry.address
+    );
+    await comptroller1.deployed();
+
+    simplePriceOracle3 = await SimplePriceOracle.connect(user1).deploy();
+    await simplePriceOracle2.deployed();
   });
 
   // Register pools to the protocol
   it("Register pool", async function () {
-    const _closeFactor = convertToUnit(0.05, 18);
-    const _liquidationIncentive = convertToUnit(1, 18);
-
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
@@ -135,10 +149,39 @@ describe("PoolRegistry: Tests", async function () {
     await unitroller2._acceptAdmin();
   });
 
+  it("Register permission less pool", async function () {
+    const [, user1] = await ethers.getSigners();
+
+    // Registering the third pool with user1.
+    await poolRegistry
+      .connect(user1)
+      .createRegistryPool(
+        "Pool 3",
+        comptroller3.address,
+        _closeFactor,
+        _liquidationIncentive,
+        simplePriceOracle3.address
+      );
+
+    const pools = await poolRegistry.callStatic.getAllPools();
+    expect(pools[2].name).equal("Pool 3");
+
+    comptroller3Proxy = await ethers.getContractAt(
+      "Comptroller",
+      pools[2].comptroller
+    );
+    unitroller3 = await ethers.getContractAt(
+      "Unitroller",
+      pools[2].comptroller
+    );
+
+    await unitroller3._acceptAdmin();
+  });
+
   // Get the list of all pools.
   it("Get all pools", async function () {
     const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools.length).equal(2);
+    expect(pools.length).equal(3);
   });
 
   // Chnage/updte pool name.
@@ -181,6 +224,11 @@ describe("PoolRegistry: Tests", async function () {
       comptroller2Proxy.address
     );
     expect(pool2[0]).equal("Pool 2");
+
+    const pool3 = await poolRegistry.getPoolByComptroller(
+      comptroller3Proxy.address
+    );
+    expect(pool3[0]).equal("Pool 3");
   });
 
   it("Deploy Mock Tokens", async function () {
