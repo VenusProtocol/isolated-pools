@@ -49,6 +49,32 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
+    
+    /**
+     * @dev Enum for risk rating of Venus interest rate pool.
+     */
+    enum RiskRating {
+        VERY_HIGH_RISK,
+        HIGH_RISK,
+        MEDIUM_RISK,
+        LOW_RISK,
+        MINIMAL_RISK
+    }
+    
+    /**
+     * @dev Struct for a Venus interest rate pool metadata.
+     */
+    struct VenusPoolMetaData {
+        RiskRating riskRating;
+        string category;
+        string logoURL;
+        string description;
+    }
+
+    /**
+     * @dev Maps venus pool id to metadata
+     */
+    mapping(uint256 => VenusPoolMetaData) public metadata;
 
     /**
      * @dev Array of Venus pools.
@@ -259,6 +285,9 @@ contract PoolRegistry is OwnableUpgradeable {
         return _bookmarks[account];
     }
 
+    /**
+     * @notice Add a market to an existing pool
+     */
     function addMarket(
         AddMarketInput memory input
     ) external {
@@ -305,5 +334,12 @@ contract PoolRegistry is OwnableUpgradeable {
 
     function getPoolsSupportedByAsset(address asset) external view returns (uint[] memory) {
         return _supportedPools[asset];
+    }
+
+    /**
+     * @notice Update metadata of an existing pool
+     */
+    function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external onlyOwner {
+        metadata[poolId] = _metadata;
     }
 }
