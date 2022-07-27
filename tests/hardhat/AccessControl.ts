@@ -29,7 +29,7 @@ describe("Access Control", () => {
 
     await accessControlManager.deployed();
   });
-  describe("Permission logic", () => {
+  describe("Access Control", () => {
     // As of now deployer is the only default role admin
     // and this is set upon dpeloyment.
     it("only default admin role can give call permissions", async () => {
