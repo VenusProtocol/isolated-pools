@@ -199,7 +199,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         CToken cToken,
         uint256 supplySpeed,
         uint256 borrowSpeed
-    ) public {
+    ) internal {
         require(
             comptroller.isMarketListed(cToken),
             "comp market is not listed"
@@ -209,7 +209,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             // Supply speed updated so let's update supply state to ensure that
             //  1. COMP accrued properly for the old speed, and
             //  2. COMP accrued at the new speed starts after this block.
-            updateCompSupplyIndex(address(cToken));
+            _updateCompSupplyIndex(address(cToken));
 
             // Update speed and emit event
             compSupplySpeeds[address(cToken)] = supplySpeed;
@@ -221,7 +221,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             //  1. COMP accrued properly for the old speed, and
             //  2. COMP accrued at the new speed starts after this block.
             Exp memory borrowIndex = Exp({mantissa: cToken.borrowIndex()});
-            updateCompBorrowIndex(address(cToken), borrowIndex);
+            _updateCompBorrowIndex(address(cToken), borrowIndex);
 
             // Update speed and emit event
             compBorrowSpeeds[address(cToken)] = borrowSpeed;
@@ -229,7 +229,11 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
-    function distributeSupplierComp(address cToken, address supplier) public {
+    function distributeSupplierComp(address cToken, address supplier) public onlyComptroller {
+        _distributeSupplierComp(cToken, supplier);
+    }
+
+    function _distributeSupplierComp(address cToken, address supplier) internal {
         // TODO: Don't distribute supplier COMP if the user is not in the supplier market.
         // This check should be as gas efficient as possible as distributeSupplierComp is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
@@ -269,17 +273,25 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         );
     }
 
+    function distributeBorrowerComp(
+        address cToken,
+        address borrower,
+        Exp memory marketBorrowIndex
+    ) external onlyComptroller {
+        _distributeBorrowerComp(cToken, borrower, marketBorrowIndex);
+    }
+
     /**
      * @notice Calculate COMP accrued by a borrower and possibly transfer it to them
      * @dev Borrowers will not begin to accrue until after the first interaction with the protocol.
      * @param cToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute COMP to
      */
-    function distributeBorrowerComp(
+    function _distributeBorrowerComp(
         address cToken,
         address borrower,
         Exp memory marketBorrowIndex
-    ) public {
+    ) internal {
         // TODO: Don't distribute supplier COMP if the user is not in the borrower market.
         // This check should be as gas efficient as possible as distributeBorrowerComp is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
@@ -342,12 +354,16 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         return amount;
     }
 
+    function updateCompSupplyIndex(address cToken) external onlyComptroller {
+        _updateCompSupplyIndex(cToken);
+    }
+
     /**
      * @notice Accrue COMP to the market by updating the supply index
      * @param cToken The market whose supply index to update
      * @dev Index is a cumulative sum of the COMP per cToken accrued.
      */
-    function updateCompSupplyIndex(address cToken) public {
+    function _updateCompSupplyIndex(address cToken) internal {
         CompMarketState storage supplyState = compSupplyState[cToken];
         uint256 supplySpeed = compSupplySpeeds[cToken];
         uint32 blockNumber = safe32(
@@ -374,13 +390,17 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
+    function updateCompBorrowIndex(address cToken, Exp memory marketBorrowIndex) external onlyComptroller {
+        _updateCompBorrowIndex(cToken, marketBorrowIndex);
+    }
+
     /**
      * @notice Accrue COMP to the market by updating the borrow index
      * @param cToken The market whose borrow index to update
      * @dev Index is a cumulative sum of the COMP per cToken accrued.
      */
-    function updateCompBorrowIndex(address cToken, Exp memory marketBorrowIndex)
-        public
+    function _updateCompBorrowIndex(address cToken, Exp memory marketBorrowIndex)
+        internal
     {
         CompMarketState storage borrowState = compBorrowState[cToken];
         uint256 borrowSpeed = compBorrowSpeeds[cToken];
@@ -419,7 +439,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param recipient The address of the recipient to transfer COMP to
      * @param amount The amount of COMP to (possibly) transfer
      */
-    function _grantComp(address recipient, uint256 amount) public onlyOwner {
+    function _grantComp(address recipient, uint256 amount) external onlyOwner {
         uint256 amountLeft = grantCompInternal(recipient, amount);
         require(amountLeft == 0, "insufficient comp for grant");
         emit CompGranted(recipient, amount);
@@ -446,9 +466,9 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             );
             if (borrowers == true) {
                 Exp memory borrowIndex = Exp({mantissa: cToken.borrowIndex()});
-                updateCompBorrowIndex(address(cToken), borrowIndex);
+                _updateCompBorrowIndex(address(cToken), borrowIndex);
                 for (uint256 j = 0; j < holders.length; j++) {
-                    distributeBorrowerComp(
+                    _distributeBorrowerComp(
                         address(cToken),
                         holders[j],
                         borrowIndex
@@ -456,9 +476,9 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
                 }
             }
             if (suppliers == true) {
-                updateCompSupplyIndex(address(cToken));
+                _updateCompSupplyIndex(address(cToken));
                 for (uint256 j = 0; j < holders.length; j++) {
-                    distributeSupplierComp(address(cToken), holders[j]);
+                    _distributeSupplierComp(address(cToken), holders[j]);
                 }
             }
         }
@@ -499,5 +519,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
 
     function getBlockNumber() public view virtual returns (uint256) {
         return block.number;
+    }
+
+    modifier onlyComptroller() {
+        require(address(comptroller) == msg.sender, "Only comptroller can call this function");
+        _;
     }
 }
