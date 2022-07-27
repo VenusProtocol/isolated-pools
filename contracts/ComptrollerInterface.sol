@@ -7,120 +7,66 @@ abstract contract ComptrollerInterface {
 
     /*** Assets You Are In ***/
 
-    function enterMarkets(address[] calldata cTokens)
-        external
-        virtual
-        returns (uint256[] memory);
-
-    function exitMarket(address cToken) external virtual returns (uint256);
+    function enterMarkets(address[] calldata cTokens) virtual external returns (uint[] memory);
+    function exitMarket(address cToken) virtual external returns (uint);
 
     /*** Policy Hooks ***/
 
-    function mintAllowed(
-        address cToken,
-        address minter,
-        uint256 mintAmount
-    ) external virtual returns (uint256);
+    function mintAllowed(address cToken, address minter, uint mintAmount) virtual external returns (uint);
+    function mintVerify(address cToken, address minter, uint mintAmount, uint mintTokens) virtual external;
 
-    function mintVerify(
-        address cToken,
-        address minter,
-        uint256 mintAmount,
-        uint256 mintTokens
-    ) external virtual;
+    function redeemAllowed(address cToken, address redeemer, uint redeemTokens) virtual external returns (uint);
+    function redeemVerify(address cToken, address redeemer, uint redeemAmount, uint redeemTokens) virtual external;
 
-    function redeemAllowed(
-        address cToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) external virtual returns (uint256);
-
-    function redeemVerify(
-        address cToken,
-        address redeemer,
-        uint256 redeemAmount,
-        uint256 redeemTokens
-    ) external virtual;
-
-    function borrowAllowed(
-        address cToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external virtual returns (uint256);
-
-    function borrowVerify(
-        address cToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external virtual;
+    function borrowAllowed(address cToken, address borrower, uint borrowAmount) virtual external returns (uint);
+    function borrowVerify(address cToken, address borrower, uint borrowAmount) virtual external;
 
     function repayBorrowAllowed(
         address cToken,
         address payer,
         address borrower,
-        uint256 repayAmount
-    ) external virtual returns (uint256);
-
+        uint repayAmount) virtual external returns (uint);
     function repayBorrowVerify(
         address cToken,
         address payer,
         address borrower,
-        uint256 repayAmount,
-        uint256 borrowerIndex
-    ) external virtual;
+        uint repayAmount,
+        uint borrowerIndex) virtual external;
 
     function liquidateBorrowAllowed(
         address cTokenBorrowed,
         address cTokenCollateral,
         address liquidator,
         address borrower,
-        uint256 repayAmount
-    ) external virtual returns (uint256);
-
+        uint repayAmount) virtual external returns (uint);
     function liquidateBorrowVerify(
         address cTokenBorrowed,
         address cTokenCollateral,
         address liquidator,
         address borrower,
-        uint256 repayAmount,
-        uint256 seizeTokens
-    ) external virtual;
+        uint repayAmount,
+        uint seizeTokens) virtual external;
 
     function seizeAllowed(
         address cTokenCollateral,
         address cTokenBorrowed,
         address liquidator,
         address borrower,
-        uint256 seizeTokens
-    ) external virtual returns (uint256);
-
+        uint seizeTokens) virtual external returns (uint);
     function seizeVerify(
         address cTokenCollateral,
         address cTokenBorrowed,
         address liquidator,
         address borrower,
-        uint256 seizeTokens
-    ) external virtual;
+        uint seizeTokens) virtual external;
 
-    function transferAllowed(
-        address cToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external virtual returns (uint256);
-
-    function transferVerify(
-        address cToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external virtual;
+    function transferAllowed(address cToken, address src, address dst, uint transferTokens) virtual external returns (uint);
+    function transferVerify(address cToken, address src, address dst, uint transferTokens) virtual external;
 
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(
         address cTokenBorrowed,
         address cTokenCollateral,
-        uint256 repayAmount
-    ) external view virtual returns (uint256, uint256);
+        uint repayAmount) virtual external view returns (uint, uint);
 }

@@ -1308,7 +1308,7 @@ contract Comptroller is
         newMarket.collateralFactorMantissa = 0;
 
         _addMarketInternal(address(cToken));
-        rewardsDistributor._initializeMarket(address(cToken));
+        rewardsDistributor.initializeMarket(address(cToken));
 
         emit MarketListed(cToken);
 

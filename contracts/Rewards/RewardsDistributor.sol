@@ -91,7 +91,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    function _initializeMarket(address cToken) external {
+    function initializeMarket(address cToken) external onlyComptroller {
         uint32 blockNumber = safe32(
             getBlockNumber(),
             "block number exceeds 32 bits"
