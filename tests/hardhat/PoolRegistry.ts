@@ -28,24 +28,30 @@ let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
-let cTokenFactory:CErc20ImmutableFactory;
-let jumpRateFactory:JumpRateModelFactory;
-let whitePaperRateFactory:WhitePaperInterestRateModelFactory;
+let cTokenFactory: CErc20ImmutableFactory;
+let jumpRateFactory: JumpRateModelFactory;
+let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 
 describe("PoolRegistry: Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    const CErc20ImmutableFactory = await ethers.getContractFactory('CErc20ImmutableFactory');
+    const CErc20ImmutableFactory = await ethers.getContractFactory(
+      "CErc20ImmutableFactory"
+    );
     cTokenFactory = await CErc20ImmutableFactory.deploy();
     await cTokenFactory.deployed();
 
-    const JumpRateModelFactory = await ethers.getContractFactory('JumpRateModelFactory');
+    const JumpRateModelFactory = await ethers.getContractFactory(
+      "JumpRateModelFactory"
+    );
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory('WhitePaperInterestRateModelFactory');
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
+      "WhitePaperInterestRateModelFactory"
+    );
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -137,11 +143,11 @@ describe("PoolRegistry: Tests", async function () {
 
   // Chnage/updte pool name.
   it("Change pool name", async function () {
-    await poolRegistry.setPoolName(0, "Pool 1 updated");
+    await poolRegistry.setPoolName(1, "Pool 1 updated");
     const pools = await poolRegistry.callStatic.getAllPools();
 
     expect(pools[0].name).equal("Pool 1 updated");
-    await poolRegistry.setPoolName(0, "Pool 1");
+    await poolRegistry.setPoolName(1, "Pool 1");
   });
 
   // Bookmark the pool anf get all of the bookmarked pools.
@@ -158,8 +164,8 @@ describe("PoolRegistry: Tests", async function () {
   });
 
   // Get pool data by pool's index.
-  it("Get pool by index", async function () {
-    const pool = await poolRegistry.getPoolByID(1);
+  it("Get pool by poolId", async function () {
+    const pool = await poolRegistry.getPoolByID(2);
 
     expect(pool.name).equal("Pool 2");
   });
@@ -193,7 +199,7 @@ describe("PoolRegistry: Tests", async function () {
     const btcBalance = await mockWBTC.balanceOf(owner.address);
 
     expect(btcBalance).equal(convertToUnit(1000, 8));
-  })
+  });
 
   it("Deploy Price Oracle", async function () {
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -210,7 +216,7 @@ describe("PoolRegistry: Tests", async function () {
 
   it("Deploy CToken", async function () {
     await poolRegistry.addMarket({
-      poolId: 0,
+      poolId: 1,
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
@@ -220,11 +226,11 @@ describe("PoolRegistry: Tests", async function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18)
+      collateralFactor: convertToUnit(0.7, 18),
     });
 
     await poolRegistry.addMarket({
-      poolId: 0,
+      poolId: 1,
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
@@ -234,20 +240,26 @@ describe("PoolRegistry: Tests", async function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18)
+      collateralFactor: convertToUnit(0.7, 18),
     });
-    
-    const cWBTCAddress = await poolRegistry.getCTokenForAsset(0, mockWBTC.address);
-    const cDAIAddress = await poolRegistry.getCTokenForAsset(0, mockDAI.address);
 
-    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress)
-    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress)
+    const cWBTCAddress = await poolRegistry.getCTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const cDAIAddress = await poolRegistry.getCTokenForAsset(
+      1,
+      mockDAI.address
+    );
+
+    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
+    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
   });
 
   // Get all pools that support a given asset
   it("Get pools with asset", async function () {
     const pools = await poolRegistry.getPoolsSupportedByAsset(mockWBTC.address);
-    expect(pools[0].toString()).equal("0")
+    expect(pools[0].toString()).equal("1");
   });
 
   it("Enter Market", async function () {
