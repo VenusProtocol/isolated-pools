@@ -29,13 +29,13 @@ describe("Access Control", () => {
 
     await accessControlManager.deployed();
   });
-  describe("Access Control", () => {
+  describe("Access Control Base Functionality", () => {
     // As of now deployer is the only default role admin
     // and this is set upon dpeloyment.
     it("only default admin role can give call permissions", async () => {
       let [owner, addr1, addr2] = addresses;
 
-      await expect(
+      expect(
         accessControlManager
           .connect(addr1)
           .giveCallPermission(

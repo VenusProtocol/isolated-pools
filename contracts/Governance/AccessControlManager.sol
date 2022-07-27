@@ -17,9 +17,11 @@ contract AccessControlManager is AccessControl {
     }
 
     /**
-     *@notice Verifies if the msg.sender can call a praticular contract's function
-     *@param Documents a parameter just like in doxygen (must be followed by parameter name)
-     *@return Documents the return variables of a contract’s function state variable
+     * @notice Verifies if the msg.sender can call a praticular contract's function
+     * @param contractName name of contract for which call permissions will be checked
+     * @param functionSig signature e.g. "functionNmae(uint,bool)"
+     * @return false if the user account cannot call the particular contract function
+     *
      */
     function isAllowedToCall(
         string memory contractName,
@@ -32,6 +34,9 @@ contract AccessControlManager is AccessControl {
     /**
      * @notice Gives a function call permission to one single account
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
+     * 		May emit a {RoleGranted} event.
+     * @param contractName name of contract for which call permissions will be granted
+     * @param functionSig signature e.g. "functionNmae(uint,bool)"
      */
     function giveCallPermission(
         string memory contractName,
@@ -45,6 +50,9 @@ contract AccessControlManager is AccessControl {
     /**
      * @notice Revokes an account's permission to a particular function call
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
+     * 		May emit a {RoleRevoked} event.
+     * @param contractName name of contract for which call permissions will be revoked
+     * @param functionSig signature e.g. "functionNmae(uint,bool)"
      */
     function revokeCallPermission(
         string memory contractName,
