@@ -289,6 +289,7 @@ describe("PoolRegistry: Tests", async function () {
   });
 
   it("Lend and Borrow", async function () {
+    await comptroller1Proxy._setMarketSupplyCaps([cDAI.address], [convertToUnit(100000, 18)]);
     const daiAmount = convertToUnit(31000, 18);
     await mockDAI.faucet(daiAmount);
     await mockDAI.approve(cDAI.address, daiAmount);
@@ -298,11 +299,10 @@ describe("PoolRegistry: Tests", async function () {
     await mockWBTC.connect(user).faucet(convertToUnit(1000, 8));
 
     const btcAmount = convertToUnit(1000, 8);
+    await comptroller1Proxy._setMarketSupplyCaps([cWBTC.address], [convertToUnit(100000, 8)]);
     await mockWBTC.connect(user).approve(cWBTC.address, btcAmount);
     await cWBTC.connect(user).mint(btcAmount);
 
-    // console.log((await comptroller1Proxy.callStatic.getAccountLiquidity(owner.address))[1].toString())
-    // console.log((await comptroller1Proxy.callStatic.getAccountLiquidity(user.address))[1].toString())
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
   });

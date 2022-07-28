@@ -294,7 +294,7 @@ contract Comptroller is
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        uint supplyCap = supplyCaps[cToken];
+        uint256 supplyCap = supplyCaps[cToken];
         require(supplyCap > 0, "market supply cap is 0");
 
         uint totalSupply = CToken(cToken).totalSupply();
@@ -1392,15 +1392,12 @@ contract Comptroller is
      * @param cTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
     */
-    function _setMarketSupplyCaps(CToken[] calldata cTokens, uint[] calldata newSupplyCaps) external {
+    function _setMarketSupplyCaps(CToken[] calldata cTokens, uint256[] calldata newSupplyCaps) external {
         require(msg.sender == admin , "only admin can set supply caps");
+        require(cTokens.length != 0, "invalid number of markets");
+        require(cTokens.length == newSupplyCaps.length, "invalid number of markets");
 
-        uint numMarkets = cTokens.length;
-        uint numSupplyCaps = newSupplyCaps.length;
-
-        require(numMarkets != 0 && numMarkets == numSupplyCaps, "invalid input");
-
-        for(uint i = 0; i < numMarkets; i++) {
+        for(uint256 i = 0; i < cTokens.length; ++i) {
             supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
             emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
         }
