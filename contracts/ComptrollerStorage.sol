@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./CToken.sol";
 import "./PriceOracle.sol";
+import "./Governance/AccessControlManager.sol";
 
 contract UnitrollerAdminStorage {
     /**
@@ -100,6 +101,7 @@ contract ComptrollerV3Storage is ComptrollerV2Storage {
 
 contract ComptrollerV4Storage is ComptrollerV3Storage {
     // @notice The borrowCapGuardian can set borrowCaps to any number for any market. Lowering the borrow cap could disable borrowing on the given market.
+    // NOTE: please remove this as it is not used anymore
     address public borrowCapGuardian;
 
     // @notice Borrow caps enforced by borrowAllowed for each cToken address. Defaults to zero which corresponds to unlimited borrowing.
@@ -124,4 +126,9 @@ contract ComptrollerV8Storage is ComptrollerV7Storage {
 
     /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
     mapping(address => uint256) public supplyCaps;
+}
+
+contract ComptrollerV9Storage is ComptrollerV8Storage {
+    /// @notice Storage of AccessControlManager address
+    address internal accessControlAddress;
 }

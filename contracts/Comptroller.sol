@@ -10,12 +10,14 @@ import "./Unitroller.sol";
 import "./Governance/Comp.sol";
 import "./Rewards/RewardsDistributor.sol";
 
+import "./Governance/AccessControlManager.sol";
+
 /**
  * @title Compound's Comptroller Contract
  * @author Compound
  */
 contract Comptroller is
-    ComptrollerV8Storage,
+    ComptrollerV9Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
     ExponentialNoError
@@ -54,6 +56,12 @@ contract Comptroller is
         PriceOracle newPriceOracle
     );
 
+    /// @notice Emitted when AccessControlManager is changed
+    event NewAccessControlManager(
+        AccessControlManager oldAccessControlManager,
+        AccessControlManager newAccessControlManager
+    );
+
     /// @notice Emitted when pause guardian is changed
     event NewPauseGuardian(address oldPauseGuardian, address newPauseGuardian);
 
@@ -79,7 +87,7 @@ contract Comptroller is
     );
 
     /// @notice Emitted when supply cap for a vToken is changed
-    event NewSupplyCap(CToken indexed vToken, uint newSupplyCap);
+    event NewSupplyCap(CToken indexed vToken, uint256 newSupplyCap);
 
     // closeFactorMantissa must be strictly greater than this value
     uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
@@ -297,14 +305,17 @@ contract Comptroller is
         uint256 supplyCap = supplyCaps[cToken];
         require(supplyCap > 0, "market supply cap is 0");
 
-        uint totalSupply = CToken(cToken).totalSupply();
-        uint nextTotalSupply = add_(totalSupply, mintAmount);
+        uint256 totalSupply = CToken(cToken).totalSupply();
+        uint256 nextTotalSupply = add_(totalSupply, mintAmount);
         require(nextTotalSupply <= supplyCap, "market supply cap reached");
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(cToken, minter);
+            rewardsDistributors[i].distributeSupplierRewardToken(
+                cToken,
+                minter
+            );
         }
 
         return uint256(Error.NO_ERROR);
@@ -355,9 +366,11 @@ contract Comptroller is
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(cToken, redeemer);
+            rewardsDistributors[i].distributeSupplierRewardToken(
+                cToken,
+                redeemer
+            );
         }
-        
 
         return uint256(Error.NO_ERROR);
     }
@@ -484,8 +497,13 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
+            Exp memory borrowIndex = Exp({
+                mantissa: CToken(cToken).borrowIndex()
+            });
+            rewardsDistributors[i].updateRewardTokenBorrowIndex(
+                cToken,
+                borrowIndex
+            );
             rewardsDistributors[i].distributeBorrowerRewardToken(
                 cToken,
                 borrower,
@@ -543,15 +561,19 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
+            Exp memory borrowIndex = Exp({
+                mantissa: CToken(cToken).borrowIndex()
+            });
+            rewardsDistributors[i].updateRewardTokenBorrowIndex(
+                cToken,
+                borrowIndex
+            );
             rewardsDistributors[i].distributeBorrowerRewardToken(
                 cToken,
                 borrower,
                 borrowIndex
             );
         }
-        
 
         return uint256(Error.NO_ERROR);
     }
@@ -719,11 +741,18 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(cTokenCollateral);
-            rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, borrower);
-            rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, liquidator);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(
+                cTokenCollateral
+            );
+            rewardsDistributors[i].distributeSupplierRewardToken(
+                cTokenCollateral,
+                borrower
+            );
+            rewardsDistributors[i].distributeSupplierRewardToken(
+                cTokenCollateral,
+                liquidator
+            );
         }
-        
 
         return uint256(Error.NO_ERROR);
     }
@@ -786,7 +815,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, src);
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, dst);
         }
-        
+
         return uint256(Error.NO_ERROR);
     }
 
@@ -1188,8 +1217,30 @@ contract Comptroller is
     }
 
     /**
+     * @notice Sets the address of AccessControlManager
+     * @dev Admin function to set address of AccessControlManager
+     * @param newAclAddress The new address of the AccessControlManager
+     * @return uint 0=success, otherwise a failure
+     */
+    function _setAccessControlAddress(
+        AccessControlManager newAccessControlManager
+    ) external returns (uint256) {
+        // Check caller is admin
+        require(msg.sender == admin, "only admin can set ACL address");
+
+        AccessControlManager oldAccessControlManager = accessControlManager;
+        accessControlManager = newAccessControlManager;
+        emit NewAccessControlManager(
+            oldAccessControlManager,
+            accessControlManager
+        );
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
      * @notice Sets the collateralFactor for a market
-     * @dev Admin function to set per-market collateralFactor
+     * @dev Restricted function to set per-market collateralFactor
      * @param cToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
@@ -1198,8 +1249,13 @@ contract Comptroller is
         CToken cToken,
         uint256 newCollateralFactorMantissa
     ) external returns (uint256) {
-        // Check caller is admin
-        if (msg.sender != admin && msg.sender != poolRegistry) {
+        bool isAllowedtoCall = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(
+                msg.sender,
+                "_setCollateralFactor(CToken,uint256)"
+            );
+
+        if (isAllowedtoCall) {
             return
                 fail(
                     Error.UNAUTHORIZED,
@@ -1350,9 +1406,14 @@ contract Comptroller is
         CToken[] calldata cTokens,
         uint256[] calldata newBorrowCaps
     ) external {
+        // NOTE: previous code restricted this function with
+        // msg.sender == admin || msg.sender == borrowCapGuardian
+        // Please consider adjusting deployment script before Testnet
         require(
-            msg.sender == admin || msg.sender == borrowCapGuardian,
-            "only admin or borrow cap guardian can set borrow caps"
+            AccessControlManager(accessControlAddress).isAllowedToCall(
+                msg.sender,
+                "_setMarketBorrowCaps(CToken[],uint256[])"
+            )
         );
 
         uint256 numMarkets = cTokens.length;
@@ -1370,34 +1431,23 @@ contract Comptroller is
     }
 
     /**
-     * @notice Admin function to change the Borrow Cap Guardian
-     * @param newBorrowCapGuardian The address of the new Borrow Cap Guardian
-     */
-    function _setBorrowCapGuardian(address newBorrowCapGuardian) external {
-        require(msg.sender == admin, "only admin can set borrow cap guardian");
-
-        // Save current value for inclusion in log
-        address oldBorrowCapGuardian = borrowCapGuardian;
-
-        // Store borrowCapGuardian with value newBorrowCapGuardian
-        borrowCapGuardian = newBorrowCapGuardian;
-
-        // Emit NewBorrowCapGuardian(OldBorrowCapGuardian, NewBorrowCapGuardian)
-        emit NewBorrowCapGuardian(oldBorrowCapGuardian, newBorrowCapGuardian);
-    }
-
-    /**
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
      * @dev Admin function to set the supply caps. A supply cap of 0 corresponds to Minting NotAllowed.
      * @param cTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
-    */
-    function _setMarketSupplyCaps(CToken[] calldata cTokens, uint256[] calldata newSupplyCaps) external {
-        require(msg.sender == admin , "only admin can set supply caps");
+     */
+    function _setMarketSupplyCaps(
+        CToken[] calldata cTokens,
+        uint256[] calldata newSupplyCaps
+    ) external {
+        require(msg.sender == admin, "only admin can set supply caps");
         require(cTokens.length != 0, "invalid number of markets");
-        require(cTokens.length == newSupplyCaps.length, "invalid number of markets");
+        require(
+            cTokens.length == newSupplyCaps.length,
+            "invalid number of markets"
+        );
 
-        for(uint256 i = 0; i < cTokens.length; ++i) {
+        for (uint256 i = 0; i < cTokens.length; ++i) {
             supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
             emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
         }
@@ -1540,7 +1590,8 @@ contract Comptroller is
     }
 
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor)
-        external returns (uint256)
+        external
+        returns (uint256)
     {
         if (msg.sender != admin) {
             return
@@ -1550,14 +1601,17 @@ contract Comptroller is
                 );
         }
 
-        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
+        require(
+            rewardsDistributorExists[address(_rewardsDistributor)] == false,
+            "already exists"
+        );
 
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
-        for (uint i = 0; i < allMarkets.length; ++i) {
+        for (uint256 i = 0; i < allMarkets.length; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
-        }    
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ import "./ErrorReporter.sol";
 import "./EIP20Interface.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
+import "./Governance/AccessControlManager.sol";
 
 /**
  * @title Compound's CToken Contract
@@ -28,9 +29,14 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
                         uint initialExchangeRateMantissa_,
                         string memory name_,
                         string memory symbol_,
-                        uint8 decimals_) public {
+                        uint8 decimals_,
+						AccessControlManager accessControlManager_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
+		
+		// Set the AccessControlManager for this token
+		err = _setAccessControlAddress(accessControlManager_);
+		require(err == NO_ERROR, "setting AccessControlManager failed");
 
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
@@ -1117,6 +1123,28 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
 
         return NO_ERROR;
+    }
+
+	 /**
+     * @notice Sets the address of AccessControlManager
+     * @dev Admin function to set address of AccessControlManager
+     * @param newAclAddress The new address of the AccessControlManager
+     * @return uint 0=success, otherwise a failure
+     */
+    function _setAccessControlAddress(
+        AccessControlManager newAccessControlManager
+    ) external returns (uint256) {
+        // Check caller is admin
+        require(msg.sender == admin, "only admin can set ACL address");
+
+        AccessControlManager oldAccessControlManager = accessControlManager;
+        accessControlManager = newAccessControlManager;
+        emit NewAccessControlManager(
+            oldAccessControlManager,
+            accessControlManager
+        );
+
+        return uint256(Error.NO_ERROR);
     }
 
     /*** Safe Token ***/
