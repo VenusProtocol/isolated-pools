@@ -39,7 +39,7 @@ describe("Access Control", () => {
         accessControlManager
           .connect(addr1)
           .giveCallPermission(
-            "ExampleContract",
+            addr1.address,
             "changeCollFactor(uint256,uint256)",
             addr2.address
           )
@@ -47,58 +47,58 @@ describe("Access Control", () => {
     });
 
     it("should not have permissions", async () => {
-      let [owner, addr1, addr2] = addresses;
+      let [owner, addr1, addr2, restrictedContract] = addresses;
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeInterest(uint256,uint256)",
         addr1.address
       );
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
       let canCall: boolean = await accessControlManager
         .connect(addr1)
         .isAllowedToCall(
-          "ExampleContract",
+          restrictedContract.address,
           "changeCollFactor(uint256,uint256)"
         );
       expect(canCall).to.be.false;
     });
 
     it("should have permissions", async () => {
-      let [owner, addr1, addr2] = addresses;
+      let [owner, addr1, addr2, restrictedContract] = addresses;
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeInterest(uint256,uint256)",
         addr1.address
       );
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
       let canCall: boolean = await accessControlManager
         .connect(addr2)
         .isAllowedToCall(
-          "ExampleContract",
+          restrictedContract.address,
           "changeCollFactor(uint256,uint256)"
         );
       expect(canCall).to.be.true;
     });
 
     it("should revoke role", async () => {
-      let [owner, addr1, addr2] = addresses;
+      let [owner, addr1, addr2, restrictedContract] = addresses;
 
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeInterest(uint256,uint256)",
         addr1.address
       );
 
       await accessControlManager.giveCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
@@ -106,14 +106,14 @@ describe("Access Control", () => {
       let canCall: boolean = await accessControlManager
         .connect(addr2)
         .isAllowedToCall(
-          "ExampleContract",
+          restrictedContract.address,
           "changeCollFactor(uint256,uint256)"
         );
 
       expect(canCall).to.be.true;
 
       await accessControlManager.revokeCallPermission(
-        "ExampleContract",
+        restrictedContract.address,
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
@@ -121,7 +121,7 @@ describe("Access Control", () => {
       canCall = await accessControlManager
         .connect(addr2)
         .isAllowedToCall(
-          "ExampleContract",
+          restrictedContract.address,
           "changeCollFactor(uint256,uint256)"
         );
 
