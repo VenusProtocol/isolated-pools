@@ -104,7 +104,11 @@ contract Comptroller is
     // PoolRegistry
     address immutable poolRegistry;
 
-    RewardsDistributor private rewardsDistributor;
+    // List of Reward Distributors added
+    RewardsDistributor[] private rewardsDistributors;
+
+    // Used to check if rewards distributor is added
+    mapping(address => bool) rewardsDistributorExists;
 
     constructor(address _poolRegistry) {
         admin = msg.sender;
@@ -302,8 +306,10 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        rewardsDistributor.updateCompSupplyIndex(cToken);
-        rewardsDistributor.distributeSupplierComp(cToken, minter);
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            rewardsDistributors[i].updateCompSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierComp(cToken, minter);
+        }
 
         return uint256(Error.NO_ERROR);
     }
@@ -351,8 +357,11 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        rewardsDistributor.updateCompSupplyIndex(cToken);
-        rewardsDistributor.distributeSupplierComp(cToken, redeemer);
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            rewardsDistributors[i].updateCompSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierComp(cToken, redeemer);
+        }
+        
 
         return uint256(Error.NO_ERROR);
     }
@@ -478,13 +487,15 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-        rewardsDistributor.updateCompBorrowIndex(cToken, borrowIndex);
-        rewardsDistributor.distributeBorrowerComp(
-            cToken,
-            borrower,
-            borrowIndex
-        );
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
+            rewardsDistributors[i].updateCompBorrowIndex(cToken, borrowIndex);
+            rewardsDistributors[i].distributeBorrowerComp(
+                cToken,
+                borrower,
+                borrowIndex
+            );
+        }
 
         return uint256(Error.NO_ERROR);
     }
@@ -535,13 +546,16 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-        rewardsDistributor.updateCompBorrowIndex(cToken, borrowIndex);
-        rewardsDistributor.distributeBorrowerComp(
-            cToken,
-            borrower,
-            borrowIndex
-        );
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
+            rewardsDistributors[i].updateCompBorrowIndex(cToken, borrowIndex);
+            rewardsDistributors[i].distributeBorrowerComp(
+                cToken,
+                borrower,
+                borrowIndex
+            );
+        }
+        
 
         return uint256(Error.NO_ERROR);
     }
@@ -708,9 +722,12 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        rewardsDistributor.updateCompSupplyIndex(cTokenCollateral);
-        rewardsDistributor.distributeSupplierComp(cTokenCollateral, borrower);
-        rewardsDistributor.distributeSupplierComp(cTokenCollateral, liquidator);
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            rewardsDistributors[i].updateCompSupplyIndex(cTokenCollateral);
+            rewardsDistributors[i].distributeSupplierComp(cTokenCollateral, borrower);
+            rewardsDistributors[i].distributeSupplierComp(cTokenCollateral, liquidator);
+        }
+        
 
         return uint256(Error.NO_ERROR);
     }
@@ -768,10 +785,12 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        rewardsDistributor.updateCompSupplyIndex(cToken);
-        rewardsDistributor.distributeSupplierComp(cToken, src);
-        rewardsDistributor.distributeSupplierComp(cToken, dst);
-
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            rewardsDistributors[i].updateCompSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierComp(cToken, src);
+            rewardsDistributors[i].distributeSupplierComp(cToken, dst);
+        }
+        
         return uint256(Error.NO_ERROR);
     }
 
@@ -1308,7 +1327,10 @@ contract Comptroller is
         newMarket.collateralFactorMantissa = 0;
 
         _addMarketInternal(address(cToken));
-        rewardsDistributor.initializeMarket(address(cToken));
+
+        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+            rewardsDistributors[i].initializeMarket(address(cToken));
+        }
 
         emit MarketListed(cToken);
 
@@ -1504,10 +1526,21 @@ contract Comptroller is
         }
     }
 
-    function setRewardsDistributor(RewardsDistributor _rewardsDistributor)
-        external
+    function addRewardsDistributor(RewardsDistributor _rewardsDistributor)
+        external returns (uint256)
     {
-        rewardsDistributor = _rewardsDistributor;
+        if (msg.sender != admin && msg.sender != poolRegistry) {
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK
+                );
+        }
+
+        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
+
+        rewardsDistributors.push(_rewardsDistributor);
+        rewardsDistributorExists[address(_rewardsDistributor)] = true;
     }
 
     /**

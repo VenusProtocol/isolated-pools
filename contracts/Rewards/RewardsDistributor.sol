@@ -6,6 +6,7 @@ import "../ExponentialNoError.sol";
 import "../CToken.sol";
 import "../Governance/Comp.sol";
 import "../Comptroller.sol";
+import "../Pool/PoolRegistry.sol";
 
 contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     struct CompMarketState {
@@ -82,12 +83,17 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     mapping(address => mapping(address => uint256)) public compBorrowerIndex;
 
     Comptroller private comptroller;
+    PoolRegistry private registry;
+
+    Comp private comp;
 
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller) public initializer {
+    function initialize(Comptroller _comptroller, PoolRegistry _registry, Comp _comp) public initializer {
         comptroller = _comptroller;
+        comp = _comp;
+        registry = _registry;
         __Ownable_init();
     }
 
@@ -345,7 +351,6 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         internal
         returns (uint256)
     {
-        Comp comp = Comp(getCompAddress());
         uint256 compRemaining = comp.balanceOf(address(this));
         if (amount > 0 && amount <= compRemaining) {
             comp.transfer(user, amount);
@@ -507,14 +512,6 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         address[] memory holders = new address[](1);
         holders[0] = holder;
         claimComp(holders, cTokens, true, true);
-    }
-
-    /**
-     * @notice Return the address of the COMP token
-     * @return The address of COMP
-     */
-    function getCompAddress() public view virtual returns (address) {
-        return 0xc00e94Cb662C3520282E6f5717214004A7f26888;
     }
 
     function getBlockNumber() public view virtual returns (uint256) {
