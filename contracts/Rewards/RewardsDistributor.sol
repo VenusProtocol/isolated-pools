@@ -6,7 +6,6 @@ import "../ExponentialNoError.sol";
 import "../CToken.sol";
 import "../Governance/Comp.sol";
 import "../Comptroller.sol";
-import "../Pool/PoolRegistry.sol";
 
 contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     struct CompMarketState {
@@ -83,17 +82,15 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     mapping(address => mapping(address => uint256)) public compBorrowerIndex;
 
     Comptroller private comptroller;
-    PoolRegistry private registry;
 
     Comp private comp;
 
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, PoolRegistry _registry, Comp _comp) public initializer {
+    function initialize(Comptroller _comptroller, Comp _comp) public initializer {
         comptroller = _comptroller;
         comp = _comp;
-        registry = _registry;
         __Ownable_init();
     }
 

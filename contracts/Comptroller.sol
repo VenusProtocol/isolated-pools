@@ -1529,7 +1529,7 @@ contract Comptroller is
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor)
         external returns (uint256)
     {
-        if (msg.sender != admin && msg.sender != poolRegistry) {
+        if (msg.sender != admin) {
             return
                 fail(
                     Error.UNAUTHORIZED,
@@ -1541,6 +1541,10 @@ contract Comptroller is
 
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
+
+        for (uint i = 0; i < allMarkets.length; i++) {
+            _rewardsDistributor.initializeMarket(address(allMarkets[i]));
+        }    
     }
 
     /**

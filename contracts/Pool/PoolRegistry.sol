@@ -328,14 +328,6 @@ contract PoolRegistry is OwnableUpgradeable {
         _supportedPools[input.asset].push(input.poolId);
     }
 
-    /**
-     * @notice Add a market to an existing pool
-     */
-    function addRewardsDistributor(
-    ) external {
-
-    }
-
     function getCTokenForAsset(uint poolId, address asset) external view returns (address) {
         return _cTokens[poolId][asset];
     }
