@@ -218,13 +218,8 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.connect(user).approve(cWBTC.address, btcAmount);
     await cWBTC.connect(user).mint(btcAmount);
 
-    // console.log((await comptroller1Proxy.callStatic.getAccountLiquidity(owner.address))[1].toString())
-    // console.log((await comptroller1Proxy.callStatic.getAccountLiquidity(user.address))[1].toString())
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
-
-    await mockWBTC.approve(cWBTC.address, convertToUnit(1, 8));
-    await cWBTC.repayBorrow(convertToUnit(1, 8)) 
   });
 
   it("Claim COMP", async function () {
