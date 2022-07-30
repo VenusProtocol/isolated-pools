@@ -187,7 +187,7 @@ describe("Rewards: Tests", async function () {
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
 
     expect(await comp.balanceOf(rewardsDistributor.address)).equal(convertToUnit(1000000, 18))
-    await rewardsDistributor._setCompSpeeds(
+    await rewardsDistributor._setRewardTokenSpeeds(
       [cWBTC.address, cDAI.address],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)]
@@ -229,8 +229,8 @@ describe("Rewards: Tests", async function () {
 
   it("Claim COMP", async function () {
     const [user1, user2] = await ethers.getSigners();
-    await rewardsDistributor["claimComp(address,address[])"](user1.address, [cWBTC.address, cDAI.address])
-    await rewardsDistributor["claimComp(address,address[])"](user2.address, [cWBTC.address, cDAI.address])
+    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [cWBTC.address, cDAI.address])
+    await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [cWBTC.address, cDAI.address])
 
     expect((await comp.balanceOf(user1.address)).toString()).not.equal("0")
     expect((await comp.balanceOf(user2.address)).toString()).not.equal("0")

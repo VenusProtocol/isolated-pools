@@ -72,20 +72,6 @@ contract Comptroller is
         address newBorrowCapGuardian
     );
 
-    /// @notice Emitted when COMP accrued for a user has been manually adjusted.
-    event CompAccruedAdjusted(
-        address indexed user,
-        uint256 oldCompAccrued,
-        uint256 newCompAccrued
-    );
-
-    /// @notice Emitted when COMP receivable for a user has been updated.
-    event CompReceivableUpdated(
-        address indexed user,
-        uint256 oldCompReceivable,
-        uint256 newCompReceivable
-    );
-
     /// @notice Emitted when minimum liquidatable amount (in USD) for a cToken is changed
     event NewMinLiquidatableAmount(
         CToken indexed cToken,
@@ -307,8 +293,8 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
-            rewardsDistributors[i].updateCompSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierComp(cToken, minter);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierRewardToken(cToken, minter);
         }
 
         return uint256(Error.NO_ERROR);
@@ -358,8 +344,8 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
-            rewardsDistributors[i].updateCompSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierComp(cToken, redeemer);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierRewardToken(cToken, redeemer);
         }
         
 
@@ -489,8 +475,8 @@ contract Comptroller is
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
             Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-            rewardsDistributors[i].updateCompBorrowIndex(cToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerComp(
+            rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
+            rewardsDistributors[i].distributeBorrowerRewardToken(
                 cToken,
                 borrower,
                 borrowIndex
@@ -548,8 +534,8 @@ contract Comptroller is
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
             Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
-            rewardsDistributors[i].updateCompBorrowIndex(cToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerComp(
+            rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
+            rewardsDistributors[i].distributeBorrowerRewardToken(
                 cToken,
                 borrower,
                 borrowIndex
@@ -723,9 +709,9 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
-            rewardsDistributors[i].updateCompSupplyIndex(cTokenCollateral);
-            rewardsDistributors[i].distributeSupplierComp(cTokenCollateral, borrower);
-            rewardsDistributors[i].distributeSupplierComp(cTokenCollateral, liquidator);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(cTokenCollateral);
+            rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, borrower);
+            rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, liquidator);
         }
         
 
@@ -786,9 +772,9 @@ contract Comptroller is
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; i++) {
-            rewardsDistributors[i].updateCompSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierComp(cToken, src);
-            rewardsDistributors[i].distributeSupplierComp(cToken, dst);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
+            rewardsDistributors[i].distributeSupplierRewardToken(cToken, src);
+            rewardsDistributors[i].distributeSupplierRewardToken(cToken, dst);
         }
         
         return uint256(Error.NO_ERROR);
