@@ -110,11 +110,6 @@ describe("Rewards: Tests", async function () {
       
       return 1;
     });
-
-    // const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    // priceOracle = await MockPriceOracle.deploy();
-    // await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
-    // await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
   })
 
   // Register pools to the protocol
