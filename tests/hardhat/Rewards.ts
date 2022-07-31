@@ -8,9 +8,7 @@ import {
   MockToken,
   PoolRegistry,
   Comptroller,
-  SimplePriceOracle,
   CErc20Immutable,
-  MockPriceOracle,
   Unitroller,
   CErc20ImmutableFactory,
   JumpRateModelFactory,
@@ -18,6 +16,8 @@ import {
   RewardsDistributor,
   Comp,
   PoolRegistry__factory,
+  PriceOracle,
+  PriceOracle__factory,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
@@ -27,7 +27,6 @@ let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
 let cWBTC: CErc20Immutable;
-let priceOracle: MockPriceOracle;
 let comptrollerProxy: Comptroller;
 let unitroller: Unitroller;
 let cTokenFactory:CErc20ImmutableFactory;
@@ -35,6 +34,8 @@ let jumpRateFactory:JumpRateModelFactory;
 let whitePaperRateFactory:WhitePaperInterestRateModelFactory;
 let rewardsDistributor:RewardsDistributor;
 let comp:Comp;
+
+const MOCK_PRICE_ORACLE_ADDRESS = "0x61167073E31b1DAd85a3E531211c7B8F1E5cAE72";
 
 describe("Rewards: Tests", async function () {
   /**
@@ -90,14 +91,30 @@ describe("Rewards: Tests", async function () {
   })
 
   it("Deploy Price Oracle", async function () {
-    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    priceOracle = await MockPriceOracle.deploy();
+    const fakePriceOracle = await smock.fake<PriceOracle>(
+      PriceOracle__factory.abi,
+      {address: MOCK_PRICE_ORACLE_ADDRESS}
+    );
 
     const btcPrice = "21000.34";
     const daiPrice = "1";
 
-    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
-    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
+    fakePriceOracle.getUnderlyingPrice.returns((args: any) => {
+      if(cDAI && cWBTC) {
+        if(args[0] === cDAI.address) {
+          return convertToUnit(daiPrice, 18)
+        } else {
+          return convertToUnit(btcPrice, 28)
+        }
+      }
+      
+      return 1;
+    });
+
+    // const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    // priceOracle = await MockPriceOracle.deploy();
+    // await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
+    // await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
   })
 
   // Register pools to the protocol
@@ -111,7 +128,7 @@ describe("Rewards: Tests", async function () {
       comptroller.address,
       _closeFactor,
       _liquidationIncentive,
-      priceOracle.address
+      MOCK_PRICE_ORACLE_ADDRESS
     );
 
     // Get all pools list.
@@ -128,7 +145,7 @@ describe("Rewards: Tests", async function () {
     );
 
     await unitroller._acceptAdmin();
-    await comptrollerProxy._setPriceOracle(priceOracle.address);
+    await comptrollerProxy._setPriceOracle(MOCK_PRICE_ORACLE_ADDRESS);
   })
 
   
