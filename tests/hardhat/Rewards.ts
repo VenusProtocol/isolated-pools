@@ -1,6 +1,10 @@
 import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import {
+  MockContract,
+  smock,
+} from "@defi-wonderland/smock";
+import {
   MockToken,
   PoolRegistry,
   Comptroller,
@@ -12,14 +16,13 @@ import {
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   RewardsDistributor,
-  Comp
+  Comp,
+  PoolRegistry__factory,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
-let poolRegistry: PoolRegistry;
+let poolRegistry: MockContract<PoolRegistry>;
 let comptroller: Comptroller;
-let simplePriceOracle1: SimplePriceOracle;
-let simplePriceOracle2: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
@@ -50,8 +53,10 @@ describe("Rewards: Tests", async function () {
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
-    const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await PoolRegistry.deploy();
+    const PoolRegistryFactory = await smock.mock<PoolRegistry__factory>(
+      "PoolRegistry"
+    ); 
+    poolRegistry = await PoolRegistryFactory.deploy();
     await poolRegistry.deployed();
 
     await poolRegistry.initialize(
@@ -64,46 +69,6 @@ describe("Rewards: Tests", async function () {
 
     comptroller = await Comptroller.deploy(poolRegistry.address);
     await comptroller.deployed();
-
-    const SimplePriceOracle = await ethers.getContractFactory(
-      "SimplePriceOracle"
-    );
-
-    simplePriceOracle1 = await SimplePriceOracle.deploy();
-    await simplePriceOracle1.deployed();
-
-    simplePriceOracle2 = await SimplePriceOracle.deploy();
-    await simplePriceOracle2.deployed();
-  })
-
-  // Register pools to the protocol
-  it("Register pool", async function () {
-    const _closeFactor = convertToUnit(0.05, 18);
-    const _liquidationIncentive = convertToUnit(1, 18);
-
-    // Registering the first pool
-    await poolRegistry.createRegistryPool(
-      "Pool 1",
-      comptroller.address,
-      _closeFactor,
-      _liquidationIncentive,
-      simplePriceOracle1.address
-    );
-
-    // Get all pools list.
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools[0].name).equal("Pool 1");
-
-    comptrollerProxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
-    unitroller = await ethers.getContractAt(
-      "Unitroller",
-      pools[0].comptroller
-    );
-
-    await unitroller._acceptAdmin();
   })
 
   it("Deploy Mock Tokens", async function () {
@@ -133,9 +98,40 @@ describe("Rewards: Tests", async function () {
 
     await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
     await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
+  })
 
+  // Register pools to the protocol
+  it("Register pool", async function () {
+    const _closeFactor = convertToUnit(0.05, 18);
+    const _liquidationIncentive = convertToUnit(1, 18);
+
+    // Registering the first pool
+    await poolRegistry.createRegistryPool(
+      "Pool 1",
+      comptroller.address,
+      _closeFactor,
+      _liquidationIncentive,
+      priceOracle.address
+    );
+
+    // Get all pools list.
+    const pools = await poolRegistry.callStatic.getAllPools();
+    expect(pools[0].name).equal("Pool 1");
+
+    comptrollerProxy = await ethers.getContractAt(
+      "Comptroller",
+      pools[0].comptroller
+    );
+    unitroller = await ethers.getContractAt(
+      "Unitroller",
+      pools[0].comptroller
+    );
+
+    await unitroller._acceptAdmin();
     await comptrollerProxy._setPriceOracle(priceOracle.address);
   })
+
+  
 
   it("Deploy CToken", async function () {
     await poolRegistry.addMarket({
