@@ -62,9 +62,6 @@ contract Comptroller is
         AccessControlManager newAccessControlManager
     );
 
-    /// @notice Emitted when pause guardian is changed
-    event NewPauseGuardian(address oldPauseGuardian, address newPauseGuardian);
-
     /// @notice Emitted when an action is paused globally
     event ActionPaused(string action, bool pauseState);
 
@@ -1457,35 +1454,6 @@ contract Comptroller is
             supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
             emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
         }
-    }
-
-    /**
-     * @notice Admin function to change the Pause Guardian
-     * @param newPauseGuardian The address of the new Pause Guardian
-     * @return uint 0=success, otherwise a failure. (See enum Error for details)
-     */
-    function _setPauseGuardian(address newPauseGuardian)
-        public
-        returns (uint256)
-    {
-        if (msg.sender != admin) {
-            return
-                fail(
-                    Error.UNAUTHORIZED,
-                    FailureInfo.SET_PAUSE_GUARDIAN_OWNER_CHECK
-                );
-        }
-
-        // Save current value for inclusion in log
-        address oldPauseGuardian = pauseGuardian;
-
-        // Store pauseGuardian with value newPauseGuardian
-        pauseGuardian = newPauseGuardian;
-
-        // Emit NewPauseGuardian(OldPauseGuardian, NewPauseGuardian)
-        emit NewPauseGuardian(oldPauseGuardian, pauseGuardian);
-
-        return uint256(Error.NO_ERROR);
     }
 
     function _setMintPaused(CToken cToken, bool state) public returns (bool) {

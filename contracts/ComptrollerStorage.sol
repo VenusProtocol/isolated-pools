@@ -78,6 +78,8 @@ contract ComptrollerV2Storage is ComptrollerV1Storage {
      * @notice The Pause Guardian can pause certain actions as a safety mechanism.
      *  Actions which allow users to remove their own assets cannot be paused.
      *  Liquidation / seizing / transfer can only be paused globally, not by market.
+     * NOTE: THIS VALUE IS NOT USED IN COMPTROLLER. HOWEVER IT IS ALREADY USED IN COMTROLLERG7
+     * 		 AND IS CAUSING COMPILATION ERROR IF REMOVED.
      */
     address public pauseGuardian;
     bool public _mintGuardianPaused;
