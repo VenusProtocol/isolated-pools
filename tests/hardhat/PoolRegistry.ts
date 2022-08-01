@@ -339,4 +339,16 @@ describe("PoolRegistry: Tests", async function () {
     await cWBTC.borrow(convertToUnit(1, 8));
     await cDAI.connect(user).borrow(convertToUnit(100, 18));
   });
+
+  it("Metadata", async function () {
+    await poolRegistry.updatePoolMetadata(0, {
+      riskRating: 2,
+      category: "Hign market cap",
+      logoURL: "http://venis.io/pool1",
+      description: "An sample description",
+    });
+
+    const metadata = await poolRegistry.metadata(0);
+    expect(metadata.riskRating).equal(2);
+  });
 });

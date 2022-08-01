@@ -44,6 +44,32 @@ contract PoolRegistry is Initializable {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
+    
+    /**
+     * @dev Enum for risk rating of Venus interest rate pool.
+     */
+    enum RiskRating {
+        VERY_HIGH_RISK,
+        HIGH_RISK,
+        MEDIUM_RISK,
+        LOW_RISK,
+        MINIMAL_RISK
+    }
+    
+    /**
+     * @dev Struct for a Venus interest rate pool metadata.
+     */
+    struct VenusPoolMetaData {
+        RiskRating riskRating;
+        string category;
+        string logoURL;
+        string description;
+    }
+
+    /**
+     * @dev Maps venus pool id to metadata
+     */
+    mapping(uint256 => VenusPoolMetaData) public metadata;
 
     /**
      * @dev Array of Venus pools.
@@ -268,7 +294,12 @@ contract PoolRegistry is Initializable {
         return _bookmarks[account];
     }
 
-    function addMarket(AddMarketInput memory input) external {
+    /**
+     * @notice Add a market to an existing pool
+     */
+    function addMarket(
+        AddMarketInput memory input
+    ) external {
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(
@@ -325,5 +356,12 @@ contract PoolRegistry is Initializable {
         returns (uint256[] memory)
     {
         return _supportedPools[asset];
+    }
+
+    /**
+     * @notice Update metadata of an existing pool
+     */
+    function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external {
+        metadata[poolId] = _metadata;
     }
 }
