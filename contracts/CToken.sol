@@ -33,7 +33,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
 						AccessControlManager accessControlManager_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-		
+
 		// Set the AccessControlManager for this token
 		err = _setAccessControlAddress(accessControlManager_);
 		require(err == NO_ERROR, "setting AccessControlManager failed");
@@ -1100,8 +1100,13 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-        // Check caller is admin
-        if (msg.sender != admin) {
+		bool canCallFunction = AccessControlManager(accessControlAddress).isAllowedToCall(
+                msg.sender,
+                "_setInterestRateModelFresh(InterestRateModel)"
+            );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
             revert SetInterestRateModelOwnerCheck();
         }
 
