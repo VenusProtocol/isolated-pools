@@ -1562,6 +1562,7 @@ contract Comptroller is
 
     /**
      * @notice Set the given min liquidation limit for the given cToken markets. Liquidations with repayAmoun below this threshold will fail.
+     * @dev this funciton access is managed by AccessControlManager
      * @param cTokens The addresses of the markets (tokens) to add/change the min liquidation threshold
      * @param newMinLiquidatableAmounts The new min liquidation amount values (in USD).
      */
@@ -1569,9 +1570,15 @@ contract Comptroller is
         CToken[] calldata cTokens,
         uint256[] calldata newMinLiquidatableAmounts
     ) external {
+        bool canCallFunction = AccessControlManager(accessControlManager)
+            .isAllowedToCall(
+                msg.sender,
+                "_setMarketMinLiquidationAmount(CToken[],uint256[])"
+            );
+
         require(
-            adminOrInitializing(),
-            "only admin can update min liquidation amounts"
+            canCallFunction,
+            "only approved addresses can update min liquidation amounts"
         );
 
         uint256 numMarkets = cTokens.length;
