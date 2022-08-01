@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "../Comptroller.sol";
 import "../Unitroller.sol";
@@ -19,16 +19,21 @@ import "../InterestRateModel.sol";
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is Initializable {
+contract PoolRegistry is OwnableUpgradeable {
     CErc20ImmutableFactory private cTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
 
+    /**
+     * @dev Initializes the deployer to owner.
+     */
     function initialize(
         CErc20ImmutableFactory _cTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory
     ) public initializer {
+        __Ownable_init();
+
         cTokenFactory = _cTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
@@ -44,7 +49,7 @@ contract PoolRegistry is Initializable {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
-    
+
     /**
      * @dev Enum for risk rating of Venus interest rate pool.
      */
@@ -55,7 +60,7 @@ contract PoolRegistry is Initializable {
         LOW_RISK,
         MINIMAL_RISK
     }
-    
+
     /**
      * @dev Struct for a Venus interest rate pool metadata.
      */
@@ -297,9 +302,7 @@ contract PoolRegistry is Initializable {
     /**
      * @notice Add a market to an existing pool
      */
-    function addMarket(
-        AddMarketInput memory input
-    ) external {
+    function addMarket(AddMarketInput memory input) external {
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(
@@ -361,7 +364,10 @@ contract PoolRegistry is Initializable {
     /**
      * @notice Update metadata of an existing pool
      */
-    function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external {
+    function updatePoolMetadata(
+        uint256 poolId,
+        VenusPoolMetaData memory _metadata
+    ) external onlyOwner {
         metadata[poolId] = _metadata;
     }
 }
