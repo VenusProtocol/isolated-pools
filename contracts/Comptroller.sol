@@ -1493,11 +1493,11 @@ contract Comptroller is
             markets[address(cToken)].isListed,
             "cannot pause a market that is not listed"
         );
-        require(
-            msg.sender == pauseGuardian || msg.sender == admin,
-            "only pause guardian and admin can pause"
-        );
-        require(msg.sender == admin || state == true, "only admin can unpause");
+
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_setMintPaused(CToken,bool)");
+
+        require(!canCallFunction, "only authorised addresses can pause");
 
         mintGuardianPaused[address(cToken)] = state;
         emit ActionPaused(cToken, "Mint", state);
@@ -1509,11 +1509,11 @@ contract Comptroller is
             markets[address(cToken)].isListed,
             "cannot pause a market that is not listed"
         );
-        require(
-            msg.sender == pauseGuardian || msg.sender == admin,
-            "only pause guardian and admin can pause"
-        );
-        require(msg.sender == admin || state == true, "only admin can unpause");
+
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_setBorrowPaused(CToken,bool)");
+
+        require(!canCallFunction, "only authorised addresses can pause");
 
         borrowGuardianPaused[address(cToken)] = state;
         emit ActionPaused(cToken, "Borrow", state);
@@ -1521,11 +1521,10 @@ contract Comptroller is
     }
 
     function _setTransferPaused(bool state) public returns (bool) {
-        require(
-            msg.sender == pauseGuardian || msg.sender == admin,
-            "only pause guardian and admin can pause"
-        );
-        require(msg.sender == admin || state == true, "only admin can unpause");
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_setTransferPaused(CToken,bool)");
+
+        require(!canCallFunction, "only authorised addresses can pause");
 
         transferGuardianPaused = state;
         emit ActionPaused("Transfer", state);
@@ -1533,11 +1532,10 @@ contract Comptroller is
     }
 
     function _setSeizePaused(bool state) public returns (bool) {
-        require(
-            msg.sender == pauseGuardian || msg.sender == admin,
-            "only pause guardian and admin can pause"
-        );
-        require(msg.sender == admin || state == true, "only admin can unpause");
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_setSeizePaused(bool)");
+
+        require(!canCallFunction, "only authorised addresses can pause");
 
         seizeGuardianPaused = state;
         emit ActionPaused("Seize", state);
