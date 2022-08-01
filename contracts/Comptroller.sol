@@ -1354,7 +1354,10 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(CToken cToken) external returns (uint256) {
-        if (msg.sender != admin && msg.sender != poolRegistry) {
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_supportMarket(CToken)");
+
+        if (!canCallFunction) {
             return
                 fail(
                     Error.UNAUTHORIZED,
