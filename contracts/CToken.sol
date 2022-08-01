@@ -940,8 +940,11 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
     function _setReserveFactorFresh(uint newReserveFactorMantissa) internal returns (uint) {
-        // Check caller is admin
-        if (msg.sender != admin) {
+
+		bool canCallFunction = AccessControlManager(accessControlAddress)
+			.isAllowedToCall(msg.sender, "_setReserveFactorFresh(uint)");
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
             revert SetReserveFactorAdminCheck();
         }
 
