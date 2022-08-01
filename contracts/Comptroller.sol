@@ -1323,8 +1323,11 @@ contract Comptroller is
         external
         returns (uint256)
     {
-        // Check caller is admin
-        if (msg.sender != admin) {
+        bool canCallFunction = AccessControlManager(accessControlAddress)
+            .isAllowedToCall(msg.sender, "_setLiquidationIncentive(uint)");
+
+        // Check if caller is allowed to call this function
+        if (!canCallFunction) {
             return
                 fail(
                     Error.UNAUTHORIZED,
