@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import {
+  FakeContract,
   MockContract,
   smock,
 } from "@defi-wonderland/smock";
@@ -34,8 +35,7 @@ let jumpRateFactory:JumpRateModelFactory;
 let whitePaperRateFactory:WhitePaperInterestRateModelFactory;
 let rewardsDistributor:RewardsDistributor;
 let comp:Comp;
-
-const MOCK_PRICE_ORACLE_ADDRESS = "0x61167073E31b1DAd85a3E531211c7B8F1E5cAE72";
+let fakePriceOracle:FakeContract<PriceOracle>
 
 describe("Rewards: Tests", async function () {
   /**
@@ -91,9 +91,8 @@ describe("Rewards: Tests", async function () {
   })
 
   it("Deploy Price Oracle", async function () {
-    const fakePriceOracle = await smock.fake<PriceOracle>(
-      PriceOracle__factory.abi,
-      {address: MOCK_PRICE_ORACLE_ADDRESS}
+    fakePriceOracle = await smock.fake<PriceOracle>(
+      PriceOracle__factory.abi
     );
 
     const btcPrice = "21000.34";
@@ -123,7 +122,7 @@ describe("Rewards: Tests", async function () {
       comptroller.address,
       _closeFactor,
       _liquidationIncentive,
-      MOCK_PRICE_ORACLE_ADDRESS
+      fakePriceOracle.address
     );
 
     // Get all pools list.
@@ -140,10 +139,8 @@ describe("Rewards: Tests", async function () {
     );
 
     await unitroller._acceptAdmin();
-    await comptrollerProxy._setPriceOracle(MOCK_PRICE_ORACLE_ADDRESS);
+    await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
   })
-
-  
 
   it("Deploy CToken", async function () {
     await poolRegistry.addMarket({
