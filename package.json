@@ -30,6 +30,9 @@
     "url": "https://github.com/VenusProtocol/isolated-pools/issues"
   },
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
+  "engines": {
+    "node": "12.x"
+  },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.2.0",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
