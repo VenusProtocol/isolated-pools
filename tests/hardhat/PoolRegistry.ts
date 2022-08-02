@@ -175,12 +175,14 @@ describe("PoolRegistry: Tests", async function () {
     const pool1 = await poolRegistry.getPoolByComptroller(
       comptroller1Proxy.address
     );
-    expect(pool1[0]).equal("Pool 1");
+    expect(pool1[0]).equal(1);
+    expect(pool1[1]).equal("Pool 1");
 
     const pool2 = await poolRegistry.getPoolByComptroller(
       comptroller2Proxy.address
     );
-    expect(pool2[0]).equal("Pool 2");
+    expect(pool2[0]).equal(2);
+    expect(pool2[1]).equal("Pool 2");
   });
 
   it("Deploy Mock Tokens", async function () {
