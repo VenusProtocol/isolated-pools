@@ -88,9 +88,9 @@ contract PoolRegistry is OwnableUpgradeable {
     uint256 private _numberOfPools;
 
     /**
-     * @dev Maps comptroller address to Venus pool.
-     */
-    mapping(address => VenusPool) private _poolByComptroller;
+    * @dev Maps comptroller address to Venus pool Index.
+    */
+    mapping(address => uint256) private _poolByComptroller;
 
     /**
      * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
@@ -146,12 +146,12 @@ contract PoolRegistry is OwnableUpgradeable {
         internal
         returns (uint256)
     {
-        VenusPool memory venusPool = _poolByComptroller[comptroller];
-
-        require(
-            venusPool.creator == address(0),
+        VenusPool memory venusPool = _poolsByID[_poolByComptroller[comptroller]];
+        
+        require(venusPool.creator == address(0),
             "RegistryPool: Pool already exists in the directory."
         );
+        
         require(bytes(name).length <= 100, "No pool name supplied.");
 
         _numberOfPools++;
@@ -166,7 +166,7 @@ contract PoolRegistry is OwnableUpgradeable {
         );
 
         _poolsByID[_numberOfPools] = pool;
-        _poolByComptroller[comptroller] = pool;
+        _poolByComptroller[comptroller] = _numberOfPools;
 
         emit PoolRegistered(_numberOfPools, pool);
         return _numberOfPools;
@@ -281,13 +281,24 @@ contract PoolRegistry is OwnableUpgradeable {
 
     /**
      * @param comptroller The Comptroller implementation address.
-     * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
+     * @notice Returns Venus pool.
      */
-
     function getPoolByComptroller(address comptroller)
         external
         view
         returns (VenusPool memory)
+    {
+        return _poolsByID[_poolByComptroller[comptroller]];
+    }
+
+    /**
+     * @param comptroller The Comptroller implementation address.
+     * @notice Returns poolID.
+     */
+    function getPoolIDByComptroller(address comptroller)
+        external
+        view
+        returns (uint256)
     {
         return _poolByComptroller[comptroller];
     }
