@@ -43,6 +43,7 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Struct for a Venus interest rate pool.
      */
     struct VenusPool {
+        uint256 poolId;
         string name;
         address creator;
         address comptroller;
@@ -152,14 +153,17 @@ contract PoolRegistry is OwnableUpgradeable {
             "RegistryPool: Pool already exists in the directory."
         );
         require(bytes(name).length <= 100, "No pool name supplied.");
+
+        _numberOfPools++;
+        
         VenusPool memory pool = VenusPool(
+            _numberOfPools,
             name,
             msg.sender,
             comptroller,
             block.number,
             block.timestamp
         );
-        _numberOfPools++;
 
         _poolsByID[_numberOfPools] = pool;
         _poolByComptroller[comptroller] = pool;
