@@ -145,7 +145,7 @@ contract Comptroller is
         uint256 len = cTokens.length;
 
         uint256[] memory results = new uint256[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len; ++i) {
             CToken cToken = CToken(cTokens[i]);
 
             results[i] = uint256(addToMarketInternal(cToken, msg.sender));
@@ -246,7 +246,7 @@ contract Comptroller is
         CToken[] memory userAssetList = accountAssets[msg.sender];
         uint256 len = userAssetList.length;
         uint256 assetIndex = len;
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len; ++i) {
             if (userAssetList[i] == cToken) {
                 assetIndex = i;
                 break;
@@ -292,7 +292,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, minter);
         }
@@ -343,7 +343,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, redeemer);
         }
@@ -473,7 +473,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
             rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(
@@ -532,7 +532,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
             rewardsDistributors[i].updateRewardTokenBorrowIndex(cToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(
@@ -708,7 +708,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cTokenCollateral);
             rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, borrower);
             rewardsDistributors[i].distributeSupplierRewardToken(cTokenCollateral, liquidator);
@@ -771,7 +771,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, src);
             rewardsDistributors[i].distributeSupplierRewardToken(cToken, dst);
@@ -994,7 +994,7 @@ contract Comptroller is
 
         // For each asset the account is in
         CToken[] memory assets = accountAssets[account];
-        for (uint256 i = 0; i < assets.length; i++) {
+        for (uint256 i = 0; i < assets.length; ++i) {
             CToken asset = assets[i];
 
             // Read the balances and exchange rate from the cToken
@@ -1314,7 +1314,7 @@ contract Comptroller is
 
         _addMarketInternal(address(cToken));
 
-        for (uint256 i = 0; i < rewardsDistributors.length; i++) {
+        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].initializeMarket(address(cToken));
         }
 
@@ -1324,7 +1324,7 @@ contract Comptroller is
     }
 
     function _addMarketInternal(address cToken) internal {
-        for (uint256 i = 0; i < allMarkets.length; i++) {
+        for (uint256 i = 0; i < allMarkets.length; ++i) {
             require(allMarkets[i] != CToken(cToken), "market already added");
         }
         allMarkets.push(CToken(cToken));
@@ -1353,7 +1353,7 @@ contract Comptroller is
             "invalid input"
         );
 
-        for (uint256 i = 0; i < numMarkets; i++) {
+        for (uint256 i = 0; i < numMarkets; ++i) {
             borrowCaps[address(cTokens[i])] = newBorrowCaps[i];
             emit NewBorrowCap(cTokens[i], newBorrowCaps[i]);
         }
@@ -1501,7 +1501,7 @@ contract Comptroller is
             "invalid input"
         );
 
-        for (uint256 i = 0; i < numMarkets; i++) {
+        for (uint256 i = 0; i < numMarkets; ++i) {
             minimalLiquidatableAmount[
                 address(cTokens[i])
             ] = newMinLiquidatableAmounts[i];
@@ -1528,7 +1528,7 @@ contract Comptroller is
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
-        for (uint i = 0; i < allMarkets.length; i++) {
+        for (uint i = 0; i < allMarkets.length; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }    
     }
