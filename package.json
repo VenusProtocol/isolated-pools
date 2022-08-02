@@ -15,7 +15,9 @@
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
     "checksize": "npx run ./script/saddle/comptrollerSize.js",
     "hardhat:test": "hardhat test",
-    "hardhat:compile": "hardhat compile"
+    "hardhat:compile": "hardhat compile",
+    "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
+    "lint:sol:fix": "prettier --write \"contracts/**/*.sol\""
   },
   "repository": {
     "type": "git",
