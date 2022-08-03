@@ -1,5 +1,5 @@
 const {address} = require('../Utils/Ethereum');
-const {makeCToken} = require('../Utils/Compound');
+const {makeCToken, setMarketSupplyCap} = require('../Utils/Compound');
 
 describe('admin / _setPendingAdmin / _acceptAdmin', () => {
   let cToken, root, accounts;
@@ -7,6 +7,7 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
   beforeEach(async () => {
     [root, ...accounts] = saddle.accounts;
     cToken = await makeCToken();
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
   });
 
   describe('admin()', () => {

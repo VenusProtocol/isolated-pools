@@ -78,6 +78,9 @@ contract Comptroller is
         uint256 newMinLiquidatableAmount
     );
 
+    /// @notice Emitted when supply cap for a vToken is changed
+    event NewSupplyCap(CToken indexed vToken, uint newSupplyCap);
+
     // closeFactorMantissa must be strictly greater than this value
     uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
 
@@ -290,6 +293,13 @@ contract Comptroller is
         if (!markets[cToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
+
+        uint256 supplyCap = supplyCaps[cToken];
+        require(supplyCap > 0, "market supply cap is 0");
+
+        uint totalSupply = CToken(cToken).totalSupply();
+        uint nextTotalSupply = add_(totalSupply, mintAmount);
+        require(nextTotalSupply <= supplyCap, "market supply cap reached");
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
@@ -1374,6 +1384,23 @@ contract Comptroller is
 
         // Emit NewBorrowCapGuardian(OldBorrowCapGuardian, NewBorrowCapGuardian)
         emit NewBorrowCapGuardian(oldBorrowCapGuardian, newBorrowCapGuardian);
+    }
+
+    /**
+     * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
+     * @dev Admin function to set the supply caps. A supply cap of 0 corresponds to Minting NotAllowed.
+     * @param cTokens The addresses of the markets (tokens) to change the supply caps for
+     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
+    */
+    function _setMarketSupplyCaps(CToken[] calldata cTokens, uint256[] calldata newSupplyCaps) external {
+        require(msg.sender == admin , "only admin can set supply caps");
+        require(cTokens.length != 0, "invalid number of markets");
+        require(cTokens.length == newSupplyCaps.length, "invalid number of markets");
+
+        for(uint256 i = 0; i < cTokens.length; ++i) {
+            supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
+            emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
+        }
     }
 
     /**

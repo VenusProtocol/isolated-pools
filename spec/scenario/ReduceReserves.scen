@@ -2,6 +2,7 @@
 Test "Reduce all reserves and verify effects"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Prep Geoff 50e18 ZRX cZRX
     Mint Geoff 50e18 cZRX
     Assert Equal (Erc20 cZRX TokenBalance Geoff) (Exactly 500e8) -- 50e18 / 1e9
@@ -34,6 +35,7 @@ Test "Reduce all reserves and verify effects"
 Test "Reduce partial reserves and verify effects"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Prep Geoff 50e18 ZRX cZRX
     Mint Geoff 50e18 cZRX
     Assert Equal (Erc20 cZRX TokenBalance Geoff) (Exactly 500e8)
@@ -66,6 +68,7 @@ Test "Reduce partial reserves and verify effects"
 Test "Redeem all and then reduce all reserves"
     NewComptroller
     ListedCToken ZRX cZRX initialExchangeRate:1e9
+    Comptroller SetMarketSupplyCaps (cZRX) (2e30)
     Prep Geoff 50e18 ZRX cZRX
     Mint Geoff 50e18 cZRX
     Assert Equal (Erc20 cZRX TokenBalance Geoff) (Exactly 500e8)
@@ -110,6 +113,7 @@ Test "Redeem all and then reduce all reserves"
 Test "Reduce reserves WBTC when paused"
     NewComptroller
     ListedCToken WBTC cWBTC initialExchangeRate:1e9 tokenType:WBTC
+    Comptroller SetMarketSupplyCaps (cWBTC) (2e30)
     Prep Geoff 50e18 WBTC cWBTC
     Mint Geoff 50e18 cWBTC
     Assert Equal (Erc20 cWBTC TokenBalance Geoff) (Exactly 500e8)

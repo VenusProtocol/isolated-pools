@@ -5,7 +5,8 @@ const {
 } = require('../Utils/Ethereum');
 const {
   makeCToken,
-  setBorrowRate
+  setBorrowRate,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 const blockNumber = 2e7;
@@ -30,6 +31,7 @@ describe('CToken', () => {
   beforeEach(async () => {
     [root, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
   });
 
   beforeEach(async () => {

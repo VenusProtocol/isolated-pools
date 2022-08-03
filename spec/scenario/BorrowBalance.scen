@@ -4,6 +4,8 @@ Macro NewBorrow borrowAmount borrowRate user=Geoff
     NewComptroller price:1.0 -- TODO: This should really be a price for a specific asset
     NewCToken ZRX cZRX
     NewCToken BAT cBAT borrowRate -- note: cannot use macros with named args right now
+    Comptroller SetMarketSupplyCaps (vBAT) (1000e18)
+    Comptroller SetMarketSupplyCaps (vZRX) (1000e18)
     Give cBAT 10e18 BAT -- Faucet some bat to borrow
     Support cZRX collateralFactor:0.5
     Support cBAT collateralFactor:0.5
@@ -52,6 +54,7 @@ Test "Borrow Balance after accrual then changed interest rate"
     -- Note: this should accrue interest
     InterestRateModel Deploy Fixed Std 0.000004
     CToken cBAT SetInterestRateModel (InterestRateModel Std Address)
+    Comptroller SetMarketSupplyCaps (cBAT) (1000e18)
     -- Check borrow balance still based on old figure (with previous interest accrual)
     Assert Equal (cToken cBAT BorrowBalance Geoff) (Exactly 2.5e18)
     Assert Equal (cToken cBAT TotalBorrowsCurrent) (Exactly 2.5e18)
@@ -65,6 +68,7 @@ Test "Total Borrow Balance with Two Borrowers"
     FastForward 300000 Blocks
     InterestRateModel Deploy Fixed Std 0.000004
     CToken cBAT SetInterestRateModel (InterestRateModel Std Address)
+    Comptroller SetMarketSupplyCaps (cBAT) (1000e18)
     -- Check borrow balance still based on old figure (with previous interest accrual)
     Assert Equal (cToken cBAT BorrowBalance Geoff) (Exactly 2.5e18)
     Assert Equal (cToken cBAT TotalBorrowsCurrent) (Exactly 2.5e18)

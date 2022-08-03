@@ -1,7 +1,8 @@
 const {
   makeCToken,
   getBalances,
-  adjustBalances
+  adjustBalances,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 const exchangeRate = 5;
@@ -12,6 +13,7 @@ describe('CEther', function () {
   beforeEach(async () => {
     [root, nonRoot, ...accounts] = saddle.accounts;
     cToken = await makeCToken({kind: 'cether', comptrollerOpts: {kind: 'bool'}});
+    await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
   });
 
   describe("getCashPrior", () => {

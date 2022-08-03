@@ -2,7 +2,8 @@ const {both} = require('../Utils/Ethereum');
 const {
   fastForward,
   makeCToken,
-  makeInterestRateModel
+  makeInterestRateModel,
+  setMarketSupplyCap
 } = require('../Utils/Compound');
 
 describe('CToken', function () {
@@ -18,6 +19,7 @@ describe('CToken', function () {
     beforeEach(async () => {
       cToken = await makeCToken();
       oldModel = cToken.interestRateModel;
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
       expect(oldModel._address).not.toEqual(newModel._address);
     });
 

@@ -3,6 +3,7 @@ Macro InKindBorrow borrowAmount borrowRate user=Geoff borrowPrice=1.0 mintAmount
     PricedComptroller
     Comptroller LiquidationIncentive 1.1
     NewCToken BAT cBAT borrowRate 2e9 8 borrowTokenType -- note: cannot use macros with named args right now
+    Comptroller SetMarketSupplyCaps (cBAT) (2000e18)
     Give cBAT giveAmount BAT -- Faucet some bat
     PriceOracle SetPrice cBAT borrowPrice
     Support cBAT collateralFactor:0.5
@@ -15,6 +16,7 @@ Test "Insufficient in-kind shortfall"
     InKindBorrow borrowAmount:1e18 borrowRate:0.000005
     Assert Equal (CToken cBAT BorrowBalance Geoff) 1e18
     Assert Equal (CToken cBAT TotalBorrows) 1e18
+    Comptroller SetMarketSupplyCaps (cBAT) (2000e18)
     Assert Equal (Erc20 BAT TokenBalance Geoff) 1e18
     Assert Equal (Erc20 BAT TokenBalance cBAT) 99e18
     Assert Equal (Comptroller Liquidity Geoff) 49e18 -- ( ( 1.0 * 100e18 * 0.5 ) - ( 1.0 * 51e18 ) ) / 1e18

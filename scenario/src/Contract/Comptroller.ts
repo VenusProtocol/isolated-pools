@@ -72,6 +72,8 @@ interface ComptrollerMethods {
   borrowCapGuardian(): Callable<string>
   borrowCaps(string): Callable<string>
   isDeprecated(cToken: string): Callable<string>
+  _setMarketSupplyCaps(cTokens:string[], supplyCaps:encodedNumber[]): Sendable<void>
+  supplyCaps(string): Callable<string>
 }
 
 export interface Comptroller extends Contract {

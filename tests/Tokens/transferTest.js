@@ -1,4 +1,4 @@
-const {makeCToken} = require('../Utils/Compound');
+const {makeCToken, setMarketSupplyCap} = require('../Utils/Compound');
 
 describe('CToken', function () {
   let root, accounts;
@@ -9,12 +9,14 @@ describe('CToken', function () {
   describe('transfer', () => {
     it("cannot transfer from a zero balance", async () => {
       const cToken = await makeCToken({supportMarket: true});
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
       expect(await call(cToken, 'balanceOf', [root])).toEqualNumber(0);
       await expect(send(cToken, 'transfer', [accounts[0], 100])).rejects.toRevert();
     });
 
     it("transfers 50 tokens", async () => {
       const cToken = await makeCToken({supportMarket: true});
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
       await send(cToken, 'harnessSetBalance', [root, 100]);
       expect(await call(cToken, 'balanceOf', [root])).toEqualNumber(100);
       await send(cToken, 'transfer', [accounts[0], 50]);
@@ -24,6 +26,7 @@ describe('CToken', function () {
 
     it("doesn't transfer when src == dst", async () => {
       const cToken = await makeCToken({supportMarket: true});
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
       await send(cToken, 'harnessSetBalance', [root, 100]);
       expect(await call(cToken, 'balanceOf', [root])).toEqualNumber(100);
       await expect(send(cToken, 'transfer', [root, 50])).rejects.toRevertWithCustomError('TransferNotAllowed');
@@ -31,6 +34,7 @@ describe('CToken', function () {
 
     it("rejects transfer when not allowed and reverts if not verified", async () => {
       const cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
       await send(cToken, 'harnessSetBalance', [root, 100]);
       expect(await call(cToken, 'balanceOf', [root])).toEqualNumber(100);
 

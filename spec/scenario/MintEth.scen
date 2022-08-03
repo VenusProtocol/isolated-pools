@@ -3,6 +3,7 @@
 GasTest "Send Mint 1 cETH"
     NewComptroller
     ListedEtherTokenMinted cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Expect Changes (EtherBalance Geoff) -0.005e18
     Expect Changes (CToken cETH UnderlyingBalance Geoff) +0.005e18
     SendMintEth Geoff 0.005e18 cETH
@@ -12,6 +13,7 @@ GasTest "Send Mint 1 cETH"
 GasTest "Call Mint 1 cETH"
     NewComptroller
     ListedEtherTokenMinted cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Expect Changes (EtherBalance Geoff) -0.005e18
     Expect Changes (CToken cETH UnderlyingBalance Geoff) +0.005e18
     CallMintEth Geoff 0.005e18 cETH
@@ -21,6 +23,7 @@ GasTest "Call Mint 1 cETH"
 Test "Mint with insufficient eth balance"
     NewComptroller
     ListedEtherTokenMinted cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     AllowFailures
     Invariant Remains (CToken cETH UnderlyingBalance Geoff) 0e18
     Invariant Remains (Erc20 cETH TokenBalance Geoff) 0e8
@@ -31,6 +34,7 @@ Test "Mint with insufficient eth balance"
 Test "Mint two Eth after minting two Eth, and then I mint two more"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     Expect Changes (EtherBalance Geoff) -0.002e18
     CallMintEth Geoff 0.002e18 cETH
     Assert Equal (Erc20 cETH TokenBalance Geoff) 4e8
@@ -47,6 +51,7 @@ Test "Mint two Eth after minting two Eth, and then I mint two more"
 Test "Two users Mint"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.002e18 cETH
     Assert Equal (Erc20 cETH TokenBalance Geoff) 4e8
     Assert Equal (Erc20 cETH TotalSupply) 4e8
@@ -58,6 +63,7 @@ Test "Two users Mint"
 Test "Mint accrues no interest without borrows"
     NewComptroller
     ListedEtherToken cETH initialExchangeRate:0.005e9
+    Comptroller SetMarketSupplyCaps (cETH) (2000e18)
     CallMintEth Geoff 0.002e18 cETH
     Assert Equal (Erc20 cETH TokenBalance Geoff) 4e8
     Assert Equal (Erc20 cETH TotalSupply) 4e8

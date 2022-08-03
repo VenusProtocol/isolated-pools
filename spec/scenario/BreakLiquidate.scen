@@ -4,6 +4,8 @@ Macro NewBorrow borrowAmount mintAmount borrowRate=0.000005 user=Geoff collatera
     Comptroller LiquidationIncentive liquidationIncentive
     NewCToken ZRX cZRX
     NewCToken BAT cBAT borrowRate
+    Comptroller SetMarketSupplyCaps (cBAT) (1000e18)
+    Comptroller SetMarketSupplyCaps (cZRX) (1000e18)
     Give cBAT 10e18 BAT -- Faucet some bat to borrow
     PriceOracle SetPrice cZRX collateralPrice
     Support cZRX collateralFactor:0.7

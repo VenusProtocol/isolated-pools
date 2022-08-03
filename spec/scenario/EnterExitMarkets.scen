@@ -93,6 +93,8 @@ Test "Realistic Market Scenario"
 	Comptroller SetCollateralFactor cEth 0.8
 	ListedCToken BAT cBAT
 	SetPriceCF cBAT 0.0015 0.3
+	Comptroller SetMarketSupplyCaps (cZRX) (2000e18)
+	Comptroller SetMarketSupplyCaps (cETH) (2000e18)
 	-- Mint some cZRX and cETH
 	Prep Geoff 1250e18 ZRX cZRX
 	Mint Geoff 1250e18 cZRX -- Liquidity -> 0.4 * 0.002 * 1250e18 = 1.0e18

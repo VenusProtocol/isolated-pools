@@ -121,4 +121,7 @@ contract ComptrollerV7Storage is ComptrollerV6Storage {
 contract ComptrollerV8Storage is ComptrollerV7Storage {
     /// @notice Storage for minimum liquidatable amount in USD for each asset
     mapping(address => uint256) public minimalLiquidatableAmount;
+
+    /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
+    mapping(address => uint256) public supplyCaps;
 }

@@ -5,7 +5,7 @@ const {
   etherExp
 } = require('../Utils/Ethereum');
 
-const {fastForward, makeCToken, getBalances, adjustBalances} = require('../Utils/Compound');
+const {fastForward, makeCToken, getBalances, adjustBalances, setMarketSupplyCap} = require('../Utils/Compound');
 
 const factor = etherMantissa(.02);
 
@@ -23,6 +23,7 @@ describe('CToken', function () {
     let cToken;
     beforeEach(async () => {
       cToken = await makeCToken();
+      await setMarketSupplyCap(cToken.comptroller, [cToken._address], [100000000000]);
     });
 
     it("rejects change by non-admin", async () => {
