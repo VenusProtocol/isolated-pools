@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 import "../CErc20Immutable.sol";
+import "../Governance/AccessControlManager.sol";
 
 contract CErc20ImmutableFactory {
   function deployCErc20(
@@ -12,7 +13,8 @@ contract CErc20ImmutableFactory {
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
-    address payable admin_
+    address payable admin_,
+	AccessControlManager accessControlManager_
   ) external returns (CErc20Immutable) {
     CErc20Immutable cToken = new CErc20Immutable(
       underlying_,
@@ -22,7 +24,8 @@ contract CErc20ImmutableFactory {
       name_,
       symbol_,
       decimals_,
-      admin_
+      admin_,
+	  accessControlManager_
     );
 
     return cToken;

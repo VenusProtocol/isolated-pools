@@ -35,7 +35,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
 		// Set the AccessControlManager for this token
-		err = _setAccessControlAddress(accessControlManager_);
+		uint err = _setAccessControlAddress(accessControlManager_);
 		require(err == NO_ERROR, "setting AccessControlManager failed");
 
         // Set initial exchange rate
@@ -43,7 +43,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
 
         // Set the comptroller
-        uint err = _setComptroller(comptroller_);
+        err = _setComptroller(comptroller_);
         require(err == NO_ERROR, "setting comptroller failed");
 
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
@@ -941,7 +941,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
       */
     function _setReserveFactorFresh(uint newReserveFactorMantissa) internal returns (uint) {
 
-		bool canCallFunction = AccessControlManager(accessControlAddress)
+		bool canCallFunction = AccessControlManager(accessControlManager)
 			.isAllowedToCall(msg.sender, "_setReserveFactorFresh(uint)");
         // Check caller is allowed to call this function
         if (!canCallFunction) {
@@ -1103,7 +1103,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-		bool canCallFunction = AccessControlManager(accessControlAddress).isAllowedToCall(
+		bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
                 msg.sender,
                 "_setInterestRateModelFresh(InterestRateModel)"
             );
@@ -1136,12 +1136,12 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
 	 /**
      * @notice Sets the address of AccessControlManager
      * @dev Admin function to set address of AccessControlManager
-     * @param newAclAddress The new address of the AccessControlManager
+     * @param newAccessControlManager The new address of the AccessControlManager
      * @return uint 0=success, otherwise a failure
      */
     function _setAccessControlAddress(
         AccessControlManager newAccessControlManager
-    ) external returns (uint256) {
+    ) public returns (uint256) {
         // Check caller is admin
         require(msg.sender == admin, "only admin can set ACL address");
 
@@ -1152,7 +1152,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
             accessControlManager
         );
 
-        return uint256(Error.NO_ERROR);
+        return uint256(NO_ERROR);
     }
 
     /*** Safe Token ***/

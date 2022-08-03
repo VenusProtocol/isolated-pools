@@ -1216,7 +1216,7 @@ contract Comptroller is
     /**
      * @notice Sets the address of AccessControlManager
      * @dev Admin function to set address of AccessControlManager
-     * @param newAclAddress The new address of the AccessControlManager
+     * @param newAccessControlManager The new address of the AccessControlManager
      * @return uint 0=success, otherwise a failure
      */
     function _setAccessControlAddress(
@@ -1246,7 +1246,7 @@ contract Comptroller is
         CToken cToken,
         uint256 newCollateralFactorMantissa
     ) external returns (uint256) {
-        bool isAllowedtoCall = AccessControlManager(accessControlAddress)
+        bool isAllowedtoCall = AccessControlManager(accessControlManager)
             .isAllowedToCall(
                 msg.sender,
                 "_setCollateralFactor(CToken,uint256)"
@@ -1320,7 +1320,7 @@ contract Comptroller is
         external
         returns (uint256)
     {
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_setLiquidationIncentive(uint)");
 
         // Check if caller is allowed to call this function
@@ -1354,7 +1354,7 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(CToken cToken) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_supportMarket(CToken)");
 
         if (!canCallFunction) {
@@ -1413,7 +1413,7 @@ contract Comptroller is
         // msg.sender == admin || msg.sender == borrowCapGuardian
         // Please consider adjusting deployment script before Testnet
         require(
-            AccessControlManager(accessControlAddress).isAllowedToCall(
+            AccessControlManager(accessControlManager).isAllowedToCall(
                 msg.sender,
                 "_setMarketBorrowCaps(CToken[],uint256[])"
             )
@@ -1462,7 +1462,7 @@ contract Comptroller is
             "cannot pause a market that is not listed"
         );
 
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_setMintPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1478,7 +1478,7 @@ contract Comptroller is
             "cannot pause a market that is not listed"
         );
 
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_setBorrowPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1489,7 +1489,7 @@ contract Comptroller is
     }
 
     function _setTransferPaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_setTransferPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1500,7 +1500,7 @@ contract Comptroller is
     }
 
     function _setSeizePaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControlAddress)
+        bool canCallFunction = AccessControlManager(accessControlManager)
             .isAllowedToCall(msg.sender, "_setSeizePaused(bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
