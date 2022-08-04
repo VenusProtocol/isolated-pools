@@ -1390,7 +1390,7 @@ contract Comptroller is
             AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
                 "_setMarketBorrowCaps(CToken[],uint256[])"
-            )
+            ), "only whitelisted accounts can set borrow caps"
         );
 
         uint256 numMarkets = cTokens.length;
@@ -1417,7 +1417,12 @@ contract Comptroller is
         CToken[] calldata cTokens,
         uint256[] calldata newSupplyCaps
     ) external {
-        require(msg.sender == admin, "only admin can set supply caps");
+        require(
+            AccessControlManager(accessControl).isAllowedToCall(
+                msg.sender,
+                "_setMarketSupplyCaps(CToken[],uint256[])"
+            ), "only whitelisted accounts can set supply caps"
+        );
         require(cTokens.length != 0, "invalid number of markets");
         require(
             cTokens.length == newSupplyCaps.length,
