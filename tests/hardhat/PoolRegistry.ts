@@ -11,8 +11,12 @@ import {
   CErc20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
+  AccessControlManager,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
+import {
+	FakeContract, smock
+} from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
@@ -31,8 +35,9 @@ let unitroller2: Unitroller;
 let cTokenFactory: CErc20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
+let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
-describe("PoolRegistry: Tests", async function () {
+describe("PoolRegistry: Tests",  function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -64,13 +69,16 @@ describe("PoolRegistry: Tests", async function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address
     );
+	
+	fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+	fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address);
+    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address);
+    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller2.deployed();
 
     const SimplePriceOracle = await ethers.getContractFactory(
@@ -242,6 +250,7 @@ describe("PoolRegistry: Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+	  accessControlManager: fakeAccessControlManager.address
     });
 
     await poolRegistry.addMarket({
@@ -256,6 +265,7 @@ describe("PoolRegistry: Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+	  accessControlManager: fakeAccessControlManager.address
     });
 
     const cWBTCAddress = await poolRegistry.getCTokenForAsset(

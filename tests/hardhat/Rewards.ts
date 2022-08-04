@@ -19,6 +19,7 @@ import {
   PoolRegistry__factory,
   PriceOracle,
   PriceOracle__factory,
+  AccessControlManager,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
@@ -36,12 +37,14 @@ let whitePaperRateFactory:WhitePaperInterestRateModelFactory;
 let rewardsDistributor:RewardsDistributor;
 let comp:Comp;
 let fakePriceOracle:FakeContract<PriceOracle>
+let fakeAccessControlManager: FakeContract<AccessControlManager>
+
 
 describe("Rewards: Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  before(async function () {
+  beforeEach(async function () {
     const CErc20ImmutableFactory = await ethers.getContractFactory('CErc20ImmutableFactory');
     cTokenFactory = await CErc20ImmutableFactory.deploy();
     await cTokenFactory.deployed();
@@ -66,9 +69,12 @@ describe("Rewards: Tests", async function () {
       whitePaperRateFactory.address
     );
 
+	fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+	await fakeAccessControlManager.isAllowedToCall.returns(true);
+
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller = await Comptroller.deploy(poolRegistry.address);
+    comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller.deployed();
   })
 
@@ -83,6 +89,7 @@ describe("Rewards: Tests", async function () {
 
     const MockWBTC = await ethers.getContractFactory("MockToken");
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
+	await mockWBTC.deployed();
     await mockWBTC.faucet(convertToUnit(1000, 8));
 
     const btcBalance = await mockWBTC.balanceOf(owner.address);
@@ -154,7 +161,8 @@ describe("Rewards: Tests", async function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18)
+      collateralFactor: convertToUnit(0.7, 18),
+	  accessControlManager: fakeAccessControlManager.address
     });
 
     await poolRegistry.addMarket({
@@ -168,7 +176,8 @@ describe("Rewards: Tests", async function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18)
+      collateralFactor: convertToUnit(0.7, 18),
+	  accessControlManager: fakeAccessControlManager.address
     });
     
     const cWBTCAddress = await poolRegistry.getCTokenForAsset(0, mockWBTC.address);
@@ -197,7 +206,7 @@ describe("Rewards: Tests", async function () {
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)]
     )
-  })
+  });
 
   it("Enter Market", async function () {
     const [owner, user] = await ethers.getSigners();
@@ -234,5 +243,5 @@ describe("Rewards: Tests", async function () {
 
     expect((await comp.balanceOf(user1.address)).toString()).not.equal("0")
     expect((await comp.balanceOf(user2.address)).toString()).not.equal("0")
-  })
+  });
 });

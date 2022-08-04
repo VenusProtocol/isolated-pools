@@ -199,7 +199,6 @@ contract PoolRegistry is OwnableUpgradeable {
             priceOracle != address(0),
             "RegistryPool: Invalid PriceOracle address."
         );
-
         // Setup Unitroller(Proxy)
         Unitroller unitroller = new Unitroller();
         address proxy = address(unitroller);

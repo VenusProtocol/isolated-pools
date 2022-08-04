@@ -9,7 +9,6 @@ import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
 import "./Governance/Comp.sol";
 import "./Rewards/RewardsDistributor.sol";
-
 import "./Governance/AccessControlManager.sol";
 
 /**
@@ -17,7 +16,7 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is
-    ComptrollerV9Storage,
+    ComptrollerV8Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
     ExponentialNoError
@@ -56,12 +55,6 @@ contract Comptroller is
         PriceOracle newPriceOracle
     );
 
-    /// @notice Emitted when AccessControlManager is changed
-    event NewAccessControlManager(
-        AccessControlManager oldAccessControlManager,
-        AccessControlManager newAccessControlManager
-    );
-
     /// @notice Emitted when an action is paused globally
     event ActionPaused(string action, bool pauseState);
 
@@ -98,15 +91,19 @@ contract Comptroller is
     // PoolRegistry
     address immutable poolRegistry;
 
+	// AccessControlManager
+    address immutable accessControl;
+
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
     // Used to check if rewards distributor is added
     mapping(address => bool) rewardsDistributorExists;
 
-    constructor(address _poolRegistry) {
+    constructor(address _poolRegistry, address _accessControl) {
         admin = msg.sender;
         poolRegistry = _poolRegistry;
+		accessControl = _accessControl;
     }
 
     /*** Assets You Are In ***/
@@ -1214,28 +1211,6 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets the address of AccessControlManager
-     * @dev Admin function to set address of AccessControlManager
-     * @param newAccessControlManager The new address of the AccessControlManager
-     * @return uint 0=success, otherwise a failure
-     */
-    function _setAccessControlAddress(
-        AccessControlManager newAccessControlManager
-    ) external returns (uint256) {
-        // Check caller is admin
-        require(msg.sender == admin, "only admin can set ACL address");
-
-        AccessControlManager oldAccessControlManager = accessControlManager;
-        accessControlManager = newAccessControlManager;
-        emit NewAccessControlManager(
-            oldAccessControlManager,
-            accessControlManager
-        );
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
      * @notice Sets the collateralFactor for a market
      * @dev Restricted function to set per-market collateralFactor
      * @param cToken The market to set the factor on
@@ -1246,7 +1221,7 @@ contract Comptroller is
         CToken cToken,
         uint256 newCollateralFactorMantissa
     ) external returns (uint256) {
-        bool isAllowedtoCall = AccessControlManager(accessControlManager)
+        bool isAllowedtoCall = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
                 "_setCollateralFactor(CToken,uint256)"
@@ -1320,9 +1295,8 @@ contract Comptroller is
         external
         returns (uint256)
     {
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setLiquidationIncentive(uint)");
-
         // Check if caller is allowed to call this function
         if (!canCallFunction) {
             return
@@ -1354,7 +1328,7 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(CToken cToken) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_supportMarket(CToken)");
 
         if (!canCallFunction) {
@@ -1413,7 +1387,7 @@ contract Comptroller is
         // msg.sender == admin || msg.sender == borrowCapGuardian
         // Please consider adjusting deployment script before Testnet
         require(
-            AccessControlManager(accessControlManager).isAllowedToCall(
+            AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
                 "_setMarketBorrowCaps(CToken[],uint256[])"
             )
@@ -1462,7 +1436,7 @@ contract Comptroller is
             "cannot pause a market that is not listed"
         );
 
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setMintPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1478,7 +1452,7 @@ contract Comptroller is
             "cannot pause a market that is not listed"
         );
 
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setBorrowPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1489,7 +1463,7 @@ contract Comptroller is
     }
 
     function _setTransferPaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setTransferPaused(CToken,bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1500,7 +1474,7 @@ contract Comptroller is
     }
 
     function _setSeizePaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setSeizePaused(bool)");
 
         require(!canCallFunction, "only authorised addresses can pause");
@@ -1538,7 +1512,7 @@ contract Comptroller is
         CToken[] calldata cTokens,
         uint256[] calldata newMinLiquidatableAmounts
     ) external {
-        bool canCallFunction = AccessControlManager(accessControlManager)
+        bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
                 "_setMarketMinLiquidationAmount(CToken[],uint256[])"
