@@ -1103,10 +1103,10 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-		bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-                msg.sender,
-                "_setInterestRateModelFresh(InterestRateModel)"
-            );
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "_setInterestRateModelFresh(InterestRateModel)"
+        );
 
         // Check if caller has call permissions
         if (!canCallFunction) {
