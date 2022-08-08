@@ -125,7 +125,7 @@ describe("Min Liquidation Amount", () => {
       var ctokens : String[] = [addr1.address, addr2.address]
       var limits : Number[] = [1,2]
 	  
-	  accessControlManager.isAllowedToCall.returns(false);
+      accessControlManager.isAllowedToCall.returns(false);
       // calling function from addr1 instead of owner address
       await expect(
         comptroller.connect(addr1)._setMarketMinLiquidationAmount(ctokens, limits)
