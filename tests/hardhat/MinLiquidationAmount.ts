@@ -139,7 +139,7 @@ describe("Min Liquidation Amount", () => {
       var ctokens : String[] = []
       var limits : Number[] = [1,2]
 
-	  accessControlManager.isAllowedToCall.returns(true);
+      accessControlManager.isAllowedToCall.returns(true);
 
       await expect(
         comptroller._setMarketMinLiquidationAmount(ctokens, limits)
