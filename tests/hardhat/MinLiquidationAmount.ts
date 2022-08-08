@@ -34,7 +34,7 @@ describe("Min Liquidation Amount", () => {
 
   beforeEach(async () => {
     const [owner] = await ethers.getSigners();
-	accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+    accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
 
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
     comptroller = await comptrollerFactory.deploy(owner.address, accessControlManager.address);
