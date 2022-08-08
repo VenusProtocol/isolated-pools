@@ -125,7 +125,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 jumpMultiplierPerYear;
         uint256 kink_;
         uint256 collateralFactor;
-		AccessControlManager accessControlManager;
+        AccessControlManager accessControlManager;
     }
 
     /**
