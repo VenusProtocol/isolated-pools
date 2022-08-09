@@ -16,7 +16,7 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is
-    ComptrollerV8Storage,
+    ComptrollerV1Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
     ExponentialNoError

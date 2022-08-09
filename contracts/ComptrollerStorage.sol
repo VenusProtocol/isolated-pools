@@ -51,9 +51,7 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
      * @notice Per-account mapping of "assets you are in", capped by maxAssets
      */
     mapping(address => CToken[]) public accountAssets;
-}
 
-contract ComptrollerV2Storage is ComptrollerV1Storage {
     struct Market {
         // Whether or not this market is listed
         bool isListed;
@@ -81,47 +79,21 @@ contract ComptrollerV2Storage is ComptrollerV1Storage {
      * 		 AND IS CAUSING COMPILATION ERROR IF REMOVED.
      */
     address public pauseGuardian;
-    bool public _mintGuardianPaused;
-    bool public _borrowGuardianPaused;
     bool public transferGuardianPaused;
     bool public seizeGuardianPaused;
     mapping(address => bool) public mintGuardianPaused;
     mapping(address => bool) public borrowGuardianPaused;
-}
 
-contract ComptrollerV3Storage is ComptrollerV2Storage {
     /// @notice A list of all markets
     CToken[] public allMarkets;
 
-    /// @notice The rate at which the flywheel distributes COMP, per block
-    uint256 public compRate;
-
-    /// @notice The portion of compRate that each market currently receives
-    mapping(address => uint256) public compSpeeds;
-}
-
-contract ComptrollerV4Storage is ComptrollerV3Storage {
     // @notice The borrowCapGuardian can set borrowCaps to any number for any market. Lowering the borrow cap could disable borrowing on the given market.
     // NOTE: please remove this as it is not used anymore
     address public borrowCapGuardian;
 
     // @notice Borrow caps enforced by borrowAllowed for each cToken address. Defaults to zero which corresponds to unlimited borrowing.
     mapping(address => uint256) public borrowCaps;
-}
 
-contract ComptrollerV5Storage is ComptrollerV4Storage {}
-
-contract ComptrollerV6Storage is ComptrollerV5Storage {}
-
-contract ComptrollerV7Storage is ComptrollerV6Storage {
-    /// @notice Flag indicating whether the function to fix COMP accruals has been executed (RE: proposal 62 bug)
-    bool public proposal65FixExecuted;
-
-    /// @notice Accounting storage mapping account addresses to how much COMP they owe the protocol.
-    mapping(address => uint256) public compReceivable;
-}
-
-contract ComptrollerV8Storage is ComptrollerV7Storage {
     /// @notice Storage for minimum liquidatable amount in USD for each asset
     mapping(address => uint256) public minimalLiquidatableAmount;
 
