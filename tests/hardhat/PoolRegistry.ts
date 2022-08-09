@@ -11,14 +11,14 @@ import {
   CErc20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
+  AccessControlManager,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
 let comptroller2: Comptroller;
-let simplePriceOracle1: SimplePriceOracle;
-let simplePriceOracle2: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
@@ -31,12 +31,14 @@ let unitroller2: Unitroller;
 let cTokenFactory: CErc20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
+let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
-describe("PoolRegistry: Tests", async function () {
+describe("PoolRegistry: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
+    const [, user] = await ethers.getSigners();
     const CErc20ImmutableFactory = await ethers.getContractFactory(
       "CErc20ImmutableFactory"
     );
@@ -65,29 +67,45 @@ describe("PoolRegistry: Tests", async function () {
       whitePaperRateFactory.address
     );
 
+    fakeAccessControlManager = await smock.fake<AccessControlManager>(
+      "AccessControlManager"
+    );
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address);
+    comptroller1 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address);
+    comptroller2 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller2.deployed();
 
-    const SimplePriceOracle = await ethers.getContractFactory(
-      "SimplePriceOracle"
-    );
+    //Deploy Mock Tokens
+    const MockDAI = await ethers.getContractFactory("MockToken");
+    mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
+    await mockDAI.faucet(convertToUnit(1000, 18));
 
-    simplePriceOracle1 = await SimplePriceOracle.deploy();
-    await simplePriceOracle1.deployed();
+    const MockWBTC = await ethers.getContractFactory("MockToken");
+    mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
 
-    simplePriceOracle2 = await SimplePriceOracle.deploy();
-    await simplePriceOracle2.deployed();
-  });
-
-  // Register pools to the protocol
-  it("Register pool", async function () {
     const _closeFactor = convertToUnit(0.05, 18);
     const _liquidationIncentive = convertToUnit(1, 18);
+
+    // Deploy Price Oracle
+    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    priceOracle = await MockPriceOracle.deploy();
+
+    const btcPrice = "21000.34";
+    const daiPrice = "1";
+
+    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
+    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
 
     // Registering the first pool
     await poolRegistry.createRegistryPool(
@@ -95,7 +113,7 @@ describe("PoolRegistry: Tests", async function () {
       comptroller1.address,
       _closeFactor,
       _liquidationIncentive,
-      simplePriceOracle1.address
+      priceOracle.address
     );
 
     // Registering the second pool
@@ -104,14 +122,11 @@ describe("PoolRegistry: Tests", async function () {
       comptroller2.address,
       _closeFactor,
       _liquidationIncentive,
-      simplePriceOracle2.address
+      priceOracle.address
     );
 
-    // Get all pools list.
+    //Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools[0].name).equal("Pool 1");
-    expect(pools[1].name).equal("Pool 2");
-
     comptroller1Proxy = await ethers.getContractAt(
       "Comptroller",
       pools[0].comptroller
@@ -133,103 +148,8 @@ describe("PoolRegistry: Tests", async function () {
     );
 
     await unitroller2._acceptAdmin();
-  });
 
-  // Get the list of all pools.
-  it("Get all pools", async function () {
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools.length).equal(2);
-  });
-
-  // Chnage/updte pool name.
-  it("Change pool name", async function () {
-    await poolRegistry.setPoolName(1, "Pool 1 updated");
-    const pools = await poolRegistry.callStatic.getAllPools();
-
-    expect(pools[0].name).equal("Pool 1 updated");
-    await poolRegistry.setPoolName(1, "Pool 1");
-  });
-
-  // Bookmark the pool anf get all of the bookmarked pools.
-  it("Bookmark pool and get the bookmarked pools", async function () {
-    const pools = await poolRegistry.callStatic.getAllPools();
-    await poolRegistry.bookmarkPool(pools[0].comptroller);
-
-    const [owner] = await ethers.getSigners();
-
-    const bookmarkedPools = await poolRegistry.getBookmarks(owner.address);
-
-    expect(bookmarkedPools.length).equal(1);
-    expect(bookmarkedPools[0]).equal(pools[0].comptroller);
-  });
-
-  // Get pool data by pool's index.
-  it("Get pool by poolId", async function () {
-    const pool = await poolRegistry.getPoolByID(2);
-
-    expect(pool.name).equal("Pool 2");
-  });
-
-  // Get pool by the comptroller address.
-  it("Get pool by comptroller", async function () {
-    const pool1 = await poolRegistry.getPoolByComptroller(
-      comptroller1Proxy.address
-    );
-    expect(pool1[0]).equal(1);
-    expect(pool1[1]).equal("Pool 1");
-
-    const pool2 = await poolRegistry.getPoolByComptroller(
-      comptroller2Proxy.address
-    );
-    expect(pool2[0]).equal(2);
-    expect(pool2[1]).equal("Pool 2");
-  });
-
-  // Get poolID by the comptroller address.
-  it("Get poolID by comptroller", async function () {
-    const poolIndex1 = await poolRegistry.getPoolIDByComptroller(
-      comptroller1Proxy.address
-    );
-    expect(poolIndex1).equal(1);
-
-    const poolIndex2 = await poolRegistry.getPoolIDByComptroller(
-      comptroller2Proxy.address
-    );
-    expect(poolIndex2).equal(2);
-  });
-
-  it("Deploy Mock Tokens", async function () {
-    const MockDAI = await ethers.getContractFactory("MockToken");
-    mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(convertToUnit(1000, 18));
-
-    const [owner] = await ethers.getSigners();
-    const daiBalance = await mockDAI.balanceOf(owner.address);
-    expect(daiBalance).equal(convertToUnit(1000, 18));
-
-    const MockWBTC = await ethers.getContractFactory("MockToken");
-    mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
-    await mockWBTC.faucet(convertToUnit(1000, 8));
-
-    const btcBalance = await mockWBTC.balanceOf(owner.address);
-
-    expect(btcBalance).equal(convertToUnit(1000, 8));
-  });
-
-  it("Deploy Price Oracle", async function () {
-    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    priceOracle = await MockPriceOracle.deploy();
-
-    const btcPrice = "21000.34";
-    const daiPrice = "1";
-
-    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
-    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
-
-    await comptroller1Proxy._setPriceOracle(priceOracle.address);
-  });
-
-  it("Deploy CToken", async function () {
+    // Deploy CTokens
     await poolRegistry.addMarket({
       poolId: 1,
       asset: mockWBTC.address,
@@ -242,6 +162,7 @@ describe("PoolRegistry: Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.addMarket({
@@ -256,6 +177,7 @@ describe("PoolRegistry: Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     const cWBTCAddress = await poolRegistry.getCTokenForAsset(
@@ -269,6 +191,88 @@ describe("PoolRegistry: Tests", async function () {
 
     cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
     cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
+
+    // Enter Markets
+    await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
+    await comptroller1Proxy
+      .connect(user)
+      .enterMarkets([cDAI.address, cWBTC.address]);
+
+    //Set Oracle
+    await comptroller1Proxy._setPriceOracle(priceOracle.address);
+  });
+
+  it("Pools should have correct names", async function () {
+    // Get all pools list.
+    const pools = await poolRegistry.callStatic.getAllPools();
+    expect(pools[0].name).equal("Pool 1");
+    expect(pools[1].name).equal("Pool 2");
+  });
+  it("Should get 2 pools", async function () {
+    const pools = await poolRegistry.callStatic.getAllPools();
+    expect(pools.length).equal(2);
+  });
+
+  it("Should change pool name", async function () {
+    await poolRegistry.setPoolName(1, "Pool 1 updated");
+    const pools = await poolRegistry.callStatic.getAllPools();
+    expect(pools[0].name).equal("Pool 1 updated");
+    await poolRegistry.setPoolName(1, "Pool 1");
+  });
+
+  it("Bookmark pool and get the bookmarked pools", async function () {
+    const pools = await poolRegistry.callStatic.getAllPools();
+    await poolRegistry.bookmarkPool(pools[0].comptroller);
+
+    const [owner] = await ethers.getSigners();
+
+    const bookmarkedPools = await poolRegistry.getBookmarks(owner.address);
+
+    expect(bookmarkedPools.length).equal(1);
+    expect(bookmarkedPools[0]).equal(pools[0].comptroller);
+  });
+
+  it("Should get pool by pools index", async function () {
+    const pool = await poolRegistry.getPoolByID(2);
+
+    expect(pool.name).equal("Pool 2");
+  });
+
+  it("Should get pool by comptroller", async function () {
+    const pool1 = await poolRegistry.getPoolByComptroller(
+      comptroller1Proxy.address
+    );
+    expect(pool1[0]).equal(1);
+    expect(pool1[1]).equal("Pool 1");
+
+    const pool2 = await poolRegistry.getPoolByComptroller(
+      comptroller2Proxy.address
+    );
+    expect(pool2[0]).equal(2);
+    expect(pool2[1]).equal("Pool 2");
+  });
+
+  it("Should get poolID by comptroller", async function () {
+    const poolIndex1 = await poolRegistry.getPoolIDByComptroller(
+      comptroller1Proxy.address
+    );
+    expect(poolIndex1).equal(1);
+
+    const poolIndex2 = await poolRegistry.getPoolIDByComptroller(
+      comptroller2Proxy.address
+    );
+    expect(poolIndex2).equal(2);
+  });
+
+  it("Should be correct balances in tokens", async function () {
+    const [owner] = await ethers.getSigners();
+    await mockWBTC.faucet(convertToUnit(1000, 8));
+
+    const daiBalance = await mockDAI.balanceOf(owner.address);
+    expect(daiBalance).equal(convertToUnit(1000, 18));
+
+    const btcBalance = await mockWBTC.balanceOf(owner.address);
+    expect(btcBalance).equal(convertToUnit(1000, 8));
   });
 
   // Get all pools that support a given asset
@@ -279,32 +283,9 @@ describe("PoolRegistry: Tests", async function () {
 
   it("Enter Market", async function () {
     const [owner, user] = await ethers.getSigners();
-    await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
-    await comptroller1Proxy
-      .connect(user)
-      .enterMarkets([cDAI.address, cWBTC.address]);
     const res = await comptroller1Proxy.getAssetsIn(owner.address);
     expect(res[0]).equal(cDAI.address);
     expect(res[1]).equal(cWBTC.address);
-  });
-
-  it("Lend and Borrow", async function () {
-    await comptroller1Proxy._setMarketSupplyCaps([cDAI.address], [convertToUnit(100000, 18)]);
-    const daiAmount = convertToUnit(31000, 18);
-    await mockDAI.faucet(daiAmount);
-    await mockDAI.approve(cDAI.address, daiAmount);
-    await cDAI.mint(daiAmount);
-
-    const [, user] = await ethers.getSigners();
-    await mockWBTC.connect(user).faucet(convertToUnit(1000, 8));
-
-    const btcAmount = convertToUnit(1000, 8);
-    await comptroller1Proxy._setMarketSupplyCaps([cWBTC.address], [convertToUnit(100000, 8)]);
-    await mockWBTC.connect(user).approve(cWBTC.address, btcAmount);
-    await cWBTC.connect(user).mint(btcAmount);
-
-    await cWBTC.borrow(convertToUnit(1, 8));
-    await cDAI.connect(user).borrow(convertToUnit(100, 18));
   });
 
   it("Metadata", async function () {

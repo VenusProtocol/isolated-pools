@@ -32,7 +32,7 @@ describe("Access Control", () => {
     accessControlManager = await accessControlFactory.deploy();
 
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    comptroller = await comptrollerFactory.deploy(addresses[0].address);
+    comptroller = await comptrollerFactory.deploy(addresses[0].address, accessControlManager.address);
 
     await accessControlManager.deployed();
   });

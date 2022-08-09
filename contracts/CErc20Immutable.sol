@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "./CErc20.sol";
+import "./Governance/AccessControlManager.sol";
 
 /**
  * @title Compound's CErc20Immutable Contract
@@ -27,12 +28,13 @@ contract CErc20Immutable is CErc20 {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_) {
+                address payable admin_, 
+                AccessControlManager accessControlManager_) {
         // Creator of the contract is admin during initialization
         admin = payable(msg.sender);
 
         // Initialize the market
-        initialize(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_);
+        initialize(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_);
 
         // Set the proper admin now that initialization is done
         admin = admin_;

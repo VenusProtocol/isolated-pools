@@ -77,6 +77,8 @@ contract ComptrollerV2Storage is ComptrollerV1Storage {
      * @notice The Pause Guardian can pause certain actions as a safety mechanism.
      *  Actions which allow users to remove their own assets cannot be paused.
      *  Liquidation / seizing / transfer can only be paused globally, not by market.
+     * NOTE: THIS VALUE IS NOT USED IN COMPTROLLER. HOWEVER IT IS ALREADY USED IN COMTROLLERG7
+     * 		 AND IS CAUSING COMPILATION ERROR IF REMOVED.
      */
     address public pauseGuardian;
     bool public _mintGuardianPaused;
@@ -100,6 +102,7 @@ contract ComptrollerV3Storage is ComptrollerV2Storage {
 
 contract ComptrollerV4Storage is ComptrollerV3Storage {
     // @notice The borrowCapGuardian can set borrowCaps to any number for any market. Lowering the borrow cap could disable borrowing on the given market.
+    // NOTE: please remove this as it is not used anymore
     address public borrowCapGuardian;
 
     // @notice Borrow caps enforced by borrowAllowed for each cToken address. Defaults to zero which corresponds to unlimited borrowing.

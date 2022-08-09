@@ -11,6 +11,7 @@ import {
   Comptroller__factory,
   CToken,
   PriceOracle,
+  AccessControlManager
 } from "../../typechain";
 import chai from "chai";
 
@@ -29,11 +30,14 @@ describe("Min Liquidation Amount", () => {
   let cTokenCollateral: FakeContract<CToken>;
 
   let priceOracle: FakeContract<PriceOracle>;
+  let accessControlManager: FakeContract<AccessControlManager>;
 
   beforeEach(async () => {
     const [owner] = await ethers.getSigners();
+    accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    comptroller = await comptrollerFactory.deploy(owner.address);
+    comptroller = await comptrollerFactory.deploy(owner.address, accessControlManager.address);
     await comptroller.deployed();
 
     priceOracle = await smock.fake<PriceOracle>("PriceOracle");
@@ -120,12 +124,13 @@ describe("Min Liquidation Amount", () => {
 
       var ctokens : String[] = [addr1.address, addr2.address]
       var limits : Number[] = [1,2]
-
+	  
+      accessControlManager.isAllowedToCall.returns(false);
       // calling function from addr1 instead of owner address
       await expect(
         comptroller.connect(addr1)._setMarketMinLiquidationAmount(ctokens, limits)
         )
-      .to.be.revertedWith("only admin can update min liquidation amounts");
+      .to.be.revertedWith("only approved addresses can update min liquidation amounts");
     });
 
     it("invalid data (markets == 0)", async () => {
@@ -133,6 +138,8 @@ describe("Min Liquidation Amount", () => {
 
       var ctokens : String[] = []
       var limits : Number[] = [1,2]
+
+      accessControlManager.isAllowedToCall.returns(true);
 
       await expect(
         comptroller._setMarketMinLiquidationAmount(ctokens, limits)
@@ -146,6 +153,8 @@ describe("Min Liquidation Amount", () => {
       var ctokens : String[] = [addr1.address, addr2.address]
       var limits : Number[] = [1, 2, 3]
 
+      accessControlManager.isAllowedToCall.returns(true);
+	  
       await expect(
         comptroller._setMarketMinLiquidationAmount(ctokens, limits)
         )

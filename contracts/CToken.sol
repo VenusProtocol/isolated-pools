@@ -7,6 +7,7 @@ import "./ErrorReporter.sol";
 import "./EIP20Interface.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
+import "./Governance/AccessControlManager.sol";
 
 /**
  * @title Compound's CToken Contract
@@ -28,16 +29,21 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
                         uint initialExchangeRateMantissa_,
                         string memory name_,
                         string memory symbol_,
-                        uint8 decimals_) public {
+                        uint8 decimals_,
+                        AccessControlManager accessControlManager_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
+
+        // Set the AccessControlManager for this token
+        uint err = _setAccessControlAddress(accessControlManager_);
+        require(err == NO_ERROR, "setting AccessControlManager failed");
 
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
         require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
 
         // Set the comptroller
-        uint err = _setComptroller(comptroller_);
+        err = _setComptroller(comptroller_);
         require(err == NO_ERROR, "setting comptroller failed");
 
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
@@ -934,8 +940,11 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
     function _setReserveFactorFresh(uint newReserveFactorMantissa) internal returns (uint) {
-        // Check caller is admin
-        if (msg.sender != admin) {
+
+        bool canCallFunction = AccessControlManager(accessControlManager)
+            .isAllowedToCall(msg.sender, "_setReserveFactorFresh(uint)");
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
             revert SetReserveFactorAdminCheck();
         }
 
@@ -1094,8 +1103,13 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-        // Check caller is admin
-        if (msg.sender != admin) {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "_setInterestRateModelFresh(InterestRateModel)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
             revert SetInterestRateModelOwnerCheck();
         }
 
@@ -1117,6 +1131,28 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
 
         return NO_ERROR;
+    }
+
+	 /**
+     * @notice Sets the address of AccessControlManager
+     * @dev Admin function to set address of AccessControlManager
+     * @param newAccessControlManager The new address of the AccessControlManager
+     * @return uint 0=success, otherwise a failure
+     */
+    function _setAccessControlAddress(
+        AccessControlManager newAccessControlManager
+    ) public returns (uint256) {
+        // Check caller is admin
+        require(msg.sender == admin, "only admin can set ACL address");
+
+        AccessControlManager oldAccessControlManager = accessControlManager;
+        accessControlManager = newAccessControlManager;
+        emit NewAccessControlManager(
+            oldAccessControlManager,
+            accessControlManager
+        );
+
+        return uint256(NO_ERROR);
     }
 
     /*** Safe Token ***/

@@ -14,6 +14,7 @@ import "../WhitePaperInterestRateModel.sol";
 import "../JumpRateModelV2.sol";
 import "../CErc20Immutable.sol";
 import "../InterestRateModel.sol";
+import "../Governance/AccessControlManager.sol";
 
 /**
  * @title PoolRegistry
@@ -124,6 +125,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 jumpMultiplierPerYear;
         uint256 kink_;
         uint256 collateralFactor;
+        AccessControlManager accessControlManager;
     }
 
     /**
@@ -197,7 +199,6 @@ contract PoolRegistry is OwnableUpgradeable {
             priceOracle != address(0),
             "RegistryPool: Invalid PriceOracle address."
         );
-
         // Setup Unitroller(Proxy)
         Unitroller unitroller = new Unitroller();
         address proxy = address(unitroller);
@@ -352,7 +353,8 @@ contract PoolRegistry is OwnableUpgradeable {
             input.name,
             input.symbol,
             input.decimals,
-            payable(msg.sender)
+            payable(msg.sender),
+            input.accessControlManager
         );
 
         comptroller._supportMarket(cToken);
