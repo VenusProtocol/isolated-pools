@@ -238,7 +238,7 @@ describe("PoolRegistry: Tests", function () {
     expect(pool.name).equal("Pool 2");
   });
 
-  it("Should get pool by comptroller", async function () {
+  it("Get pool by comptroller", async function () {
     const pool1 = await poolRegistry.getPoolByComptroller(
       comptroller1Proxy.address
     );

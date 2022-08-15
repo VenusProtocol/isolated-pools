@@ -289,6 +289,7 @@ contract PoolRegistry is OwnableUpgradeable {
         view
         returns (VenusPool memory)
     {
+        uint256 poolId = _poolByComptroller[comptroller];
         return _poolsByID[_poolByComptroller[comptroller]];
     }
 
@@ -302,6 +303,18 @@ contract PoolRegistry is OwnableUpgradeable {
         returns (uint256)
     {
         return _poolByComptroller[comptroller];
+    }
+
+    /**
+    * @param poolId index of Venus pool.
+    * @notice Returns Metadata of Venus pool.
+    */
+    function getVenusPoolMetadata(uint256 poolId)
+        external
+        view
+        returns (VenusPoolMetaData memory)
+    {
+        return metadata[poolId];
     }
 
     /**

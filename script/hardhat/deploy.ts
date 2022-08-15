@@ -31,13 +31,14 @@ async function main() {
   const MockDAI = await ethers.getContractFactory('MockToken')
   const mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
   await mockDAI.deployed()
-  await verify(mockDAI.address, ['MakerDAO', 'DAI', 18]);
+  //await verify(mockDAI.address, ['MakerDAO', 'DAI', 18]);
 
   const MockWBTC = await ethers.getContractFactory('MockToken')
   const mockWBTC = await MockWBTC.deploy('Bitcoin', 'BTC', 8)
   await mockWBTC.deployed()
-  await verify(mockWBTC.address, ['Bitcoin', 'BTC', 8]);
+  //await verify(mockWBTC.address, ['Bitcoin', 'BTC', 8]);
 
+  
   const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
   const priceOracle = await MockPriceOracle.deploy();
   await priceOracle.deployed()
@@ -55,27 +56,27 @@ async function main() {
   );
   const cTokenFactory = await CErc20ImmutableFactory.deploy();
   await cTokenFactory.deployed();
-  await verify(cTokenFactory.address, []);
+  //await verify(cTokenFactory.address, []);
 
   const JumpRateModelFactory = await ethers.getContractFactory(
     "JumpRateModelFactory"
   );
   const jumpRateFactory = await JumpRateModelFactory.deploy();
   await jumpRateFactory.deployed();
-  await verify(jumpRateFactory.address, []);
+  //await verify(jumpRateFactory.address, []);
 
   const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
     "WhitePaperInterestRateModelFactory"
   );
   const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
   await whitePaperRateFactory.deployed();
-  await verify(whitePaperRateFactory.address, []);
+  //await verify(whitePaperRateFactory.address, []);
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
   const poolRegistry = await PoolRegistry.deploy();
   await poolRegistry.deployed();
 
-  await verify(poolRegistry.address, []);
+  //await verify(poolRegistry.address, []);
 
   await poolRegistry.initialize(
     cTokenFactory.address,
@@ -86,7 +87,7 @@ async function main() {
   const Comptroller = await ethers.getContractFactory('Comptroller');
   const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
-  await verify(comptroller.address, []);
+  //await verify(comptroller.address, []);
 
   const closeFactor = convertToUnit(0.05, 18) 
   const liquidationIncentive = convertToUnit(1, 18)
@@ -111,7 +112,7 @@ async function main() {
     pools[0].comptroller
   );
 
-  await verify(unitroller.address, [], "contracts/Unitroller.sol:Unitroller");
+  //await verify(unitroller.address, [], "contracts/Unitroller.sol:Unitroller");
 
   tx = await unitroller._acceptAdmin();
   await tx.wait(1)
