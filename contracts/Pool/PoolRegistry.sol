@@ -139,6 +139,16 @@ contract PoolRegistry is OwnableUpgradeable {
     event PoolNameSet(uint256 index, string name);
 
     /**
+     * @dev Emitted when a pool metadata is updated.
+     */
+    event PoolMedatataUpdated(uint256 indexed index, address indexed comptrollerAddress, RiskRating riskRating, string category);
+
+    /**
+     * @dev Emitted when a Market is added to the pool.
+     */
+    event MarketAdded(uint256 indexed index, address indexed comptroller, address cTokenAddress);
+
+    /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
      * @param name The name of the pool.
      * @param comptroller The pool's Comptroller proxy contract address.
@@ -375,6 +385,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         _cTokens[input.poolId][input.asset] = address(cToken);
         _supportedPools[input.asset].push(input.poolId);
+
+        emit MarketAdded(input.poolId, address(comptroller), address(cToken));
     }
 
     function getCTokenForAsset(uint256 poolId, address asset)
@@ -398,5 +410,6 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external onlyOwner {
         metadata[poolId] = _metadata;
+        emit PoolMedatataUpdated(poolId, _poolsByID[poolId].comptroller, _metadata.riskRating, _metadata.category);
     }
 }
