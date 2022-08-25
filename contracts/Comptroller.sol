@@ -1444,7 +1444,7 @@ contract Comptroller is
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setMintPaused(CToken,bool)");
 
-        require(!canCallFunction, "only authorised addresses can pause");
+        require(canCallFunction, "only authorised addresses can pause");
 
         mintGuardianPaused[address(cToken)] = state;
         emit ActionPaused(cToken, "Mint", state);
@@ -1460,7 +1460,7 @@ contract Comptroller is
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setBorrowPaused(CToken,bool)");
 
-        require(!canCallFunction, "only authorised addresses can pause");
+        require(canCallFunction, "only authorised addresses can pause");
 
         borrowGuardianPaused[address(cToken)] = state;
         emit ActionPaused(cToken, "Borrow", state);
@@ -1471,7 +1471,7 @@ contract Comptroller is
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setTransferPaused(CToken,bool)");
 
-        require(!canCallFunction, "only authorised addresses can pause");
+        require(canCallFunction, "only authorised addresses can pause");
 
         transferGuardianPaused = state;
         emit ActionPaused("Transfer", state);
@@ -1482,7 +1482,7 @@ contract Comptroller is
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(msg.sender, "_setSeizePaused(bool)");
 
-        require(!canCallFunction, "only authorised addresses can pause");
+        require(canCallFunction, "only authorised addresses can pause");
 
         seizeGuardianPaused = state;
         emit ActionPaused("Seize", state);
