@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { ethers, run } from "hardhat";
 
 async function main() {
