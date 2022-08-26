@@ -73,13 +73,17 @@ abstract contract ComptrollerInterface {
         address cTokenCollateral,
         uint repayAmount) virtual external view returns (uint, uint);
 
-    function getAllMarkets() virtual external view returns (CToken[] memory);    
+    function getAllMarkets() virtual external view returns (CToken[] memory); 
 }
 
 abstract contract ComptrollerViewInterface {
-
     function markets(address) virtual external view returns (bool, uint);
     function oracle() virtual external view returns (PriceOracle);
     function getAssetsIn(address) virtual external view returns (CToken[] memory);
     function compSpeeds(address) virtual external view returns (uint);
+    function pauseGuardian() virtual external view returns (address);
+    function priceOracle() virtual external view returns (address);
+    function closeFactorMantissa() virtual external view returns (uint256);
+    function maxAssets() virtual external view returns (uint256);
+    function liquidationIncentiveMantissa() virtual external view returns (uint256);
 }
