@@ -29,6 +29,11 @@ contract PoolLens is ExponentialNoError {
         string category;
         string logoURL;
         string description;
+        address priceOracle;
+        address pauseGuardian;
+        uint256 closeFactor;
+        uint256 liquidationIncentive;
+        uint256 maxAssets;
         CTokenMetadata[] cTokens;
     }
 
@@ -72,6 +77,8 @@ contract PoolLens is ExponentialNoError {
             //get PoolMetada via lookup on comptrollerAddress to poolId and then poolId to poolMetadata
             PoolRegistry.VenusPoolMetaData memory venusPoolMetaData = poolRegistryInterface.getVenusPoolMetadata(poolId);
 
+            ComptrollerViewInterface comptrollerViewInstance = ComptrollerViewInterface(venusPool.comptroller);
+
             PoolData memory poolData = PoolData({
                 poolId: venusPool.poolId,
                 name: venusPool.name,
@@ -83,7 +90,12 @@ contract PoolLens is ExponentialNoError {
                 category: venusPoolMetaData.category,
                 logoURL: venusPoolMetaData.logoURL,
                 description: venusPoolMetaData.description,
-                cTokens: cTokenMetadataItems
+                cTokens: cTokenMetadataItems,
+                priceOracle: address(comptrollerViewInstance.oracle()),
+                pauseGuardian: comptrollerViewInstance.pauseGuardian(),
+                closeFactor: comptrollerViewInstance.closeFactorMantissa(),
+                liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
+                maxAssets: comptrollerViewInstance.maxAssets()
             });
 
             return poolData;

@@ -40,6 +40,7 @@ let poolLens: PoolLens;
 let owner: Signer;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
+let closeFactor1: any, closeFactor2: any, liquidationIncentive1: any, liquidationIncentive2 : any;
 
 describe("PoolLens - PoolView Tests", async function () {
   /**
@@ -102,24 +103,27 @@ describe("PoolLens - PoolView Tests", async function () {
     simplePriceOracle2 = await SimplePriceOracle.deploy();
     await simplePriceOracle2.deployed();
 
-    const _closeFactor = convertToUnit(0.05, 18);
-    const _liquidationIncentive = convertToUnit(1, 18);
+    closeFactor1 = convertToUnit(0.05, 18);
+    liquidationIncentive1 = convertToUnit(1, 18);
 
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
       comptroller1.address,
-      _closeFactor,
-      _liquidationIncentive,
+      closeFactor1,
+      liquidationIncentive1,
       simplePriceOracle1.address
     );
+
+    closeFactor2 = convertToUnit(0.05, 18);
+    liquidationIncentive2 = convertToUnit(1, 18);
 
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
       comptroller2.address,
-      _closeFactor,
-      _liquidationIncentive,
+      closeFactor2,
+      liquidationIncentive2,
       simplePriceOracle2.address
     );
 
@@ -236,7 +240,6 @@ describe("PoolLens - PoolView Tests", async function () {
     //Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
 
-
     const PoolLens = await ethers.getContractFactory("PoolLens");
     poolLens = await PoolLens.deploy();
   });
@@ -256,8 +259,13 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[7]).equal("Hign market cap");
     expect(venusPool_1_Actual[8]).equal("http://venis.io/pool1");
     expect(venusPool_1_Actual[9]).equal("Pool1 description");
+    expect(venusPool_1_Actual[10]).equal(priceOracle.address);
+    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
+    expect(venusPool_1_Actual[12]).equal(closeFactor1);
+    expect(venusPool_1_Actual[13]).equal(liquidationIncentive1);
+    expect(venusPool_1_Actual[14]).equal(0);
 
-    const cTokens_Actual = venusPool_1_Actual[10];
+    const cTokens_Actual = venusPool_1_Actual[15];
     expect(cTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
@@ -281,6 +289,11 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_2_Actual[7]).equal("Low market cap");
     expect(venusPool_2_Actual[8]).equal("http://highrisk.io/pool2");
     expect(venusPool_2_Actual[9]).equal("Pool2 description");
+    expect(venusPool_1_Actual[10]).equal(priceOracle.address);
+    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
+    expect(venusPool_1_Actual[12]).equal(closeFactor2);
+    expect(venusPool_1_Actual[13]).equal(liquidationIncentive2);
+    expect(venusPool_1_Actual[14]).equal(0);
   });
 
   it("getPoolData By Comptroller", async function () {
@@ -294,8 +307,13 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[7]).equal("Hign market cap");
     expect(poolData[8]).equal("http://venis.io/pool1");
     expect(poolData[9]).equal("Pool1 description");
+    expect(poolData[10]).equal(priceOracle.address);
+    expect(poolData[11]).equal(ethers.constants.AddressZero);
+    expect(poolData[12]).equal(closeFactor1);
+    expect(poolData[13]).equal(liquidationIncentive1);
+    expect(poolData[14]).equal(0);
 
-    const cTokens_Actual = poolData[10];
+    const cTokens_Actual = poolData[15];
     expect(cTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
@@ -369,24 +387,27 @@ describe("PoolLens - CTokens Query Tests", async function () {
     simplePriceOracle2 = await SimplePriceOracle.deploy();
     await simplePriceOracle2.deployed();
 
-    const _closeFactor = convertToUnit(0.05, 18);
-    const _liquidationIncentive = convertToUnit(1, 18);
+    closeFactor1 = convertToUnit(0.05, 18);
+    liquidationIncentive1 = convertToUnit(1, 18);
 
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
       comptroller1.address,
-      _closeFactor,
-      _liquidationIncentive,
+      closeFactor1,
+      liquidationIncentive1,
       simplePriceOracle1.address
     );
+
+    closeFactor2 = convertToUnit(0.05, 18);
+    liquidationIncentive2 = convertToUnit(1, 18);
 
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
       comptroller2.address,
-      _closeFactor,
-      _liquidationIncentive,
+      closeFactor2,
+      liquidationIncentive2,
       simplePriceOracle2.address
     );
 
