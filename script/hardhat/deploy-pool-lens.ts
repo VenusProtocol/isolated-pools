@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ethers, run } from "hardhat";
+const { ethers, run } = require('hardhat');
 
 async function main() {
   const verify = async (
