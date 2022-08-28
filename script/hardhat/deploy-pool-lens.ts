@@ -35,9 +35,7 @@ async function main() {
   await poolLens.deployed()
   //await verify(poolLens.address, []);
   console.log("poolLens Address:", poolLens.address);
+  return poolLens.address;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+export default main
