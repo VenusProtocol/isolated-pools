@@ -18,7 +18,7 @@
     "hardhat:compile": "hardhat compile",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
-    "postinstall" : "npx tsc script/hardhat/index.ts --skipLibCheck --outDir ./dist --declaration"
+    "postinstall" : "npx hardhat compile && npx tsc script/hardhat/index.ts --skipLibCheck --outDir ./dist --declaration"
   },
   "repository": {
     "type": "git",
