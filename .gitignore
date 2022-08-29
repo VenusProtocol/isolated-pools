@@ -56,3 +56,6 @@ node_modules_tmp
 .idea
 
 secrets.json
+
+# Build
+dist

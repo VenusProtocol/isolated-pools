@@ -1,5 +1,6 @@
-import { ethers, run } from "hardhat";
 import { convertToUnit } from "../../helpers/utils";
+
+const { ethers, run } = require('hardhat');
 
 async function main() {
   const verify = async (
@@ -168,9 +169,16 @@ async function main() {
   console.log("cDAI Address:", cDAI.address);
   console.log("cWBTC Address:", cWBTC.address);
   console.log("MocPriceOracle Address:", priceOracle.address);
+
+  return {
+    poolRegistry: poolRegistry.address,
+    comptrollerProxy: comptrollerProxy.address,
+    mockDai: mockDAI.address,
+    mockWBTC: mockWBTC.address,
+    cDAI: cDAI.address,
+    cWBTC: cWBTC.address,
+    priceOracle: priceOracle.address
+  }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+export default main;
