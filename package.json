@@ -2,7 +2,7 @@
   "name": "isolated-pools",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "compile": "./script/compile",
     "console": "if node -v | grep -E \"v(12|13)\" > /dev/null; then flags=\"-n --experimental-repl-await\"; fi; npx $flags saddle console",
@@ -17,7 +17,8 @@
     "hardhat:test": "hardhat test",
     "hardhat:compile": "hardhat compile",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
-    "lint:sol:fix": "prettier --write \"contracts/**/*.sol\""
+    "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
+    "postinstall" : "npx tsc script/hardhat/index.ts --skipLibCheck --outDir ./dist --declaration"
   },
   "repository": {
     "type": "git",
