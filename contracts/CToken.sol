@@ -1193,13 +1193,9 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
     /*** Handling Bad Debt and Shortfall ***/
 
     /**
-     * @notice Transfers collateral tokens (this market) to the liquidator.
-     * @dev Called only during an in-kind liquidation, or by liquidateBorrow during the liquidation of another CToken.
-     *  Its absolutely critical to use msg.sender as the seizer cToken and not a parameter.
-     * @param seizerToken The contract seizing the collateral (i.e. borrowed cToken)
-     * @param liquidator The account receiving seized collateral
-     * @param borrower The account having collateral seized
-     * @param seizeTokens The number of cTokens to seize
+     * @notice Tracks market bad debt.
+     * @dev Called only when bad debt is detected during liquidation.
+     * @param borrower The borrow account which is liquidated
      */
     function accountBadDebtDetected(address borrower) internal {
         BorrowSnapshot storage borrowSnapshot = accountBorrows[borrower];
