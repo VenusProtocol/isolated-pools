@@ -14,7 +14,9 @@ contract CErc20ImmutableFactory {
     string memory symbol_,
     uint8 decimals_,
     address payable admin_,
-    AccessControlManager accessControlManager_
+    AccessControlManager accessControlManager_,
+    address payable riskFund_,
+    address payable liquidatedShareReserve_
   ) external returns (CErc20Immutable) {
     CErc20Immutable cToken = new CErc20Immutable(
       underlying_,
@@ -25,7 +27,9 @@ contract CErc20ImmutableFactory {
       symbol_,
       decimals_,
       admin_,
-      accessControlManager_
+      accessControlManager_,
+      riskFund_,
+      liquidatedShareReserve_
     );
 
     return cToken;

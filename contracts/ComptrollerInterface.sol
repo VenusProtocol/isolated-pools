@@ -74,6 +74,8 @@ abstract contract ComptrollerInterface {
         uint repayAmount) virtual external view returns (uint, uint);
 
     function getAllMarkets() virtual external view returns (CToken[] memory); 
+
+    function getOracle() virtual external returns(PriceOracle);
 }
 
 abstract contract ComptrollerViewInterface {

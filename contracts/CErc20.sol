@@ -31,9 +31,11 @@ contract CErc20 is CToken, CErc20Interface {
                         string memory name_,
                         string memory symbol_,
                         uint8 decimals_ ,
-                        AccessControlManager accessControlManager_) public {
+                        AccessControlManager accessControlManager_,
+                        address payable riskFund_,
+                        address payable liquidatedShareReserve_) public {
         // CToken initialize does the bulk of the work
-        super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_);
+        super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_, riskFund_, liquidatedShareReserve_);
 
         // Set underlying and sanity check it
         underlying = underlying_;

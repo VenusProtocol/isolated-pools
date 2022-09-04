@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./EIP20NonStandardInterface.sol";
@@ -27,6 +28,16 @@ contract CTokenStorage {
      * @notice EIP-20 token decimals for this token
      */
     uint8 public decimals;
+
+    /**
+    * @notice Risk fund contract address
+    */
+    address payable internal riskFund;
+
+    /**
+    * @notice Liquidation fund contract address
+    */
+    address payable internal liquidatedShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
     uint256 internal constant borrowRateMaxMantissa = 0.0005e16;

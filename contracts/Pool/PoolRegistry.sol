@@ -24,6 +24,8 @@ contract PoolRegistry is OwnableUpgradeable {
     CErc20ImmutableFactory private cTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
+    address payable private riskFund;
+    address payable private liquidatedShareReserve;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -31,13 +33,17 @@ contract PoolRegistry is OwnableUpgradeable {
     function initialize(
         CErc20ImmutableFactory _cTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
-        WhitePaperInterestRateModelFactory _whitePaperFactory
+        WhitePaperInterestRateModelFactory _whitePaperFactory,
+        address payable riskFund_,
+        address payable liquidationSeizeFund_
     ) public initializer {
         __Ownable_init();
 
         cTokenFactory = _cTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
+        riskFund = riskFund_;
+        liquidatedShareReserve = liquidationSeizeFund_;
     }
 
     /**
@@ -270,12 +276,29 @@ contract PoolRegistry is OwnableUpgradeable {
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() external view returns (VenusPool[] memory) {
-        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; i++) {
-            _pools[i - 1] = (_poolsByID[i]);
+    function getAllPools() external view returns (
+        uint256[] memory,
+        string[] memory,
+        address[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        uint256[] memory poolIds;
+        string[] memory names;
+        address[] memory creators;
+        address[] memory comptrollers;
+        uint256[] memory blockPosts;
+        uint256[] memory timestampPosts;
+        for (uint256 i = 1; i <= _numberOfPools; ++i) {
+            poolIds[i - 1] = _poolsByID[i].poolId;
+            names[i - 1] = _poolsByID[i].name;
+            creators[i - 1] = _poolsByID[i].creator;
+            comptrollers[i - 1] = _poolsByID[i].comptroller;
+            blockPosts[i - 1] = _poolsByID[i].blockPosted;
+            timestampPosts[i - 1] = _poolsByID[i].timestampPosted;
         }
-        return _pools;
+        return (poolIds, names, creators, comptrollers, blockPosts, timestampPosts);
     }
 
     /**
@@ -377,7 +400,9 @@ contract PoolRegistry is OwnableUpgradeable {
             input.symbol,
             input.decimals,
             payable(msg.sender),
-            input.accessControlManager
+            input.accessControlManager,
+            riskFund,
+            liquidatedShareReserve
         );
 
         comptroller._supportMarket(cToken);

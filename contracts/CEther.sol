@@ -27,11 +27,23 @@ contract CEther is CToken {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_ ,
-                AccessControlManager accessControlManager_) {
+                AccessControlManager accessControlManager_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_) {
         // Creator of the contract is admin during initialization
         admin = payable(msg.sender);
 
-        initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_);
+        initialize(
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            accessControlManager_,
+            riskFund_,
+            liquidatedShareReserve_
+        );
 
         // Set the proper admin now that initialization is done
         admin = admin_;

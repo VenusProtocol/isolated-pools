@@ -1600,4 +1600,8 @@ contract Comptroller is
     function getBlockNumber() public view virtual returns (uint256) {
         return block.number;
     }
+
+    function getOracle() public virtual override returns (PriceOracle) {
+        return oracle;
+    }
 }
