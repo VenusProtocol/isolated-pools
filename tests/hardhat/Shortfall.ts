@@ -21,6 +21,6 @@ describe("Rewards: Tests", async function () {
   });
 
   it("test", async function () {
-    console.log(await shortfall.test())
+    console.log((await shortfall.test()).toString())
   });
 });

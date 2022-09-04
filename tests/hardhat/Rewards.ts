@@ -139,7 +139,6 @@ describe("Rewards: Tests", async function () {
 
     await unitroller._acceptAdmin();
     await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
-    console.log("1");
     //Deploy CTokens
     await poolRegistry.addMarket({
       poolId: 1,
@@ -155,7 +154,6 @@ describe("Rewards: Tests", async function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
     });
-    console.log("2");
 
     await poolRegistry.addMarket({
       poolId: 1,
@@ -171,7 +169,6 @@ describe("Rewards: Tests", async function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
     });
-    console.log("2");
 
     const cWBTCAddress = await poolRegistry.getCTokenForAsset(
       1,
@@ -184,8 +181,6 @@ describe("Rewards: Tests", async function () {
 
     cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
     cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
-    console.log(cWBTC.address);
-    console.log(cDAI.address);
 
     const [, user, compOwner] = await ethers.getSigners();
 

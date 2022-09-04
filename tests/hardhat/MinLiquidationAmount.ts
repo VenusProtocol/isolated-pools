@@ -16,7 +16,6 @@ import {
 import chai from "chai";
 
 import { Error } from "./util/Errors";
-import { assert } from "console";
 
 chai.should(); // if you like should syntax
 const { expect } = chai;
