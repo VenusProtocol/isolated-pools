@@ -7,13 +7,14 @@ import "./CToken.sol";
 import "./Pool/PoolRegistry.sol";
 import "./Pool/PoolRegistryInterface.sol";
 import "./IPancakeswapV2Router.sol";
+import "./Pool/PoolRegistry.sol";
 
 contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     uint256 private amountOutMin;
-    address private immutable convertableBUSDAddress;
+    address private convertableBUSDAddress;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -80,11 +81,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @dev Min amount out setter
      * @param _amountOutMin Min amount out for the pancake swap.
      */
-    function setAmountOutMin(address _amountOutMin) external onlyOwner {
-        require(
-            _amountOutMin != address(0),
-            "Risk Fund: Min amount out invalid"
-        );
+    function setAmountOutMin(uint256 _amountOutMin) external onlyOwner {
+        require(_amountOutMin >= 0, "Risk Fund: Min amount out invalid");
         amountOutMin = _amountOutMin;
     }
 
@@ -92,7 +90,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @dev Min amout to convert setter
      * @param _minAmountToConvert Min amout to convert.
      */
-    function setMinAmountToConvert(address _minAmountToConvert)
+    function setMinAmountToConvert(uint256 _minAmountToConvert)
         external
         onlyOwner
     {
@@ -100,50 +98,61 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             _minAmountToConvert > 0,
             "Risk Fund: Invalid min amout to convert"
         );
-        poolRegistry = _minAmountToConvert;
+        minAmountToConvert = _minAmountToConvert;
     }
 
     /**
      * @dev Convert asset to BUSD
      */
-    function convertoToBUSD() external {
-        (, , , address[] memory comptrollers, , ) = PoolRegistryInterface(
+    function convertoToBUSD() external returns (uint256) {
+        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(
             poolRegistry
-        ).getAllPools();
+        );
+        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface
+            .getAllPools();
 
-        for (uint256 i = 1; i <= comptrollers.length; ++i) {
-            CToken[] memory allMarkets = ComptrollerInterface(comptrollers[i])
-                .getAllMarkets();
-            for (uint256 j = 1; j <= allMarkets.length; ++j) {
-                uint256 underlyingPrice = ComptrollerInterface(comptrollers[i])
-                    .getOracle()
-                    .getUnderlyingPrice(CToken(allMarkets[j]));
+        uint256 totalAmount = 0;
+
+        for (uint256 i; i <= venusPools.length; ++i) {
+            CToken[] memory allMarkets = ComptrollerInterface(
+                venusPools[i].comptroller
+            ).getAllMarkets();
+            for (uint256 j; j <= allMarkets.length; ++j) {
+                uint256 underlyingPrice = ComptrollerViewInterface(
+                    venusPools[i].comptroller
+                ).oracle().getUnderlyingPrice(CToken(allMarkets[j]));
                 address asset = CErc20Interface(address(allMarkets[j]))
                     .underlying();
                 uint256 underlyingAssets = EIP20Interface(asset).balanceOf(
                     address(this)
                 );
                 Exp memory oraclePrice = Exp({mantissa: underlyingPrice});
-                uint256 repayAmountInUsd = mul_ScalarTruncate(
+                uint256 amountInUsd = mul_ScalarTruncate(
                     oraclePrice,
                     underlyingAssets
                 );
                 require(
-                    repayAmountInUsd >= minAmountToConvert,
+                    amountInUsd >= minAmountToConvert,
                     "Risk Fund: In sufficient balance."
                 );
                 address[] memory path = new address[](2);
                 path[0] = asset;
                 path[1] = convertableBUSDAddress;
-                IPancakeswapV2Router(pancakeSwapRouter)
-                    .swapExactTokensForTokens(
+                uint256[] memory amounts = IPancakeswapV2Router(
+                    pancakeSwapRouter
+                ).swapExactTokensForTokens(
                         underlyingAssets,
                         amountOutMin,
                         path,
                         address(this),
                         block.timestamp
                     );
+                for (uint256 k; k <= amounts.length; ++k) {
+                    totalAmount = totalAmount + amounts[k];
+                }
             }
         }
+
+        return totalAmount;
     }
 }

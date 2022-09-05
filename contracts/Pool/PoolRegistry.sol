@@ -276,29 +276,12 @@ contract PoolRegistry is OwnableUpgradeable {
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() external view returns (
-        uint256[] memory,
-        string[] memory,
-        address[] memory,
-        address[] memory,
-        uint256[] memory,
-        uint256[] memory
-    ) {
-        uint256[] memory poolIds;
-        string[] memory names;
-        address[] memory creators;
-        address[] memory comptrollers;
-        uint256[] memory blockPosts;
-        uint256[] memory timestampPosts;
-        for (uint256 i = 1; i <= _numberOfPools; ++i) {
-            poolIds[i - 1] = _poolsByID[i].poolId;
-            names[i - 1] = _poolsByID[i].name;
-            creators[i - 1] = _poolsByID[i].creator;
-            comptrollers[i - 1] = _poolsByID[i].comptroller;
-            blockPosts[i - 1] = _poolsByID[i].blockPosted;
-            timestampPosts[i - 1] = _poolsByID[i].timestampPosted;
+    function getAllPools() external view returns (VenusPool[] memory) {
+        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
+        for (uint256 i = 1; i <= _numberOfPools; i++) {
+            _pools[i - 1] = (_poolsByID[i]);
+        return _pools;
         }
-        return (poolIds, names, creators, comptrollers, blockPosts, timestampPosts);
     }
 
     /**

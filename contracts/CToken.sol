@@ -60,7 +60,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         symbol = symbol_;
         decimals = decimals_;
         riskFund = riskFund_;
-        liquidateSeizeFund = liquidatedShareReserve_;
+        liquidatedShareReserve = liquidatedShareReserve_;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -841,7 +841,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
-        doTransferOut(liquidateSeizeFund, protocolSeizeAmount);
+        doTransferOut(liquidatedShareReserve, protocolSeizeAmount);
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
