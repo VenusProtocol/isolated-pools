@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "../../contracts/CEther.sol";
 import "./ComptrollerScenario.sol";
+import "../Governance/AccessControlManager.sol";
 
 contract CEtherHarness is CEther {
     uint harnessExchangeRate;
@@ -16,15 +17,18 @@ contract CEtherHarness is CEther {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
-    CEther(
-    comptroller_,
-    interestRateModel_,
-    initialExchangeRateMantissa,
-    name_,
-    symbol_,
-    decimals_,
-    admin_) {}
+                address payable admin_,
+                AccessControlManager accessControlManager_)
+        CEther(
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_
+        ) {}
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -164,14 +168,16 @@ contract CEtherScenario is CEther {
                 address payable admin_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,
-                uint initialExchangeRateMantissa)
+                uint initialExchangeRateMantissa,
+                AccessControlManager accessControlManager_)
         CEther(comptroller_,
                interestRateModel_,
                initialExchangeRateMantissa,
                name_,
                symbol_,
                decimals_,
-               admin_) {
+               admin_,
+               accessControlManager_) {
     }
 
     function setTotalBorrows(uint totalBorrows_) public {

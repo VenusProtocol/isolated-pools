@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/CErc20Immutable.sol";
-import "../../contracts/CErc20Delegator.sol";
-import "../../contracts/CErc20Delegate.sol";
-import "../../contracts/CDaiDelegate.sol";
+import "../CErc20Immutable.sol";
+import "../CErc20Delegator.sol";
+import "../CErc20Delegate.sol";
+import "../CDaiDelegate.sol";
+import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
 contract CErc20Harness is CErc20Immutable {
-    uint blockNumber = 100000;
-    uint harnessExchangeRate;
-    bool harnessExchangeRateStored;
+    uint public blockNumber = 100000;
+    uint public harnessExchangeRate;
+    bool public harnessExchangeRateStored;
 
     mapping (address => bool) public failTransferToAddresses;
 
@@ -21,16 +22,19 @@ contract CErc20Harness is CErc20Immutable {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
-    CErc20Immutable(
-    underlying_,
-    comptroller_,
-    interestRateModel_,
-    initialExchangeRateMantissa_,
-    name_,
-    symbol_,
-    decimals_,
-    admin_) {}
+                address payable admin_,
+                AccessControlManager accessControlManager_)
+        CErc20Immutable(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_
+        ) {}
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -162,16 +166,19 @@ contract CErc20Scenario is CErc20Immutable {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
-    CErc20Immutable(
-    underlying_,
-    comptroller_,
-    interestRateModel_,
-    initialExchangeRateMantissa_,
-    name_,
-    symbol_,
-    decimals_,
-    admin_) {}
+                address payable admin_,
+                AccessControlManager accessControlManager_)
+        CErc20Immutable(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_
+        ) {}
 
     function setTotalBorrows(uint totalBorrows_) public {
         totalBorrows = totalBorrows_;
@@ -195,16 +202,19 @@ contract CEvil is CErc20Scenario {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
-    CErc20Scenario(
-    underlying_,
-    comptroller_,
-    interestRateModel_,
-    initialExchangeRateMantissa_,
-    name_,
-    symbol_,
-    decimals_,
-    admin_) {}
+                address payable admin_,
+                AccessControlManager accessControlManager_)
+        CErc20Scenario(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_
+        ) {}
 
     function evilSeize(CToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
         return treasure.seize(liquidator, borrower, seizeTokens);
