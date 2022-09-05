@@ -32,9 +32,10 @@
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
   "devDependencies": {
     "@defi-wonderland/smock": "^2.2.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.4",
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
-    "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@typechain/ethers-v5": "^7.2.0",
     "@typechain/hardhat": "^2.3.1",
     "@types/chai": "^4.3.1",
@@ -70,7 +71,6 @@
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@solidity-parser/parser": "^0.13.2",
     "eth-saddle": "^0.1.25",
-    "ethereum-waffle": "3.4.4",
     "ethers": "5.6.4"
   },
   "resolutions": {
