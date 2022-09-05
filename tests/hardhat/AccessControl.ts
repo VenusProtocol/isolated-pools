@@ -50,7 +50,7 @@ describe("Access Control", () => {
             "changeCollFactor(uint256,uint256)",
             addr2.address
           )
-      ).to.be.reverted;
+      ).to.reverted;
     });
 
     it("should not have permissions", async () => {
@@ -83,7 +83,6 @@ describe("Access Control", () => {
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
-      console.log("Comptroller Address: " + comptroller.address);
       let canCall: boolean = await accessControlManager
         .connect(comptroller.address)
         .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)");
