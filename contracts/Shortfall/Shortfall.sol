@@ -66,6 +66,8 @@ contract Shortfall is OwnableUpgradeable {
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.tokenDebt[i] = TokenDebt(cTokens[i], marketBadDebt);
+
+            // cTokens[i].updateMarketBadDebt(0) - TBD
         }
 
         require(poolBadDebt < minimumPoolBadDebt, "pool bad debt is too low");
