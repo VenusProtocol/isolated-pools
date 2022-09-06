@@ -27,7 +27,14 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.13',
+    compilers: [
+      {
+        version: "0.8.13",
+      },
+      {
+        version: "0.6.6",
+      },
+    ],
     settings: {
       optimizer: {
         enabled: true,
@@ -40,9 +47,20 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    development:{
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      loggingEnabled: false,
+      forking: {
+        url: `https://white-ultra-silence.bsc.discover.quiknode.pro/6dffe4657cabff210888b8dcbaad026063ab5d08/`,
+        blockNumber: 21068448,
+      },
+      accounts: {
+        accountsBalance: "10000000000000000000000000",
+      },
+    },
+    development: {
       url: "http://127.0.0.1:8545/",
-      chainId: 31337
+      chainId: 31337,
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
@@ -76,8 +94,22 @@ const config: HardhatUserConfig = {
     ],
   },
   paths: {
-    tests: "./tests/hardhat",
+    tests: "./tests/hardhat/test",
   },
 };
+
+// if (process.env.FORK_MAINNET) {
+//   config?.networks?.hardhat = {
+//     allowUnlimitedContractSize: true,
+//     loggingEnabled: false,
+//     forking: {
+//       url: `https://bsc-dataseed.binance.org/`,
+//       blockNumber: 21068448,
+//     },
+//     accounts: {
+//       accountsBalance: "1000000000",
+//     },
+//   };
+// }
 
 export default config;

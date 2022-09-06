@@ -34,7 +34,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             "Risk Fund: Pancake swap address invalid"
         );
         require(
-            convertableBUSDAddress != address(0),
+            _convertableBUSDAddress != address(0),
             "Risk Fund: BUSD address invalid"
         );
         require(
