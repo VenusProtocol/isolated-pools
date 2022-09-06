@@ -12,7 +12,9 @@ import {
   WhitePaperInterestRateModelFactory,
   PoolLens,
   AccessControlManager,
-  CErc20Immutable
+  CErc20Immutable,
+  RiskFund,
+  LiquidatedShareReserve,
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Signer } from "ethers";
@@ -40,7 +42,12 @@ let poolLens: PoolLens;
 let owner: Signer;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let closeFactor1: any, closeFactor2: any, liquidationIncentive1: any, liquidationIncentive2 : any;
+let closeFactor1: any,
+  closeFactor2: any,
+  liquidationIncentive1: any,
+  liquidationIncentive2: any;
+let liquidatedShareReserve: LiquidatedShareReserve;
+let riskFund: RiskFund;
 
 describe("PoolLens - PoolView Tests", async function () {
   /**
@@ -72,10 +79,22 @@ describe("PoolLens - PoolView Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const RiskFund = await ethers.getContractFactory("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve = await ethers.getContractFactory(
+      "LiquidatedShareReserve"
+    );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     await poolRegistry.initialize(
       cTokenFactory.address,
       jumpRateFactory.address,
-      whitePaperRateFactory.address
+      whitePaperRateFactory.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
@@ -87,10 +106,16 @@ describe("PoolLens - PoolView Tests", async function () {
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller1 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller2 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller2.deployed();
 
     const SimplePriceOracle = await ethers.getContractFactory(
@@ -159,7 +184,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.addMarket({
@@ -174,7 +199,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {
@@ -217,7 +242,6 @@ describe("PoolLens - PoolView Tests", async function () {
       pools[1].comptroller
     );
     await unitroller2._acceptAdmin();
-
 
     const cWBTCAddress = await poolRegistry.getCTokenForAsset(
       1,
@@ -269,16 +293,32 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(cTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
+    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(
+      cTokenAddress_WBTC
+    );
     const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
-    assertCTokenMetadata(cTokenMetadata_WBTC_Actual, cTokenMetadata_WBTC_Expected);
+    assertCTokenMetadata(
+      cTokenMetadata_WBTC_Actual,
+      cTokenMetadata_WBTC_Expected
+    );
 
     // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(1, mockDAI.address);
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(cTokenAddress_DAI);
+    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(
+      1,
+      mockDAI.address
+    );
+    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(
+      cTokenAddress_DAI
+    );
     const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
-    assertCTokenMetadata(cTokenMetadata_DAI_Actual, cTokenMetadata_DAI_Expected);
+    assertCTokenMetadata(
+      cTokenMetadata_DAI_Actual,
+      cTokenMetadata_DAI_Expected
+    );
 
     const venusPool_2_Actual = poolData[1];
     expect(venusPool_2_Actual[0]).equal(2);
@@ -297,7 +337,10 @@ describe("PoolLens - PoolView Tests", async function () {
   });
 
   it("getPoolData By Comptroller", async function () {
-    const poolData = await poolLens.getPoolByComptroller(poolRegistryAddress, comptroller1Proxy.address);
+    const poolData = await poolLens.getPoolByComptroller(
+      poolRegistryAddress,
+      comptroller1Proxy.address
+    );
 
     expect(poolData[0]).equal(1);
     expect(poolData[1]).equal("Pool 1");
@@ -317,16 +360,32 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(cTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
+    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(
+      cTokenAddress_WBTC
+    );
     const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
-    assertCTokenMetadata(cTokenMetadata_WBTC_Actual, cTokenMetadata_WBTC_Expected);
+    assertCTokenMetadata(
+      cTokenMetadata_WBTC_Actual,
+      cTokenMetadata_WBTC_Expected
+    );
 
     // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(1, mockDAI.address);
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(cTokenAddress_DAI);
+    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(
+      1,
+      mockDAI.address
+    );
+    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(
+      cTokenAddress_DAI
+    );
     const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
-    assertCTokenMetadata(cTokenMetadata_DAI_Actual, cTokenMetadata_DAI_Expected);
+    assertCTokenMetadata(
+      cTokenMetadata_DAI_Actual,
+      cTokenMetadata_DAI_Expected
+    );
   });
 });
 
@@ -335,7 +394,6 @@ describe("PoolLens - CTokens Query Tests", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
@@ -361,20 +419,38 @@ describe("PoolLens - CTokens Query Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const RiskFund = await ethers.getContractFactory("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve = await ethers.getContractFactory(
+      "LiquidatedShareReserve"
+    );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     await poolRegistry.initialize(
       cTokenFactory.address,
       jumpRateFactory.address,
-      whitePaperRateFactory.address
+      whitePaperRateFactory.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller1 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller2 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller2.deployed();
 
     const SimplePriceOracle = await ethers.getContractFactory(
@@ -443,7 +519,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.addMarket({
@@ -458,7 +534,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {
@@ -506,14 +582,21 @@ describe("PoolLens - CTokens Query Tests", async function () {
     poolLens = await PoolLens.deploy();
   });
 
-  it('is correct for WBTC as underlyingAsset', async () => {
+  it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_Actual = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
+    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const cTokenMetadata_Actual = await poolLens.cTokenMetadata(
+      cTokenAddress_WBTC
+    );
 
     const cTokenMetadata_Actual_Parsed: any = cullTuple(cTokenMetadata_Actual);
     expect(cTokenMetadata_Actual_Parsed["cToken"]).equal(cTokenAddress_WBTC);
-    expect(cTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
+    expect(cTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal(
+      "100000000"
+    );
     expect(cTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
     expect(cTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
     expect(cTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
@@ -523,13 +606,18 @@ describe("PoolLens - CTokens Query Tests", async function () {
     expect(cTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
     expect(cTokenMetadata_Actual_Parsed["isListed"]).equal("true");
     expect(cTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);
+    expect(cTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(
+      mockWBTC.address
+    );
     expect(cTokenMetadata_Actual_Parsed["cTokenDecimals"]).equal("8");
     expect(cTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
-    });
   });
+});
 
-const assertCTokenMetadata = (cTokenMetadata_Actual: any, cTokenMetadata_Expected: any) => {
+const assertCTokenMetadata = (
+  cTokenMetadata_Actual: any,
+  cTokenMetadata_Expected: any
+) => {
   expect(cTokenMetadata_Actual[0]).equal(cTokenMetadata_Expected[0]);
   expect(cTokenMetadata_Actual[1]).equal(cTokenMetadata_Expected[1]);
   expect(cTokenMetadata_Actual[2]).equal(cTokenMetadata_Expected[2]);
@@ -552,10 +640,10 @@ const cullTuple = (tuple: any) => {
     if (Number.isNaN(Number(key))) {
       return {
         ...acc,
-        [key]: tuple[key].toString()
+        [key]: tuple[key].toString(),
       };
     } else {
       return acc;
     }
   }, {});
-}
+};

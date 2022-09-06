@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./EIP20Interface.sol";
 import "./ExponentialNoError.sol";
 
-contract LiquidateBonusReserves is OwnableUpgradeable, ExponentialNoError {
+contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
     address private liquidatedShares;
     address private riskFund;
 

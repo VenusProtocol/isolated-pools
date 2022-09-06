@@ -1,8 +1,10 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import {
-  MockToken,
   PoolRegistry,
+  RiskFund,
+  LiquidatedShareReserve,
+  MockToken,
   Comptroller,
   CErc20Immutable,
   MockPriceOracle,
@@ -11,23 +13,24 @@ import {
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
-  RiskFund,
-  LiquidatedShareReserve,
-} from "../../typechain";
-import { convertToUnit } from "../../helpers/utils";
+  IPancakeswapV2Router__factory,
+  IPancakeswapV2Router,
+  PancakeRouter__factory,
+} from "../../../typechain";
+import { convertToUnit } from "../../../helpers/utils";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
 let comptroller2: Comptroller;
 let mockDAI: MockToken;
+let mockBUSD: MockToken;
 let mockWBTC: MockToken;
 let cDAI: CErc20Immutable;
 let cWBTC: CErc20Immutable;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
-let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
 let cTokenFactory: CErc20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
@@ -36,11 +39,13 @@ let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let liquidatedShareReserve: LiquidatedShareReserve;
 let riskFund: RiskFund;
 
-describe("PoolRegistry: Tests", function () {
+describe("Risk Fund: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
+
   before(async function () {
+    // const signers = await ethers.getSigners();
     const [, user] = await ethers.getSigners();
     const CErc20ImmutableFactory = await ethers.getContractFactory(
       "CErc20ImmutableFactory"
@@ -106,6 +111,10 @@ describe("PoolRegistry: Tests", function () {
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
 
+    const MockBUSD = await ethers.getContractFactory("MockToken");
+    mockBUSD = await MockBUSD.deploy("MakerBUSD", "BUSD", 18);
+    await mockBUSD.faucet(convertToUnit(1000, 18));
+
     const MockWBTC = await ethers.getContractFactory("MockToken");
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
 
@@ -153,10 +162,7 @@ describe("PoolRegistry: Tests", function () {
 
     await unitroller1._acceptAdmin();
 
-    comptroller2Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[1].comptroller
-    );
+    await ethers.getContractAt("Comptroller", pools[1].comptroller);
     unitroller2 = await ethers.getContractAt(
       "Unitroller",
       pools[1].comptroller
@@ -217,101 +223,16 @@ describe("PoolRegistry: Tests", function () {
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
   });
 
-  it("Pools should have correct names", async function () {
-    // Get all pools list.
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools[0].name).equal("Pool 1");
-    expect(pools[1].name).equal("Pool 2");
-  });
-  it("Should get 2 pools", async function () {
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools.length).equal(2);
-  });
-
-  it("Should change pool name", async function () {
-    await poolRegistry.setPoolName(1, "Pool 1 updated");
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools[0].name).equal("Pool 1 updated");
-    await poolRegistry.setPoolName(1, "Pool 1");
-  });
-
-  it("Bookmark pool and get the bookmarked pools", async function () {
-    const pools = await poolRegistry.callStatic.getAllPools();
-    await poolRegistry.bookmarkPool(pools[0].comptroller);
-
-    const [owner] = await ethers.getSigners();
-
-    const bookmarkedPools = await poolRegistry.getBookmarks(owner.address);
-
-    expect(bookmarkedPools.length).equal(1);
-    expect(bookmarkedPools[0]).equal(pools[0].comptroller);
-  });
-
-  it("Should get pool by pools index", async function () {
-    const pool = await poolRegistry.getPoolByID(2);
-
-    expect(pool.name).equal("Pool 2");
-  });
-
-  it("Get pool by comptroller", async function () {
-    const pool1 = await poolRegistry.getPoolByComptroller(
-      comptroller1Proxy.address
+  it("Add to reserves", async function () {
+    await comptroller1Proxy._setMarketSupplyCaps(
+      [cDAI.address],
+      [convertToUnit(2000, 18)]
     );
-    expect(pool1[0]).equal(1);
-    expect(pool1[1]).equal("Pool 1");
+    await mockDAI.approve(cDAI.address, convertToUnit(1000, 18));
+    await cDAI._addReserves(convertToUnit(200, 18));
+    await cDAI._reduceReserves(convertToUnit(100, 18));
 
-    const pool2 = await poolRegistry.getPoolByComptroller(
-      comptroller2Proxy.address
-    );
-    expect(pool2[0]).equal(2);
-    expect(pool2[1]).equal("Pool 2");
-  });
-
-  it("Should get poolID by comptroller", async function () {
-    const poolIndex1 = await poolRegistry.getPoolIDByComptroller(
-      comptroller1Proxy.address
-    );
-    expect(poolIndex1).equal(1);
-
-    const poolIndex2 = await poolRegistry.getPoolIDByComptroller(
-      comptroller2Proxy.address
-    );
-    expect(poolIndex2).equal(2);
-  });
-
-  it("Should be correct balances in tokens", async function () {
-    const [owner] = await ethers.getSigners();
-    await mockWBTC.faucet(convertToUnit(1000, 8));
-
-    const daiBalance = await mockDAI.balanceOf(owner.address);
-    expect(daiBalance).equal(convertToUnit(1000, 18));
-
-    const btcBalance = await mockWBTC.balanceOf(owner.address);
-    expect(btcBalance).equal(convertToUnit(1000, 8));
-  });
-
-  // Get all pools that support a given asset
-  it("Get pools with asset", async function () {
-    const pools = await poolRegistry.getPoolsSupportedByAsset(mockWBTC.address);
-    expect(pools[0].toString()).equal("1");
-  });
-
-  it("Enter Market", async function () {
-    const [owner] = await ethers.getSigners();
-    const res = await comptroller1Proxy.getAssetsIn(owner.address);
-    expect(res[0]).equal(cDAI.address);
-    expect(res[1]).equal(cWBTC.address);
-  });
-
-  it("Metadata", async function () {
-    await poolRegistry.updatePoolMetadata(0, {
-      riskRating: 2,
-      category: "Hign market cap",
-      logoURL: "http://venis.io/pool1",
-      description: "An sample description",
-    });
-
-    const metadata = await poolRegistry.metadata(0);
-    expect(metadata.riskRating).equal(2);
+    const riskFundBalance = await mockDAI.balanceOf(riskFund.address);
+    expect(riskFundBalance).equal(convertToUnit(30, 18));
   });
 });
