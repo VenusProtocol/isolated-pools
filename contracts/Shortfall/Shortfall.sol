@@ -2,8 +2,10 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../CToken.sol";
+import "../CErc20.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 
@@ -73,8 +75,7 @@ contract Shortfall is OwnableUpgradeable {
 
         CToken[] memory cTokens = ComptrollerInterface(comptroller).getAllMarkets();
         PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
-        uint256 poolBadDebt = 0;
-        
+        uint256 poolBadDebt = 0;       
 
         for (uint256 i = 0; i < cTokens.length; i++) {
             uint256 marketBadDebt = cTokens[i].badDebt();
@@ -124,22 +125,25 @@ contract Shortfall is OwnableUpgradeable {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(bid.length == auction.markets.length, "you need to bid all markets");
 
-        PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
-        uint256 totalBidValue;
-        
+        // PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle());
+        // uint256 poolBadDebt = 0;
+
         for (uint256 i = 0; i < bid.length; i++) {
-            uint256 usdValue =  priceOracle.getUnderlyingPrice(bid[i].cToken) * bid[i].amount;
-            totalBidValue = totalBidValue + usdValue;
 
             require(auction.marketDebt[bid[i].cToken] > 0, "market is not part of auction");
 
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 require(bid[i].amount <= auction.marketDebt[bid[i].cToken], "cannot bid more than debt");
                 require(seizeRiskFund == auction.seizedRiskFund, "you need to seize total risk fund");
+
+                // poolBadDebt = poolBadDebt + (priceOracle.getUnderlyingPrice(cTokens[i]) * auction.marketDebt[bid[i].cToken]);
             } else {
                 require(bid[i].amount == auction.marketDebt[bid[i].cToken], "invalid bid amount");
                 require(seizeRiskFund <= auction.seizedRiskFund, "invalid seize risk fund");
             }
+
+            IERC20 token = IERC20(CErc20(address(bid[i].cToken)).underlying());
+            token.transferFrom(msg.sender, address(this), bid[i].amount);
         }
     }
 }
