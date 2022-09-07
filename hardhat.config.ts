@@ -30,21 +30,31 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         version: "0.8.13",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
       },
       {
         version: "0.6.6",
-      },
-    ],
-    settings: {
-      optimizer: {
-        enabled: true,
-      },
-      outputSelection: {
-        "*": {
-          "*": ["storageLayout"],
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
         },
       },
-    },
+    ],
   },
   networks: {
     hardhat: isFork(),

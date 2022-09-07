@@ -278,10 +278,10 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function getAllPools() external view returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; i++) {
+        for (uint256 i = 1; i <= _numberOfPools; ++i) {
             _pools[i - 1] = (_poolsByID[i]);
-        return _pools;
         }
+        return _pools;
     }
 
     /**
