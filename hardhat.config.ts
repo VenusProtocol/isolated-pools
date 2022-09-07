@@ -89,7 +89,7 @@ const config: HardhatUserConfig = {
 };
 
 function isFork() {
-  return process.env.FORK_MAINNET
+  return process.env.FORK_MAINNET === "true"
     ? {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
@@ -101,7 +101,10 @@ function isFork() {
           accountsBalance: "1000000000000000000",
         },
       }
-    : {};
+    : {
+        allowUnlimitedContractSize: true,
+        loggingEnabled: false,
+      };
 }
 
 export default config;
