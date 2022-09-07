@@ -13,7 +13,6 @@ import {
 } from "../../typechain";
 import chai from "chai";
 
-chai.should(); // if you like should syntax
 const { expect } = chai;
 chai.use(smock.matchers);
 
@@ -22,6 +21,7 @@ describe("Access Control", () => {
   let accessControlManager: MockContract<AccessControlManager>;
   let comptrollerFactory: MockContractFactory<Comptroller__factory>;
   let comptroller: MockContract<Comptroller>;
+  let comptroller2: MockContract<Comptroller>;
   let addresses: any;
 
   beforeEach(async () => {
@@ -33,20 +33,30 @@ describe("Access Control", () => {
 
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
     comptroller = await comptrollerFactory.deploy(addresses[0].address, accessControlManager.address);
-
+    comptroller2 = await comptrollerFactory.deploy(addresses[0].address, accessControlManager.address);
     await accessControlManager.deployed();
   });
-  describe("Access Control Base Functionality", () => {
+  describe("Access Control", () => {
     // As of now deployer is the only default role admin
     // and this is set upon dpeloyment.
     it("only default admin role can give call permissions", async () => {
       let [owner, addr1, addr2] = addresses;
 
-      expect(
+      await expect(
         accessControlManager
           .connect(addr1)
           .giveCallPermission(
             addr1.address,
+            "changeCollFactor(uint256,uint256)",
+            addr2.address
+          )
+      ).to.be.reverted;
+
+      await expect(
+        accessControlManager
+          .connect(addr1)
+          .giveCallPermission(
+            ethers.constants.AddressZero,
             "changeCollFactor(uint256,uint256)",
             addr2.address
           )
@@ -83,7 +93,6 @@ describe("Access Control", () => {
         "changeCollFactor(uint256,uint256)",
         addr2.address
       );
-      console.log("Comptroller Address: " + comptroller.address);
       let canCall: boolean = await accessControlManager
         .connect(comptroller.address)
         .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)");
@@ -122,6 +131,46 @@ describe("Access Control", () => {
         .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)");
 
       expect(canCall).to.be.false;
+    });
+
+    it("should be able to call the function only for the given contract", async () => {
+      let [owner, addr1, addr2] = addresses;
+      await accessControlManager.giveCallPermission(
+        comptroller.address,
+        "changeCollFactor(uint256,uint256)",
+        addr2.address
+      );
+      let canCall: boolean = await accessControlManager
+        .connect(comptroller.address)
+        .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)");
+
+      let cannotCall: boolean = await accessControlManager
+        .connect(comptroller2.address)
+        .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)");
+
+      expect(canCall).to.be.true;
+      expect(cannotCall).to.be.false;
+    });
+
+    it("should be able to call the function on every contract ", async () => {
+      let [owner, addr1, addr2] = addresses;
+      await accessControlManager.giveCallPermission(
+        ethers.constants.AddressZero,
+        "changeCollFactor(uint256,uint256)",
+        addr2.address
+      );
+
+      expect(
+        await accessControlManager
+          .connect(comptroller.address)
+          .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)")
+      ).to.be.true;
+
+      expect(
+        await accessControlManager
+          .connect(comptroller2.address)
+          .isAllowedToCall(addr2.address, "changeCollFactor(uint256,uint256)")
+      ).to.be.true;
     });
   });
 });

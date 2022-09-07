@@ -98,6 +98,11 @@ contract CTokenStorage {
      */
     uint256 public totalSupply;
 
+    /**
+     * @notice Total bad debt of the market
+     */
+    uint256 public badDebt;
+
     // Official record of token balances for each account
     mapping(address => uint256) internal accountTokens;
 

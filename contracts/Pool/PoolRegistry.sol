@@ -142,7 +142,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Emitted when a pool name is set.
      */
-    event PoolNameSet(uint256 index, string name);
+    event PoolNameSet(address comptroller, string name);
 
     /**
      * @dev Emitted when a pool metadata is updated.
@@ -262,7 +262,7 @@ contract PoolRegistry is OwnableUpgradeable {
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
 
         _poolsByID[poolId].name = name;
-        emit PoolNameSet(poolId, name);
+        emit PoolNameSet(address(_comptroller), name);
     }
 
     /**

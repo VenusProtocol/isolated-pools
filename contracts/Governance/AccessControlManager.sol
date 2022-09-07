@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *		within Venus Smart Contract Ecosystem
  */
 contract AccessControlManager is AccessControl {
+
     constructor() {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
@@ -30,7 +31,13 @@ contract AccessControlManager is AccessControl {
         returns (bool)
     {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
-        return hasRole(role, account);
+
+        if(hasRole(role, account)){
+            return true;
+        } else {
+            role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
+           return hasRole(role, account);
+        }
     }
 
     /**
@@ -38,16 +45,27 @@ contract AccessControlManager is AccessControl {
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
      * 		May emit a {RoleGranted} event.
      * @param contractAddress address of contract for which call permissions will be granted
+     * NOTE: if contractAddress is zero address, we give the account DEFAULT_ADMIN_ROLE,
+     *      meaning that this account can access the certain function on ANY contract managed by this ACL
      * @param functionSig signature e.g. "functionName(uint,bool)"
+     * @param accountToPermit account that will be given access to the contract function
      */
     function giveCallPermission(
         address contractAddress,
         string memory functionSig,
         address accountToPermit
     ) public {
-        bytes32 role = keccak256(
-            abi.encodePacked(contractAddress, functionSig)
-        );
+        bytes32 role;
+        if(contractAddress == address(0)){
+            role = keccak256(
+                abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig)
+            );
+        } else {
+            role = keccak256(
+                abi.encodePacked(contractAddress, functionSig)
+            );
+        }
+ 
         grantRole(role, accountToPermit);
     }
 

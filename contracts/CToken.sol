@@ -1199,4 +1199,18 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         _;
         _notEntered = true; // get a gas-refund post-Istanbul
     }
+
+    /*** Handling Bad Debt and Shortfall ***/
+
+    /**
+     * @notice Tracks market bad debt.
+     * @dev Called only when bad debt is detected during liquidation.
+     * @param borrower The borrow account which is liquidated
+     */
+    function accountBadDebtDetected(address borrower) internal {
+        BorrowSnapshot storage borrowSnapshot = accountBorrows[borrower];
+        badDebt = badDebt + borrowSnapshot.principal * (borrowIndex / borrowSnapshot.interestIndex);
+        totalBorrows = totalBorrows - borrowSnapshot.principal;
+        borrowSnapshot.principal = 0;
+    }
 }
