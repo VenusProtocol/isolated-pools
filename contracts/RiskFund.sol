@@ -105,54 +105,63 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @dev Convert asset to BUSD
      */
     function convertoToBUSD() external returns (uint256) {
+        uint256 totalAmount;
+
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(
             poolRegistry
         );
         PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface
             .getAllPools();
 
-        uint256 totalAmount = 0;
-
-        for (uint256 i; i <= venusPools.length; ++i) {
-            CToken[] memory allMarkets = ComptrollerInterface(
-                venusPools[i].comptroller
-            ).getAllMarkets();
-            for (uint256 j; j <= allMarkets.length; ++j) {
-                uint256 underlyingPrice = ComptrollerViewInterface(
+        for (uint256 i; i < venusPools.length; ++i) {
+            if (venusPools[i].comptroller != address(0)) {
+                CToken[] memory allMarkets = ComptrollerInterface(
                     venusPools[i].comptroller
-                ).oracle().getUnderlyingPrice(CToken(allMarkets[j]));
-                address asset = CErc20Interface(address(allMarkets[j]))
-                    .underlying();
-                uint256 underlyingAssets = EIP20Interface(asset).balanceOf(
-                    address(this)
-                );
-                Exp memory oraclePrice = Exp({mantissa: underlyingPrice});
-                uint256 amountInUsd = mul_ScalarTruncate(
-                    oraclePrice,
-                    underlyingAssets
-                );
-                require(
-                    amountInUsd >= minAmountToConvert,
-                    "Risk Fund: In sufficient balance."
-                );
-                address[] memory path = new address[](2);
-                path[0] = asset;
-                path[1] = convertableBUSDAddress;
-                uint256[] memory amounts = IPancakeswapV2Router(
-                    pancakeSwapRouter
-                ).swapExactTokensForTokens(
-                        underlyingAssets,
-                        amountOutMin,
-                        path,
-                        address(this),
-                        block.timestamp
+                ).getAllMarkets();
+
+                for (uint256 j; j < allMarkets.length; ++j) {
+                    uint256 underlyingPrice = ComptrollerViewInterface(
+                        venusPools[i].comptroller
+                    ).oracle().getUnderlyingPrice(CToken(allMarkets[j]));
+                    address asset = CErc20Interface(address(allMarkets[j]))
+                        .underlying();
+                    uint256 underlyingAssets = EIP20Interface(asset).balanceOf(
+                        address(this)
                     );
-                for (uint256 k; k <= amounts.length; ++k) {
-                    totalAmount = totalAmount + amounts[k];
+
+                    if (underlyingAssets > 0) {
+                        Exp memory oraclePrice = Exp({
+                            mantissa: underlyingPrice
+                        });
+                        uint256 amountInUsd = mul_ScalarTruncate(
+                            oraclePrice,
+                            underlyingAssets
+                        );
+
+                        if (amountInUsd >= minAmountToConvert) {
+                            address[] memory path = new address[](2);
+                            path[0] = asset;
+                            path[1] = convertableBUSDAddress;
+                            EIP20Interface(asset).approve(
+                                pancakeSwapRouter,
+                                underlyingAssets
+                            );
+                            uint256[] memory amounts = IPancakeswapV2Router(
+                                pancakeSwapRouter
+                            ).swapExactTokensForTokens(
+                                    underlyingAssets,
+                                    amountOutMin,
+                                    path,
+                                    address(this),
+                                    block.timestamp
+                                );
+                            totalAmount = totalAmount + amounts[1];
+                        }
+                    }
                 }
             }
         }
 
-        return totalAmount;
+        return (totalAmount);
     }
 }
