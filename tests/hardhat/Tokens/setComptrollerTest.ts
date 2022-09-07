@@ -44,8 +44,7 @@ describe('CToken', function () {
     });
 
     it("reverts if passed a contract that doesn't implement isComptroller", async () => {
-      await expect(cToken._setComptroller(accessControlManager.address))
-        .to.be.reverted;
+      await expect(cToken._setComptroller(accessControlManager.address)).to.be.revertedWithoutReason();
       expect(await cToken.comptroller()).to.equal(comptroller.address);
     });
 

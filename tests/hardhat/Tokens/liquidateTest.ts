@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { Signer, BigNumberish, constants } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
@@ -193,7 +194,6 @@ describe('CToken', function () {
       const borrowerAddress = await borrower.getAddress();
       const beforeBalances =
         await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
-      //await send(cToken.comptroller, 'setFailCalculateSeizeTokens', [true]);
       comptroller.liquidateCalculateSeizeTokens.reverts("Oups");
       await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
         .to.be.reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
@@ -309,12 +309,14 @@ describe('CToken', function () {
 
     it("fails if cTokenBalances[borrower] < amount", async () => {
       await collateral.cToken.harnessSetBalance(await borrower.getAddress(), 1);
-      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens)).to.be.reverted;
+      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens))
+        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if cTokenBalances[liquidator] overflows", async () => {
       await collateral.cToken.harnessSetBalance(await liquidator.getAddress(), constants.MaxUint256);
-      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens)).to.be.reverted;
+      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens))
+        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("succeeds, updates balances, adds to reserves, and emits Transfer and ReservesAdded events", async () => {

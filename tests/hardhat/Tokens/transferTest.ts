@@ -14,6 +14,7 @@ import {
   getBalances, adjustBalances, preApprove,
   cTokenTestFixture, CTokenTestFixture
 } from "../util/TokenTestHelpers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 
 describe('CToken', function () {
   let root: Signer;
@@ -34,7 +35,8 @@ describe('CToken', function () {
   describe('transfer', () => {
     it("cannot transfer from a zero balance", async () => {
       expect(await cToken.balanceOf(rootAddress)).to.equal(0);
-      await expect(cToken.transfer(guyAddress, 100)).to.be.reverted;
+      await expect(cToken.transfer(guyAddress, 100))
+        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("transfers 50 tokens", async () => {

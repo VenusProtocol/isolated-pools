@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { Signer, BigNumberish, constants } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
@@ -168,17 +169,20 @@ describe('CToken', function () {
 
     it("fails if borrowBalanceStored fails (due to non-zero stored principal with zero account index)", async () => {
       await pretendBorrow(cToken, borrower, 0, 3, 5);
-      await expect(borrowFresh(cToken, borrower, borrowAmount)).to.be.reverted;
+      await expect(borrowFresh(cToken, borrower, borrowAmount))
+        .to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
     });
 
     it("fails if calculating account new total borrow balance overflows", async () => {
       await pretendBorrow(cToken, borrower, 1e-18, 1e-18, constants.MaxUint256);
-      await expect(borrowFresh(cToken, borrower, borrowAmount)).to.be.reverted;
+      await expect(borrowFresh(cToken, borrower, borrowAmount))
+        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if calculation of new total borrow balance overflows", async () => {
       await cToken.harnessSetTotalBorrows(constants.MaxUint256);
-      await expect(borrowFresh(cToken, borrower, borrowAmount)).to.be.reverted;
+      await expect(borrowFresh(cToken, borrower, borrowAmount))
+        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("reverts if transfer out fails", async () => {
@@ -281,15 +285,16 @@ describe('CToken', function () {
             .to.be.revertedWith("Insufficient balance");
         });
 
-
         it("returns an error if calculating account new account borrow balance fails", async () => {
           await pretendBorrow(cToken, borrower, 1, 1, 1);
-          await expect(repayBorrowFresh(cToken, payer, borrower, repayAmount)).to.be.reverted;
+          await expect(repayBorrowFresh(cToken, payer, borrower, repayAmount))
+            .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
         });
 
         it("returns an error if calculation of new total borrow balance fails", async () => {
           await cToken.harnessSetTotalBorrows(1);
-          await expect(repayBorrowFresh(cToken, payer, borrower, repayAmount)).to.be.reverted;
+          await expect(repayBorrowFresh(cToken, payer, borrower, repayAmount))
+            .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
         });
 
 

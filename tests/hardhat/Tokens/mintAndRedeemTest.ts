@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { Signer, BigNumberish, constants } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
@@ -250,7 +251,8 @@ describe('CToken', function () {
       //expect(
         await cToken.harnessSetExchangeRate(0)
       //).toSucceed();
-      await expect(mintFresh(cToken, minter, mintAmount)).to.be.reverted;
+      await expect(mintFresh(cToken, minter, mintAmount))
+        .to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
     });
 
     it("fails if transferring in fails", async () => {
@@ -352,12 +354,14 @@ describe('CToken', function () {
           //expect(
             await cToken.harnessSetExchangeRate(constants.MaxUint256)
           //).toSucceed();
-          await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount)).to.be.reverted;
+          await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount))
+            .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
         } else {
           //expect(
             await cToken.harnessSetExchangeRate(0)
           //).toSucceed();
-          await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount)).to.be.reverted;
+          await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount))
+            .to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
         }
       });
 
@@ -369,12 +373,14 @@ describe('CToken', function () {
 
       it("fails if total supply < redemption amount", async () => {
         await cToken.harnessExchangeRateDetails(0, 0, 0);
-        await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount)).to.be.reverted;
+        await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount)).to.be
+          .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
       });
 
       it("reverts if new account balance underflows", async () => {
         await cToken.harnessSetBalance(redeemerAddress, 0);
-        await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount)).to.be.reverted;
+        await expect(redeemFresh(cToken, redeemer, redeemTokens, redeemAmount))
+          .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
       });
 
       it("transfers the underlying cash, tokens, and emits Redeem, Transfer events", async () => {
@@ -413,7 +419,8 @@ describe('CToken', function () {
 
     it("returns error from redeemFresh without emitting any extra logs", async () => {
       await underlying.harnessSetBalance(cToken.address, 0);
-      await expect(quickRedeem(cToken, redeemer, redeemTokens, {exchangeRate})).to.be.reverted;
+      await expect(quickRedeem(cToken, redeemer, redeemTokens, {exchangeRate}))
+        .to.be.revertedWithCustomError(cToken, "RedeemTransferOutNotPossible");
     });
 
     it("returns success from redeemFresh and redeems the right amount", async () => {

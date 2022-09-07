@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { Signer, constants } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
@@ -68,31 +69,31 @@ describe('CToken', () => {
 
     it('fails if simple interest factor calculation fails', async () => {
       await pretendBlock(cToken, blockNumber, convertToUnit("5", 70));
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if new borrow index calculation fails', async () => {
       await pretendBlock(cToken, blockNumber, convertToUnit("5", 60));
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if new borrow interest index calculation fails', async () => {
       await pretendBlock(cToken);
       await cToken.harnessSetBorrowIndex(constants.MaxUint256);
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if interest accumulated calculation fails', async () => {
       await cToken.harnessExchangeRateDetails(0, constants.MaxUint256, 0);
       await pretendBlock(cToken)
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if new total borrows calculation fails', async () => {
       interestRateModel.getBorrowRate.returns("1");
       await pretendBlock(cToken)
       await cToken.harnessExchangeRateDetails(0, constants.MaxUint256, 0);
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if interest accumulated for reserves calculation fails', async () => {
@@ -100,7 +101,7 @@ describe('CToken', () => {
       await cToken.harnessExchangeRateDetails(0, convertToUnit("1", 30), constants.MaxUint256);
       await cToken.harnessSetReserveFactorFresh(convertToUnit("1", 10));
       await pretendBlock(cToken, blockNumber, 5e20)
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('fails if new total reserves calculation fails', async () => {
@@ -108,7 +109,7 @@ describe('CToken', () => {
       await cToken.harnessExchangeRateDetails(0, convertToUnit("1", 56), constants.MaxUint256);
       await cToken.harnessSetReserveFactorFresh(convertToUnit("1", 17));
       await pretendBlock(cToken)
-      await expect(cToken.accrueInterest()).to.be.reverted;
+      await expect(cToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it('succeeds and saves updated values in storage on success', async () => {
