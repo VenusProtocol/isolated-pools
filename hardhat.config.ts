@@ -41,23 +41,13 @@ const config: HardhatUserConfig = {
       },
       outputSelection: {
         "*": {
-          "*": ["storageLayout"]
-        }
-      }
+          "*": ["storageLayout"],
+        },
+      },
     },
   },
   networks: {
-    hardhat: {
-      allowUnlimitedContractSize: true,
-      loggingEnabled: false,
-      forking: {
-        url: `https://white-ultra-silence.bsc.discover.quiknode.pro/6dffe4657cabff210888b8dcbaad026063ab5d08/`,
-        blockNumber: 21068448,
-      },
-      accounts: {
-        accountsBalance: "10000000000000000000000000",
-      },
-    },
+    hardhat: isFork(),
     development: {
       url: "http://127.0.0.1:8545/",
       chainId: 31337,
@@ -71,7 +61,7 @@ const config: HardhatUserConfig = {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       gasPrice: 20000000000,
-      accounts: {mnemonic: mnemonic}
+      accounts: { mnemonic: mnemonic },
     },
   },
   gasReporter: {
@@ -94,22 +84,24 @@ const config: HardhatUserConfig = {
     ],
   },
   paths: {
-    tests: "./tests/hardhat/test",
+    tests: "./tests/hardhat",
   },
 };
 
-// if (process.env.FORK_MAINNET) {
-//   config?.networks?.hardhat = {
-//     allowUnlimitedContractSize: true,
-//     loggingEnabled: false,
-//     forking: {
-//       url: `https://bsc-dataseed.binance.org/`,
-//       blockNumber: 21068448,
-//     },
-//     accounts: {
-//       accountsBalance: "1000000000",
-//     },
-//   };
-// }
+function isFork() {
+  return process.env.FORK_MAINNET
+    ? {
+        allowUnlimitedContractSize: true,
+        loggingEnabled: false,
+        forking: {
+          url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,
+          blockNumber: 21068448,
+        },
+        accounts: {
+          accountsBalance: "1000000000000000000",
+        },
+      }
+    : {};
+}
 
 export default config;
