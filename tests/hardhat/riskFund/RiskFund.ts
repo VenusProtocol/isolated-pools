@@ -272,8 +272,6 @@ describe("Risk Fund: Tests", function () {
       mockBUSD.address
     );
     await riskFund.setPoolRegistry(poolRegistry.address);
-
-    console.log("Completed before transactions");
   });
 
   it("Convert to BUSD without funds", async function () {
@@ -302,8 +300,14 @@ describe("Risk Fund: Tests", function () {
     const riskFundUSDCBal = await mockUSDC.balanceOf(riskFund.address);
     expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
-    const amount = await riskFund.callStatic.convertoToBUSD();
-    expect(amount).equal("29874814246130941595");
+    await riskFund.convertoToBUSD();
+    const balanceAfter = await mockUSDC.balanceOf(riskFund.address);
+    expect(balanceAfter).equal("0");
+
+    const balanceBUSD = await mockBUSD.balanceOf(riskFund.address);
+    expect(Number(balanceBUSD)).to.be.greaterThan(
+      Number(convertToUnit(29, 18))
+    );
   });
 
   it("Add two assets to riskFund", async function () {
@@ -316,7 +320,16 @@ describe("Risk Fund: Tests", function () {
     await cUSDT._reduceReserves(convertToUnit(100, 18));
     await cUSDC._reduceReserves(convertToUnit(100, 18));
 
-    const amount = await riskFund.callStatic.convertoToBUSD();
-    expect(amount).equal("89650441594074939758");
+    const riskFundUSDCBal = await mockUSDC.balanceOf(riskFund.address);
+    expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
+
+    const riskFundUSDTBal = await mockUSDT.balanceOf(riskFund.address);
+    expect(riskFundUSDTBal).equal(convertToUnit(30, 18));
+
+    await riskFund.convertoToBUSD();
+    const balanceBUSD = await mockBUSD.balanceOf(riskFund.address);
+    expect(Number(balanceBUSD)).to.be.greaterThan(
+      Number(convertToUnit(89, 18))
+    );
   });
 });

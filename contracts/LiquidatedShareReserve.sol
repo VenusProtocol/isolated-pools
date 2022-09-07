@@ -49,8 +49,8 @@ contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
             "Liquidated shares Reserves: Asset address invalid"
         );
         require(
-            amount >= EIP20Interface(asset).balanceOf(address(this)),
-            "In sufficient balance"
+            amount <= EIP20Interface(asset).balanceOf(address(this)),
+            "Liquidated shares Reserves: In sufficient balance"
         );
         EIP20Interface(asset).transfer(
             liquidatedShares,
