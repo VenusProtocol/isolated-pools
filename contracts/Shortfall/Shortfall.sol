@@ -30,7 +30,7 @@ contract Shortfall is OwnableUpgradeable {
         ENDED
     }
 
-    struct TokenDebt {
+    struct TokenBid {
         CToken cToken;
         uint256 amount;
     }
@@ -39,11 +39,12 @@ contract Shortfall is OwnableUpgradeable {
         uint256 startBlock;
         AuctionType auctionType;
         AuctionStatus status;
-        TokenDebt[] tokenDebt;
+        CToken[] markets;
         uint256 seizedRiskFund;
-        TokenDebt[] highestBid;
         address highestBidder;
         uint256 poolBadDebt;
+        mapping (CToken => uint256) marketDebt;
+        mapping (CToken => uint256) highestBid;
     }
 
     Auction public auction;
@@ -61,18 +62,27 @@ contract Shortfall is OwnableUpgradeable {
     function startAuction() external {
         require(auction.startBlock == 0 || auction.status == AuctionStatus.ENDED, "auction is on-going");
 
+        //clear the mappings
+        for (uint256 i = 0; i < auction.markets.length; i++) {
+            CToken cToken = auction.markets[i];
+            auction.marketDebt[cToken] = 0;
+            auction.highestBid[cToken] = 0;
+        }
+
+        delete auction.markets;
+
         CToken[] memory cTokens = ComptrollerInterface(comptroller).getAllMarkets();
         PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
-
         uint256 poolBadDebt = 0;
-        delete auction.tokenDebt;
+        
 
         for (uint256 i = 0; i < cTokens.length; i++) {
             uint256 marketBadDebt = cTokens[i].badDebt();
             uint256 usdValue =  priceOracle.getUnderlyingPrice(cTokens[i]) * marketBadDebt;
 
             poolBadDebt = poolBadDebt + usdValue;
-            auction.tokenDebt[i] = TokenDebt(cTokens[i], marketBadDebt);
+            auction.markets[i] = cTokens[i];
+            auction.marketDebt[cTokens[i]] = marketBadDebt;
 
             // cTokens[i].updateMarketBadDebt(0) - TBD
         }
@@ -102,40 +112,34 @@ contract Shortfall is OwnableUpgradeable {
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
         riskFundBalance = remainingRiskFundBalance; //for testing. we need to update the risk fund balance in risk fund contract
 
-        delete auction.highestBid;
         auction.startBlock = block.number;
         auction.status = AuctionStatus.STARTED;
         auction.highestBidder = address(0);
     }
 
-    // function placeBid(
-    //     TokenDebt[] memory bid,
-    //     uint256 seizeRiskFund
-    // ) external {
-    //     require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+    function placeBid(
+        TokenBid[] memory bid,
+        uint256 seizeRiskFund
+    ) external {
+        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(bid.length == auction.markets.length, "you need to bid all markets");
 
-    //     PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
-    //     uint256 totalBidValue;
+        PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
+        uint256 totalBidValue;
+        
+        for (uint256 i = 0; i < bid.length; i++) {
+            uint256 usdValue =  priceOracle.getUnderlyingPrice(bid[i].cToken) * bid[i].amount;
+            totalBidValue = totalBidValue + usdValue;
 
-    //     for (uint256 i = 0; i < bid.length; i++) {
-    //         totalBidValue = totalBidValue + (priceOracle.getUnderlyingPrice(bid[i].cToken) * bid[i].amount);
-    //     }
+            require(auction.marketDebt[bid[i].cToken] > 0, "market is not part of auction");
 
-    //     if (auction.highestBidder != address(0)) {
-    //         uint256 highestBidderBidValue;
-
-    //         for (uint256 i = 0; i < bid.length; i++) {
-    //             highestBidderBidValue = highestBidderBidValue + (priceOracle.getUnderlyingPrice(auction.highestBid[i].cToken) * auction.highestBid[i].amount);
-    //         }
-
-    //         if(auction.auctionType == AuctionType.LARGE_RISK_FUND) {
-    //             require(highestBidderBidValue < totalBidValue, "your bid is not the highest");
-    //         } else {
-    //             require(highestBidderBidValue < totalBidValue, "your bid is not the highest");
-    //         }
-    //     } else {
-    //         auction.highestBidder = msg.sender;
-    //         auction.highestBid = bid;
-    //     }
-    // }
+            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                require(bid[i].amount <= auction.marketDebt[bid[i].cToken], "cannot bid more than debt");
+                require(seizeRiskFund == auction.seizedRiskFund, "you need to seize total risk fund");
+            } else {
+                require(bid[i].amount == auction.marketDebt[bid[i].cToken], "invalid bid amount");
+                require(seizeRiskFund <= auction.seizedRiskFund, "invalid seize risk fund");
+            }
+        }
+    }
 }
