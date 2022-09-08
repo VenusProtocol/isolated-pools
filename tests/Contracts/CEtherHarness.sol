@@ -16,7 +16,9 @@ contract CEtherHarness is CEther {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
+                address payable admin_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
     CEther(
     comptroller_,
     interestRateModel_,
@@ -24,7 +26,9 @@ contract CEtherHarness is CEther {
     name_,
     symbol_,
     decimals_,
-    admin_) {}
+    admin_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -164,14 +168,18 @@ contract CEtherScenario is CEther {
                 address payable admin_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,
-                uint initialExchangeRateMantissa)
+                uint initialExchangeRateMantissa,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
         CEther(comptroller_,
                interestRateModel_,
                initialExchangeRateMantissa,
                name_,
                symbol_,
                decimals_,
-               admin_) {
+               admin_,
+               riskFund_,
+               liquidatedShareReserve_) {
     }
 
     function setTotalBorrows(uint totalBorrows_) public {

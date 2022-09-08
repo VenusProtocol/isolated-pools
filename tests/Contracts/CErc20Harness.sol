@@ -21,7 +21,9 @@ contract CErc20Harness is CErc20Immutable {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
+                address payable admin_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
     CErc20Immutable(
     underlying_,
     comptroller_,
@@ -30,7 +32,9 @@ contract CErc20Harness is CErc20Immutable {
     name_,
     symbol_,
     decimals_,
-    admin_) {}
+    admin_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -162,7 +166,9 @@ contract CErc20Scenario is CErc20Immutable {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
+                address payable admin_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
     CErc20Immutable(
     underlying_,
     comptroller_,
@@ -171,7 +177,9 @@ contract CErc20Scenario is CErc20Immutable {
     name_,
     symbol_,
     decimals_,
-    admin_) {}
+    admin_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function setTotalBorrows(uint totalBorrows_) public {
         totalBorrows = totalBorrows_;
@@ -195,7 +203,9 @@ contract CEvil is CErc20Scenario {
                 string memory name_,
                 string memory symbol_,
                 uint8 decimals_,
-                address payable admin_)
+                address payable admin_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
     CErc20Scenario(
     underlying_,
     comptroller_,
@@ -204,7 +214,9 @@ contract CEvil is CErc20Scenario {
     name_,
     symbol_,
     decimals_,
-    admin_) {}
+    admin_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function evilSeize(CToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
         return treasure.seize(liquidator, borrower, seizeTokens);

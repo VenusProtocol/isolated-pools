@@ -20,6 +20,8 @@ contract CErc20Immutable is CErc20 {
      * @param symbol_ ERC-20 symbol of this token
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
+     * @param riskFund_ Address of the risk fund contract
+     * @param liquidatedShareReserve_ Address of the liquidated share reserve contract
      */
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
