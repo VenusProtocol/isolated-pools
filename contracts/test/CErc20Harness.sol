@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/CErc20Immutable.sol";
-import "../../contracts/CErc20Delegator.sol";
-import "../../contracts/CErc20Delegate.sol";
-import "../../contracts/CDaiDelegate.sol";
+import "../CErc20Immutable.sol";
+import "../CErc20Delegator.sol";
+import "../CErc20Delegate.sol";
+import "../CDaiDelegate.sol";
+import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
 contract CErc20Harness is CErc20Immutable {
-    uint blockNumber = 100000;
-    uint harnessExchangeRate;
-    bool harnessExchangeRateStored;
+    uint public blockNumber = 100000;
+    uint public harnessExchangeRate;
+    bool public harnessExchangeRateStored;
 
     mapping (address => bool) public failTransferToAddresses;
 

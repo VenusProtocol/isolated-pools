@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "../../contracts/CEther.sol";
 import "./ComptrollerScenario.sol";
+import "../Governance/AccessControlManager.sol";
 
 contract CEtherHarness is CEther {
     uint harnessExchangeRate;
