@@ -5,12 +5,12 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-env:
-  FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
-  QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
 jobs:
   build:
     runs-on: self-hosted
+    env:
+      FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
+      QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
     steps:
       - uses: actions/checkout@v2
       - name: Echo ENV Vars

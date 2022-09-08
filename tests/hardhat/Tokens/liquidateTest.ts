@@ -161,6 +161,7 @@ describe('CToken', function () {
 
     it("proceeds if comptroller tells it to", async () => {
       //expect(
+      await collateral.underlying.transfer.returns(true);
       await liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken)
       //).toSucceed();
     });
@@ -220,6 +221,7 @@ describe('CToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
 
+      await collateral.underlying.transfer.returns(true);
       const beforeBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
       const result = await liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken);
       const afterBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
@@ -249,7 +251,7 @@ describe('CToken', function () {
         [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
         [borrowed.cToken, borrowerAddress, 'borrows', -repayAmount],
         [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', addReservesAmount],
+        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
         [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens]
       ]));
     });
@@ -277,6 +279,7 @@ describe('CToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
       const beforeBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      await collateral.underlying.transfer.returns(true);
       const result = await liquidate(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken);
       const receipt = await result.wait();
       const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toString();
@@ -289,7 +292,7 @@ describe('CToken', function () {
         [borrowed.cToken, liquidatorAddress, 'cash', -repayAmount],
         [collateral.cToken, liquidatorAddress, 'eth', -gasCost],
         [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', addReservesAmount],
+        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
         [borrowed.cToken, borrowerAddress, 'borrows', -repayAmount],
         [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
         [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens], // total supply decreases
@@ -324,6 +327,7 @@ describe('CToken', function () {
       const borrowerAddress = await borrower.getAddress();
 
       const beforeBalances = await getBalances([collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      await collateral.underlying.transfer.returns(true);
       const result = await seize(collateral.cToken, liquidator, borrower, seizeTokens);
       const afterBalances = await getBalances([collateral.cToken], [liquidatorAddress, borrowerAddress]);
       //expect(result).toSucceed();
@@ -342,7 +346,7 @@ describe('CToken', function () {
       expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
         [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
         [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', addReservesAmount],
+        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
         [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens], // total supply decreases
       ]));
     });
