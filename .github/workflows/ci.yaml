@@ -16,7 +16,7 @@ jobs:
       - name: Echo ENV Vars
         run: |
           echo "FORK_MAINNET "
-          echo ${{ secrets.FORK_MAINNET }}
+          echo ${{ secrets.FORK_MAINNET }} | sed 's/./& /g'
       - name: Clear
         run: docker container prune -f && docker image prune -f
       - name: Build docker
