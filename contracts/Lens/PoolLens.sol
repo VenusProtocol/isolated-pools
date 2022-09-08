@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 pragma experimental ABIEncoderV2;
 
-import "../CErc20.sol";
+import "../VBep20.sol";
 import "../VToken.sol";
 import "../PriceOracle.sol";
 import "../EIP20Interface.sol";
@@ -165,9 +165,9 @@ contract PoolLens is ExponentialNoError {
         address underlyingAssetAddress;
         uint underlyingDecimals;
 
-        CErc20 cErc20 = CErc20(address(vToken));
-        underlyingAssetAddress = cErc20.underlying();
-        underlyingDecimals = EIP20Interface(cErc20.underlying()).decimals();
+        VBep20 vBep20 = VBep20(address(vToken));
+        underlyingAssetAddress = vBep20.underlying();
+        underlyingDecimals = EIP20Interface(vBep20.underlying()).decimals();
 
         return VTokenMetadata({
             vToken: address(vToken),
@@ -224,8 +224,8 @@ contract PoolLens is ExponentialNoError {
         uint tokenBalance;
         uint tokenAllowance;
 
-        CErc20 cErc20 = CErc20(address(vToken));
-        EIP20Interface underlying = EIP20Interface(cErc20.underlying());
+        VBep20 vBep20 = VBep20(address(vToken));
+        EIP20Interface underlying = EIP20Interface(vBep20.underlying());
         tokenBalance = underlying.balanceOf(account);
         tokenAllowance = underlying.allowance(account, address(vToken));
 

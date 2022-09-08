@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../CErc20Immutable.sol";
-import "../CErc20Delegator.sol";
-import "../CErc20Delegate.sol";
+import "../VBep20Immutable.sol";
+import "../VBep20Delegator.sol";
+import "../VBep20Delegate.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
-contract CErc20Harness is CErc20Immutable {
+contract VBep20Harness is VBep20Immutable {
     uint public blockNumber = 100000;
     uint public harnessExchangeRate;
     bool public harnessExchangeRateStored;
@@ -23,7 +23,7 @@ contract CErc20Harness is CErc20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_)
-        CErc20Immutable(
+        VBep20Immutable(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -157,7 +157,7 @@ contract CErc20Harness is CErc20Immutable {
     }
 }
 
-contract CErc20Scenario is CErc20Immutable {
+contract VBep20Scenario is VBep20Immutable {
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,
@@ -167,7 +167,7 @@ contract CErc20Scenario is CErc20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_)
-        CErc20Immutable(
+        VBep20Immutable(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -193,7 +193,7 @@ contract CErc20Scenario is CErc20Immutable {
     }
 }
 
-contract CEvil is CErc20Scenario {
+contract CEvil is VBep20Scenario {
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,
@@ -203,7 +203,7 @@ contract CEvil is CErc20Scenario {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_)
-        CErc20Scenario(
+        VBep20Scenario(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -220,7 +220,7 @@ contract CEvil is CErc20Scenario {
     }
 }
 
-contract CErc20DelegatorScenario is CErc20Delegator {
+contract VBep20DelegatorScenario is VBep20Delegator {
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,
@@ -231,7 +231,7 @@ contract CErc20DelegatorScenario is CErc20Delegator {
                 address payable admin_,
                 address implementation_,
                 bytes memory becomeImplementationData)
-    CErc20Delegator(
+    VBep20Delegator(
     underlying_,
     comptroller_,
     interestRateModel_,
@@ -252,7 +252,7 @@ contract CErc20DelegatorScenario is CErc20Delegator {
     }
 }
 
-contract CErc20DelegateHarness is CErc20Delegate {
+contract VBep20DelegateHarness is VBep20Delegate {
     event Log(string x, address y);
     event Log(string x, uint y);
 
@@ -388,7 +388,7 @@ contract CErc20DelegateHarness is CErc20Delegate {
     }
 }
 
-contract CErc20DelegateScenario is CErc20Delegate {
+contract VBep20DelegateScenario is VBep20Delegate {
     constructor() {}
 
     function setTotalBorrows(uint totalBorrows_) public {
@@ -400,7 +400,7 @@ contract CErc20DelegateScenario is CErc20Delegate {
     }
 }
 
-contract CErc20DelegateScenarioExtra is CErc20DelegateScenario {
+contract VBep20DelegateScenarioExtra is VBep20DelegateScenario {
     function iHaveSpoken() public pure returns (string memory) {
       return "i have spoken";
     }

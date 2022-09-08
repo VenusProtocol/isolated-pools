@@ -361,14 +361,14 @@ abstract contract VTokenInterface is VTokenStorage {
         returns (uint256);
 }
 
-contract CErc20Storage {
+contract VBep20Storage {
     /**
      * @notice Underlying asset for this VToken
      */
     address public underlying;
 }
 
-abstract contract CErc20Interface is CErc20Storage {
+abstract contract VBep20Interface is VBep20Storage {
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

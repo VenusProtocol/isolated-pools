@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "./PriceOracle.sol";
-import "./CErc20.sol";
+import "./VBep20.sol";
 
 contract SimplePriceOracle is PriceOracle {
     mapping(address => uint) prices;
@@ -13,7 +13,7 @@ contract SimplePriceOracle is PriceOracle {
         if (compareStrings(vToken.symbol(), "cETH")) {
             asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         } else {
-            asset = address(CErc20(address(vToken)).underlying());
+            asset = address(VBep20(address(vToken)).underlying());
         }
         return asset;
     }

@@ -4,11 +4,11 @@ pragma solidity ^0.8.10;
 import "./VTokenInterfaces.sol";
 
 /**
- * @title Compound's CErc20Delegator Contract
+ * @title Compound's VBep20Delegator Contract
  * @notice VTokens which wrap an EIP-20 underlying and delegate to an implementation
  * @author Compound
  */
-contract CErc20Delegator is VTokenInterface, CErc20Interface, CDelegatorInterface {
+contract VBep20Delegator is VTokenInterface, VBep20Interface, CDelegatorInterface {
     /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset
@@ -59,7 +59,7 @@ contract CErc20Delegator is VTokenInterface, CErc20Interface, CDelegatorInterfac
      * @param becomeImplementationData The encoded bytes data to be passed to _becomeImplementation
      */
     function _setImplementation(address implementation_, bool allowResign, bytes memory becomeImplementationData)override public {
-        require(msg.sender == admin, "CErc20Delegator::_setImplementation: Caller must be admin");
+        require(msg.sender == admin, "VBep20Delegator::_setImplementation: Caller must be admin");
 
         if (allowResign) {
             delegateToImplementation(abi.encodeWithSignature("_resignImplementation()"));
@@ -460,7 +460,7 @@ contract CErc20Delegator is VTokenInterface, CErc20Interface, CDelegatorInterfac
      * @dev It returns to the external caller whatever the implementation returns or forwards reverts
      */
     fallback() external payable {
-        require(msg.value == 0,"CErc20Delegator:fallback: cannot send value to fallback");
+        require(msg.value == 0,"VBep20Delegator:fallback: cannot send value to fallback");
 
         // delegate all other functions to current implementation
         (bool success, ) = implementation.delegatecall(msg.data);

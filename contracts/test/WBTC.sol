@@ -71,13 +71,13 @@ library SafeMath {
   }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC20/BasiVToken.sol
+// File: openzeppelin-solidity/contracts/token/ERC20/BasicToken.sol
 
 /**
  * @title Basic token
  * @dev Basic version of StandardToken, with no allowances.
  */
-contract BasivToken is ERC20Basic {
+contract BasicToken is ERC20Basic {
   using SafeMath for uint256;
 
   mapping(address => uint256) internal balances;
@@ -147,7 +147,7 @@ abstract contract ERC20 is ERC20Basic {
  * https://github.com/ethereum/EIPs/issues/20
  * Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
  */
-contract StandardToken is ERC20, BasivToken {
+contract StandardToken is ERC20, BasicToken {
   using SafeMath for uint256;
 
   mapping (address => mapping (address => uint256)) internal allowed;
@@ -414,7 +414,7 @@ contract MintableToken is StandardToken, Ownable {
  * @title Burnable Token
  * @dev Token that can be irreversibly burned (destroyed).
  */
-contract BurnableToken is BasivToken {
+contract BurnableToken is BasicToken {
   using SafeMath for uint256;
 
   event Burn(address indexed burner, uint256 value);
@@ -498,7 +498,7 @@ contract PausableToken is StandardToken, Pausable {
     uint256 _value
   )
     virtual
-    override (BasivToken, ERC20Basic)
+    override (BasicToken, ERC20Basic)
     public
     whenNotPaused
     returns (bool)
@@ -715,7 +715,7 @@ contract WBTVToken is StandardToken, DetailedERC20("Wrapped BTC", "WBTC", 8),
       return super.decreaseApproval(_spender, _subtractedValue);
     }
 
-    function transfer(address _to, uint256 _value) override(BasivToken, ERC20Basic, PausableToken) public returns (bool) {
+    function transfer(address _to, uint256 _value) override(BasicToken, ERC20Basic, PausableToken) public returns (bool) {
       return super.transfer(_to, _value);
     }
 

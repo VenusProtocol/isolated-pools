@@ -9,11 +9,11 @@ interface CompLike {
 }
 
 /**
- * @title Compound's CErc20 Contract
+ * @title Venus VBep20 Contract
  * @notice VTokens which wrap an EIP-20 underlying
- * @author Compound
+ * @author Venus dev team
  */
-contract CErc20 is VToken, CErc20Interface {
+contract VBep20 is VToken, VBep20Interface {
     /**
      * @notice Initialize the new money market
      * @param underlying_ The address of the underlying asset
@@ -124,8 +124,8 @@ contract CErc20 is VToken, CErc20Interface {
      * @param token The address of the ERC-20 token to sweep
      */
     function sweepToken(EIP20NonStandardInterface token) override external {
-        require(msg.sender == admin, "CErc20::sweepToken: only admin can sweep tokens");
-        require(address(token) != underlying, "CErc20::sweepToken: can not sweep underlying token");
+        require(msg.sender == admin, "VBep20::sweepToken: only admin can sweep tokens");
+        require(address(token) != underlying, "VBep20::sweepToken: can not sweep underlying token");
         uint256 balance = token.balanceOf(address(this));
         token.transfer(admin, balance);
     }

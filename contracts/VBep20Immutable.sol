@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./CErc20.sol";
+import "./VBep20.sol";
 import "./Governance/AccessControlManager.sol";
 
 /**
- * @title Compound's CErc20Immutable Contract
+ * @title Compound's VBep20Immutable Contract
  * @notice VTokens which wrap an EIP-20 underlying and are immutable
  * @author Compound
  */
-contract CErc20Immutable is CErc20 {
+contract VBep20Immutable is VBep20 {
     /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset

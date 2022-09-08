@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/CErc20.sol";
+import "../../contracts/VBep20.sol";
 import "../../contracts/VToken.sol";
 import "../../contracts/PriceOracle.sol";
 
@@ -93,7 +93,7 @@ contract PriceOracleProxy is PriceOracle {
         }
 
         // otherwise just read from v1 oracle
-        address underlying = CErc20(vTokenAddress).underlying();
+        address underlying = VBep20(vTokenAddress).underlying();
         return v1PriceOracle.assetPrices(underlying);
     }
 

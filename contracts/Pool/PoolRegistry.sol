@@ -7,12 +7,12 @@ import "../Comptroller.sol";
 import "../Unitroller.sol";
 import "../PriceOracle.sol";
 
-import "../Factories/CErc20ImmutableFactory.sol";
+import "../Factories/VBep20ImmutableFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
 import "../JumpRateModelV2.sol";
-import "../CErc20Immutable.sol";
+import "../VBep20Immutable.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 
@@ -21,7 +21,7 @@ import "../Governance/AccessControlManager.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is OwnableUpgradeable {
-    CErc20ImmutableFactory private vTokenFactory;
+    VBep20ImmutableFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
 
@@ -29,7 +29,7 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Initializes the deployer to owner.
      */
     function initialize(
-        CErc20ImmutableFactory _vTokenFactory,
+        VBep20ImmutableFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory
     ) public initializer {
@@ -368,7 +368,7 @@ contract PoolRegistry is OwnableUpgradeable {
             _poolsByID[input.poolId].comptroller
         );
 
-        CErc20Immutable vToken = vTokenFactory.deployCErc20(
+        VBep20Immutable vToken = vTokenFactory.deployVBep20(
             input.asset,
             comptroller,
             rate,
