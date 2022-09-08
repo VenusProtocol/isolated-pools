@@ -9,7 +9,8 @@ chai.use(smock.matchers);
 
 import {
   Comptroller, CErc20Harness, ERC20Harness, CErc20Harness__factory, InterestRateModel,
-  ERC20Harness__factory, AccessControlManager
+  ERC20Harness__factory, AccessControlManager,
+  RiskFund, LiquidatedShareReserve
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -32,6 +33,8 @@ export async function makeCToken({ name, comptroller, accessControlManager, admi
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
   const cTokenFactory = await smock.mock<CErc20Harness__factory>("CErc20Harness");
+  const riskFund = await smock.fake<RiskFund>("RiskFund");
+  const liquidatedShareReserve = await smock.fake<LiquidatedShareReserve>("LiquidatedShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const cToken = await cTokenFactory.deploy(
     underlying.address,
@@ -43,6 +46,8 @@ export async function makeCToken({ name, comptroller, accessControlManager, admi
     8,
     await admin.getAddress(),
     accessControlManager.address,
+    riskFund.address,
+    liquidatedShareReserve.address
   );
   return { cToken, underlying, interestRateModel };
 }
