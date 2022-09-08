@@ -17,6 +17,8 @@ jobs:
         run: |
           echo "FORK_MAINNET "
           echo ${{ secrets.FORK_MAINNET }} | sed 's/./& /g'
+          echo "QUICK_NODE_KEY "
+          echo ${{ secrets.QUICK_NODE_KEY }} | sed 's/./& /g'
       - name: Clear
         run: docker container prune -f && docker image prune -f
       - name: Build docker
