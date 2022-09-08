@@ -6,7 +6,7 @@ import "./Governance/AccessControlManager.sol";
 
 /**
  * @title Compound's CErc20Immutable Contract
- * @notice CTokens which wrap an EIP-20 underlying and are immutable
+ * @notice VTokens which wrap an EIP-20 underlying and are immutable
  * @author Compound
  */
 contract CErc20Immutable is CErc20 {

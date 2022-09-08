@@ -15,7 +15,7 @@ contract MockPriceOracle {
     }
 
     //https://compound.finance/docs/prices
-    function getUnderlyingPrice(CErc20 cToken) public view returns (uint256) {
-        return assetPrices[cToken.underlying()];
+    function getUnderlyingPrice(CErc20 vToken) public view returns (uint256) {
+        return assetPrices[vToken.underlying()];
     }
 }

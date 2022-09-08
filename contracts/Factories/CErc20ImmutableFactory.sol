@@ -16,7 +16,7 @@ contract CErc20ImmutableFactory {
     address payable admin_,
     AccessControlManager accessControlManager_
   ) external returns (CErc20Immutable) {
-    CErc20Immutable cToken = new CErc20Immutable(
+    CErc20Immutable vToken = new CErc20Immutable(
       underlying_,
       comptroller_,
       interestRateModel_,
@@ -28,6 +28,6 @@ contract CErc20ImmutableFactory {
       accessControlManager_
     );
 
-    return cToken;
+    return vToken;
   }
 }

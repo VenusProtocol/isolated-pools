@@ -71,13 +71,13 @@ library SafeMath {
   }
 }
 
-// File: openzeppelin-solidity/contracts/token/ERC20/BasicToken.sol
+// File: openzeppelin-solidity/contracts/token/ERC20/BasiVToken.sol
 
 /**
  * @title Basic token
  * @dev Basic version of StandardToken, with no allowances.
  */
-contract BasicToken is ERC20Basic {
+contract BasivToken is ERC20Basic {
   using SafeMath for uint256;
 
   mapping(address => uint256) internal balances;
@@ -147,7 +147,7 @@ abstract contract ERC20 is ERC20Basic {
  * https://github.com/ethereum/EIPs/issues/20
  * Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
  */
-contract StandardToken is ERC20, BasicToken {
+contract StandardToken is ERC20, BasivToken {
   using SafeMath for uint256;
 
   mapping (address => mapping (address => uint256)) internal allowed;
@@ -414,7 +414,7 @@ contract MintableToken is StandardToken, Ownable {
  * @title Burnable Token
  * @dev Token that can be irreversibly burned (destroyed).
  */
-contract BurnableToken is BasicToken {
+contract BurnableToken is BasivToken {
   using SafeMath for uint256;
 
   event Burn(address indexed burner, uint256 value);
@@ -498,7 +498,7 @@ contract PausableToken is StandardToken, Pausable {
     uint256 _value
   )
     virtual
-    override (BasicToken, ERC20Basic)
+    override (BasivToken, ERC20Basic)
     public
     whenNotPaused
     returns (bool)
@@ -670,7 +670,7 @@ contract OwnableContract is CanReclaimToken, Claimable {
 
 // File: contracts/token/WBTC.sol
 
-contract WBTCToken is StandardToken, DetailedERC20("Wrapped BTC", "WBTC", 8),
+contract WBTVToken is StandardToken, DetailedERC20("Wrapped BTC", "WBTC", 8),
     MintableToken, BurnableToken, PausableToken, OwnableContract {
 
     function approve(address _spender, uint256 _value) override(ERC20, PausableToken, StandardToken) public returns (bool) {
@@ -715,7 +715,7 @@ contract WBTCToken is StandardToken, DetailedERC20("Wrapped BTC", "WBTC", 8),
       return super.decreaseApproval(_spender, _subtractedValue);
     }
 
-    function transfer(address _to, uint256 _value) override(BasicToken, ERC20Basic, PausableToken) public returns (bool) {
+    function transfer(address _to, uint256 _value) override(BasivToken, ERC20Basic, PausableToken) public returns (bool) {
       return super.transfer(_to, _value);
     }
 

@@ -7,7 +7,7 @@ import "./EIP20NonStandardInterface.sol";
 import "./ErrorReporter.sol";
 import "./Governance/AccessControlManager.sol";
 
-contract CTokenStorage {
+contract VTokenStorage {
     /**
      * @dev Guard variable for re-entrancy checks
      */
@@ -45,7 +45,7 @@ contract CTokenStorage {
     address payable public pendingAdmin;
 
     /**
-     * @notice Contract which oversees inter-cToken operations
+     * @notice Contract which oversees inter-vToken operations
      */
     ComptrollerInterface public comptroller;
 
@@ -54,7 +54,7 @@ contract CTokenStorage {
      */
     InterestRateModel public interestRateModel;
 
-    // Initial exchange rate used when minting the first CTokens (used when totalSupply = 0)
+    // Initial exchange rate used when minting the first VTokens (used when totalSupply = 0)
     uint256 internal initialExchangeRateMantissa;
 
     /**
@@ -122,11 +122,11 @@ contract CTokenStorage {
     AccessControlManager public accessControlManager;
 }
 
-abstract contract CTokenInterface is CTokenStorage {
+abstract contract VTokenInterface is VTokenStorage {
     /**
-     * @notice Indicator that this is a CToken contract (for inspection)
+     * @notice Indicator that this is a VToken contract (for inspection)
      */
-    bool public constant isCToken = true;
+    bool public constant isVToken = true;
 
     /*** Market Events ***/
 
@@ -178,7 +178,7 @@ abstract contract CTokenInterface is CTokenStorage {
         address liquidator,
         address borrower,
         uint256 repayAmount,
-        address cTokenCollateral,
+        address vTokenCollateral,
         uint256 seizeTokens
     );
 
@@ -363,7 +363,7 @@ abstract contract CTokenInterface is CTokenStorage {
 
 contract CErc20Storage {
     /**
-     * @notice Underlying asset for this CToken
+     * @notice Underlying asset for this VToken
      */
     address public underlying;
 }
@@ -395,7 +395,7 @@ abstract contract CErc20Interface is CErc20Storage {
     function liquidateBorrow(
         address borrower,
         uint256 repayAmount,
-        CTokenInterface cTokenCollateral
+        VTokenInterface vTokenCollateral
     ) external virtual returns (uint256);
 
     function sweepToken(EIP20NonStandardInterface token) external virtual;

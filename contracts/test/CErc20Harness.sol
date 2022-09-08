@@ -103,8 +103,8 @@ contract CErc20Harness is CErc20Immutable {
         return NO_ERROR;
     }
 
-    function harnessRedeemFresh(address payable account, uint cTokenAmount, uint underlyingAmount) public returns (uint) {
-        super.redeemFresh(account, cTokenAmount, underlyingAmount);
+    function harnessRedeemFresh(address payable account, uint vTokenAmount, uint underlyingAmount) public returns (uint) {
+        super.redeemFresh(account, vTokenAmount, underlyingAmount);
         return NO_ERROR;
     }
 
@@ -131,8 +131,8 @@ contract CErc20Harness is CErc20Immutable {
         return NO_ERROR;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, CToken cTokenCollateral) public returns (uint) {
-        liquidateBorrowFresh(liquidator, borrower, repayAmount, cTokenCollateral);
+    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, VToken vTokenCollateral) public returns (uint) {
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral);
         return NO_ERROR;
     }
 
@@ -215,7 +215,7 @@ contract CEvil is CErc20Scenario {
             accessControlManager_
         ) {}
 
-    function evilSeize(CToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
+    function evilSeize(VToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
         return treasure.seize(liquidator, borrower, seizeTokens);
     }
 }
@@ -334,8 +334,8 @@ contract CErc20DelegateHarness is CErc20Delegate {
         return NO_ERROR;
     }
 
-    function harnessRedeemFresh(address payable account, uint cTokenAmount, uint underlyingAmount) public returns (uint) {
-        super.redeemFresh(account, cTokenAmount, underlyingAmount);
+    function harnessRedeemFresh(address payable account, uint vTokenAmount, uint underlyingAmount) public returns (uint) {
+        super.redeemFresh(account, vTokenAmount, underlyingAmount);
         return NO_ERROR;
     }
 
@@ -362,8 +362,8 @@ contract CErc20DelegateHarness is CErc20Delegate {
         return NO_ERROR;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, CToken cTokenCollateral) public returns (uint) {
-        liquidateBorrowFresh(liquidator, borrower, repayAmount, cTokenCollateral);
+    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, VToken vTokenCollateral) public returns (uint) {
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral);
         return NO_ERROR;
     }
 

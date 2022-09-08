@@ -3,7 +3,7 @@ pragma solidity ^0.8.10;
 import "../../../contracts/CErc20Immutable.sol";
 import "../../../contracts/EIP20Interface.sol";
 
-contract CTokenCollateral is CErc20Immutable {
+contract VTokenCollateral is CErc20Immutable {
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
                 InterestRateModel interestRateModel_,

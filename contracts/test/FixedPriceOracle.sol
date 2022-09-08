@@ -10,8 +10,8 @@ contract FixedPriceOracle is PriceOracle {
         price = _price;
     }
 
-    function getUnderlyingPrice(CToken cToken) override public view returns (uint) {
-        cToken;
+    function getUnderlyingPrice(VToken vToken) override public view returns (uint) {
+        vToken;
         return price;
     }
 

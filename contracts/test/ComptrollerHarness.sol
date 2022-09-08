@@ -65,67 +65,67 @@ contract ComptrollerBorked {
     uint noError = 0;
     uint opaqueError = noError + 11; // an arbitrary, opaque error code
 
-    function enterMarkets(address[] calldata _cTokens) override external returns (uint[] memory) {
-        _cTokens;
+    function enterMarkets(address[] calldata _vTokens) override external returns (uint[] memory) {
+        _vTokens;
         uint[] memory ret;
         return ret;
     }
 
-    function exitMarket(address _cToken) override external returns (uint) {
-        _cToken;
+    function exitMarket(address _vToken) override external returns (uint) {
+        _vToken;
         return noError;
     }
 
-    function mintAllowed(address _cToken, address _minter, uint _mintAmount) override public returns (uint) {
-        _cToken;
+    function mintAllowed(address _vToken, address _minter, uint _mintAmount) override public returns (uint) {
+        _vToken;
         _minter;
         _mintAmount;
         return allowMint ? noError : opaqueError;
     }
 
-    function mintVerify(address _cToken, address _minter, uint _mintAmount, uint _mintTokens) override external {
-        _cToken;
+    function mintVerify(address _vToken, address _minter, uint _mintAmount, uint _mintTokens) override external {
+        _vToken;
         _minter;
         _mintAmount;
         _mintTokens;
         require(verifyMint, "mintVerify rejected mint");
     }
 
-    function redeemAllowed(address _cToken, address _redeemer, uint _redeemTokens) override public returns (uint) {
-        _cToken;
+    function redeemAllowed(address _vToken, address _redeemer, uint _redeemTokens) override public returns (uint) {
+        _vToken;
         _redeemer;
         _redeemTokens;
         return allowRedeem ? noError : opaqueError;
     }
 
-    function redeemVerify(address _cToken, address _redeemer, uint _redeemAmount, uint _redeemTokens) override external {
-        _cToken;
+    function redeemVerify(address _vToken, address _redeemer, uint _redeemAmount, uint _redeemTokens) override external {
+        _vToken;
         _redeemer;
         _redeemAmount;
         _redeemTokens;
         require(verifyRedeem, "redeemVerify rejected redeem");
     }
 
-    function borrowAllowed(address _cToken, address _borrower, uint _borrowAmount) override public returns (uint) {
-        _cToken;
+    function borrowAllowed(address _vToken, address _borrower, uint _borrowAmount) override public returns (uint) {
+        _vToken;
         _borrower;
         _borrowAmount;
         return allowBorrow ? noError : opaqueError;
     }
 
-    function borrowVerify(address _cToken, address _borrower, uint _borrowAmount) override external {
-        _cToken;
+    function borrowVerify(address _vToken, address _borrower, uint _borrowAmount) override external {
+        _vToken;
         _borrower;
         _borrowAmount;
         require(verifyBorrow, "borrowVerify rejected borrow");
     }
 
     function repayBorrowAllowed(
-        address _cToken,
+        address _vToken,
         address _payer,
         address _borrower,
         uint _repayAmount) override public returns (uint) {
-        _cToken;
+        _vToken;
         _payer;
         _borrower;
         _repayAmount;
@@ -133,12 +133,12 @@ contract ComptrollerBorked {
     }
 
     function repayBorrowVerify(
-        address _cToken,
+        address _vToken,
         address _payer,
         address _borrower,
         uint _repayAmount,
         uint _borrowerIndex) override external {
-        _cToken;
+        _vToken;
         _payer;
         _borrower;
         _repayAmount;
@@ -147,13 +147,13 @@ contract ComptrollerBorked {
     }
 
     function liquidateBorrowAllowed(
-        address _cTokenBorrowed,
-        address _cTokenCollateral,
+        address _vTokenBorrowed,
+        address _vTokenCollateral,
         address _liquidator,
         address _borrower,
         uint _repayAmount) override public returns (uint) {
-        _cTokenBorrowed;
-        _cTokenCollateral;
+        _vTokenBorrowed;
+        _vTokenCollateral;
         _liquidator;
         _borrower;
         _repayAmount;
@@ -161,14 +161,14 @@ contract ComptrollerBorked {
     }
 
     function liquidateBorrowVerify(
-        address _cTokenBorrowed,
-        address _cTokenCollateral,
+        address _vTokenBorrowed,
+        address _vTokenCollateral,
         address _liquidator,
         address _borrower,
         uint _repayAmount,
         uint _seizeTokens) override external {
-        _cTokenBorrowed;
-        _cTokenCollateral;
+        _vTokenBorrowed;
+        _vTokenCollateral;
         _liquidator;
         _borrower;
         _repayAmount;
@@ -177,13 +177,13 @@ contract ComptrollerBorked {
     }
 
     function seizeAllowed(
-        address _cTokenCollateral,
-        address _cTokenBorrowed,
+        address _vTokenCollateral,
+        address _vTokenBorrowed,
         address _borrower,
         address _liquidator,
         uint _seizeTokens) override public returns (uint) {
-        _cTokenCollateral;
-        _cTokenBorrowed;
+        _vTokenCollateral;
+        _vTokenBorrowed;
         _liquidator;
         _borrower;
         _seizeTokens;
@@ -191,13 +191,13 @@ contract ComptrollerBorked {
     }
 
     function seizeVerify(
-        address _cTokenCollateral,
-        address _cTokenBorrowed,
+        address _vTokenCollateral,
+        address _vTokenBorrowed,
         address _liquidator,
         address _borrower,
         uint _seizeTokens) override external {
-        _cTokenCollateral;
-        _cTokenBorrowed;
+        _vTokenCollateral;
+        _vTokenBorrowed;
         _liquidator;
         _borrower;
         _seizeTokens;
@@ -205,11 +205,11 @@ contract ComptrollerBorked {
     }
 
     function transferAllowed(
-        address _cToken,
+        address _vToken,
         address _src,
         address _dst,
         uint _transferTokens) override public returns (uint) {
-        _cToken;
+        _vToken;
         _src;
         _dst;
         _transferTokens;
@@ -217,11 +217,11 @@ contract ComptrollerBorked {
     }
 
     function transferVerify(
-        address _cToken,
+        address _vToken,
         address _src,
         address _dst,
         uint _transferTokens) override external {
-        _cToken;
+        _vToken;
         _src;
         _dst;
         _transferTokens;
@@ -229,11 +229,11 @@ contract ComptrollerBorked {
     }
 
     function liquidateCalculateSeizeTokens(
-        address _cTokenBorrowed,
-        address _cTokenCollateral,
+        address _vTokenBorrowed,
+        address _vTokenCollateral,
         uint _repayAmount) override public view returns (uint, uint) {
-        _cTokenBorrowed;
-        _cTokenCollateral;
+        _vTokenBorrowed;
+        _vTokenCollateral;
         _repayAmount;
         return failCalculateSeizeTokens ? (opaqueError, 0) : (noError, calculatedSeizeTokens);
     }

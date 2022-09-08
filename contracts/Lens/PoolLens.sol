@@ -3,7 +3,7 @@ pragma solidity 0.8.13;
 pragma experimental ABIEncoderV2;
 
 import "../CErc20.sol";
-import "../CToken.sol";
+import "../VToken.sol";
 import "../PriceOracle.sol";
 import "../EIP20Interface.sol";
 import "../ComptrollerInterface.sol";
@@ -34,7 +34,7 @@ contract PoolLens is ExponentialNoError {
         uint256 closeFactor;
         uint256 liquidationIncentive;
         uint256 maxAssets;
-        CTokenMetadata[] cTokens;
+        VTokenMetadata[] vTokens;
     }
 
     /**
@@ -66,9 +66,9 @@ contract PoolLens is ExponentialNoError {
             //get tokens in the Pool
             ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
-            CToken[] memory cTokens = comptrollerInstance.getAllMarkets();
+            VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
 
-            CTokenMetadata[] memory cTokenMetadataItems = cTokenMetadataAll(cTokens);
+            VTokenMetadata[] memory vTokenMetadataItems = vTokenMetadataAll(vTokens);
 
             PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
 
@@ -90,7 +90,7 @@ contract PoolLens is ExponentialNoError {
                 category: venusPoolMetaData.category,
                 logoURL: venusPoolMetaData.logoURL,
                 description: venusPoolMetaData.description,
-                cTokens: cTokenMetadataItems,
+                vTokens: vTokenMetadataItems,
                 priceOracle: address(comptrollerViewInstance.oracle()),
                 pauseGuardian: comptrollerViewInstance.pauseGuardian(),
                 closeFactor: comptrollerViewInstance.closeFactorMantissa(),
@@ -115,17 +115,17 @@ contract PoolLens is ExponentialNoError {
     /**
     * @param poolRegistryAddress The address of Pool.
     * @param poolId The poolIndex.  
-    * @param asset The underlyingAsset of CToken.
-    * @notice Returns CToken in a Pool for an Asset.
+    * @param asset The underlyingAsset of VToken.
+    * @notice Returns VToken in a Pool for an Asset.
     */
-    function getCTokenForAsset(address poolRegistryAddress, uint poolId, address asset) external view returns (address) {
+    function getVTokenForAsset(address poolRegistryAddress, uint poolId, address asset) external view returns (address) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        return poolRegistryInterface.getCTokenForAsset(poolId, asset);
+        return poolRegistryInterface.getVTokenForAsset(poolId, asset);
     }
 
     /**
     * @param poolRegistryAddress The address of Pool.  
-    * @param asset The underlyingAsset of CToken.
+    * @param asset The underlyingAsset of VToken.
     * @notice Returns all Pools supported by an Asset.
     */
     function getPoolsSupportedByAsset(address poolRegistryAddress, address asset) external view returns (uint[] memory) {
@@ -134,10 +134,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-    * @dev Struct for CToken.
+    * @dev Struct for VToken.
     */
-    struct CTokenMetadata {
-        address cToken;
+    struct VTokenMetadata {
+        address vToken;
         uint exchangeRateCurrent;
         uint supplyRatePerBlock;
         uint borrowRatePerBlock;
@@ -149,62 +149,62 @@ contract PoolLens is ExponentialNoError {
         bool isListed;
         uint collateralFactorMantissa;
         address underlyingAssetAddress;
-        uint cTokenDecimals;
+        uint vTokenDecimals;
         uint underlyingDecimals;
     }
 
     /**
-    * @param cToken The address of cToken.  
-    * @notice Returns the metadata of CToken.
+    * @param vToken The address of vToken.  
+    * @notice Returns the metadata of VToken.
     */
-    function cTokenMetadata(CToken cToken) public view returns (CTokenMetadata memory) {
-        uint exchangeRateCurrent = cToken.exchangeRateStored();
-        address comptrollerAddress = address(cToken.comptroller());
+    function vTokenMetadata(VToken vToken) public view returns (VTokenMetadata memory) {
+        uint exchangeRateCurrent = vToken.exchangeRateStored();
+        address comptrollerAddress = address(vToken.comptroller());
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
-        (bool isListed, uint collateralFactorMantissa) = comptroller.markets(address(cToken));
+        (bool isListed, uint collateralFactorMantissa) = comptroller.markets(address(vToken));
         address underlyingAssetAddress;
         uint underlyingDecimals;
 
-        CErc20 cErc20 = CErc20(address(cToken));
+        CErc20 cErc20 = CErc20(address(vToken));
         underlyingAssetAddress = cErc20.underlying();
         underlyingDecimals = EIP20Interface(cErc20.underlying()).decimals();
 
-        return CTokenMetadata({
-            cToken: address(cToken),
+        return VTokenMetadata({
+            vToken: address(vToken),
             exchangeRateCurrent: exchangeRateCurrent,
-            supplyRatePerBlock: cToken.supplyRatePerBlock(),
-            borrowRatePerBlock: cToken.borrowRatePerBlock(),
-            reserveFactorMantissa: cToken.reserveFactorMantissa(),
-            totalBorrows: cToken.totalBorrows(),
-            totalReserves: cToken.totalReserves(),
-            totalSupply: cToken.totalSupply(),
-            totalCash: cToken.getCash(),
+            supplyRatePerBlock: vToken.supplyRatePerBlock(),
+            borrowRatePerBlock: vToken.borrowRatePerBlock(),
+            reserveFactorMantissa: vToken.reserveFactorMantissa(),
+            totalBorrows: vToken.totalBorrows(),
+            totalReserves: vToken.totalReserves(),
+            totalSupply: vToken.totalSupply(),
+            totalCash: vToken.getCash(),
             isListed: isListed,
             collateralFactorMantissa: collateralFactorMantissa,
             underlyingAssetAddress: underlyingAssetAddress,
-            cTokenDecimals: cToken.decimals(),
+            vTokenDecimals: vToken.decimals(),
             underlyingDecimals: underlyingDecimals
         });
     }
 
     /**
-    * @param cTokens The list of cToken Addresses.  
-    * @notice Returns the metadata of all CTokens.
+    * @param vTokens The list of vToken Addresses.  
+    * @notice Returns the metadata of all VTokens.
     */
-    function cTokenMetadataAll(CToken[] memory cTokens) public view returns (CTokenMetadata[] memory) {
-        uint cTokenCount = cTokens.length;
-        CTokenMetadata[] memory res = new CTokenMetadata[](cTokenCount);
-        for (uint256 i; i < cTokenCount; ++i) {
-            res[i] = cTokenMetadata(cTokens[i]);
+    function vTokenMetadataAll(VToken[] memory vTokens) public view returns (VTokenMetadata[] memory) {
+        uint vTokenCount = vTokens.length;
+        VTokenMetadata[] memory res = new VTokenMetadata[](vTokenCount);
+        for (uint256 i; i < vTokenCount; ++i) {
+            res[i] = vTokenMetadata(vTokens[i]);
         }
         return res;
     }
 
     /**
-    * @dev Struct for CTokenBalance.
+    * @dev Struct for VTokenBalance.
     */
-    struct CTokenBalances {
-        address cToken;
+    struct VTokenBalances {
+        address vToken;
         uint balanceOf;
         uint borrowBalanceCurrent;
         uint balanceOfUnderlying;
@@ -213,24 +213,24 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-    * @param cToken The cTokenAddress.
+    * @param vToken The vTokenAddress.
     * @param account The user Account.
-    * @notice Returns the BalanceInfo of CToken.
+    * @notice Returns the BalanceInfo of VToken.
     */
-    function cTokenBalances(CToken cToken, address payable account) public returns (CTokenBalances memory) {
-        uint balanceOf = cToken.balanceOf(account);
-        uint borrowBalanceCurrent = cToken.borrowBalanceCurrent(account);
-        uint balanceOfUnderlying = cToken.balanceOfUnderlying(account);
+    function vTokenBalances(VToken vToken, address payable account) public returns (VTokenBalances memory) {
+        uint balanceOf = vToken.balanceOf(account);
+        uint borrowBalanceCurrent = vToken.borrowBalanceCurrent(account);
+        uint balanceOfUnderlying = vToken.balanceOfUnderlying(account);
         uint tokenBalance;
         uint tokenAllowance;
 
-        CErc20 cErc20 = CErc20(address(cToken));
+        CErc20 cErc20 = CErc20(address(vToken));
         EIP20Interface underlying = EIP20Interface(cErc20.underlying());
         tokenBalance = underlying.balanceOf(account);
-        tokenAllowance = underlying.allowance(account, address(cToken));
+        tokenAllowance = underlying.allowance(account, address(vToken));
 
-        return CTokenBalances({
-            cToken: address(cToken),
+        return VTokenBalances({
+            vToken: address(vToken),
             balanceOf: balanceOf,
             borrowBalanceCurrent: borrowBalanceCurrent,
             balanceOfUnderlying: balanceOfUnderlying,
@@ -240,50 +240,50 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-    * @param cTokens The list of cToken Addresses.
+    * @param vTokens The list of vToken Addresses.
     * @param account The user Account. 
-    * @notice Returns the BalanceInfo of all CTokens.
+    * @notice Returns the BalanceInfo of all VTokens.
     */
-    function cTokenBalancesAll(CToken[] calldata cTokens, address payable account) external returns (CTokenBalances[] memory) {
-        uint cTokenCount = cTokens.length;
-        CTokenBalances[] memory res = new CTokenBalances[](cTokenCount);
-        for (uint256 i; i < cTokenCount; ++i) {
-            res[i] = cTokenBalances(cTokens[i], account);
+    function vTokenBalancesAll(VToken[] calldata vTokens, address payable account) external returns (VTokenBalances[] memory) {
+        uint vTokenCount = vTokens.length;
+        VTokenBalances[] memory res = new VTokenBalances[](vTokenCount);
+        for (uint256 i; i < vTokenCount; ++i) {
+            res[i] = vTokenBalances(vTokens[i], account);
         }
         return res;
     }
 
     /**
-    * @dev Struct for underlyingPrice of CToken.
+    * @dev Struct for underlyingPrice of VToken.
     */
-    struct CTokenUnderlyingPrice {
-        address cToken;
+    struct VTokenUnderlyingPrice {
+        address vToken;
         uint underlyingPrice;
     }
 
     /**
-    * @param cToken The cToken Addresses.  
-    * @notice Returns the underlyingPrice of CToken.
+    * @param vToken The vToken Addresses.  
+    * @notice Returns the underlyingPrice of VToken.
     */
-    function cTokenUnderlyingPrice(CToken cToken) public view returns (CTokenUnderlyingPrice memory) {
-        ComptrollerViewInterface comptroller = ComptrollerViewInterface(address(cToken.comptroller()));
+    function vTokenUnderlyingPrice(VToken vToken) public view returns (VTokenUnderlyingPrice memory) {
+        ComptrollerViewInterface comptroller = ComptrollerViewInterface(address(vToken.comptroller()));
         PriceOracle priceOracle = comptroller.oracle();
 
-        return CTokenUnderlyingPrice({
-            cToken: address(cToken),
-            underlyingPrice: priceOracle.getUnderlyingPrice(cToken)
+        return VTokenUnderlyingPrice({
+            vToken: address(vToken),
+            underlyingPrice: priceOracle.getUnderlyingPrice(vToken)
         });
     }
 
     /**
-    * @param cTokens The list of cToken Addresses.  
-    * @notice Returns the underlyingPrice Info of all CTokens.
+    * @param vTokens The list of vToken Addresses.  
+    * @notice Returns the underlyingPrice Info of all VTokens.
     */
-    function cTokenUnderlyingPriceAll(CToken[] calldata cTokens) external view returns (CTokenUnderlyingPrice[] memory) {
-        uint cTokenCount = cTokens.length;
-        CTokenUnderlyingPrice[] memory res = new CTokenUnderlyingPrice[](cTokenCount);
-        for (uint256 i; i < cTokenCount; ++i) {
-            res[i] = cTokenUnderlyingPrice(cTokens[i]);
+    function vTokenUnderlyingPriceAll(VToken[] calldata vTokens) external view returns (VTokenUnderlyingPrice[] memory) {
+        uint vTokenCount = vTokens.length;
+        VTokenUnderlyingPrice[] memory res = new VTokenUnderlyingPrice[](vTokenCount);
+        for (uint256 i; i < vTokenCount; ++i) {
+            res[i] = vTokenUnderlyingPrice(vTokens[i]);
         }
         return res;
     }
