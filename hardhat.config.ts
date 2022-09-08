@@ -99,7 +99,7 @@ const config: HardhatUserConfig = {
 };
 
 function isFork() {
-  return process.env.FORK_MAINNET === "true"
+  return process.env.FORK_MAINNET
     ? {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
