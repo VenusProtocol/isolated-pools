@@ -1221,13 +1221,13 @@ contract Comptroller is
         CToken cToken,
         uint256 newCollateralFactorMantissa
     ) external returns (uint256) {
-        bool isAllowedtoCall = AccessControlManager(accessControl)
+        bool isAllowedToCall = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
                 "_setCollateralFactor(CToken,uint256)"
             );
 
-        if (isAllowedtoCall) {
+        if (!isAllowedToCall) {
             return
                 fail(
                     Error.UNAUTHORIZED,
