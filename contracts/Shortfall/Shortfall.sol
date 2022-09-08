@@ -44,9 +44,9 @@ contract Shortfall is OwnableUpgradeable {
         CToken[] markets;
         uint256 seizedRiskFund;
         address highestBidder;
-        uint256 poolBadDebt;
+        address highestBidBps;
+        uint256 startBidBps;
         mapping (CToken => uint256) marketDebt;
-        mapping (CToken => uint256) highestBid;
     }
 
     Auction public auction;
@@ -68,7 +68,7 @@ contract Shortfall is OwnableUpgradeable {
         for (uint256 i = 0; i < auction.markets.length; i++) {
             CToken cToken = auction.markets[i];
             auction.marketDebt[cToken] = 0;
-            auction.highestBid[cToken] = 0;
+            auction.highestBidBps = 0;
         }
 
         delete auction.markets;
@@ -89,12 +89,12 @@ contract Shortfall is OwnableUpgradeable {
         }
 
         require(poolBadDebt < minimumPoolBadDebt, "pool bad debt is too low");
-        auction.poolBadDebt = poolBadDebt;
         
         uint256 riskFundBalance = 50000 * 10**18; // for testing. we need to fetch the risk fund balance
         uint256 remainingRiskFundBalance = riskFundBalance;
 
         if (poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS) >= riskFundBalance) {
+            auction.startBidBps =  ((MAX_BPS - incentiveBps) * remainingRiskFundBalance) / poolBadDebt;
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
@@ -108,6 +108,7 @@ contract Shortfall is OwnableUpgradeable {
 
             remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
             auction.auctionType = AuctionType.LARGE_RISK_FUND;
+            auction.startBidBps = MAX_BPS;
         }
 
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
@@ -125,9 +126,6 @@ contract Shortfall is OwnableUpgradeable {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(bid.length == auction.markets.length, "you need to bid all markets");
 
-        // PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle());
-        // uint256 poolBadDebt = 0;
-
         for (uint256 i = 0; i < bid.length; i++) {
 
             require(auction.marketDebt[bid[i].cToken] > 0, "market is not part of auction");
@@ -135,8 +133,6 @@ contract Shortfall is OwnableUpgradeable {
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 require(bid[i].amount <= auction.marketDebt[bid[i].cToken], "cannot bid more than debt");
                 require(seizeRiskFund == auction.seizedRiskFund, "you need to seize total risk fund");
-
-                // poolBadDebt = poolBadDebt + (priceOracle.getUnderlyingPrice(cTokens[i]) * auction.marketDebt[bid[i].cToken]);
             } else {
                 require(bid[i].amount == auction.marketDebt[bid[i].cToken], "invalid bid amount");
                 require(seizeRiskFund <= auction.seizedRiskFund, "invalid seize risk fund");
