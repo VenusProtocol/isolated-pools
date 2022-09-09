@@ -41,6 +41,21 @@ describe("Liquidated shares reserves: Tests", function () {
     );
   });
 
+  it("Revert on invalid asset address.", async function () {
+    await expect(
+      liquidatedShareReserve.releaseFunds(
+        "0x0000000000000000000000000000000000000000",
+        10
+      )
+    ).to.be.rejectedWith("Liquidated shares Reserves: Asset address invalid");
+  });
+
+  it("Revert on Insufficient balance.", async function () {
+    await expect(
+      liquidatedShareReserve.releaseFunds(mockDAI.address, 10)
+    ).to.be.rejectedWith("Liquidated shares Reserves: Insufficient balance");
+  });
+
   it("Release liquidated share reserve", async function () {
     await mockDAI.transfer(
       liquidatedShareReserve.address,

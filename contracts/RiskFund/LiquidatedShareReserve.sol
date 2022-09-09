@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./EIP20Interface.sol";
-import "./ExponentialNoError.sol";
+import "../EIP20Interface.sol";
+import "../ExponentialNoError.sol";
 
 contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
     address private liquidatedShares;
@@ -38,6 +38,7 @@ contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
      * @dev Release funds
      * @param asset  Asset to be released.
      * @param amount Amount to release.
+     * @return Number of total released tokens.
      */
     function releaseFunds(address asset, uint256 amount)
         external
@@ -50,7 +51,7 @@ contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
         );
         require(
             amount <= EIP20Interface(asset).balanceOf(address(this)),
-            "Liquidated shares Reserves: In sufficient balance"
+            "Liquidated shares Reserves: Insufficient balance"
         );
         EIP20Interface(asset).transfer(
             liquidatedShares,

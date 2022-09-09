@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./CToken.sol";
-import "./Pool/PoolRegistry.sol";
-import "./Pool/PoolRegistryInterface.sol";
-import "./IPancakeswapV2Router.sol";
-import "./Pool/PoolRegistry.sol";
+import "../CToken.sol";
+import "../Pool/PoolRegistry.sol";
+import "../Pool/PoolRegistryInterface.sol";
+import "../IPancakeswapV2Router.sol";
+import "../Pool/PoolRegistry.sol";
 
 contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     address private poolRegistry;
@@ -102,66 +102,94 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     }
 
     /**
-     * @dev Convert asset to BUSD
+     * @dev Swap single asset to BUSD.
+     * @param cToken CToken
+     * @param comptroller comptorller address
+     * @return Number of BUSD tokens.
      */
-    function convertoToBUSD() external returns (uint256) {
+    function swapAsset(CToken cToken, address comptroller)
+        public
+        returns (uint256)
+    {
         uint256 totalAmount;
 
+        address underlyingAsset = CErc20Interface(address(cToken)).underlying();
+        uint256 balanceOfUnderlyingAsset = EIP20Interface(underlyingAsset)
+            .balanceOf(address(this));
+
+        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller)
+            .oracle()
+            .getUnderlyingPrice(CToken(cToken));
+
+        if (balanceOfUnderlyingAsset > 0) {
+            Exp memory oraclePrice = Exp({mantissa: underlyingAssetPrice});
+            uint256 amountInUsd = mul_ScalarTruncate(
+                oraclePrice,
+                balanceOfUnderlyingAsset
+            );
+
+            if (amountInUsd >= minAmountToConvert) {
+                address[] memory path = new address[](2);
+                path[0] = underlyingAsset;
+                path[1] = convertableBUSDAddress;
+                EIP20Interface(underlyingAsset).approve(
+                    pancakeSwapRouter,
+                    balanceOfUnderlyingAsset
+                );
+                uint256[] memory amounts = IPancakeswapV2Router(
+                    pancakeSwapRouter
+                ).swapExactTokensForTokens(
+                        balanceOfUnderlyingAsset,
+                        amountOutMin,
+                        path,
+                        address(this),
+                        block.timestamp
+                    );
+                totalAmount = amounts[1];
+            }
+        }
+        return totalAmount;
+    }
+
+    /**
+     * @dev Swap assets of selected pools into BUSD tokens.
+     * @param venusPools Array of Pools to swap for BUSD
+     * @return Number of BUSD tokens.
+     */
+    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools)
+        public
+        returns (uint256)
+    {
+        uint256 totalAmount;
+        for (uint256 i; i < venusPools.length; ++i) {
+            if (venusPools[i].comptroller != address(0)) {
+                CToken[] memory cTokens = ComptrollerInterface(
+                    venusPools[i].comptroller
+                ).getAllMarkets();
+
+                for (uint256 j; j < cTokens.length; ++j) {
+                    address comptroller = venusPools[i].comptroller;
+                    CToken cToken = cTokens[j];
+                    totalAmount = totalAmount + swapAsset(cToken, comptroller);
+                }
+            }
+        }
+        return totalAmount;
+    }
+
+    /**
+     * @dev Swap assets of all pools into BUSD tokens.
+     * @return Number of BUSD tokens.
+     */
+    function swapAllPoolsAssets() external returns (uint256) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(
             poolRegistry
         );
         PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface
             .getAllPools();
 
-        for (uint256 i; i < venusPools.length; ++i) {
-            if (venusPools[i].comptroller != address(0)) {
-                CToken[] memory allMarkets = ComptrollerInterface(
-                    venusPools[i].comptroller
-                ).getAllMarkets();
+        uint256 totalAmount = swapPoolsAssets(venusPools);
 
-                for (uint256 j; j < allMarkets.length; ++j) {
-                    uint256 underlyingPrice = ComptrollerViewInterface(
-                        venusPools[i].comptroller
-                    ).oracle().getUnderlyingPrice(CToken(allMarkets[j]));
-                    address asset = CErc20Interface(address(allMarkets[j]))
-                        .underlying();
-                    uint256 underlyingAssets = EIP20Interface(asset).balanceOf(
-                        address(this)
-                    );
-
-                    if (underlyingAssets > 0) {
-                        Exp memory oraclePrice = Exp({
-                            mantissa: underlyingPrice
-                        });
-                        uint256 amountInUsd = mul_ScalarTruncate(
-                            oraclePrice,
-                            underlyingAssets
-                        );
-
-                        if (amountInUsd >= minAmountToConvert) {
-                            address[] memory path = new address[](2);
-                            path[0] = asset;
-                            path[1] = convertableBUSDAddress;
-                            EIP20Interface(asset).approve(
-                                pancakeSwapRouter,
-                                underlyingAssets
-                            );
-                            uint256[] memory amounts = IPancakeswapV2Router(
-                                pancakeSwapRouter
-                            ).swapExactTokensForTokens(
-                                    underlyingAssets,
-                                    amountOutMin,
-                                    path,
-                                    address(this),
-                                    block.timestamp
-                                );
-                            totalAmount = totalAmount + amounts[1];
-                        }
-                    }
-                }
-            }
-        }
-
-        return (totalAmount);
+        return totalAmount;
     }
 }

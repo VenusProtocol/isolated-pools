@@ -274,8 +274,30 @@ describe("Risk Fund: Tests", function () {
     await riskFund.setPoolRegistry(poolRegistry.address);
   });
 
+  describe("Test all setters", async function () {
+    it("Revert on invalid Pool registry address.", async function () {
+      await expect(
+        riskFund.setPoolRegistry("0x0000000000000000000000000000000000000000")
+      ).to.be.rejectedWith("Risk Fund: Pool registry address invalid");
+    });
+
+    it("Revert on invalid Pancake swap address.", async function () {
+      await expect(
+        riskFund.setPancakeSwapRouter(
+          "0x0000000000000000000000000000000000000000"
+        )
+      ).to.be.rejectedWith("Risk Fund: Pancake swap address invalid");
+    });
+
+    it("Revert on invalid min amount to convert.", async function () {
+      await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith(
+        "Risk Fund: Invalid min amout to convert"
+      );
+    });
+  });
+
   it("Convert to BUSD without funds", async function () {
-    const amount = await riskFund.callStatic.convertoToBUSD();
+    const amount = await riskFund.callStatic.swapAllPoolsAssets();
     expect(amount).equal("0");
   });
 
@@ -290,7 +312,7 @@ describe("Risk Fund: Tests", function () {
     const riskFundUSDCBal = await mockUSDC.balanceOf(riskFund.address);
     expect(riskFundUSDCBal).equal(convertToUnit(15, 18));
 
-    const amount = await riskFund.callStatic.convertoToBUSD();
+    const amount = await riskFund.callStatic.swapAllPoolsAssets();
     expect(amount).equal("0");
   });
 
@@ -300,7 +322,7 @@ describe("Risk Fund: Tests", function () {
     const riskFundUSDCBal = await mockUSDC.balanceOf(riskFund.address);
     expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
-    await riskFund.convertoToBUSD();
+    await riskFund.swapAllPoolsAssets();
     const balanceAfter = await mockUSDC.balanceOf(riskFund.address);
     expect(balanceAfter).equal("0");
 
@@ -326,7 +348,7 @@ describe("Risk Fund: Tests", function () {
     const riskFundUSDTBal = await mockUSDT.balanceOf(riskFund.address);
     expect(riskFundUSDTBal).equal(convertToUnit(30, 18));
 
-    await riskFund.convertoToBUSD();
+    await riskFund.swapAllPoolsAssets();
     const balanceBUSD = await mockBUSD.balanceOf(riskFund.address);
     expect(Number(balanceBUSD)).to.be.greaterThan(
       Number(convertToUnit(89, 18))
