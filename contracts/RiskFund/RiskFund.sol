@@ -15,6 +15,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     uint256 private minAmountToConvert;
     uint256 private amountOutMin;
     address private convertableBUSDAddress;
+    address private auctionContractAddress;
+    mapping(uint256 => uint256) private poolReserves;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -63,6 +65,18 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     }
 
     /**
+     * @dev Auction contract address setter
+     * @param _auctionContractAddress Address of the auction contract.
+     */
+    function setAuctionContractAddress(address _auctionContractAddress) external onlyOwner {
+        require(
+            _auctionContractAddress != address(0),
+            "Risk Fund: Auction contract address invalid"
+        );
+        auctionContractAddress = _auctionContractAddress;
+    }
+
+    /**
      * @dev Pancake swap router address setter
      * @param _pancakeSwapRouter Address of the pancake swap router.
      */
@@ -108,7 +122,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @return Number of BUSD tokens.
      */
     function swapAsset(CToken cToken, address comptroller)
-        public
+        internal
         returns (uint256)
     {
         uint256 totalAmount;
@@ -170,7 +184,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
                 for (uint256 j; j < cTokens.length; ++j) {
                     address comptroller = venusPools[i].comptroller;
                     CToken cToken = cTokens[j];
-                    totalAmount = totalAmount + swapAsset(cToken, comptroller);
+                    uint256 swappedTokens = swapAsset(cToken, comptroller);
+                    poolReserves[venusPools[i].poolId] = poolReserves[venusPools[i].poolId] + swappedTokens;
+                    totalAmount = totalAmount + swappedTokens;
                 }
             }
         }
@@ -182,6 +198,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @return Number of BUSD tokens.
      */
     function swapAllPoolsAssets() external returns (uint256) {
+        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(
             poolRegistry
         );
@@ -191,5 +208,28 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount = swapPoolsAssets(venusPools);
 
         return totalAmount;
+    }
+
+    /**
+     * @dev Get pool reserve by pool id.
+     * @param poolId Id of the pool.
+     * @return Number reserved tokens.
+     */
+    function getPoolReserve(uint256 poolId) external view returns(uint256) {
+        return poolReserves[poolId];
+    }
+
+    /**
+     * @dev Transfer tokens for auction.
+     * @param poolId Id of the pool.
+     * @param amount Amount to be transferred to auction contract.
+     * @return Number reserved tokens.
+     */
+    function transferReserveForAuction(uint256 poolId, uint256 amount) external onlyOwner returns(uint256) {
+        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
+        require(amount <= poolReserves[poolId], "Risk Fund: Insufficient balance.");
+        poolReserves[poolId] = poolReserves[poolId] - amount;
+        EIP20Interface(convertableBUSDAddress).transfer(auctionContractAddress, amount);
+        return amount;
     }
 }

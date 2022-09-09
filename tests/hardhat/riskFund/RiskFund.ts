@@ -353,5 +353,37 @@ describe("Risk Fund: Tests", function () {
     expect(Number(balanceBUSD)).to.be.greaterThan(
       Number(convertToUnit(89, 18))
     );
+
+    const pool1Reserve = await riskFund.getPoolReserve(1);
+    const pool2Reserve = await riskFund.getPoolReserve(2);
+    expect(Number(pool1Reserve)).to.be.greaterThan(
+      Number(convertToUnit(89, 18))
+    );
+    expect(pool2Reserve).equal(0);
+  });
+
+  it("Revert while transfering funds to Auction contract", async function () {
+    await expect(
+      riskFund.transferReserveForAuction(1, convertToUnit(30, 18))
+    ).to.be.rejectedWith("Risk Fund: Auction contract invalid address.");
+
+    const auctionContract = "0x0000000000000000000000000000000000000001";
+    await riskFund.setAuctionContractAddress(auctionContract);
+
+    await expect(
+      riskFund.transferReserveForAuction(1, convertToUnit(100, 18))
+    ).to.be.rejectedWith("Risk Fund: Insufficient balance.");
+  });
+
+  it("Transfer funds to auction contact", async function () {
+    const auctionContract = "0x0000000000000000000000000000000000000001";
+
+    await riskFund.transferReserveForAuction(1, convertToUnit(30, 18));
+    const amount = await mockBUSD.balanceOf(auctionContract);
+    const remainingBalance = await mockBUSD.balanceOf(riskFund.address);
+    const poolReserve = await riskFund.getPoolReserve(1);
+
+    expect(Number(amount)).to.be.greaterThan(Number(convertToUnit(20, 18)));
+    expect(remainingBalance).equal(poolReserve);
   });
 });
