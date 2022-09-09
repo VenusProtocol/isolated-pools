@@ -240,7 +240,6 @@ contract Shortfall is OwnableUpgradeable {
         }
 
         auction.status = AuctionStatus.ENDED;
-        //update exchange rate
 
         emit AuctionClosed(
             auction.highestBidder,
