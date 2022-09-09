@@ -21,7 +21,6 @@ jobs:
           touch .env
           echo FORK_MAINNET=${{ secrets.FORK_MAINNET }} >> .env
           echo QUICK_NODE_KEY=${{ secrets.QUICK_NODE_KEY }} >> .env
-          cat .env
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
       - name: Run hardhat tests
