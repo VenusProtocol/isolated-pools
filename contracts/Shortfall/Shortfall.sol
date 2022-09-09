@@ -18,9 +18,11 @@ contract Shortfall is OwnableUpgradeable {
     //Incentive to auction participants.
     uint256 public constant incentiveBps = 1000; //10%
 
+    //Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10_000;
 
-    //Bidding period
+    //Time to wait for next bidder. wait for 10 blocks
+    uint256 private constant nextBidderBlockLimit = 10;
 
     enum AuctionType {
         LARGE_RISK_FUND,
@@ -44,7 +46,8 @@ contract Shortfall is OwnableUpgradeable {
         CToken[] markets;
         uint256 seizedRiskFund;
         address highestBidder;
-        address highestBidBps;
+        uint256 highestBidBps;
+        uint256 highestBidBlock;
         uint256 startBidBps;
         mapping (CToken => uint256) marketDebt;
     }
@@ -69,6 +72,7 @@ contract Shortfall is OwnableUpgradeable {
             CToken cToken = auction.markets[i];
             auction.marketDebt[cToken] = 0;
             auction.highestBidBps = 0;
+            auction.highestBidBlock = 0;
         }
 
         delete auction.markets;
@@ -112,7 +116,7 @@ contract Shortfall is OwnableUpgradeable {
         }
 
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
-        riskFundBalance = remainingRiskFundBalance; //for testing. we need to update the risk fund balance in risk fund contract
+        riskFundBalance = remainingRiskFundBalance; //for testing. we need to update the risk fund balance in risk fund contract and transfer rest to this contract
 
         auction.startBlock = block.number;
         auction.status = AuctionStatus.STARTED;
@@ -120,26 +124,46 @@ contract Shortfall is OwnableUpgradeable {
     }
 
     function placeBid(
-        TokenBid[] memory bid,
-        uint256 seizeRiskFund
+        uint256 bidBps
     ) external {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
-        require(bid.length == auction.markets.length, "you need to bid all markets");
+        require(bidBps > 10000, "basis points cannot be more than 10000");
+        require(
+            (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
+            (
+                (auction.highestBidder != address(0) && bidBps > auction.highestBidBps) ||
+                (auction.highestBidder == address(0) && bidBps > auction.startBidBps)
+            )) ||
+            (auction.auctionType == AuctionType.LARGE_RISK_FUND && 
+            (
+                (auction.highestBidder != address(0) && bidBps < auction.highestBidBps) ||
+                (auction.highestBidder == address(0) && bidBps <= auction.startBidBps)
+            )),
+            "your bid is not the highest"
+        );
 
-        for (uint256 i = 0; i < bid.length; i++) {
+        for (uint256 i = 0; i < auction.markets.length; i++) {
+            CErc20 cErc20 = CErc20(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(cErc20.underlying()));
 
-            require(auction.marketDebt[bid[i].cToken] > 0, "market is not part of auction");
-
-            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-                require(bid[i].amount <= auction.marketDebt[bid[i].cToken], "cannot bid more than debt");
-                require(seizeRiskFund == auction.seizedRiskFund, "you need to seize total risk fund");
+            if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
+                uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps)/MAX_BPS);
+                erc20.transferFrom(address(this), auction.highestBidder, previousBidAmount);
+                erc20.transferFrom(msg.sender, address(this), currentBidAmount);
             } else {
-                require(bid[i].amount == auction.marketDebt[bid[i].cToken], "invalid bid amount");
-                require(seizeRiskFund <= auction.seizedRiskFund, "invalid seize risk fund");
+                erc20.transferFrom(address(this), auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                erc20.transferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
-
-            IERC20 token = IERC20(CErc20(address(bid[i].cToken)).underlying());
-            token.transferFrom(msg.sender, address(this), bid[i].amount);
         }
+
+        auction.highestBidder = msg.sender;
+        auction.highestBidBps = bidBps;
+        auction.highestBidBlock = block.number;
+    }
+
+    function closeAuction() external {
+        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(block.number > auction.highestBidBlock + nextBidderBlockLimit, "waiting for next bidder. cannot close auction" );
     }
 }
