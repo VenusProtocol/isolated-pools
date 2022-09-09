@@ -63,7 +63,7 @@ describe("assetListTest", () => {
     accessControl.isAllowedToCall.returns(true);
     oracle.getUnderlyingPrice.returns(convertToUnit("0.5", 18));
     allTokens.map((cToken, i) => {
-      cToken.isCToken.returns(true);
+      cToken.isVToken.returns(true);
       cToken.symbol.returns(names[i]);
       cToken.name.returns(names[i]);
       cToken.getAccountSnapshot.returns([0, 0, 0, 0]);

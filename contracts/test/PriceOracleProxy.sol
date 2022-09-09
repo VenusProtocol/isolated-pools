@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/CErc20.sol";
-import "../../contracts/CToken.sol";
+import "../../contracts/VBep20.sol";
+import "../../contracts/VToken.sol";
 import "../../contracts/PriceOracle.sol";
 
 interface V1PriceOracleInterface {
@@ -67,33 +67,33 @@ contract PriceOracleProxy is PriceOracle {
     }
 
     /**
-     * @notice Get the underlying price of a listed cToken asset
-     * @param cToken The cToken to get the underlying price of
+     * @notice Get the underlying price of a listed vToken asset
+     * @param vToken The vToken to get the underlying price of
      * @return The underlying asset price mantissa (scaled by 1e18)
      */
-    function getUnderlyingPrice(CToken cToken) override public view returns (uint) {
-        address cTokenAddress = address(cToken);
+    function getUnderlyingPrice(VToken vToken) override public view returns (uint) {
+        address vTokenAddress = address(vToken);
 
-        if (cTokenAddress == cEthAddress) {
+        if (vTokenAddress == cEthAddress) {
             // ether always worth 1
             return 1e18;
         }
 
-        if (cTokenAddress == cUsdcAddress || cTokenAddress == cUsdtAddress) {
+        if (vTokenAddress == cUsdcAddress || vTokenAddress == cUsdtAddress) {
             return v1PriceOracle.assetPrices(usdcOracleKey);
         }
 
-        if (cTokenAddress == cDaiAddress) {
+        if (vTokenAddress == cDaiAddress) {
             return v1PriceOracle.assetPrices(daiOracleKey);
         }
 
-        if (cTokenAddress == cSaiAddress) {
+        if (vTokenAddress == cSaiAddress) {
             // use the frozen SAI price if set, otherwise use the DAI price
             return saiPrice > 0 ? saiPrice : v1PriceOracle.assetPrices(daiOracleKey);
         }
 
         // otherwise just read from v1 oracle
-        address underlying = CErc20(cTokenAddress).underlying();
+        address underlying = VBep20(vTokenAddress).underlying();
         return v1PriceOracle.assetPrices(underlying);
     }
 

@@ -7,12 +7,12 @@ import "../Comptroller.sol";
 import "../Unitroller.sol";
 import "../PriceOracle.sol";
 
-import "../Factories/CErc20ImmutableFactory.sol";
+import "../Factories/VBep20ImmutableFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
 import "../JumpRateModelV2.sol";
-import "../CErc20Immutable.sol";
+import "../VBep20Immutable.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 
@@ -21,7 +21,7 @@ import "../Governance/AccessControlManager.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is OwnableUpgradeable {
-    CErc20ImmutableFactory private cTokenFactory;
+    VBep20ImmutableFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
 
@@ -29,13 +29,13 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Initializes the deployer to owner.
      */
     function initialize(
-        CErc20ImmutableFactory _cTokenFactory,
+        VBep20ImmutableFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory
     ) public initializer {
         __Ownable_init();
 
-        cTokenFactory = _cTokenFactory;
+        vTokenFactory = _vTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
     }
@@ -99,9 +99,9 @@ contract PoolRegistry is OwnableUpgradeable {
     mapping(address => address[]) private _bookmarks;
 
     /**
-     * @dev Maps pool id to asset to cToken.
+     * @dev Maps pool id to asset to vToken.
      */
-    mapping(uint256 => mapping(address => address)) private _cTokens;
+    mapping(uint256 => mapping(address => address)) private _vTokens;
 
     /**
      * @dev Maps asset to list of supported pools.
@@ -146,7 +146,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Emitted when a Market is added to the pool.
      */
-    event MarketAdded(uint256 indexed index, address indexed comptroller, address cTokenAddress);
+    event MarketAdded(uint256 indexed index, address indexed comptroller, address vTokenAddress);
 
     /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
@@ -368,7 +368,7 @@ contract PoolRegistry is OwnableUpgradeable {
             _poolsByID[input.poolId].comptroller
         );
 
-        CErc20Immutable cToken = cTokenFactory.deployCErc20(
+        VBep20Immutable vToken = vTokenFactory.deployVBep20(
             input.asset,
             comptroller,
             rate,
@@ -380,21 +380,21 @@ contract PoolRegistry is OwnableUpgradeable {
             input.accessControlManager
         );
 
-        comptroller._supportMarket(cToken);
-        comptroller._setCollateralFactor(cToken, input.collateralFactor);
+        comptroller._supportMarket(vToken);
+        comptroller._setCollateralFactor(vToken, input.collateralFactor);
 
-        _cTokens[input.poolId][input.asset] = address(cToken);
+        _vTokens[input.poolId][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.poolId);
 
-        emit MarketAdded(input.poolId, address(comptroller), address(cToken));
+        emit MarketAdded(input.poolId, address(comptroller), address(vToken));
     }
 
-    function getCTokenForAsset(uint256 poolId, address asset)
+    function getVTokenForAsset(uint256 poolId, address asset)
         external
         view
         returns (address)
     {
-        return _cTokens[poolId][asset];
+        return _vTokens[poolId][asset];
     }
 
     function getPoolsSupportedByAsset(address asset)
