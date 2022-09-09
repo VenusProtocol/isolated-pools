@@ -60,6 +60,30 @@ contract Shortfall is OwnableUpgradeable {
 
     Auction public auction;
 
+    event AuctionStarted(
+        uint256 startBlock,
+        AuctionType auctionType,
+        CToken[] markets,
+        uint256[] marketsDebt,
+        uint256 seizedRiskFund,
+        uint256 startBidBps
+    );
+
+    event BidPlaced(
+        uint256 bidBps,
+        address bidder
+    );
+
+    event AuctionClosed(
+        address highestBidder,
+        uint256 highestBidBps,
+        uint256 seizedRiskFind,
+        CToken[] markets,
+        uint256[] marketDebt
+    );
+
+    event AuctionRestarted();
+
     constructor(address _comptroller, IERC20 _BUSD) {
         comptroller = _comptroller;
         BUSD = _BUSD;
@@ -71,7 +95,7 @@ contract Shortfall is OwnableUpgradeable {
         minimumPoolBadDebt = _minimumPoolBadDebt;
     }
 
-    function startAuction() external {
+    function startAuction() public {
         require(auction.startBlock == 0 || auction.status == AuctionStatus.ENDED, "auction is on-going");
 
         //clear the mappings
@@ -88,6 +112,8 @@ contract Shortfall is OwnableUpgradeable {
         PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(comptroller).priceOracle()); 
         uint256 poolBadDebt = 0;       
 
+        uint256[] memory marketsDebt;
+
         for (uint256 i = 0; i < cTokens.length; i++) {
             uint256 marketBadDebt = cTokens[i].badDebt();
             uint256 usdValue =  priceOracle.getUnderlyingPrice(cTokens[i]) * marketBadDebt;
@@ -95,6 +121,7 @@ contract Shortfall is OwnableUpgradeable {
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = cTokens[i];
             auction.marketDebt[cTokens[i]] = marketBadDebt;
+            marketsDebt[i] = marketBadDebt;
 
             // cTokens[i].updateMarketBadDebt(0) - TBD
         }
@@ -128,6 +155,15 @@ contract Shortfall is OwnableUpgradeable {
         auction.startBlock = block.number;
         auction.status = AuctionStatus.STARTED;
         auction.highestBidder = address(0);
+
+        emit AuctionStarted(
+            auction.startBlock,
+            auction.auctionType,
+            auction.markets,
+            marketsDebt,
+            auction.seizedRiskFund,
+            auction.startBidBps
+        );
     }
 
     function placeBid(
@@ -156,10 +192,10 @@ contract Shortfall is OwnableUpgradeable {
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
                 uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps)/MAX_BPS);
-                erc20.transferFrom(address(this), auction.highestBidder, previousBidAmount);
+                erc20.transfer(auction.highestBidder, previousBidAmount);
                 erc20.transferFrom(msg.sender, address(this), currentBidAmount);
             } else {
-                erc20.transferFrom(address(this), auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                erc20.transfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
                 erc20.transferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
         }
@@ -167,11 +203,15 @@ contract Shortfall is OwnableUpgradeable {
         auction.highestBidder = msg.sender;
         auction.highestBidBps = bidBps;
         auction.highestBidBlock = block.number;
+
+        emit BidPlaced(bidBps, msg.sender);
     }
 
     function closeAuction() external {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0), "waiting for next bidder. cannot close auction" );
+        
+        uint256[] memory marketsDebt;
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
             CErc20 cErc20 = CErc20(address(auction.markets[i]));
@@ -179,28 +219,46 @@ contract Shortfall is OwnableUpgradeable {
 
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
-                erc20.transferFrom(address(this), address(auction.markets[i]), bidAmount);
+                erc20.transfer(address(auction.markets[i]), bidAmount);
+                marketsDebt[i] = bidAmount;
             } else {
-                erc20.transferFrom(address(this), address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
+                erc20.transfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
+                marketsDebt[i] = auction.marketDebt[auction.markets[i]];
             }
         }
 
-        if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-            BUSD.transferFrom(address(this), auction.highestBidder, auction.seizedRiskFund);
-        } else {
-            uint256 riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
-            BUSD.transferFrom(address(this), auction.highestBidder, riskFundBidAmount);
+        uint256 riskFundBidAmount = auction.seizedRiskFund;
 
-            uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - seizedRiskFund;
+        if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
+        } else {
+            riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
+            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
+
+            uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
             //transfer remainingRiskFundSeizedAmount to risk fund
         }
 
         auction.status = AuctionStatus.ENDED;
         //update exchange rate
+
+        emit AuctionClosed(
+            auction.highestBidder,
+            auction.highestBidBps,
+            riskFundBidAmount,
+            auction.markets,
+            marketsDebt
+        );
     }
 
     function restartAuction() external {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0), "you need to wait for more time for first bidder" );
+
+        auction.status = AuctionStatus.ENDED;
+        //transfer auction.seizedRiskFund to risk fund contract and update the balance in the risk fund contract
+
+        emit AuctionRestarted();
+        startAuction();
     }
 }
