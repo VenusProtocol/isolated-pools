@@ -16,13 +16,19 @@ contract Shortfall is OwnableUpgradeable {
     uint256 public minimumPoolBadDebt;
 
     //Incentive to auction participants.
-    uint256 public constant incentiveBps = 1000; //10%
+    uint256 private constant incentiveBps = 1000; //10%
 
     //Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10_000;
 
     //Time to wait for next bidder. wait for 10 blocks
     uint256 private constant nextBidderBlockLimit = 10;
+
+    //Time to wait for first bidder. wait for 100 blocks
+    uint256 private constant waitForFirstBidder = 100;
+
+    //BUSD contract address
+    IERC20 private immutable BUSD;
 
     enum AuctionType {
         LARGE_RISK_FUND,
@@ -54,8 +60,9 @@ contract Shortfall is OwnableUpgradeable {
 
     Auction public auction;
 
-    constructor(address _comptroller) {
+    constructor(address _comptroller, IERC20 _BUSD) {
         comptroller = _comptroller;
+        BUSD = _BUSD;
     }
 
     function initialize(uint256 _minimumPoolBadDebt) public initializer {
@@ -164,6 +171,36 @@ contract Shortfall is OwnableUpgradeable {
 
     function closeAuction() external {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
-        require(block.number > auction.highestBidBlock + nextBidderBlockLimit, "waiting for next bidder. cannot close auction" );
+        require(block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0), "waiting for next bidder. cannot close auction" );
+
+        for (uint256 i = 0; i < auction.markets.length; i++) {
+            CErc20 cErc20 = CErc20(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(cErc20.underlying()));
+
+            if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
+                erc20.transferFrom(address(this), address(auction.markets[i]), bidAmount);
+            } else {
+                erc20.transferFrom(address(this), address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
+            }
+        }
+
+        if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+            BUSD.transferFrom(address(this), auction.highestBidder, auction.seizedRiskFund);
+        } else {
+            uint256 riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
+            BUSD.transferFrom(address(this), auction.highestBidder, riskFundBidAmount);
+
+            uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - seizedRiskFund;
+            //transfer remainingRiskFundSeizedAmount to risk fund
+        }
+
+        auction.status = AuctionStatus.ENDED;
+        //update exchange rate
+    }
+
+    function restartAuction() external {
+        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0), "you need to wait for more time for first bidder" );
     }
 }
