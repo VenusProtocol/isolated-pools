@@ -9,18 +9,21 @@ jobs:
   build:
     runs-on: self-hosted
     env:
+      CI: true
       FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
       QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
     steps:
       - uses: actions/checkout@v2
-      - name: Echo ENV Vars
-        run: |
-          echo "FORK_MAINNET "
-          echo ${{ secrets.FORK_MAINNET }} | sed 's/./& /g'
       - name: Clear
         run: docker container prune -f && docker image prune -f
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo FORK_MAINNET=${{ secrets.FORK_MAINNET }} >> .env
+          echo QUICK_NODE_KEY=${{ secrets.QUICK_NODE_KEY }} >> .env
+          cat .env
       - name: Run hardhat tests
         run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:test"
       - name: Clear
