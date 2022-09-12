@@ -8,6 +8,7 @@ import "../CToken.sol";
 import "../CErc20.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
+import "./IRiskFund.sol";
 
 contract Shortfall is OwnableUpgradeable {
     enum AuctionType {
@@ -74,7 +75,7 @@ contract Shortfall is OwnableUpgradeable {
     address private poolRegistry;
 
     //Risk fund address
-    address immutable private riskFund;
+    IRiskFund immutable private riskFund;
 
     //Minimum USD debt in pool for shortfall to trigger 
     uint256 public minimumPoolBadDebt;
@@ -97,7 +98,7 @@ contract Shortfall is OwnableUpgradeable {
     //Auctions for each pool
     mapping (uint256 => Auction) auctions;
 
-    constructor(IERC20 _BUSD, address _riskFund) {
+    constructor(IERC20 _BUSD, IRiskFund _riskFund) {
         BUSD = _BUSD;
         riskFund = _riskFund;
     }
@@ -128,7 +129,6 @@ contract Shortfall is OwnableUpgradeable {
 
         require(auction.startBlock == 0 || auction.status == AuctionStatus.ENDED, "auction is on-going");
 
-        //clear the mappings
         for (uint256 i = 0; i < auction.markets.length; i++) {
             CToken cToken = auction.markets[i];
             auction.marketDebt[cToken] = 0;
@@ -152,13 +152,11 @@ contract Shortfall is OwnableUpgradeable {
             auction.markets[i] = cTokens[i];
             auction.marketDebt[cTokens[i]] = marketBadDebt;
             marketsDebt[i] = marketBadDebt;
-
-            // cTokens[i].updateMarketBadDebt(0) - TBD
         }
 
         require(poolBadDebt < minimumPoolBadDebt, "pool bad debt is too low");
         
-        uint256 riskFundBalance = 50000 * 10**18; // for testing. we need to fetch the risk fund balance
+        uint256 riskFundBalance = riskFund.getPoolReserve(poolId);
         uint256 remainingRiskFundBalance = riskFundBalance;
 
         if (poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS) >= riskFundBalance) {
@@ -180,8 +178,6 @@ contract Shortfall is OwnableUpgradeable {
         }
 
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
-        riskFundBalance = remainingRiskFundBalance; //for testing. we need to update the risk fund balance in risk fund contract and transfer rest to this contract
-
         auction.startBlock = block.number;
         auction.status = AuctionStatus.STARTED;
         auction.highestBidder = address(0);
@@ -266,13 +262,15 @@ contract Shortfall is OwnableUpgradeable {
         uint256 riskFundBidAmount = auction.seizedRiskFund;
 
         if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+            riskFund.transferReserveForAuction(poolId, riskFundBidAmount);
             BUSD.transfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
             BUSD.transfer(auction.highestBidder, riskFundBidAmount);
 
             uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
-            //transfer remainingRiskFundSeizedAmount to risk fund
+            riskFund.transferReserveForAuction(poolId, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
+            BUSD.transfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
         }
 
         auction.status = AuctionStatus.ENDED;
@@ -294,7 +292,6 @@ contract Shortfall is OwnableUpgradeable {
         require(block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0), "you need to wait for more time for first bidder" );
 
         auction.status = AuctionStatus.ENDED;
-        //transfer auction.seizedRiskFund to risk fund contract and update the balance in the risk fund contract
 
         emit AuctionRestarted(poolId);
         startAuction(poolId);
