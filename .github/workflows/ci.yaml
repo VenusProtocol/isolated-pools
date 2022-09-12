@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CI: true
       FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
       QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
     steps:
