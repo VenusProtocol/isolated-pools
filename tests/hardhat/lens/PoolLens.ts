@@ -7,12 +7,12 @@ import {
   SimplePriceOracle,
   MockPriceOracle,
   Unitroller,
-  CErc20ImmutableFactory,
+  VBep20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   PoolLens,
   AccessControlManager,
-  CErc20Immutable
+  VBep20Immutable
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Signer } from "ethers";
@@ -26,14 +26,14 @@ let simplePriceOracle1: SimplePriceOracle;
 let simplePriceOracle2: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let cDAI: CErc20Immutable;
-let cWBTC: CErc20Immutable;
+let cDAI: VBep20Immutable;
+let cWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let unitroller1: Unitroller;
 let comptroller1Proxy: Comptroller;
 let unitroller2: Unitroller;
 let comptroller2Proxy: Comptroller;
-let cTokenFactory: CErc20ImmutableFactory;
+let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let poolLens: PoolLens;
@@ -50,10 +50,10 @@ describe("PoolLens - PoolView Tests", async function () {
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const CErc20ImmutableFactory = await ethers.getContractFactory(
-      "CErc20ImmutableFactory"
+    const VBep20ImmutableFactory = await ethers.getContractFactory(
+      "VBep20ImmutableFactory"
     );
-    cTokenFactory = await CErc20ImmutableFactory.deploy();
+    cTokenFactory = await VBep20ImmutableFactory.deploy();
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -219,17 +219,17 @@ describe("PoolLens - PoolView Tests", async function () {
     await unitroller2._acceptAdmin();
 
 
-    const cWBTCAddress = await poolRegistry.getCTokenForAsset(
+    const cWBTCAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cDAIAddress = await poolRegistry.getCTokenForAsset(
+    const cDAIAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockDAI.address
     );
 
-    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
-    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
+    cWBTC = await ethers.getContractAt("VBep20Immutable", cWBTCAddress);
+    cDAI = await ethers.getContractAt("VBep20Immutable", cDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
@@ -260,24 +260,23 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[8]).equal("http://venis.io/pool1");
     expect(venusPool_1_Actual[9]).equal("Pool1 description");
     expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
-    expect(venusPool_1_Actual[12]).equal(closeFactor1);
-    expect(venusPool_1_Actual[13]).equal(liquidationIncentive1);
-    expect(venusPool_1_Actual[14]).equal(0);
+    expect(venusPool_1_Actual[11]).equal(closeFactor1);
+    expect(venusPool_1_Actual[12]).equal(liquidationIncentive1);
+    expect(venusPool_1_Actual[13]).equal(0);
 
-    const cTokens_Actual = venusPool_1_Actual[15];
-    expect(cTokens_Actual.length).equal(2);
+    const vTokens_Actual = venusPool_1_Actual[14];
+    expect(vTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
-    const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
+    const cTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
+    const cTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(cTokenAddress_WBTC);
+    const cTokenMetadata_WBTC_Actual = vTokens_Actual[0];
     assertCTokenMetadata(cTokenMetadata_WBTC_Actual, cTokenMetadata_WBTC_Expected);
 
     // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(1, mockDAI.address);
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(cTokenAddress_DAI);
-    const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
+    const cTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
+    const cTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(cTokenAddress_DAI);
+    const cTokenMetadata_DAI_Actual = vTokens_Actual[1];
     assertCTokenMetadata(cTokenMetadata_DAI_Actual, cTokenMetadata_DAI_Expected);
 
     const venusPool_2_Actual = poolData[1];
@@ -290,10 +289,9 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_2_Actual[8]).equal("http://highrisk.io/pool2");
     expect(venusPool_2_Actual[9]).equal("Pool2 description");
     expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
-    expect(venusPool_1_Actual[12]).equal(closeFactor2);
-    expect(venusPool_1_Actual[13]).equal(liquidationIncentive2);
-    expect(venusPool_1_Actual[14]).equal(0);
+    expect(venusPool_1_Actual[11]).equal(closeFactor2);
+    expect(venusPool_1_Actual[12]).equal(liquidationIncentive2);
+    expect(venusPool_1_Actual[13]).equal(0);
   });
 
   it("getPoolData By Comptroller", async function () {
@@ -308,24 +306,23 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[8]).equal("http://venis.io/pool1");
     expect(poolData[9]).equal("Pool1 description");
     expect(poolData[10]).equal(priceOracle.address);
-    expect(poolData[11]).equal(ethers.constants.AddressZero);
-    expect(poolData[12]).equal(closeFactor1);
-    expect(poolData[13]).equal(liquidationIncentive1);
-    expect(poolData[14]).equal(0);
+    expect(poolData[11]).equal(closeFactor1);
+    expect(poolData[12]).equal(liquidationIncentive1);
+    expect(poolData[13]).equal(0);
 
-    const cTokens_Actual = poolData[15];
-    expect(cTokens_Actual.length).equal(2);
+    const vTokens_Actual = poolData[14];
+    expect(vTokens_Actual.length).equal(2);
 
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
-    const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
+    const cTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
+    const cTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(cTokenAddress_WBTC);
+    const cTokenMetadata_WBTC_Actual = vTokens_Actual[0];
     assertCTokenMetadata(cTokenMetadata_WBTC_Actual, cTokenMetadata_WBTC_Expected);
 
     // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(1, mockDAI.address);
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(cTokenAddress_DAI);
-    const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
+    const cTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
+    const cTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(cTokenAddress_DAI);
+    const cTokenMetadata_DAI_Actual = vTokens_Actual[1];
     assertCTokenMetadata(cTokenMetadata_DAI_Actual, cTokenMetadata_DAI_Expected);
   });
 });
@@ -339,10 +336,10 @@ describe("PoolLens - CTokens Query Tests", async function () {
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const CErc20ImmutableFactory = await ethers.getContractFactory(
-      "CErc20ImmutableFactory"
+    const VBep20ImmutableFactory = await ethers.getContractFactory(
+      "VBep20ImmutableFactory"
     );
-    cTokenFactory = await CErc20ImmutableFactory.deploy();
+    cTokenFactory = await VBep20ImmutableFactory.deploy();
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -508,11 +505,11 @@ describe("PoolLens - CTokens Query Tests", async function () {
 
   it('is correct for WBTC as underlyingAsset', async () => {
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(1, mockWBTC.address);
-    const cTokenMetadata_Actual = await poolLens.cTokenMetadata(cTokenAddress_WBTC);
+    const cTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
+    const cTokenMetadata_Actual = await poolLens.vTokenMetadata(cTokenAddress_WBTC);
 
     const cTokenMetadata_Actual_Parsed: any = cullTuple(cTokenMetadata_Actual);
-    expect(cTokenMetadata_Actual_Parsed["cToken"]).equal(cTokenAddress_WBTC);
+    expect(cTokenMetadata_Actual_Parsed["vToken"]).equal(cTokenAddress_WBTC);
     expect(cTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
     expect(cTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
     expect(cTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
@@ -524,7 +521,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
     expect(cTokenMetadata_Actual_Parsed["isListed"]).equal("true");
     expect(cTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("0");
     expect(cTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);
-    expect(cTokenMetadata_Actual_Parsed["cTokenDecimals"]).equal("8");
+    expect(cTokenMetadata_Actual_Parsed["vTokenDecimals"]).equal("8");
     expect(cTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
     });
   });
