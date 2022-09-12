@@ -92,6 +92,11 @@ contract VTokenStorage {
      */
     uint256 public badDebt;
 
+    /**
+     * @notice Underlying asset for this VToken
+     */
+    address public underlying;
+
     // Official record of token balances for each account
     mapping(address => uint256) internal accountTokens;
 
@@ -361,14 +366,7 @@ abstract contract VTokenInterface is VTokenStorage {
         returns (uint256);
 }
 
-contract VBep20Storage {
-    /**
-     * @notice Underlying asset for this VToken
-     */
-    address public underlying;
-}
-
-abstract contract VBep20Interface is VBep20Storage {
+abstract contract VBep20Interface {
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
