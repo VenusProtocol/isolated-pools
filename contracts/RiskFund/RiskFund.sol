@@ -133,7 +133,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
 
         uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller)
             .oracle()
-            .getUnderlyingPrice(CToken(cToken));
+            .getUnderlyingPrice(cToken);
 
         if (balanceOfUnderlyingAsset > 0) {
             Exp memory oraclePrice = Exp({mantissa: underlyingAssetPrice});
@@ -227,7 +227,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      */
     function transferReserveForAuction(uint256 poolId, uint256 amount) external onlyOwner returns(uint256) {
         require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
-        require(amount <= poolReserves[poolId], "Risk Fund: Insufficient balance.");
+        require(amount <= poolReserves[poolId], "Risk Fund: Insufficient pool reserve.");
         poolReserves[poolId] = poolReserves[poolId] - amount;
         EIP20Interface(convertableBUSDAddress).transfer(auctionContractAddress, amount);
         return amount;

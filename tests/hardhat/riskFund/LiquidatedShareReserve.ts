@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   MockToken,
@@ -9,36 +10,40 @@ import {
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 
+let mockDAI: MockToken;
+let fakeRiskFund: FakeContract<RiskFund>;
+let fakeLiquidatedShares: FakeContract<RiskFund>;
+let liquidatedShareReserve: LiquidatedShareReserve;
+
+const fixture = async (): Promise<void> => {
+  const MockDAI = await ethers.getContractFactory("MockToken");
+  mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
+  await mockDAI.faucet(convertToUnit(1000, 18));
+
+  // Fake contracts
+  fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
+  fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
+
+  // LiquidatedShareReserve contract deployment
+  const LiquidatedShareReserve = await ethers.getContractFactory(
+    "LiquidatedShareReserve"
+  );
+  liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+  await liquidatedShareReserve.deployed();
+
+  await liquidatedShareReserve.initialize(
+    fakeLiquidatedShares.address,
+    fakeRiskFund.address
+  );
+};
+
 describe("Liquidated shares reserves: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  let mockDAI: MockToken;
-  let fakeRiskFund: FakeContract<RiskFund>;
-  let fakeLiquidatedShares: FakeContract<RiskFund>;
-  let liquidatedShareReserve: LiquidatedShareReserve;
 
   before(async function () {
-    // Deploy Mock Token
-    const MockDAI = await ethers.getContractFactory("MockToken");
-    mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(convertToUnit(1000, 18));
-
-    // Fake contracts
-    fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
-    fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
-
-    // LiquidatedShareReserve contract deployment
-    const LiquidatedShareReserve = await ethers.getContractFactory(
-      "LiquidatedShareReserve"
-    );
-    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-    await liquidatedShareReserve.deployed();
-
-    await liquidatedShareReserve.initialize(
-      fakeLiquidatedShares.address,
-      fakeRiskFund.address
-    );
+    await loadFixture(fixture);
   });
 
   it("Revert on invalid asset address.", async function () {
