@@ -15,6 +15,8 @@ import "../JumpRateModelV2.sol";
 import "../CErc20Immutable.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
+import "../Shortfall/Shortfall.sol";
+import "../ComptrollerInterface.sol";
 
 /**
  * @title PoolRegistry
@@ -24,6 +26,7 @@ contract PoolRegistry is OwnableUpgradeable {
     CErc20ImmutableFactory private cTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
+    Shortfall private shortfall;    
 
     /**
      * @dev Initializes the deployer to owner.
@@ -31,13 +34,15 @@ contract PoolRegistry is OwnableUpgradeable {
     function initialize(
         CErc20ImmutableFactory _cTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
-        WhitePaperInterestRateModelFactory _whitePaperFactory
+        WhitePaperInterestRateModelFactory _whitePaperFactory,
+        Shortfall _shortfall
     ) public initializer {
         __Ownable_init();
 
         cTokenFactory = _cTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
+        shortfall = _shortfall;
     }
 
     /**
@@ -179,6 +184,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         _poolsByID[_numberOfPools] = pool;
         _poolByComptroller[comptroller] = _numberOfPools;
+
+        shortfall.setPoolComptroller(_numberOfPools, ComptrollerInterface(address(comptroller)));
 
         emit PoolRegistered(_numberOfPools, pool);
         return _numberOfPools;
