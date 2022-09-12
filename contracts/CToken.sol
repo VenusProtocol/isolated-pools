@@ -307,10 +307,10 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         } else {
             /*
              * Otherwise:
-             *  exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
+             *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
              */
             uint totalCash = getCashPrior();
-            uint cashPlusBorrowsMinusReserves = totalCash + totalBorrows - totalReserves;
+            uint cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
             uint exchangeRate = cashPlusBorrowsMinusReserves * expScale / _totalSupply;
 
             return exchangeRate;
