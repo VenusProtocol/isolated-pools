@@ -17,7 +17,7 @@ import {
   LiquidatedShareReserve,
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
-import { Signer } from "ethers";
+import { BigNumberish, Signer } from "ethers";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
@@ -42,10 +42,10 @@ let poolLens: PoolLens;
 let owner: Signer;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let closeFactor1: any,
-  closeFactor2: any,
-  liquidationIncentive1: any,
-  liquidationIncentive2: any;
+let closeFactor1: BigNumberish,
+  closeFactor2: BigNumberish,
+  liquidationIncentive1: BigNumberish,
+  liquidationIncentive2: BigNumberish;
 let liquidatedShareReserve: LiquidatedShareReserve;
 let riskFund: RiskFund;
 

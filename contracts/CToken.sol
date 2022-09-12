@@ -846,6 +846,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
+        emit Transfer(address(this), liquidatedShareReserve, protocolSeizeAmount);
     }
 
 

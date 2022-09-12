@@ -1,4 +1,5 @@
-// import * as dotenv from "dotenv";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
@@ -9,8 +10,6 @@ import "solidity-coverage";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
-
-require("dotenv").config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
