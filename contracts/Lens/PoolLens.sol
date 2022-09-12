@@ -30,7 +30,6 @@ contract PoolLens is ExponentialNoError {
         string logoURL;
         string description;
         address priceOracle;
-        address pauseGuardian;
         uint256 closeFactor;
         uint256 liquidationIncentive;
         uint256 maxAssets;
@@ -92,7 +91,6 @@ contract PoolLens is ExponentialNoError {
                 description: venusPoolMetaData.description,
                 vTokens: vTokenMetadataItems,
                 priceOracle: address(comptrollerViewInstance.oracle()),
-                pauseGuardian: comptrollerViewInstance.pauseGuardian(),
                 closeFactor: comptrollerViewInstance.closeFactorMantissa(),
                 liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
                 maxAssets: comptrollerViewInstance.maxAssets()
