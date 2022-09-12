@@ -7,8 +7,8 @@ import {
   MockToken,
   RiskFund,
   LiquidatedShareReserve,
-} from "../../../typechain";
-import { convertToUnit } from "../../../helpers/utils";
+} from "../../typechain";
+import { convertToUnit } from "../../helpers/utils";
 
 let mockDAI: MockToken;
 let fakeRiskFund: FakeContract<RiskFund>;

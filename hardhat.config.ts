@@ -10,7 +10,7 @@ import "solidity-coverage";
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
 
-require("dotenv").config()
+require("dotenv").config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -99,8 +99,6 @@ const config: HardhatUserConfig = {
 };
 
 function isFork() {
-  console.log("FORK_MAINNET", process.env.FORK_MAINNET, process.env.FORK_MAINNET === "true");
-  console.log("QUICK_NODE_KEY", process.env.QUICK_NODE_KEY)
   return process.env.FORK_MAINNET === "true"
     ? {
         allowUnlimitedContractSize: true,
