@@ -56,7 +56,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await deploy("PoolRegistry", {
     from: deployer,
-    args: [],
+    proxy: "initialize",
+    args: [
+      VBep20Factory.address,
+      JumpRateModelFactory.address,
+      WhitePaperRateFactory.address,
+    ],
     log: true,
     autoMine: true,
   });
@@ -70,15 +75,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
 
   await tx.wait(1);
-
-  tx = await poolRegistry.initialize(
-    VBep20Factory.address,
-    JumpRateModelFactory.address,
-    WhitePaperRateFactory.address
-  );
-
-  await tx.wait(1);
-
+  
   const Comptroller: DeployResult = await deploy("Comptroller", {
     from: deployer,
     args: [poolRegistry.address],
