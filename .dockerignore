@@ -13,7 +13,6 @@ allFiredEvents
 build
 build_
 node_modules
-.env
 .certora*
 certora_*
 coverage/
