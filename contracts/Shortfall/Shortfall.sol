@@ -10,15 +10,14 @@ import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "./IRiskFund.sol";
 
-import "hardhat/console.sol";
-
 contract Shortfall is OwnableUpgradeable {
     enum AuctionType {
-        LARGE_RISK_FUND,
-        LARGE_POOL_DEBT
+        LARGE_POOL_DEBT,
+        LARGE_RISK_FUND
     }
 
     enum AuctionStatus {
+        NOT_STARTED,
         STARTED,
         ENDED
     }
@@ -86,7 +85,7 @@ contract Shortfall is OwnableUpgradeable {
     uint256 private constant incentiveBps = 1000; //10%
 
     //Max basis points i.e., 100%
-    uint256 private constant MAX_BPS = 10_000;
+    uint256 private constant MAX_BPS = 10000;
 
     //Time to wait for next bidder. wait for 10 blocks
     uint256 public constant nextBidderBlockLimit = 10;
@@ -98,7 +97,7 @@ contract Shortfall is OwnableUpgradeable {
     IERC20 private immutable BUSD;
 
     //Auctions for each pool
-    mapping (uint256 => Auction) auctions;
+    mapping (uint256 => Auction) public auctions;
 
     constructor(IERC20 _BUSD, IRiskFund _riskFund) {
         BUSD = _BUSD;
@@ -133,7 +132,7 @@ contract Shortfall is OwnableUpgradeable {
         Auction storage auction = auctions[poolId];
         ComptrollerInterface comptroller = comptrollers[poolId];
 
-        require(auction.startBlock == 0 || auction.status == AuctionStatus.ENDED, "auction is on-going");
+        require((auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED)|| auction.status == AuctionStatus.ENDED, "auction is on-going");
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
             CToken cToken = auction.markets[i];
@@ -171,7 +170,6 @@ contract Shortfall is OwnableUpgradeable {
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
-            //bids starts at
             uint256 maxSeizeableRiskFundBalance = remainingRiskFundBalance;
             uint256 incentivizedRiskFundBalance = (poolBadDebt * ((poolBadDebt * incentiveBps) / MAX_BPS)) / remainingRiskFundBalance;
 
@@ -207,12 +205,12 @@ contract Shortfall is OwnableUpgradeable {
         Auction storage auction = auctions[poolId];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
-        require(bidBps > 10000, "basis points cannot be more than 10000");
+        require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
             (
                 (auction.highestBidder != address(0) && bidBps > auction.highestBidBps) ||
-                (auction.highestBidder == address(0) && bidBps > auction.startBidBps)
+                (auction.highestBidder == address(0) && bidBps >= auction.startBidBps)
             )) ||
             (auction.auctionType == AuctionType.LARGE_RISK_FUND && 
             (
@@ -227,12 +225,18 @@ contract Shortfall is OwnableUpgradeable {
             IERC20 erc20 = IERC20(address(cErc20.underlying()));
 
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-                uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
+                if (auction.highestBidder != address(0)) {
+                    uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
+                    erc20.transfer(auction.highestBidder, previousBidAmount);
+                }
+
                 uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps)/MAX_BPS);
-                erc20.transfer(auction.highestBidder, previousBidAmount);
                 erc20.transferFrom(msg.sender, address(this), currentBidAmount);
             } else {
-                erc20.transfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                if (auction.highestBidder != address(0)) {
+                    erc20.transfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                }
+                
                 erc20.transferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
         }

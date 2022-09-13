@@ -14,6 +14,8 @@ import { convertToUnit } from "../../helpers/utils";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
+import { parse } from "path";
+import BigNumber from "bignumber.js";
 
 let shortfall:Shortfall
 let fakeRiskFund:FakeContract<IRiskFund>
@@ -54,10 +56,11 @@ describe("Shortfall: Tests", async function () {
     //Deploy Mock Tokens
     const MockDAI = await ethers.getContractFactory("MockToken");
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(convertToUnit(1000, 18));
+    await mockDAI.faucet(convertToUnit(1000000, 18));
 
     const MockWBTC = await ethers.getContractFactory("MockToken");
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
+    await mockWBTC.faucet(convertToUnit(1000000, 8));
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
       "AccessControlManager"
@@ -73,7 +76,7 @@ describe("Shortfall: Tests", async function () {
     cWBTC.setVariable("decimals", 8);
     cDAI.decimals.returns(18);
     
-    cDAI.setVariable("underlying", mockDAI.address)
+    cDAI.underlying.returns(mockDAI.address)
     cWBTC.setVariable("underlying", mockWBTC.address)
 
     cDAI.setVariable("shortfall", shortfall.address)
@@ -124,10 +127,41 @@ describe("Shortfall: Tests", async function () {
     expect(await cWBTC.badDebt()).equal(parseUnits("1", 8))
   });
 
-  it("Should not start auction", async function () {
+  it("Should not be able to start auction", async function () {
     cDAI.badDebt.returns(parseUnits("20", 18))
     cWBTC.badDebt.returns(parseUnits("0.01", 8))
 
     await expect(shortfall.startAuction(1)).to.be.reverted;
+  });
+
+  it("Scenerio 1 - Start auction", async function () {
+    cDAI.badDebt.returns(parseUnits("10000", 18))
+    cWBTC.badDebt.returns(parseUnits("2", 8))
+
+    await shortfall.startAuction(pooldId);
+    
+    const auction = await shortfall.auctions(pooldId);
+    expect(auction.status).equal(1)
+    expect(auction.auctionType).equal(0)
+    expect(auction.seizedRiskFund).equal(parseUnits(riskFundBalance, 18))
+    
+    const startBidBps = (new BigNumber((new BigNumber("10000")).times(0.9).times(100))).dividedBy("52000.68").toFixed(2)
+    expect(auction.startBidBps.toString()).equal((new BigNumber(startBidBps)).times(100).toString())
+  });
+
+  it("Scenerio 1 - Place bid", async function () {
+    const auction = await shortfall.auctions(pooldId);
+
+    mockDAI.approve(shortfall.address, parseUnits("10000", 18));
+    mockWBTC.approve(shortfall.address, parseUnits("2", 8));
+
+    const [owner] = await ethers.getSigners();
+
+    const previousDaiBalance = await mockDAI.balanceOf(owner.address)
+    const previousWBTCBalance = await mockWBTC.balanceOf(owner.address)
+
+    await shortfall.placeBid(pooldId, auction.startBidBps);
+    expect(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toNumber()).lt(previousDaiBalance.div(parseUnits("1", 18)).toNumber())
+    expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
   });
 });
