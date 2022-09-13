@@ -342,10 +342,9 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[8]).equal("http://venis.io/pool1");
     expect(poolData[9]).equal("Pool1 description");
     expect(poolData[10]).equal(priceOracle.address);
-    expect(poolData[11]).equal(ethers.constants.AddressZero);
-    expect(poolData[12]).equal(closeFactor1);
-    expect(poolData[13]).equal(liquidationIncentive1);
-    expect(poolData[14]).equal(0);
+    expect(poolData[11]).equal(closeFactor1);
+    expect(poolData[12]).equal(liquidationIncentive1);
+    expect(poolData[13]).equal(0);
 
     const vTokens_Actual = poolData[14];
     expect(vTokens_Actual.length).equal(2);

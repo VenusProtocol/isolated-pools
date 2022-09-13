@@ -9,10 +9,10 @@ import {
   LiquidatedShareReserve,
   MockToken,
   Comptroller,
-  CErc20Immutable,
+  VBep20Immutable,
   MockPriceOracle,
   Unitroller,
-  CErc20ImmutableFactory,
+  VBep20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -28,13 +28,13 @@ let comptroller2: Comptroller;
 let mainnetUSDC: MockToken;
 let mainnetBUSD: MockToken;
 let mainnetUSDT: MockToken;
-let cUSDC: CErc20Immutable;
-let cUSDT: CErc20Immutable;
+let cUSDC: VBep20Immutable;
+let cUSDT: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let unitroller2: Unitroller;
-let cTokenFactory: CErc20ImmutableFactory;
+let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -47,10 +47,10 @@ let usdtUser: any;
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user] = await ethers.getSigners();
-  const CErc20ImmutableFactory = await ethers.getContractFactory(
-    "CErc20ImmutableFactory"
+  const VBep20ImmutableFactory = await ethers.getContractFactory(
+    "VBep20ImmutableFactory"
   );
-  cTokenFactory = await CErc20ImmutableFactory.deploy();
+  cTokenFactory = await VBep20ImmutableFactory.deploy();
   await cTokenFactory.deployed();
 
   const JumpRateModelFactory = await ethers.getContractFactory(
@@ -228,17 +228,17 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: fakeAccessControlManager.address,
   });
 
-  const cUSDTAddress = await poolRegistry.getCTokenForAsset(
+  const cUSDTAddress = await poolRegistry.getVTokenForAsset(
     1,
     mainnetUSDT.address
   );
-  const cUSDCAddress = await poolRegistry.getCTokenForAsset(
+  const cUSDCAddress = await poolRegistry.getVTokenForAsset(
     1,
     mainnetUSDC.address
   );
 
-  cUSDT = await ethers.getContractAt("CErc20Immutable", cUSDTAddress);
-  cUSDC = await ethers.getContractAt("CErc20Immutable", cUSDCAddress);
+  cUSDT = await ethers.getContractAt("VBep20Immutable", cUSDTAddress);
+  cUSDC = await ethers.getContractAt("VBep20Immutable", cUSDCAddress);
 
   // Enter Markets
   await comptroller1Proxy.enterMarkets([cUSDC.address, cUSDT.address]);

@@ -3,7 +3,7 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../CToken.sol";
+import "../VToken.sol";
 import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
@@ -117,23 +117,23 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
 
     /**
      * @dev Swap single asset to BUSD.
-     * @param cToken CToken
+     * @param vToken VToken
      * @param comptroller comptorller address
      * @return Number of BUSD tokens.
      */
-    function swapAsset(CToken cToken, address comptroller)
+    function swapAsset(VToken vToken, address comptroller)
         internal
         returns (uint256)
     {
         uint256 totalAmount;
 
-        address underlyingAsset = CErc20Interface(address(cToken)).underlying();
+        address underlyingAsset = VBep20Interface(address(vToken)).underlying();
         uint256 balanceOfUnderlyingAsset = EIP20Interface(underlyingAsset)
             .balanceOf(address(this));
 
         uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller)
             .oracle()
-            .getUnderlyingPrice(cToken);
+            .getUnderlyingPrice(vToken);
 
         if (balanceOfUnderlyingAsset > 0) {
             Exp memory oraclePrice = Exp({mantissa: underlyingAssetPrice});
@@ -177,14 +177,14 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount;
         for (uint256 i; i < venusPools.length; ++i) {
             if (venusPools[i].comptroller != address(0)) {
-                CToken[] memory cTokens = ComptrollerInterface(
+                VToken[] memory vTokens = ComptrollerInterface(
                     venusPools[i].comptroller
                 ).getAllMarkets();
 
-                for (uint256 j; j < cTokens.length; ++j) {
+                for (uint256 j; j < vTokens.length; ++j) {
                     address comptroller = venusPools[i].comptroller;
-                    CToken cToken = cTokens[j];
-                    uint256 swappedTokens = swapAsset(cToken, comptroller);
+                    VToken vToken = vTokens[j];
+                    uint256 swappedTokens = swapAsset(vToken, comptroller);
                     poolReserves[venusPools[i].poolId] = poolReserves[venusPools[i].poolId] + swappedTokens;
                     totalAmount = totalAmount + swappedTokens;
                 }
