@@ -10,6 +10,8 @@ import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "./IRiskFund.sol";
 
+import "hardhat/console.sol";
+
 contract Shortfall is OwnableUpgradeable {
     enum AuctionType {
         LARGE_RISK_FUND,
@@ -108,6 +110,10 @@ contract Shortfall is OwnableUpgradeable {
         minimumPoolBadDebt = _minimumPoolBadDebt;
     }
 
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+        minimumPoolBadDebt = _minimumPoolBadDebt;
+    }
+
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
         poolRegistry = _poolRegistry;
@@ -142,11 +148,12 @@ contract Shortfall is OwnableUpgradeable {
         PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(address(comptroller)).oracle()); 
         uint256 poolBadDebt = 0;       
 
-        uint256[] memory marketsDebt;
+        uint256[] memory marketsDebt = new uint256[](cTokens.length);
+        auction.markets = new CToken[](cTokens.length);
 
         for (uint256 i = 0; i < cTokens.length; i++) {
             uint256 marketBadDebt = cTokens[i].badDebt();
-            uint256 usdValue =  priceOracle.getUnderlyingPrice(cTokens[i]) * marketBadDebt;
+            uint256 usdValue =  (priceOracle.getUnderlyingPrice(cTokens[i]) * marketBadDebt * (10 ** (18 - cTokens[i].decimals()))) / 10 ** 18;
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = cTokens[i];
@@ -154,7 +161,7 @@ contract Shortfall is OwnableUpgradeable {
             marketsDebt[i] = marketBadDebt;
         }
 
-        require(poolBadDebt < minimumPoolBadDebt, "pool bad debt is too low");
+        require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
         
         uint256 riskFundBalance = riskFund.getPoolReserve(poolId);
         uint256 remainingRiskFundBalance = riskFundBalance;

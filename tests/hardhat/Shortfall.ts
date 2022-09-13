@@ -26,6 +26,10 @@ let comptroller: MockContract<Comptroller>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
 
+let riskFundBalance = "10000"
+const minimumPoolBadDebt = "10000"
+const pooldId = "1"
+
 describe("Shortfall: Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
@@ -42,7 +46,7 @@ describe("Shortfall: Tests", async function () {
       mockBUSD.address,
       fakeRiskFund.address
     );
-    await shortfall.initialize(1000);
+    await shortfall.initialize(parseUnits(minimumPoolBadDebt, "18"));
 
     const [poolRegistry] = await ethers.getSigners();
     await shortfall.setPoolRegistry(poolRegistry.address)
@@ -66,13 +70,16 @@ describe("Shortfall: Tests", async function () {
     cDAI = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
     cWBTC = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
     
+    cWBTC.setVariable("decimals", 8);
+    cDAI.decimals.returns(18);
+    
     cDAI.setVariable("underlying", mockDAI.address)
     cWBTC.setVariable("underlying", mockWBTC.address)
 
     cDAI.setVariable("shortfall", shortfall.address)
     cWBTC.setVariable("shortfall", shortfall.address)
 
-    await shortfall.setPoolComptroller(1, comptroller.address)
+    await shortfall.setPoolComptroller(pooldId, comptroller.address)
 
     comptroller.getAllMarkets.returns((args: any) => {
       return [cDAI.address, cWBTC.address];
@@ -88,33 +95,39 @@ describe("Shortfall: Tests", async function () {
         if (args[0] === cDAI.address) {
           return convertToUnit(daiPrice, 18);
         } else {
-          return convertToUnit(btcPrice, 28);
+          return convertToUnit(btcPrice, 18);
         }
       }
 
       return 1;
     });
 
-    comptroller.oracle.returns();
+    comptroller.oracle.returns(fakePriceOracle.address);
+
+    fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
+
+    fakeRiskFund.transferReserveForAuction.returns(async () => {
+      await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18))
+    });
   });
 
   it("Should have debt and reserve", async function () {
     const comptrollerAddress = (await shortfall.comptrollers(1));
     expect(comptrollerAddress).equal(comptroller.address)
 
-    let riskFundBalance = "10000"
-    fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
-
-    fakeRiskFund.transferReserveForAuction.returns(async () => {
-      await mockBUSD.transfer(shortfall.address, riskFundBalance)
-    });
-
     cDAI.badDebt.returns(parseUnits("1000", 18))
-    cWBTC.badDebt.returns(parseUnits("1", 18))
+    cWBTC.badDebt.returns(parseUnits("1", 8))
 
     expect(await fakeRiskFund.getPoolReserve(1)).equal(parseUnits(riskFundBalance, 18).toString())
 
     expect(await cDAI.badDebt()).equal(parseUnits("1000", 18))
-    expect(await cWBTC.badDebt()).equal(parseUnits("1", 18))
+    expect(await cWBTC.badDebt()).equal(parseUnits("1", 8))
+  });
+
+  it("Should not start auction", async function () {
+    cDAI.badDebt.returns(parseUnits("20", 18))
+    cWBTC.badDebt.returns(parseUnits("0.01", 8))
+
+    await expect(shortfall.startAuction(1)).to.be.reverted;
   });
 });
