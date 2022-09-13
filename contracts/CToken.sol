@@ -30,7 +30,8 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
                         string memory name_,
                         string memory symbol_,
                         uint8 decimals_,
-                        AccessControlManager accessControlManager_) public {
+                        AccessControlManager accessControlManager_,
+                        address shortfall_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -57,6 +58,7 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
+        shortfall = shortfall_;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -1202,5 +1204,17 @@ abstract contract CToken is CTokenInterface, ExponentialNoError, TokenErrorRepor
         badDebt = badDebt + borrowSnapshot.principal * (borrowIndex / borrowSnapshot.interestIndex);
         totalBorrows = totalBorrows - borrowSnapshot.principal;
         borrowSnapshot.principal = 0;
+    }
+
+    /**
+     * @notice Updates bad debt
+     * @dev Called only when bad debt is recovered from action
+     * @param _badDebt The amount of bad debt recovered
+     */
+    function badDebtRecovered(uint256 _badDebt) external {
+        require(msg.sender == shortfall, "only shortfall contract can update bad debt");
+        require(_badDebt <= badDebt, "more than bad debt recovered from auction");
+
+        badDebt = badDebt - _badDebt;
     }
 }

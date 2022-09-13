@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import {
   AccessControlManager,
   CErc20,
+  CErc20__factory,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
@@ -67,6 +68,9 @@ describe("Shortfall: Tests", async function () {
 
     cDAI.underlying.returns(mockDAI.address)
     cWBTC.underlying.returns(mockWBTC.address)
+
+    cDAI.shortfall.returns(shortfall.address)
+    cWBTC.shortfall.returns(shortfall.address)
 
     await shortfall.setPoolComptroller(1, comptroller.address)
 

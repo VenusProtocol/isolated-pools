@@ -120,6 +120,11 @@ contract CTokenStorage {
      * @notice Storage of AccessControlManager
      */
     AccessControlManager public accessControlManager;
+
+    /**
+     * @notice Storage of Shortfall contract address
+     */
+    address public shortfall;
 }
 
 abstract contract CTokenInterface is CTokenStorage {
