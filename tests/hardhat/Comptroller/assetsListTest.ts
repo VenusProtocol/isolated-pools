@@ -7,7 +7,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, PriceOracle, Comptroller__factory, CErc20Immutable, AccessControlManager, PoolRegistry
+  Comptroller, PriceOracle, Comptroller__factory, VBep20Immutable, AccessControlManager, PoolRegistry
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -18,21 +18,21 @@ describe("assetListTest", () => {
   let customer: Signer;
   let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
-  let OMG: FakeContract<CErc20Immutable>;
-  let ZRX: FakeContract<CErc20Immutable>;
-  let BAT: FakeContract<CErc20Immutable>;
-  let SKT: FakeContract<CErc20Immutable>;
-  let allTokens: FakeContract<CErc20Immutable>[];
+  let OMG: FakeContract<VBep20Immutable>;
+  let ZRX: FakeContract<VBep20Immutable>;
+  let BAT: FakeContract<VBep20Immutable>;
+  let SKT: FakeContract<VBep20Immutable>;
+  let allTokens: FakeContract<VBep20Immutable>[];
 
   type AssetListFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>,
     oracle: FakeContract<PriceOracle>,
-    OMG: FakeContract<CErc20Immutable>,
-    ZRX: FakeContract<CErc20Immutable>,
-    BAT: FakeContract<CErc20Immutable>,
-    SKT: FakeContract<CErc20Immutable>,
-    allTokens: FakeContract<CErc20Immutable>[],
+    OMG: FakeContract<VBep20Immutable>,
+    ZRX: FakeContract<VBep20Immutable>,
+    BAT: FakeContract<VBep20Immutable>,
+    SKT: FakeContract<VBep20Immutable>,
+    allTokens: FakeContract<VBep20Immutable>[],
     names: string[]
   };
 
@@ -48,11 +48,11 @@ describe("assetListTest", () => {
     const names = ["OMG", "ZRX", "BAT", "sketch"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async (name) => {
-        const cToken = await smock.fake<CErc20Immutable>("CErc20Immutable");
+        const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
         if (name !== "sketch") {
-          await comptroller._supportMarket(cToken.address);
+          await comptroller._supportMarket(vToken.address);
         }
-        return cToken;
+        return vToken;
       })
     );
     const allTokens = [OMG, ZRX, BAT, SKT];
@@ -62,11 +62,11 @@ describe("assetListTest", () => {
   function configure({ accessControl, oracle, allTokens, names }: AssetListFixture) {
     accessControl.isAllowedToCall.returns(true);
     oracle.getUnderlyingPrice.returns(convertToUnit("0.5", 18));
-    allTokens.map((cToken, i) => {
-      cToken.isVToken.returns(true);
-      cToken.symbol.returns(names[i]);
-      cToken.name.returns(names[i]);
-      cToken.getAccountSnapshot.returns([0, 0, 0, 0]);
+    allTokens.map((vToken, i) => {
+      vToken.isVToken.returns(true);
+      vToken.symbol.returns(names[i]);
+      vToken.name.returns(names[i]);
+      vToken.getAccountSnapshot.returns([0, 0, 0, 0]);
     })
   }
 
@@ -77,7 +77,7 @@ describe("assetListTest", () => {
     ({ comptroller, OMG, ZRX, BAT, SKT, allTokens } = contracts);
   });
 
-  async function checkMarkets(expectedTokens: FakeContract<CErc20Immutable>[]) {
+  async function checkMarkets(expectedTokens: FakeContract<VBep20Immutable>[]) {
     for (let token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
       expect(await comptroller.checkMembership(await customer.getAddress(), token.address)).to.equal(isExpected);
@@ -85,8 +85,8 @@ describe("assetListTest", () => {
   }
 
   async function enterAndCheckMarkets(
-    enterTokens: FakeContract<CErc20Immutable>[],
-    expectedTokens: FakeContract<CErc20Immutable>[],
+    enterTokens: FakeContract<VBep20Immutable>[],
+    expectedTokens: FakeContract<VBep20Immutable>[],
     expectedErrors: Error[] | null = null
   ) {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
@@ -108,8 +108,8 @@ describe("assetListTest", () => {
   };
 
   async function exitAndCheckMarkets(
-    exitToken: FakeContract<CErc20Immutable>,
-    expectedTokens: FakeContract<CErc20Immutable>[],
+    exitToken: FakeContract<VBep20Immutable>,
+    expectedTokens: FakeContract<VBep20Immutable>[],
     expectedError: Error = Error.NO_ERROR
   ) {
     const reply = await comptroller.connect(customer).callStatic.exitMarket(exitToken.address);
@@ -228,7 +228,7 @@ describe("assetListTest", () => {
     it("reverts when called by not a ctoken", async () => {
       await expect(
         comptroller.connect(customer).borrowAllowed(BAT.address, await customer.getAddress(), 1)
-      ).to.be.revertedWith("sender must be cToken");
+      ).to.be.revertedWith("sender must be vToken");
 
       const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
 

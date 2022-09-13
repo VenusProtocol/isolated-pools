@@ -7,66 +7,66 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { CErc20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
+import { VBep20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 import {
   getBalances, adjustBalances, preApprove,
-  cTokenTestFixture, CTokenTestFixture
+  vTokenTestFixture, VTokenTestFixture
 } from "../util/TokenTestHelpers";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 
-describe('CToken', function () {
+describe('VToken', function () {
   let root: Signer;
   let guy: Signer;
   let rootAddress: string;
   let guyAddress: string;
   let accounts: Signer[];
-  let cToken: MockContract<CErc20Harness>;
+  let vToken: MockContract<VBep20Harness>;
   let comptroller: FakeContract<Comptroller>;
 
   beforeEach(async () => {
     [root, guy, ...accounts] = await ethers.getSigners();
     rootAddress = await root.getAddress();
     guyAddress = await guy.getAddress();
-    ({ cToken, comptroller } = await loadFixture(cTokenTestFixture));
+    ({ vToken, comptroller } = await loadFixture(vTokenTestFixture));
   });
 
   describe('transfer', () => {
     it("cannot transfer from a zero balance", async () => {
-      expect(await cToken.balanceOf(rootAddress)).to.equal(0);
-      await expect(cToken.transfer(guyAddress, 100))
+      expect(await vToken.balanceOf(rootAddress)).to.equal(0);
+      await expect(vToken.transfer(guyAddress, 100))
         .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("transfers 50 tokens", async () => {
-      await cToken.harnessSetBalance(rootAddress, 100);
-      expect(await cToken.balanceOf(rootAddress)).to.equal(100);
-      await cToken.transfer(guyAddress, 50);
-      expect(await cToken.balanceOf(rootAddress)).to.equal(50);
-      expect(await cToken.balanceOf(guyAddress)).to.equal(50);
+      await vToken.harnessSetBalance(rootAddress, 100);
+      expect(await vToken.balanceOf(rootAddress)).to.equal(100);
+      await vToken.transfer(guyAddress, 50);
+      expect(await vToken.balanceOf(rootAddress)).to.equal(50);
+      expect(await vToken.balanceOf(guyAddress)).to.equal(50);
     });
 
     it("doesn't transfer when src == dst", async () => {
-      await cToken.harnessSetBalance(rootAddress, 100);
-      expect(await cToken.balanceOf(rootAddress)).to.equal(100);
-      await expect(cToken.transfer(rootAddress, 50))
-        .to.be.revertedWithCustomError(cToken, 'TransferNotAllowed');
+      await vToken.harnessSetBalance(rootAddress, 100);
+      expect(await vToken.balanceOf(rootAddress)).to.equal(100);
+      await expect(vToken.transfer(rootAddress, 50))
+        .to.be.revertedWithCustomError(vToken, 'TransferNotAllowed');
     });
 
     it("rejects transfer when not allowed and reverts if not verified", async () => {
-      await cToken.harnessSetBalance(rootAddress, 100);
-      expect(await cToken.balanceOf(rootAddress)).to.equal(100);
+      await vToken.harnessSetBalance(rootAddress, 100);
+      expect(await vToken.balanceOf(rootAddress)).to.equal(100);
 
       comptroller.transferAllowed.returns(11);
-      await expect(cToken.transfer(rootAddress, 50))
-        .to.be.revertedWithCustomError(cToken, 'TransferComptrollerRejection')
+      await expect(vToken.transfer(rootAddress, 50))
+        .to.be.revertedWithCustomError(vToken, 'TransferComptrollerRejection')
         .withArgs(11);
 
       //comptroller.transferAllowed.returns(Error.NO_ERROR);
-      //await send(cToken.comptroller, 'setTransferVerify', [false])
-      // no longer support verifyTransfer on cToken end
-      // await expect(send(cToken, 'transfer', [guyAddress, 50])).rejects.toRevert("revert transferVerify rejected transfer");
+      //await send(vToken.comptroller, 'setTransferVerify', [false])
+      // no longer support verifyTransfer on vToken end
+      // await expect(send(vToken, 'transfer', [guyAddress, 50])).rejects.toRevert("revert transferVerify rejected transfer");
     });
   });
 });
