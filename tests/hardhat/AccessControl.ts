@@ -12,26 +12,27 @@ import {
   Comptroller__factory,
 } from "../../typechain";
 import chai from "chai";
+import { Contract, ContractFactory } from "ethers";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
 describe("Access Control", () => {
-  let accessControlFactory: MockContractFactory<AccessControlManager__factory>;
-  let accessControlManager: MockContract<AccessControlManager>;
-  let comptrollerFactory: MockContractFactory<Comptroller__factory>;
+  let accessControlFactory: MockContractFactory<ContractFactory & AccessControlManager>;
+  let accessControlManager: MockContract<Contract>;
+  let comptrollerFactory: MockContractFactory<ContractFactory & Comptroller__factory>;
   let comptroller: MockContract<Comptroller>;
   let comptroller2: MockContract<Comptroller>;
   let addresses: any;
 
   beforeEach(async () => {
     addresses = await ethers.getSigners();
-    accessControlFactory = await smock.mock<AccessControlManager__factory>(
+    accessControlFactory = await smock.mock<ContractFactory & AccessControlManager>(
       "AccessControlManager"
     );
     accessControlManager = await accessControlFactory.deploy();
 
-    comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
+    comptrollerFactory = await smock.mock<ContractFactory & Comptroller__factory>("Comptroller");
     comptroller = await comptrollerFactory.deploy(addresses[0].address, accessControlManager.address);
     comptroller2 = await comptrollerFactory.deploy(addresses[0].address, accessControlManager.address);
     await accessControlManager.deployed();
