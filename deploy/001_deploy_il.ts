@@ -75,7 +75,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
 
   await tx.wait(1);
-  
+
+  tx = await poolRegistry.initialize(
+    VBep20Factory.address,
+    JumpRateModelFactory.address,
+    WhitePaperRateFactory.address
+  );
+
+  await tx.wait(1);
+
   const Comptroller: DeployResult = await deploy("Comptroller", {
     from: deployer,
     args: [poolRegistry.address],
