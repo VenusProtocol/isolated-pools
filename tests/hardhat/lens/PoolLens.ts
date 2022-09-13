@@ -7,12 +7,12 @@ import {
   SimplePriceOracle,
   MockPriceOracle,
   Unitroller,
-  CErc20ImmutableFactory,
+  VBep20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   PoolLens,
   AccessControlManager,
-  CErc20Immutable,
+  VBep20Immutable,
   RiskFund,
   LiquidatedShareReserve,
 } from "../../../typechain";
@@ -28,14 +28,14 @@ let simplePriceOracle1: SimplePriceOracle;
 let simplePriceOracle2: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let cDAI: CErc20Immutable;
-let cWBTC: CErc20Immutable;
+let vDAI: VBep20Immutable;
+let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let unitroller1: Unitroller;
 let comptroller1Proxy: Comptroller;
 let unitroller2: Unitroller;
 let comptroller2Proxy: Comptroller;
-let cTokenFactory: CErc20ImmutableFactory;
+let vTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let poolLens: PoolLens;
@@ -57,11 +57,11 @@ describe("PoolLens - PoolView Tests", async function () {
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const CErc20ImmutableFactory = await ethers.getContractFactory(
-      "CErc20ImmutableFactory"
+    const VBep20ImmutableFactory = await ethers.getContractFactory(
+      "VBep20ImmutableFactory"
     );
-    cTokenFactory = await CErc20ImmutableFactory.deploy();
-    await cTokenFactory.deployed();
+    vTokenFactory = await VBep20ImmutableFactory.deploy();
+    await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
@@ -90,7 +90,7 @@ describe("PoolLens - PoolView Tests", async function () {
     await liquidatedShareReserve.deployed();
 
     await poolRegistry.initialize(
-      cTokenFactory.address,
+      vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
@@ -177,7 +177,7 @@ describe("PoolLens - PoolView Tests", async function () {
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
-      symbol: "cWBTC",
+      symbol: "vWBTC",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -192,7 +192,7 @@ describe("PoolLens - PoolView Tests", async function () {
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
-      symbol: "cDAI",
+      symbol: "vDAI",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -243,23 +243,24 @@ describe("PoolLens - PoolView Tests", async function () {
     );
     await unitroller2._acceptAdmin();
 
-    const cWBTCAddress = await poolRegistry.getCTokenForAsset(
+
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cDAIAddress = await poolRegistry.getCTokenForAsset(
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockDAI.address
     );
 
-    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
-    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
+    vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
 
     // Enter Markets
-    await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
+    await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy
       .connect(owner)
-      .enterMarkets([cDAI.address, cWBTC.address]);
+      .enterMarkets([vDAI.address, vWBTC.address]);
 
     //Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
@@ -284,41 +285,32 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[8]).equal("http://venis.io/pool1");
     expect(venusPool_1_Actual[9]).equal("Pool1 description");
     expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
-    expect(venusPool_1_Actual[12]).equal(closeFactor1);
-    expect(venusPool_1_Actual[13]).equal(liquidationIncentive1);
-    expect(venusPool_1_Actual[14]).equal(0);
+    expect(venusPool_1_Actual[11]).equal(closeFactor1);
+    expect(venusPool_1_Actual[12]).equal(liquidationIncentive1);
+    expect(venusPool_1_Actual[13]).equal(0);
 
-    const cTokens_Actual = venusPool_1_Actual[15];
-    expect(cTokens_Actual.length).equal(2);
+    const vTokens_Actual = venusPool_1_Actual[14];
+    expect(vTokens_Actual.length).equal(2);
 
-    // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+    // get VToken for Asset-1 : WBTC
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(
-      cTokenAddress_WBTC
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
     );
-    const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
-    assertCTokenMetadata(
-      cTokenMetadata_WBTC_Actual,
-      cTokenMetadata_WBTC_Expected
+    const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
+    assertVTokenMetadata(
+      vTokenMetadata_WBTC_Actual,
+      vTokenMetadata_WBTC_Expected
     );
 
-    // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(
-      1,
-      mockDAI.address
-    );
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(
-      cTokenAddress_DAI
-    );
-    const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
-    assertCTokenMetadata(
-      cTokenMetadata_DAI_Actual,
-      cTokenMetadata_DAI_Expected
-    );
+    // get VToken for Asset-2 : DAI
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
+    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(vTokenAddress_DAI);
+    const vTokenMetadata_DAI_Actual = vTokens_Actual[1];
+    assertVTokenMetadata(vTokenMetadata_DAI_Actual, vTokenMetadata_DAI_Expected);
 
     const venusPool_2_Actual = poolData[1];
     expect(venusPool_2_Actual[0]).equal(2);
@@ -330,10 +322,9 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_2_Actual[8]).equal("http://highrisk.io/pool2");
     expect(venusPool_2_Actual[9]).equal("Pool2 description");
     expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(ethers.constants.AddressZero);
-    expect(venusPool_1_Actual[12]).equal(closeFactor2);
-    expect(venusPool_1_Actual[13]).equal(liquidationIncentive2);
-    expect(venusPool_1_Actual[14]).equal(0);
+    expect(venusPool_1_Actual[11]).equal(closeFactor2);
+    expect(venusPool_1_Actual[12]).equal(liquidationIncentive2);
+    expect(venusPool_1_Actual[13]).equal(0);
   });
 
   it("getPoolData By Comptroller", async function () {
@@ -356,40 +347,40 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[13]).equal(liquidationIncentive1);
     expect(poolData[14]).equal(0);
 
-    const cTokens_Actual = poolData[15];
-    expect(cTokens_Actual.length).equal(2);
+    const vTokens_Actual = poolData[14];
+    expect(vTokens_Actual.length).equal(2);
 
-    // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+    // get VToken for Asset-1 : WBTC
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cTokenMetadata_WBTC_Expected = await poolLens.cTokenMetadata(
-      cTokenAddress_WBTC
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
     );
-    const cTokenMetadata_WBTC_Actual = cTokens_Actual[0];
-    assertCTokenMetadata(
-      cTokenMetadata_WBTC_Actual,
-      cTokenMetadata_WBTC_Expected
+    const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
+    assertVTokenMetadata(
+      vTokenMetadata_WBTC_Actual,
+      vTokenMetadata_WBTC_Expected
     );
 
-    // get CToken for Asset-2 : DAI
-    const cTokenAddress_DAI = await poolRegistry.getCTokenForAsset(
+    // get VToken for Asset-2 : DAI
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(
       1,
       mockDAI.address
     );
-    const cTokenMetadata_DAI_Expected = await poolLens.cTokenMetadata(
-      cTokenAddress_DAI
+    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_DAI
     );
-    const cTokenMetadata_DAI_Actual = cTokens_Actual[1];
-    assertCTokenMetadata(
-      cTokenMetadata_DAI_Actual,
-      cTokenMetadata_DAI_Expected
+    const vTokenMetadata_DAI_Actual = vTokens_Actual[1];
+    assertVTokenMetadata(
+      vTokenMetadata_DAI_Actual,
+      vTokenMetadata_DAI_Expected
     );
   });
 });
 
-describe("PoolLens - CTokens Query Tests", async function () {
+describe("PoolLens - VTokens Query Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -397,11 +388,11 @@ describe("PoolLens - CTokens Query Tests", async function () {
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const CErc20ImmutableFactory = await ethers.getContractFactory(
-      "CErc20ImmutableFactory"
+    const VBep20ImmutableFactory = await ethers.getContractFactory(
+      "VBep20ImmutableFactory"
     );
-    cTokenFactory = await CErc20ImmutableFactory.deploy();
-    await cTokenFactory.deployed();
+    vTokenFactory = await VBep20ImmutableFactory.deploy();
+    await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
@@ -430,7 +421,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
     await liquidatedShareReserve.deployed();
 
     await poolRegistry.initialize(
-      cTokenFactory.address,
+      vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
@@ -512,7 +503,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
-      symbol: "cWBTC",
+      symbol: "vWBTC",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -527,7 +518,7 @@ describe("PoolLens - CTokens Query Tests", async function () {
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
-      symbol: "cDAI",
+      symbol: "vDAI",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -584,55 +575,51 @@ describe("PoolLens - CTokens Query Tests", async function () {
 
   it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
-    const cTokenAddress_WBTC = await poolRegistry.getCTokenForAsset(
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cTokenMetadata_Actual = await poolLens.cTokenMetadata(
-      cTokenAddress_WBTC
+    const vTokenMetadata_Actual = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
     );
 
-    const cTokenMetadata_Actual_Parsed: any = cullTuple(cTokenMetadata_Actual);
-    expect(cTokenMetadata_Actual_Parsed["cToken"]).equal(cTokenAddress_WBTC);
-    expect(cTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal(
-      "100000000"
-    );
-    expect(cTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["totalSupply"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["isListed"]).equal("true");
-    expect(cTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("0");
-    expect(cTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(
-      mockWBTC.address
-    );
-    expect(cTokenMetadata_Actual_Parsed["cTokenDecimals"]).equal("8");
-    expect(cTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
+    const vTokenMetadata_Actual_Parsed: any = cullTuple(vTokenMetadata_Actual);
+    expect(vTokenMetadata_Actual_Parsed["vToken"]).equal(vTokenAddress_WBTC);
+    expect(vTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
+    expect(vTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["isListed"]).equal("true");
+    expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);
+    expect(vTokenMetadata_Actual_Parsed["vTokenDecimals"]).equal("8");
+    expect(vTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
   });
 });
 
-const assertCTokenMetadata = (
-  cTokenMetadata_Actual: any,
-  cTokenMetadata_Expected: any
+const assertVTokenMetadata = (
+  vTokenMetadata_Actual: any,
+  vTokenMetadata_Expected: any
 ) => {
-  expect(cTokenMetadata_Actual[0]).equal(cTokenMetadata_Expected[0]);
-  expect(cTokenMetadata_Actual[1]).equal(cTokenMetadata_Expected[1]);
-  expect(cTokenMetadata_Actual[2]).equal(cTokenMetadata_Expected[2]);
-  expect(cTokenMetadata_Actual[3]).equal(cTokenMetadata_Expected[3]);
-  expect(cTokenMetadata_Actual[4]).equal(cTokenMetadata_Expected[4]);
-  expect(cTokenMetadata_Actual[5]).equal(cTokenMetadata_Expected[5]);
-  expect(cTokenMetadata_Actual[6]).equal(cTokenMetadata_Expected[6]);
-  expect(cTokenMetadata_Actual[7]).equal(cTokenMetadata_Expected[7]);
-  expect(cTokenMetadata_Actual[8]).equal(cTokenMetadata_Expected[8]);
-  expect(cTokenMetadata_Actual[9]).equal(cTokenMetadata_Expected[9]);
-  expect(cTokenMetadata_Actual[10]).equal(cTokenMetadata_Expected[10]);
-  expect(cTokenMetadata_Actual[11]).equal(cTokenMetadata_Expected[11]);
-  expect(cTokenMetadata_Actual[12]).equal(cTokenMetadata_Expected[12]);
-  expect(cTokenMetadata_Actual[13]).equal(cTokenMetadata_Expected[13]);
-  expect(cTokenMetadata_Actual[14]).equal(cTokenMetadata_Expected[14]);
+  expect(vTokenMetadata_Actual[0]).equal(vTokenMetadata_Expected[0]);
+  expect(vTokenMetadata_Actual[1]).equal(vTokenMetadata_Expected[1]);
+  expect(vTokenMetadata_Actual[2]).equal(vTokenMetadata_Expected[2]);
+  expect(vTokenMetadata_Actual[3]).equal(vTokenMetadata_Expected[3]);
+  expect(vTokenMetadata_Actual[4]).equal(vTokenMetadata_Expected[4]);
+  expect(vTokenMetadata_Actual[5]).equal(vTokenMetadata_Expected[5]);
+  expect(vTokenMetadata_Actual[6]).equal(vTokenMetadata_Expected[6]);
+  expect(vTokenMetadata_Actual[7]).equal(vTokenMetadata_Expected[7]);
+  expect(vTokenMetadata_Actual[8]).equal(vTokenMetadata_Expected[8]);
+  expect(vTokenMetadata_Actual[9]).equal(vTokenMetadata_Expected[9]);
+  expect(vTokenMetadata_Actual[10]).equal(vTokenMetadata_Expected[10]);
+  expect(vTokenMetadata_Actual[11]).equal(vTokenMetadata_Expected[11]);
+  expect(vTokenMetadata_Actual[12]).equal(vTokenMetadata_Expected[12]);
+  expect(vTokenMetadata_Actual[13]).equal(vTokenMetadata_Expected[13]);
+  expect(vTokenMetadata_Actual[14]).equal(vTokenMetadata_Expected[14]);
 };
 
 const cullTuple = (tuple: any) => {

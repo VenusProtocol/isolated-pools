@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./CToken.sol";
+import "./VToken.sol";
 import "./Governance/AccessControlManager.sol";
 
 interface CompLike {
@@ -9,11 +9,11 @@ interface CompLike {
 }
 
 /**
- * @title Compound's CErc20 Contract
- * @notice CTokens which wrap an EIP-20 underlying
- * @author Compound
+ * @title Venus VBep20 Contract
+ * @notice VTokens which wrap an EIP-20 underlying
+ * @author Venus dev team
  */
-contract CErc20 is CToken, CErc20Interface {
+contract VBep20 is VToken, VBep20Interface {
     /**
      * @notice Initialize the new money market
      * @param underlying_ The address of the underlying asset
@@ -34,7 +34,7 @@ contract CErc20 is CToken, CErc20Interface {
                         AccessControlManager accessControlManager_,
                         address payable riskFund_,
                         address payable liquidatedShareReserve_) public {
-        // CToken initialize does the bulk of the work
+        // VToken initialize does the bulk of the work
         super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_, riskFund_, liquidatedShareReserve_);
 
         // Set underlying and sanity check it
@@ -45,7 +45,7 @@ contract CErc20 is CToken, CErc20Interface {
     /*** User Interface ***/
 
     /**
-     * @notice Sender supplies assets into the market and receives cTokens in exchange
+     * @notice Sender supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
@@ -56,9 +56,9 @@ contract CErc20 is CToken, CErc20Interface {
     }
 
     /**
-     * @notice Sender redeems cTokens in exchange for the underlying asset
+     * @notice Sender redeems vTokens in exchange for the underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param redeemTokens The number of cTokens to redeem into underlying
+     * @param redeemTokens The number of vTokens to redeem into underlying
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function redeem(uint redeemTokens) override external returns (uint) {
@@ -67,7 +67,7 @@ contract CErc20 is CToken, CErc20Interface {
     }
 
     /**
-     * @notice Sender redeems cTokens in exchange for a specified amount of underlying asset
+     * @notice Sender redeems vTokens in exchange for a specified amount of underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemAmount The amount of underlying to redeem
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
@@ -111,13 +111,13 @@ contract CErc20 is CToken, CErc20Interface {
     /**
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
-     * @param borrower The borrower of this cToken to be liquidated
+     * @param borrower The borrower of this vToken to be liquidated
      * @param repayAmount The amount of the underlying borrowed asset to repay
-     * @param cTokenCollateral The market in which to seize collateral from the borrower
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function liquidateBorrow(address borrower, uint repayAmount, CTokenInterface cTokenCollateral) override external returns (uint) {
-        liquidateBorrowInternal(borrower, repayAmount, cTokenCollateral);
+    function liquidateBorrow(address borrower, uint repayAmount, VTokenInterface vTokenCollateral) override external returns (uint) {
+        liquidateBorrowInternal(borrower, repayAmount, vTokenCollateral);
         return NO_ERROR;
     }
 
@@ -126,8 +126,8 @@ contract CErc20 is CToken, CErc20Interface {
      * @param token The address of the ERC-20 token to sweep
      */
     function sweepToken(EIP20NonStandardInterface token) override external {
-        require(msg.sender == admin, "CErc20::sweepToken: only admin can sweep tokens");
-        require(address(token) != underlying, "CErc20::sweepToken: can not sweep underlying token");
+        require(msg.sender == admin, "VBep20::sweepToken: only admin can sweep tokens");
+        require(address(token) != underlying, "VBep20::sweepToken: can not sweep underlying token");
         uint256 balance = token.balanceOf(address(this));
         token.transfer(admin, balance);
     }
@@ -223,7 +223,7 @@ contract CErc20 is CToken, CErc20Interface {
     /**
     * @notice Admin call to delegate the votes of the COMP-like underlying
     * @param compLikeDelegatee The address to delegate votes to
-    * @dev CTokens whose underlying are not CompLike should revert here
+    * @dev VTokens whose underlying are not CompLike should revert here
     */
     function _delegateCompLikeTo(address compLikeDelegatee) external {
         require(msg.sender == admin, "only the admin may set the comp-like delegate");

@@ -8,7 +8,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, CErc20Harness, ERC20Harness, CErc20Harness__factory, InterestRateModel,
+  Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
   ERC20Harness__factory, AccessControlManager,
   RiskFund, LiquidatedShareReserve
 } from "../../../typechain";
@@ -16,27 +16,27 @@ import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 
 
-export type CTokenContracts = {
-  cToken: MockContract<CErc20Harness>;
+export type VTokenContracts = {
+  vToken: MockContract<VBep20Harness>;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
 };
 
-export async function makeCToken({ name, comptroller, accessControlManager, admin }: {
+export async function makeVToken({ name, comptroller, accessControlManager, admin }: {
   name: string,
   comptroller: FakeContract<Comptroller>,
   accessControlManager: FakeContract<AccessControlManager>,
   admin: Signer
-}): Promise<CTokenContracts> {
+}): Promise<VTokenContracts> {
   const interestRateModel = await smock.fake<InterestRateModel>("InterestRateModel");
   interestRateModel.isInterestRateModel.returns(true);
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
-  const cTokenFactory = await smock.mock<CErc20Harness__factory>("CErc20Harness");
+  const vTokenFactory = await smock.mock<VBep20Harness__factory>("VBep20Harness");
   const riskFund = await smock.fake<RiskFund>("RiskFund");
   const liquidatedShareReserve = await smock.fake<LiquidatedShareReserve>("LiquidatedShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
-  const cToken = await cTokenFactory.deploy(
+  const vToken = await vTokenFactory.deploy(
     underlying.address,
     comptroller.address,
     interestRateModel.address,
@@ -49,32 +49,32 @@ export async function makeCToken({ name, comptroller, accessControlManager, admi
     riskFund.address,
     liquidatedShareReserve.address
   );
-  return { cToken, underlying, interestRateModel };
+  return { vToken, underlying, interestRateModel };
 }
 
-export type CTokenTestFixture = {
+export type VTokenTestFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
   comptroller: FakeContract<Comptroller>;
-  cToken: MockContract<CErc20Harness>;
+  vToken: MockContract<VBep20Harness>;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
 };
 
-export async function cTokenTestFixture(): Promise<CTokenTestFixture> {
+export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
   const comptroller = await smock.fake<Comptroller>("Comptroller");
   comptroller.isComptroller.returns(true);
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
 
   const [admin, ] = await ethers.getSigners();
-  const { cToken, interestRateModel, underlying } =
-    await makeCToken({ name: "BAT", comptroller, accessControlManager, admin});
+  const { vToken, interestRateModel, underlying } =
+    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin});
 
-  return { accessControlManager, comptroller, cToken, interestRateModel, underlying };
+  return { accessControlManager, comptroller, vToken, interestRateModel, underlying };
 }
 
 type BalancesSnapshot = {
-  [cToken: string]: HoldersSnapshot
+  [vToken: string]: HoldersSnapshot
 };
 
 type HoldersSnapshot = {
@@ -90,32 +90,32 @@ type HolderSnapshot = {
 }
 
 type BalanceDeltaEntry =
-  [MockContract<CErc20Harness>, string, keyof HolderSnapshot, string | number] 
-  | [MockContract<CErc20Harness>, keyof HolderSnapshot, string | number];
+  [MockContract<VBep20Harness>, string, keyof HolderSnapshot, string | number] 
+  | [MockContract<VBep20Harness>, keyof HolderSnapshot, string | number];
 
 
 export async function getBalances(
-  cTokens: MockContract<CErc20Harness>[],
+  vTokens: MockContract<VBep20Harness>[],
   accounts: string[]
 ): Promise<BalancesSnapshot> {
   const balances: BalancesSnapshot = {};
-  for (let cToken of cTokens) {
-    const cBalances: HoldersSnapshot = balances[cToken.address] = {};
-    const underlying = await ethers.getContractAt("ERC20Harness", await cToken.underlying());
+  for (let vToken of vTokens) {
+    const vBalances: HoldersSnapshot = balances[vToken.address] = {};
+    const underlying = await ethers.getContractAt("ERC20Harness", await vToken.underlying());
     for (let account of accounts) {
-      cBalances[account] = {
+      vBalances[account] = {
         eth: (await ethers.provider.getBalance(account)).toString(),
         cash: (await underlying.balanceOf(account)).toString(),
-        tokens: (await cToken.balanceOf(account)).toString(),
-        borrows: (await cToken.harnessAccountBorrows(account)).principal.toString()
+        tokens: (await vToken.balanceOf(account)).toString(),
+        borrows: (await vToken.harnessAccountBorrows(account)).principal.toString()
       };
     }
-    cBalances[cToken.address] = {
-      eth: (await ethers.provider.getBalance(cToken.address)).toString(),
-      cash: (await underlying.balanceOf(cToken.address)).toString(),
-      tokens: (await cToken.totalSupply()).toString(),
-      borrows: (await cToken.totalBorrows()).toString(),
-      reserves: (await cToken.totalReserves()).toString()
+    vBalances[vToken.address] = {
+      eth: (await ethers.provider.getBalance(vToken.address)).toString(),
+      cash: (await underlying.balanceOf(vToken.address)).toString(),
+      tokens: (await vToken.totalSupply()).toString(),
+      borrows: (await vToken.totalBorrows()).toString(),
+      reserves: (await vToken.totalReserves()).toString()
     };
   }
   return balances;
@@ -123,25 +123,25 @@ export async function getBalances(
 
 export function adjustBalances(balances: BalancesSnapshot, deltas: BalanceDeltaEntry[]) {
   for (let delta of deltas) {
-    let cToken: MockContract<CErc20Harness>;
+    let vToken: MockContract<VBep20Harness>;
     let account: string;
     let key: keyof HolderSnapshot;
     let diff: string | number;
     if (delta.length == 4) {
-      ([cToken, account, key, diff] = delta);
+      ([vToken, account, key, diff] = delta);
     } else {
-      ([cToken, key, diff] = delta);
-      account = cToken.address;
+      ([vToken, key, diff] = delta);
+      account = vToken.address;
     }
-    balances[cToken.address][account][key] =
-      new BigNumber(balances[cToken.address][account][key]!).plus(diff).toString();
+    balances[vToken.address][account][key] =
+      new BigNumber(balances[vToken.address][account][key]!).plus(diff).toString();
   }
   return balances;
 }
 
 export async function preApprove(
   erc20: MockContract<ERC20Harness>,
-  cToken: MockContract<CErc20Harness>,
+  vToken: MockContract<VBep20Harness>,
   from: Signer,
   amount: BigNumberish,
   opts: { faucet?: boolean } = {}
@@ -150,20 +150,20 @@ export async function preApprove(
     await erc20.connect(from).harnessSetBalance(await from.getAddress(), amount);
   }
 
-  return erc20.connect(from).approve(cToken.address, amount);
+  return erc20.connect(from).approve(vToken.address, amount);
 }
 
 export async function pretendBorrow(
-  cToken: MockContract<CErc20Harness>,
+  vToken: MockContract<VBep20Harness>,
   borrower: Signer,
   accountIndex: number,
   marketIndex: number,
   principalRaw: BigNumberish,
   blockNumber: number = 2e7
 ) {
-  await cToken.harnessSetTotalBorrows(principalRaw);
-  await cToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, convertToUnit(accountIndex, 18));
-  await cToken.harnessSetBorrowIndex(convertToUnit(marketIndex, 18));
-  await cToken.harnessSetAccrualBlockNumber(blockNumber);
-  await cToken.harnessSetBlockNumber(blockNumber);
+  await vToken.harnessSetTotalBorrows(principalRaw);
+  await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, convertToUnit(accountIndex, 18));
+  await vToken.harnessSetBorrowIndex(convertToUnit(marketIndex, 18));
+  await vToken.harnessSetAccrualBlockNumber(blockNumber);
+  await vToken.harnessSetBlockNumber(blockNumber);
 }

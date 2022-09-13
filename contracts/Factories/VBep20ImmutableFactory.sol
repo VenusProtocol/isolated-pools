@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "../CErc20Immutable.sol";
+import "../VBep20Immutable.sol";
 import "../Governance/AccessControlManager.sol";
 
-contract CErc20ImmutableFactory {
-  function deployCErc20(
+contract VBep20ImmutableFactory {
+  function deployVBep20(
     address underlying_,
     ComptrollerInterface comptroller_,
     InterestRateModel interestRateModel_,
@@ -17,8 +17,8 @@ contract CErc20ImmutableFactory {
     AccessControlManager accessControlManager_,
     address payable riskFund_,
     address payable liquidatedShareReserve_
-  ) external returns (CErc20Immutable) {
-    CErc20Immutable cToken = new CErc20Immutable(
+  ) external returns (VBep20Immutable) {
+    VBep20Immutable cToken = new VBep20Immutable(
       underlying_,
       comptroller_,
       interestRateModel_,

@@ -9,7 +9,7 @@ import {
   Comptroller,
   ComptrollerErrorReporter,
   Comptroller__factory,
-  CToken,
+  VToken,
   PriceOracle,
   AccessControlManager
 } from "../../typechain";
@@ -26,8 +26,8 @@ describe("Min Liquidation Amount", () => {
   let comptrollerFactory: MockContractFactory<Comptroller__factory>;
   let comptroller: MockContract<Comptroller>;
 
-  let cTokenBorrow: FakeContract<CToken>;
-  let cTokenCollateral: FakeContract<CToken>;
+  let vTokenBorrow: FakeContract<VToken>;
+  let vTokenCollateral: FakeContract<VToken>;
 
   let priceOracle: FakeContract<PriceOracle>;
   let accessControlManager: FakeContract<AccessControlManager>;
@@ -44,16 +44,16 @@ describe("Min Liquidation Amount", () => {
 
     await comptroller._setPriceOracle(priceOracle.address);
 
-    cTokenBorrow = await smock.fake<CToken>("CToken");
-    cTokenCollateral = await smock.fake<CToken>("CToken");
+    vTokenBorrow = await smock.fake<VToken>("VToken");
+    vTokenCollateral = await smock.fake<VToken>("VToken");
   });
   describe("Verification Tests", () => {
     it("should revert if Oracle Price is 0", async () => {
       const [owner, addr1] = await ethers.getSigners();
       var response = await comptroller.validateMinLiquidatableAmount(
         1,
-        cTokenCollateral.address,
-        cTokenBorrow.address
+        vTokenCollateral.address,
+        vTokenBorrow.address
       );
       expect(Number(response).should.be.equal(Number(Error.PRICE_ERROR)));
     });
@@ -63,8 +63,8 @@ describe("Min Liquidation Amount", () => {
       const [owner, addr1] = await ethers.getSigners();
       var response = await comptroller.validateMinLiquidatableAmount(
         1,
-        cTokenCollateral.address,
-        cTokenBorrow.address
+        vTokenCollateral.address,
+        vTokenBorrow.address
       );
 
       expect(
@@ -77,17 +77,17 @@ describe("Min Liquidation Amount", () => {
     it("should revert if min liqudate amount > repayAmount", async () => {
       await priceOracle.getUnderlyingPrice.returns(100);
 
-      var cTokenBorrowAddress = cTokenBorrow.address;
+      var vTokenBorrowAddress = vTokenBorrow.address;
 
       await comptroller.setVariable("minimalLiquidatableAmount", {
-        [cTokenBorrowAddress]: 1000,
+        [vTokenBorrowAddress]: 1000,
       });
 
       const [owner, addr1] = await ethers.getSigners();
       var response = await comptroller.validateMinLiquidatableAmount(
         1,
-        cTokenCollateral.address,
-        cTokenBorrow.address
+        vTokenCollateral.address,
+        vTokenBorrow.address
       );
       expect(
         Number(response).should.be.equal(
@@ -99,17 +99,17 @@ describe("Min Liquidation Amount", () => {
     it("should return 0 upon sucessful validation", async () => {
       await priceOracle.getUnderlyingPrice.returns(1000000);
 
-      var cTokenBorrowAddress = cTokenBorrow.address;
+      var vTokenBorrowAddress = vTokenBorrow.address;
 
       await comptroller.setVariable("minimalLiquidatableAmount", {
-        [cTokenBorrowAddress]: 1,
+        [vTokenBorrowAddress]: 1,
       });
 
       const [owner, addr1] = await ethers.getSigners();
       var response = await comptroller.validateMinLiquidatableAmount(
         2,
-        cTokenCollateral.address,
-        cTokenBorrow.address
+        vTokenCollateral.address,
+        vTokenBorrow.address
       );
       expect(
         Number(response).should.be.equal(
@@ -122,13 +122,13 @@ describe("Min Liquidation Amount", () => {
     it("only admin can set Min Liquidate Amounts", async () => {
       const [owner, addr1, addr2] = await ethers.getSigners();
 
-      var ctokens : String[] = [addr1.address, addr2.address]
+      var vTokens : String[] = [addr1.address, addr2.address]
       var limits : Number[] = [1,2]
 	  
       accessControlManager.isAllowedToCall.returns(false);
       // calling function from addr1 instead of owner address
       await expect(
-        comptroller.connect(addr1)._setMarketMinLiquidationAmount(ctokens, limits)
+        comptroller.connect(addr1)._setMarketMinLiquidationAmount(vTokens, limits)
         )
       .to.be.revertedWith("only approved addresses can update min liquidation amounts");
     });
@@ -136,13 +136,13 @@ describe("Min Liquidation Amount", () => {
     it("invalid data (markets == 0)", async () => {
       const [owner, addr1] = await ethers.getSigners();
 
-      var ctokens : String[] = []
+      var vTokens : String[] = []
       var limits : Number[] = [1,2]
 
       accessControlManager.isAllowedToCall.returns(true);
 
       await expect(
-        comptroller._setMarketMinLiquidationAmount(ctokens, limits)
+        comptroller._setMarketMinLiquidationAmount(vTokens, limits)
         )
       .to.be.revertedWith("invalid input");
     });
@@ -150,14 +150,14 @@ describe("Min Liquidation Amount", () => {
     it("invalid data (markets.size != limits.size)", async () => {
       const [owner, addr1, addr2] = await ethers.getSigners();
 
-      var ctokens : String[] = [addr1.address, addr2.address]
+      var vTokens : String[] = [addr1.address, addr2.address]
       var limits : Number[] = [1, 2, 3]
 
       accessControlManager.isAllowedToCall.returns(true);
 	  
       await expect(
-        comptroller._setMarketMinLiquidationAmount(ctokens, limits)
-        )
+        comptroller._setMarketMinLiquidationAmount(vTokens, limits)
+      )
       .to.be.revertedWith("invalid input");
     });
   });

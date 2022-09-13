@@ -8,7 +8,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, Comptroller__factory, PriceOracle, CErc20Immutable, PoolRegistry, AccessControlManager
+  Comptroller, Comptroller__factory, PriceOracle, VBep20Immutable, PoolRegistry, AccessControlManager
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -20,11 +20,11 @@ const repayAmount = convertToUnit(1, 18);
 
 async function calculateSeizeTokens(
   comptroller: MockContract<Comptroller>,
-  cTokenBorrowed: FakeContract<CErc20Immutable>,
-  cTokenCollateral: FakeContract<CErc20Immutable>,
+  vTokenBorrowed: FakeContract<VBep20Immutable>,
+  vTokenCollateral: FakeContract<VBep20Immutable>,
   repayAmount: BigNumberish
 ) {
-  return comptroller.liquidateCalculateSeizeTokens(cTokenBorrowed.address, cTokenCollateral.address, repayAmount);
+  return comptroller.liquidateCalculateSeizeTokens(vTokenBorrowed.address, vTokenCollateral.address, repayAmount);
 }
 
 function rando(min: number, max: number): number {
@@ -36,19 +36,19 @@ describe('Comptroller', () => {
   let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
   let oracle: FakeContract<PriceOracle>;
-  let cTokenBorrowed: FakeContract<CErc20Immutable>;
-  let cTokenCollateral: FakeContract<CErc20Immutable>;
+  let vTokenBorrowed: FakeContract<VBep20Immutable>;
+  let vTokenCollateral: FakeContract<VBep20Immutable>;
 
   type LiquidateFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>;
     oracle: FakeContract<PriceOracle>;
-    cTokenBorrowed: FakeContract<CErc20Immutable>;
-    cTokenCollateral: FakeContract<CErc20Immutable>;
+    vTokenBorrowed: FakeContract<VBep20Immutable>;
+    vTokenCollateral: FakeContract<VBep20Immutable>;
   };
 
-  async function setOraclePrice(cToken: FakeContract<CErc20Immutable>, price: BigNumberish) {
-    oracle.getUnderlyingPrice.whenCalledWith(cToken.address).returns(price);
+  async function setOraclePrice(vToken: FakeContract<VBep20Immutable>, price: BigNumberish) {
+    oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(price);
   }
 
   async function liquidateFixture(): Promise<LiquidateFixture> {
@@ -62,68 +62,68 @@ describe('Comptroller', () => {
     await comptroller._setPriceOracle(oracle.address);
     await comptroller._setLiquidationIncentive(convertToUnit("1.1", 18));
 
-    const cTokenBorrowed = await smock.fake<CErc20Immutable>("CErc20Immutable");
-    const cTokenCollateral = await smock.fake<CErc20Immutable>("CErc20Immutable");
+    const vTokenBorrowed = await smock.fake<VBep20Immutable>("VBep20Immutable");
+    const vTokenCollateral = await smock.fake<VBep20Immutable>("VBep20Immutable");
 
-    return { accessControl, comptroller, oracle, cTokenBorrowed, cTokenCollateral };
+    return { accessControl, comptroller, oracle, vTokenBorrowed, vTokenCollateral };
   }
 
   async function configure(
-    { accessControl, comptroller, cTokenCollateral, oracle, cTokenBorrowed }: LiquidateFixture
+    { accessControl, comptroller, vTokenCollateral, oracle, vTokenBorrowed }: LiquidateFixture
   ) {
     oracle.getUnderlyingPrice.returns(0);
-    for (const cToken of [cTokenBorrowed, cTokenCollateral]) {
-      cToken.comptroller.returns(comptroller.address);
-      cToken.isCToken.returns(true);
+    for (const vToken of [vTokenBorrowed, vTokenCollateral]) {
+      vToken.comptroller.returns(comptroller.address);
+      vToken.isVToken.returns(true);
     }
 
     accessControl.isAllowedToCall.returns(true);
-    cTokenCollateral.exchangeRateStored.returns(5e9);
-    oracle.getUnderlyingPrice.whenCalledWith(cTokenCollateral.address).returns(collateralPrice);
-    oracle.getUnderlyingPrice.whenCalledWith(cTokenBorrowed.address).returns(borrowedPrice);
+    vTokenCollateral.exchangeRateStored.returns(5e9);
+    oracle.getUnderlyingPrice.whenCalledWith(vTokenCollateral.address).returns(collateralPrice);
+    oracle.getUnderlyingPrice.whenCalledWith(vTokenBorrowed.address).returns(borrowedPrice);
   }
 
   beforeEach(async () => {
     [root, ...accounts] = await ethers.getSigners();
     const contracts = await loadFixture(liquidateFixture);
     await configure(contracts);
-    ({ comptroller, cTokenBorrowed, oracle, cTokenCollateral} = contracts);
+    ({ comptroller, vTokenBorrowed, oracle, vTokenCollateral} = contracts);
   });
 
   describe('liquidateCalculateAmountSeize', () => {
     it("fails if borrowed asset price is 0", async () => {
-      setOraclePrice(cTokenBorrowed, 0);
-      const [err, result] = await calculateSeizeTokens(comptroller, cTokenBorrowed, cTokenCollateral, repayAmount)
+      setOraclePrice(vTokenBorrowed, 0);
+      const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount)
       expect(err).to.equal(Error.PRICE_ERROR);
       expect(result).to.equal(0);
     });
 
     it("fails if collateral asset price is 0", async () => {
-      setOraclePrice(cTokenCollateral, 0);
-      const [err, result] = await calculateSeizeTokens(comptroller, cTokenBorrowed, cTokenCollateral, repayAmount)
+      setOraclePrice(vTokenCollateral, 0);
+      const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount)
       expect(err).to.equal(Error.PRICE_ERROR);
       expect(result).to.equal(0);
     });
 
     it("fails if the repayAmount causes overflow ", async () => {
       await expect(
-        calculateSeizeTokens(comptroller, cTokenBorrowed, cTokenCollateral, constants.MaxUint256)
+        calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, constants.MaxUint256)
       ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if the borrowed asset price causes overflow ", async () => {
-      setOraclePrice(cTokenBorrowed, constants.MaxUint256);
+      setOraclePrice(vTokenBorrowed, constants.MaxUint256);
       await expect(
-        calculateSeizeTokens(comptroller, cTokenBorrowed, cTokenCollateral, repayAmount)
+        calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount)
       ).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("reverts if it fails to calculate the exchange rate", async () => {
-      cTokenCollateral.exchangeRateStored.reverts("exchangeRateStored: exchangeRateStoredInternal failed");
+      vTokenCollateral.exchangeRateStored.reverts("exchangeRateStored: exchangeRateStoredInternal failed");
       ethers.provider.getBlockNumber();
       /// TODO: Somehow the error message does not get propagated into the resulting tx. Smock bug?
       await expect(
-        comptroller.liquidateCalculateSeizeTokens(cTokenBorrowed.address, cTokenCollateral.address, repayAmount)
+        comptroller.liquidateCalculateSeizeTokens(vTokenBorrowed.address, vTokenCollateral.address, repayAmount)
       ).to.be.reverted; // revertedWith("exchangeRateStored: exchangeRateStoredInternal failed");
     });
 
@@ -138,15 +138,15 @@ describe('Comptroller', () => {
       it(`returns the correct value for ${testCase}`, async () => {
         const [exchangeRate, borrowedPrice, collateralPrice, liquidationIncentive, repayAmount] = testCase.map(x => BigInt(x));
 
-        setOraclePrice(cTokenCollateral, collateralPrice);
-        setOraclePrice(cTokenBorrowed, borrowedPrice);
+        setOraclePrice(vTokenCollateral, collateralPrice);
+        setOraclePrice(vTokenBorrowed, borrowedPrice);
         await comptroller._setLiquidationIncentive(liquidationIncentive);
-        cTokenCollateral.exchangeRateStored.returns(exchangeRate);
+        vTokenCollateral.exchangeRateStored.returns(exchangeRate);
 
         const seizeAmount = repayAmount * liquidationIncentive * borrowedPrice / collateralPrice;
         const seizeTokens = seizeAmount / exchangeRate;
 
-        const [err, result] = await calculateSeizeTokens(comptroller, cTokenBorrowed, cTokenCollateral, repayAmount);
+        const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount);
         expect(err).to.equal(Error.NO_ERROR);
         expect(Number(result)).to.be.approximately(Number(seizeTokens), 1e7);
       });

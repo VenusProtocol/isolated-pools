@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./CToken.sol";
+import "./VToken.sol";
 import "./PriceOracle.sol";
 
 contract UnitrollerAdminStorage {
@@ -50,7 +50,7 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
     /**
      * @notice Per-account mapping of "assets you are in", capped by maxAssets
      */
-    mapping(address => CToken[]) public accountAssets;
+    mapping(address => VToken[]) public accountAssets;
 
     struct Market {
         // Whether or not this market is listed
@@ -66,7 +66,7 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
     }
 
     /**
-     * @notice Official mapping of cTokens -> Market metadata
+     * @notice Official mapping of vTokens -> Market metadata
      * @dev Used e.g. to determine if a market is supported
      */
     mapping(address => Market) public markets;
@@ -85,13 +85,13 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
     mapping(address => bool) public borrowGuardianPaused;
 
     /// @notice A list of all markets
-    CToken[] public allMarkets;
+    VToken[] public allMarkets;
 
     // @notice The borrowCapGuardian can set borrowCaps to any number for any market. Lowering the borrow cap could disable borrowing on the given market.
     // NOTE: please remove this as it is not used anymore
     address public borrowCapGuardian;
 
-    // @notice Borrow caps enforced by borrowAllowed for each cToken address. Defaults to zero which corresponds to unlimited borrowing.
+    // @notice Borrow caps enforced by borrowAllowed for each vToken address. Defaults to zero which corresponds to unlimited borrowing.
     mapping(address => uint256) public borrowCaps;
 
     /// @notice Storage for minimum liquidatable amount in USD for each asset

@@ -21,8 +21,8 @@ abstract contract PoolRegistryInterface {
     /*** get all Bookmarks made by an account ***/
     function getBookmarks(address account) virtual external view returns (address[] memory);
 
-    /*** get CToken in the Pool for an Asset ***/
-    function getCTokenForAsset(uint poolId, address asset) virtual external view returns (address);
+    /*** get VToken in the Pool for an Asset ***/
+    function getVTokenForAsset(uint poolId, address asset) virtual external view returns (address);
 
     /*** get Pools supported by Asset ***/
     function getPoolsSupportedByAsset(address asset) virtual external view returns (uint256[] memory);

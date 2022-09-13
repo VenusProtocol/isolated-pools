@@ -9,14 +9,14 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, CErc20Harness, ERC20Harness, CErc20Harness__factory, InterestRateModel,
+  Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
   ERC20Harness__factory, AccessControlManager
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 import {
   getBalances, adjustBalances, preApprove, pretendBorrow,
-  makeCToken, CTokenContracts
+  makeVToken, VTokenContracts
 } from "../util/TokenTestHelpers";
 
 
@@ -27,8 +27,8 @@ const exchangeRate = convertToUnit("0.2", 18);
 type LiquidateTestFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
   comptroller: FakeContract<Comptroller>;
-  borrowed: CTokenContracts;
-  collateral: CTokenContracts;
+  borrowed: VTokenContracts;
+  collateral: VTokenContracts;
 };
 
 async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
@@ -39,19 +39,19 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
 
   const [admin, liquidator, borrower,] = await ethers.getSigners();
   const borrowed =
-    await makeCToken({ name: "BAT", comptroller, accessControlManager, admin});
+    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin});
   const collateral =
-    await makeCToken({ name: "ZRX", comptroller, accessControlManager, admin});
+    await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin});
 
-  await collateral.cToken.harnessSetExchangeRate(exchangeRate);
+  await collateral.vToken.harnessSetExchangeRate(exchangeRate);
 
   // setup for success in liquidating
-  await collateral.cToken.harnessSetTotalSupply(convertToUnit("10", 18));
-  await collateral.cToken.harnessSetBalance(await liquidator.getAddress(), 0);
-  await collateral.cToken.harnessSetBalance(await borrower.getAddress(), seizeTokens);
-  await pretendBorrow(collateral.cToken, borrower, 0, 1, 0);
-  await pretendBorrow(borrowed.cToken, borrower, 1, 1, repayAmount);
-  await preApprove(borrowed.underlying, borrowed.cToken, liquidator, repayAmount, { faucet: true });
+  await collateral.vToken.harnessSetTotalSupply(convertToUnit("10", 18));
+  await collateral.vToken.harnessSetBalance(await liquidator.getAddress(), 0);
+  await collateral.vToken.harnessSetBalance(await borrower.getAddress(), seizeTokens);
+  await pretendBorrow(collateral.vToken, borrower, 0, 1, 0);
+  await pretendBorrow(borrowed.vToken, borrower, 1, 1, repayAmount);
+  await preApprove(borrowed.underlying, borrowed.vToken, liquidator, repayAmount, { faucet: true });
 
   return { accessControlManager, comptroller, borrowed, collateral };
 }
@@ -85,55 +85,55 @@ function configure({ comptroller, accessControlManager, collateral, borrowed }: 
 }
 
 async function liquidateFresh(
-  cToken: MockContract<CErc20Harness>,
+  vToken: MockContract<VBep20Harness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  cTokenCollateral: MockContract<CErc20Harness>
+  vTokenCollateral: MockContract<VBep20Harness>
 ) {
-  return cToken.harnessLiquidateBorrowFresh(
+  return vToken.harnessLiquidateBorrowFresh(
     await liquidator.getAddress(),
     await borrower.getAddress(),
     repayAmount,
-    cTokenCollateral.address
+    vTokenCollateral.address
   );
 }
 
 async function liquidate(
-  cToken: MockContract<CErc20Harness>,
+  vToken: MockContract<VBep20Harness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  cTokenCollateral: MockContract<CErc20Harness>
+  vTokenCollateral: MockContract<VBep20Harness>
 ) {
   // make sure to have a block delta so we accrue interest
-  await cToken.harnessFastForward(1);
-  await cTokenCollateral.harnessFastForward(1);
-  return cToken.connect(liquidator).liquidateBorrow(
+  await vToken.harnessFastForward(1);
+  await vTokenCollateral.harnessFastForward(1);
+  return vToken.connect(liquidator).liquidateBorrow(
     await borrower.getAddress(),
     repayAmount,
-    cTokenCollateral.address
+    vTokenCollateral.address
   );
 }
 
 async function seize(
-  cToken: MockContract<CErc20Harness>,
+  vToken: MockContract<VBep20Harness>,
   liquidator: Signer,
   borrower: Signer,
   seizeAmount: BigNumberish
 ) {
-  return cToken.seize(await liquidator.getAddress(), await borrower.getAddress(), seizeAmount);
+  return vToken.seize(await liquidator.getAddress(), await borrower.getAddress(), seizeAmount);
 }
 
-describe('CToken', function () {
+describe('VToken', function () {
   let root: Signer;
   let liquidator: Signer;
   let borrower: Signer;
   let accounts: Signer[];
   let accessControlManager: FakeContract<AccessControlManager>;
   let comptroller: FakeContract<Comptroller>;
-  let borrowed: CTokenContracts;
-  let collateral: CTokenContracts;
+  let borrowed: VTokenContracts;
+  let collateral: VTokenContracts;
 
   const protocolSeizeShareMantissa = convertToUnit("0.028", 18); // 2.8%
 
@@ -154,66 +154,66 @@ describe('CToken', function () {
   describe('liquidateBorrowFresh', () => {
     it("fails if comptroller tells it to", async () => {
       comptroller.liquidateBorrowAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateComptrollerRejection')
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateComptrollerRejection')
         .withArgs(11);
     });
 
     it("proceeds if comptroller tells it to", async () => {
       //expect(
       await collateral.underlying.transfer.returns(true);
-      await liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken)
+      await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)
       //).toSucceed();
     });
 
     it("fails if market not fresh", async () => {
-      await borrowed.cToken.harnessFastForward(5);
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateFreshnessCheck');
+      await borrowed.vToken.harnessFastForward(5);
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateFreshnessCheck');
     });
 
     it("fails if collateral market not fresh", async () => {
-      await borrowed.cToken.harnessFastForward(5);
-      await collateral.cToken.harnessFastForward(5);
-      await borrowed.cToken.accrueInterest();
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateCollateralFreshnessCheck');
+      await borrowed.vToken.harnessFastForward(5);
+      await collateral.vToken.harnessFastForward(5);
+      await borrowed.vToken.accrueInterest();
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateCollateralFreshnessCheck');
     });
 
     it("fails if borrower is equal to liquidator", async () => {
-      await expect(liquidateFresh(borrowed.cToken, borrower, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateLiquidatorIsBorrower');
+      await expect(liquidateFresh(borrowed.vToken, borrower, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateLiquidatorIsBorrower');
     });
 
     it("fails if repayAmount = 0", async () => {
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, 0, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateCloseAmountIsZero');
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, 0, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateCloseAmountIsZero');
     });
 
     it("fails if calculating seize tokens fails and does not adjust balances", async () => {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
       const beforeBalances =
-        await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+        await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       comptroller.liquidateCalculateSeizeTokens.reverts("Oups");
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
         .to.be.reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
       const afterBalances =
-        await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+        await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       expect(afterBalances).to.deep.equal(beforeBalances);
     });
 
     it("fails if repay fails", async () => {
       comptroller.repayBorrowAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'RepayBorrowComptrollerRejection')
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'RepayBorrowComptrollerRejection')
         .withArgs(11);
     });
 
     it("reverts if seize fails", async () => {
       comptroller.seizeAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, 'LiquidateSeizeComptrollerRejection')
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateSeizeComptrollerRejection')
         .withArgs(11);
     });
 
@@ -222,37 +222,37 @@ describe('CToken', function () {
       const borrowerAddress = await borrower.getAddress();
 
       await collateral.underlying.transfer.returns(true);
-      const beforeBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
-      const result = await liquidateFresh(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken);
-      const afterBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+      const result = await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
+      const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       //expect(
       //  result
       //).toSucceed();
       expect(result)
-        .to.emit(borrowed.cToken, "LiquidateBorrow")
-        .withArgs(liquidatorAddress, borrowerAddress, repayAmount, collateral.cToken.address, seizeTokens);
+        .to.emit(borrowed.vToken, "LiquidateBorrow")
+        .withArgs(liquidatorAddress, borrowerAddress, repayAmount, collateral.vToken.address, seizeTokens);
 
       expect(result)
         .to.emit(borrowed.underlying, "Transfer")
-        .withArgs(liquidatorAddress, borrowed.cToken.address, repayAmount);
+        .withArgs(liquidatorAddress, borrowed.vToken.address, repayAmount);
 
       expect(result)
-        .to.emit(collateral.cToken, "Transfer")
+        .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, liquidatorAddress, liquidatorShareTokens);
 
       expect(result)
-        .to.emit(collateral.cToken, "Transfer")
-        .withArgs(borrowerAddress, collateral.cToken.address, protocolShareTokens);
+        .to.emit(collateral.vToken, "Transfer")
+        .withArgs(borrowerAddress, collateral.vToken.address, protocolShareTokens);
 
       expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [borrowed.cToken, 'cash', repayAmount],
-        [borrowed.cToken, 'borrows', -repayAmount],
-        [borrowed.cToken, liquidatorAddress, 'cash', -repayAmount],
-        [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [borrowed.cToken, borrowerAddress, 'borrows', -repayAmount],
-        [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
-        [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens]
+        [borrowed.vToken, 'cash', repayAmount],
+        [borrowed.vToken, 'borrows', -repayAmount],
+        [borrowed.vToken, liquidatorAddress, 'cash', -repayAmount],
+        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
+        [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
+        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
+        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens]
       ]));
     });
   });
@@ -260,42 +260,42 @@ describe('CToken', function () {
   describe('liquidateBorrow', () => {
     it("emits a liquidation failure if borrowed asset interest accrual fails", async () => {
       borrowed.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
         .to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("emits a liquidation failure if collateral asset interest accrual fails", async () => {
       collateral.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken))
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
         .to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from liquidateBorrowFresh without emitting any extra logs", async () => {
-      await expect(liquidate(borrowed.cToken, liquidator, borrower, 0, collateral.cToken))
-        .to.be.revertedWithCustomError(borrowed.cToken, "LiquidateCloseAmountIsZero");
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, 0, collateral.vToken))
+        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateCloseAmountIsZero");
     });
 
     it("returns success from liquidateBorrowFresh and transfers the correct amounts", async () => {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
-      const beforeBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       await collateral.underlying.transfer.returns(true);
-      const result = await liquidate(borrowed.cToken, liquidator, borrower, repayAmount, collateral.cToken);
+      const result = await liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
       const receipt = await result.wait();
       const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toString();
-      const afterBalances = await getBalances([borrowed.cToken, collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       //expect(result).toSucceed();
       expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [borrowed.cToken, 'cash', repayAmount],
-        [borrowed.cToken, 'borrows', -repayAmount],
-        [borrowed.cToken, liquidatorAddress, 'eth', -gasCost],
-        [borrowed.cToken, liquidatorAddress, 'cash', -repayAmount],
-        [collateral.cToken, liquidatorAddress, 'eth', -gasCost],
-        [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
-        [borrowed.cToken, borrowerAddress, 'borrows', -repayAmount],
-        [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens], // total supply decreases
+        [borrowed.vToken, 'cash', repayAmount],
+        [borrowed.vToken, 'borrows', -repayAmount],
+        [borrowed.vToken, liquidatorAddress, 'eth', -gasCost],
+        [borrowed.vToken, liquidatorAddress, 'cash', -repayAmount],
+        [collateral.vToken, liquidatorAddress, 'eth', -gasCost],
+        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
+        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
+        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
+        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
       ]));
     });
   });
@@ -305,20 +305,20 @@ describe('CToken', function () {
 
     it("fails if seize is not allowed", async () => {
       comptroller.seizeAllowed.returns(11);
-      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens))
-        .to.be.revertedWithCustomError(collateral.cToken, "LiquidateSeizeComptrollerRejection")
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
+        .to.be.revertedWithCustomError(collateral.vToken, "LiquidateSeizeComptrollerRejection")
         .withArgs(11);
     });
 
-    it("fails if cTokenBalances[borrower] < amount", async () => {
-      await collateral.cToken.harnessSetBalance(await borrower.getAddress(), 1);
-      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens))
+    it("fails if vTokenBalances[borrower] < amount", async () => {
+      await collateral.vToken.harnessSetBalance(await borrower.getAddress(), 1);
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
         .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
-    it("fails if cTokenBalances[liquidator] overflows", async () => {
-      await collateral.cToken.harnessSetBalance(await liquidator.getAddress(), constants.MaxUint256);
-      await expect(seize(collateral.cToken, liquidator, borrower, seizeTokens))
+    it("fails if vTokenBalances[liquidator] overflows", async () => {
+      await collateral.vToken.harnessSetBalance(await liquidator.getAddress(), constants.MaxUint256);
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
         .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
@@ -326,28 +326,28 @@ describe('CToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
 
-      const beforeBalances = await getBalances([collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      const beforeBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
       await collateral.underlying.transfer.returns(true);
-      const result = await seize(collateral.cToken, liquidator, borrower, seizeTokens);
-      const afterBalances = await getBalances([collateral.cToken], [liquidatorAddress, borrowerAddress]);
+      const result = await seize(collateral.vToken, liquidator, borrower, seizeTokens);
+      const afterBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
       //expect(result).toSucceed();
       expect(result)
-        .to.emit(collateral.cToken, "Transfer")
+        .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, liquidatorAddress, liquidatorShareTokens);
 
       expect(result)
-        .to.emit(collateral.cToken, "Transfer")
-        .withArgs(borrowerAddress, collateral.cToken.address, protocolShareTokens);
+        .to.emit(collateral.vToken, "Transfer")
+        .withArgs(borrowerAddress, collateral.vToken.address, protocolShareTokens);
 
       expect(result)
-        .to.emit(collateral.cToken, "ReservesAdded")
-        .withArgs(collateral.cToken.address, addReservesAmount, addReservesAmount);
+        .to.emit(collateral.vToken, "ReservesAdded")
+        .withArgs(collateral.vToken.address, addReservesAmount, addReservesAmount);
 
       expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [collateral.cToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.cToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.cToken, collateral.cToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
-        [collateral.cToken, collateral.cToken.address, 'tokens', -protocolShareTokens], // total supply decreases
+        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
+        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
+        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
       ]));
     });
   });
@@ -358,35 +358,35 @@ describe('CToken', function () {
     let [root, liquidator, borrower] = saddle.accounts;
     let collatAmount = 10;
     let borrowAmount = 2;
-    const cTokenCollat = await makeCToken({supportMarket: true, underlyingPrice: 1, collateralFactor: .5});
-    const cTokenBorrow = await makeCToken({supportMarket: true, underlyingPrice: 1, comptroller: cTokenCollat.comptroller});
-    const comptroller = cTokenCollat.comptroller;
+    const vTokenCollat = await makeVToken({supportMarket: true, underlyingPrice: 1, collateralFactor: .5});
+    const vTokenBorrow = await makeVToken({supportMarket: true, underlyingPrice: 1, comptroller: vTokenCollat.comptroller});
+    const comptroller = vTokenCollat.comptroller;
 
     // borrow some tokens
-    await send(cTokenCollat.underlying, 'harnessSetBalance', [borrower, collatAmount]);
-    await send(cTokenCollat.underlying, 'approve', [cTokenCollat._address, collatAmount], {from: borrower});
-    await send(cTokenBorrow.underlying, 'harnessSetBalance', [cTokenBorrow._address, collatAmount]);
-    await send(cTokenBorrow, 'harnessSetTotalSupply', [collatAmount * 10]);
-    await send(cTokenBorrow, 'harnessSetExchangeRate', [etherExp(1)]);
-    expect(await enterMarkets([cTokenCollat], borrower)).toSucceed();
-    expect(await send(cTokenCollat, 'mint', [collatAmount], {from: borrower})).toSucceed();
-    expect(await send(cTokenBorrow, 'borrow', [borrowAmount], {from: borrower})).toSucceed();
+    await send(vTokenCollat.underlying, 'harnessSetBalance', [borrower, collatAmount]);
+    await send(vTokenCollat.underlying, 'approve', [vTokenCollat._address, collatAmount], {from: borrower});
+    await send(vTokenBorrow.underlying, 'harnessSetBalance', [vTokenBorrow._address, collatAmount]);
+    await send(vTokenBorrow, 'harnessSetTotalSupply', [collatAmount * 10]);
+    await send(vTokenBorrow, 'harnessSetExchangeRate', [etherExp(1)]);
+    expect(await enterMarkets([vTokenCollat], borrower)).toSucceed();
+    expect(await send(vTokenCollat, 'mint', [collatAmount], {from: borrower})).toSucceed();
+    expect(await send(vTokenBorrow, 'borrow', [borrowAmount], {from: borrower})).toSucceed();
 
     // show the account is healthy
-    expect(await call(comptroller, 'isDeprecated', [cTokenBorrow._address])).toEqual(false);
-    expect(await call(comptroller, 'liquidateBorrowAllowed', [cTokenBorrow._address, cTokenCollat._address, liquidator, borrower, borrowAmount])).toHaveTrollError('INSUFFICIENT_SHORTFALL');
+    expect(await call(comptroller, 'isDeprecated', [vTokenBorrow._address])).toEqual(false);
+    expect(await call(comptroller, 'liquidateBorrowAllowed', [vTokenBorrow._address, vTokenCollat._address, liquidator, borrower, borrowAmount])).toHaveTrollError('INSUFFICIENT_SHORTFALL');
 
     // show deprecating a market works
-    expect(await send(comptroller, '_setCollateralFactor', [cTokenBorrow._address, 0])).toSucceed();
-    expect(await send(comptroller, '_setBorrowPaused', [cTokenBorrow._address, true])).toSucceed();
-    expect(await send(cTokenBorrow, '_setReserveFactor', [etherMantissa(1)])).toSucceed();
+    expect(await send(comptroller, '_setCollateralFactor', [vTokenBorrow._address, 0])).toSucceed();
+    expect(await send(comptroller, '_setBorrowPaused', [vTokenBorrow._address, true])).toSucceed();
+    expect(await send(vTokenBorrow, '_setReserveFactor', [etherMantissa(1)])).toSucceed();
 
-    expect(await call(comptroller, 'isDeprecated', [cTokenBorrow._address])).toEqual(true);
+    expect(await call(comptroller, 'isDeprecated', [vTokenBorrow._address])).toEqual(true);
 
     // show deprecated markets can be liquidated even if healthy
-    expect(await send(comptroller, 'liquidateBorrowAllowed', [cTokenBorrow._address, cTokenCollat._address, liquidator, borrower, borrowAmount])).toSucceed();
+    expect(await send(comptroller, 'liquidateBorrowAllowed', [vTokenBorrow._address, vTokenCollat._address, liquidator, borrower, borrowAmount])).toSucceed();
 
     // even if deprecated, cant over repay
-    await expect(send(comptroller, 'liquidateBorrowAllowed', [cTokenBorrow._address, cTokenCollat._address, liquidator, borrower, borrowAmount * 2])).rejects.toRevert('revert Can not repay more than the total borrow');
+    await expect(send(comptroller, 'liquidateBorrowAllowed', [vTokenBorrow._address, vTokenCollat._address, liquidator, borrower, borrowAmount * 2])).rejects.toRevert('revert Can not repay more than the total borrow');
   });
 })*/
