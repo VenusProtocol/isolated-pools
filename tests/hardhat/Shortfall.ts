@@ -20,8 +20,8 @@ let fakeRiskFund:FakeContract<IRiskFund>
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let cDAI: FakeContract<CErc20>;
-let cWBTC: FakeContract<CErc20>;
+let cDAI: MockContract<CErc20>;
+let cWBTC: MockContract<CErc20>;
 let comptroller: MockContract<Comptroller>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
@@ -63,14 +63,14 @@ describe("Shortfall: Tests", async function () {
     const Comptroller = await smock.mock<Comptroller__factory>('Comptroller');
     comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address)
 
-    cDAI = await smock.fake<CErc20>("CErc20")
-    cWBTC = await smock.fake<CErc20>("CErc20")
+    cDAI = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
+    cWBTC = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
+    
+    cDAI.setVariable("underlying", mockDAI.address)
+    cWBTC.setVariable("underlying", mockWBTC.address)
 
-    cDAI.underlying.returns(mockDAI.address)
-    cWBTC.underlying.returns(mockWBTC.address)
-
-    cDAI.shortfall.returns(shortfall.address)
-    cWBTC.shortfall.returns(shortfall.address)
+    cDAI.setVariable("shortfall", shortfall.address)
+    cWBTC.setVariable("shortfall", shortfall.address)
 
     await shortfall.setPoolComptroller(1, comptroller.address)
 
