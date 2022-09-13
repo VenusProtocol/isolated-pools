@@ -69,13 +69,13 @@ contract Shortfall is OwnableUpgradeable {
     );
 
     //Pool ID to comptroller address mapping
-    mapping (uint256 => ComptrollerInterface) private comptrollers;
+    mapping (uint256 => ComptrollerInterface) public comptrollers;
 
     //Pool registry address
-    address private poolRegistry;
+    address public poolRegistry;
 
     //Risk fund address
-    IRiskFund immutable private riskFund;
+    IRiskFund immutable public riskFund;
 
     //Minimum USD debt in pool for shortfall to trigger 
     uint256 public minimumPoolBadDebt;
@@ -87,10 +87,10 @@ contract Shortfall is OwnableUpgradeable {
     uint256 private constant MAX_BPS = 10_000;
 
     //Time to wait for next bidder. wait for 10 blocks
-    uint256 private constant nextBidderBlockLimit = 10;
+    uint256 public constant nextBidderBlockLimit = 10;
 
     //Time to wait for first bidder. wait for 100 blocks
-    uint256 private constant waitForFirstBidder = 100;
+    uint256 public constant waitForFirstBidder = 100;
 
     //BUSD contract address
     IERC20 private immutable BUSD;
@@ -139,7 +139,7 @@ contract Shortfall is OwnableUpgradeable {
         delete auction.markets;
 
         CToken[] memory cTokens = comptroller.getAllMarkets();
-        PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(address(comptroller)).priceOracle()); 
+        PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(address(comptroller)).oracle()); 
         uint256 poolBadDebt = 0;       
 
         uint256[] memory marketsDebt;
