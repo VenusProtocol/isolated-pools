@@ -8,7 +8,7 @@ import "@nomicfoundation/hardhat-chai-matchers";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
-import 'hardhat-deploy';
+import "hardhat-deploy";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
