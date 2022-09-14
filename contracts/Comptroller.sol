@@ -58,7 +58,7 @@ contract Comptroller is
     event ActionPaused(string action, bool pauseState);
 
     /// @notice Emitted when an action is paused on a market
-    event ActionPaused(VToken vToken, string action, bool pauseState);
+    event ActionPausedMarket(VToken vToken, Action action, bool pauseState);
 
     /// @notice Emitted when borrow cap for a vToken is changed
     event NewBorrowCap(VToken indexed vToken, uint256 newBorrowCap);
@@ -103,6 +103,13 @@ contract Comptroller is
         admin = msg.sender;
         poolRegistry = _poolRegistry;
 		accessControl = _accessControl;
+    }
+
+    /// @notice Reverts if a certain action is paused on a market
+    /// @param market Market to check
+    /// @param action Action to check
+    function checkActionPauseState(address market, Action action) private view {
+        require(!actionPaused(market, action), "action is paused");
     }
 
     /*** Assets You Are In ***/
@@ -168,6 +175,7 @@ contract Comptroller is
         internal
         returns (Error)
     {
+        checkActionPauseState(address(vToken), Action.ENTER_MARKET);
         Market storage marketToJoin = markets[address(vToken)];
 
         if (!marketToJoin.isListed) {
@@ -205,6 +213,7 @@ contract Comptroller is
         override
         returns (uint256)
     {
+        checkActionPauseState(vTokenAddress, Action.EXIT_MARKET);
         VToken vToken = VToken(vTokenAddress);
         /* Get sender tokensHeld and amountOwed underlying from the vToken */
         (uint256 oErr, uint256 tokensHeld, uint256 amountOwed, ) = vToken
@@ -284,8 +293,7 @@ contract Comptroller is
         address minter,
         uint256 mintAmount
     ) external override returns (uint256) {
-        // Pausing is a very serious situation - we revert to sound the alarms
-        require(!mintGuardianPaused[vToken], "mint is paused");
+        checkActionPauseState(vToken, Action.MINT);
 
         // Shh - currently unused
         minter;
@@ -351,6 +359,8 @@ contract Comptroller is
         address redeemer,
         uint256 redeemTokens
     ) external override returns (uint256) {
+        checkActionPauseState(vToken, Action.REDEEM);
+
         uint256 allowed = redeemAllowedInternal(vToken, redeemer, redeemTokens);
         if (allowed != uint256(Error.NO_ERROR)) {
             return allowed;
@@ -438,8 +448,7 @@ contract Comptroller is
         address borrower,
         uint256 borrowAmount
     ) external override returns (uint256) {
-        // Pausing is a very serious situation - we revert to sound the alarms
-        require(!borrowGuardianPaused[vToken], "borrow is paused");
+        checkActionPauseState(vToken, Action.BORROW);
 
         if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
@@ -543,6 +552,8 @@ contract Comptroller is
         address borrower,
         uint256 repayAmount
     ) external override returns (uint256) {
+        checkActionPauseState(vToken, Action.REPAY);
+
         // Shh - currently unused
         payer;
         borrower;
@@ -613,6 +624,11 @@ contract Comptroller is
         address borrower,
         uint256 repayAmount
     ) external override returns (uint256) {
+        // Pause Action.LIQUIDATE on BORROWED TOKEN to prevent liquidating it.
+        // If we want to pause liquidating to vTokenCollateral, we should pause
+        // Action.SEIZE on it
+        checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
+
         // Shh - currently unused
         liquidator;
 
@@ -712,8 +728,10 @@ contract Comptroller is
         address borrower,
         uint256 seizeTokens
     ) external override returns (uint256) {
-        // Pausing is a very serious situation - we revert to sound the alarms
-        require(!seizeGuardianPaused, "seize is paused");
+        // Pause Action.SEIZE on COLLATERAL to prevent seizing it.
+        // If we want to pause liquidating vTokenBorrowed, we should pause
+        // Action.LIQUIDATE on it
+        checkActionPauseState(vTokenCollateral, Action.SEIZE);
 
         // Shh - currently unused
         seizeTokens;
@@ -792,8 +810,7 @@ contract Comptroller is
         address dst,
         uint256 transferTokens
     ) external override returns (uint256) {
-        // Pausing is a very serious situation - we revert to sound the alarms
-        require(!transferGuardianPaused, "transfer is paused");
+        checkActionPauseState(vToken, Action.TRANSFER);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
@@ -1432,58 +1449,43 @@ contract Comptroller is
         }
     }
 
-    function _setMintPaused(VToken vToken, bool state) public returns (bool) {
+    /**
+     * @notice Pause/unpause certain actions
+     * @param marketsList Markets to pause/unpause the actions on
+     * @param actionsList List of action ids to pause/unpause
+     * @param paused The new paused state (true=paused, false=unpaused)
+     */
+    function _setActionsPaused(
+        VToken[] calldata marketsList,
+        Action[] calldata actionsList,
+        bool paused
+    )
+        external
+    {
+        bool canCallFunction = AccessControlManager(accessControl)
+            .isAllowedToCall(msg.sender, "_setActionsPaused(VToken[],Action[],bool)");
+        require(canCallFunction, "only authorised addresses can pause");
+
+        for (uint marketIdx = 0; marketIdx < marketsList.length; ++marketIdx) {
+            for (uint actionIdx = 0; actionIdx < actionsList.length; ++actionIdx) {
+                setActionPausedInternal(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
+            }
+        }
+    }
+
+    /**
+     * @dev Pause/unpause an action on a market
+     * @param market Market to pause/unpause the action on
+     * @param action Action id to pause/unpause
+     * @param paused The new paused state (true=paused, false=unpaused)
+     */
+    function setActionPausedInternal(address market, Action action, bool paused) internal {
         require(
-            markets[address(vToken)].isListed,
+            markets[market].isListed,
             "cannot pause a market that is not listed"
         );
-
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setMintPaused(VToken,bool)");
-
-        require(canCallFunction, "only authorised addresses can pause");
-
-        mintGuardianPaused[address(vToken)] = state;
-        emit ActionPaused(vToken, "Mint", state);
-        return state;
-    }
-
-    function _setBorrowPaused(VToken vToken, bool state) public returns (bool) {
-        require(
-            markets[address(vToken)].isListed,
-            "cannot pause a market that is not listed"
-        );
-
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setBorrowPaused(VToken,bool)");
-
-        require(canCallFunction, "only authorised addresses can pause");
-
-        borrowGuardianPaused[address(vToken)] = state;
-        emit ActionPaused(vToken, "Borrow", state);
-        return state;
-    }
-
-    function _setTransferPaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setTransferPaused(VToken,bool)");
-
-        require(canCallFunction, "only authorised addresses can pause");
-
-        transferGuardianPaused = state;
-        emit ActionPaused("Transfer", state);
-        return state;
-    }
-
-    function _setSeizePaused(bool state) public returns (bool) {
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setSeizePaused(bool)");
-
-        require(canCallFunction, "only authorised addresses can pause");
-
-        seizeGuardianPaused = state;
-        emit ActionPaused("Seize", state);
-        return state;
+        _actionPaused[market][action] = paused;
+        emit ActionPausedMarket(VToken(market), action, paused);
     }
 
     function _become(Unitroller unitroller) public {
@@ -1583,6 +1585,16 @@ contract Comptroller is
     }
 
     /**
+     * @notice Checks if a certain action is paused on a market
+     * @param market vToken address
+     * @param action Action to check
+     * @return true if the action is paused
+     */
+    function actionPaused(address market, Action action) public view returns (bool) {
+        return _actionPaused[market][action];
+    }
+
+    /**
      * @notice Returns true if the given vToken market has been deprecated
      * @dev All borrows in a deprecated vToken market can be immediately liquidated
      * @param vToken The market to check if deprecated
@@ -1590,7 +1602,7 @@ contract Comptroller is
     function isDeprecated(VToken vToken) public view returns (bool) {
         return
             markets[address(vToken)].collateralFactorMantissa == 0 &&
-            borrowGuardianPaused[address(vToken)] == true &&
+            actionPaused(address(vToken), Action.BORROW) &&
             vToken.reserveFactorMantissa() == 1e18;
     }
 

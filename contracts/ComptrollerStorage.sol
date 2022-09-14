@@ -97,4 +97,19 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
 
     /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
     mapping(address => uint256) public supplyCaps;
+
+    enum Action {
+        MINT,
+        REDEEM,
+        BORROW,
+        REPAY,
+        SEIZE,
+        LIQUIDATE,
+        TRANSFER,
+        ENTER_MARKET,
+        EXIT_MARKET
+    }
+
+    /// @notice True if a certain action is paused on a certain market
+    mapping (address => mapping(Action => bool)) internal _actionPaused;
 }
