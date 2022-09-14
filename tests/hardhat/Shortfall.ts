@@ -49,8 +49,6 @@ describe("Shortfall: Tests", async function () {
       fakeRiskFund.address
     );
     await shortfall.initialize(parseUnits(minimumPoolBadDebt, "18"));
-    shortfall.setVariable("riskFund", fakeRiskFund.address);
-    shortfall.riskFund.returns(fakeRiskFund.address)
 
     const [poolRegistry] = await ethers.getSigners();
     await shortfall.setPoolRegistry(poolRegistry.address)

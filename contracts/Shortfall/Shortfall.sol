@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-3-Clause
+/// @notice  SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,22 +11,21 @@ import "../ComptrollerInterface.sol";
 import "./IRiskFund.sol";
 
 contract Shortfall is OwnableUpgradeable {
+
+    /// @notice Type of auction
     enum AuctionType {
         LARGE_POOL_DEBT,
         LARGE_RISK_FUND
     }
 
+    /// @notice Status of auction
     enum AuctionStatus {
         NOT_STARTED,
         STARTED,
         ENDED
     }
 
-    struct TokenBid {
-        VToken vToken;
-        uint256 amount;
-    }
-
+    /// @notice Auction metadata
     struct Auction {
         uint256 startBlock;
         AuctionType auctionType;
@@ -40,6 +39,7 @@ contract Shortfall is OwnableUpgradeable {
         mapping (VToken => uint256) marketDebt;
     }
 
+    /// @notice Emitted when a auction starts
     event AuctionStarted(
         uint256 poolId,
         uint256 startBlock,
@@ -50,12 +50,14 @@ contract Shortfall is OwnableUpgradeable {
         uint256 startBidBps
     );
 
+    /// @notice Emitted when a bid is placed
     event BidPlaced(
         uint256 poolId,
         uint256 bidBps,
         address bidder
     );
 
+    /// @notice Emitted when a auction is completed
     event AuctionClosed(
         uint256 poolId,
         address highestBidder,
@@ -65,69 +67,99 @@ contract Shortfall is OwnableUpgradeable {
         uint256[] marketDebt
     );
 
+    /// @notice Emitted when a auction is restarted
     event AuctionRestarted(
         uint256 poolId
     );
 
-    //Pool ID to comptroller address mapping
+    /// @notice Pool ID to comptroller address mapping
     mapping (uint256 => ComptrollerInterface) public comptrollers;
 
-    //Pool registry address
+    /// @notice Pool registry address
     address public poolRegistry;
 
-    //Risk fund address
-    IRiskFund public riskFund;
+    /// @notice Risk fund address
+    IRiskFund immutable private riskFund;
 
-    //Minimum USD debt in pool for shortfall to trigger 
+    /// @notice Minimum USD debt in pool for shortfall to trigger 
     uint256 public minimumPoolBadDebt;
 
-    //Incentive to auction participants.
-    uint256 private constant incentiveBps = 1000; //10%
+    /// @notice Incentive to auction participants.
+    uint256 private constant incentiveBps = 1000; /// @notice 10%
 
-    //Max basis points i.e., 100%
+    /// @notice Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    //Time to wait for next bidder. wait for 10 blocks
+    /// @notice Time to wait for next bidder. wait for 10 blocks
     uint256 public constant nextBidderBlockLimit = 10;
 
-    //Time to wait for first bidder. wait for 100 blocks
+    /// @notice Time to wait for first bidder. wait for 100 blocks
     uint256 public constant waitForFirstBidder = 100;
 
-    //BUSD contract address
+    /// @notice BUSD contract address
     IERC20 private immutable BUSD;
 
-    //Auctions for each pool
+    /// @notice Auctions for each pool
     mapping (uint256 => Auction) public auctions;
 
+    /**
+     * @notice Constructor
+     * @param _BUSD The address of the BUSD contract
+     * @param _riskFund The address of the risk fund
+     */
     constructor(IERC20 _BUSD, IRiskFund _riskFund) {
         BUSD = _BUSD;
         riskFund = _riskFund;
     }
 
+    /**
+     * @notice Initalize the shortfall contract
+     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     */
     function initialize(uint256 _minimumPoolBadDebt) public initializer {
         __Ownable_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
     }
 
+    /**
+     * @notice Update minimum pool bad debt to start auction
+     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
         minimumPoolBadDebt = _minimumPoolBadDebt;
     }
 
+    /**
+     * @notice After Pool Registry is deployed we need to set the pool registry address
+     * @param _poolRegistry Address of pool registry contract
+     */
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
         poolRegistry = _poolRegistry;
     }
 
+    /**
+     * @notice Modifier to allow only pool registry to call functions
+     */
     modifier onlyPoolRegistry {
         require(msg.sender == poolRegistry, "caller is not pool registry");
         _;
     }
 
+    /**
+     * @notice Called by pool registry contract whenever a new isolated pool is created
+     * @param poolId ID of the new pool
+     * @param _comptroller Comptroller address of the new pool
+     */
     function setPoolComptroller(uint256 poolId, ComptrollerInterface _comptroller) public onlyPoolRegistry {
         require(address(_comptroller) != address(0), "invalid address");
         comptrollers[poolId] = _comptroller;
     }
 
+    /**
+     * @notice Start a auction
+     * @param poolId ID of the pool
+     */
     function startAuction(uint256 poolId) public onlyOwner {
         Auction storage auction = auctions[poolId];
         ComptrollerInterface comptroller = comptrollers[poolId];
@@ -198,6 +230,11 @@ contract Shortfall is OwnableUpgradeable {
         );
     }
 
+    /**
+     * @notice Place a bid in a auction
+     * @param poolId ID of the pool
+     * @param bidBps The bid m% or n%
+     */
     function placeBid(
         uint256 poolId,
         uint256 bidBps
@@ -248,6 +285,10 @@ contract Shortfall is OwnableUpgradeable {
         emit BidPlaced(poolId, bidBps, msg.sender);
     }
 
+    /**
+     * @notice Close an auction
+     * @param poolId ID of the pool
+     */
     function closeAuction(uint256 poolId) external {
         Auction storage auction = auctions[poolId];
 
@@ -298,6 +339,10 @@ contract Shortfall is OwnableUpgradeable {
         );
     }
 
+    /**
+     * @notice Restart an auction
+     * @param poolId ID of the pool
+     */
     function restartAuction(uint256 poolId) external {
         Auction storage auction = auctions[poolId];
 
