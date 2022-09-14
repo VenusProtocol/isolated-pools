@@ -9,15 +9,15 @@ import {
   MockToken,
   PriceOracle,
   Shortfall,
+  Shortfall__factory,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
-import { parse } from "path";
 import BigNumber from "bignumber.js";
 
-let shortfall:Shortfall
+let shortfall:MockContract<Shortfall>
 let fakeRiskFund:FakeContract<IRiskFund>
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
@@ -43,12 +43,14 @@ describe("Shortfall: Tests", async function () {
 
     fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund")
 
-    const Shortfall = await ethers.getContractFactory("Shortfall");
+    const Shortfall = await smock.mock<Shortfall__factory>('Shortfall');
     shortfall = await Shortfall.deploy(
       mockBUSD.address,
       fakeRiskFund.address
     );
     await shortfall.initialize(parseUnits(minimumPoolBadDebt, "18"));
+    shortfall.setVariable("riskFund", fakeRiskFund.address);
+    shortfall.riskFund.returns(fakeRiskFund.address)
 
     const [poolRegistry] = await ethers.getSigners();
     await shortfall.setPoolRegistry(poolRegistry.address)
@@ -108,10 +110,7 @@ describe("Shortfall: Tests", async function () {
     comptroller.oracle.returns(fakePriceOracle.address);
 
     fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
-
-    fakeRiskFund.transferReserveForAuction.returns(async () => {
-      await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18))
-    });
+    fakeRiskFund.transferReserveForAuction.returns(0);
   });
 
   it("Should have debt and reserve", async function () {
@@ -136,7 +135,9 @@ describe("Shortfall: Tests", async function () {
 
   it("Scenerio 1 - Start auction", async function () {
     cDAI.badDebt.returns(parseUnits("10000", 18))
+    cDAI.setVariable("badDebt", parseUnits("10000", 18))
     cWBTC.badDebt.returns(parseUnits("2", 8))
+    cWBTC.setVariable("badDebt", parseUnits("2", 8))
 
     await shortfall.startAuction(pooldId);
     
@@ -163,5 +164,36 @@ describe("Shortfall: Tests", async function () {
     await shortfall.placeBid(pooldId, auction.startBidBps);
     expect(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toNumber()).lt(previousDaiBalance.div(parseUnits("1", 18)).toNumber())
     expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
+
+    let percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
+    let total = (new BigNumber((await cDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
+    let amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
+    let amountDeducted = (new BigNumber(previousDaiBalance.div(parseUnits("1", 18)).toString())).minus(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toString()).toString()
+    expect(amountDeducted).equal(amountToDeduct)
+
+    percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
+    total = (new BigNumber((await cWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
+    amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
+    amountDeducted = ((new BigNumber(previousWBTCBalance.toString())).minus((await mockWBTC.balanceOf(owner.address)).toString())).div(parseUnits("1", 8).toString()).toString()
+    expect(amountDeducted).equal(amountToDeduct)
   });
+
+  it("Scenerio 1 - Close Auction", async function () {
+    async function mineNBlocks(n:number) {
+      for (let index = 0; index < n; index++) {
+        await ethers.provider.send('evm_mine', [Date.now() * 1000]);
+      }
+    }
+
+    const [owner] = await ethers.getSigners();
+
+    await mineNBlocks((await shortfall.nextBidderBlockLimit()).toNumber() + 2)
+
+    //simulate transferReserveForAuction
+    await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18))
+
+    await shortfall.closeAuction(pooldId)
+    const auction = await shortfall.auctions(pooldId);
+    expect(auction.status).equal(2)
+  }); 
 });

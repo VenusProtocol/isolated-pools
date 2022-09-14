@@ -76,7 +76,7 @@ contract Shortfall is OwnableUpgradeable {
     address public poolRegistry;
 
     //Risk fund address
-    IRiskFund immutable public riskFund;
+    IRiskFund public riskFund;
 
     //Minimum USD debt in pool for shortfall to trigger 
     uint256 public minimumPoolBadDebt;
@@ -254,7 +254,7 @@ contract Shortfall is OwnableUpgradeable {
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0), "waiting for next bidder. cannot close auction" );
         
-        uint256[] memory marketsDebt;
+        uint256[] memory marketsDebt = new uint256[](auction.markets.length);
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
             CErc20 cErc20 = CErc20(address(auction.markets[i]));
