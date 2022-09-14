@@ -5,10 +5,10 @@ import {
   PoolRegistry,
   Comptroller,
   SimplePriceOracle,
-  CErc20Immutable,
+  VBep20Immutable,
   MockPriceOracle,
   Unitroller,
-  CErc20ImmutableFactory,
+  VBep20ImmutableFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -21,14 +21,14 @@ let comptroller1: Comptroller;
 let comptroller2: Comptroller;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let cDAI: CErc20Immutable;
-let cWBTC: CErc20Immutable;
+let vDAI: VBep20Immutable;
+let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
-let cTokenFactory: CErc20ImmutableFactory;
+let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -39,10 +39,10 @@ describe("PoolRegistry: Tests", function () {
    */
   before(async function () {
     const [, user] = await ethers.getSigners();
-    const CErc20ImmutableFactory = await ethers.getContractFactory(
-      "CErc20ImmutableFactory"
+    const VBep20ImmutableFactory = await ethers.getContractFactory(
+      "VBep20ImmutableFactory"
     );
-    cTokenFactory = await CErc20ImmutableFactory.deploy();
+    cTokenFactory = await VBep20ImmutableFactory.deploy();
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -162,13 +162,13 @@ describe("PoolRegistry: Tests", function () {
 
     await unitroller2._acceptAdmin();
 
-    // Deploy CTokens
+    // Deploy VTokens
     await poolRegistry.addMarket({
       poolId: 1,
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
-      symbol: "cWBTC",
+      symbol: "vWBTC",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -183,7 +183,7 @@ describe("PoolRegistry: Tests", function () {
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
-      symbol: "cDAI",
+      symbol: "vDAI",
       rateModel: 0,
       baseRatePerYear: 0,
       multiplierPerYear: "40000000000000000",
@@ -193,23 +193,23 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
     });
 
-    const cWBTCAddress = await poolRegistry.getCTokenForAsset(
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockWBTC.address
     );
-    const cDAIAddress = await poolRegistry.getCTokenForAsset(
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(
       1,
       mockDAI.address
     );
 
-    cWBTC = await ethers.getContractAt("CErc20Immutable", cWBTCAddress);
-    cDAI = await ethers.getContractAt("CErc20Immutable", cDAIAddress);
+    vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
 
     // Enter Markets
-    await comptroller1Proxy.enterMarkets([cDAI.address, cWBTC.address]);
+    await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy
       .connect(user)
-      .enterMarkets([cDAI.address, cWBTC.address]);
+      .enterMarkets([vDAI.address, vWBTC.address]);
 
     //Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
@@ -297,8 +297,8 @@ describe("PoolRegistry: Tests", function () {
   it("Enter Market", async function () {
     const [owner, user] = await ethers.getSigners();
     const res = await comptroller1Proxy.getAssetsIn(owner.address);
-    expect(res[0]).equal(cDAI.address);
-    expect(res[1]).equal(cWBTC.address);
+    expect(res[0]).equal(vDAI.address);
+    expect(res[1]).equal(vWBTC.address);
   });
 
   it("Metadata", async function () {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./CToken.sol";
+import "./VToken.sol";
 import "./ErrorReporter.sol";
 import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
@@ -22,13 +22,13 @@ contract Comptroller is
     ExponentialNoError
 {
     /// @notice Emitted when an admin supports a market
-    event MarketListed(CToken cToken);
+    event MarketListed(VToken vToken);
 
     /// @notice Emitted when an account enters a market
-    event MarketEntered(CToken cToken, address account);
+    event MarketEntered(VToken vToken, address account);
 
     /// @notice Emitted when an account exits a market
-    event MarketExited(CToken cToken, address account);
+    event MarketExited(VToken vToken, address account);
 
     /// @notice Emitted when close factor is changed by admin
     event NewCloseFactor(
@@ -38,7 +38,7 @@ contract Comptroller is
 
     /// @notice Emitted when a collateral factor is changed by admin
     event NewCollateralFactor(
-        CToken cToken,
+        VToken vToken,
         uint256 oldCollateralFactorMantissa,
         uint256 newCollateralFactorMantissa
     );
@@ -59,10 +59,10 @@ contract Comptroller is
     event ActionPaused(string action, bool pauseState);
 
     /// @notice Emitted when an action is paused on a market
-    event ActionPaused(CToken cToken, string action, bool pauseState);
+    event ActionPaused(VToken vToken, string action, bool pauseState);
 
-    /// @notice Emitted when borrow cap for a cToken is changed
-    event NewBorrowCap(CToken indexed cToken, uint256 newBorrowCap);
+    /// @notice Emitted when borrow cap for a vToken is changed
+    event NewBorrowCap(VToken indexed vToken, uint256 newBorrowCap);
 
     /// @notice Emitted when borrow cap guardian is changed
     event NewBorrowCapGuardian(
@@ -70,14 +70,14 @@ contract Comptroller is
         address newBorrowCapGuardian
     );
 
-    /// @notice Emitted when minimum liquidatable amount (in USD) for a cToken is changed
+    /// @notice Emitted when minimum liquidatable amount (in USD) for a vToken is changed
     event NewMinLiquidatableAmount(
-        CToken indexed cToken,
+        VToken indexed vToken,
         uint256 newMinLiquidatableAmount
     );
 
     /// @notice Emitted when supply cap for a vToken is changed
-    event NewSupplyCap(CToken indexed vToken, uint256 newSupplyCap);
+    event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
     // closeFactorMantissa must be strictly greater than this value
     uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
@@ -116,9 +116,9 @@ contract Comptroller is
     function getAssetsIn(address account)
         external
         view
-        returns (CToken[] memory)
+        returns (VToken[] memory)
     {
-        CToken[] memory assetsIn = accountAssets[account];
+        VToken[] memory assetsIn = accountAssets[account];
 
         return assetsIn;
     }
@@ -126,34 +126,34 @@ contract Comptroller is
     /**
      * @notice Returns whether the given account is entered in the given asset
      * @param account The address of the account to check
-     * @param cToken The cToken to check
+     * @param vToken The vToken to check
      * @return True if the account is in the asset, otherwise false.
      */
-    function checkMembership(address account, CToken cToken)
+    function checkMembership(address account, VToken vToken)
         external
         view
         returns (bool)
     {
-        return markets[address(cToken)].accountMembership[account];
+        return markets[address(vToken)].accountMembership[account];
     }
 
     /**
      * @notice Add assets to be included in account liquidity calculation
-     * @param cTokens The list of addresses of the cToken markets to be enabled
+     * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return Success indicator for whether each corresponding market was entered
      */
-    function enterMarkets(address[] memory cTokens)
+    function enterMarkets(address[] memory vTokens)
         public
         override
         returns (uint256[] memory)
     {
-        uint256 len = cTokens.length;
+        uint256 len = vTokens.length;
 
         uint256[] memory results = new uint256[](len);
         for (uint256 i = 0; i < len; ++i) {
-            CToken cToken = CToken(cTokens[i]);
+            VToken vToken = VToken(vTokens[i]);
 
-            results[i] = uint256(addToMarketInternal(cToken, msg.sender));
+            results[i] = uint256(addToMarketInternal(vToken, msg.sender));
         }
 
         return results;
@@ -161,15 +161,15 @@ contract Comptroller is
 
     /**
      * @notice Add the market to the borrower's "assets in" for liquidity calculations
-     * @param cToken The market to enter
+     * @param vToken The market to enter
      * @param borrower The address of the account to modify
      * @return Success indicator for whether the market was entered
      */
-    function addToMarketInternal(CToken cToken, address borrower)
+    function addToMarketInternal(VToken vToken, address borrower)
         internal
         returns (Error)
     {
-        Market storage marketToJoin = markets[address(cToken)];
+        Market storage marketToJoin = markets[address(vToken)];
 
         if (!marketToJoin.isListed) {
             // market is not listed, cannot join
@@ -187,9 +187,9 @@ contract Comptroller is
         //  that is, only when we need to perform liquidity checks
         //  and not whenever we want to check if an account is in a particular market
         marketToJoin.accountMembership[borrower] = true;
-        accountAssets[borrower].push(cToken);
+        accountAssets[borrower].push(vToken);
 
-        emit MarketEntered(cToken, borrower);
+        emit MarketEntered(vToken, borrower);
 
         return Error.NO_ERROR;
     }
@@ -198,17 +198,17 @@ contract Comptroller is
      * @notice Removes asset from sender's account liquidity calculation
      * @dev Sender must not have an outstanding borrow balance in the asset,
      *  or be providing necessary collateral for an outstanding borrow.
-     * @param cTokenAddress The address of the asset to be removed
+     * @param vTokenAddress The address of the asset to be removed
      * @return Whether or not the account successfully exited the market
      */
-    function exitMarket(address cTokenAddress)
+    function exitMarket(address vTokenAddress)
         external
         override
         returns (uint256)
     {
-        CToken cToken = CToken(cTokenAddress);
-        /* Get sender tokensHeld and amountOwed underlying from the cToken */
-        (uint256 oErr, uint256 tokensHeld, uint256 amountOwed, ) = cToken
+        VToken vToken = VToken(vTokenAddress);
+        /* Get sender tokensHeld and amountOwed underlying from the vToken */
+        (uint256 oErr, uint256 tokensHeld, uint256 amountOwed, ) = vToken
             .getAccountSnapshot(msg.sender);
         require(oErr == 0, "exitMarket: getAccountSnapshot failed"); // semi-opaque error code
 
@@ -223,7 +223,7 @@ contract Comptroller is
 
         /* Fail if the sender is not permitted to redeem all of their tokens */
         uint256 allowed = redeemAllowedInternal(
-            cTokenAddress,
+            vTokenAddress,
             msg.sender,
             tokensHeld
         );
@@ -236,23 +236,23 @@ contract Comptroller is
                 );
         }
 
-        Market storage marketToExit = markets[address(cToken)];
+        Market storage marketToExit = markets[address(vToken)];
 
         /* Return true if the sender is not already ‘in’ the market */
         if (!marketToExit.accountMembership[msg.sender]) {
             return uint256(Error.NO_ERROR);
         }
 
-        /* Set cToken account membership to false */
+        /* Set vToken account membership to false */
         delete marketToExit.accountMembership[msg.sender];
 
-        /* Delete cToken from the account’s list of assets */
+        /* Delete vToken from the account’s list of assets */
         // load into memory for faster iteration
-        CToken[] memory userAssetList = accountAssets[msg.sender];
+        VToken[] memory userAssetList = accountAssets[msg.sender];
         uint256 len = userAssetList.length;
         uint256 assetIndex = len;
         for (uint256 i = 0; i < len; ++i) {
-            if (userAssetList[i] == cToken) {
+            if (userAssetList[i] == vToken) {
                 assetIndex = i;
                 break;
             }
@@ -262,11 +262,11 @@ contract Comptroller is
         assert(assetIndex < len);
 
         // copy last item in list to location of item to be removed, reduce length by 1
-        CToken[] storage storedList = accountAssets[msg.sender];
+        VToken[] storage storedList = accountAssets[msg.sender];
         storedList[assetIndex] = storedList[storedList.length - 1];
         storedList.pop();
 
-        emit MarketExited(cToken, msg.sender);
+        emit MarketExited(vToken, msg.sender);
 
         return uint256(Error.NO_ERROR);
     }
@@ -275,39 +275,39 @@ contract Comptroller is
 
     /**
      * @notice Checks if the account should be allowed to mint tokens in the given market
-     * @param cToken The market to verify the mint against
+     * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
      * @return 0 if the mint is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function mintAllowed(
-        address cToken,
+        address vToken,
         address minter,
         uint256 mintAmount
     ) external override returns (uint256) {
         // Pausing is a very serious situation - we revert to sound the alarms
-        require(!mintGuardianPaused[cToken], "mint is paused");
+        require(!mintGuardianPaused[vToken], "mint is paused");
 
         // Shh - currently unused
         minter;
         mintAmount;
 
-        if (!markets[cToken].isListed) {
+        if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        uint256 supplyCap = supplyCaps[cToken];
+        uint256 supplyCap = supplyCaps[vToken];
         require(supplyCap > 0, "market supply cap is 0");
 
-        uint256 totalSupply = CToken(cToken).totalSupply();
+        uint256 totalSupply = VToken(vToken).totalSupply();
         uint256 nextTotalSupply = add_(totalSupply, mintAmount);
         require(nextTotalSupply <= supplyCap, "market supply cap reached");
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(
-                cToken,
+                vToken,
                 minter
             );
         }
@@ -317,19 +317,19 @@ contract Comptroller is
 
     /**
      * @notice Validates mint and reverts on rejection. May emit logs.
-     * @param cToken Asset being minted
+     * @param vToken Asset being minted
      * @param minter The address minting the tokens
      * @param actualMintAmount The amount of the underlying asset being minted
      * @param mintTokens The number of tokens being minted
      */
     function mintVerify(
-        address cToken,
+        address vToken,
         address minter,
         uint256 actualMintAmount,
         uint256 mintTokens
     ) external override {
         // Shh - currently unused
-        cToken;
+        vToken;
         minter;
         actualMintAmount;
         mintTokens;
@@ -342,26 +342,26 @@ contract Comptroller is
 
     /**
      * @notice Checks if the account should be allowed to redeem tokens in the given market
-     * @param cToken The market to verify the redeem against
+     * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
-     * @param redeemTokens The number of cTokens to exchange for the underlying asset in the market
+     * @param redeemTokens The number of vTokens to exchange for the underlying asset in the market
      * @return 0 if the redeem is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function redeemAllowed(
-        address cToken,
+        address vToken,
         address redeemer,
         uint256 redeemTokens
     ) external override returns (uint256) {
-        uint256 allowed = redeemAllowedInternal(cToken, redeemer, redeemTokens);
+        uint256 allowed = redeemAllowedInternal(vToken, redeemer, redeemTokens);
         if (allowed != uint256(Error.NO_ERROR)) {
             return allowed;
         }
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(
-                cToken,
+                vToken,
                 redeemer
             );
         }
@@ -370,16 +370,16 @@ contract Comptroller is
     }
 
     function redeemAllowedInternal(
-        address cToken,
+        address vToken,
         address redeemer,
         uint256 redeemTokens
     ) internal view returns (uint256) {
-        if (!markets[cToken].isListed) {
+        if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!markets[cToken].accountMembership[redeemer]) {
+        if (!markets[vToken].accountMembership[redeemer]) {
             return uint256(Error.NO_ERROR);
         }
 
@@ -390,7 +390,7 @@ contract Comptroller is
             uint256 shortfall
         ) = getHypotheticalAccountLiquidityInternal(
                 redeemer,
-                CToken(cToken),
+                VToken(vToken),
                 redeemTokens,
                 0
             );
@@ -406,19 +406,19 @@ contract Comptroller is
 
     /**
      * @notice Validates redeem and reverts on rejection. May emit logs.
-     * @param cToken Asset being redeemed
+     * @param vToken Asset being redeemed
      * @param redeemer The address redeeming the tokens
      * @param redeemAmount The amount of the underlying asset being redeemed
      * @param redeemTokens The number of tokens being redeemed
      */
     function redeemVerify(
-        address cToken,
+        address vToken,
         address redeemer,
         uint256 redeemAmount,
         uint256 redeemTokens
     ) external override {
         // Shh - currently unused
-        cToken;
+        vToken;
         redeemer;
 
         // Require tokens is zero or amount is also zero
@@ -429,45 +429,45 @@ contract Comptroller is
 
     /**
      * @notice Checks if the account should be allowed to borrow the underlying asset of the given market
-     * @param cToken The market to verify the borrow against
+     * @param vToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
      * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function borrowAllowed(
-        address cToken,
+        address vToken,
         address borrower,
         uint256 borrowAmount
     ) external override returns (uint256) {
         // Pausing is a very serious situation - we revert to sound the alarms
-        require(!borrowGuardianPaused[cToken], "borrow is paused");
+        require(!borrowGuardianPaused[vToken], "borrow is paused");
 
-        if (!markets[cToken].isListed) {
+        if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        if (!markets[cToken].accountMembership[borrower]) {
-            // only cTokens may call borrowAllowed if borrower not in market
-            require(msg.sender == cToken, "sender must be cToken");
+        if (!markets[vToken].accountMembership[borrower]) {
+            // only vTokens may call borrowAllowed if borrower not in market
+            require(msg.sender == vToken, "sender must be vToken");
 
             // attempt to add borrower to the market
-            Error err = addToMarketInternal(CToken(msg.sender), borrower);
+            Error err = addToMarketInternal(VToken(msg.sender), borrower);
             if (err != Error.NO_ERROR) {
                 return uint256(err);
             }
 
             // it should be impossible to break the important invariant
-            assert(markets[cToken].accountMembership[borrower]);
+            assert(markets[vToken].accountMembership[borrower]);
         }
 
-        if (oracle.getUnderlyingPrice(CToken(cToken)) == 0) {
+        if (oracle.getUnderlyingPrice(VToken(vToken)) == 0) {
             return uint256(Error.PRICE_ERROR);
         }
 
-        uint256 borrowCap = borrowCaps[cToken];
+        uint256 borrowCap = borrowCaps[vToken];
         // Borrow cap of 0 corresponds to unlimited borrowing
         if (borrowCap != 0) {
-            uint256 totalBorrows = CToken(cToken).totalBorrows();
+            uint256 totalBorrows = VToken(vToken).totalBorrows();
             uint256 nextTotalBorrows = add_(totalBorrows, borrowAmount);
             require(nextTotalBorrows < borrowCap, "market borrow cap reached");
         }
@@ -478,7 +478,7 @@ contract Comptroller is
             uint256 shortfall
         ) = getHypotheticalAccountLiquidityInternal(
                 borrower,
-                CToken(cToken),
+                VToken(vToken),
                 0,
                 borrowAmount
             );
@@ -492,14 +492,14 @@ contract Comptroller is
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             Exp memory borrowIndex = Exp({
-                mantissa: CToken(cToken).borrowIndex()
+                mantissa: VToken(vToken).borrowIndex()
             });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(
-                cToken,
+                vToken,
                 borrowIndex
             );
             rewardsDistributors[i].distributeBorrowerRewardToken(
-                cToken,
+                vToken,
                 borrower,
                 borrowIndex
             );
@@ -510,17 +510,17 @@ contract Comptroller is
 
     /**
      * @notice Validates borrow and reverts on rejection. May emit logs.
-     * @param cToken Asset whose underlying is being borrowed
+     * @param vToken Asset whose underlying is being borrowed
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
      */
     function borrowVerify(
-        address cToken,
+        address vToken,
         address borrower,
         uint256 borrowAmount
     ) external override {
         // Shh - currently unused
-        cToken;
+        vToken;
         borrower;
         borrowAmount;
 
@@ -532,14 +532,14 @@ contract Comptroller is
 
     /**
      * @notice Checks if the account should be allowed to repay a borrow in the given market
-     * @param cToken The market to verify the repay against
+     * @param vToken The market to verify the repay against
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
      * @return 0 if the repay is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function repayBorrowAllowed(
-        address cToken,
+        address vToken,
         address payer,
         address borrower,
         uint256 repayAmount
@@ -549,21 +549,21 @@ contract Comptroller is
         borrower;
         repayAmount;
 
-        if (!markets[cToken].isListed) {
+        if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             Exp memory borrowIndex = Exp({
-                mantissa: CToken(cToken).borrowIndex()
+                mantissa: VToken(vToken).borrowIndex()
             });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(
-                cToken,
+                vToken,
                 borrowIndex
             );
             rewardsDistributors[i].distributeBorrowerRewardToken(
-                cToken,
+                vToken,
                 borrower,
                 borrowIndex
             );
@@ -574,20 +574,20 @@ contract Comptroller is
 
     /**
      * @notice Validates repayBorrow and reverts on rejection. May emit logs.
-     * @param cToken Asset being repaid
+     * @param vToken Asset being repaid
      * @param payer The address repaying the borrow
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
      */
     function repayBorrowVerify(
-        address cToken,
+        address vToken,
         address payer,
         address borrower,
         uint256 actualRepayAmount,
         uint256 borrowerIndex
     ) external override {
         // Shh - currently unused
-        cToken;
+        vToken;
         payer;
         borrower;
         actualRepayAmount;
@@ -601,15 +601,15 @@ contract Comptroller is
 
     /**
      * @notice Checks if the liquidation should be allowed to occur
-     * @param cTokenBorrowed Asset which was borrowed by the borrower
-     * @param cTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param repayAmount The amount of underlying being repaid
      */
     function liquidateBorrowAllowed(
-        address cTokenBorrowed,
-        address cTokenCollateral,
+        address vTokenBorrowed,
+        address vTokenCollateral,
         address liquidator,
         address borrower,
         uint256 repayAmount
@@ -619,26 +619,26 @@ contract Comptroller is
 
         uint256 error = validateMinLiquidatableAmountInternal(
             repayAmount,
-            cTokenCollateral,
-            cTokenBorrowed
+            vTokenCollateral,
+            vTokenBorrowed
         );
         if (error != uint256(Error.NO_ERROR)) {
             return error;
         }
 
         if (
-            !markets[cTokenBorrowed].isListed ||
-            !markets[cTokenCollateral].isListed
+            !markets[vTokenBorrowed].isListed ||
+            !markets[vTokenCollateral].isListed
         ) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        uint256 borrowBalance = CToken(cTokenBorrowed).borrowBalanceStored(
+        uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(
             borrower
         );
 
         /* allow accounts to be liquidated if the market is deprecated */
-        if (isDeprecated(CToken(cTokenBorrowed))) {
+        if (isDeprecated(VToken(vTokenBorrowed))) {
             require(
                 borrowBalance >= repayAmount,
                 "Can not repay more than the total borrow"
@@ -670,23 +670,23 @@ contract Comptroller is
 
     /**
      * @notice Validates liquidateBorrow and reverts on rejection. May emit logs.
-     * @param cTokenBorrowed Asset which was borrowed by the borrower
-     * @param cTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
      */
     function liquidateBorrowVerify(
-        address cTokenBorrowed,
-        address cTokenCollateral,
+        address vTokenBorrowed,
+        address vTokenCollateral,
         address liquidator,
         address borrower,
         uint256 actualRepayAmount,
         uint256 seizeTokens
     ) external override {
         // Shh - currently unused
-        cTokenBorrowed;
-        cTokenCollateral;
+        vTokenBorrowed;
+        vTokenCollateral;
         liquidator;
         borrower;
         actualRepayAmount;
@@ -700,15 +700,15 @@ contract Comptroller is
 
     /**
      * @notice Checks if the seizing of assets should be allowed to occur
-     * @param cTokenCollateral Asset which was used as collateral and will be seized
-     * @param cTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param seizeTokens The number of collateral tokens to seize
      */
     function seizeAllowed(
-        address cTokenCollateral,
-        address cTokenBorrowed,
+        address vTokenCollateral,
+        address vTokenBorrowed,
         address liquidator,
         address borrower,
         uint256 seizeTokens
@@ -720,15 +720,15 @@ contract Comptroller is
         seizeTokens;
 
         if (
-            !markets[cTokenCollateral].isListed ||
-            !markets[cTokenBorrowed].isListed
+            !markets[vTokenCollateral].isListed ||
+            !markets[vTokenBorrowed].isListed
         ) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
         if (
-            CToken(cTokenCollateral).comptroller() !=
-            CToken(cTokenBorrowed).comptroller()
+            VToken(vTokenCollateral).comptroller() !=
+            VToken(vTokenBorrowed).comptroller()
         ) {
             return uint256(Error.COMPTROLLER_MISMATCH);
         }
@@ -736,14 +736,14 @@ contract Comptroller is
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(
-                cTokenCollateral
+                vTokenCollateral
             );
             rewardsDistributors[i].distributeSupplierRewardToken(
-                cTokenCollateral,
+                vTokenCollateral,
                 borrower
             );
             rewardsDistributors[i].distributeSupplierRewardToken(
-                cTokenCollateral,
+                vTokenCollateral,
                 liquidator
             );
         }
@@ -753,22 +753,22 @@ contract Comptroller is
 
     /**
      * @notice Validates seize and reverts on rejection. May emit logs.
-     * @param cTokenCollateral Asset which was used as collateral and will be seized
-     * @param cTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param seizeTokens The number of collateral tokens to seize
      */
     function seizeVerify(
-        address cTokenCollateral,
-        address cTokenBorrowed,
+        address vTokenCollateral,
+        address vTokenBorrowed,
         address liquidator,
         address borrower,
         uint256 seizeTokens
     ) external override {
         // Shh - currently unused
-        cTokenCollateral;
-        cTokenBorrowed;
+        vTokenCollateral;
+        vTokenBorrowed;
         liquidator;
         borrower;
         seizeTokens;
@@ -781,14 +781,14 @@ contract Comptroller is
 
     /**
      * @notice Checks if the account should be allowed to transfer tokens in the given market
-     * @param cToken The market to verify the transfer against
+     * @param vToken The market to verify the transfer against
      * @param src The account which sources the tokens
      * @param dst The account which receives the tokens
-     * @param transferTokens The number of cTokens to transfer
+     * @param transferTokens The number of vTokens to transfer
      * @return 0 if the transfer is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function transferAllowed(
-        address cToken,
+        address vToken,
         address src,
         address dst,
         uint256 transferTokens
@@ -798,16 +798,16 @@ contract Comptroller is
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
-        uint256 allowed = redeemAllowedInternal(cToken, src, transferTokens);
+        uint256 allowed = redeemAllowedInternal(vToken, src, transferTokens);
         if (allowed != uint256(Error.NO_ERROR)) {
             return allowed;
         }
 
         // Keep the flywheel moving
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(cToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(cToken, src);
-            rewardsDistributors[i].distributeSupplierRewardToken(cToken, dst);
+            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
+            rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
         }
 
         return uint256(Error.NO_ERROR);
@@ -815,19 +815,19 @@ contract Comptroller is
 
     /**
      * @notice Validates transfer and reverts on rejection. May emit logs.
-     * @param cToken Asset being transferred
+     * @param vToken Asset being transferred
      * @param src The account which sources the tokens
      * @param dst The account which receives the tokens
-     * @param transferTokens The number of cTokens to transfer
+     * @param transferTokens The number of vTokens to transfer
      */
     function transferVerify(
-        address cToken,
+        address vToken,
         address src,
         address dst,
         uint256 transferTokens
     ) external override {
         // Shh - currently unused
-        cToken;
+        vToken;
         src;
         dst;
         transferTokens;
@@ -842,13 +842,13 @@ contract Comptroller is
 
     /**
      * @dev Local vars for avoiding stack-depth limits in calculating account liquidity.
-     *  Note that `cTokenBalance` is the number of cTokens the account owns in the market,
+     *  Note that `vTokenBalance` is the number of vTokens the account owns in the market,
      *  whereas `borrowBalance` is the amount of underlying that the account has borrowed.
      */
     struct AccountLiquidityLocalVars {
         uint256 sumCollateral;
         uint256 sumBorrowPlusEffects;
-        uint256 cTokenBalance;
+        uint256 vTokenBalance;
         uint256 borrowBalance;
         uint256 exchangeRateMantissa;
         uint256 oraclePriceMantissa;
@@ -864,24 +864,24 @@ contract Comptroller is
      */
     function validateMinLiquidatableAmount(
         uint256 repayAmount,
-        address cTokenCollateral,
-        address cTokenBorrow
+        address vTokenCollateral,
+        address vTokenBorrow
     ) public view returns (uint256) {
         return
             validateMinLiquidatableAmountInternal(
                 repayAmount,
-                cTokenCollateral,
-                cTokenBorrow
+                vTokenCollateral,
+                vTokenBorrow
             );
     }
 
     function validateMinLiquidatableAmountInternal(
         uint256 repayAmount,
-        address cTokenCollateral,
-        address cTokenBorrow
+        address vTokenCollateral,
+        address vTokenBorrow
     ) internal view returns (uint256) {
         AccountLiquidityLocalVars memory vars; // Holds all our calculation results
-        CToken repayAsset = CToken(cTokenCollateral);
+        VToken repayAsset = VToken(vTokenCollateral);
 
         // Get the normalized price of the asset
         vars.oraclePriceMantissa = oracle.getUnderlyingPrice(repayAsset);
@@ -895,7 +895,7 @@ contract Comptroller is
             vars.oraclePrice,
             repayAmount
         );
-        uint256 minLiquidatableAmount = minimalLiquidatableAmount[cTokenBorrow];
+        uint256 minLiquidatableAmount = minimalLiquidatableAmount[vTokenBorrow];
 
         if (minLiquidatableAmount == 0) {
             return uint256(Error.MIN_LIQUIDATABLE_AMOUNT_NOT_SET);
@@ -927,7 +927,7 @@ contract Comptroller is
             uint256 shortfall
         ) = getHypotheticalAccountLiquidityInternal(
                 account,
-                CToken(address(0)),
+                VToken(address(0)),
                 0,
                 0
             );
@@ -953,7 +953,7 @@ contract Comptroller is
         return
             getHypotheticalAccountLiquidityInternal(
                 account,
-                CToken(address(0)),
+                VToken(address(0)),
                 0,
                 0
             );
@@ -961,7 +961,7 @@ contract Comptroller is
 
     /**
      * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
-     * @param cTokenModify The market to hypothetically redeem/borrow in
+     * @param vTokenModify The market to hypothetically redeem/borrow in
      * @param account The account to determine liquidity for
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
@@ -971,7 +971,7 @@ contract Comptroller is
      */
     function getHypotheticalAccountLiquidity(
         address account,
-        address cTokenModify,
+        address vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount
     )
@@ -989,7 +989,7 @@ contract Comptroller is
             uint256 shortfall
         ) = getHypotheticalAccountLiquidityInternal(
                 account,
-                CToken(cTokenModify),
+                VToken(vTokenModify),
                 redeemTokens,
                 borrowAmount
             );
@@ -998,11 +998,11 @@ contract Comptroller is
 
     /**
      * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
-     * @param cTokenModify The market to hypothetically redeem/borrow in
+     * @param vTokenModify The market to hypothetically redeem/borrow in
      * @param account The account to determine liquidity for
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
-     * @dev Note that we calculate the exchangeRateStored for each collateral cToken using stored data,
+     * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return (possible error code,
                 hypothetical account liquidity in excess of collateral requirements,
@@ -1010,7 +1010,7 @@ contract Comptroller is
      */
     function getHypotheticalAccountLiquidityInternal(
         address account,
-        CToken cTokenModify,
+        VToken vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount
     )
@@ -1026,14 +1026,14 @@ contract Comptroller is
         uint256 oErr;
 
         // For each asset the account is in
-        CToken[] memory assets = accountAssets[account];
+        VToken[] memory assets = accountAssets[account];
         for (uint256 i = 0; i < assets.length; ++i) {
-            CToken asset = assets[i];
+            VToken asset = assets[i];
 
-            // Read the balances and exchange rate from the cToken
+            // Read the balances and exchange rate from the vToken
             (
                 oErr,
-                vars.cTokenBalance,
+                vars.vTokenBalance,
                 vars.borrowBalance,
                 vars.exchangeRateMantissa
             ) = asset.getAccountSnapshot(account);
@@ -1059,10 +1059,10 @@ contract Comptroller is
                 vars.oraclePrice
             );
 
-            // sumCollateral += tokensToDenom * cTokenBalance
+            // sumCollateral += tokensToDenom * vTokenBalance
             vars.sumCollateral = mul_ScalarTruncateAddUInt(
                 vars.tokensToDenom,
-                vars.cTokenBalance,
+                vars.vTokenBalance,
                 vars.sumCollateral
             );
 
@@ -1073,8 +1073,8 @@ contract Comptroller is
                 vars.sumBorrowPlusEffects
             );
 
-            // Calculate effects of interacting with cTokenModify
-            if (asset == cTokenModify) {
+            // Calculate effects of interacting with vTokenModify
+            if (asset == vTokenModify) {
                 // redeem effect
                 // sumBorrowPlusEffects += tokensToDenom * redeemTokens
                 vars.sumBorrowPlusEffects = mul_ScalarTruncateAddUInt(
@@ -1111,23 +1111,23 @@ contract Comptroller is
 
     /**
      * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
-     * @dev Used in liquidation (called in cToken.liquidateBorrowFresh)
-     * @param cTokenBorrowed The address of the borrowed cToken
-     * @param cTokenCollateral The address of the collateral cToken
-     * @param actualRepayAmount The amount of cTokenBorrowed underlying to convert into cTokenCollateral tokens
-     * @return (errorCode, number of cTokenCollateral tokens to be seized in a liquidation)
+     * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
+     * @param vTokenBorrowed The address of the borrowed vToken
+     * @param vTokenCollateral The address of the collateral vToken
+     * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
+     * @return (errorCode, number of vTokenCollateral tokens to be seized in a liquidation)
      */
     function liquidateCalculateSeizeTokens(
-        address cTokenBorrowed,
-        address cTokenCollateral,
+        address vTokenBorrowed,
+        address vTokenCollateral,
         uint256 actualRepayAmount
     ) external view override returns (uint256, uint256) {
         /* Read oracle prices for borrowed and collateral markets */
         uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(
-            CToken(cTokenBorrowed)
+            VToken(vTokenBorrowed)
         );
         uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(
-            CToken(cTokenCollateral)
+            VToken(vTokenCollateral)
         );
         if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
             return (uint256(Error.PRICE_ERROR), 0);
@@ -1139,7 +1139,7 @@ contract Comptroller is
          *  seizeTokens = seizeAmount / exchangeRate
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
-        uint256 exchangeRateMantissa = CToken(cTokenCollateral)
+        uint256 exchangeRateMantissa = VToken(vTokenCollateral)
             .exchangeRateStored(); // Note: reverts on error
         uint256 seizeTokens;
         Exp memory numerator;
@@ -1213,21 +1213,21 @@ contract Comptroller is
     /**
      * @notice Sets the collateralFactor for a market
      * @dev Restricted function to set per-market collateralFactor
-     * @param cToken The market to set the factor on
+     * @param vToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
     function _setCollateralFactor(
-        CToken cToken,
+        VToken vToken,
         uint256 newCollateralFactorMantissa
     ) external returns (uint256) {
-        bool isAllowedtoCall = AccessControlManager(accessControl)
+        bool isAllowedToCall = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
-                "_setCollateralFactor(CToken,uint256)"
+                "_setCollateralFactor(VToken,uint256)"
             );
 
-        if (isAllowedtoCall) {
+        if (!isAllowedToCall) {
             return
                 fail(
                     Error.UNAUTHORIZED,
@@ -1236,7 +1236,7 @@ contract Comptroller is
         }
 
         // Verify market is listed
-        Market storage market = markets[address(cToken)];
+        Market storage market = markets[address(vToken)];
         if (!market.isListed) {
             return
                 fail(
@@ -1262,7 +1262,7 @@ contract Comptroller is
         // If collateral factor != 0, fail if price == 0
         if (
             newCollateralFactorMantissa != 0 &&
-            oracle.getUnderlyingPrice(cToken) == 0
+            oracle.getUnderlyingPrice(vToken) == 0
         ) {
             return
                 fail(
@@ -1277,7 +1277,7 @@ contract Comptroller is
 
         // Emit event with asset, old collateral factor, and new collateral factor
         emit NewCollateralFactor(
-            cToken,
+            vToken,
             oldCollateralFactorMantissa,
             newCollateralFactorMantissa
         );
@@ -1324,12 +1324,12 @@ contract Comptroller is
     /**
      * @notice Add the market to the markets mapping and set it as listed
      * @dev Admin function to set isListed and add support for the market
-     * @param cToken The address of the market (token) to list
+     * @param vToken The address of the market (token) to list
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
-    function _supportMarket(CToken cToken) external returns (uint256) {
+    function _supportMarket(VToken vToken) external returns (uint256) {
         bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_supportMarket(CToken)");
+            .isAllowedToCall(msg.sender, "_supportMarket(VToken)");
 
         if (!canCallFunction) {
             return
@@ -1339,7 +1339,7 @@ contract Comptroller is
                 );
         }
 
-        if (markets[address(cToken)].isListed) {
+        if (markets[address(vToken)].isListed) {
             return
                 fail(
                     Error.MARKET_ALREADY_LISTED,
@@ -1347,40 +1347,40 @@ contract Comptroller is
                 );
         }
 
-        cToken.isCToken(); // Sanity check to make sure its really a CToken
+        vToken.isVToken(); // Sanity check to make sure its really a VToken
 
         // Note that isComped is not in active use anymore
-        Market storage newMarket = markets[address(cToken)];
+        Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;
         newMarket.isComped = false;
         newMarket.collateralFactorMantissa = 0;
 
-        _addMarketInternal(address(cToken));
+        _addMarketInternal(address(vToken));
 
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
-            rewardsDistributors[i].initializeMarket(address(cToken));
+            rewardsDistributors[i].initializeMarket(address(vToken));
         }
 
-        emit MarketListed(cToken);
+        emit MarketListed(vToken);
 
         return uint256(Error.NO_ERROR);
     }
 
-    function _addMarketInternal(address cToken) internal {
+    function _addMarketInternal(address vToken) internal {
         for (uint256 i = 0; i < allMarkets.length; ++i) {
-            require(allMarkets[i] != CToken(cToken), "market already added");
+            require(allMarkets[i] != VToken(vToken), "market already added");
         }
-        allMarkets.push(CToken(cToken));
+        allMarkets.push(VToken(vToken));
     }
 
     /**
-     * @notice Set the given borrow caps for the given cToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
+     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
      * @dev Admin or borrowCapGuardian function to set the borrow caps. A borrow cap of 0 corresponds to unlimited borrowing.
-     * @param cTokens The addresses of the markets (tokens) to change the borrow caps for
+     * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
      */
     function _setMarketBorrowCaps(
-        CToken[] calldata cTokens,
+        VToken[] calldata vTokens,
         uint256[] calldata newBorrowCaps
     ) external {
         // NOTE: previous code restricted this function with
@@ -1389,11 +1389,11 @@ contract Comptroller is
         require(
             AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
-                "_setMarketBorrowCaps(CToken[],uint256[])"
+                "_setMarketBorrowCaps(VToken[],uint256[])"
             ), "only whitelisted accounts can set borrow caps"
         );
 
-        uint256 numMarkets = cTokens.length;
+        uint256 numMarkets = vTokens.length;
         uint256 numBorrowCaps = newBorrowCaps.length;
 
         require(
@@ -1402,74 +1402,74 @@ contract Comptroller is
         );
 
         for (uint256 i = 0; i < numMarkets; ++i) {
-            borrowCaps[address(cTokens[i])] = newBorrowCaps[i];
-            emit NewBorrowCap(cTokens[i], newBorrowCaps[i]);
+            borrowCaps[address(vTokens[i])] = newBorrowCaps[i];
+            emit NewBorrowCap(vTokens[i], newBorrowCaps[i]);
         }
     }
 
     /**
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
      * @dev Admin function to set the supply caps. A supply cap of 0 corresponds to Minting NotAllowed.
-     * @param cTokens The addresses of the markets (tokens) to change the supply caps for
+     * @param vTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
      */
     function _setMarketSupplyCaps(
-        CToken[] calldata cTokens,
+        VToken[] calldata vTokens,
         uint256[] calldata newSupplyCaps
     ) external {
         require(
             AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
-                "_setMarketSupplyCaps(CToken[],uint256[])"
+                "_setMarketSupplyCaps(VToken[],uint256[])"
             ), "only whitelisted accounts can set supply caps"
         );
-        require(cTokens.length != 0, "invalid number of markets");
+        require(vTokens.length != 0, "invalid number of markets");
         require(
-            cTokens.length == newSupplyCaps.length,
+            vTokens.length == newSupplyCaps.length,
             "invalid number of markets"
         );
 
-        for (uint256 i = 0; i < cTokens.length; ++i) {
-            supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
-            emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
+        for (uint256 i = 0; i < vTokens.length; ++i) {
+            supplyCaps[address(vTokens[i])] = newSupplyCaps[i];
+            emit NewSupplyCap(vTokens[i], newSupplyCaps[i]);
         }
     }
 
-    function _setMintPaused(CToken cToken, bool state) public returns (bool) {
+    function _setMintPaused(VToken vToken, bool state) public returns (bool) {
         require(
-            markets[address(cToken)].isListed,
+            markets[address(vToken)].isListed,
             "cannot pause a market that is not listed"
         );
 
         bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setMintPaused(CToken,bool)");
+            .isAllowedToCall(msg.sender, "_setMintPaused(VToken,bool)");
 
         require(canCallFunction, "only authorised addresses can pause");
 
-        mintGuardianPaused[address(cToken)] = state;
-        emit ActionPaused(cToken, "Mint", state);
+        mintGuardianPaused[address(vToken)] = state;
+        emit ActionPaused(vToken, "Mint", state);
         return state;
     }
 
-    function _setBorrowPaused(CToken cToken, bool state) public returns (bool) {
+    function _setBorrowPaused(VToken vToken, bool state) public returns (bool) {
         require(
-            markets[address(cToken)].isListed,
+            markets[address(vToken)].isListed,
             "cannot pause a market that is not listed"
         );
 
         bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setBorrowPaused(CToken,bool)");
+            .isAllowedToCall(msg.sender, "_setBorrowPaused(VToken,bool)");
 
         require(canCallFunction, "only authorised addresses can pause");
 
-        borrowGuardianPaused[address(cToken)] = state;
-        emit ActionPaused(cToken, "Borrow", state);
+        borrowGuardianPaused[address(vToken)] = state;
+        emit ActionPaused(vToken, "Borrow", state);
         return state;
     }
 
     function _setTransferPaused(bool state) public returns (bool) {
         bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setTransferPaused(CToken,bool)");
+            .isAllowedToCall(msg.sender, "_setTransferPaused(VToken,bool)");
 
         require(canCallFunction, "only authorised addresses can pause");
 
@@ -1508,19 +1508,19 @@ contract Comptroller is
     }
 
     /**
-     * @notice Set the given min liquidation limit for the given cToken markets. Liquidations with repayAmoun below this threshold will fail.
+     * @notice Set the given min liquidation limit for the given vToken markets. Liquidations with repayAmoun below this threshold will fail.
      * @dev this funciton access is managed by AccessControlManager
-     * @param cTokens The addresses of the markets (tokens) to add/change the min liquidation threshold
+     * @param vTokens The addresses of the markets (tokens) to add/change the min liquidation threshold
      * @param newMinLiquidatableAmounts The new min liquidation amount values (in USD).
      */
     function _setMarketMinLiquidationAmount(
-        CToken[] calldata cTokens,
+        VToken[] calldata vTokens,
         uint256[] calldata newMinLiquidatableAmounts
     ) external {
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
-                "_setMarketMinLiquidationAmount(CToken[],uint256[])"
+                "_setMarketMinLiquidationAmount(VToken[],uint256[])"
             );
 
         require(
@@ -1528,7 +1528,7 @@ contract Comptroller is
             "only approved addresses can update min liquidation amounts"
         );
 
-        uint256 numMarkets = cTokens.length;
+        uint256 numMarkets = vTokens.length;
         uint256 numMinAmounts = newMinLiquidatableAmounts.length;
 
         require(
@@ -1538,10 +1538,10 @@ contract Comptroller is
 
         for (uint256 i = 0; i < numMarkets; ++i) {
             minimalLiquidatableAmount[
-                address(cTokens[i])
+                address(vTokens[i])
             ] = newMinLiquidatableAmounts[i];
             emit NewMinLiquidatableAmount(
-                cTokens[i],
+                vTokens[i],
                 newMinLiquidatableAmounts[i]
             );
         }
@@ -1577,24 +1577,24 @@ contract Comptroller is
      * @dev The automatic getter may be used to access an individual market.
      * @return The list of market addresses
      */
-    function getAllMarkets() override public view returns (CToken[] memory) {
+    function getAllMarkets() override public view returns (VToken[] memory) {
         return allMarkets;
     }
 
-    function isMarketListed(CToken cToken) public view returns (bool) {
-        return markets[address(cToken)].isListed;
+    function isMarketListed(VToken vToken) public view returns (bool) {
+        return markets[address(vToken)].isListed;
     }
 
     /**
-     * @notice Returns true if the given cToken market has been deprecated
-     * @dev All borrows in a deprecated cToken market can be immediately liquidated
-     * @param cToken The market to check if deprecated
+     * @notice Returns true if the given vToken market has been deprecated
+     * @dev All borrows in a deprecated vToken market can be immediately liquidated
+     * @param vToken The market to check if deprecated
      */
-    function isDeprecated(CToken cToken) public view returns (bool) {
+    function isDeprecated(VToken vToken) public view returns (bool) {
         return
-            markets[address(cToken)].collateralFactorMantissa == 0 &&
-            borrowGuardianPaused[address(cToken)] == true &&
-            cToken.reserveFactorMantissa() == 1e18;
+            markets[address(vToken)].collateralFactorMantissa == 0 &&
+            borrowGuardianPaused[address(vToken)] == true &&
+            vToken.reserveFactorMantissa() == 1e18;
     }
 
     function getBlockNumber() public view virtual returns (uint256) {

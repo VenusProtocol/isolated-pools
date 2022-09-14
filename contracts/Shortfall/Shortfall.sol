@@ -4,8 +4,8 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../CToken.sol";
-import "../CErc20.sol";
+import "../VToken.sol";
+import "../VBep20.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "./IRiskFund.sol";
@@ -23,7 +23,7 @@ contract Shortfall is OwnableUpgradeable {
     }
 
     struct TokenBid {
-        CToken cToken;
+        VToken vToken;
         uint256 amount;
     }
 
@@ -31,20 +31,20 @@ contract Shortfall is OwnableUpgradeable {
         uint256 startBlock;
         AuctionType auctionType;
         AuctionStatus status;
-        CToken[] markets;
+        VToken[] markets;
         uint256 seizedRiskFund;
         address highestBidder;
         uint256 highestBidBps;
         uint256 highestBidBlock;
         uint256 startBidBps;
-        mapping (CToken => uint256) marketDebt;
+        mapping (VToken => uint256) marketDebt;
     }
 
     event AuctionStarted(
         uint256 poolId,
         uint256 startBlock,
         AuctionType auctionType,
-        CToken[] markets,
+        VToken[] markets,
         uint256[] marketsDebt,
         uint256 seizedRiskFund,
         uint256 startBidBps
@@ -61,7 +61,7 @@ contract Shortfall is OwnableUpgradeable {
         address highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
-        CToken[] markets,
+        VToken[] markets,
         uint256[] marketDebt
     );
 
@@ -135,28 +135,28 @@ contract Shortfall is OwnableUpgradeable {
         require((auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED)|| auction.status == AuctionStatus.ENDED, "auction is on-going");
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
-            CToken cToken = auction.markets[i];
-            auction.marketDebt[cToken] = 0;
+            VToken vToken = auction.markets[i];
+            auction.marketDebt[vToken] = 0;
             auction.highestBidBps = 0;
             auction.highestBidBlock = 0;
         }
 
         delete auction.markets;
 
-        CToken[] memory cTokens = comptroller.getAllMarkets();
+        VToken[] memory vTokens = comptroller.getAllMarkets();
         PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(address(comptroller)).oracle()); 
         uint256 poolBadDebt = 0;       
 
-        uint256[] memory marketsDebt = new uint256[](cTokens.length);
-        auction.markets = new CToken[](cTokens.length);
+        uint256[] memory marketsDebt = new uint256[](vTokens.length);
+        auction.markets = new VToken[](vTokens.length);
 
-        for (uint256 i = 0; i < cTokens.length; i++) {
-            uint256 marketBadDebt = cTokens[i].badDebt();
-            uint256 usdValue =  (priceOracle.getUnderlyingPrice(cTokens[i]) * marketBadDebt * (10 ** (18 - cTokens[i].decimals()))) / 10 ** 18;
+        for (uint256 i = 0; i < vTokens.length; i++) {
+            uint256 marketBadDebt = vTokens[i].badDebt();
+            uint256 usdValue =  (priceOracle.getUnderlyingPrice(vTokens[i]) * marketBadDebt * (10 ** (18 - vTokens[i].decimals()))) / 10 ** 18;
 
             poolBadDebt = poolBadDebt + usdValue;
-            auction.markets[i] = cTokens[i];
-            auction.marketDebt[cTokens[i]] = marketBadDebt;
+            auction.markets[i] = vTokens[i];
+            auction.marketDebt[vTokens[i]] = marketBadDebt;
             marketsDebt[i] = marketBadDebt;
         }
 
@@ -221,8 +221,8 @@ contract Shortfall is OwnableUpgradeable {
         );
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
-            CErc20 cErc20 = CErc20(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(cErc20.underlying()));
+            VBep20 vBep20 = VBep20(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(vBep20.underlying()));
 
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 if (auction.highestBidder != address(0)) {
@@ -257,8 +257,8 @@ contract Shortfall is OwnableUpgradeable {
         uint256[] memory marketsDebt = new uint256[](auction.markets.length);
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
-            CErc20 cErc20 = CErc20(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(cErc20.underlying()));
+            VBep20 vBep20 = VBep20(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(vBep20.underlying()));
 
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);

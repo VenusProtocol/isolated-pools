@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 import {
   AccessControlManager,
-  CErc20,
-  CErc20__factory,
+  VBep20,
+  VBep20__factory,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
@@ -22,8 +22,8 @@ let fakeRiskFund:FakeContract<IRiskFund>
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let cDAI: MockContract<CErc20>;
-let cWBTC: MockContract<CErc20>;
+let cDAI: MockContract<VBep20>;
+let cWBTC: MockContract<VBep20>;
 let comptroller: MockContract<Comptroller>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
@@ -72,8 +72,8 @@ describe("Shortfall: Tests", async function () {
     const Comptroller = await smock.mock<Comptroller__factory>('Comptroller');
     comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address)
 
-    cDAI = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
-    cWBTC = await (await smock.mock<CErc20__factory>("CErc20")).deploy()
+    cDAI = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
+    cWBTC = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
     
     cWBTC.setVariable("decimals", 8);
     cDAI.decimals.returns(18);
