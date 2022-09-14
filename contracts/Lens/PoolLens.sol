@@ -7,14 +7,10 @@ import "../VToken.sol";
 import "../PriceOracle.sol";
 import "../EIP20Interface.sol";
 import "../ComptrollerInterface.sol";
-import "../SafeMath.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../Pool/PoolRegistry.sol";
 
 contract PoolLens is ExponentialNoError {
-
-    using SafeMath for uint256;
-
     /**
     * @dev Struct for PoolDetails.
     */
