@@ -26,7 +26,3 @@ jobs:
         run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:test"
       - name: Clear
         run: docker rm ${GITHUB_SHA::7}
-      - name: Run compound tests
-        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn test"
-      - name: Clear
-        run: docker rm ${GITHUB_SHA::7}
