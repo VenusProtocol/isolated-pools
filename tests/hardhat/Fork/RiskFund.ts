@@ -258,7 +258,8 @@ const riskFundFixture = async (): Promise<void> => {
     pancakeSwapRouter.address,
     convertToUnit(10, 18),
     convertToUnit(20, 18),
-    mainnetBUSD.address
+    mainnetBUSD.address,
+    fakeAccessControlManager.address
   );
   await riskFund.setPoolRegistry(poolRegistry.address);
 };

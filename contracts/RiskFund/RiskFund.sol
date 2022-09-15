@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../VToken.sol";
 import "../Pool/PoolRegistry.sol";
@@ -9,13 +10,19 @@ import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
 import "../Pool/PoolRegistry.sol";
 
+/**
+* @dev This contract does not support BNB.
+*/
 contract RiskFund is OwnableUpgradeable, ExponentialNoError {
+    using SafeERC20 for IERC20;
+
     address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     uint256 private amountOutMin;
     address private convertableBUSDAddress;
     address private auctionContractAddress;
+    address private accessControl;
     mapping(uint256 => uint256) private poolReserves;
 
     /**
@@ -24,12 +31,14 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @param _amountOutMin Min amount out for the pancake swap.
      * @param _minAmountToConvert Asset should be worth of min amount to convert to BUSD
      * @param _convertableBUSDAddress Address of the BUSD
+     * @param _accessControl Address of the access control contract.
      */
     function initialize(
         address _pancakeSwapRouter,
         uint256 _amountOutMin,
         uint256 _minAmountToConvert,
-        address _convertableBUSDAddress
+        address _convertableBUSDAddress,
+        address _accessControl
     ) public initializer {
         require(
             _pancakeSwapRouter != address(0),
@@ -50,6 +59,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         amountOutMin = _amountOutMin;
         minAmountToConvert = _minAmountToConvert;
         convertableBUSDAddress = _convertableBUSDAddress;
+        accessControl = _accessControl;
     }
 
     /**
@@ -225,11 +235,22 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(uint256 poolId, uint256 amount) external onlyOwner returns(uint256) {
+    function transferReserveForAuction(uint256 poolId, uint256 amount) external returns(uint256) {
+        bool canTransferFunds = AccessControlManager(accessControl)
+            .isAllowedToCall(
+                msg.sender,
+                "transferReserveForAuction(uint256,uint256)"
+            );
+
+        require(
+            canTransferFunds,
+            "Risk fund: Not authorized to transfer funds."
+        );
+
         require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
         require(amount <= poolReserves[poolId], "Risk Fund: Insufficient pool reserve.");
         poolReserves[poolId] = poolReserves[poolId] - amount;
-        EIP20Interface(convertableBUSDAddress).transfer(auctionContractAddress, amount);
+        IERC20(convertableBUSDAddress).safeTransfer(auctionContractAddress, amount);
         return amount;
     }
 }

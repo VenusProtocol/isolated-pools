@@ -100,7 +100,7 @@ const config: HardhatUserConfig = {
 function isFork() {
   return process.env.FORK_MAINNET === "true"
     ? {
-        allowUnlimitedContractSize: true,
+        allowUnlimitedContractSize: false,
         loggingEnabled: false,
         forking: {
           url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,

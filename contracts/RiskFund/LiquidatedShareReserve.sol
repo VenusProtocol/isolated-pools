@@ -2,11 +2,14 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../EIP20Interface.sol";
 import "../ExponentialNoError.sol";
 
 contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
+    using SafeERC20 for IERC20;
+
     address private liquidatedShares;
     address private riskFund;
 
@@ -53,14 +56,14 @@ contract LiquidatedShareReserve is OwnableUpgradeable, ExponentialNoError {
             amount <= EIP20Interface(asset).balanceOf(address(this)),
             "Liquidated shares Reserves: Insufficient balance"
         );
-        EIP20Interface(asset).transfer(
+        IERC20(asset).safeTransfer(
             liquidatedShares,
             mul_(
                 Exp({mantissa: amount}),
                 div_(Exp({mantissa: 70 * expScale}), 100)
             ).mantissa
         );
-        EIP20Interface(asset).transfer(
+        IERC20(asset).safeTransfer(
             riskFund,
             mul_(
                 Exp({mantissa: amount}),

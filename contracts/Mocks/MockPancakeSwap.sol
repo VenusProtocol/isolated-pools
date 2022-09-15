@@ -3,6 +3,8 @@
 */
 
 // File: @uniswap\lib\contracts\libraries\TransferHelper.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.6.0;
 
@@ -33,6 +35,8 @@ library TransferHelper {
 }
 
 // File: contracts\interfaces\IPancakeRouter01.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.6.2;
 
@@ -131,6 +135,8 @@ interface IPancakeRouter01 {
 }
 
 // File: contracts\interfaces\IPancakeRouter02.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.6.2;
 
@@ -176,6 +182,8 @@ interface IPancakeRouter02 is IPancakeRouter01 {
 }
 
 // File: contracts\interfaces\IPancakeFactory.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.5.0;
 
@@ -198,6 +206,8 @@ interface IPancakeFactory {
 }
 
 // File: contracts\libraries\SafeMath.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity =0.6.6;
 
@@ -218,6 +228,8 @@ library SafeMath {
 }
 
 // File: contracts\interfaces\IPancakePair.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.5.0;
 
@@ -273,6 +285,8 @@ interface IPancakePair {
 }
 
 // File: contracts\libraries\PancakeLibrary.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.5.0;
 
@@ -357,6 +371,8 @@ library PancakeLibrary {
 }
 
 // File: contracts\interfaces\IERC20.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.5.0;
 
@@ -377,6 +393,8 @@ interface IERC20 {
 }
 
 // File: contracts\interfaces\IWETH.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity >=0.5.0;
 
@@ -387,14 +405,10 @@ interface IWETH {
 }
 
 // File: contracts\PancakeRouter.sol
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2021 Uniswap
 
 pragma solidity =0.6.6;
-
-
-
-
-
-
 
 contract PancakeRouter is IPancakeRouter02 {
     using SafeMath for uint;
