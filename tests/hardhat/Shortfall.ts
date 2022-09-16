@@ -194,4 +194,72 @@ describe("Shortfall: Tests", async function () {
     const auction = await shortfall.auctions(pooldId);
     expect(auction.status).equal(2)
   }); 
+
+  it("Scenerio 2 - Start auction", async function () {
+    cDAI.badDebt.returns(parseUnits("10000", 18))
+    cDAI.setVariable("badDebt", parseUnits("10000", 18))
+    cWBTC.badDebt.returns(parseUnits("1", 8))
+    cWBTC.setVariable("badDebt", parseUnits("1", 8))
+
+    riskFundBalance = "50000"
+    fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
+
+    await shortfall.startAuction(pooldId);
+    
+    const auction = await shortfall.auctions(pooldId);
+    expect(auction.status).equal(1)
+    expect(auction.auctionType).equal(1)
+    
+    
+    const startBidBps = (new BigNumber((new BigNumber("21000.34").plus(10000)).times(1.1).times(100))).dividedBy(riskFundBalance)
+    expect(new BigNumber(startBidBps).times(riskFundBalance).dividedBy(100).toString()).equal(new BigNumber(auction.seizedRiskFund.toString()).dividedBy(parseUnits("1", 18).toString()).toString())
+  });
+
+  it("Scenerio 2 - Place bid", async function () {
+    const auction = await shortfall.auctions(pooldId);
+
+    mockDAI.approve(shortfall.address, parseUnits("10000", 18));
+    mockWBTC.approve(shortfall.address, parseUnits("1", 8));
+
+    const [owner] = await ethers.getSigners();
+
+    const previousDaiBalance = await mockDAI.balanceOf(owner.address)
+    const previousWBTCBalance = await mockWBTC.balanceOf(owner.address)
+
+    await shortfall.placeBid(pooldId, auction.startBidBps);
+    expect(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toNumber()).lt(previousDaiBalance.div(parseUnits("1", 18)).toNumber())
+    expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
+
+    let percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
+    let total = (new BigNumber((await cDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
+    let amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
+    let amountDeducted = (new BigNumber(previousDaiBalance.div(parseUnits("1", 18)).toString())).minus(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toString()).toString()
+    expect(amountDeducted).equal(amountToDeduct)
+
+    percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
+    total = (new BigNumber((await cWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
+    amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
+    amountDeducted = ((new BigNumber(previousWBTCBalance.toString())).minus((await mockWBTC.balanceOf(owner.address)).toString())).div(parseUnits("1", 8).toString()).toString()
+    expect(amountDeducted).equal(amountToDeduct)
+  });
+
+  it("Scenerio 2 - Close Auction", async function () {
+    async function mineNBlocks(n:number) {
+      for (let index = 0; index < n; index++) {
+        await ethers.provider.send('evm_mine', [Date.now() * 1000]);
+      }
+    }
+
+    const [owner] = await ethers.getSigners();
+    let auction = await shortfall.auctions(pooldId);
+
+    await mineNBlocks((await shortfall.nextBidderBlockLimit()).toNumber() + 2)
+
+    //simulate transferReserveForAuction
+    await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund)
+
+    await shortfall.closeAuction(pooldId)
+    auction = await shortfall.auctions(pooldId);
+    expect(auction.status).equal(2)
+  }); 
 });

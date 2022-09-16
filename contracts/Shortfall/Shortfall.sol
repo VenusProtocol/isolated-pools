@@ -10,6 +10,8 @@ import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "./IRiskFund.sol";
 
+import "hardhat/console.sol";
+
 contract Shortfall is OwnableUpgradeable {
 
     /// @notice Type of auction
@@ -203,8 +205,7 @@ contract Shortfall is OwnableUpgradeable {
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
             uint256 maxSeizeableRiskFundBalance = remainingRiskFundBalance;
-            uint256 incentivizedRiskFundBalance = (poolBadDebt * ((poolBadDebt * incentiveBps) / MAX_BPS)) / remainingRiskFundBalance;
-
+            uint256 incentivizedRiskFundBalance = ((incentiveBps * poolBadDebt)/ MAX_BPS) + poolBadDebt;
             if(incentivizedRiskFundBalance < remainingRiskFundBalance) {
                 maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
             }
@@ -320,8 +321,6 @@ contract Shortfall is OwnableUpgradeable {
             BUSD.transfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
-            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
-
             uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
             riskFund.transferReserveForAuction(poolId, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
             BUSD.transfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
