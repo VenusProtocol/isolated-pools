@@ -24,6 +24,8 @@ contract PoolRegistry is OwnableUpgradeable {
     VBep20ImmutableFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
+    address payable private riskFund;
+    address payable private liquidatedShareReserve;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -31,13 +33,17 @@ contract PoolRegistry is OwnableUpgradeable {
     function initialize(
         VBep20ImmutableFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
-        WhitePaperInterestRateModelFactory _whitePaperFactory
+        WhitePaperInterestRateModelFactory _whitePaperFactory,
+        address payable riskFund_,
+        address payable liquidationSeizeFund_
     ) public initializer {
         __Ownable_init();
 
         vTokenFactory = _vTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
+        riskFund = riskFund_;
+        liquidatedShareReserve = liquidationSeizeFund_;
     }
 
     /**
@@ -272,7 +278,7 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function getAllPools() external view returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; i++) {
+        for (uint256 i = 1; i <= _numberOfPools; ++i) {
             _pools[i - 1] = (_poolsByID[i]);
         }
         return _pools;
@@ -377,7 +383,9 @@ contract PoolRegistry is OwnableUpgradeable {
             input.symbol,
             input.decimals,
             payable(msg.sender),
-            input.accessControlManager
+            input.accessControlManager,
+            riskFund,
+            liquidatedShareReserve
         );
 
         comptroller._supportMarket(vToken);

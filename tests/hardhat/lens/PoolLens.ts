@@ -12,10 +12,12 @@ import {
   WhitePaperInterestRateModelFactory,
   PoolLens,
   AccessControlManager,
-  VBep20Immutable
+  VBep20Immutable,
+  RiskFund,
+  LiquidatedShareReserve,
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
-import { Signer } from "ethers";
+import { BigNumberish, Signer } from "ethers";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
@@ -40,7 +42,12 @@ let poolLens: PoolLens;
 let owner: Signer;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let closeFactor1: any, closeFactor2: any, liquidationIncentive1: any, liquidationIncentive2 : any;
+let closeFactor1: BigNumberish,
+  closeFactor2: BigNumberish,
+  liquidationIncentive1: BigNumberish,
+  liquidationIncentive2: BigNumberish;
+let liquidatedShareReserve: LiquidatedShareReserve;
+let riskFund: RiskFund;
 
 describe("PoolLens - PoolView Tests", async function () {
   /**
@@ -72,10 +79,22 @@ describe("PoolLens - PoolView Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const RiskFund = await ethers.getContractFactory("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve = await ethers.getContractFactory(
+      "LiquidatedShareReserve"
+    );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
-      whitePaperRateFactory.address
+      whitePaperRateFactory.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
@@ -87,10 +106,16 @@ describe("PoolLens - PoolView Tests", async function () {
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller1 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller2 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller2.deployed();
 
     const SimplePriceOracle = await ethers.getContractFactory(
@@ -159,7 +184,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.addMarket({
@@ -174,7 +199,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {
@@ -268,10 +293,18 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
-    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
+    );
     const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
-    assertVTokenMetadata(vTokenMetadata_WBTC_Actual, vTokenMetadata_WBTC_Expected);
+    assertVTokenMetadata(
+      vTokenMetadata_WBTC_Actual,
+      vTokenMetadata_WBTC_Expected
+    );
 
     // get VToken for Asset-2 : DAI
     const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
@@ -295,7 +328,10 @@ describe("PoolLens - PoolView Tests", async function () {
   });
 
   it("getPoolData By Comptroller", async function () {
-    const poolData = await poolLens.getPoolByComptroller(poolRegistryAddress, comptroller1Proxy.address);
+    const poolData = await poolLens.getPoolByComptroller(
+      poolRegistryAddress,
+      comptroller1Proxy.address
+    );
 
     expect(poolData[0]).equal(1);
     expect(poolData[1]).equal("Pool 1");
@@ -314,16 +350,32 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
-    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
+    );
     const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
-    assertVTokenMetadata(vTokenMetadata_WBTC_Actual, vTokenMetadata_WBTC_Expected);
+    assertVTokenMetadata(
+      vTokenMetadata_WBTC_Actual,
+      vTokenMetadata_WBTC_Expected
+    );
 
     // get VToken for Asset-2 : DAI
-    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
-    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(vTokenAddress_DAI);
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(
+      1,
+      mockDAI.address
+    );
+    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(
+      vTokenAddress_DAI
+    );
     const vTokenMetadata_DAI_Actual = vTokens_Actual[1];
-    assertVTokenMetadata(vTokenMetadata_DAI_Actual, vTokenMetadata_DAI_Expected);
+    assertVTokenMetadata(
+      vTokenMetadata_DAI_Actual,
+      vTokenMetadata_DAI_Expected
+    );
   });
 });
 
@@ -332,7 +384,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-
     [owner] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
@@ -358,20 +409,38 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const RiskFund = await ethers.getContractFactory("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve = await ethers.getContractFactory(
+      "LiquidatedShareReserve"
+    );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
-      whitePaperRateFactory.address
+      whitePaperRateFactory.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
-    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller1 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller1.deployed();
 
-    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    comptroller2 = await Comptroller.deploy(
+      poolRegistry.address,
+      fakeAccessControlManager.address
+    );
     await comptroller2.deployed();
 
     const SimplePriceOracle = await ethers.getContractFactory(
@@ -440,7 +509,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.addMarket({
@@ -455,7 +524,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address
+      accessControlManager: fakeAccessControlManager.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {
@@ -503,10 +572,15 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolLens = await PoolLens.deploy();
   });
 
-  it('is correct for WBTC as underlyingAsset', async () => {
+  it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(1, mockWBTC.address);
-    const vTokenMetadata_Actual = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
+      1,
+      mockWBTC.address
+    );
+    const vTokenMetadata_Actual = await poolLens.vTokenMetadata(
+      vTokenAddress_WBTC
+    );
 
     const vTokenMetadata_Actual_Parsed: any = cullTuple(vTokenMetadata_Actual);
     expect(vTokenMetadata_Actual_Parsed["vToken"]).equal(vTokenAddress_WBTC);
@@ -526,7 +600,10 @@ describe("PoolLens - VTokens Query Tests", async function () {
   });
 });
 
-const assertVTokenMetadata = (vTokenMetadata_Actual: any, vTokenMetadata_Expected: any) => {
+const assertVTokenMetadata = (
+  vTokenMetadata_Actual: any,
+  vTokenMetadata_Expected: any
+) => {
   expect(vTokenMetadata_Actual[0]).equal(vTokenMetadata_Expected[0]);
   expect(vTokenMetadata_Actual[1]).equal(vTokenMetadata_Expected[1]);
   expect(vTokenMetadata_Actual[2]).equal(vTokenMetadata_Expected[2]);
@@ -549,10 +626,10 @@ const cullTuple = (tuple: any) => {
     if (Number.isNaN(Number(key))) {
       return {
         ...acc,
-        [key]: tuple[key].toString()
+        [key]: tuple[key].toString(),
       };
     } else {
       return acc;
     }
   }, {});
-}
+};

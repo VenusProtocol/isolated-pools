@@ -30,7 +30,9 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
                         string memory name_,
                         string memory symbol_,
                         uint8 decimals_,
-                        AccessControlManager accessControlManager_) public {
+                        AccessControlManager accessControlManager_,
+                        address payable riskFund_,
+                        address payable liquidatedShareReserve_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -57,6 +59,8 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
+        riskFund = riskFund_;
+        liquidatedShareReserve = liquidatedShareReserve_;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -826,7 +830,6 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         uint liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({mantissa: exchangeRateStoredInternal()});
         uint protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
-        uint totalReservesNew = totalReserves + protocolSeizeAmount;
 
 
         /////////////////////////
@@ -834,15 +837,16 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         // (No safe failures beyond this point)
 
         /* We write the calculated values into storage */
-        totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
+        doTransferOut(liquidatedShareReserve, protocolSeizeAmount);
+
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+        emit Transfer(address(this), liquidatedShareReserve, protocolSeizeAmount);
     }
 
 
@@ -1072,8 +1076,15 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         // Store reserves[n+1] = reserves[n] - reduceAmount
         totalReserves = totalReservesNew;
 
+        uint256 riskFundShare = mul_(Exp({mantissa: reduceAmount}), div_(Exp({mantissa: 30*expScale}), 100)).mantissa;
+
+        uint256 remainingReduceReserves = reduceAmount - riskFundShare;
+
+         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        doTransferOut(riskFund, riskFundShare);
+
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
-        doTransferOut(admin, reduceAmount);
+        doTransferOut(admin, remainingReduceReserves);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
 

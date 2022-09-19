@@ -22,18 +22,21 @@ contract VBep20Harness is VBep20Immutable {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_,
-                AccessControlManager accessControlManager_)
-        VBep20Immutable(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_
-        ) {}
+                AccessControlManager accessControlManager_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
+    VBep20Immutable(
+    underlying_,
+    comptroller_,
+    interestRateModel_,
+    initialExchangeRateMantissa_,
+    name_,
+    symbol_,
+    decimals_,
+    admin_,
+    accessControlManager_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -166,18 +169,21 @@ contract VBep20Scenario is VBep20Immutable {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_,
-                AccessControlManager accessControlManager_)
-        VBep20Immutable(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_
-        ) {}
+                AccessControlManager accessControlManager_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
+    VBep20Immutable(
+    underlying_,
+    comptroller_,
+    interestRateModel_,
+    initialExchangeRateMantissa_,
+    name_,
+    symbol_,
+    decimals_,
+    admin_,
+    accessControlManager_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function setTotalBorrows(uint totalBorrows_) public {
         totalBorrows = totalBorrows_;
@@ -202,18 +208,21 @@ contract CEvil is VBep20Scenario {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_,
-                AccessControlManager accessControlManager_)
-        VBep20Scenario(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_
-        ) {}
+                AccessControlManager accessControlManager_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
+    VBep20Scenario(
+    underlying_,
+    comptroller_,
+    interestRateModel_,
+    initialExchangeRateMantissa_,
+    name_,
+    symbol_,
+    decimals_,
+    admin_,
+    accessControlManager_,
+    riskFund_,
+    liquidatedShareReserve_) {}
 
     function evilSeize(VToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
         return treasure.seize(liquidator, borrower, seizeTokens);

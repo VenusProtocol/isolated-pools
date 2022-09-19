@@ -4,7 +4,6 @@ import {
   MockToken,
   PoolRegistry,
   Comptroller,
-  SimplePriceOracle,
   VBep20Immutable,
   MockPriceOracle,
   Unitroller,
@@ -12,6 +11,8 @@ import {
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
+  RiskFund,
+  LiquidatedShareReserve,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 import { FakeContract, smock } from "@defi-wonderland/smock";
@@ -32,6 +33,8 @@ let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
+let liquidatedShareReserve: LiquidatedShareReserve;
+let riskFund: RiskFund;
 
 describe("PoolRegistry: Tests", function () {
   /**
@@ -61,10 +64,22 @@ describe("PoolRegistry: Tests", function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const RiskFund = await ethers.getContractFactory("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve = await ethers.getContractFactory(
+      "LiquidatedShareReserve"
+    );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     await poolRegistry.initialize(
       cTokenFactory.address,
       jumpRateFactory.address,
-      whitePaperRateFactory.address
+      whitePaperRateFactory.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
@@ -86,7 +101,7 @@ describe("PoolRegistry: Tests", function () {
     );
     await comptroller2.deployed();
 
-    //Deploy Mock Tokens
+    // Deploy Mock Tokens
     const MockDAI = await ethers.getContractFactory("MockToken");
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
@@ -125,7 +140,7 @@ describe("PoolRegistry: Tests", function () {
       priceOracle.address
     );
 
-    //Setup Proxies
+    // Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
     comptroller1Proxy = await ethers.getContractAt(
       "Comptroller",
@@ -198,7 +213,7 @@ describe("PoolRegistry: Tests", function () {
       .connect(user)
       .enterMarkets([vDAI.address, vWBTC.address]);
 
-    //Set Oracle
+    // Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
   });
 
@@ -282,7 +297,7 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Enter Market", async function () {
-    const [owner, user] = await ethers.getSigners();
+    const [owner] = await ethers.getSigners();
     const res = await comptroller1Proxy.getAssetsIn(owner.address);
     expect(res[0]).equal(vDAI.address);
     expect(res[1]).equal(vWBTC.address);
