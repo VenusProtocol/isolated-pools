@@ -16,6 +16,7 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import BigNumber from "bignumber.js";
+import sleep from 'sleep-promise';
 
 describe("Shortfall: Tests", async function () {
   let shortfall:MockContract<Shortfall>
@@ -32,6 +33,13 @@ describe("Shortfall: Tests", async function () {
   let riskFundBalance = "10000"
   const minimumPoolBadDebt = "10000"
   const pooldId = "1"
+
+  async function mineNBlocks(n:number) {
+    for (let index = 0; index < n; index++) {
+      await ethers.provider.send('evm_mine', [Date.now() * 1000]);
+      await sleep(100);
+    }
+  }
 
   /**
    * Deploying required contracts along with the poolRegistry.
@@ -177,12 +185,6 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Scenerio 1 - Close Auction", async function () {
-    async function mineNBlocks(n:number) {
-      for (let index = 0; index < n; index++) {
-        await ethers.provider.send('evm_mine', [Date.now() * 1000]);
-      }
-    }
-
     const [owner] = await ethers.getSigners();
 
     await mineNBlocks((await shortfall.nextBidderBlockLimit()).toNumber() + 2)
@@ -244,11 +246,7 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Scenerio 2 - Close Auction", async function () {
-    async function mineNBlocks(n:number) {
-      for (let index = 0; index < n; index++) {
-        await ethers.provider.send('evm_mine', [Date.now() * 1000]);
-      }
-    }
+    
 
     const [owner] = await ethers.getSigners();
     let auction = await shortfall.auctions(pooldId);

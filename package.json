@@ -18,7 +18,7 @@
     "hardhat:compile": "hardhat compile",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
-    "postinstall" : "npx hardhat compile && npx tsc script/hardhat/index.ts --skipLibCheck --outDir ./dist --declaration"
+    "postinstall": "npx hardhat compile && npx tsc script/hardhat/index.ts --skipLibCheck --outDir ./dist --declaration"
   },
   "repository": {
     "type": "git",
@@ -72,7 +72,8 @@
     "@openzeppelin/contracts": "^4.6.0",
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@solidity-parser/parser": "^0.13.2",
-    "ethers": "5.6.4"
+    "ethers": "5.6.4",
+    "sleep-promise": "^9.1.0"
   },
   "resolutions": {
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
