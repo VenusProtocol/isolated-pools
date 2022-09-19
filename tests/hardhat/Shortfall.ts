@@ -17,22 +17,22 @@ import { parseUnits } from "ethers/lib/utils";
 import { expect } from "chai";
 import BigNumber from "bignumber.js";
 
-let shortfall:MockContract<Shortfall>
-let fakeRiskFund:FakeContract<IRiskFund>
-let mockBUSD: MockToken;
-let mockDAI: MockToken;
-let mockWBTC: MockToken;
-let cDAI: MockContract<VBep20>;
-let cWBTC: MockContract<VBep20>;
-let comptroller: MockContract<Comptroller>;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let fakePriceOracle: FakeContract<PriceOracle>;
-
-let riskFundBalance = "10000"
-const minimumPoolBadDebt = "10000"
-const pooldId = "1"
-
 describe("Shortfall: Tests", async function () {
+  let shortfall:MockContract<Shortfall>
+  let fakeRiskFund:FakeContract<IRiskFund>
+  let mockBUSD: MockToken;
+  let mockDAI: MockToken;
+  let mockWBTC: MockToken;
+  let cDAI: MockContract<VBep20>;
+  let cWBTC: MockContract<VBep20>;
+  let comptroller: MockContract<Comptroller>;
+  let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let fakePriceOracle: FakeContract<PriceOracle>;
+
+  let riskFundBalance = "10000"
+  const minimumPoolBadDebt = "10000"
+  const pooldId = "1"
+
   /**
    * Deploying required contracts along with the poolRegistry.
    */
