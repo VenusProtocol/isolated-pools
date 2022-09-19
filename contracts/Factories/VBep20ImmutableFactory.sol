@@ -15,7 +15,9 @@ contract VBep20ImmutableFactory {
     uint8 decimals_,
     address payable admin_,
     AccessControlManager accessControlManager_,
-    address shortfall
+    address shortfall,
+    address payable riskFund_,
+    address payable liquidatedShareReserve_
   ) external returns (VBep20Immutable) {
     VBep20Immutable cToken = new VBep20Immutable(
       underlying_,
@@ -27,7 +29,9 @@ contract VBep20ImmutableFactory {
       decimals_,
       admin_,
       accessControlManager_,
-      shortfall
+      shortfall,
+      riskFund_,
+      liquidatedShareReserve_
     );
 
     return cToken;

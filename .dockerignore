@@ -1,5 +1,4 @@
 node_modules
-.env
 coverage
 coverage.json
 typechain
@@ -14,7 +13,6 @@ allFiredEvents
 build
 build_
 node_modules
-.env
 .certora*
 certora_*
 coverage/

@@ -1,6 +1,7 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+
 import {
   MockToken,
   PoolRegistry,
@@ -16,6 +17,10 @@ import {
   PriceOracle,
   PriceOracle__factory,
   AccessControlManager,
+  LiquidatedShareReserve,
+  RiskFund,
+  LiquidatedShareReserve__factory,
+  RiskFund__factory
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
@@ -34,6 +39,8 @@ let rewardsDistributor: RewardsDistributor;
 let comp: Comp;
 let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
+let liquidatedShareReserve: FakeContract<LiquidatedShareReserve>;
+let riskFund: FakeContract<RiskFund>;
 
 describe("Rewards: Tests", async function () {
   /**
@@ -58,6 +65,17 @@ describe("Rewards: Tests", async function () {
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
+    const RiskFund = await smock.mock<RiskFund__factory>("RiskFund");
+    riskFund = await RiskFund.deploy();
+    await riskFund.deployed();
+
+    const LiquidatedShareReserve =
+      await smock.mock<LiquidatedShareReserve__factory>(
+        "LiquidatedShareReserve"
+      );
+    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
+    await liquidatedShareReserve.deployed();
+
     const PoolRegistryFactory = await smock.mock<PoolRegistry__factory>(
       "PoolRegistry"
     );
@@ -78,7 +96,9 @@ describe("Rewards: Tests", async function () {
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
-      shortfall.address
+      shortfall.address,
+      riskFund.address,
+      liquidatedShareReserve.address
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);

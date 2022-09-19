@@ -9,7 +9,9 @@ chai.use(smock.matchers);
 
 import {
   Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
-  ERC20Harness__factory, AccessControlManager, Shortfall
+  Shortfall
+  ERC20Harness__factory, AccessControlManager,
+  RiskFund, LiquidatedShareReserve
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -33,6 +35,8 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
   const vTokenFactory = await smock.mock<VBep20Harness__factory>("VBep20Harness");
+  const riskFund = await smock.fake<RiskFund>("RiskFund");
+  const liquidatedShareReserve = await smock.fake<LiquidatedShareReserve>("LiquidatedShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const vToken = await vTokenFactory.deploy(
     underlying.address,
@@ -44,7 +48,12 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
     8,
     await admin.getAddress(),
     accessControlManager.address,
+<<<<<<< HEAD
     shortfall.address
+=======
+    riskFund.address,
+    liquidatedShareReserve.address
+>>>>>>> main
   );
   return { vToken, underlying, interestRateModel };
 }

@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+dotenv.config();
 
 import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
@@ -9,8 +10,6 @@ import "solidity-coverage";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
-
-dotenv.config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -27,22 +26,40 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.13',
-    settings: {
-      optimizer: {
-        enabled: true,
+    compilers: [
+      {
+        version: "0.8.13",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
       },
-      outputSelection: {
-        "*": {
-          "*": ["storageLayout"]
-        }
-      }
-    },
+      {
+        version: "0.6.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+    ],
   },
   networks: {
-    development:{
+    hardhat: isFork(),
+    development: {
       url: "http://127.0.0.1:8545/",
-      chainId: 31337
+      chainId: 31337,
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
@@ -53,7 +70,7 @@ const config: HardhatUserConfig = {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       gasPrice: 20000000000,
-      accounts: {mnemonic: mnemonic}
+      accounts: { mnemonic: mnemonic },
     },
   },
   gasReporter: {
@@ -79,5 +96,24 @@ const config: HardhatUserConfig = {
     tests: "./tests/hardhat",
   },
 };
+
+function isFork() {
+  return process.env.FORK_MAINNET === "true"
+    ? {
+        allowUnlimitedContractSize: false,
+        loggingEnabled: false,
+        forking: {
+          url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,
+          blockNumber: 21068448,
+        },
+        accounts: {
+          accountsBalance: "1000000000000000000",
+        },
+      }
+    : {
+        allowUnlimitedContractSize: true,
+        loggingEnabled: false,
+      };
+}
 
 export default config;

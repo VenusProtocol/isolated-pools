@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
   "engines": {
-    "node": "12.x"
+    "node": "16.x"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.2.0",

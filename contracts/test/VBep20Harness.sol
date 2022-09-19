@@ -23,7 +23,9 @@ contract VBep20Harness is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_, 
-                address shortfall_)
+                address shortfall_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
         VBep20Immutable(
             underlying_,
             comptroller_,
@@ -34,8 +36,11 @@ contract VBep20Harness is VBep20Immutable {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_
+            shortfall_,
+            riskFund_,
+            liquidatedShareReserve_
         ) {}
+  
 
     function doTransferOut(address payable to, uint amount) override internal {
         require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
@@ -169,7 +174,9 @@ contract VBep20Scenario is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_,
-                address shortfall_)
+                address shortfall_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
         VBep20Immutable(
             underlying_,
             comptroller_,
@@ -180,9 +187,11 @@ contract VBep20Scenario is VBep20Immutable {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_
+            shortfall_,
+            riskFund_,
+            liquidatedShareReserve_
         ) {}
-
+                
     function setTotalBorrows(uint totalBorrows_) public {
         totalBorrows = totalBorrows_;
     }
@@ -207,7 +216,9 @@ contract CEvil is VBep20Scenario {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_,
-                address shortfall_)
+                address shortfall_,
+                address payable riskFund_,
+                address payable liquidatedShareReserve_)
         VBep20Scenario(
             underlying_,
             comptroller_,
@@ -218,7 +229,9 @@ contract CEvil is VBep20Scenario {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_
+            shortfall_,
+            riskFund_,  
+            liquidatedShareReserve_
         ) {}
 
     function evilSeize(VToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {
