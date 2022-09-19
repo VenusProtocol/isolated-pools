@@ -424,5 +424,31 @@ describe("Risk Fund: Tests", function () {
       );
       expect(remainingBalance).equal(poolReserve);
     });
+
+    it("Should revert the transfer to auction transaction", async function () {
+      const auctionContract = "0x0000000000000000000000000000000000000001";
+      await riskFund.setAuctionContractAddress(auctionContract);
+
+      await mainnetUSDC
+        .connect(usdcUser)
+        .approve(cUSDC.address, convertToUnit(1000, 18));
+
+      await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
+
+      await mainnetUSDT
+        .connect(usdtUser)
+        .approve(cUSDT.address, convertToUnit(1000, 18));
+
+      await cUSDT.connect(usdtUser)._addReserves(convertToUnit(200, 18));
+
+      await cUSDT._reduceReserves(convertToUnit(100, 18));
+      await cUSDC._reduceReserves(convertToUnit(100, 18));
+      await riskFund.swapAllPoolsAssets();
+
+      fakeAccessControlManager.isAllowedToCall.returns(false);
+      await expect(
+        riskFund.transferReserveForAuction(1, convertToUnit(20, 18))
+      ).to.be.rejectedWith("Risk fund: Not authorized to transfer funds.");
+    });
   });
 });
