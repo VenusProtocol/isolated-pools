@@ -79,10 +79,21 @@ const riskFundFixture = async (): Promise<void> => {
   liquidatedShareReserve = await LiquidatedShareReserve.deploy();
   await liquidatedShareReserve.deployed();
 
+  const Shortfall = await ethers.getContractFactory("Shortfall");
+  const shortfall = await Shortfall.deploy(
+    ethers.constants.AddressZero,
+    ethers.constants.AddressZero
+  );
+
+  await shortfall.initialize(
+    convertToUnit("10000", 18)
+  )
+
   await poolRegistry.initialize(
     cTokenFactory.address,
     jumpRateFactory.address,
     whitePaperRateFactory.address,
+    shortfall.address,
     riskFund.address,
     liquidatedShareReserve.address
   );

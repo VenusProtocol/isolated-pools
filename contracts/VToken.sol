@@ -31,9 +31,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
                         string memory symbol_,
                         uint8 decimals_,
                         AccessControlManager accessControlManager_,
-                        address shortfall_,
-                        address payable riskFund_,
-                        address payable liquidatedShareReserve_) public {
+                        VBep20Interface.RiskManagementInit memory riskManagement) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -60,9 +58,9 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        shortfall = shortfall_;
-        riskFund = riskFund_;
-        liquidatedShareReserve = liquidatedShareReserve_;
+        shortfall = riskManagement.shortfall;
+        riskFund = riskManagement.riskFund;
+        liquidatedShareReserve = riskManagement.liquidatedShareReserve;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;

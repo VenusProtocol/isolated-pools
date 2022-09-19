@@ -9,7 +9,7 @@ chai.use(smock.matchers);
 
 import {
   Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
-  Shortfall
+  Shortfall,
   ERC20Harness__factory, AccessControlManager,
   RiskFund, LiquidatedShareReserve
 } from "../../../typechain";
@@ -48,12 +48,11 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
     8,
     await admin.getAddress(),
     accessControlManager.address,
-<<<<<<< HEAD
-    shortfall.address
-=======
-    riskFund.address,
-    liquidatedShareReserve.address
->>>>>>> main
+    {
+      shortfall: shortfall.address,
+      riskFund: riskFund.address,
+      liquidatedShareReserve: liquidatedShareReserve.address
+    }
   );
   return { vToken, underlying, interestRateModel };
 }

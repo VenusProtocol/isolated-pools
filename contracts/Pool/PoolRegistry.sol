@@ -17,6 +17,7 @@ import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../ComptrollerInterface.sol";
+import "../VTokenInterfaces.sol";
 
 /**
  * @title PoolRegistry
@@ -391,9 +392,11 @@ contract PoolRegistry is OwnableUpgradeable {
             input.decimals,
             payable(msg.sender),
             input.accessControlManager,
-            address(shortfall),
-            riskFund,
-            liquidatedShareReserve
+            VBep20Interface.RiskManagementInit(
+                address(shortfall),
+                riskFund,
+                liquidatedShareReserve
+            )
         );
 
         comptroller._supportMarket(vToken);

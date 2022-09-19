@@ -23,9 +23,7 @@ contract VBep20Harness is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_, 
-                address shortfall_,
-                address payable riskFund_,
-                address payable liquidatedShareReserve_)
+                RiskManagementInit memory riskManagement)
         VBep20Immutable(
             underlying_,
             comptroller_,
@@ -36,9 +34,7 @@ contract VBep20Harness is VBep20Immutable {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_,
-            riskFund_,
-            liquidatedShareReserve_
+            riskManagement
         ) {}
   
 
@@ -174,9 +170,7 @@ contract VBep20Scenario is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_,
-                address shortfall_,
-                address payable riskFund_,
-                address payable liquidatedShareReserve_)
+                VBep20Interface.RiskManagementInit memory riskManagement)
         VBep20Immutable(
             underlying_,
             comptroller_,
@@ -187,9 +181,7 @@ contract VBep20Scenario is VBep20Immutable {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_,
-            riskFund_,
-            liquidatedShareReserve_
+            riskManagement
         ) {}
                 
     function setTotalBorrows(uint totalBorrows_) public {
@@ -216,9 +208,7 @@ contract CEvil is VBep20Scenario {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_,
-                address shortfall_,
-                address payable riskFund_,
-                address payable liquidatedShareReserve_)
+                VBep20Interface.RiskManagementInit memory riskManagement)
         VBep20Scenario(
             underlying_,
             comptroller_,
@@ -229,9 +219,7 @@ contract CEvil is VBep20Scenario {
             decimals_,
             admin_,
             accessControlManager_,
-            shortfall_,
-            riskFund_,  
-            liquidatedShareReserve_
+            riskManagement
         ) {}
 
     function evilSeize(VToken treasure, address liquidator, address borrower, uint seizeTokens) public returns (uint) {

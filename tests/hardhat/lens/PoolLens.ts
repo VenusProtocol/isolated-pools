@@ -421,7 +421,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
-<<<<<<< HEAD
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy(
       ethers.constants.AddressZero,
@@ -431,7 +430,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     await shortfall.initialize(
       convertToUnit("10000", 18)
     )
-=======
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
@@ -441,18 +439,14 @@ describe("PoolLens - VTokens Query Tests", async function () {
     );
     liquidatedShareReserve = await LiquidatedShareReserve.deploy();
     await liquidatedShareReserve.deployed();
->>>>>>> main
 
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
-<<<<<<< HEAD
-      shortfall.address
-=======
+      shortfall.address,
       riskFund.address,
       liquidatedShareReserve.address
->>>>>>> main
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);

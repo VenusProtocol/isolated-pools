@@ -385,6 +385,12 @@ contract VBep20Storage {
 }
 
 abstract contract VBep20Interface is VBep20Storage {
+    struct RiskManagementInit {
+        address shortfall;
+        address payable riskFund;
+        address payable liquidatedShareReserve;
+    }
+    
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

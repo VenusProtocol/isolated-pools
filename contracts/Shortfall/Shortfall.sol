@@ -8,9 +8,7 @@ import "../VToken.sol";
 import "../VBep20.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
-import "./IRiskFund.sol";
-
-import "hardhat/console.sol";
+import "../RiskFund/IRiskFund.sol";
 
 contract Shortfall is OwnableUpgradeable {
 
