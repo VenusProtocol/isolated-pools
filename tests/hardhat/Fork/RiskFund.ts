@@ -98,6 +98,8 @@ const riskFundFixture = async (): Promise<void> => {
     liquidatedShareReserve.address
   );
 
+  await shortfall.setPoolRegistry(poolRegistry.address)
+
   fakeAccessControlManager = await smock.fake<AccessControlManager>(
     "AccessControlManager"
   );
