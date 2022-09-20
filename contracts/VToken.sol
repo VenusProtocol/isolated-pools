@@ -1046,11 +1046,6 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         // totalReserves - reduceAmount
         uint totalReservesNew;
 
-        // Check caller is admin
-        if (msg.sender != admin) {
-            revert ReduceReservesAdminCheck();
-        }
-
         // We fail gracefully unless market's block number equals current block number
         if (accrualBlockNumber != getBlockNumber()) {
             revert ReduceReservesFreshCheck();
