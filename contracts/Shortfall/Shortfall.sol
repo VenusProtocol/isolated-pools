@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "../VToken.sol";
 import "../VBep20.sol";
@@ -10,7 +11,7 @@ import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
 
-contract Shortfall is OwnableUpgradeable {
+contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Type of auction
     enum AuctionType {
@@ -118,6 +119,7 @@ contract Shortfall is OwnableUpgradeable {
      */
     function initialize(uint256 _minimumPoolBadDebt) public initializer {
         __Ownable_init();
+        __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
     }
 
@@ -237,7 +239,7 @@ contract Shortfall is OwnableUpgradeable {
     function placeBid(
         uint256 poolId,
         uint256 bidBps
-    ) external {
+    ) external nonReentrant {
         Auction storage auction = auctions[poolId];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
@@ -288,13 +290,15 @@ contract Shortfall is OwnableUpgradeable {
      * @notice Close an auction
      * @param poolId ID of the pool
      */
-    function closeAuction(uint256 poolId) external {
+    function closeAuction(uint256 poolId) external nonReentrant {
         Auction storage auction = auctions[poolId];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0), "waiting for next bidder. cannot close auction" );
         
         uint256[] memory marketsDebt = new uint256[](auction.markets.length);
+
+        auction.status = AuctionStatus.ENDED;
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
             VBep20 vBep20 = VBep20(address(auction.markets[i]));
@@ -323,8 +327,6 @@ contract Shortfall is OwnableUpgradeable {
             riskFund.transferReserveForAuction(poolId, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
             BUSD.transfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
         }
-
-        auction.status = AuctionStatus.ENDED;
 
         emit AuctionClosed(
             poolId,
