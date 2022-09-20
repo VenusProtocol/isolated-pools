@@ -12,7 +12,7 @@ import {
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
   RiskFund,
-  LiquidatedShareReserve,
+  ProtocolShareReserve,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 import { FakeContract, smock } from "@defi-wonderland/smock";
@@ -33,7 +33,7 @@ let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let liquidatedShareReserve: LiquidatedShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
 
 describe("PoolRegistry: Tests", function () {
@@ -68,18 +68,18 @@ describe("PoolRegistry: Tests", function () {
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const LiquidatedShareReserve = await ethers.getContractFactory(
-      "LiquidatedShareReserve"
+    const ProtocolShareReserve = await ethers.getContractFactory(
+      "ProtocolShareReserve"
     );
-    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-    await liquidatedShareReserve.deployed();
+    protocolShareReserve = await ProtocolShareReserve.deploy();
+    await protocolShareReserve.deployed();
 
     await poolRegistry.initialize(
       cTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
-      liquidatedShareReserve.address
+      protocolShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(

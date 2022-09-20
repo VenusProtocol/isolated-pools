@@ -14,7 +14,7 @@ import {
   AccessControlManager,
   VBep20Immutable,
   RiskFund,
-  LiquidatedShareReserve,
+  ProtocolShareReserve,
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { BigNumberish, Signer } from "ethers";
@@ -46,7 +46,7 @@ let closeFactor1: BigNumberish,
   closeFactor2: BigNumberish,
   liquidationIncentive1: BigNumberish,
   liquidationIncentive2: BigNumberish;
-let liquidatedShareReserve: LiquidatedShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
 
 describe("PoolLens - PoolView Tests", async function () {
@@ -83,18 +83,18 @@ describe("PoolLens - PoolView Tests", async function () {
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const LiquidatedShareReserve = await ethers.getContractFactory(
-      "LiquidatedShareReserve"
+    const ProtocolShareReserve = await ethers.getContractFactory(
+      "ProtocolShareReserve"
     );
-    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-    await liquidatedShareReserve.deployed();
+    protocolShareReserve = await ProtocolShareReserve.deploy();
+    await protocolShareReserve.deployed();
 
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
-      liquidatedShareReserve.address
+      protocolShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
@@ -413,18 +413,18 @@ describe("PoolLens - VTokens Query Tests", async function () {
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const LiquidatedShareReserve = await ethers.getContractFactory(
-      "LiquidatedShareReserve"
+    const ProtocolShareReserve = await ethers.getContractFactory(
+      "ProtocolShareReserve"
     );
-    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-    await liquidatedShareReserve.deployed();
+    protocolShareReserve = await ProtocolShareReserve.deploy();
+    await protocolShareReserve.deployed();
 
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
-      liquidatedShareReserve.address
+      protocolShareReserve.address
     );
 
     poolRegistryAddress = poolRegistry.address;

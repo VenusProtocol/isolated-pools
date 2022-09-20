@@ -17,9 +17,9 @@ import {
   PriceOracle,
   PriceOracle__factory,
   AccessControlManager,
-  LiquidatedShareReserve,
+  ProtocolShareReserve,
   RiskFund,
-  LiquidatedShareReserve__factory,
+  ProtocolShareReserve__factory,
   RiskFund__factory
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
@@ -39,7 +39,7 @@ let rewardsDistributor: RewardsDistributor;
 let comp: Comp;
 let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let liquidatedShareReserve: FakeContract<LiquidatedShareReserve>;
+let protocolShareReserve: FakeContract<ProtocolShareReserve>;
 let riskFund: FakeContract<RiskFund>;
 
 describe("Rewards: Tests", async function () {
@@ -69,12 +69,12 @@ describe("Rewards: Tests", async function () {
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const LiquidatedShareReserve =
-      await smock.mock<LiquidatedShareReserve__factory>(
-        "LiquidatedShareReserve"
+    const ProtocolShareReserve =
+      await smock.mock<ProtocolShareReserve__factory>(
+        "ProtocolShareReserve"
       );
-    liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-    await liquidatedShareReserve.deployed();
+    protocolShareReserve = await ProtocolShareReserve.deploy();
+    await protocolShareReserve.deployed();
 
     const PoolRegistryFactory = await smock.mock<PoolRegistry__factory>(
       "PoolRegistry"
@@ -87,7 +87,7 @@ describe("Rewards: Tests", async function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       riskFund.address,
-      liquidatedShareReserve.address
+      protocolShareReserve.address
     );
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
