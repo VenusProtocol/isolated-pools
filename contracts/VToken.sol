@@ -830,23 +830,22 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         uint liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({mantissa: exchangeRateStoredInternal()});
         uint protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
-
+        uint totalReservesNew = totalReserves + protocolSeizeAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
         /* We write the calculated values into storage */
+        totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
-        doTransferOut(liquidatedShareReserve, protocolSeizeAmount);
-
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit Transfer(address(this), liquidatedShareReserve, protocolSeizeAmount);
+        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
     }
 
 
@@ -1076,15 +1075,8 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         // Store reserves[n+1] = reserves[n] - reduceAmount
         totalReserves = totalReservesNew;
 
-        uint256 riskFundShare = mul_(Exp({mantissa: reduceAmount}), div_(Exp({mantissa: 30*expScale}), 100)).mantissa;
-
-        uint256 remainingReduceReserves = reduceAmount - riskFundShare;
-
-         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
-        doTransferOut(riskFund, riskFundShare);
-
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
-        doTransferOut(admin, remainingReduceReserves);
+        doTransferOut(liquidatedShareReserve, reduceAmount);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
 
