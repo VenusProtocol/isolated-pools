@@ -21,6 +21,7 @@ yarn install
 yarn test
 yarn hardhat:test
 ```
+* To run fork tests add FORK_MAINNET=true and QUICK_NODE_KEY in the .env file.
 
 ### Hardhat Commands
 
