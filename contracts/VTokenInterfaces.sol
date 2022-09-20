@@ -37,7 +37,7 @@ contract VTokenStorage {
     /**
     * @notice Liquidation fund contract address
     */
-    address payable internal liquidatedShareReserve;
+    address payable internal protocolShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
     uint256 internal constant borrowRateMaxMantissa = 0.0005e16;

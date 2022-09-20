@@ -32,7 +32,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
                         uint8 decimals_,
                         AccessControlManager accessControlManager_,
                         address payable riskFund_,
-                        address payable liquidatedShareReserve_) public {
+                        address payable protocolShareReserve_) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -60,7 +60,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         symbol = symbol_;
         decimals = decimals_;
         riskFund = riskFund_;
-        liquidatedShareReserve = liquidatedShareReserve_;
+        protocolShareReserve = protocolShareReserve_;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -1076,7 +1076,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         totalReserves = totalReservesNew;
 
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
-        doTransferOut(liquidatedShareReserve, reduceAmount);
+        doTransferOut(protocolShareReserve, reduceAmount);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
 

@@ -16,7 +16,7 @@ contract VBep20ImmutableFactory {
     address payable admin_,
     AccessControlManager accessControlManager_,
     address payable riskFund_,
-    address payable liquidatedShareReserve_
+    address payable protocolShareReserve_
   ) external returns (VBep20Immutable) {
     VBep20Immutable cToken = new VBep20Immutable(
       underlying_,
@@ -29,7 +29,7 @@ contract VBep20ImmutableFactory {
       admin_,
       accessControlManager_,
       riskFund_,
-      liquidatedShareReserve_
+      protocolShareReserve_
     );
 
     return cToken;

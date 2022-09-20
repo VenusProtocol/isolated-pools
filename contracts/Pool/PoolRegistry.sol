@@ -25,7 +25,7 @@ contract PoolRegistry is OwnableUpgradeable {
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
     address payable private riskFund;
-    address payable private liquidatedShareReserve;
+    address payable private protocolShareReserve;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -35,7 +35,7 @@ contract PoolRegistry is OwnableUpgradeable {
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         address payable riskFund_,
-        address payable liquidationSeizeFund_
+        address payable protocolShareReserve_
     ) public initializer {
         __Ownable_init();
 
@@ -43,7 +43,7 @@ contract PoolRegistry is OwnableUpgradeable {
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
         riskFund = riskFund_;
-        liquidatedShareReserve = liquidationSeizeFund_;
+        protocolShareReserve = protocolShareReserve_;
     }
 
     /**
@@ -385,7 +385,7 @@ contract PoolRegistry is OwnableUpgradeable {
             payable(msg.sender),
             input.accessControlManager,
             riskFund,
-            liquidatedShareReserve
+            protocolShareReserve
         );
 
         comptroller._supportMarket(vToken);
