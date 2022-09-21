@@ -80,12 +80,11 @@ describe("PoolLens - PoolView Tests", async function () {
     await poolRegistry.deployed();
 
     const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero
-    );
+    const shortfall = await Shortfall.deploy();
 
     await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
       convertToUnit("10000", 18)
     )
     const RiskFund = await ethers.getContractFactory("RiskFund");
@@ -422,12 +421,11 @@ describe("PoolLens - VTokens Query Tests", async function () {
     await poolRegistry.deployed();
 
     const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero
-    );
+    const shortfall = await Shortfall.deploy();
 
     await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
       convertToUnit("10000", 18)
     )
     const RiskFund = await ethers.getContractFactory("RiskFund");
