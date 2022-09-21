@@ -79,6 +79,14 @@ describe("PoolLens - PoolView Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const Shortfall = await ethers.getContractFactory("Shortfall");
+    const shortfall = await Shortfall.deploy();
+
+    await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+      convertToUnit("10000", 18)
+    )
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
@@ -93,9 +101,12 @@ describe("PoolLens - PoolView Tests", async function () {
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
+      shortfall.address,
       riskFund.address,
       liquidatedShareReserve.address
     );
+
+    await shortfall.setPoolRegistry(poolRegistry.address);
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
       "AccessControlManager"
@@ -409,6 +420,14 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const Shortfall = await ethers.getContractFactory("Shortfall");
+    const shortfall = await Shortfall.deploy();
+
+    await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+      convertToUnit("10000", 18)
+    )
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
@@ -423,9 +442,12 @@ describe("PoolLens - VTokens Query Tests", async function () {
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
+      shortfall.address,
       riskFund.address,
       liquidatedShareReserve.address
     );
+
+    await shortfall.setPoolRegistry(poolRegistry.address);
 
     poolRegistryAddress = poolRegistry.address;
 

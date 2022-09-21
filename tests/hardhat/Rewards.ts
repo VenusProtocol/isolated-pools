@@ -82,13 +82,25 @@ describe("Rewards: Tests", async function () {
     poolRegistry = await PoolRegistryFactory.deploy();
     await poolRegistry.deployed();
 
+    const Shortfall = await ethers.getContractFactory("Shortfall");
+    const shortfall = await Shortfall.deploy();
+
+    await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+      convertToUnit("10000", 18)
+    )
+
     await poolRegistry.initialize(
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
+      shortfall.address,
       riskFund.address,
       liquidatedShareReserve.address
     );
+
+    await shortfall.setPoolRegistry(poolRegistry.address);
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
       "AccessControlManager"

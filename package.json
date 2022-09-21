@@ -74,6 +74,7 @@
     "@solidity-parser/parser": "^0.13.2",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14"
+    "sleep-promise": "^9.1.0"
   },
   "resolutions": {
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",

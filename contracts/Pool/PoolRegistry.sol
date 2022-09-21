@@ -15,6 +15,9 @@ import "../JumpRateModelV2.sol";
 import "../VBep20Immutable.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
+import "../Shortfall/Shortfall.sol";
+import "../ComptrollerInterface.sol";
+import "../VTokenInterfaces.sol";
 
 /**
  * @title PoolRegistry
@@ -24,6 +27,7 @@ contract PoolRegistry is OwnableUpgradeable {
     VBep20ImmutableFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
+    Shortfall private shortfall;    
     address payable private riskFund;
     address payable private liquidatedShareReserve;
 
@@ -34,6 +38,7 @@ contract PoolRegistry is OwnableUpgradeable {
         VBep20ImmutableFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory,
+        Shortfall _shortfall,
         address payable riskFund_,
         address payable liquidationSeizeFund_
     ) public initializer {
@@ -42,6 +47,7 @@ contract PoolRegistry is OwnableUpgradeable {
         vTokenFactory = _vTokenFactory;
         jumpRateFactory = _jumpRateFactory;
         whitePaperFactory = _whitePaperFactory;
+        shortfall = _shortfall;
         riskFund = riskFund_;
         liquidatedShareReserve = liquidationSeizeFund_;
     }
@@ -185,6 +191,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         _poolsByID[_numberOfPools] = pool;
         _poolByComptroller[comptroller] = _numberOfPools;
+
+        shortfall.setPoolComptroller(_numberOfPools, ComptrollerInterface(address(comptroller)));
 
         emit PoolRegistered(_numberOfPools, pool);
         return _numberOfPools;
@@ -384,8 +392,11 @@ contract PoolRegistry is OwnableUpgradeable {
             input.decimals,
             payable(msg.sender),
             input.accessControlManager,
-            riskFund,
-            liquidatedShareReserve
+            VBep20Interface.RiskManagementInit(
+                address(shortfall),
+                riskFund,
+                liquidatedShareReserve
+            )
         );
 
         comptroller._supportMarket(vToken);
