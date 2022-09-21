@@ -52,11 +52,12 @@ describe("Shortfall: Tests", async function () {
     fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund")
 
     const Shortfall = await smock.mock<Shortfall__factory>('Shortfall');
-    shortfall = await Shortfall.deploy(
+    shortfall = await Shortfall.deploy();
+    await shortfall.initialize(
       mockBUSD.address,
-      fakeRiskFund.address
+      fakeRiskFund.address,
+      parseUnits(minimumPoolBadDebt, "18")
     );
-    await shortfall.initialize(parseUnits(minimumPoolBadDebt, "18"));
 
     const [poolRegistry] = await ethers.getSigners();
     await shortfall.setPoolRegistry(poolRegistry.address)

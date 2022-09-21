@@ -80,7 +80,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public poolRegistry;
 
     /// @notice Risk fund address
-    IRiskFund immutable private riskFund;
+    IRiskFund private riskFund;
 
     /// @notice Minimum USD debt in pool for shortfall to trigger 
     uint256 public minimumPoolBadDebt;
@@ -98,29 +98,21 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public constant waitForFirstBidder = 100;
 
     /// @notice BUSD contract address
-    IERC20 private immutable BUSD;
+    IERC20 private BUSD;
 
     /// @notice Auctions for each pool
     mapping (uint256 => Auction) public auctions;
 
     /**
-     * @notice Constructor
-     * @param _BUSD The address of the BUSD contract
-     * @param _riskFund The address of the risk fund
-     */
-    constructor(IERC20 _BUSD, IRiskFund _riskFund) {
-        BUSD = _BUSD;
-        riskFund = _riskFund;
-    }
-
-    /**
      * @notice Initalize the shortfall contract
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
-    function initialize(uint256 _minimumPoolBadDebt) public initializer {
+    function initialize(IERC20 _BUSD, IRiskFund _riskFund, uint256 _minimumPoolBadDebt) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
+        BUSD = _BUSD;
+        riskFund = _riskFund;
     }
 
     /**
