@@ -73,21 +73,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const riskFund = await ethers.getContract("RiskFund");
 
-  await deploy("LiquidatedShareReserve", {
+  await deploy("ProtocolShareReserve", {
     from: deployer,
     args: [],
     log: true,
     autoMine: true,
   });
 
-  const liquidatedShareReserve = await ethers.getContract("LiquidatedShareReserve");
+  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
 
   tx = await poolRegistry.initialize(
     vBep20Factory.address,
     jumpRateModelFactory.address,
     whitePaperRateFactory.address,
     riskFund.address,
-    liquidatedShareReserve.address,
+    protocolShareReserve.address,
   );
 
   await tx.wait(1);

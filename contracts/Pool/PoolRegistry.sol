@@ -400,7 +400,7 @@ contract PoolRegistry is OwnableUpgradeable {
             VBep20Interface.RiskManagementInit(
                 address(shortfall),
                 riskFund,
-                liquidatedShareReserve
+                protocolShareReserve
             )
         );
 
