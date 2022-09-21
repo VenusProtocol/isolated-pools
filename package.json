@@ -73,7 +73,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@solidity-parser/parser": "^0.13.2",
     "ethers": "^5.7.0",
-    "hardhat-deploy": "^0.11.14"
+    "hardhat-deploy": "^0.11.14",
     "sleep-promise": "^9.1.0"
   },
   "resolutions": {
