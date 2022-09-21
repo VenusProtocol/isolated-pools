@@ -10,7 +10,7 @@ chai.use(smock.matchers);
 
 import {
   Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
-  ERC20Harness__factory, AccessControlManager
+  ERC20Harness__factory, AccessControlManager, Shortfall
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -36,12 +36,12 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   comptroller.isComptroller.returns(true);
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
-
+  const shortfall = await smock.fake<Shortfall>("Shortfall");
   const [admin, liquidator, borrower,] = await ethers.getSigners();
   const borrowed =
-    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin});
+    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall});
   const collateral =
-    await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin});
+    await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin, shortfall});
 
   await collateral.vToken.harnessSetExchangeRate(exchangeRate);
 

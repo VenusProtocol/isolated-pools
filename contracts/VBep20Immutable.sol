@@ -20,8 +20,7 @@ contract VBep20Immutable is VBep20 {
      * @param symbol_ ERC-20 symbol of this token
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
-     * @param riskFund_ Address of the risk fund contract
-     * @param liquidatedShareReserve_ Address of the liquidated share reserve contract
+     * @param riskManagement Addresses of risk fund contracts
      */
     constructor(address underlying_,
                 ComptrollerInterface comptroller_,
@@ -32,13 +31,13 @@ contract VBep20Immutable is VBep20 {
                 uint8 decimals_,
                 address payable admin_, 
                 AccessControlManager accessControlManager_,
-                address payable riskFund_,
-                address payable liquidatedShareReserve_) {
+                RiskManagementInit memory riskManagement
+        ) {
         // Creator of the contract is admin during initialization
         admin = payable(msg.sender);
 
         // Initialize the market
-        initialize(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_, riskFund_, liquidatedShareReserve_);
+        initialize(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, accessControlManager_, riskManagement);
 
         // Set the proper admin now that initialization is done
         admin = admin_;
