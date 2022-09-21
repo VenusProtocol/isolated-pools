@@ -79,13 +79,25 @@ const riskFundFixture = async (): Promise<void> => {
   protocolShareReserve = await ProtocolShareReserve.deploy();
   await protocolShareReserve.deployed();
 
+  const Shortfall = await ethers.getContractFactory("Shortfall");
+  const shortfall = await Shortfall.deploy();
+
+  await shortfall.initialize(
+    ethers.constants.AddressZero,
+    ethers.constants.AddressZero,
+    convertToUnit("10000", 18)
+  )
+
   await poolRegistry.initialize(
     cTokenFactory.address,
     jumpRateFactory.address,
     whitePaperRateFactory.address,
+    shortfall.address,
     riskFund.address,
     protocolShareReserve.address
   );
+
+  await shortfall.setPoolRegistry(poolRegistry.address)
 
   fakeAccessControlManager = await smock.fake<AccessControlManager>(
     "AccessControlManager"

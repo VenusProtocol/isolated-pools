@@ -131,6 +131,11 @@ contract VTokenStorage {
      * @notice Storage of AccessControlManager
      */
     AccessControlManager public accessControlManager;
+
+    /**
+     * @notice Storage of Shortfall contract address
+     */
+    address public shortfall;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -380,6 +385,12 @@ contract VBep20Storage {
 }
 
 abstract contract VBep20Interface is VBep20Storage {
+    struct RiskManagementInit {
+        address shortfall;
+        address payable riskFund;
+        address payable liquidatedShareReserve;
+    }
+    
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

@@ -64,6 +64,14 @@ describe("PoolRegistry: Tests", function () {
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
+    const Shortfall = await ethers.getContractFactory("Shortfall");
+    const shortfall = await Shortfall.deploy();
+
+    await shortfall.initialize(
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+      convertToUnit("10000", 18)
+    )
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
@@ -78,9 +86,12 @@ describe("PoolRegistry: Tests", function () {
       cTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
+      shortfall.address,
       riskFund.address,
       protocolShareReserve.address
     );
+
+    await shortfall.setPoolRegistry(poolRegistry.address);
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
       "AccessControlManager"

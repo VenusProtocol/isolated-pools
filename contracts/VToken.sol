@@ -31,8 +31,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
                         string memory symbol_,
                         uint8 decimals_,
                         AccessControlManager accessControlManager_,
-                        address payable riskFund_,
-                        address payable protocolShareReserve_) public {
+                        VBep20Interface.RiskManagementInit memory riskManagement) public {
         require(msg.sender == admin, "only admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
@@ -59,8 +58,9 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        riskFund = riskFund_;
-        protocolShareReserve = protocolShareReserve_;
+        shortfall = riskManagement.shortfall;
+        riskFund = riskManagement.riskFund;
+        protocolShareReserve = riskManagement.protocolShareReserve;
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -311,10 +311,10 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         } else {
             /*
              * Otherwise:
-             *  exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
+             *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
              */
             uint totalCash = getCashPrior();
-            uint cashPlusBorrowsMinusReserves = totalCash + totalBorrows - totalReserves;
+            uint cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
             uint exchangeRate = cashPlusBorrowsMinusReserves * expScale / _totalSupply;
 
             return exchangeRate;
@@ -1201,5 +1201,17 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         badDebt = badDebt + borrowSnapshot.principal * (borrowIndex / borrowSnapshot.interestIndex);
         totalBorrows = totalBorrows - borrowSnapshot.principal;
         borrowSnapshot.principal = 0;
+    }
+
+    /**
+     * @notice Updates bad debt
+     * @dev Called only when bad debt is recovered from action
+     * @param _badDebt The amount of bad debt recovered
+     */
+    function badDebtRecovered(uint256 _badDebt) external {
+        require(msg.sender == shortfall, "only shortfall contract can update bad debt");
+        require(_badDebt <= badDebt, "more than bad debt recovered from auction");
+
+        badDebt = badDebt - _badDebt;
     }
 }

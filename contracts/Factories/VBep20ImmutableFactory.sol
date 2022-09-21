@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import "../VBep20Immutable.sol";
 import "../Governance/AccessControlManager.sol";
+import "../VTokenInterfaces.sol";
 
 contract VBep20ImmutableFactory {
   function deployVBep20(
@@ -15,8 +16,7 @@ contract VBep20ImmutableFactory {
     uint8 decimals_,
     address payable admin_,
     AccessControlManager accessControlManager_,
-    address payable riskFund_,
-    address payable protocolShareReserve_
+    VBep20Interface.RiskManagementInit memory riskManagement
   ) external returns (VBep20Immutable) {
     VBep20Immutable cToken = new VBep20Immutable(
       underlying_,
@@ -28,8 +28,7 @@ contract VBep20ImmutableFactory {
       decimals_,
       admin_,
       accessControlManager_,
-      riskFund_,
-      protocolShareReserve_
+      riskManagement
     );
 
     return cToken;

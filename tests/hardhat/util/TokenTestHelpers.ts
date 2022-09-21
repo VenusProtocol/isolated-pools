@@ -9,6 +9,7 @@ chai.use(smock.matchers);
 
 import {
   Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
+  Shortfall,
   ERC20Harness__factory, AccessControlManager,
   RiskFund, ProtocolShareReserve
 } from "../../../typechain";
@@ -22,11 +23,12 @@ export type VTokenContracts = {
   interestRateModel: FakeContract<InterestRateModel>;
 };
 
-export async function makeVToken({ name, comptroller, accessControlManager, admin }: {
+export async function makeVToken({ name, comptroller, accessControlManager, admin, shortfall }: {
   name: string,
   comptroller: FakeContract<Comptroller>,
   accessControlManager: FakeContract<AccessControlManager>,
-  admin: Signer
+  admin: Signer,
+  shortfall: FakeContract<Shortfall>,
 }): Promise<VTokenContracts> {
   const interestRateModel = await smock.fake<InterestRateModel>("InterestRateModel");
   interestRateModel.isInterestRateModel.returns(true);
@@ -46,8 +48,11 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
     8,
     await admin.getAddress(),
     accessControlManager.address,
-    riskFund.address,
-    protocolShareReserve.address
+    {
+      shortfall: shortfall.address,
+      riskFund: riskFund.address,
+      protocolShareReserve: protocolShareReserve.address
+    }
   );
   return { vToken, underlying, interestRateModel };
 }
@@ -64,11 +69,12 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
   const comptroller = await smock.fake<Comptroller>("Comptroller");
   comptroller.isComptroller.returns(true);
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  const shortfall = await smock.fake<Shortfall>("Shortfall");
   accessControlManager.isAllowedToCall.returns(true);
 
   const [admin, ] = await ethers.getSigners();
   const { vToken, interestRateModel, underlying } =
-    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin});
+    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall});
 
   return { accessControlManager, comptroller, vToken, interestRateModel, underlying };
 }
