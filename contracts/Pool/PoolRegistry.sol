@@ -28,7 +28,12 @@ contract PoolRegistry is OwnableUpgradeable {
     address payable private protocolShareReserve;
 
     /**
-     * @dev Initializes the deployer to owner.
+      * @dev Initializes the deployer to owner.
+      * @param _vTokenFactory vToken factory address.
+      * @param _jumpRateFactory jump rate factory address.
+      * @param _whitePaperFactory white paper factory address.
+      * @param riskFund_ risk fund address.
+      * @param protocolShareReserve_ protocol's shares reserve address.
      */
     function initialize(
         VBep20ImmutableFactory _vTokenFactory,

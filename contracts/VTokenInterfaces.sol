@@ -35,7 +35,7 @@ contract VTokenStorage {
     address payable internal riskFund;
 
     /**
-    * @notice Liquidation fund contract address
+    * @notice Protocol share Reserve contract address
     */
     address payable internal protocolShareReserve;
 
