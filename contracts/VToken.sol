@@ -1071,6 +1071,7 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         totalReserves = totalReservesNew;
 
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         doTransferOut(protocolShareReserve, reduceAmount);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
