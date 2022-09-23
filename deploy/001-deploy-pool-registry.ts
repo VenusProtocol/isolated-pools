@@ -2,6 +2,8 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
+import { convertToUnit } from "../helpers/utils";
+import { MockToken } from "../typechain";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -47,22 +49,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "AccessControlManager"
   );
 
-  await deploy("PoolRegistry", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-
-  const poolRegistry = await ethers.getContract("PoolRegistry");
-
-  let tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "changeCollFactor(uint256,uint256)",
-    poolRegistry.address
-  );
-
-  await tx.wait(1);
 
   await deploy("RiskFund", {
     from: deployer,
@@ -73,21 +59,83 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const riskFund = await ethers.getContract("RiskFund");
 
+
   await deploy("LiquidatedShareReserve", {
     from: deployer,
-    args: [],
     log: true,
     autoMine: true,
   });
 
   const liquidatedShareReserve = await ethers.getContract("LiquidatedShareReserve");
 
-  tx = await poolRegistry.initialize(
+  await deploy("Shortfall", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+  });
+  const shortFall = await ethers.getContract("Shortfall");
+
+  await deploy("MockBUSD", {
+    from: deployer,
+    contract: "MockToken",
+    args: ["Binance USD", "BUSD", 18],
+    log: true,
+    autoMine: true,
+  });
+
+  const BUSD: MockToken = await ethers.getContract("MockBUSD");
+  
+  await shortFall.initialize(BUSD.address,riskFund.address,convertToUnit(1000,18))
+
+  await deploy("PoolRegistry", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+    args: [], 
+  });
+
+  const poolRegistry = await ethers.getContract("PoolRegistry");
+  const shortfall = await ethers.getContract("Shortfall");
+  const deployerSigner = await ethers.provider.getSigner(deployer);
+
+  await shortfall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  
+  await poolRegistry.initialize(
     vBep20Factory.address,
-    jumpRateModelFactory.address,
-    whitePaperRateFactory.address,
-    riskFund.address,
-    liquidatedShareReserve.address,
+    jumpRateModelFactory.address,    
+    whitePaperRateFactory.address,    
+    shortfall.address,     
+    riskFund.address,    
+    liquidatedShareReserve.address
+  );
+
+  await deploy("MockPriceOracle", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+    args: [], 
+  });
+    
+  let tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "changeCollFactor(uint256,uint256)",
+    poolRegistry.address
+  );
+
+  await tx.wait(1);
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "_setLiquidationIncentive(uint)",
+    poolRegistry.address
+  );
+
+  await tx.wait(1);
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "_setInterestRateModelFresh(InterestRateModel)",
+    vBep20Factory.address
   );
 
   await tx.wait(1);
