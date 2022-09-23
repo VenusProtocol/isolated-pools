@@ -213,8 +213,8 @@ const config: HardhatUserConfig = {
   external: {
     contracts: [
       {
-        artifacts: "node_modules/isolated-pools/artifacts",
-      }
+        artifacts: `${__dirname}/node_modules/@venusprotocol/oracle/artifacts/`,
+      },
     ],
   }
 };
