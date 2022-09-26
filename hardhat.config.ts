@@ -11,6 +11,8 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import { convertToUnit } from "./helpers/utils";
 
+require('@openzeppelin/hardhat-upgrades');
+
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
 

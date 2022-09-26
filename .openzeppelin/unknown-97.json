@@ -1,0 +1,46 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0xd88EC1FE1BaD482b52464F436141b9Bf69A24BB4",
+    "txHash": "0x3ee82dbdc1ab8ebd85c07ad521a579507d8d5d9a8265bcfec59d248645626510"
+  },
+  "proxies": [
+    {
+      "address": "0x345Dfb0554ee638a595eE36F4545192524F8D6D7",
+      "txHash": "0x6ecb99564bcbd077b6ff93617619fa87ace90fe10032bbcdf1fe224dd1b0fec2",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "b7aa5736030dfdac90659ac0e0d96aec5391f9fc0721fbdf29640feb2da4da5d": {
+      "address": "0xB54c8fcf22DE29eE1A1a9a78C4465B7d8eD42A8f",
+      "txHash": "0x434a78cab412bb71907bfbacb53c4bfbbcb02e8599311723e8f7233b95d0ce30",
+      "layout": {
+        "storage": [
+          {
+            "label": "assetPrices",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "MockPriceOracle",
+            "src": "contracts/Mocks/MockPriceOracle.sol:8"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    }
+  }
+}
