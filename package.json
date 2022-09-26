@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "",
   "files": [
     "artifacts",
