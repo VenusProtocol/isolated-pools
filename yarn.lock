@@ -1262,10 +1262,10 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@venusprotocol/oracle@^1.0.3":
-  version "1.0.3"
-  resolved "https://npm.pkg.github.com/download/@venusprotocol/oracle/1.0.3/29e2ae947f98a08d4860f1d38945d2913a8143c5#29e2ae947f98a08d4860f1d38945d2913a8143c5"
-  integrity sha512-NzhQTULt7MZ2BJDCRK651RKC5SH1txcZYGrDA5I00AR+BRB9g0p+XEFeY1cp1LKaBDQHFyyJyceR2Mvmobi8PQ==
+"@venusprotocol/oracle@^1.1.0":
+  version "1.1.0"
+  resolved "https://npm.pkg.github.com/download/@venusprotocol/oracle/1.1.0/08fde4ce9a0943de039f9932e8539f899ab5b4f5#08fde4ce9a0943de039f9932e8539f899ab5b4f5"
+  integrity sha512-9pbJdp0fkz2ARx1HMlEUjZFP3iZ37A6vOm4CAAm26GWtDmOntZarY3SuuP0rJg2LedfFLaQV1cBJ6B1DdCSjRg==
   dependencies:
     "@openzeppelin/contracts" "^4.6.0"
     "@openzeppelin/contracts-upgradeable" "^4.7.3"
