@@ -45,10 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const accessControlManager = await ethers.getContract(
-    "AccessControlManager"
-  );
-
+  const accessControlManager = await ethers.getContract("AccessControlManager");
 
   await deploy("RiskFund", {
     from: deployer,
@@ -59,21 +56,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const riskFund = await ethers.getContract("RiskFund");
 
-
-  await deploy("LiquidatedShareReserve", {
+  await deploy("ProtocolShareReserve", {
     from: deployer,
     log: true,
     autoMine: true,
   });
 
-  const liquidatedShareReserve = await ethers.getContract("LiquidatedShareReserve");
+  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
 
   await deploy("Shortfall", {
     from: deployer,
     log: true,
     autoMine: true,
   });
-  const shortFall = await ethers.getContract("Shortfall");
 
   await deploy("MockBUSD", {
     from: deployer,
@@ -82,40 +77,44 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
+  const shortFall = await ethers.getContract("Shortfall");
 
   const BUSD: MockToken = await ethers.getContract("MockBUSD");
-  
-  await shortFall.initialize(BUSD.address,riskFund.address,convertToUnit(1000,18))
+
+  await shortFall.initialize(
+    BUSD.address,
+    riskFund.address,
+    convertToUnit(1000, 18)
+  );
 
   await deploy("PoolRegistry", {
     from: deployer,
     log: true,
     autoMine: true,
-    args: [], 
+    args: [],
   });
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const shortfall = await ethers.getContract("Shortfall");
   const deployerSigner = await ethers.provider.getSigner(deployer);
 
-  await shortfall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
-  
+  await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+
   await poolRegistry.initialize(
     vBep20Factory.address,
-    jumpRateModelFactory.address,    
-    whitePaperRateFactory.address,    
-    shortfall.address,     
-    riskFund.address,    
-    liquidatedShareReserve.address
+    jumpRateModelFactory.address,
+    whitePaperRateFactory.address,
+    shortFall.address,
+    riskFund.address,
+    protocolShareReserve.address
   );
 
   await deploy("MockPriceOracle", {
     from: deployer,
     log: true,
     autoMine: true,
-    args: [], 
+    args: [],
   });
-    
+
   let tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "changeCollFactor(uint256,uint256)",
@@ -144,4 +143,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 func.tags = ["Pool Registry"];
 
 export default func;
-
