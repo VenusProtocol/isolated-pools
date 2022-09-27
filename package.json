@@ -6,7 +6,8 @@
     "artifacts",
     "networks",
     "deploy",
-    "helpers"
+    "helpers",
+    "contracts"
   ],
   "scripts": {
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
@@ -15,7 +16,7 @@
     "hardhat:coverage": "hardhat coverage ",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./artifacts ./dist && cp -r networks dist/ && cp ./{package.json,yarn.lock} dist/",
+    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts} dist/",
     "publish:dist": "yarn build && yarn publish dist -f",
     "hardhat:coverage-validator": "./script/coverageValidator.sh"
   },
