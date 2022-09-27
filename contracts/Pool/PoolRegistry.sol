@@ -29,10 +29,15 @@ contract PoolRegistry is OwnableUpgradeable {
     WhitePaperInterestRateModelFactory private whitePaperFactory;
     Shortfall private shortfall;    
     address payable private riskFund;
-    address payable private liquidatedShareReserve;
+    address payable private protocolShareReserve;
 
     /**
-     * @dev Initializes the deployer to owner.
+      * @dev Initializes the deployer to owner.
+      * @param _vTokenFactory vToken factory address.
+      * @param _jumpRateFactory jump rate factory address.
+      * @param _whitePaperFactory white paper factory address.
+      * @param riskFund_ risk fund address.
+      * @param protocolShareReserve_ protocol's shares reserve address.
      */
     function initialize(
         VBep20ImmutableFactory _vTokenFactory,
@@ -40,7 +45,7 @@ contract PoolRegistry is OwnableUpgradeable {
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         Shortfall _shortfall,
         address payable riskFund_,
-        address payable liquidationSeizeFund_
+        address payable protocolShareReserve_
     ) public initializer {
         __Ownable_init();
 
@@ -49,7 +54,7 @@ contract PoolRegistry is OwnableUpgradeable {
         whitePaperFactory = _whitePaperFactory;
         shortfall = _shortfall;
         riskFund = riskFund_;
-        liquidatedShareReserve = liquidationSeizeFund_;
+        protocolShareReserve = protocolShareReserve_;
     }
 
     /**
@@ -395,7 +400,7 @@ contract PoolRegistry is OwnableUpgradeable {
             VBep20Interface.RiskManagementInit(
                 address(shortfall),
                 riskFund,
-                liquidatedShareReserve
+                protocolShareReserve
             )
         );
 

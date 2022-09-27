@@ -161,7 +161,6 @@ describe('VToken', function () {
 
     it("proceeds if comptroller tells it to", async () => {
       //expect(
-      await collateral.underlying.transfer.returns(true);
       await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)
       //).toSucceed();
     });
@@ -221,7 +220,6 @@ describe('VToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
 
-      await collateral.underlying.transfer.returns(true);
       const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       const result = await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
       const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
@@ -251,7 +249,7 @@ describe('VToken', function () {
         [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
         [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
         [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
         [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens]
       ]));
     });
@@ -279,7 +277,6 @@ describe('VToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
       const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
-      await collateral.underlying.transfer.returns(true);
       const result = await liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
       const receipt = await result.wait();
       const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toString();
@@ -292,7 +289,7 @@ describe('VToken', function () {
         [borrowed.vToken, liquidatorAddress, 'cash', -repayAmount],
         [collateral.vToken, liquidatorAddress, 'eth', -gasCost],
         [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
         [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
         [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
         [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
@@ -327,7 +324,6 @@ describe('VToken', function () {
       const borrowerAddress = await borrower.getAddress();
 
       const beforeBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
-      await collateral.underlying.transfer.returns(true);
       const result = await seize(collateral.vToken, liquidator, borrower, seizeTokens);
       const afterBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
       //expect(result).toSucceed();
@@ -346,7 +342,7 @@ describe('VToken', function () {
       expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
         [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
         [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', 0], // Transfering protocol seize amount to liquidatedShareReserve
+        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
         [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
       ]));
     });

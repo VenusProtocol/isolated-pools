@@ -20,23 +20,23 @@ contract AccessControlManager is AccessControl {
     /**
      * @notice Verifies if the given account can call a praticular contract's function
      * @dev Since the contract is calling itself this function, we can get contracts address with msg.sender
-     * @param account address (eoa or contract) for which call permissions will be checked
+     * @param caller contract for which call permissions will be checked
      * @param functionSig signature e.g. "functionName(uint,bool)"
      * @return false if the user account cannot call the particular contract function
      *
      */
-    function isAllowedToCall(address account, string memory functionSig)
+    function isAllowedToCall(address caller, string memory functionSig)
         public
         view
         returns (bool)
     {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
 
-        if(hasRole(role, account)){
+        if(hasRole(role, caller)){
             return true;
         } else {
             role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
-           return hasRole(role, account);
+           return hasRole(role, caller);
         }
     }
 

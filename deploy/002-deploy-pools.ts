@@ -3,33 +3,56 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
 import { convertToUnit } from "../helpers/utils";
+import { MockToken } from "../typechain";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments, getNamedAccounts } = hre;
+  const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-
-  //TODO: should deploy tokens or get token addresses
-  const wBTCAddress = ethers.constants.AddressZero;
-  const daiAddress = ethers.constants.AddressZero;
-  //TODO: deploy price oracle or get its address
-  const priceOracleAddress = ethers.constants.AddressZero;
-
   const { deployer } = await getNamedAccounts();
+
+  //=======================
+  // DEPLOY MOCK TOKENS
+  //========================
+  await deploy("MockBTC", {
+    from: deployer,
+    contract: "MockToken",
+    args: ["Bitcoin", "BTC", 8],
+    log: true,
+    autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
+  });
+
+  const wBTC: MockToken = await ethers.getContract("MockBTC");
+
+  await deploy("MockDAI", {
+    from: deployer,
+    contract: "MockToken",
+    args: ["MakerDAO", "DAI", 18],
+    log: true,
+    autoMine: true,
+  });
+
+  const DAI: MockToken = await ethers.getContract("MockDAI");
+  //========================
+  //========================
+
+  //TODO: deploy price oracle or get its address
+  let priceOracle;
+
+  try {
+    priceOracle = await ethers.getContract("PriceOracle");
+  } catch (e) {
+    priceOracle = await ethers.getContract("MockPriceOracle");
+  }
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
 
-  const poolRegistry = await ethers.getContract(
-    "PoolRegistry"
-  );
+  const poolRegistry = await ethers.getContract("PoolRegistry");
 
-  const accessControlManager = await ethers.getContract(
-    "AccessControlManager"
-  );
-
+  const accessControlManager = await ethers.getContract("AccessControlManager");
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
-    contract: 'Comptroller',
+    contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
     log: true,
@@ -41,28 +64,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     Pool1Comptroller.address,
     closeFactor,
     liquidationIncentive,
-    priceOracleAddress
+    priceOracle.address
   );
 
   await tx.wait(1);
 
   const pools = await poolRegistry.callStatic.getAllPools();
-  await ethers.getContractAt(
-    "Pool 1",
-    pools[0].comptroller
-  );
+  await ethers.getContractAt("Comptroller", pools[0].comptroller);
 
   const unitroller = await ethers.getContractAt(
     "Unitroller",
     pools[0].comptroller
   );
-
   tx = await unitroller._acceptAdmin();
   await tx.wait(1);
 
   tx = await poolRegistry.addMarket({
     poolId: 1,
-    asset: wBTCAddress,
+    asset: wBTC.address,
     decimals: 8,
     name: "Compound WBTC",
     symbol: "cWBTC",
@@ -72,13 +91,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    accessControlManager: accessControlManager.address,
   });
 
   await tx.wait(1);
 
   tx = await poolRegistry.addMarket({
     poolId: 1,
-    asset: daiAddress,
+    asset: DAI.address,
     decimals: 18,
     name: "Compound DAI",
     symbol: "cDAI",
@@ -88,10 +108,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    accessControlManager: accessControlManager.address,
   });
   await tx.wait(1);
-}
+};
 
 func.tags = ["Pools"];
+func.dependencies = ["Pool Registry"];
 
 export default func;

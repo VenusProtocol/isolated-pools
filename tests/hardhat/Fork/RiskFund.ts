@@ -6,7 +6,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import {
   PoolRegistry,
   RiskFund,
-  LiquidatedShareReserve,
+  ProtocolShareReserve,
   MockToken,
   Comptroller,
   VBep20Immutable,
@@ -38,7 +38,7 @@ let cTokenFactory: VBep20ImmutableFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let liquidatedShareReserve: LiquidatedShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
 let pancakeSwapRouter: PancakeRouter;
 let busdUser: any;
@@ -73,11 +73,11 @@ const riskFundFixture = async (): Promise<void> => {
   riskFund = await RiskFund.deploy();
   await riskFund.deployed();
 
-  const LiquidatedShareReserve = await ethers.getContractFactory(
-    "LiquidatedShareReserve"
+  const ProtocolShareReserve = await ethers.getContractFactory(
+    "ProtocolShareReserve"
   );
-  liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-  await liquidatedShareReserve.deployed();
+  protocolShareReserve = await ProtocolShareReserve.deploy();
+  await protocolShareReserve.deployed();
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
   const shortfall = await Shortfall.deploy();
@@ -94,7 +94,7 @@ const riskFundFixture = async (): Promise<void> => {
     whitePaperRateFactory.address,
     shortfall.address,
     riskFund.address,
-    liquidatedShareReserve.address
+    protocolShareReserve.address
   );
 
   await shortfall.setPoolRegistry(poolRegistry.address)
@@ -274,6 +274,13 @@ const riskFundFixture = async (): Promise<void> => {
     fakeAccessControlManager.address
   );
   await riskFund.setPoolRegistry(poolRegistry.address);
+
+  const fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
+
+  await protocolShareReserve.initialize(
+    fakeLiquidatedShares.address,
+    riskFund.address
+  );
 };
 
 describe("Risk Fund: Tests", function () {
@@ -321,6 +328,14 @@ describe("Risk Fund: Tests", function () {
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
       await cUSDC._reduceReserves(convertToUnit(50, 18));
 
+      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDC.address,
+        convertToUnit(50, 18)
+      );
       const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(15, 18));
 
@@ -336,6 +351,15 @@ describe("Risk Fund: Tests", function () {
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
 
+      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
+
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDC.address,
+        convertToUnit(100, 18)
+      );
       const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
@@ -366,6 +390,24 @@ describe("Risk Fund: Tests", function () {
       await cUSDT._reduceReserves(convertToUnit(100, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
 
+      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
+
+      const protocolReserveUSDTBal = await mainnetUSDT.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
+
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDC.address,
+        convertToUnit(100, 18)
+      );
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDT.address,
+        convertToUnit(100, 18)
+      );
       const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
@@ -421,6 +463,24 @@ describe("Risk Fund: Tests", function () {
 
       await cUSDT._reduceReserves(convertToUnit(100, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
+      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
+
+      const protocolReserveUSDTBal = await mainnetUSDT.balanceOf(
+        protocolShareReserve.address
+      );
+      expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
+
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDC.address,
+        convertToUnit(100, 18)
+      );
+      await protocolShareReserve.releaseFunds(
+        mainnetUSDT.address,
+        convertToUnit(100, 18)
+      );
       await riskFund.swapAllPoolsAssets();
 
       const beforeTransfer = await mainnetBUSD.balanceOf(auctionContract);

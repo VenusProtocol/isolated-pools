@@ -102,9 +102,6 @@ const config: HardhatUserConfig = {
       },
     ],
   },
-  namedAccounts: {
-    deployer: 0
-  },
   networks: {
     hardhat: isFork(),
     development: {
@@ -145,6 +142,17 @@ const config: HardhatUserConfig = {
   paths: {
     tests: "./tests/hardhat",
   },
+  // Hardhat deploy
+  namedAccounts: {
+    deployer: 0
+  },
+  external: {
+    contracts: [
+      {
+        artifacts: "node_modules/isolated-pools/artifacts",
+      }
+    ],
+  }
 };
 
 function isFork() {

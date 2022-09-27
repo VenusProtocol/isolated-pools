@@ -6,14 +6,14 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import {
   MockToken,
   RiskFund,
-  LiquidatedShareReserve,
+  ProtocolShareReserve,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
 let mockDAI: MockToken;
 let fakeRiskFund: FakeContract<RiskFund>;
 let fakeLiquidatedShares: FakeContract<RiskFund>;
-let liquidatedShareReserve: LiquidatedShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 
 const fixture = async (): Promise<void> => {
   const MockDAI = await ethers.getContractFactory("MockToken");
@@ -24,14 +24,14 @@ const fixture = async (): Promise<void> => {
   fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
   fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
 
-  // LiquidatedShareReserve contract deployment
-  const LiquidatedShareReserve = await ethers.getContractFactory(
-    "LiquidatedShareReserve"
+  // ProtocolShareReserve contract deployment
+  const ProtocolShareReserve = await ethers.getContractFactory(
+    "ProtocolShareReserve"
   );
-  liquidatedShareReserve = await LiquidatedShareReserve.deploy();
-  await liquidatedShareReserve.deployed();
+  protocolShareReserve = await ProtocolShareReserve.deploy();
+  await protocolShareReserve.deployed();
 
-  await liquidatedShareReserve.initialize(
+  await protocolShareReserve.initialize(
     fakeLiquidatedShares.address,
     fakeRiskFund.address
   );
@@ -48,7 +48,7 @@ describe("Liquidated shares reserves: Tests", function () {
 
   it("Revert on invalid asset address.", async function () {
     await expect(
-      liquidatedShareReserve.releaseFunds(
+      protocolShareReserve.releaseFunds(
         "0x0000000000000000000000000000000000000000",
         10
       )
@@ -57,20 +57,20 @@ describe("Liquidated shares reserves: Tests", function () {
 
   it("Revert on Insufficient balance.", async function () {
     await expect(
-      liquidatedShareReserve.releaseFunds(mockDAI.address, 10)
+      protocolShareReserve.releaseFunds(mockDAI.address, 10)
     ).to.be.rejectedWith("Liquidated shares Reserves: Insufficient balance");
   });
 
   it("Release liquidated share reserve", async function () {
     await mockDAI.transfer(
-      liquidatedShareReserve.address,
+      protocolShareReserve.address,
       convertToUnit(100, 18)
     );
-    const balance = await mockDAI.balanceOf(liquidatedShareReserve.address);
+    const balance = await mockDAI.balanceOf(protocolShareReserve.address);
 
     expect(balance).equal(convertToUnit(100, 18));
 
-    await liquidatedShareReserve.releaseFunds(
+    await protocolShareReserve.releaseFunds(
       mockDAI.address,
       convertToUnit(100, 18)
     );
@@ -79,12 +79,12 @@ describe("Liquidated shares reserves: Tests", function () {
     const liquidatedShareBal = await mockDAI.balanceOf(
       fakeLiquidatedShares.address
     );
-    const liquidatedShareReserveBal = await mockDAI.balanceOf(
-      liquidatedShareReserve.address
+    const protocolShareReserveBal = await mockDAI.balanceOf(
+      protocolShareReserve.address
     );
 
     expect(riskFundBal).equal(convertToUnit(30, 18));
     expect(liquidatedShareBal).equal(convertToUnit(70, 18));
-    expect(liquidatedShareReserveBal).equal("0");
+    expect(protocolShareReserveBal).equal("0");
   });
 });
