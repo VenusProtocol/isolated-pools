@@ -5,7 +5,8 @@
   "files": [
     "artifacts",
     "networks",
-    "deploy"
+    "deploy",
+    "helpers"
   ],
   "scripts": {
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
