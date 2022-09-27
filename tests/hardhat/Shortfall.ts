@@ -196,6 +196,12 @@ describe("Shortfall: Tests", async function () {
     await shortfall.closeAuction(pooldId)
     const auction = await shortfall.auctions(pooldId);
     expect(auction.status).equal(2)
+
+    expect(cWBTC.badDebtRecovered).to.have.been.calledOnce;
+    expect(cWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("2", 8));
+
+    expect(cDAI.badDebtRecovered).to.have.been.calledOnce;
+    expect(cDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
   }); 
 
   it("Scenerio 2 - Start auction", async function () {
@@ -247,8 +253,6 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Scenerio 2 - Close Auction", async function () {
-    
-
     const [owner] = await ethers.getSigners();
     let auction = await shortfall.auctions(pooldId);
 
@@ -260,5 +264,11 @@ describe("Shortfall: Tests", async function () {
     await shortfall.closeAuction(pooldId)
     auction = await shortfall.auctions(pooldId);
     expect(auction.status).equal(2)
+
+    expect(cWBTC.badDebtRecovered).to.have.been.calledTwice;
+    expect(cWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("1", 8));
+
+    expect(cDAI.badDebtRecovered).to.have.been.calledTwice;
+    expect(cDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
   }); 
 });
