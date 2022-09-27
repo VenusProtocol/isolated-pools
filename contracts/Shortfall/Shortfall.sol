@@ -299,13 +299,13 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps)/MAX_BPS);
                 erc20.transfer(address(auction.markets[i]), bidAmount);
-                auction.markets[i].badDebtRecovered(bidAmount);
                 marketsDebt[i] = bidAmount;
             } else {
                 erc20.transfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
-                auction.markets[i].badDebtRecovered(auction.marketDebt[auction.markets[i]]);
                 marketsDebt[i] = auction.marketDebt[auction.markets[i]];
             }
+
+            auction.markets[i].badDebtRecovered(auction.marketDebt[auction.markets[i]]);
         }
 
         uint256 riskFundBidAmount = auction.seizedRiskFund;
