@@ -17,7 +17,7 @@
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts} dist/",
-    "publish:dist": "yarn build && yarn publish dist -f",
+    "publish:dist": "yarn build && yarn publish dist -f --access public",
     "hardhat:coverage-validator": "./script/coverageValidator.sh"
   },
   "repository": {
