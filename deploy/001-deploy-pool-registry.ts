@@ -56,12 +56,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const riskFund = await ethers.getContract("RiskFund");
 
-  let tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "changeCollFactor(uint256,uint256)",
-    poolRegistry.address
-  );
-
   await deploy("ProtocolShareReserve", {
     from: deployer,
     log: true,
