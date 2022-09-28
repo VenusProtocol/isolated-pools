@@ -1262,20 +1262,20 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@venusprotocol/oracle@^1.1.0":
-  version "1.1.0"
-  resolved "https://npm.pkg.github.com/download/@venusprotocol/oracle/1.1.0/08fde4ce9a0943de039f9932e8539f899ab5b4f5#08fde4ce9a0943de039f9932e8539f899ab5b4f5"
-  integrity sha512-9pbJdp0fkz2ARx1HMlEUjZFP3iZ37A6vOm4CAAm26GWtDmOntZarY3SuuP0rJg2LedfFLaQV1cBJ6B1DdCSjRg==
+"@venusprotocol/oracle@^1.1.3":
+  version "1.1.3"
+  resolved "https://registry.npmjs.org/@venusprotocol/oracle/-/oracle-1.1.3.tgz#ac7ea322494ef77a1d3a5d124de13aa541259de6"
+  integrity sha512-vA/6hN8V1YYG4xpzHJCDVyv8IkNwTmKv7lnTeF9lCxTeQ+vVNaQLvv7unEtsZYqJ2on9hqmmFBRJQORS75QGLw==
   dependencies:
     "@openzeppelin/contracts" "^4.6.0"
     "@openzeppelin/contracts-upgradeable" "^4.7.3"
-    "@venusprotocol/venus-protocol" "0.3.0"
+    "@venusprotocol/venus-protocol" "0.4.1"
     module-alias "^2.2.2"
 
-"@venusprotocol/venus-protocol@0.3.0":
-  version "0.3.0"
-  resolved "https://npm.pkg.github.com/download/@venusprotocol/venus-protocol/0.3.0/044371a154f6822c66f8d2c7e6d674a70034f298#044371a154f6822c66f8d2c7e6d674a70034f298"
-  integrity sha512-jE3XrS/8C4MKKEwPQ0Y1F5TRKrT7BWNxz9WKwLaRo5yAEY81YavEfKQ54q5GbLOkuTV9s7IeOeBLonelG5q24Q==
+"@venusprotocol/venus-protocol@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.npmjs.org/@venusprotocol/venus-protocol/-/venus-protocol-0.4.1.tgz#b98546a9b3bee6a1356b3435b5a67dabf0933366"
+  integrity sha512-Fk1zcc9s8S4phX5cnZtJI3Z3EWwcZuBktE8G6prAfcXYlSegNjRxvgyX9p8gJrH3uZh36MI3Cbm4LSvENL4ezA==
   dependencies:
     dotenv "^16.0.1"
 
