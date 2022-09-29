@@ -8,16 +8,7 @@
     "deploy"
   ],
   "scripts": {
-    "compile": "./script/compile",
-    "console": "if node -v | grep -E \"v(12|13)\" > /dev/null; then flags=\"-n --experimental-repl-await\"; fi; npx $flags saddle console",
-    "coverage": "./script/coverage",
-    "deploy": "./scenario/script/repl -s ./script/scen/deploy.scen",
-    "lint": "./script/lint",
-    "repl": "./scenario/script/repl",
-    "profile": "yarn test tests/gasProfiler.js",
-    "report": "npx run ./script/saddle/gasReport.js",
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
-    "checksize": "npx run ./script/saddle/comptrollerSize.js",
     "hardhat:test": "hardhat test",
     "hardhat:compile": "hardhat compile",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",

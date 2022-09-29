@@ -51,7 +51,6 @@ tests/Scenarios/
 junit.xml
 .build
 .last_confs
-.saddle_history
 node_modules_tmp
 .idea
 
