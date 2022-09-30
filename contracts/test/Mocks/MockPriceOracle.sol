@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../PriceOracle.sol";
-import "../VBep20.sol";
+import "../../PriceOracle.sol";
+import "../../VBep20.sol";
 
 contract MockPriceOracle {
     mapping(address => uint256) public assetPrices;
