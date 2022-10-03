@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 jobs:
   build:
@@ -11,21 +11,18 @@ jobs:
     env:
       FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
       QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
-      MIN_COVERAGE: 80
     steps:
       - uses: actions/checkout@v2
       - name: Clear
         run: docker container prune -f && docker image prune -f
-      - name: 'Create env file'
+      - name: "Create env file"
         run: |
           touch .env
           echo FORK_MAINNET=${{ secrets.FORK_MAINNET }} >> .env
           echo QUICK_NODE_KEY=${{ secrets.QUICK_NODE_KEY }} >> .env
       - name: Build docker
         run: docker build -t isolated:${GITHUB_SHA::7} .
-      - name: Run hardhat tests and coverage
-        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:test && yarn hardhat:coverage"
-      - name: Coverage validation
-        run: reports=('Statements' 'Branches' 'Functions' 'Lines'); i=0; exitCode=0; grep -m 4 '%' coverage/index.html | cut -d '>' -f 2 | cut -d '%' -f 1 | while read -r line; do if [ $(echo "$line > ${{ env.MIN_COVERAGE }}" | bc) -eq 1 ]; then echo -e "\e[39m${reports[$i]} coverage = \e[92m$line %"; else echo -e "\e[39m${reports[$i]} coverage = \e[91m$line % (min ${{ env.MIN_COVERAGE }} %)"; exitCode=1 ; fi; i=$((i+1)); if [ $(echo "$i >= ${#reports[@]}" | bc) -eq 1 ] && [ $exitCode -gt 0 ]; then exit 1; fi; done;
+      - name: Run hardhat compile and tests coverage
+        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:coverage && yarn hardhat:coverage-validator"
       - name: Clear
         run: docker rm ${GITHUB_SHA::7}
