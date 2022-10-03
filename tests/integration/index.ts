@@ -20,8 +20,6 @@ import { smock } from "@defi-wonderland/smock";
 import { BigNumber, ethers, Signer } from "ethers";
 import { convertToUnit } from "../../helpers/utils";
 import { Error } from "../hardhat/util/Errors";
-import { network } from "hardhat";
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
 const { deployments } = require("hardhat");
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -49,10 +47,12 @@ const setupTest = deployments.createFixture(
     );
 
     const PriceOracle = await ethers.getContract("MockPriceOracle");
-    
 
     const pools = await PoolRegistry.callStatic.getAllPools();
-    const Comptroller = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+    const Comptroller = await ethers.getContractAt(
+      "Comptroller",
+      pools[0].comptroller
+    );
 
     const wBTC = await ethers.getContract("MockBTC");
     const DAI = await ethers.getContract("MockDAI");
@@ -60,25 +60,29 @@ const setupTest = deployments.createFixture(
     // Set Oracle
     await Comptroller._setPriceOracle(PriceOracle.address);
 
-    const vWBTCAddress = await PoolRegistry.getVTokenForAsset(
-      1,
-      wBTC.address
-    );
-    const vDAIAddress = await PoolRegistry.getVTokenForAsset(
-      1,
-      DAI.address
-    );
+    const vWBTCAddress = await PoolRegistry.getVTokenForAsset(1, wBTC.address);
+    const vDAIAddress = await PoolRegistry.getVTokenForAsset(1, DAI.address);
 
     const vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
     const vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
-    
-    await PriceOracle.setPrice(vWBTC.address, convertToUnit(1, 18));
-    await PriceOracle.setPrice(vDAI.address, convertToUnit(1, 8));
 
 
     //Enter Markets
-    await Comptroller.enterMarkets([vDAI.address,vWBTC.address]);
+    await Comptroller.enterMarkets([vDAI.address, vWBTC.address]);
 
+    //Enable Access to Supply Caps
+    await AccessControlManager.giveCallPermission(
+      ethers.constants.AddressZero,
+      "_setMarketSupplyCaps(VToken[],uint256[])",
+      deployer
+    );
+
+    //Set Supply Caps
+    let supply = convertToUnit(10, 6);
+    await Comptroller._setMarketSupplyCaps(
+      [vDAI.address, vWBTC.address],
+      [supply, supply]
+    );
     return {
       fixture: {
         PoolRegistry,
@@ -94,7 +98,7 @@ const setupTest = deployments.createFixture(
         vDAI,
         wBTC,
         DAI,
-        deployer
+        deployer,
       },
     };
   }
@@ -133,7 +137,7 @@ describe("Positive Cases", () => {
       vDAI,
       wBTC,
       DAI,
-      deployer
+      deployer,
     } = fixture);
   });
   describe("Setup", () => {
@@ -154,8 +158,13 @@ describe("Positive Cases", () => {
         Comptroller.address
       ).isAllowedToCall(
         PoolRegistry.address,
-        "changeCollFactor(uint256,uint256)"
+        "_setCollateralFactor(VToken,uint256)"
       );
+      expect(canCall).to.be.true;
+
+      canCall = await AccessControlManager.connect(
+        Comptroller.address
+      ).isAllowedToCall(PoolRegistry.address, "_supportMarket(VToken)");
       expect(canCall).to.be.true;
 
       canCall = await AccessControlManager.connect(
@@ -163,51 +172,61 @@ describe("Positive Cases", () => {
       ).isAllowedToCall(PoolRegistry.address, "_setLiquidationIncentive(uint)");
       expect(canCall).to.be.true;
     });
-    it("VBep20Factory has the required permissions ", async function () {
-      let canCall = await AccessControlManager.connect(
-        VBep20ImmutableFactory.address
-      ).isAllowedToCall(
-        PoolRegistry.address,
-        "changeCollFactor(uint256,uint256)"
-      );
-      expect(canCall).to.be.true;
-    });
   });
-  describe("Positive Cases", () => {
-    it.only("Mint", async function(){
-      const collateralFactor: BigNumber = BigNumber.from(convertToUnit(0.7,18));
-      const mintAmount: BigNumber = BigNumber.from(convertToUnit(100,18));
+  describe("Main Operations", () => {
+    const mintAmount: number = 1e6;
+    const borrowAmount: number = 1e6;
+    const collateralFactor: number = 0.7;
+
+    beforeEach(async () =>{
+      await DAI.faucet(mintAmount*100);
+      await DAI.approve(vDAI.address, mintAmount * 10);
+    });
+    it("Mint & Redeem", async function () {
+      
       let error: BigNumber;
       let liquidity: BigNumber;
       let shortfall: BigNumber;
       let balance: BigNumber;
-      let borrowBalance: BigNumber
-      let exchangeRate: BigNumber
+      let borrowBalance: BigNumber;
+      let exchangeRate: BigNumber;
 
-      let tx = await DAI.faucet(mintAmount.mul(100));
-      tx.wait(1);
-      const balanceTest = await DAI.balanceOf(deployer);
-      console.log(balanceTest.toString());
-      //THIS MINT FAILS
-      tx = await vDAI.mint(mintAmount);
-      tx.wait(1);
-      ([error, balance, borrowBalance,exchangeRate ] = await vDAI.getAccountSnapshot(deployer));
-      console.log("Borrow Balance: " + borrowBalance);
+      ////////////
+      /// MINT ///
+      ////////////
+
+      await expect(vDAI.mint(mintAmount))
+        .to.emit(vDAI, "Mint")
+        .withArgs(deployer, mintAmount, mintAmount);
+
+      [error, balance, borrowBalance, exchangeRate] =
+        await vDAI.getAccountSnapshot(deployer);
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(mintAmount);
       expect(borrowBalance).to.equal(0);
-      //expect(borrowBalance).to.equal(BigNumber.from(convertToUnit(1,8)));
 
-
-      ([error, liquidity, shortfall] = await Comptroller.getHypotheticalAccountLiquidity(
-        deployer,
-        vDAI.address,
-        0,
-        mintAmount
-      ));
-      
+      [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer)
+     
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal(mintAmount.div(collateralFactor));
+      expect(liquidity).to.equal(mintAmount*collateralFactor);
+      expect(shortfall).to.equal(0);
+
+      ////////////
+      // REDEEM //
+      ////////////
+
+      let redeemAmount = 10e3;
+      await expect(vDAI.redeem(10e3)).to.emit(vDAI,"Redeem");
+
+      [error, balance, borrowBalance, exchangeRate] = await vDAI.getAccountSnapshot(deployer);
+
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(balance).to.equal(mintAmount-redeemAmount);
+      expect(borrowBalance).to.equal(0);
+
+      [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(liquidity).to.equal((mintAmount-redeemAmount)*collateralFactor);
       expect(shortfall).to.equal(0);
     });
   });

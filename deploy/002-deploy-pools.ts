@@ -32,16 +32,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const DAI: MockToken = await ethers.getContract("MockDAI");
-  //========================
-  //========================
 
   //TODO: deploy price oracle or get its address
   let priceOracle;
 
   try {
     priceOracle = await ethers.getContract("PriceOracle");
+    console.log("Price Oracle Obtained")
   } catch (e) {
+    console.log("Mock Oracle Obtained")
     priceOracle = await ethers.getContract("MockPriceOracle");
+    await priceOracle.setPrice(wBTC.address, convertToUnit(1, 18));
+    await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
   }
 
   const closeFactor = convertToUnit(0.05, 18);
@@ -50,6 +52,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
+  console.log("ACL2: " + accessControlManager.address);
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
@@ -120,6 +123,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["Pools"];
-func.dependencies = ["Pool Registry"];
+func.dependencies = ["PoolsRegistry"];
 
 export default func;
