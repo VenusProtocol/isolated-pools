@@ -155,8 +155,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "_setInterestRateModelFresh(InterestRateModel)",
     vBep20Factory.address
   );
-
-  await tx.wait(1);
 };
 
 func.tags = ["PoolsRegistry"];

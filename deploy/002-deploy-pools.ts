@@ -33,7 +33,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const DAI: MockToken = await ethers.getContract("MockDAI");
 
-  //TODO: deploy price oracle or get its address
   let priceOracle;
 
   try {
