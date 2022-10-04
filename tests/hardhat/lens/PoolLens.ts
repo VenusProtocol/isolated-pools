@@ -54,7 +54,7 @@ describe("PoolLens - PoolView Tests", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    [owner] = await ethers.getSigners();
+    const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
     const VBep20ImmutableFactory = await ethers.getContractFactory(
@@ -196,6 +196,7 @@ describe("PoolLens - PoolView Tests", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     await poolRegistry.addMarket({
@@ -211,6 +212,7 @@ describe("PoolLens - PoolView Tests", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {
@@ -395,7 +397,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    [owner] = await ethers.getSigners();
+    const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
     const VBep20ImmutableFactory = await ethers.getContractFactory(
@@ -532,6 +534,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     await poolRegistry.addMarket({
@@ -547,6 +550,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     await poolRegistry.updatePoolMetadata(1, {

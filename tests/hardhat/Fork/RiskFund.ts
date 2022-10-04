@@ -46,7 +46,7 @@ let usdcUser: any;
 let usdtUser: any;
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user] = await ethers.getSigners();
+  const [admin, user, proxyAdmin] = await ethers.getSigners();
   const VBep20ImmutableFactory = await ethers.getContractFactory(
     "VBep20ImmutableFactory"
   );
@@ -223,6 +223,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
+    vTokenProxyAdmin: proxyAdmin.address,
   });
 
   await poolRegistry.addMarket({
@@ -238,6 +239,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
+    vTokenProxyAdmin: proxyAdmin.address,
   });
 
   const cUSDTAddress = await poolRegistry.getVTokenForAsset(

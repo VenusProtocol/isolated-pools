@@ -41,7 +41,7 @@ describe("PoolRegistry: Tests", function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    const [, user] = await ethers.getSigners();
+    const [, user, proxyAdmin] = await ethers.getSigners();
     const VBep20ImmutableFactory = await ethers.getContractFactory(
       "VBep20ImmutableFactory"
     );
@@ -189,6 +189,7 @@ describe("PoolRegistry: Tests", function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     await poolRegistry.addMarket({
@@ -204,6 +205,7 @@ describe("PoolRegistry: Tests", function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(

@@ -143,6 +143,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 kink_;
         uint256 collateralFactor;
         AccessControlManager accessControlManager;
+        address vTokenProxyAdmin;
     }
 
     /**
@@ -387,7 +388,7 @@ contract PoolRegistry is OwnableUpgradeable {
             _poolsByID[input.poolId].comptroller
         );
 
-        VBep20Immutable vToken = vTokenFactory.deployVBep20(
+        VBep20ImmutableFactory.VBep20Args memory args = VBep20ImmutableFactory.VBep20Args(
             input.asset,
             comptroller,
             rate,
@@ -401,8 +402,11 @@ contract PoolRegistry is OwnableUpgradeable {
                 address(shortfall),
                 riskFund,
                 protocolShareReserve
-            )
+            ),
+            input.vTokenProxyAdmin
         );
+
+        VBep20Immutable vToken = vTokenFactory.deployVBep20(args);
 
         comptroller._supportMarket(vToken);
         comptroller._setCollateralFactor(vToken, input.collateralFactor);

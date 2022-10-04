@@ -27,7 +27,7 @@ async function main() {
     }
   } 
 
-  const [owner] = await ethers.getSigners();
+  const [, proxyAdmin] = await ethers.getSigners();
 
   const MockDAI = await ethers.getContractFactory('MockToken')
   const mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
@@ -131,6 +131,7 @@ async function main() {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    vTokenProxyAdmin: proxyAdmin.address,
   });
   await tx.wait(1)
 
@@ -146,6 +147,7 @@ async function main() {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    vTokenProxyAdmin: proxyAdmin.address,
   });
   await tx.wait(1)
 
