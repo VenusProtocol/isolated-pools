@@ -14,8 +14,8 @@ import {
   RiskFund,
   ProtocolShareReserve,
   TransparentUpgradeableProxy,
-} from "../../../typechain";
-import { convertToUnit } from "../../../helpers/utils";
+} from "../../typechain";
+import { convertToUnit } from "../../helpers/utils";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
