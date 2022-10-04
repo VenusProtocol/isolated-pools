@@ -1,5 +1,4 @@
 node_modules
-coverage
 coverage.json
 typechain
 
@@ -15,7 +14,6 @@ build_
 node_modules
 .certora*
 certora_*
-coverage/
 coverage.json
 coverageEnv/
 emv-*/

@@ -11,10 +11,12 @@
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
     "hardhat:test": "hardhat test",
     "hardhat:compile": "hardhat compile",
+    "hardhat:coverage": "hardhat coverage ",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./artifacts ./dist && cp -r networks dist/ && cp ./{package.json,yarn.lock} dist/",
-    "publish": "yarn build && cd dist && yarn npm publish"
+    "publish": "yarn build && cd dist && yarn npm publish",
+    "hardhat:coverage-validator": "./script/coverageValidator.sh"
   },
   "repository": {
     "type": "git",

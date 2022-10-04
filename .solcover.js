@@ -1,10 +1,10 @@
 const {execSync} = require('child_process');
 async function moveCoverage(config) {
-  execSync('mv ./.coverage_artifacts/contracts ./networks/coverage-contracts');
+  execSync('mv ./artifacts/contracts ./networks/coverage-contracts');
 }
 
 async function moveCoverageBack() {
-  execSync('mv ./networks/coverage-contracts ./.coverage_artifacts/contracts');
+  execSync('mv ./networks/coverage-contracts ./artifacts/contracts');
 }
 
 module.exports = {
