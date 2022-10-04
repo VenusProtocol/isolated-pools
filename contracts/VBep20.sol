@@ -4,9 +4,6 @@ pragma solidity ^0.8.10;
 import "./VToken.sol";
 import "./Governance/AccessControlManager.sol";
 
-interface CompLike {
-    function delegate(address delegatee) external;
-}
 
 /**
  * @title Venus VBep20 Contract
@@ -217,15 +214,5 @@ contract VBep20 is VToken, VBep20Interface {
                 }
         }
         require(success, "TOKEN_TRANSFER_OUT_FAILED");
-    }
-
-    /**
-    * @notice Admin call to delegate the votes of the COMP-like underlying
-    * @param compLikeDelegatee The address to delegate votes to
-    * @dev VTokens whose underlying are not CompLike should revert here
-    */
-    function _delegateCompLikeTo(address compLikeDelegatee) external {
-        require(msg.sender == admin, "only the admin may set the comp-like delegate");
-        CompLike(underlying).delegate(compLikeDelegatee);
     }
 }

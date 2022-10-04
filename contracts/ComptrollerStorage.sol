@@ -61,8 +61,6 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
         uint256 collateralFactorMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
-        // Whether or not this market receives COMP
-        bool isComped;
     }
 
     /**

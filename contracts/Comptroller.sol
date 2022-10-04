@@ -7,7 +7,6 @@ import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
-import "./Governance/Comp.sol";
 import "./Rewards/RewardsDistributor.sol";
 import "./Governance/AccessControlManager.sol";
 
@@ -1349,10 +1348,8 @@ contract Comptroller is
 
         vToken.isVToken(); // Sanity check to make sure its really a VToken
 
-        // Note that isComped is not in active use anymore
         Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;
-        newMarket.isComped = false;
         newMarket.collateralFactorMantissa = 0;
 
         _addMarketInternal(address(vToken));

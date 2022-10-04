@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./PriceOracle.sol";
-import "./VBep20.sol";
+import "../PriceOracle.sol";
+import "../VBep20.sol";
 
 contract SimplePriceOracle is PriceOracle {
     mapping(address => uint) prices;
@@ -10,7 +10,7 @@ contract SimplePriceOracle is PriceOracle {
 
     function _getUnderlyingAddress(VToken vToken) private view returns (address) {
         address asset;
-        if (compareStrings(vToken.symbol(), "cETH")) {
+        if (compareStrings(vToken.symbol(), "vBNB")) {
             asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         } else {
             asset = address(VBep20(address(vToken)).underlying());
