@@ -3,15 +3,15 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "./VBep20.sol";
-import "./Governance/AccessControlManager.sol";
+import "../VBep20.sol";
+import "../Governance/AccessControlManager.sol";
 
 /**
- * @title Compound's VBep20Immutable Contract
+ * @title Venus's VBep20Immutable Contract
  * @notice VTokens which wrap an EIP-20 underlying and are immutable
- * @author Compound
+ * @author Venus
  */
-contract VBep20Immutable is VBep20, Initializable {
+contract UpgradedVBEP20 is VBep20, Initializable {
     /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset
@@ -55,5 +55,9 @@ contract VBep20Immutable is VBep20, Initializable {
 
         // Set the proper admin now that initialization is done
         admin = admin_;
+    }
+
+    function getTokenUnderlying() public view returns(address) {
+        return underlying;
     }
 }
