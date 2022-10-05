@@ -23,7 +23,7 @@ contract VBep20ImmutableProxyFactory {
         VBep20Immutable tokenImplementation_;
     }
 
-    function deployVBep20(VBep20Args memory input)
+    function deployVBep20Proxy(VBep20Args memory input)
         external
         returns (VBep20Immutable)
     {

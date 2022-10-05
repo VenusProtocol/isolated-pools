@@ -408,7 +408,7 @@ contract PoolRegistry is OwnableUpgradeable {
             input.tokenImplementation_
         );
 
-        VBep20Immutable vToken = vTokenFactory.deployVBep20(initializeArgs);
+        VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(initializeArgs);
 
         comptroller._supportMarket(vToken);
         comptroller._setCollateralFactor(vToken, input.collateralFactor);
