@@ -11,12 +11,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const vBep20Factory: DeployResult = await deploy("VBep20ImmutableFactory", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
-  });
+  const vBep20Factory: DeployResult = await deploy(
+    "VBep20ImmutableProxyFactory",
+    {
+      from: deployer,
+      args: [],
+      log: true,
+      autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
+    }
+  );
 
   const jumpRateModelFactory: DeployResult = await deploy(
     "JumpRateModelFactory",

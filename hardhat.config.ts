@@ -65,6 +65,8 @@ task("add market", "Add a market to an existing pool")
       jumpMultiplierPerYear: taskArgs.jumpMul,
       kink_: taskArgs.kink,
       collateralFactor: convertToUnit(taskArgs.collFactor, 18),
+      vTokenProxyAdmin: taskArgs.vTokenProxyAdmin,
+      tokenImplementation_: taskArgs.tokenImplementation_.address,
     });
   });
 

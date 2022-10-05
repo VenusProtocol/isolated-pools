@@ -27,7 +27,7 @@ async function main() {
     }
   } 
 
-  const [owner] = await ethers.getSigners();
+  const [, proxyAdmin] = await ethers.getSigners();
 
   const MockDAI = await ethers.getContractFactory('MockToken')
   const mockDAI = await MockDAI.deploy('MakerDAO', 'DAI', 18)
@@ -118,6 +118,9 @@ async function main() {
   tx = await unitroller._acceptAdmin();
   await tx.wait(1)
 
+  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+  const tokenImplementation = await VBep20Immutable.deploy();
+  await tokenImplementation.deployed();
 
   tx = await poolRegistry.addMarket({
     poolId: 1,
@@ -131,6 +134,8 @@ async function main() {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    vTokenProxyAdmin: proxyAdmin.address,
+    tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait(1)
 
@@ -146,6 +151,8 @@ async function main() {
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
+    vTokenProxyAdmin: proxyAdmin.address,
+    tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait(1)
 

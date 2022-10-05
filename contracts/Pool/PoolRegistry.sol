@@ -7,7 +7,7 @@ import "../Comptroller.sol";
 import "../Unitroller.sol";
 import "../PriceOracle.sol";
 
-import "../Factories/VBep20ImmutableFactory.sol";
+import "../Factories/VBep20ImmutableProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
@@ -24,7 +24,7 @@ import "../VTokenInterfaces.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is OwnableUpgradeable {
-    VBep20ImmutableFactory private vTokenFactory;
+    VBep20ImmutableProxyFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
     Shortfall private shortfall;    
@@ -40,7 +40,7 @@ contract PoolRegistry is OwnableUpgradeable {
       * @param protocolShareReserve_ protocol's shares reserve address.
      */
     function initialize(
-        VBep20ImmutableFactory _vTokenFactory,
+        VBep20ImmutableProxyFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         Shortfall _shortfall,
@@ -143,6 +143,8 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 kink_;
         uint256 collateralFactor;
         AccessControlManager accessControlManager;
+        address vTokenProxyAdmin;
+        VBep20Immutable tokenImplementation_;
     }
 
     /**
@@ -387,7 +389,7 @@ contract PoolRegistry is OwnableUpgradeable {
             _poolsByID[input.poolId].comptroller
         );
 
-        VBep20Immutable vToken = vTokenFactory.deployVBep20(
+        VBep20ImmutableProxyFactory.VBep20Args memory initializeArgs = VBep20ImmutableProxyFactory.VBep20Args(
             input.asset,
             comptroller,
             rate,
@@ -401,8 +403,12 @@ contract PoolRegistry is OwnableUpgradeable {
                 address(shortfall),
                 riskFund,
                 protocolShareReserve
-            )
+            ),
+            input.vTokenProxyAdmin,
+            input.tokenImplementation_
         );
+
+        VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(initializeArgs);
 
         comptroller._supportMarket(vToken);
         comptroller._setCollateralFactor(vToken, input.collateralFactor);

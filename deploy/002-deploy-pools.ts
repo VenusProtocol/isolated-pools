@@ -79,6 +79,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await unitroller._acceptAdmin();
   await tx.wait(1);
 
+  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+  const tokenImplementation = await VBep20Immutable.deploy();
+  await tokenImplementation.deployed();
+
   tx = await poolRegistry.addMarket({
     poolId: 1,
     asset: wBTC.address,
@@ -92,6 +96,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
+    tokenImplementation_: tokenImplementation.address,
   });
 
   await tx.wait(1);
@@ -109,6 +114,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
+    tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait(1);
 };

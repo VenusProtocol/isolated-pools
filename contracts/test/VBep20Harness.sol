@@ -23,19 +23,10 @@ contract VBep20Harness is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_, 
-                RiskManagementInit memory riskManagement)
-        VBep20Immutable(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        ) {}
+                RiskManagementInit memory riskManagement
+        ) {
+            initializeVToken(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, admin_, accessControlManager_, riskManagement);
+        }
   
 
     function doTransferOut(address payable to, uint amount) override internal {
@@ -170,19 +161,10 @@ contract VBep20Scenario is VBep20Immutable {
                 uint8 decimals_,
                 address payable admin_,
                 AccessControlManager accessControlManager_,
-                VBep20Interface.RiskManagementInit memory riskManagement)
-        VBep20Immutable(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        ) {}
+                VBep20Interface.RiskManagementInit memory riskManagement
+        )   {
+                initializeVToken(underlying_, comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, admin_, accessControlManager_, riskManagement);
+        }
                 
     function setTotalBorrows(uint totalBorrows_) public {
         totalBorrows = totalBorrows_;
