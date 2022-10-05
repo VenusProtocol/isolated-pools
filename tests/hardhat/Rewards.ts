@@ -8,7 +8,7 @@ import {
   Comptroller,
   VBep20Immutable,
   Unitroller,
-  VBep20ImmutableFactory,
+  VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   RewardsDistributor,
@@ -32,7 +32,7 @@ let vDAI: VBep20Immutable;
 let vWBTC: VBep20Immutable;
 let comptrollerProxy: Comptroller;
 let unitroller: Unitroller;
-let vTokenFactory: VBep20ImmutableFactory;
+let vTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let rewardsDistributor: RewardsDistributor;
@@ -48,10 +48,10 @@ describe("Rewards: Tests", async function () {
    */
   before(async function () {
     const [, proxyAdmin] = await ethers.getSigners();
-    const VBep20ImmutableFactory = await ethers.getContractFactory(
-      "VBep20ImmutableFactory"
+    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
+      "VBep20ImmutableProxyFactory"
     );
-    vTokenFactory = await VBep20ImmutableFactory.deploy();
+    vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -172,6 +172,11 @@ describe("Rewards: Tests", async function () {
 
     await unitroller._acceptAdmin();
     await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
+
+    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+    const tokenImplementation = await VBep20Immutable.deploy();
+    await tokenImplementation.deployed();
+
     //Deploy VTokens
     await poolRegistry.addMarket({
       poolId: 1,
@@ -187,6 +192,7 @@ describe("Rewards: Tests", async function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
     });
 
     await poolRegistry.addMarket({
@@ -203,6 +209,7 @@ describe("Rewards: Tests", async function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(

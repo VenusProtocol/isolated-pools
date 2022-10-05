@@ -7,7 +7,7 @@ import {
   VBep20Immutable,
   MockPriceOracle,
   Unitroller,
-  VBep20ImmutableFactory,
+  VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -29,7 +29,7 @@ let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
 let unitroller2: Unitroller;
-let cTokenFactory: VBep20ImmutableFactory;
+let cTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -42,12 +42,11 @@ describe("PoolRegistry: Tests", function () {
    */
   before(async function () {
     const [, user, proxyAdmin] = await ethers.getSigners();
-    const VBep20ImmutableFactory = await ethers.getContractFactory(
-      "VBep20ImmutableFactory"
+    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
+      "VBep20ImmutableProxyFactory"
     );
-    cTokenFactory = await VBep20ImmutableFactory.deploy();
+    cTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await cTokenFactory.deployed();
-
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
     );
@@ -71,7 +70,7 @@ describe("PoolRegistry: Tests", function () {
       ethers.constants.AddressZero,
       ethers.constants.AddressZero,
       convertToUnit("10000", 18)
-    )
+    );
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
@@ -175,6 +174,10 @@ describe("PoolRegistry: Tests", function () {
 
     await unitroller2._acceptAdmin();
 
+    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+    const tokenImplementation = await VBep20Immutable.deploy();
+    await tokenImplementation.deployed();
+
     // Deploy VTokens
     await poolRegistry.addMarket({
       poolId: 1,
@@ -190,6 +193,7 @@ describe("PoolRegistry: Tests", function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
     });
 
     await poolRegistry.addMarket({
@@ -206,6 +210,7 @@ describe("PoolRegistry: Tests", function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(

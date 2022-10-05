@@ -12,7 +12,7 @@ import {
   VBep20Immutable,
   MockPriceOracle,
   Unitroller,
-  VBep20ImmutableFactory,
+  VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -34,7 +34,7 @@ let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let unitroller1: Unitroller;
 let unitroller2: Unitroller;
-let cTokenFactory: VBep20ImmutableFactory;
+let vTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -47,11 +47,11 @@ let usdtUser: any;
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, proxyAdmin] = await ethers.getSigners();
-  const VBep20ImmutableFactory = await ethers.getContractFactory(
-    "VBep20ImmutableFactory"
+  const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
+    "VBep20ImmutableProxyFactory"
   );
-  cTokenFactory = await VBep20ImmutableFactory.deploy();
-  await cTokenFactory.deployed();
+  vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+  await vTokenFactory.deployed();
 
   const JumpRateModelFactory = await ethers.getContractFactory(
     "JumpRateModelFactory"
@@ -89,7 +89,7 @@ const riskFundFixture = async (): Promise<void> => {
   )
 
   await poolRegistry.initialize(
-    cTokenFactory.address,
+    vTokenFactory.address,
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
@@ -209,6 +209,10 @@ const riskFundFixture = async (): Promise<void> => {
 
   await unitroller2._acceptAdmin();
 
+  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+  const tokenImplementation = await VBep20Immutable.deploy();
+  await tokenImplementation.deployed();
+
   // Deploy CTokens
   await poolRegistry.addMarket({
     poolId: 1,
@@ -224,6 +228,7 @@ const riskFundFixture = async (): Promise<void> => {
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
+    tokenImplementation_: tokenImplementation.address,
   });
 
   await poolRegistry.addMarket({
@@ -240,6 +245,7 @@ const riskFundFixture = async (): Promise<void> => {
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
+    tokenImplementation_: tokenImplementation.address,
   });
 
   const cUSDTAddress = await poolRegistry.getVTokenForAsset(

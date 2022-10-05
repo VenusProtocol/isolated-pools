@@ -7,7 +7,7 @@ import {
   VBep20Immutable,
   MockPriceOracle,
   Unitroller,
-  VBep20ImmutableFactory,
+  VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -24,7 +24,7 @@ let mockWBTC: MockToken;
 let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let unitroller1: Unitroller;
-let cTokenFactory: VBep20ImmutableFactory;
+let cTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -39,10 +39,10 @@ describe("UpgradedVBEP20: Tests", function () {
   let proxyAdmin;
   before(async function () {
     [, proxyAdmin] = await ethers.getSigners();
-    const VBep20ImmutableFactory = await ethers.getContractFactory(
-      "VBep20ImmutableFactory"
+    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
+      "VBep20ImmutableProxyFactory"
     );
-    cTokenFactory = await VBep20ImmutableFactory.deploy();
+    cTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -136,6 +136,10 @@ describe("UpgradedVBEP20: Tests", function () {
 
     await unitroller1._acceptAdmin();
 
+    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
+    const tokenImplementation = await VBep20Immutable.deploy();
+    await tokenImplementation.deployed();
+
     // Deploy VTokens
     await poolRegistry.addMarket({
       poolId: 1,
@@ -151,6 +155,7 @@ describe("UpgradedVBEP20: Tests", function () {
       collateralFactor: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(
