@@ -195,7 +195,7 @@ describe("Positive Cases", () => {
       await wBTC.connect(otherAcc).faucet(mintAmount*100);
       await wBTC.connect(otherAcc).approve(vWBTC.address, mintAmount * 100);
     });
-    it.only("Mint & Redeem", async function () {
+    it.only("Mint, Redeem, Borrow, Repay", async function () {
       
       let error: BigNumber;
       let liquidity: BigNumber;
@@ -271,13 +271,10 @@ describe("Positive Cases", () => {
       expect(balance).to.equal(mintAmount-redeemAmount);
       expect(borrowBalance).to.equal(0);
 
-      console.log("Balance: " + balance.toString());
-
       [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer);
       expect(error).to.equal(Error.NO_ERROR);
       // Not sure why liquidity is 593000
       // Balance * CF = 990000*0.7 = 693000
-      console.log("Liquidity: " + liquidity.toString());
       expect(liquidity).to.equal((mintAmount-redeemAmount)*collateralFactor-1e5);
       expect(shortfall).to.equal(0);
 

@@ -51,7 +51,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
-  console.log("ACL2: " + accessControlManager.address);
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
