@@ -14,4 +14,10 @@ abstract contract PriceOracle {
       *  Zero means the price is unavailable.
       */
     function getUnderlyingPrice(VToken vToken) virtual external view returns (uint);
+
+    /**
+      * @notice This is called before state updates that depends on oracle price
+      * @param vToken The vToken to get the underlying price of
+      */
+    function updatePrice(address vToken) virtual external;
 }

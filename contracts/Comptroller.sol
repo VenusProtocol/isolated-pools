@@ -361,6 +361,8 @@ contract Comptroller is
     ) external override returns (uint256) {
         checkActionPauseState(vToken, Action.REDEEM);
 
+        oracle.updatePrice(vToken);
+
         uint256 allowed = redeemAllowedInternal(vToken, redeemer, redeemTokens);
         if (allowed != uint256(Error.NO_ERROR)) {
             return allowed;
@@ -449,6 +451,8 @@ contract Comptroller is
         uint256 borrowAmount
     ) external override returns (uint256) {
         checkActionPauseState(vToken, Action.BORROW);
+
+        oracle.updatePrice(vToken);
 
         if (!markets[vToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
@@ -553,6 +557,8 @@ contract Comptroller is
         uint256 repayAmount
     ) external override returns (uint256) {
         checkActionPauseState(vToken, Action.REPAY);
+        
+        oracle.updatePrice(vToken);
 
         // Shh - currently unused
         payer;
@@ -628,6 +634,9 @@ contract Comptroller is
         // If we want to pause liquidating to vTokenCollateral, we should pause
         // Action.SEIZE on it
         checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
+
+        oracle.updatePrice(vTokenBorrowed);
+        oracle.updatePrice(vTokenCollateral);
 
         // Shh - currently unused
         liquidator;
@@ -811,6 +820,8 @@ contract Comptroller is
         uint256 transferTokens
     ) external override returns (uint256) {
         checkActionPauseState(vToken, Action.TRANSFER);
+
+        oracle.updatePrice(vToken);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens

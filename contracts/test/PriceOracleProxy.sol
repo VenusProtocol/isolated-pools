@@ -107,4 +107,6 @@ contract PriceOracleProxy is PriceOracle {
         require(price < 0.1e18, "SAI price must be < 0.1 ETH");
         saiPrice = price;
     }
+
+    function updatePrice(address vToken) external override {}
 }
