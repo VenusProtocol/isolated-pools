@@ -67,12 +67,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
 
-  await deploy("Shortfall", {
-    from: deployer,
-    log: true,
-    autoMine: true,
-  });
-
   await deploy("MockBUSD", {
     from: deployer,
     contract: "MockToken",
@@ -80,36 +74,55 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
-  const shortFall = await ethers.getContract("Shortfall");
-
+  
+  
   const BUSD: MockToken = await ethers.getContract("MockBUSD");
 
-  await shortFall.initialize(
-    BUSD.address,
-    riskFund.address,
-    convertToUnit(1000, 18)
-  );
-
-  await deploy("PoolRegistry", {
+  await deploy('Shortfall', {
     from: deployer,
-    log: true,
+    contract: 'Shortfall',
+    proxy: {
+      owner: deployer,
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        methodName: 'initialize',
+        args: [BUSD.address,
+          riskFund.address,
+          convertToUnit(1000, 18)],
+      },
+      upgradeIndex: 0,
+    },
     autoMine: true,
-    args: [],
+    log: true,
+  });
+  
+  const shortFall = await ethers.getContract("Shortfall");
+
+  await deploy('PoolRegistry', {
+    from: deployer,
+    contract: 'PoolRegistry',
+    proxy: {
+      owner: deployer,
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        methodName: 'initialize',
+        args: [vBep20Factory.address,
+          jumpRateModelFactory.address,
+          whitePaperRateFactory.address,
+          shortFall.address,
+          riskFund.address,
+          protocolShareReserve.address],
+      },
+      upgradeIndex: 0,
+    },
+    autoMine: true,
+    log: true,
   });
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = await ethers.provider.getSigner(deployer);
 
   await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
-
-  await poolRegistry.initialize(
-    vBep20Factory.address,
-    jumpRateModelFactory.address,
-    whitePaperRateFactory.address,
-    shortFall.address,
-    riskFund.address,
-    protocolShareReserve.address
-  );
 
   await deploy("MockPriceOracle", {
     from: deployer,
@@ -143,6 +156,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait(1);
 };
 
-func.tags = ["Pool Registry"];
+func.tags = ["PoolsRegistry"];
 
 export default func;
