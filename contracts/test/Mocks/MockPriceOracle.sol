@@ -19,5 +19,5 @@ contract MockPriceOracle {
         return assetPrices[vToken.underlying()];
     }
 
-    function updatePrice(address vToken) virtual external;
+    function updatePrice(address vToken) external {}
 }
