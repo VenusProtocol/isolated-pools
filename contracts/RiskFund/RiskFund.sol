@@ -141,6 +141,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 balanceOfUnderlyingAsset = EIP20Interface(underlyingAsset)
             .balanceOf(address(this));
 
+        ComptrollerViewInterface(comptroller)
+            .oracle()
+            .updatePrice(address(vToken));
+
         uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller)
             .oracle()
             .getUnderlyingPrice(vToken);
