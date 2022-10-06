@@ -107,7 +107,7 @@ describe("Shortfall: Tests", async function () {
         if (args[0] === cDAI.address) {
           return convertToUnit(daiPrice, 18);
         } else {
-          return convertToUnit(btcPrice, 18);
+          return convertToUnit(btcPrice, 28);
         }
       }
 

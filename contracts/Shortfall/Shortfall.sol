@@ -180,7 +180,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             uint256 marketBadDebt = vTokens[i].badDebt();
 
             priceOracle.updatePrice(address(vTokens[i]));
-            uint256 usdValue =  (priceOracle.getUnderlyingPrice(vTokens[i]) * marketBadDebt * (10 ** (18 - vTokens[i].decimals()))) / 10 ** 18;
+            uint256 usdValue =  (priceOracle.getUnderlyingPrice(vTokens[i]) * marketBadDebt) / 10 ** 18;
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = vTokens[i];
