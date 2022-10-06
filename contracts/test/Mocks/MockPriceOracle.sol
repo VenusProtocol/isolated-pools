@@ -18,4 +18,6 @@ contract MockPriceOracle {
     function getUnderlyingPrice(VBep20 vToken) public view returns (uint256) {
         return assetPrices[vToken.underlying()];
     }
+
+    function updatePrice(address vToken) virtual external;
 }
