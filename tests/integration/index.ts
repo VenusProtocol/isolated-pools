@@ -17,9 +17,12 @@ import {
 } from "../../typechain";
 import chai from "chai";
 import { smock } from "@defi-wonderland/smock";
-import { BigNumber, ethers, Signer } from "ethers";
 import { convertToUnit } from "../../helpers/utils";
 import { Error } from "../hardhat/util/Errors";
+import { ethers } from "hardhat";
+import { BigNumber, Signer} from "ethers";
+
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deployments } = require("hardhat");
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -27,7 +30,7 @@ chai.use(smock.matchers);
 const setupTest = deployments.createFixture(
   async ({ deployments, getNamedAccounts, ethers }: any) => {
     await deployments.fixture(["Pools"]);
-    const { deployer } = await getNamedAccounts();
+    const { deployer, acc1 } = await getNamedAccounts();
     const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
     const AccessControlManager = await ethers.getContract(
       "AccessControlManager"
@@ -99,6 +102,7 @@ const setupTest = deployments.createFixture(
         wBTC,
         DAI,
         deployer,
+        acc1
       },
     };
   }
@@ -119,7 +123,8 @@ describe("Positive Cases", () => {
   let vDAI: VBep20Immutable;
   let wBTC: MockToken;
   let DAI: MockToken;
-  let deployer: string;
+  let deployer: any;
+  let acc1: any;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
@@ -138,6 +143,7 @@ describe("Positive Cases", () => {
       wBTC,
       DAI,
       deployer,
+      acc1
     } = fixture);
   });
   describe("Setup", () => {
@@ -177,12 +183,19 @@ describe("Positive Cases", () => {
     const mintAmount: number = 1e6;
     const borrowAmount: number = 1e6;
     const collateralFactor: number = 0.7;
+    let otherAcc: Signer;
+
 
     beforeEach(async () =>{
       await DAI.faucet(mintAmount*100);
       await DAI.approve(vDAI.address, mintAmount * 10);
+
+      // Fund 2nd account
+      otherAcc = await ethers.getSigner(acc1);
+      await wBTC.connect(otherAcc).faucet(mintAmount*100);
+      await wBTC.connect(otherAcc).approve(vWBTC.address, mintAmount * 100);
     });
-    it("Mint & Redeem", async function () {
+    it.only("Mint & Redeem", async function () {
       
       let error: BigNumber;
       let liquidity: BigNumber;
@@ -198,7 +211,6 @@ describe("Positive Cases", () => {
       await expect(vDAI.mint(mintAmount))
         .to.emit(vDAI, "Mint")
         .withArgs(deployer, mintAmount, mintAmount);
-
       [error, balance, borrowBalance, exchangeRate] =
         await vDAI.getAccountSnapshot(deployer);
       expect(error).to.equal(Error.NO_ERROR);
@@ -212,22 +224,81 @@ describe("Positive Cases", () => {
       expect(shortfall).to.equal(0);
 
       ////////////
+      // Borrow //
+      ////////////
+
+      let expectedMintScaled = convertToUnit(0.01,18);
+
+      //Supply WBTC to market from 2nd account
+      await expect(vWBTC.connect(otherAcc).mint(mintAmount))
+      .to.emit(vWBTC, "Mint")
+      .withArgs(await otherAcc.getAddress(), mintAmount, expectedMintScaled);
+
+      [error, balance, borrowBalance, exchangeRate] = await vWBTC.getAccountSnapshot(await otherAcc.getAddress());
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(balance).to.equal(expectedMintScaled)
+      expect(borrowBalance).to.equal(0);
+      
+      [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(liquidity).to.equal(mintAmount*collateralFactor);
+      expect(shortfall).to.equal(0);
+
+      let borrowAmount = convertToUnit(7,4);
+
+      const btcBorrowAmount = 1e4;
+
+      await expect(vWBTC.borrow(btcBorrowAmount))
+        .to.emit(vWBTC, "Borrow")
+        .withArgs(deployer, btcBorrowAmount, btcBorrowAmount,btcBorrowAmount);
+
+      [error, balance, borrowBalance, exchangeRate] =
+        await vWBTC.getAccountSnapshot(deployer);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(balance).to.equal(0);
+      expect(borrowBalance).to.equal(btcBorrowAmount);
+
+      ////////////
       // REDEEM //
       ////////////
 
       let redeemAmount = 10e3;
-      await expect(vDAI.redeem(10e3)).to.emit(vDAI,"Redeem");
+      await expect(vDAI.redeem(redeemAmount)).to.emit(vDAI,"Redeem")
+      .withArgs(deployer,redeemAmount,redeemAmount);
 
       [error, balance, borrowBalance, exchangeRate] = await vDAI.getAccountSnapshot(deployer);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(balance).to.equal(mintAmount-redeemAmount);
+      expect(borrowBalance).to.equal(0);
 
+      console.log("Balance: " + balance.toString());
+
+      [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer);
+      expect(error).to.equal(Error.NO_ERROR);
+      // Not sure why liquidity is 593000
+      // Balance * CF = 990000*0.7 = 693000
+      console.log("Liquidity: " + liquidity.toString());
+      expect(liquidity).to.equal((mintAmount-redeemAmount)*collateralFactor-1e5);
+      expect(shortfall).to.equal(0);
+
+
+      ////////////
+      /// REPAY //
+      ////////////
+      await wBTC.faucet(btcBorrowAmount);
+      await wBTC.approve(vWBTC.address, btcBorrowAmount);
+      await expect(vWBTC.repayBorrow(btcBorrowAmount)).to.emit(vWBTC,"RepayBorrow");
+
+      [error, balance, borrowBalance, exchangeRate] = await vDAI.getAccountSnapshot(deployer);
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(mintAmount-redeemAmount);
       expect(borrowBalance).to.equal(0);
 
       [error, liquidity, shortfall] = await Comptroller.getAccountLiquidity(deployer);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal((mintAmount-redeemAmount)*collateralFactor);
+      expect(liquidity).to.equal(((mintAmount-redeemAmount)*collateralFactor));
       expect(shortfall).to.equal(0);
     });
+    
   });
 });

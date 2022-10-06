@@ -41,7 +41,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } catch (e) {
     console.log("Mock Oracle Obtained")
     priceOracle = await ethers.getContract("MockPriceOracle");
-    await priceOracle.setPrice(wBTC.address, convertToUnit(1, 18));
+    await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
     await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
   }
 
