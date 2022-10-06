@@ -123,8 +123,8 @@ describe("Positive Cases", () => {
   let vDAI: VBep20Immutable;
   let wBTC: MockToken;
   let DAI: MockToken;
-  let deployer: any;
-  let acc1: any;
+  let deployer: String;
+  let acc1: String;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
