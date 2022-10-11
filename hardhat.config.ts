@@ -146,7 +146,9 @@ const config: HardhatUserConfig = {
   },
   // Hardhat deploy
   namedAccounts: {
-    deployer: 0
+    deployer: 0,
+    acc1:1,
+    acc2:2,
   },
   external: {
     contracts: [
