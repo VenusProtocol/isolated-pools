@@ -130,30 +130,31 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     args: [],
   });
-
-  let tx = await accessControlManager.giveCallPermission(
+    
+  await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "changeCollFactor(uint256,uint256)",
+    "_setCollateralFactor(VToken,uint256)",
     poolRegistry.address
   );
 
-  await tx.wait(1);
 
-  tx = await accessControlManager.giveCallPermission(
+  await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setLiquidationIncentive(uint)",
     poolRegistry.address
   );
 
-  await tx.wait(1);
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "_supportMarket(VToken)",
+    poolRegistry.address
+  );
 
-  tx = await accessControlManager.giveCallPermission(
+  await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setInterestRateModelFresh(InterestRateModel)",
     vBep20Factory.address
   );
-
-  await tx.wait(1);
 };
 
 func.tags = ["PoolsRegistry"];

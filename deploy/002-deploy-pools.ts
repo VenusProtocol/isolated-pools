@@ -4,12 +4,14 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
 import { convertToUnit } from "../helpers/utils";
 import { MockToken } from "../typechain";
+import { AccessControlManager } from "../typechain/AccessControlManager";
+import { VBep20Immutable } from "../typechain/VBep20Immutable";
+import { PoolRegistry } from "../typechain/PoolRegistry";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-
   //=======================
   // DEPLOY MOCK TOKENS
   //========================
@@ -32,24 +34,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const DAI: MockToken = await ethers.getContract("MockDAI");
-  //========================
-  //========================
 
-  //TODO: deploy price oracle or get its address
   let priceOracle;
 
   try {
     priceOracle = await ethers.getContract("PriceOracle");
+    console.log("Price Oracle Obtained")
   } catch (e) {
     priceOracle = await ethers.getContract("MockPriceOracle");
+    console.log("Mock Oracle Obtained")
+    await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
+    await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
   }
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
 
-  const poolRegistry = await ethers.getContract("PoolRegistry");
+  const poolRegistry: PoolRegistry= await ethers.getContract("PoolRegistry");
 
-  const accessControlManager = await ethers.getContract("AccessControlManager");
+  const accessControlManager: AccessControlManager = await ethers.getContract("AccessControlManager");
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
@@ -58,6 +61,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
+
+
 
   let tx = await poolRegistry.createRegistryPool(
     "Pool 1",
@@ -83,23 +88,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const tokenImplementation = await VBep20Immutable.deploy();
   await tokenImplementation.deployed();
 
-  tx = await poolRegistry.addMarket({
+  await poolRegistry.addMarket({
     poolId: 1,
     asset: wBTC.address,
     decimals: 8,
-    name: "Compound WBTC",
-    symbol: "cWBTC",
+    name: 'Venus WBTC',
+    symbol: 'vWBTC',
     rateModel: 0,
     baseRatePerYear: 0,
-    multiplierPerYear: "40000000000000000",
+    multiplierPerYear: '40000000000000000',
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
+    vTokenProxyAdmin: deployer,
     tokenImplementation_: tokenImplementation.address,
   });
-
-  await tx.wait(1);
 
   tx = await poolRegistry.addMarket({
     poolId: 1,
@@ -114,12 +118,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
+    vTokenProxyAdmin: deployer,
     tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait(1);
+
 };
 
 func.tags = ["Pools"];
-func.dependencies = ["Pool Registry"];
+func.dependencies = ["PoolsRegistry"];
 
 export default func;
