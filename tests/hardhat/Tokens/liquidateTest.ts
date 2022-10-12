@@ -9,8 +9,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, VBep20Harness, ERC20Harness, VBep20Harness__factory, InterestRateModel,
-  ERC20Harness__factory, AccessControlManager, Shortfall
+  Comptroller, VBep20Harness, AccessControlManager, Shortfall
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -89,13 +88,15 @@ async function liquidateFresh(
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VBep20Harness>
+  vTokenCollateral: MockContract<VBep20Harness>,
+  skipLiquidityCheck: boolean = false
 ) {
   return vToken.harnessLiquidateBorrowFresh(
     await liquidator.getAddress(),
     await borrower.getAddress(),
     repayAmount,
-    vTokenCollateral.address
+    vTokenCollateral.address,
+    skipLiquidityCheck
   );
 }
 
