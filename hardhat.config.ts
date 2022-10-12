@@ -10,6 +10,8 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-deploy";
 import { convertToUnit } from "./helpers/utils";
+import { DeployResult } from "hardhat-deploy/types";
+import { PoolRegistry } from "./typechain";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
@@ -24,7 +26,8 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-task("add market", "Add a market to an existing pool")
+task("addMarket", "Add a market to an existing pool")
+  .addParam("proxyAdmin", "Admin of vToken proxy")
   .addParam("poolid", "ID of pool to add a market", 1, types.int)
   .addParam(
     "asset",
@@ -52,7 +55,14 @@ task("add market", "Add a market to an existing pool")
     types.float
   )
   .setAction(async (taskArgs, hre) => {
+
+    const VBep20Immutable = await hre.ethers.getContractFactory("VBep20Immutable");
+    const tokenImplementation = await VBep20Immutable.deploy();
+    await tokenImplementation.deployed();
+
     const poolRegistry = await hre.ethers.getContract("PoolRegistry");
+    const accessControl = await hre.ethers.getContract("AccessControlManager");
+
     await poolRegistry.addMarket({
       poolId: taskArgs.poolid,
       asset: taskArgs.asset,
@@ -65,10 +75,60 @@ task("add market", "Add a market to an existing pool")
       jumpMultiplierPerYear: taskArgs.jumpMul,
       kink_: taskArgs.kink,
       collateralFactor: convertToUnit(taskArgs.collFactor, 18),
-      vTokenProxyAdmin: taskArgs.vTokenProxyAdmin,
-      tokenImplementation_: taskArgs.tokenImplementation_.address,
+      accessControlManager: accessControl.address, 
+      vTokenProxyAdmin: taskArgs.proxyAdmin,
+      tokenImplementation_: tokenImplementation.address,
     });
+
+    console.log("Market " + taskArgs.name + " added successfully to pool " + taskArgs.poolId)
   });
+
+  task("deployComptroller", "Deploys a Comptroller Implementation")
+  .addParam("contractName", "Contract name, later we can load contracts by name")
+  .addParam("poolRegistry", "Address of PoolRegistry Contract")
+  .addParam("accessControl", "Address of AccessControlManager contract")
+  .setAction(async (taskArgs,hre) => {
+    const { deployer } = await hre.getNamedAccounts();
+    const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
+      contract: "Comptroller",
+      from: deployer,
+      args: [taskArgs.poolRegistry, taskArgs.accessControl],
+      log: true
+    });
+  
+
+    console.log("Comptroller implementation deployed with address: " + Comptroller.address);
+  });
+
+  task("createPool", "Creates a pool via PoolRegistry")
+  .addParam("poolName", "Name of the pool")
+  .addParam("comptroller", "Address of comptroller implementation")
+  .addParam("oracle", "Contract name, later we can load contracts by name")
+  .addParam("closeFactor", "Close factor for pool")
+  .addParam("liquidationIncentive", "Liquidation incentive for pool")
+  .setAction(async (taskArgs,hre) => {
+    const { deployer } = await hre.getNamedAccounts();
+    const poolRegistry: PoolRegistry= await hre.ethers.getContract("PoolRegistry");
+    await poolRegistry.createRegistryPool(
+      taskArgs.poolName,
+      taskArgs.comptroller,
+      taskArgs.closeFactor,
+      taskArgs.liquidationIncentive,
+      taskArgs.oracle
+    );
+
+    const pools = await poolRegistry.callStatic.getAllPools();
+    await hre.ethers.getContractAt("Comptroller", pools[0].comptroller);
+
+    const unitroller = await hre.ethers.getContractAt(
+      "Unitroller",
+      pools[0].comptroller
+    );
+    await unitroller._acceptAdmin();
+  
+    console.log("Pool " + taskArgs.poolName + " has been sucessfully created");
+  });
+
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
