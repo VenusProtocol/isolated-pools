@@ -41,7 +41,8 @@ abstract contract ComptrollerInterface {
         address vTokenCollateral,
         address liquidator,
         address borrower,
-        uint repayAmount) virtual external returns (uint);
+        uint repayAmount,
+        bool skipLiquidityCheck) virtual external returns (uint);
     function liquidateBorrowVerify(
         address vTokenBorrowed,
         address vTokenCollateral,

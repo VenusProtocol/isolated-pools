@@ -59,6 +59,10 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
         //  For instance, 0.9 to allow borrowing 90% of collateral value.
         //  Must be between 0 and 1, and stored as a mantissa.
         uint256 collateralFactorMantissa;
+        //  Multiplier representing the collateralization after which the borrow is eligible
+        //  for liquidation. For instance, 0.8 liquidate when the borrow is 80% of collateral
+        //  value. Must be between 0 and collateral factor, stored as a mantissa.
+        uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
     }
@@ -92,8 +96,8 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
     // @notice Borrow caps enforced by borrowAllowed for each vToken address. Defaults to zero which corresponds to unlimited borrowing.
     mapping(address => uint256) public borrowCaps;
 
-    /// @notice Storage for minimum liquidatable amount in USD for each asset
-    mapping(address => uint256) public minimalLiquidatableAmount;
+    /// @notice Minimal collateral required for regular (non-batch) liquidations
+    uint256 public minLiquidatableCollateral;
 
     /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
     mapping(address => uint256) public supplyCaps;
