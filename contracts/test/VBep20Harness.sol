@@ -125,8 +125,17 @@ contract VBep20Harness is VBep20Immutable {
         return NO_ERROR;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, VToken vTokenCollateral) public returns (uint) {
-        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral);
+    function harnessLiquidateBorrowFresh(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VToken vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        public
+        returns (uint)
+    {
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
         return NO_ERROR;
     }
 
@@ -351,8 +360,17 @@ contract VBep20DelegateHarness is VBep20Delegate {
         return NO_ERROR;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, VToken vTokenCollateral) public returns (uint) {
-        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral);
+    function harnessLiquidateBorrowFresh(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VToken vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        public
+        returns (uint)
+    {
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
         return NO_ERROR;
     }
 
