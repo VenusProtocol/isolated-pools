@@ -122,7 +122,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = await ethers.provider.getSigner(deployer);
 
-  await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  let tx = await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  await tx.wait();
 
   await deploy("MockPriceOracle", {
     from: deployer,
