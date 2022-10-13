@@ -884,6 +884,7 @@ contract Comptroller is
         // We need all user's markets to be fresh for the computations to be correct
         for (uint256 i = 0; i < userAssets.length; ++i) {
             userAssets[i].accrueInterest();
+            oracle.updatePrice(address(userAssets[i]));
         }
 
         AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(user, getLiquidationThreshold);
@@ -947,6 +948,8 @@ contract Comptroller is
      * @param orders an array of liquidation orders
      */
     function liquidateAccount(address borrower, LiquidationOrder[] calldata orders) external {
+        // We will accrue interest and update the oracle prices later during the liquidation
+
         AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(borrower, getLiquidationThreshold);
 
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
