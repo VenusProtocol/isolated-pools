@@ -11,7 +11,6 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import { convertToUnit } from "./helpers/utils";
 import { DeployResult } from "hardhat-deploy/types";
-import { PoolRegistry } from "./typechain";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
@@ -108,7 +107,7 @@ task("addMarket", "Add a market to an existing pool")
   .addParam("liquidationIncentive", "Liquidation incentive for pool")
   .setAction(async (taskArgs,hre) => {
     const { deployer } = await hre.getNamedAccounts();
-    const poolRegistry: PoolRegistry= await hre.ethers.getContract("PoolRegistry");
+    const poolRegistry = await hre.ethers.getContract("PoolRegistry");
     await poolRegistry.createRegistryPool(
       taskArgs.poolName,
       taskArgs.comptroller,
