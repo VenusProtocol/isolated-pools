@@ -46,6 +46,7 @@ describe("Shortfall: Tests", async function () {
    */
   before(async function () {
     const MockBUSD = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
     await mockBUSD.faucet(convertToUnit(100000, 18));
 
@@ -64,10 +65,12 @@ describe("Shortfall: Tests", async function () {
 
     //Deploy Mock Tokens
     const MockDAI = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000000, 18));
 
     const MockWBTC = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.faucet(convertToUnit(1000000, 8));
 

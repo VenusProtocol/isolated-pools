@@ -60,22 +60,26 @@ describe("PoolLens - PoolView Tests", async function () {
     const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
       "VBep20ImmutableProxyFactory"
     );
+    // @ts-ignore @TODO VEN-663
     vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
       "WhitePaperInterestRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+    // @ts-ignore @TODO VEN-663
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
@@ -88,12 +92,14 @@ describe("PoolLens - PoolView Tests", async function () {
       convertToUnit("10000", 18)
     )
     const RiskFund = await ethers.getContractFactory("RiskFund");
+    // @ts-ignore @TODO VEN-663
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
     const ProtocolShareReserve = await ethers.getContractFactory(
       "ProtocolShareReserve"
     );
+    // @ts-ignore @TODO VEN-663
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -116,13 +122,13 @@ describe("PoolLens - PoolView Tests", async function () {
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-
+    // @ts-ignore @TODO VEN-663
     comptroller1 = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
     );
     await comptroller1.deployed();
-
+    // @ts-ignore @TODO VEN-663
     comptroller2 = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
@@ -132,10 +138,11 @@ describe("PoolLens - PoolView Tests", async function () {
     const SimplePriceOracle = await ethers.getContractFactory(
       "SimplePriceOracle"
     );
-
+    // @ts-ignore @TODO VEN-663
     simplePriceOracle1 = await SimplePriceOracle.deploy();
     await simplePriceOracle1.deployed();
 
+    // @ts-ignore @TODO VEN-663
     simplePriceOracle2 = await SimplePriceOracle.deploy();
     await simplePriceOracle2.deployed();
 
@@ -164,6 +171,7 @@ describe("PoolLens - PoolView Tests", async function () {
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
 
@@ -171,10 +179,12 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(daiBalance).equal(convertToUnit(1000, 18));
 
     const MockWBTC = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.faucet(convertToUnit(1000, 8));
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    // @ts-ignore @TODO VEN-663
     priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
@@ -285,6 +295,7 @@ describe("PoolLens - PoolView Tests", async function () {
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
 
     const PoolLens = await ethers.getContractFactory("PoolLens");
+    // @ts-ignore @TODO VEN-663
     poolLens = await PoolLens.deploy();
   });
 
@@ -409,22 +420,26 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
       "VBep20ImmutableProxyFactory"
     );
+    // @ts-ignore @TODO VEN-663
     vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
       "WhitePaperInterestRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+    // @ts-ignore @TODO VEN-663
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
@@ -437,12 +452,14 @@ describe("PoolLens - VTokens Query Tests", async function () {
       convertToUnit("10000", 18)
     )
     const RiskFund = await ethers.getContractFactory("RiskFund");
+    // @ts-ignore @TODO VEN-663
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
     const ProtocolShareReserve = await ethers.getContractFactory(
       "ProtocolShareReserve"
     );
+    // @ts-ignore @TODO VEN-663
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -460,13 +477,13 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-
+    // @ts-ignore @TODO VEN-663
     comptroller1 = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
     );
     await comptroller1.deployed();
-
+    // @ts-ignore @TODO VEN-663
     comptroller2 = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
@@ -476,10 +493,10 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const SimplePriceOracle = await ethers.getContractFactory(
       "SimplePriceOracle"
     );
-
+    // @ts-ignore @TODO VEN-663
     simplePriceOracle1 = await SimplePriceOracle.deploy();
     await simplePriceOracle1.deployed();
-
+    // @ts-ignore @TODO VEN-663
     simplePriceOracle2 = await SimplePriceOracle.deploy();
     await simplePriceOracle2.deployed();
 
@@ -508,6 +525,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
 
@@ -515,10 +533,12 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(daiBalance).equal(convertToUnit(1000, 18));
 
     const MockWBTC = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.faucet(convertToUnit(1000, 8));
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    // @ts-ignore @TODO VEN-663
     priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
@@ -607,6 +627,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     await unitroller2._acceptAdmin();
 
     const PoolLens = await ethers.getContractFactory("PoolLens");
+    // @ts-ignore @TODO VEN-663
     poolLens = await PoolLens.deploy();
   });
 

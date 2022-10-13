@@ -36,28 +36,33 @@ describe("UpgradedVBEP20: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
+  // @ts-ignore @TODO VEN-663
   let proxyAdmin;
   before(async function () {
     [, proxyAdmin] = await ethers.getSigners();
     const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
       "VBep20ImmutableProxyFactory"
     );
+    // @ts-ignore @TODO VEN-663
     cTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await cTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
       "WhitePaperInterestRateModelFactory"
     );
+    // @ts-ignore @TODO VEN-663
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+    // @ts-ignore @TODO VEN-663
     poolRegistry = await PoolRegistry.deploy();
     await poolRegistry.deployed();
 
@@ -70,12 +75,14 @@ describe("UpgradedVBEP20: Tests", function () {
       convertToUnit("10000", 18)
     );
     const RiskFund = await ethers.getContractFactory("RiskFund");
+    // @ts-ignore @TODO VEN-663
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
     const ProtocolShareReserve = await ethers.getContractFactory(
       "ProtocolShareReserve"
     );
+    // @ts-ignore @TODO VEN-663
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -96,7 +103,7 @@ describe("UpgradedVBEP20: Tests", function () {
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-
+    // @ts-ignore @TODO VEN-663
     comptroller1 = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
@@ -105,6 +112,7 @@ describe("UpgradedVBEP20: Tests", function () {
 
     // Deploy Mock Tokens
     const MockWBTC = await ethers.getContractFactory("MockToken");
+    // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
 
     const _closeFactor = convertToUnit(0.05, 18);
@@ -112,6 +120,7 @@ describe("UpgradedVBEP20: Tests", function () {
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    // @ts-ignore @TODO VEN-663
     priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
@@ -175,9 +184,11 @@ describe("UpgradedVBEP20: Tests", function () {
       "TransparentUpgradeableProxy",
       vWBTC.address
     );
+    // @ts-ignore @TODO VEN-663
     await transparentProxy.connect(proxyAdmin).upgradeTo(vTokenDeploy.address);
 
     const upgradeTo = await transparentProxy
+    // @ts-ignore @TODO VEN-663
       .connect(proxyAdmin)
       .callStatic.implementation();
     expect(upgradeTo).to.be.equal(vTokenDeploy.address);

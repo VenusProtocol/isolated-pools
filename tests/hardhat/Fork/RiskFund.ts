@@ -50,32 +50,38 @@ const riskFundFixture = async (): Promise<void> => {
   const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
     "VBep20ImmutableProxyFactory"
   );
+  // @ts-ignore @TODO VEN-663
   vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
   await vTokenFactory.deployed();
 
   const JumpRateModelFactory = await ethers.getContractFactory(
     "JumpRateModelFactory"
   );
+  // @ts-ignore @TODO VEN-663
   jumpRateFactory = await JumpRateModelFactory.deploy();
   await jumpRateFactory.deployed();
 
   const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
     "WhitePaperInterestRateModelFactory"
   );
+  // @ts-ignore @TODO VEN-663
   whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
   await whitePaperRateFactory.deployed();
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+  // @ts-ignore @TODO VEN-663
   poolRegistry = await PoolRegistry.deploy();
   await poolRegistry.deployed();
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
+  // @ts-ignore @TODO VEN-663
   riskFund = await RiskFund.deploy();
   await riskFund.deployed();
 
   const ProtocolShareReserve = await ethers.getContractFactory(
     "ProtocolShareReserve"
   );
+  // @ts-ignore @TODO VEN-663
   protocolShareReserve = await ProtocolShareReserve.deploy();
   await protocolShareReserve.deployed();
 
@@ -105,13 +111,13 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-
+  // @ts-ignore @TODO VEN-663
   comptroller1 = await Comptroller.deploy(
     poolRegistry.address,
     fakeAccessControlManager.address
   );
   await comptroller1.deployed();
-
+  // @ts-ignore @TODO VEN-663
   comptroller2 = await Comptroller.deploy(
     poolRegistry.address,
     fakeAccessControlManager.address
@@ -166,6 +172,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   // Deploy Price Oracle
   const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+  // @ts-ignore @TODO VEN-663
   priceOracle = await MockPriceOracle.deploy();
 
   const usdtPrice = ".75";
