@@ -41,4 +41,6 @@ contract SimplePriceOracle is PriceOracle {
     function compareStrings(string memory a, string memory b) internal pure returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
+
+    function updatePrice(address vToken) external override {}
 }

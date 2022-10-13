@@ -19,4 +19,6 @@ contract FixedPriceOracle is PriceOracle {
         asset;
         return price;
     }
+
+    function updatePrice(address vToken) external override {}
 }
