@@ -72,6 +72,24 @@ contract ComptrollerErrorReporter {
 
         return uint(err);
     }
+
+    error InvalidCollateralFactor();
+    error InvalidLiquidationThreshold();
+
+    error LiquidityComputationFailure(Error err);
+    error Unauthorized();
+    error PriceError();
+    error SnapshotError();
+    error MarketNotListed(address market);
+
+    /**
+     * @notice Throwed during the liquidation if user's total collateral amount is lower than
+     *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
+     *   or healAccount) are available.
+     */
+    error MinimalCollateralViolated(uint256 expectedGreaterThan, uint256 actual);
+    error CollateralExceedsThreshold(uint256 expectedLessThanOrEqualTo, uint256 actual);
+    error InsufficientCollateral(uint256 collateralToSeize, uint256 availableCollateral);
 }
 
 contract TokenErrorReporter {
@@ -95,6 +113,9 @@ contract TokenErrorReporter {
 
     error RepayBorrowComptrollerRejection(uint256 errorCode);
     error RepayBorrowFreshnessCheck();
+
+    error HealBorrowUnauthorized();
+    error ForceLiquidateBorrowUnauthorized();
 
     error LiquidateComptrollerRejection(uint256 errorCode);
     error LiquidateFreshnessCheck();

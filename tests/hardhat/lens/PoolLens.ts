@@ -4,7 +4,6 @@ import {
   MockToken,
   PoolRegistry,
   Comptroller,
-  SimplePriceOracle,
   MockPriceOracle,
   Unitroller,
   VBep20ImmutableProxyFactory,
@@ -24,8 +23,6 @@ let poolRegistry: PoolRegistry;
 let poolRegistryAddress: string;
 let comptroller1: Comptroller;
 let comptroller2: Comptroller;
-let simplePriceOracle1: SimplePriceOracle;
-let simplePriceOracle2: SimplePriceOracle;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let vDAI: VBep20Immutable;
@@ -135,16 +132,9 @@ describe("PoolLens - PoolView Tests", async function () {
     );
     await comptroller2.deployed();
 
-    const SimplePriceOracle = await ethers.getContractFactory(
-      "SimplePriceOracle"
-    );
+    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
     // @ts-ignore @TODO VEN-663
-    simplePriceOracle1 = await SimplePriceOracle.deploy();
-    await simplePriceOracle1.deployed();
-
-    // @ts-ignore @TODO VEN-663
-    simplePriceOracle2 = await SimplePriceOracle.deploy();
-    await simplePriceOracle2.deployed();
+    priceOracle = await MockPriceOracle.deploy();
 
     closeFactor1 = convertToUnit(0.05, 18);
     liquidationIncentive1 = convertToUnit(1, 18);
@@ -155,7 +145,7 @@ describe("PoolLens - PoolView Tests", async function () {
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
-      simplePriceOracle1.address
+      priceOracle.address
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -167,7 +157,7 @@ describe("PoolLens - PoolView Tests", async function () {
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
-      simplePriceOracle2.address
+      priceOracle.address
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -182,10 +172,6 @@ describe("PoolLens - PoolView Tests", async function () {
     // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.faucet(convertToUnit(1000, 8));
-
-    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    // @ts-ignore @TODO VEN-663
-    priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
     const daiPrice = "1";
@@ -209,6 +195,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       tokenImplementation_: tokenImplementation.address,
@@ -226,6 +213,7 @@ describe("PoolLens - PoolView Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       tokenImplementation_: tokenImplementation.address,
@@ -490,15 +478,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
     );
     await comptroller2.deployed();
 
-    const SimplePriceOracle = await ethers.getContractFactory(
-      "SimplePriceOracle"
-    );
+    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
     // @ts-ignore @TODO VEN-663
-    simplePriceOracle1 = await SimplePriceOracle.deploy();
-    await simplePriceOracle1.deployed();
-    // @ts-ignore @TODO VEN-663
-    simplePriceOracle2 = await SimplePriceOracle.deploy();
-    await simplePriceOracle2.deployed();
+    priceOracle = await MockPriceOracle.deploy();
 
     closeFactor1 = convertToUnit(0.05, 18);
     liquidationIncentive1 = convertToUnit(1, 18);
@@ -509,7 +491,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
-      simplePriceOracle1.address
+      priceOracle.address
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -521,7 +503,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
-      simplePriceOracle2.address
+      priceOracle.address
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -536,10 +518,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     // @ts-ignore @TODO VEN-663
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.faucet(convertToUnit(1000, 8));
-
-    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    // @ts-ignore @TODO VEN-663
-    priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
     const daiPrice = "1";
@@ -563,6 +541,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       tokenImplementation_: tokenImplementation.address,
@@ -580,6 +559,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       jumpMultiplierPerYear: 0,
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       tokenImplementation_: tokenImplementation.address,
@@ -652,7 +632,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["isListed"]).equal("true");
-    expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("700000000000000000");
     expect(vTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);
     expect(vTokenMetadata_Actual_Parsed["vTokenDecimals"]).equal("8");
     expect(vTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");

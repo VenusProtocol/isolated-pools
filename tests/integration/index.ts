@@ -168,7 +168,7 @@ describe("Positive Cases", () => {
         Comptroller.address
       ).isAllowedToCall(
         PoolRegistry.address,
-        "_setCollateralFactor(VToken,uint256)"
+        "_setCollateralFactor(VToken,uint256,uint256)"
       );
       expect(canCall).to.be.true;
 

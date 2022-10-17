@@ -53,7 +53,11 @@ async function makeVToken(
     oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(convertToUnit(underlyingPrice, 18));
   }
   if (collateralFactor) {
-    await comptroller._setCollateralFactor(vToken.address, convertToUnit(collateralFactor, 18));
+    await comptroller._setCollateralFactor(
+      vToken.address,
+      convertToUnit(collateralFactor, 18),
+      convertToUnit(collateralFactor, 18)
+    );
   }
   await comptroller._setMarketSupplyCaps([vToken.address], [100000000000]);
 
@@ -89,8 +93,8 @@ describe('Comptroller', () => {
     it("fails if a price has not been set", async () => {
       const vToken = await makeVToken({accessControl, comptroller, oracle, supportMarket: true});
       await comptroller.connect(accounts[1]).enterMarkets([vToken.address]);
-      let [err,] = await comptroller.getAccountLiquidity(await accounts[1].getAddress());
-      expect(err).to.equal(Error.PRICE_ERROR);
+      await expect(comptroller.getAccountLiquidity(await accounts[1].getAddress()))
+        .to.be.revertedWithCustomError(comptroller, "PriceError");
     });
 
     it("allows a borrow up to collateralFactor, but not more", async () => {

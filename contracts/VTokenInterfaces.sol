@@ -188,6 +188,19 @@ abstract contract VTokenInterface is VTokenStorage {
     );
 
     /**
+     * @notice Event emitted when bad debt is accumulated on a market
+     * @param borrower borrower to "forgive"
+     * @param badDebtOld previous bad debt value
+     * @param badDebtNew new bad debt value
+     */
+    event BadDebtIncreased(
+        address borrower,
+        uint256 badDebtDelta,
+        uint256 badDebtOld,
+        uint256 badDebtNew
+    );
+
+    /**
      * @notice Event emitted when a borrow is liquidated
      */
     event LiquidateBorrow(
@@ -340,6 +353,16 @@ abstract contract VTokenInterface is VTokenStorage {
     function getCash() external view virtual returns (uint256);
 
     function accrueInterest() external virtual returns (uint256);
+
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
+
+    function forceLiquidateBorrow(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipCloseFactorCheck
+    ) external virtual returns (uint256);
 
     function seize(
         address liquidator,

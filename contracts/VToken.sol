@@ -703,11 +703,23 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
     /**
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
+     * @param liquidator The address repaying the borrow and seizing collateral
      * @param borrower The borrower of this vToken to be liquidated
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
+     *   regardless of the account liquidity
      */
-    function liquidateBorrowInternal(address borrower, uint repayAmount, VTokenInterface vTokenCollateral) internal nonReentrant {
+    function liquidateBorrowInternal(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        internal
+        nonReentrant
+    {
         accrueInterest();
 
         uint error = vTokenCollateral.accrueInterest();
@@ -717,20 +729,32 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
         }
 
         // liquidateBorrowFresh emits borrow-specific logs on errors, so we don't need to
-        liquidateBorrowFresh(msg.sender, borrower, repayAmount, vTokenCollateral);
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
     }
 
     /**
      * @notice The liquidator liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
-     * @param borrower The borrower of this vToken to be liquidated
      * @param liquidator The address repaying the borrow and seizing collateral
+     * @param borrower The borrower of this vToken to be liquidated
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
+     *   regardless of the account liquidity
      */
-    function liquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, VTokenInterface vTokenCollateral) internal {
+    function liquidateBorrowFresh(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        internal
+    {
         /* Fail if liquidate not allowed */
-        uint allowed = comptroller.liquidateBorrowAllowed(address(this), address(vTokenCollateral), liquidator, borrower, repayAmount);
+        uint allowed = comptroller.liquidateBorrowAllowed(
+            liquidator, address(vTokenCollateral), liquidator, borrower, repayAmount, skipLiquidityCheck
+        );
         if (allowed != 0) {
             revert LiquidateComptrollerRejection(allowed);
         }
@@ -786,6 +810,84 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
     }
 
     /**
+     * @notice Repays a certain amount of debt, treats the rest of the borrow as bad debt, essentially
+     *   "forgiving" the borrower. Healing is a situation that should rarely happen. However, some pools
+     *   may list risky assets or be configured improperly – we want to still handle such cases gracefully.
+     *   We assume that Comptroller does the seizing, so this function is only available to Comptroller.
+     * @dev This function does not call any Comptroller hooks (like "healAllowed"), because we assume
+     *   the Comptroller does all the necessary checks before calling this function.
+     * @param payer account who repays the debt
+     * @param borrower account to heal
+     * @param repayAmount amount to repay
+     */
+    function healBorrow(address payer, address borrower, uint256 repayAmount) override external nonReentrant {
+        if (msg.sender != address(comptroller)) {
+            revert HealBorrowUnauthorized();
+        }
+
+        accrueInterest();
+        uint256 accountBorrowsPrev = borrowBalanceStoredInternal(borrower);
+        uint256 totalBorrowsNew = totalBorrows;
+
+        uint256 actualRepayAmount;
+        if (repayAmount != 0) {
+            // doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
+            // We violate checks-effects-interactions here to account for tokens that take transfer fees
+            actualRepayAmount = doTransferIn(payer, repayAmount);
+            totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
+            emit RepayBorrow(payer, borrower, actualRepayAmount, 0, totalBorrowsNew);
+        }
+
+        // The transaction will fail if trying to repay too much
+        uint256 badDebtDelta = accountBorrowsPrev - actualRepayAmount;
+        if (badDebtDelta != 0) {
+            uint256 badDebtOld = badDebt;
+            uint256 badDebtNew = badDebtOld + badDebtDelta;
+            totalBorrowsNew = totalBorrowsNew - badDebtDelta;
+            badDebt = badDebtNew;
+
+            // We treat healing as "repayment", where vToken is the payer
+            emit RepayBorrow(
+                address(this), borrower, badDebtDelta, accountBorrowsPrev - badDebtDelta, totalBorrowsNew
+            );
+            emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
+        }
+
+        accountBorrows[borrower].principal = 0;
+        accountBorrows[borrower].interestIndex = borrowIndex;
+        totalBorrows = totalBorrowsNew;
+    }
+
+    /**
+     * @notice The extended version of liquidations, callable only by Comptroller. May skip
+     *  the close factor check. The collateral seized is transferred to the liquidator.
+     * @param liquidator The address repaying the borrow and seizing collateral
+     * @param borrower The borrower of this vToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
+     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
+     *   regardless of the account liquidity
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function forceLiquidateBorrow(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        override
+        external
+        returns (uint)
+    {
+        if (msg.sender != address(comptroller)) {
+            revert ForceLiquidateBorrowUnauthorized();
+        }
+        liquidateBorrowInternal(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
+        return NO_ERROR;
+    }
+
+    /**
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Will fail unless called by another vToken during the process of liquidation.
      *  Its absolutely critical to use msg.sender as the borrowed vToken and not a parameter.
@@ -804,14 +906,14 @@ abstract contract VToken is VTokenInterface, ExponentialNoError, TokenErrorRepor
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Called only during an in-kind liquidation, or by liquidateBorrow during the liquidation of another VToken.
      *  Its absolutely critical to use msg.sender as the seizer vToken and not a parameter.
-     * @param seizerToken The contract seizing the collateral (i.e. borrowed vToken)
+     * @param seizerContract The contract seizing the collateral (either borrowed vToken or Comptroller)
      * @param liquidator The account receiving seized collateral
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
      */
-    function seizeInternal(address seizerToken, address liquidator, address borrower, uint seizeTokens) internal {
+    function seizeInternal(address seizerContract, address liquidator, address borrower, uint seizeTokens) internal {
         /* Fail if seize not allowed */
-        uint allowed = comptroller.seizeAllowed(address(this), seizerToken, liquidator, borrower, seizeTokens);
+        uint allowed = comptroller.seizeAllowed(address(this), seizerContract, liquidator, borrower, seizeTokens);
         if (allowed != 0) {
             revert LiquidateSeizeComptrollerRejection(allowed);
         }

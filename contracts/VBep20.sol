@@ -113,7 +113,7 @@ contract VBep20 is VToken, VBep20Interface {
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function liquidateBorrow(address borrower, uint repayAmount, VTokenInterface vTokenCollateral) override external returns (uint) {
-        liquidateBorrowInternal(borrower, repayAmount, vTokenCollateral);
+        liquidateBorrowInternal(msg.sender, borrower, repayAmount, vTokenCollateral, false);
         return NO_ERROR;
     }
 

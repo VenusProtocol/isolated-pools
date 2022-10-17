@@ -142,6 +142,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 jumpMultiplierPerYear;
         uint256 kink_;
         uint256 collateralFactor;
+        uint256 liquidationThreshold;
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
         VBep20Immutable tokenImplementation_;
@@ -411,7 +412,7 @@ contract PoolRegistry is OwnableUpgradeable {
         VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(initializeArgs);
 
         comptroller._supportMarket(vToken);
-        comptroller._setCollateralFactor(vToken, input.collateralFactor);
+        comptroller._setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
         _vTokens[input.poolId][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.poolId);

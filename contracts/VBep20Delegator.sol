@@ -315,6 +315,61 @@ contract VBep20Delegator is VTokenInterface, VBep20Interface, CDelegatorInterfac
     }
 
     /**
+     * @notice The extended version of liquidations, callable only by Comptroller. May skip
+     *  the close factor check. The collateral seized is transferred to the liquidator.
+     * @param liquidator The address repaying the borrow and seizing collateral
+     * @param borrower The borrower of this vToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
+     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
+     *   regardless of the account liquidity
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function forceLiquidateBorrow(
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipLiquidityCheck
+    )
+        override
+        external
+        returns (uint)
+    {
+        bytes memory data = delegateToImplementation(
+            abi.encodeWithSignature("forceLiquidateBorrow(address,address,uint256,address,bool)",
+                liquidator,
+                borrower,
+                repayAmount,
+                vTokenCollateral,
+                skipLiquidityCheck
+            )
+        );
+        return abi.decode(data, (uint));
+    }
+
+    /**
+     * @notice Repays a certain amount of debt, treats the rest of the borrow as bad debt, essentially
+     *   "forgiving" the borrower. Healing is a situation that should rarely happen. However, some pools
+     *   may list risky assets or be configured improperly – we want to still handle such cases gracefully.
+     *   We assume that Comptroller does the seizing, so this function is only available to Comptroller.
+     * @dev This function does not call any Comptroller hooks (like "healAllowed"), because we assume
+     *   the Comptroller does all the necessary checks before calling this function.
+     * @param payer account who repays the debt
+     * @param borrower account to heal
+     * @param repayAmount amount to repay
+     */
+    function healBorrow(address payer, address borrower, uint256 repayAmount) override external {
+        delegateToImplementation(
+            abi.encodeWithSignature("healBorrow(address,address,uint256)",
+                payer,
+                borrower,
+                repayAmount
+            )
+        );
+    }
+
+    /**
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Will fail unless called by another vToken during the process of liquidation.
      *  Its absolutely critical to use msg.sender as the borrowed vToken and not a parameter.

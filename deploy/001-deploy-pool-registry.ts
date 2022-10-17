@@ -133,7 +133,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     
   await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setCollateralFactor(VToken,uint256)",
+    "_setCollateralFactor(VToken,uint256,uint256)",
     poolRegistry.address
   );
 
