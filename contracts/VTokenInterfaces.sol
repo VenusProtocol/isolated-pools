@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
-import "./EIP20NonStandardInterface.sol";
 import "./ErrorReporter.sol";
 import "./Governance/AccessControlManager.sol";
 
@@ -443,7 +443,7 @@ abstract contract VBep20Interface is VBep20Storage {
         VTokenInterface vTokenCollateral
     ) external virtual returns (uint256);
 
-    function sweepToken(EIP20NonStandardInterface token) external virtual;
+    function sweepToken(IERC20 token) external virtual;
 
     /*** Admin Functions ***/
 

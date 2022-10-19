@@ -30,7 +30,7 @@ contract VBEP20Harness is VBep20Immutable {
   
 
     function doTransferOut(address payable to, uint amount) override internal {
-        require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
+        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
         return super.doTransferOut(to, amount);
     }
 
@@ -268,7 +268,7 @@ contract VBep20DelegateHarness is VBep20Delegate {
     }
 
     function doTransferOut(address payable to, uint amount) override internal {
-        require(failTransferToAddresses[to] == false, "TOKEN_TRANSFER_OUT_FAILED");
+        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
         return super.doTransferOut(to, amount);
     }
 

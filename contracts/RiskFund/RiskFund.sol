@@ -138,7 +138,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount;
 
         address underlyingAsset = VBep20Interface(address(vToken)).underlying();
-        uint256 balanceOfUnderlyingAsset = EIP20Interface(underlyingAsset)
+        uint256 balanceOfUnderlyingAsset = IERC20(underlyingAsset)
             .balanceOf(address(this));
 
         ComptrollerViewInterface(comptroller)
@@ -160,7 +160,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
                 address[] memory path = new address[](2);
                 path[0] = underlyingAsset;
                 path[1] = convertableBUSDAddress;
-                EIP20Interface(underlyingAsset).approve(
+                IERC20(underlyingAsset).safeApprove(
                     pancakeSwapRouter,
                     balanceOfUnderlyingAsset
                 );
