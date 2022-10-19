@@ -186,9 +186,6 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: {
-      testnet: process.env.BSC_API_KEY || "",
-    },
     customChains: [
       {
         network: "testnet",
