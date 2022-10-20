@@ -21,6 +21,6 @@ module.exports = {
   },
   onCompileComplete: moveCoverage,
   onTestsComplete: moveCoverageBack,
-  skipFiles: ['test'].concat(
+  skipFiles: ['test', 'oracle'].concat(
     process.env['SKIP_UNITROLLER'] ? ['Unitroller.sol'] : []),
 };
