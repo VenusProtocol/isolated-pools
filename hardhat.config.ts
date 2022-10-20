@@ -209,13 +209,6 @@ const config: HardhatUserConfig = {
     acc1:1,
     acc2:2,
   },
-  external: {
-    contracts: [
-      {
-        artifacts: `${__dirname}/node_modules/@venusprotocol/oracle/artifacts/`,
-      },
-    ],
-  }
 };
 
 function isFork() {
