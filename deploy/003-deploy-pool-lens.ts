@@ -7,7 +7,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   await deploy("PoolLens", {
-    contract: 'PoolLens',
     from: deployer,
     args: [],
     log: true,
@@ -16,6 +15,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 }
 
-func.tags = ["Pool Lens"];
+func.tags = ["PoolLens"];
 
 export default func;
