@@ -3,10 +3,6 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
 import { convertToUnit } from "../helpers/utils";
-import { MockToken } from "../typechain";
-import { AccessControlManager } from "../typechain/AccessControlManager";
-import { VBep20Immutable } from "../typechain/VBep20Immutable";
-import { PoolRegistry } from "../typechain/PoolRegistry";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
@@ -23,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
   });
 
-  const wBTC: MockToken = await ethers.getContract("MockBTC");
+  const wBTC = await ethers.getContract("MockBTC");
 
   await deploy("MockDAI", {
     from: deployer,
@@ -33,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const DAI: MockToken = await ethers.getContract("MockDAI");
+  const DAI = await ethers.getContract("MockDAI");
 
   let priceOracle;
 
@@ -50,9 +46,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
 
-  const poolRegistry: PoolRegistry= await ethers.getContract("PoolRegistry");
+  const poolRegistry = await ethers.getContract("PoolRegistry");
 
-  const accessControlManager: AccessControlManager = await ethers.getContract("AccessControlManager");
+  const accessControlManager = await ethers.getContract("AccessControlManager");
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
