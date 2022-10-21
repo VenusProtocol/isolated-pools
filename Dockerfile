@@ -19,6 +19,7 @@ RUN npm install -g yarn
 
 COPY package.json /usr/app/package.json
 COPY yarn.lock /usr/app/yarn.lock
+COPY ./copy_contracts.sh /usr/app/copy_contracts.sh
 
 RUN yarn install
 
