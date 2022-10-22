@@ -258,7 +258,9 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Should change pool name", async function () {
-    await poolRegistry.setPoolName(1, "Pool 1 updated");
+    await expect(poolRegistry.setPoolName(1, "Pool 1 updated"))
+      .to.emit(poolRegistry, "PoolNameSet")
+      .withArgs(1, "Pool 1 updated");
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1 updated");
     await poolRegistry.setPoolName(1, "Pool 1");
