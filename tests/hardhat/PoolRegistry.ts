@@ -336,18 +336,20 @@ describe("PoolRegistry: Tests", function () {
 
   it("Metadata", async function () {
     const riskRating = 2;
-    const category = "Hign market cap";
+    const category = "High market cap";
     const logoURL = "http://venus.io/pool1";
     const description = "An sample description";
-
-    await expect(poolRegistry.updatePoolMetadata(0, {
+    const oldMetadata = await poolRegistry.metadata(0);
+    const newMetadata = {
       riskRating,
       category,
       logoURL,
       description,
-    }))
+    };
+
+    await expect(poolRegistry.updatePoolMetadata(0, newMetadata))
       .to.emit(poolRegistry, "PoolMetadataUpdated")
-      .withArgs(1, comptroller1.address, riskRating, category);
+      .withArgs(0, oldMetadata, [riskRating, category, logoURL, description]);
 
     const metadata = await poolRegistry.metadata(0);
     expect(metadata.riskRating).equal(riskRating);
