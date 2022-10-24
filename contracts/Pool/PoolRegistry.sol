@@ -161,7 +161,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Emitted when a pool metadata is updated.
      */
-    event PoolMedatataUpdated(uint256 indexed index, address indexed comptrollerAddress, RiskRating riskRating, string category);
+    event PoolMetadataUpdated(uint256 indexed index, address indexed comptrollerAddress, RiskRating riskRating, string category);
 
     /**
      * @dev Emitted when a Market is added to the pool.
@@ -441,6 +441,6 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external onlyOwner {
         metadata[poolId] = _metadata;
-        emit PoolMedatataUpdated(poolId, _poolsByID[poolId].comptroller, _metadata.riskRating, _metadata.category);
+        emit PoolMetadataUpdated(poolId, _poolsByID[poolId].comptroller, _metadata.riskRating, _metadata.category);
     }
 }
