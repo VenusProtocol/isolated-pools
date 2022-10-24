@@ -335,14 +335,24 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Metadata", async function () {
-    await poolRegistry.updatePoolMetadata(0, {
-      riskRating: 2,
-      category: "Hign market cap",
-      logoURL: "http://venis.io/pool1",
-      description: "An sample description",
-    });
+    const riskRating = 2;
+    const category = "Hign market cap";
+    const logoURL = "http://venus.io/pool1";
+    const description = "An sample description";
+
+    await expect(poolRegistry.updatePoolMetadata(0, {
+      riskRating,
+      category,
+      logoURL,
+      description,
+    }))
+      .to.emit(poolRegistry, "PoolMetadataUpdated")
+      .withArgs(1, comptroller1.address, riskRating, category);
 
     const metadata = await poolRegistry.metadata(0);
-    expect(metadata.riskRating).equal(2);
+    expect(metadata.riskRating).equal(riskRating);
+    expect(metadata.category).equal(category);
+    expect(metadata.logoURL).equal(logoURL);
+    expect(metadata.description).equal(description);
   });
 });
