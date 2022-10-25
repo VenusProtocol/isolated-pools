@@ -11,23 +11,27 @@ jobs:
     env:
       FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
       QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v2
 
-      - name: Clear
-        run: docker container prune -f && docker image prune -f
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          cache: "yarn"
+      
+      - name: Install deps
+        run: yarn
+
+      - name: Install deps
+        run: yarn global add solc@0.8.13
 
       - name: "Create env file"
         run: |
           touch .env
           echo FORK_MAINNET=${{ secrets.FORK_MAINNET }} >> .env
           echo QUICK_NODE_KEY=${{ secrets.QUICK_NODE_KEY }} >> .env
-
-      - name: Build docker
-        run: docker build -t isolated:${GITHUB_SHA::7} .
+          source .env
 
       - name: Run hardhat compile and tests coverage
-        run: docker run --name ${GITHUB_SHA::7} isolated:${GITHUB_SHA::7} bash -c "yarn hardhat:compile && yarn hardhat:coverage && yarn hardhat:coverage-validator"
-
-      - name: Clear
-        run: docker rm ${GITHUB_SHA::7}
+        run: yarn hardhat:compile && yarn hardhat:coverage && yarn hardhat:coverage-validator
