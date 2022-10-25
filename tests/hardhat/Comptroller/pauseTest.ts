@@ -1,6 +1,6 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
 import chai from "chai";
 const { expect } = chai;
@@ -14,6 +14,7 @@ import {
 type PauseFixture = {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
+  poolRegistry: FakeContract<PoolRegistry>;
   oracle: FakeContract<PriceOracle>;
   OMG: FakeContract<VBep20Immutable>;
   ZRX: FakeContract<VBep20Immutable>;
@@ -31,19 +32,29 @@ async function pauseFixture(): Promise<PauseFixture> {
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);
+  const [root] = await ethers.getSigners();
   await comptroller._setPriceOracle(oracle.address);
   const names = ["OMG", "ZRX", "BAT", "sketch"];
   const [OMG, ZRX, BAT, SKT] = await Promise.all(
     names.map(async (name) => {
       const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
       if (name !== "sketch") {
-        await comptroller._supportMarket(vToken.address);
+        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+        if (poolRegistryBalance.isZero()) {
+          setBalance(await root.getAddress(), 100n ** 18n)
+          await root.sendTransaction({
+            to: poolRegistry.address,
+            value: ethers.utils.parseEther("1"),
+          });
+        }
+        const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+        await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
       }
       return vToken;
     })
   );
   const allTokens = [OMG, ZRX, BAT];
-  return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names };
+  return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names, poolRegistry };
 }
 
 function configure({ accessControl, oracle, allTokens, names }: PauseFixture) {

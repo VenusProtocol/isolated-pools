@@ -1405,16 +1405,7 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(VToken vToken) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_supportMarket(VToken)");
-
-        if (!canCallFunction) {
-            return
-                fail(
-                    Error.UNAUTHORIZED,
-                    FailureInfo.SUPPORT_MARKET_OWNER_CHECK
-                );
-        }
+        require(msg.sender == poolRegistry, "only poolRegistry can call _supportMarket");
 
         if (markets[address(vToken)].isListed) {
             return
