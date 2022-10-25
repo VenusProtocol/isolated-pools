@@ -21,8 +21,6 @@ contract Comptroller is
     ComptrollerErrorReporter,
     ExponentialNoError
 {
-    /// @notice Emitted when an admin supports a market
-    event MarketListed(VToken vToken);
 
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
@@ -1438,8 +1436,6 @@ contract Comptroller is
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
-
-        emit MarketListed(vToken);
 
         return uint256(Error.NO_ERROR);
     }
