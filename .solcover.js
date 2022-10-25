@@ -23,4 +23,5 @@ module.exports = {
   onTestsComplete: moveCoverageBack,
   skipFiles: ['test', 'oracle'].concat(
     process.env['SKIP_UNITROLLER'] ? ['Unitroller.sol'] : []),
+  istanbulReporter: ['html', 'lcov', 'text', 'json', 'cobertura']
 };
