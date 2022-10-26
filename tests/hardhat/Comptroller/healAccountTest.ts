@@ -1,6 +1,6 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
 import chai from "chai";
 const { expect } = chai;
@@ -53,7 +53,16 @@ describe("healAccount", () => {
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async (name) => {
         const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
-        await comptroller._supportMarket(vToken.address);
+        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+        if (poolRegistryBalance.isZero()) {
+          setBalance(await root.getAddress(), 100n ** 18n)
+          await root.sendTransaction({
+            to: poolRegistry.address,
+            value: ethers.utils.parseEther("1"),
+          });
+        }
+        const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+        await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
         return vToken;
       })
     );

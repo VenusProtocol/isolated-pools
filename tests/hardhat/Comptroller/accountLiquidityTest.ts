@@ -1,8 +1,9 @@
 import { BigNumber, BigNumberish, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
+
 const { expect } = chai;
 chai.use(smock.matchers);
 
@@ -13,10 +14,11 @@ import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 
 
-type AccountLiquidityTestFixture = {
+interface AccountLiquidityTestFixture {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
   oracle: FakeContract<PriceOracle>;
+  poolRegistry: FakeContract<PoolRegistry>;
 };
 
 async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
@@ -28,26 +30,28 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
 
   accessControl.isAllowedToCall.returns(true);
   await comptroller._setPriceOracle(oracle.address);
-  return { accessControl, comptroller, oracle };
+  return { accessControl, comptroller, oracle, poolRegistry };
 }
 
 async function makeVToken(
-  {accessControl, comptroller, oracle, supportMarket, exchangeRate, collateralFactor, underlyingPrice}:
-  {
-    accessControl: FakeContract<AccessControlManager>;
-    comptroller: MockContract<Comptroller>;
-    oracle: FakeContract<PriceOracle>;
-    supportMarket?: boolean,
-    exchangeRate?: BigNumberish,
-    collateralFactor?: string | number,
-    underlyingPrice?: string | number
-  }
+  { accessControl, comptroller, oracle, supportMarket, exchangeRate, collateralFactor, underlyingPrice, poolRegistry }:
+    {
+      accessControl: FakeContract<AccessControlManager>;
+      comptroller: MockContract<Comptroller>;
+      oracle: FakeContract<PriceOracle>;
+      supportMarket?: boolean,
+      exchangeRate?: BigNumberish,
+      collateralFactor?: string | number,
+      underlyingPrice?: string | number
+      poolRegistry: FakeContract<PoolRegistry>,
+    }
 ): Promise<FakeContract<VBep20Immutable>> {
   accessControl.isAllowedToCall.returns(true);
   const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
   configureVToken({ vToken, comptroller, exchangeRate });
   if (supportMarket) {
-    await comptroller._supportMarket(vToken.address);
+    const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+    await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
   }
   if (underlyingPrice) {
     oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(convertToUnit(underlyingPrice, 18));
@@ -83,15 +87,24 @@ describe('Comptroller', () => {
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
   let oracle: FakeContract<PriceOracle>;
+  let poolRegistry: FakeContract<PoolRegistry>;
 
   beforeEach(async () => {
     [root, ...accounts] = await ethers.getSigners();
-    ({ accessControl, comptroller, oracle } = await loadFixture(makeComptroller));
+    ({ accessControl, comptroller, oracle, poolRegistry } = await loadFixture(makeComptroller));
+    const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+    if (poolRegistryBalance.isZero()) {
+      setBalance(await root.getAddress(), 100n ** 18n)
+      await root.sendTransaction({
+        to: poolRegistry.address,
+        value: ethers.utils.parseEther("1"),
+      });
+    }
   });
 
   describe('liquidity', () => {
     it("fails if a price has not been set", async () => {
-      const vToken = await makeVToken({accessControl, comptroller, oracle, supportMarket: true});
+      const vToken = await makeVToken({ accessControl, comptroller, oracle, supportMarket: true, poolRegistry });
       await comptroller.connect(accounts[1]).enterMarkets([vToken.address]);
       await expect(comptroller.getAccountLiquidity(await accounts[1].getAddress()))
         .to.be.revertedWithCustomError(comptroller, "PriceError");
@@ -100,7 +113,7 @@ describe('Comptroller', () => {
     it("allows a borrow up to collateralFactor, but not more", async () => {
       const collateralFactor = 0.5, underlyingPrice = 1, user = accounts[1], amount = 1e6;
       const vToken = await makeVToken(
-        {accessControl, comptroller, oracle, supportMarket: true, collateralFactor, underlyingPrice}
+        { accessControl, comptroller, oracle, supportMarket: true, collateralFactor, underlyingPrice, poolRegistry }
       );
 
       let error: BigNumber;
@@ -164,13 +177,13 @@ describe('Comptroller', () => {
       const collateral = Math.floor(c1 + c2);
 
       const vToken1 = await makeVToken(
-        {accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf1, underlyingPrice: up1}
+        { accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf1, underlyingPrice: up1, poolRegistry }
       );
       const vToken2 = await makeVToken(
-        {accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf2, underlyingPrice: up2}
+        { accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf2, underlyingPrice: up2, poolRegistry }
       );
       const vToken3 = await makeVToken(
-        {accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf3, underlyingPrice: up3}
+        { accessControl, comptroller, oracle, supportMarket: true, collateralFactor: cf3, underlyingPrice: up3, poolRegistry }
       );
 
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address, vToken3.address]);
@@ -231,7 +244,7 @@ describe('Comptroller', () => {
 
   describe("getHypotheticalAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
-      const vToken = await makeVToken({ accessControl, comptroller, oracle });
+      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry });
       const [error, liquidity, shortfall] =
         await comptroller.getHypotheticalAccountLiquidity(await accounts[0].getAddress(), vToken.address, 0, 0);
       expect(error).to.equal(Error.NO_ERROR);
@@ -244,7 +257,7 @@ describe('Comptroller', () => {
       const exchangeRate = 1;
       const underlyingPrice = 1;
       const vToken = await makeVToken({
-        accessControl, comptroller, oracle, supportMarket: true, collateralFactor, underlyingPrice
+        accessControl, comptroller, oracle, supportMarket: true, collateralFactor, underlyingPrice, poolRegistry
       });
       const from = accounts[0];
       const amount = 1e6;

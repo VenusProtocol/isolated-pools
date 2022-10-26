@@ -21,8 +21,6 @@ contract Comptroller is
     ComptrollerErrorReporter,
     ExponentialNoError
 {
-    /// @notice Emitted when an admin supports a market
-    event MarketListed(VToken vToken);
 
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
@@ -1407,16 +1405,7 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(VToken vToken) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_supportMarket(VToken)");
-
-        if (!canCallFunction) {
-            return
-                fail(
-                    Error.UNAUTHORIZED,
-                    FailureInfo.SUPPORT_MARKET_OWNER_CHECK
-                );
-        }
+        require(msg.sender == poolRegistry, "only poolRegistry can call _supportMarket");
 
         if (markets[address(vToken)].isListed) {
             return
@@ -1438,8 +1427,6 @@ contract Comptroller is
         for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
-
-        emit MarketListed(vToken);
 
         return uint256(Error.NO_ERROR);
     }

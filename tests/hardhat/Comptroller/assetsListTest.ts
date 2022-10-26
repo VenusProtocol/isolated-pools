@@ -18,6 +18,7 @@ describe("assetListTest", () => {
   let customer: Signer;
   let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
+  let poolRegistry: FakeContract<PoolRegistry>;
   let OMG: FakeContract<VBep20Immutable>;
   let ZRX: FakeContract<VBep20Immutable>;
   let BAT: FakeContract<VBep20Immutable>;
@@ -37,7 +38,7 @@ describe("assetListTest", () => {
   };
 
   async function assetListFixture(): Promise<AssetListFixture> {
-    const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
+    poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
     const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
     const ComptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
     const comptroller = await ComptrollerFactory.deploy(poolRegistry.address, accessControl.address);
@@ -50,7 +51,16 @@ describe("assetListTest", () => {
       names.map(async (name) => {
         const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
         if (name !== "sketch") {
-          await comptroller._supportMarket(vToken.address);
+          const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+          if (poolRegistryBalance.isZero()) {
+            setBalance(await root.getAddress(), 100n ** 18n)
+            await root.sendTransaction({
+              to: poolRegistry.address,
+              value: ethers.utils.parseEther("1"),
+            });
+          }
+          const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+          await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
         }
         return vToken;
       })
@@ -143,7 +153,8 @@ describe("assetListTest", () => {
 
     it("the market must be listed for add to succeed", async () => {
       await enterAndCheckMarkets([SKT], [], [Error.MARKET_NOT_LISTED]);
-      await comptroller._supportMarket(SKT.address);
+      const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+      await comptroller.connect(poolRegistrySigner)._supportMarket(SKT.address);
       await enterAndCheckMarkets([SKT], [SKT]);
     });
 
