@@ -7,7 +7,7 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBep20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
+import { VBEP20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 import {
@@ -22,7 +22,7 @@ describe('VToken', function () {
   let rootAddress: string;
   let guyAddress: string;
   let accounts: Signer[];
-  let vToken: MockContract<VBep20Harness>;
+  let vToken: MockContract<VBEP20Harness>;
   let comptroller: FakeContract<Comptroller>;
 
   beforeEach(async () => {

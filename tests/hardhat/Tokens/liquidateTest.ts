@@ -9,7 +9,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, VBep20Harness, AccessControlManager, Shortfall
+  Comptroller, VBEP20Harness, AccessControlManager, Shortfall
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -41,7 +41,6 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
     await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall});
   const collateral =
     await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin, shortfall});
-
   await collateral.vToken.harnessSetExchangeRate(exchangeRate);
 
   // setup for success in liquidating
@@ -84,13 +83,14 @@ function configure({ comptroller, accessControlManager, collateral, borrowed }: 
 }
 
 async function liquidateFresh(
-  vToken: MockContract<VBep20Harness>,
+  vToken: MockContract<VBEP20Harness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VBep20Harness>,
+  vTokenCollateral: MockContract<VBEP20Harness>,
   skipLiquidityCheck: boolean = false
 ) {
+
   return vToken.harnessLiquidateBorrowFresh(
     await liquidator.getAddress(),
     await borrower.getAddress(),
@@ -101,15 +101,18 @@ async function liquidateFresh(
 }
 
 async function liquidate(
-  vToken: MockContract<VBep20Harness>,
+  vToken: MockContract<VBEP20Harness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VBep20Harness>
+  vTokenCollateral: MockContract<VBEP20Harness>
 ) {
   // make sure to have a block delta so we accrue interest
+
   await vToken.harnessFastForward(1);
+
   await vTokenCollateral.harnessFastForward(1);
+
   return vToken.connect(liquidator).liquidateBorrow(
     await borrower.getAddress(),
     repayAmount,
@@ -118,11 +121,12 @@ async function liquidate(
 }
 
 async function seize(
-  vToken: MockContract<VBep20Harness>,
+  vToken: MockContract<VBEP20Harness>,
   liquidator: Signer,
   borrower: Signer,
   seizeAmount: BigNumberish
 ) {
+
   return vToken.seize(await liquidator.getAddress(), await borrower.getAddress(), seizeAmount);
 }
 
@@ -196,6 +200,7 @@ describe('VToken', function () {
       const beforeBalances =
         await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       comptroller.liquidateCalculateSeizeTokens.reverts("Oups");
+    
       await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
         .to.be.reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
       const afterBalances =
@@ -222,6 +227,7 @@ describe('VToken', function () {
       const borrowerAddress = await borrower.getAddress();
 
       const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+    
       const result = await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
       const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
       //expect(

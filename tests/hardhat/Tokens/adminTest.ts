@@ -6,12 +6,12 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBep20Harness } from "../../../typechain";
+import { VBEP20Harness } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
 
 describe('admin / _setPendingAdmin / _acceptAdmin', () => {
-  let vToken: MockContract<VBep20Harness>;
+  let vToken: MockContract<VBEP20Harness>;
   let root: Signer;
   let rootAddress: string;
   let guy: Signer;
