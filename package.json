@@ -19,7 +19,6 @@
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
-    "hardhat:coverage-validator": "./script/coverageValidator.sh",
     "postinstall": "./copy_contracts.sh"
   },
   "repository": {
