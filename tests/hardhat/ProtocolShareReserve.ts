@@ -17,7 +17,6 @@ let protocolShareReserve: ProtocolShareReserve;
 
 const fixture = async (): Promise<void> => {
   const MockDAI = await ethers.getContractFactory("MockToken");
-  // @ts-ignore @TODO VEN-663
   mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
   await mockDAI.faucet(convertToUnit(1000, 18));
 
@@ -29,7 +28,6 @@ const fixture = async (): Promise<void> => {
   const ProtocolShareReserve = await ethers.getContractFactory(
     "ProtocolShareReserve"
   );
-  // @ts-ignore @TODO VEN-663
   protocolShareReserve = await ProtocolShareReserve.deploy();
   await protocolShareReserve.deployed();
 
