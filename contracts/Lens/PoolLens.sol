@@ -2,10 +2,11 @@
 pragma solidity 0.8.13;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import "../VBep20.sol";
 import "../VToken.sol";
 import "../PriceOracle.sol";
-import "../EIP20Interface.sol";
 import "../ComptrollerInterface.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../Pool/PoolRegistry.sol";
@@ -161,7 +162,7 @@ contract PoolLens is ExponentialNoError {
 
         VBep20 vBep20 = VBep20(address(vToken));
         underlyingAssetAddress = vBep20.underlying();
-        underlyingDecimals = EIP20Interface(vBep20.underlying()).decimals();
+        underlyingDecimals = IERC20Metadata(vBep20.underlying()).decimals();
 
         return VTokenMetadata({
             vToken: address(vToken),
@@ -219,7 +220,7 @@ contract PoolLens is ExponentialNoError {
         uint tokenAllowance;
 
         VBep20 vBep20 = VBep20(address(vToken));
-        EIP20Interface underlying = EIP20Interface(vBep20.underlying());
+        IERC20 underlying = IERC20(vBep20.underlying());
         tokenBalance = underlying.balanceOf(account);
         tokenAllowance = underlying.allowance(account, address(vToken));
 

@@ -188,7 +188,7 @@ describe('VToken', function () {
     it("reverts if transfer out fails", async () => {
       await vToken.harnessSetFailTransferToAddress(borrowerAddress, true);
       await expect(borrowFresh(vToken, borrower, borrowAmount))
-        .to.be.revertedWith("TOKEN_TRANSFER_OUT_FAILED");
+        .to.be.revertedWith("HARNESS_TOKEN_TRANSFER_OUT_FAILED");
     });
 
     xit("reverts if borrowVerify fails", async() => {
@@ -301,7 +301,7 @@ describe('VToken', function () {
         it("reverts if doTransferIn fails", async () => {
           await underlying.harnessSetFailTransferFromAddress(payerAddress, true);
           await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount))
-            .to.be.revertedWith("TOKEN_TRANSFER_IN_FAILED");
+            .to.be.revertedWith("SafeERC20: ERC20 operation did not succeed");
         });
 
         xit("reverts if repayBorrowVerify fails", async() => {

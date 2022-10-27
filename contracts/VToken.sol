@@ -4,7 +4,6 @@ pragma solidity ^0.8.10;
 import "./ComptrollerInterface.sol";
 import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
-import "./EIP20Interface.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlManager.sol";

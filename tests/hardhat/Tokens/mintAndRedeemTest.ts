@@ -258,7 +258,7 @@ describe('VToken', function () {
     it("fails if transferring in fails", async () => {
       await underlying.harnessSetFailTransferFromAddress(minterAddress, true);
       await expect(mintFresh(vToken, minter, mintAmount))
-        .to.be.revertedWith("TOKEN_TRANSFER_IN_FAILED");
+        .to.be.revertedWith("SafeERC20: ERC20 operation did not succeed");
     });
 
     it("transfers the underlying cash, tokens, and emits Mint, Transfer events", async () => {
@@ -368,7 +368,7 @@ describe('VToken', function () {
       it("fails if transferring out fails", async () => {
         await underlying.harnessSetFailTransferToAddress(redeemerAddress, true);
         await expect(redeemFresh(vToken, redeemer, redeemTokens, redeemAmount))
-          .to.be.revertedWith("TOKEN_TRANSFER_OUT_FAILED");
+          .to.be.revertedWith("SafeERC20: ERC20 operation did not succeed");
       });
 
       it("fails if total supply < redemption amount", async () => {
