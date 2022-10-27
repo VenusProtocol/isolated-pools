@@ -50,21 +50,18 @@ describe("Rewards: Tests", async function () {
     const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
       "VBep20ImmutableProxyFactory"
     );
-    // @ts-ignore @TODO VEN-663
     vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
     );
-    // @ts-ignore @TODO VEN-663
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
       "WhitePaperInterestRateModelFactory"
     );
-    // @ts-ignore @TODO VEN-663
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -111,7 +108,6 @@ describe("Rewards: Tests", async function () {
     await fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    // @ts-ignore @TODO VEN-663
     comptroller = await Comptroller.deploy(
       poolRegistry.address,
       fakeAccessControlManager.address
@@ -120,14 +116,12 @@ describe("Rewards: Tests", async function () {
 
     // Deploy Mock Tokens
     const MockToken = await ethers.getContractFactory("MockToken");
-    // @ts-ignore @TODO VEN-663
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
 
     const [owner] = await ethers.getSigners();
     const daiBalance = await mockDAI.balanceOf(owner.address);
     expect(daiBalance).equal(convertToUnit(1000, 18));
-    // @ts-ignore @TODO VEN-663
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.deployed();
     await mockWBTC.faucet(convertToUnit(1000, 8));
@@ -241,9 +235,7 @@ describe("Rewards: Tests", async function () {
     const RewardsDistributor = await ethers.getContractFactory(
       "RewardsDistributor"
     );
-    // @ts-ignore @TODO VEN-663
     rewardsDistributor = await RewardsDistributor.deploy();
-    // @ts-ignore @TODO VEN-663
     xvs = await MockToken.deploy("Venus Token", "XVS", 18);
     const initialXvs = convertToUnit(1000000, 18);
     await xvs.faucet(initialXvs);
