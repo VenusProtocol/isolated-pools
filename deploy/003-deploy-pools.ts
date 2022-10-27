@@ -3,10 +3,6 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
 import { convertToUnit } from "../helpers/utils";
-import { MockToken } from "../typechain";
-import { AccessControlManager } from "../typechain/AccessControlManager";
-import { VBep20Immutable } from "../typechain/VBep20Immutable";
-import { PoolRegistry } from "../typechain/PoolRegistry";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
@@ -23,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
   });
 
-  const wBTC: MockToken = await ethers.getContract("MockBTC");
+  const wBTC = await ethers.getContract("MockBTC");
 
   await deploy("MockDAI", {
     from: deployer,
@@ -33,9 +29,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const DAI: MockToken = await ethers.getContract("MockDAI");
+  const DAI = await ethers.getContract("MockDAI");
 
   let priceOracle;
+  let tx;
 
   try {
     priceOracle = await ethers.getContract("PriceOracle");
@@ -43,16 +40,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } catch (e) {
     priceOracle = await ethers.getContract("MockPriceOracle");
     console.log("Mock Oracle Obtained")
-    await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
-    await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
+    tx = await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
+    await tx.wait();
+    tx = await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
+    await tx.wait();
   }
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
 
-  const poolRegistry: PoolRegistry= await ethers.getContract("PoolRegistry");
+  const poolRegistry = await ethers.getContract("PoolRegistry");
 
-  const accessControlManager: AccessControlManager = await ethers.getContract("AccessControlManager");
+  const accessControlManager = await ethers.getContract("AccessControlManager");
 
   const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
@@ -64,7 +63,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 
 
-  let tx = await poolRegistry.createRegistryPool(
+  tx = await poolRegistry.createRegistryPool(
     "Pool 1",
     Pool1Comptroller.address,
     closeFactor,
@@ -72,7 +71,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     priceOracle.address
   );
 
-  await tx.wait(1);
+  await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
   await ethers.getContractAt("Comptroller", pools[0].comptroller);
@@ -82,13 +81,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     pools[0].comptroller
   );
   tx = await unitroller._acceptAdmin();
-  await tx.wait(1);
+  await tx.wait();
 
   const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
   const tokenImplementation = await VBep20Immutable.deploy();
   await tokenImplementation.deployed();
 
-  await poolRegistry.addMarket({
+  tx = await poolRegistry.addMarket({
     poolId: 1,
     asset: wBTC.address,
     decimals: 8,
@@ -105,6 +104,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     vTokenProxyAdmin: deployer,
     tokenImplementation_: tokenImplementation.address,
   });
+  await tx.wait();
 
   tx = await poolRegistry.addMarket({
     poolId: 1,
@@ -123,7 +123,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     vTokenProxyAdmin: deployer,
     tokenImplementation_: tokenImplementation.address,
   });
-  await tx.wait(1);
+  await tx.wait();
 
 };
 

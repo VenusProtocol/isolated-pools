@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import { HardhatUserConfig, task, types } from "hardhat/config";
+import '@nomicfoundation/hardhat-toolbox';
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
@@ -140,6 +141,9 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
+            details: {
+              yul: !process.env.CI
+            }
           },
           outputSelection: {
             "*": {
@@ -153,6 +157,9 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
+            details: {
+              yul: !process.env.CI
+            }
           },
           outputSelection: {
             "*": {
@@ -178,7 +185,8 @@ const config: HardhatUserConfig = {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       gasPrice: 20000000000,
-      accounts: { mnemonic: mnemonic },
+      accounts:
+      process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
   gasReporter: {
@@ -206,13 +214,6 @@ const config: HardhatUserConfig = {
     acc1:1,
     acc2:2,
   },
-  external: {
-    contracts: [
-      {
-        artifacts: `${__dirname}/node_modules/@venusprotocol/oracle/artifacts/`,
-      },
-    ],
-  }
 };
 
 function isFork() {

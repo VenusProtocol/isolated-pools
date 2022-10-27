@@ -3,7 +3,6 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
 import { convertToUnit } from "../helpers/utils";
-import { MockToken } from "../typechain";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -76,7 +75,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   
   
-  const BUSD: MockToken = await ethers.getContract("MockBUSD");
+  const BUSD = await ethers.getContract("MockBUSD");
 
   await deploy('Shortfall', {
     from: deployer,
@@ -122,7 +121,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = await ethers.provider.getSigner(deployer);
 
-  await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  let tx = await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  await tx.wait();
 
   await deploy("MockPriceOracle", {
     from: deployer,
@@ -131,30 +131,33 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
   });
     
-  await accessControlManager.giveCallPermission(
+  tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setCollateralFactor(VToken,uint256,uint256)",
     poolRegistry.address
   );
+  await tx.wait();
 
-
-  await accessControlManager.giveCallPermission(
+  tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setLiquidationIncentive(uint)",
     poolRegistry.address
   );
+  await tx.wait();
 
-  await accessControlManager.giveCallPermission(
+  tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_supportMarket(VToken)",
     poolRegistry.address
   );
+  await tx.wait();
 
-  await accessControlManager.giveCallPermission(
+  tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setInterestRateModelFresh(InterestRateModel)",
     vBep20Factory.address
   );
+  await tx.wait();
 };
 
 func.tags = ["PoolsRegistry"];

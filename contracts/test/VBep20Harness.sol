@@ -7,7 +7,7 @@ import "../VBep20Delegate.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
-contract VBep20Harness is VBep20Immutable {
+contract VBEP20Harness is VBep20Immutable {
     uint public blockNumber = 100000;
     uint public harnessExchangeRate;
     bool public harnessExchangeRateStored;
