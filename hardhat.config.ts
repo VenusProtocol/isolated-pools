@@ -64,7 +64,7 @@ task("addMarket", "Add a market to an existing pool")
     const accessControl = await hre.ethers.getContract("AccessControlManager");
 
     await poolRegistry.addMarket({
-      poolId: taskArgs.poolid,
+      comptroller: taskArgs.comptroller,
       asset: taskArgs.asset,
       decimals: taskArgs.decimals,
       name: taskArgs.name,
@@ -80,7 +80,7 @@ task("addMarket", "Add a market to an existing pool")
       tokenImplementation_: tokenImplementation.address,
     });
 
-    console.log("Market " + taskArgs.name + " added successfully to pool " + taskArgs.poolId)
+    console.log("Market " + taskArgs.name + " added successfully to pool " + taskArgs.comptroller)
   });
 
   task("deployComptroller", "Deploys a Comptroller Implementation")
