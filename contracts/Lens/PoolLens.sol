@@ -67,7 +67,6 @@ contract PoolLens is ExponentialNoError {
 
             PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
 
-            //get PoolMetada via lookup on comptrollerAddress to poolId and then poolId to poolMetadata
             PoolRegistry.VenusPoolMetaData memory venusPoolMetaData = poolRegistryInterface.getVenusPoolMetadata(venusPool.comptroller);
 
             ComptrollerViewInterface comptrollerViewInstance = ComptrollerViewInterface(venusPool.comptroller);

@@ -61,7 +61,6 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Struct for a Venus interest rate pool.
      */
     struct VenusPool {
-        uint256 poolId;
         string name;
         address creator;
         address comptroller;
@@ -190,7 +189,6 @@ contract PoolRegistry is OwnableUpgradeable {
         _numberOfPools++;
         
         VenusPool memory pool = VenusPool(
-            _numberOfPools,
             name,
             msg.sender,
             comptroller,
