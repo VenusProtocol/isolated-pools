@@ -32,7 +32,7 @@ describe("Shortfall: Tests", async function () {
 
   let riskFundBalance = "10000"
   const minimumPoolBadDebt = "10000"
-  const pooldId = "1"
+  let poolId;
 
   async function mineNBlocks(n:number) {
     for (let index = 0; index < n; index++) {
@@ -78,6 +78,7 @@ describe("Shortfall: Tests", async function () {
 
     const Comptroller = await smock.mock<Comptroller__factory>('Comptroller');
     comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address)
+    poolId = comptroller.address
 
     cDAI = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
     cWBTC = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
@@ -90,8 +91,6 @@ describe("Shortfall: Tests", async function () {
 
     cDAI.setVariable("shortfall", shortfall.address)
     cWBTC.setVariable("shortfall", shortfall.address)
-
-    await shortfall.setPoolComptroller(pooldId, comptroller.address)
 
     comptroller.getAllMarkets.returns((args: any) => {
       return [cDAI.address, cWBTC.address];
@@ -121,13 +120,10 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Should have debt and reserve", async function () {
-    const comptrollerAddress = (await shortfall.comptrollers(1));
-    expect(comptrollerAddress).equal(comptroller.address)
-
     cDAI.badDebt.returns(parseUnits("1000", 18))
     cWBTC.badDebt.returns(parseUnits("1", 8))
 
-    expect(await fakeRiskFund.getPoolReserve(1)).equal(parseUnits(riskFundBalance, 18).toString())
+    expect(await fakeRiskFund.getPoolReserve(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString())
 
     expect(await cDAI.badDebt()).equal(parseUnits("1000", 18))
     expect(await cWBTC.badDebt()).equal(parseUnits("1", 8))
@@ -137,7 +133,7 @@ describe("Shortfall: Tests", async function () {
     cDAI.badDebt.returns(parseUnits("20", 18))
     cWBTC.badDebt.returns(parseUnits("0.01", 8))
 
-    await expect(shortfall.startAuction(1)).to.be.reverted;
+    await expect(shortfall.startAuction(poolId)).to.be.reverted;
   });
 
   it("Scenerio 1 - Start auction", async function () {
@@ -146,9 +142,9 @@ describe("Shortfall: Tests", async function () {
     cWBTC.badDebt.returns(parseUnits("2", 8))
     cWBTC.setVariable("badDebt", parseUnits("2", 8))
 
-    await shortfall.startAuction(pooldId);
+    await shortfall.startAuction(poolId);
     
-    const auction = await shortfall.auctions(pooldId);
+    const auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(1)
     expect(auction.auctionType).equal(0)
     expect(auction.seizedRiskFund).equal(parseUnits(riskFundBalance, 18))
@@ -158,7 +154,7 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Scenerio 1 - Place bid", async function () {
-    const auction = await shortfall.auctions(pooldId);
+    const auction = await shortfall.auctions(poolId);
 
     mockDAI.approve(shortfall.address, parseUnits("10000", 18));
     mockWBTC.approve(shortfall.address, parseUnits("2", 8));
@@ -168,7 +164,7 @@ describe("Shortfall: Tests", async function () {
     const previousDaiBalance = await mockDAI.balanceOf(owner.address)
     const previousWBTCBalance = await mockWBTC.balanceOf(owner.address)
 
-    await shortfall.placeBid(pooldId, auction.startBidBps);
+    await shortfall.placeBid(poolId, auction.startBidBps);
     expect(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toNumber()).lt(previousDaiBalance.div(parseUnits("1", 18)).toNumber())
     expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
 
@@ -193,8 +189,8 @@ describe("Shortfall: Tests", async function () {
     //simulate transferReserveForAuction
     await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18))
 
-    await shortfall.closeAuction(pooldId)
-    const auction = await shortfall.auctions(pooldId);
+    await shortfall.closeAuction(poolId)
+    const auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(2)
 
     expect(cWBTC.badDebtRecovered).to.have.been.calledOnce;
@@ -213,9 +209,9 @@ describe("Shortfall: Tests", async function () {
     riskFundBalance = "50000"
     fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
 
-    await shortfall.startAuction(pooldId);
+    await shortfall.startAuction(poolId);
     
-    const auction = await shortfall.auctions(pooldId);
+    const auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(1)
     expect(auction.auctionType).equal(1)
     
@@ -225,7 +221,7 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Scenerio 2 - Place bid", async function () {
-    const auction = await shortfall.auctions(pooldId);
+    const auction = await shortfall.auctions(poolId);
 
     mockDAI.approve(shortfall.address, parseUnits("10000", 18));
     mockWBTC.approve(shortfall.address, parseUnits("1", 8));
@@ -235,7 +231,7 @@ describe("Shortfall: Tests", async function () {
     const previousDaiBalance = await mockDAI.balanceOf(owner.address)
     const previousWBTCBalance = await mockWBTC.balanceOf(owner.address)
 
-    await shortfall.placeBid(pooldId, auction.startBidBps);
+    await shortfall.placeBid(poolId, auction.startBidBps);
     expect(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toNumber()).lt(previousDaiBalance.div(parseUnits("1", 18)).toNumber())
     expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
 
@@ -254,15 +250,15 @@ describe("Shortfall: Tests", async function () {
 
   it("Scenerio 2 - Close Auction", async function () {
     const [owner] = await ethers.getSigners();
-    let auction = await shortfall.auctions(pooldId);
+    let auction = await shortfall.auctions(poolId);
 
     await mineNBlocks((await shortfall.nextBidderBlockLimit()).toNumber() + 2)
 
     //simulate transferReserveForAuction
     await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund)
 
-    await shortfall.closeAuction(pooldId)
-    auction = await shortfall.auctions(pooldId);
+    await shortfall.closeAuction(poolId)
+    auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(2)
 
     expect(cWBTC.badDebtRecovered).to.have.been.calledTwice;

@@ -213,7 +213,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   // Deploy CTokens
   await poolRegistry.addMarket({
-    poolId: 1,
+    comptroller: comptroller1Proxy.address,
     asset: mainnetUSDT.address,
     decimals: 8,
     name: "Compound USDT",
@@ -231,7 +231,7 @@ const riskFundFixture = async (): Promise<void> => {
   });
 
   await poolRegistry.addMarket({
-    poolId: 1,
+    comptroller: comptroller1Proxy.address,
     asset: mainnetUSDC.address,
     decimals: 18,
     name: "Compound USDC",
@@ -249,11 +249,11 @@ const riskFundFixture = async (): Promise<void> => {
   });
 
   const cUSDTAddress = await poolRegistry.getVTokenForAsset(
-    1,
+    comptroller1Proxy.address,
     mainnetUSDT.address
   );
   const cUSDCAddress = await poolRegistry.getVTokenForAsset(
-    1,
+    comptroller1Proxy.address,
     mainnetUSDC.address
   );
 
@@ -429,8 +429,8 @@ describe("Risk Fund: Tests", function () {
         Number(convertToUnit(3, 17))
       );
 
-      const pool1Reserve = await riskFund.getPoolReserve(1);
-      const pool2Reserve = await riskFund.getPoolReserve(2);
+      const pool1Reserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
+      const pool2Reserve = await riskFund.getPoolReserve("0x0000000000000000000000000000000000000000");
       expect(Number(pool1Reserve)).to.be.closeTo(
         Number(convertToUnit(60, 18)),
         Number(convertToUnit(3, 17))
@@ -442,14 +442,14 @@ describe("Risk Fund: Tests", function () {
   describe("Transfer to Auction contract", async function () {
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
-        riskFund.transferReserveForAuction(1, convertToUnit(30, 18))
+        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18))
       ).to.be.rejectedWith("Risk Fund: Auction contract invalid address.");
 
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
       await expect(
-        riskFund.transferReserveForAuction(1, convertToUnit(100, 18))
+        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18))
       ).to.be.rejectedWith("Risk Fund: Insufficient pool reserve.");
     });
 
@@ -492,10 +492,10 @@ describe("Risk Fund: Tests", function () {
       await riskFund.swapAllPoolsAssets();
 
       const beforeTransfer = await mainnetBUSD.balanceOf(auctionContract);
-      await riskFund.transferReserveForAuction(1, convertToUnit(20, 18));
+      await riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
       const afterTransfer = await mainnetBUSD.balanceOf(auctionContract);
       const remainingBalance = await mainnetBUSD.balanceOf(riskFund.address);
-      const poolReserve = await riskFund.getPoolReserve(1);
+      const poolReserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
 
       const amount = Number(afterTransfer) - Number(beforeTransfer);
       expect(amount).to.be.closeTo(
@@ -527,7 +527,7 @@ describe("Risk Fund: Tests", function () {
 
       fakeAccessControlManager.isAllowedToCall.returns(false);
       await expect(
-        riskFund.transferReserveForAuction(1, convertToUnit(20, 18))
+        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18))
       ).to.be.rejectedWith("Risk fund: Not authorized to transfer funds.");
     });
   });

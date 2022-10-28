@@ -42,7 +42,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Emitted when a auction starts
     event AuctionStarted(
-        uint256 poolId,
+        address comptroller,
         uint256 startBlock,
         AuctionType auctionType,
         VToken[] markets,
@@ -53,14 +53,14 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Emitted when a bid is placed
     event BidPlaced(
-        uint256 poolId,
+        address comptroller,
         uint256 bidBps,
         address bidder
     );
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
-        uint256 poolId,
+        address comptroller,
         address highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
@@ -70,11 +70,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Emitted when a auction is restarted
     event AuctionRestarted(
-        uint256 poolId
+        address comptroller
     );
-
-    /// @notice Pool ID to comptroller address mapping
-    mapping (uint256 => ComptrollerInterface) public comptrollers;
 
     /// @notice Pool registry address
     address public poolRegistry;
@@ -101,7 +98,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     IERC20 private BUSD;
 
     /// @notice Auctions for each pool
-    mapping (uint256 => Auction) public auctions;
+    mapping (address => Auction) public auctions;
 
     /**
      * @notice Initalize the shortfall contract
@@ -141,22 +138,11 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Called by pool registry contract whenever a new isolated pool is created
-     * @param poolId ID of the new pool
-     * @param _comptroller Comptroller address of the new pool
-     */
-    function setPoolComptroller(uint256 poolId, ComptrollerInterface _comptroller) public onlyPoolRegistry {
-        require(address(_comptroller) != address(0), "invalid address");
-        comptrollers[poolId] = _comptroller;
-    }
-
-    /**
      * @notice Start a auction
-     * @param poolId ID of the pool
+     * @param comptroller comptroller of the pool
      */
-    function startAuction(uint256 poolId) public onlyOwner {
-        Auction storage auction = auctions[poolId];
-        ComptrollerInterface comptroller = comptrollers[poolId];
+    function startAuction(address comptroller) public onlyOwner {
+        Auction storage auction = auctions[comptroller];
 
         require((auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED)|| auction.status == AuctionStatus.ENDED, "auction is on-going");
 
@@ -168,9 +154,11 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         delete auction.markets;
-
-        VToken[] memory vTokens = comptroller.getAllMarkets();
-        PriceOracle priceOracle = PriceOracle(ComptrollerViewInterface(address(comptroller)).oracle()); 
+        ComptrollerInterface iComptroller = ComptrollerInterface(address(comptroller));
+        ComptrollerViewInterface viComptroller = ComptrollerViewInterface(address(comptroller));
+        
+        VToken[] memory vTokens = iComptroller.getAllMarkets();
+        PriceOracle priceOracle = PriceOracle(viComptroller.oracle()); 
         uint256 poolBadDebt = 0;       
 
         uint256[] memory marketsDebt = new uint256[](vTokens.length);
@@ -190,7 +178,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
         
-        uint256 riskFundBalance = riskFund.getPoolReserve(poolId);
+        uint256 riskFundBalance = riskFund.getPoolReserve(comptroller);
         uint256 remainingRiskFundBalance = riskFundBalance;
 
         if (poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS) >= riskFundBalance) {
@@ -215,7 +203,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         auction.highestBidder = address(0);
 
         emit AuctionStarted(
-            poolId,
+            comptroller,
             auction.startBlock,
             auction.auctionType,
             auction.markets,
@@ -227,14 +215,14 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Place a bid in a auction
-     * @param poolId ID of the pool
+     * @param comptroller comptroller of the pool
      * @param bidBps The bid m% or n%
      */
     function placeBid(
-        uint256 poolId,
+        address comptroller,
         uint256 bidBps
     ) external nonReentrant {
-        Auction storage auction = auctions[poolId];
+        Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
@@ -277,15 +265,15 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         auction.highestBidBps = bidBps;
         auction.highestBidBlock = block.number;
 
-        emit BidPlaced(poolId, bidBps, msg.sender);
+        emit BidPlaced(comptroller, bidBps, msg.sender);
     }
 
     /**
      * @notice Close an auction
-     * @param poolId ID of the pool
+     * @param comptroller comptroller of the pool
      */
-    function closeAuction(uint256 poolId) external nonReentrant {
-        Auction storage auction = auctions[poolId];
+    function closeAuction(address comptroller) external nonReentrant {
+        Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0), "waiting for next bidder. cannot close auction" );
@@ -313,17 +301,17 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 riskFundBidAmount = auction.seizedRiskFund;
 
         if(auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-            riskFund.transferReserveForAuction(poolId, riskFundBidAmount);
+            riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
             BUSD.transfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
             uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
-            riskFund.transferReserveForAuction(poolId, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
+            riskFund.transferReserveForAuction(comptroller, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
             BUSD.transfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
         }
 
         emit AuctionClosed(
-            poolId,
+            comptroller,
             auction.highestBidder,
             auction.highestBidBps,
             riskFundBidAmount,
@@ -334,17 +322,17 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Restart an auction
-     * @param poolId ID of the pool
+     * @param comptroller ID of the pool
      */
-    function restartAuction(uint256 poolId) external {
-        Auction storage auction = auctions[poolId];
+    function restartAuction(address comptroller) external {
+        Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
         require(block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0), "you need to wait for more time for first bidder" );
 
         auction.status = AuctionStatus.ENDED;
 
-        emit AuctionRestarted(poolId);
-        startAuction(poolId);
+        emit AuctionRestarted(comptroller);
+        startAuction(comptroller);
     }
 }

@@ -93,12 +93,13 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Maps venus pool id to metadata
      */
-    mapping(uint256 => VenusPoolMetaData) public metadata;
+    mapping(address => VenusPoolMetaData) public metadata;
 
     /**
-     * @dev Array of Venus pools.
+     * @dev Array of Venus pool comptroller addresses.
+     * Used for iterating over all pools
      */
-    mapping(uint256 => VenusPool) private _poolsByID;
+    mapping(uint256 => address) private _poolsByID;
 
     /**
      * @dev Total number of pools created.
@@ -108,7 +109,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
     * @dev Maps comptroller address to Venus pool Index.
     */
-    mapping(address => uint256) private _poolByComptroller;
+    mapping(address => VenusPool) private _poolByComptroller;
 
     /**
      * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
@@ -118,12 +119,12 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Maps pool id to asset to vToken.
      */
-    mapping(uint256 => mapping(address => address)) private _vTokens;
+    mapping(address => mapping(address => address)) private _vTokens;
 
     /**
      * @dev Maps asset to list of supported pools.
      */
-    mapping(address => uint256[]) private _supportedPools;
+    mapping(address => address[]) private _supportedPools;
 
     enum InterestRateModels {
         WhitePaper,
@@ -131,7 +132,7 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     struct AddMarketInput {
-        uint256 poolId;
+        address comptroller;
         address asset;
         uint8 decimals;
         string name;
@@ -151,22 +152,22 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Emitted when a new Venus pool is added to the directory.
      */
-    event PoolRegistered(uint256 index, VenusPool pool);
+    event PoolRegistered(address indexed comptroller, VenusPool pool);
 
     /**
      * @dev Emitted when a pool name is set.
      */
-    event PoolNameSet(uint256 index, string name);
+    event PoolNameSet(address indexed comptroller, string name);
 
     /**
      * @dev Emitted when a pool metadata is updated.
      */
-    event PoolMetadataUpdated(uint256 indexed index, VenusPoolMetaData oldMetadata, VenusPoolMetaData newMetadata);
+    event PoolMetadataUpdated(address indexed comptroller, VenusPoolMetaData oldMetadata, VenusPoolMetaData newMetadata);
 
     /**
      * @dev Emitted when a Market is added to the pool.
      */
-    event MarketAdded(uint256 indexed index, address indexed comptroller, address vTokenAddress);
+    event MarketAdded(address indexed comptroller, address vTokenAddress);
 
     /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
@@ -178,7 +179,7 @@ contract PoolRegistry is OwnableUpgradeable {
         internal
         returns (uint256)
     {
-        VenusPool memory venusPool = _poolsByID[_poolByComptroller[comptroller]];
+        VenusPool memory venusPool = _poolByComptroller[comptroller];
         
         require(venusPool.creator == address(0),
             "RegistryPool: Pool already exists in the directory."
@@ -197,12 +198,10 @@ contract PoolRegistry is OwnableUpgradeable {
             block.timestamp
         );
 
-        _poolsByID[_numberOfPools] = pool;
-        _poolByComptroller[comptroller] = _numberOfPools;
+        _poolsByID[_numberOfPools] = comptroller;
+        _poolByComptroller[comptroller] = pool;
 
-        shortfall.setPoolComptroller(_numberOfPools, ComptrollerInterface(address(comptroller)));
-
-        emit PoolRegistered(_numberOfPools, pool);
+        emit PoolRegistered(comptroller, pool);
         return _numberOfPools;
     }
 
@@ -270,15 +269,14 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Modify existing Venus pool name.
      */
-    function setPoolName(uint256 poolId, string calldata name) external {
-        Comptroller _comptroller = Comptroller(_poolsByID[poolId].comptroller);
+    function setPoolName(address comptroller, string calldata name) external {
+        Comptroller _comptroller = Comptroller(comptroller);
 
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
         require(msg.sender == _comptroller.admin() || msg.sender == owner());
-
-        _poolsByID[poolId].name = name;
-        emit PoolNameSet(poolId, name);
+        _poolByComptroller[comptroller].name = name;
+        emit PoolNameSet(comptroller, name);
     }
 
     /**
@@ -295,21 +293,10 @@ contract PoolRegistry is OwnableUpgradeable {
     function getAllPools() external view returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
         for (uint256 i = 1; i <= _numberOfPools; ++i) {
-            _pools[i - 1] = (_poolsByID[i]);
+            address comptroller = _poolsByID[i];
+            _pools[i - 1] = (_poolByComptroller[comptroller]);
         }
         return _pools;
-    }
-
-    /**
-     * @notice Returns Venus pool by PoolID.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
-     */
-    function getPoolByID(uint256 poolId)
-        external
-        view
-        returns (VenusPool memory)
-    {
-        return _poolsByID[poolId];
     }
 
     /**
@@ -321,32 +308,19 @@ contract PoolRegistry is OwnableUpgradeable {
         view
         returns (VenusPool memory)
     {
-        uint256 poolId = _poolByComptroller[comptroller];
-        return _poolsByID[_poolByComptroller[comptroller]];
-    }
-
-    /**
-     * @param comptroller The Comptroller implementation address.
-     * @notice Returns poolID.
-     */
-    function getPoolIDByComptroller(address comptroller)
-        external
-        view
-        returns (uint256)
-    {
         return _poolByComptroller[comptroller];
     }
 
     /**
-    * @param poolId index of Venus pool.
+    * @param comptroller comptroller of Venus pool.
     * @notice Returns Metadata of Venus pool.
     */
-    function getVenusPoolMetadata(uint256 poolId)
+    function getVenusPoolMetadata(address comptroller)
         external
         view
         returns (VenusPoolMetaData memory)
     {
-        return metadata[poolId];
+        return metadata[comptroller];
     }
 
     /**
@@ -387,7 +361,7 @@ contract PoolRegistry is OwnableUpgradeable {
         }
 
         Comptroller comptroller = Comptroller(
-            _poolsByID[input.poolId].comptroller
+            input.comptroller
         );
 
         VBep20ImmutableProxyFactory.VBep20Args memory initializeArgs = VBep20ImmutableProxyFactory.VBep20Args(
@@ -414,24 +388,24 @@ contract PoolRegistry is OwnableUpgradeable {
         comptroller._supportMarket(vToken);
         comptroller._setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
-        _vTokens[input.poolId][input.asset] = address(vToken);
-        _supportedPools[input.asset].push(input.poolId);
+        _vTokens[input.comptroller][input.asset] = address(vToken);
+        _supportedPools[input.asset].push(input.comptroller);
 
-        emit MarketAdded(input.poolId, address(comptroller), address(vToken));
+        emit MarketAdded(address(comptroller), address(vToken));
     }
 
-    function getVTokenForAsset(uint256 poolId, address asset)
+    function getVTokenForAsset(address comptroller, address asset)
         external
         view
         returns (address)
     {
-        return _vTokens[poolId][asset];
+        return _vTokens[comptroller][asset];
     }
 
     function getPoolsSupportedByAsset(address asset)
         external
         view
-        returns (uint256[] memory)
+        returns (address[] memory)
     {
         return _supportedPools[asset];
     }
@@ -439,9 +413,9 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Update metadata of an existing pool
      */
-    function updatePoolMetadata(uint256 poolId, VenusPoolMetaData memory _metadata) external onlyOwner {
-        VenusPoolMetaData memory oldMetadata = metadata[poolId];
-        metadata[poolId] = _metadata;
-        emit PoolMetadataUpdated(poolId, oldMetadata, _metadata);
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external onlyOwner {
+        VenusPoolMetaData memory oldMetadata = metadata[comptroller];
+        metadata[comptroller] = _metadata;
+        emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);
     }
 }

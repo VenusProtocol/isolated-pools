@@ -16,7 +16,6 @@ contract PoolLens is ExponentialNoError {
     * @dev Struct for PoolDetails.
     */
     struct PoolData {
-        uint256 poolId;
         string name;
         address creator;
         address comptroller;
@@ -68,15 +67,12 @@ contract PoolLens is ExponentialNoError {
 
             PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
 
-            uint256 poolId = poolRegistryInterface.getPoolIDByComptroller(venusPool.comptroller);
-
             //get PoolMetada via lookup on comptrollerAddress to poolId and then poolId to poolMetadata
-            PoolRegistry.VenusPoolMetaData memory venusPoolMetaData = poolRegistryInterface.getVenusPoolMetadata(poolId);
+            PoolRegistry.VenusPoolMetaData memory venusPoolMetaData = poolRegistryInterface.getVenusPoolMetadata(venusPool.comptroller);
 
             ComptrollerViewInterface comptrollerViewInstance = ComptrollerViewInterface(venusPool.comptroller);
 
             PoolData memory poolData = PoolData({
-                poolId: venusPool.poolId,
                 name: venusPool.name,
                 creator: venusPool.creator,
                 comptroller: venusPool.comptroller,
@@ -109,13 +105,13 @@ contract PoolLens is ExponentialNoError {
 
     /**
     * @param poolRegistryAddress The address of Pool.
-    * @param poolId The poolIndex.  
+    * @param comptroller The pool comptroller.
     * @param asset The underlyingAsset of VToken.
     * @notice Returns VToken in a Pool for an Asset.
     */
-    function getVTokenForAsset(address poolRegistryAddress, uint poolId, address asset) external view returns (address) {
+    function getVTokenForAsset(address poolRegistryAddress, address comptroller, address asset) external view returns (address) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        return poolRegistryInterface.getVTokenForAsset(poolId, asset);
+        return poolRegistryInterface.getVTokenForAsset(comptroller, asset);
     }
 
     /**

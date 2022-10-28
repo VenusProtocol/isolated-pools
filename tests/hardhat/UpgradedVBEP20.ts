@@ -141,7 +141,7 @@ describe("UpgradedVBEP20: Tests", function () {
 
     // Deploy VTokens
     await poolRegistry.addMarket({
-      poolId: 1,
+      comptroller: pools[0].comptroller,
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
@@ -159,7 +159,7 @@ describe("UpgradedVBEP20: Tests", function () {
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      pools[0].comptroller,
       mockWBTC.address
     );
 

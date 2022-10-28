@@ -172,56 +172,6 @@ describe("PoolLens - PoolView Tests", async function () {
     const tokenImplementation = await VBep20Immutable.deploy();
     await tokenImplementation.deployed();
 
-    await poolRegistry.addMarket({
-      poolId: 1,
-      asset: mockWBTC.address,
-      decimals: 8,
-      name: "Compound WBTC",
-      symbol: "vWBTC",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
-    });
-
-    await poolRegistry.addMarket({
-      poolId: 1,
-      asset: mockDAI.address,
-      decimals: 18,
-      name: "Compound DAI",
-      symbol: "vDAI",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
-    });
-
-    await poolRegistry.updatePoolMetadata(1, {
-      riskRating: 2,
-      category: "Hign market cap",
-      logoURL: "http://venis.io/pool1",
-      description: "Pool1 description",
-    });
-
-    await poolRegistry.updatePoolMetadata(2, {
-      riskRating: 0,
-      category: "Low market cap",
-      logoURL: "http://highrisk.io/pool2",
-      description: "Pool2 description",
-    });
-
     // Get all pools list.
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1");
@@ -249,13 +199,63 @@ describe("PoolLens - PoolView Tests", async function () {
     );
     await unitroller2._acceptAdmin();
 
+    await poolRegistry.addMarket({
+      comptroller: comptroller1Proxy.address,
+      asset: mockWBTC.address,
+      decimals: 8,
+      name: "Compound WBTC",
+      symbol: "vWBTC",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
+    });
+
+    await poolRegistry.addMarket({
+      comptroller: comptroller1Proxy.address,
+      asset: mockDAI.address,
+      decimals: 18,
+      name: "Compound DAI",
+      symbol: "vDAI",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
+    });
+
+    await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
+      riskRating: 2,
+      category: "Hign market cap",
+      logoURL: "http://venis.io/pool1",
+      description: "Pool1 description",
+    });
+
+    await poolRegistry.updatePoolMetadata(comptroller2Proxy.address, {
+      riskRating: 0,
+      category: "Low market cap",
+      logoURL: "http://highrisk.io/pool2",
+      description: "Pool2 description",
+    });
+
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockWBTC.address
     );
     const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockDAI.address
     );
 
@@ -282,25 +282,24 @@ describe("PoolLens - PoolView Tests", async function () {
 
     const venusPool_1_Actual = poolData[0];
 
-    expect(venusPool_1_Actual[0]).equal(1);
-    expect(venusPool_1_Actual[1]).equal("Pool 1");
-    expect(venusPool_1_Actual[2]).equal(ownerAddress);
-    expect(venusPool_1_Actual[3]).equal(comptroller1Proxy.address);
-    expect(venusPool_1_Actual[6]).equal(2);
-    expect(venusPool_1_Actual[7]).equal("Hign market cap");
-    expect(venusPool_1_Actual[8]).equal("http://venis.io/pool1");
-    expect(venusPool_1_Actual[9]).equal("Pool1 description");
-    expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(closeFactor1);
-    expect(venusPool_1_Actual[12]).equal(liquidationIncentive1);
-    expect(venusPool_1_Actual[13]).equal(0);
+    expect(venusPool_1_Actual[0]).equal("Pool 1");
+    expect(venusPool_1_Actual[1]).equal(ownerAddress);
+    expect(venusPool_1_Actual[2]).equal(comptroller1Proxy.address);
+    expect(venusPool_1_Actual[5]).equal(2);
+    expect(venusPool_1_Actual[6]).equal("Hign market cap");
+    expect(venusPool_1_Actual[7]).equal("http://venis.io/pool1");
+    expect(venusPool_1_Actual[8]).equal("Pool1 description");
+    expect(venusPool_1_Actual[9]).equal(priceOracle.address);
+    expect(venusPool_1_Actual[10]).equal(closeFactor1);
+    expect(venusPool_1_Actual[11]).equal(liquidationIncentive1);
+    expect(venusPool_1_Actual[12]).equal(0);
 
-    const vTokens_Actual = venusPool_1_Actual[14];
+    const vTokens_Actual = venusPool_1_Actual[13];
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
     const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockWBTC.address
     );
     const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
@@ -313,24 +312,24 @@ describe("PoolLens - PoolView Tests", async function () {
     );
 
     // get VToken for Asset-2 : DAI
-    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(1, mockDAI.address);
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
     const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(vTokenAddress_DAI);
     const vTokenMetadata_DAI_Actual = vTokens_Actual[1];
     assertVTokenMetadata(vTokenMetadata_DAI_Actual, vTokenMetadata_DAI_Expected);
 
     const venusPool_2_Actual = poolData[1];
-    expect(venusPool_2_Actual[0]).equal(2);
-    expect(venusPool_2_Actual[1]).equal("Pool 2");
-    expect(venusPool_2_Actual[2]).equal(ownerAddress);
-    expect(venusPool_2_Actual[3]).equal(comptroller2Proxy.address);
-    expect(venusPool_2_Actual[6]).equal(0);
-    expect(venusPool_2_Actual[7]).equal("Low market cap");
-    expect(venusPool_2_Actual[8]).equal("http://highrisk.io/pool2");
-    expect(venusPool_2_Actual[9]).equal("Pool2 description");
-    expect(venusPool_1_Actual[10]).equal(priceOracle.address);
-    expect(venusPool_1_Actual[11]).equal(closeFactor2);
-    expect(venusPool_1_Actual[12]).equal(liquidationIncentive2);
-    expect(venusPool_1_Actual[13]).equal(0);
+    // expect(venusPool_2_Actual[0]).equal(2);
+    expect(venusPool_2_Actual[0]).equal("Pool 2");
+    expect(venusPool_2_Actual[1]).equal(ownerAddress);
+    expect(venusPool_2_Actual[2]).equal(comptroller2Proxy.address);
+    expect(venusPool_2_Actual[5]).equal(0);
+    expect(venusPool_2_Actual[6]).equal("Low market cap");
+    expect(venusPool_2_Actual[7]).equal("http://highrisk.io/pool2");
+    expect(venusPool_2_Actual[8]).equal("Pool2 description");
+    expect(venusPool_1_Actual[9]).equal(priceOracle.address);
+    expect(venusPool_1_Actual[10]).equal(closeFactor2);
+    expect(venusPool_1_Actual[11]).equal(liquidationIncentive2);
+    expect(venusPool_1_Actual[12]).equal(0);
   });
 
   it("getPoolData By Comptroller", async function () {
@@ -339,25 +338,25 @@ describe("PoolLens - PoolView Tests", async function () {
       comptroller1Proxy.address
     );
 
-    expect(poolData[0]).equal(1);
-    expect(poolData[1]).equal("Pool 1");
-    expect(poolData[2]).equal(ownerAddress);
-    expect(poolData[3]).equal(comptroller1Proxy.address);
-    expect(poolData[6]).equal(2);
-    expect(poolData[7]).equal("Hign market cap");
-    expect(poolData[8]).equal("http://venis.io/pool1");
-    expect(poolData[9]).equal("Pool1 description");
-    expect(poolData[10]).equal(priceOracle.address);
-    expect(poolData[11]).equal(closeFactor1);
-    expect(poolData[12]).equal(liquidationIncentive1);
-    expect(poolData[13]).equal(0);
+    // expect(poolData[0]).equal(1);
+    expect(poolData[0]).equal("Pool 1");
+    expect(poolData[1]).equal(ownerAddress);
+    expect(poolData[2]).equal(comptroller1Proxy.address);
+    expect(poolData[5]).equal(2);
+    expect(poolData[6]).equal("Hign market cap");
+    expect(poolData[7]).equal("http://venis.io/pool1");
+    expect(poolData[8]).equal("Pool1 description");
+    expect(poolData[9]).equal(priceOracle.address);
+    expect(poolData[10]).equal(closeFactor1);
+    expect(poolData[11]).equal(liquidationIncentive1);
+    expect(poolData[12]).equal(0);
 
-    const vTokens_Actual = poolData[14];
+    const vTokens_Actual = poolData[13];
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
     const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockWBTC.address
     );
     const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
@@ -371,7 +370,7 @@ describe("PoolLens - PoolView Tests", async function () {
 
     // get VToken for Asset-2 : DAI
     const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockDAI.address
     );
     const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(
@@ -392,6 +391,11 @@ describe("PoolLens - VTokens Query Tests", async function () {
   before(async function () {
     const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
+
+    fakeAccessControlManager = await smock.fake<AccessControlManager>(
+      "AccessControlManager"
+    );
+    fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
       "VBep20ImmutableProxyFactory"
@@ -506,56 +510,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const tokenImplementation = await VBep20Immutable.deploy();
     await tokenImplementation.deployed();
 
-    await poolRegistry.addMarket({
-      poolId: 1,
-      asset: mockWBTC.address,
-      decimals: 8,
-      name: "Compound WBTC",
-      symbol: "vWBTC",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
-    });
-
-    await poolRegistry.addMarket({
-      poolId: 1,
-      asset: mockDAI.address,
-      decimals: 18,
-      name: "Compound DAI",
-      symbol: "vDAI",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
-    });
-
-    await poolRegistry.updatePoolMetadata(1, {
-      riskRating: 2,
-      category: "Hign market cap",
-      logoURL: "http://venis.io/pool1",
-      description: "Pool1 description",
-    });
-
-    await poolRegistry.updatePoolMetadata(2, {
-      riskRating: 0,
-      category: "Low market cap",
-      logoURL: "http://highrisk.io/pool2",
-      description: "Pool2 description",
-    });
-
     // Get all pools list.
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1");
@@ -583,6 +537,56 @@ describe("PoolLens - VTokens Query Tests", async function () {
     );
     await unitroller2._acceptAdmin();
 
+    await poolRegistry.addMarket({
+      comptroller: comptroller1Proxy.address,
+      asset: mockWBTC.address,
+      decimals: 8,
+      name: "Compound WBTC",
+      symbol: "vWBTC",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
+    });
+
+    await poolRegistry.addMarket({
+      comptroller: comptroller1Proxy.address,
+      asset: mockDAI.address,
+      decimals: 18,
+      name: "Compound DAI",
+      symbol: "vDAI",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      vTokenProxyAdmin: proxyAdmin.address,
+      tokenImplementation_: tokenImplementation.address,
+    });
+
+    await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
+      riskRating: 2,
+      category: "Hign market cap",
+      logoURL: "http://venis.io/pool1",
+      description: "Pool1 description",
+    });
+
+    await poolRegistry.updatePoolMetadata(comptroller2Proxy.address, {
+      riskRating: 0,
+      category: "Low market cap",
+      logoURL: "http://highrisk.io/pool2",
+      description: "Pool2 description",
+    });
+
     const PoolLens = await ethers.getContractFactory("PoolLens");
     poolLens = await PoolLens.deploy();
   });
@@ -590,7 +594,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
   it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
     const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockWBTC.address
     );
     const vTokenMetadata_Actual = await poolLens.vTokenMetadata(
