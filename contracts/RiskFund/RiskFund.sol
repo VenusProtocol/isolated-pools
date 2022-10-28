@@ -23,7 +23,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     address private convertableBUSDAddress;
     address private auctionContractAddress;
     address private accessControl;
-    mapping(uint256 => uint256) private poolReserves;
+    mapping(address => uint256) private poolReserves;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -199,7 +199,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
                     address comptroller = venusPools[i].comptroller;
                     VToken vToken = vTokens[j];
                     uint256 swappedTokens = swapAsset(vToken, comptroller);
-                    poolReserves[venusPools[i].poolId] = poolReserves[venusPools[i].poolId] + swappedTokens;
+                    poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
                     totalAmount = totalAmount + swappedTokens;
                 }
             }
@@ -226,20 +226,20 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
 
     /**
      * @dev Get pool reserve by pool id.
-     * @param poolId Id of the pool.
+     * @param comptroller comptroller of the pool.
      * @return Number reserved tokens.
      */
-    function getPoolReserve(uint256 poolId) external view returns(uint256) {
-        return poolReserves[poolId];
+    function getPoolReserve(address comptroller) external view returns(uint256) {
+        return poolReserves[comptroller];
     }
 
     /**
      * @dev Transfer tokens for auction.
-     * @param poolId Id of the pool.
+     * @param comptroller comptroller of the pool.
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(uint256 poolId, uint256 amount) external returns(uint256) {
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns(uint256) {
         bool canTransferFunds = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
@@ -252,8 +252,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         );
 
         require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
-        require(amount <= poolReserves[poolId], "Risk Fund: Insufficient pool reserve.");
-        poolReserves[poolId] = poolReserves[poolId] - amount;
+        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
+        poolReserves[comptroller] = poolReserves[comptroller] - amount;
         IERC20(convertableBUSDAddress).safeTransfer(auctionContractAddress, amount);
         return amount;
     }

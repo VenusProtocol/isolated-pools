@@ -175,7 +175,7 @@ describe("Rewards: Tests", async function () {
 
     //Deploy VTokens
     await poolRegistry.addMarket({
-      poolId: 1,
+      comptroller: comptrollerProxy.address,
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
@@ -193,7 +193,7 @@ describe("Rewards: Tests", async function () {
     });
 
     await poolRegistry.addMarket({
-      poolId: 1,
+      comptroller: comptrollerProxy.address,
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
@@ -211,11 +211,11 @@ describe("Rewards: Tests", async function () {
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptrollerProxy.address,
       mockWBTC.address
     );
     const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptrollerProxy.address,
       mockDAI.address
     );
 

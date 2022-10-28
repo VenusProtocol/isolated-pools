@@ -62,8 +62,8 @@ const setupTest = deployments.createFixture(
     // Set Oracle
     await Comptroller._setPriceOracle(PriceOracle.address);
 
-    const vWBTCAddress = await PoolRegistry.getVTokenForAsset(1, wBTC.address);
-    const vDAIAddress = await PoolRegistry.getVTokenForAsset(1, DAI.address);
+    const vWBTCAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, wBTC.address);
+    const vDAIAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, DAI.address);
 
     const vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
     const vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);

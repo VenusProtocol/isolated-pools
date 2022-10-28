@@ -178,7 +178,7 @@ describe("PoolRegistry: Tests", function () {
 
     // Deploy VTokens
     await poolRegistry.addMarket({
-      poolId: 1,
+      comptroller: comptroller1Proxy.address,
       asset: mockWBTC.address,
       decimals: 8,
       name: "Compound WBTC",
@@ -196,7 +196,7 @@ describe("PoolRegistry: Tests", function () {
     });
 
     await poolRegistry.addMarket({
-      poolId: 1,
+      comptroller: comptroller1Proxy.address,
       asset: mockDAI.address,
       decimals: 18,
       name: "Compound DAI",
@@ -214,11 +214,11 @@ describe("PoolRegistry: Tests", function () {
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockWBTC.address
     );
     const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      1,
+      comptroller1Proxy.address,
       mockDAI.address
     );
 
@@ -247,12 +247,12 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Should change pool name", async function () {
-    await expect(poolRegistry.setPoolName(1, "Pool 1 updated"))
+    await expect(poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1 updated"))
       .to.emit(poolRegistry, "PoolNameSet")
-      .withArgs(1, "Pool 1 updated");
+      .withArgs(comptroller1Proxy.address, "Pool 1 updated");
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1 updated");
-    await poolRegistry.setPoolName(1, "Pool 1");
+    await poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1");
   });
 
   it("Bookmark pool and get the bookmarked pools", async function () {
@@ -265,12 +265,6 @@ describe("PoolRegistry: Tests", function () {
 
     expect(bookmarkedPools.length).equal(1);
     expect(bookmarkedPools[0]).equal(pools[0].comptroller);
-  });
-
-  it("Should get pool by pools index", async function () {
-    const pool = await poolRegistry.getPoolByID(2);
-
-    expect(pool.name).equal("Pool 2");
   });
 
   it("Get pool by comptroller", async function () {
@@ -287,18 +281,6 @@ describe("PoolRegistry: Tests", function () {
     expect(pool2[1]).equal("Pool 2");
   });
 
-  it("Should get poolID by comptroller", async function () {
-    const poolIndex1 = await poolRegistry.getPoolIDByComptroller(
-      comptroller1Proxy.address
-    );
-    expect(poolIndex1).equal(1);
-
-    const poolIndex2 = await poolRegistry.getPoolIDByComptroller(
-      comptroller2Proxy.address
-    );
-    expect(poolIndex2).equal(2);
-  });
-
   it("Should be correct balances in tokens", async function () {
     const [owner] = await ethers.getSigners();
     await mockWBTC.faucet(convertToUnit(1000, 8));
@@ -313,7 +295,7 @@ describe("PoolRegistry: Tests", function () {
   // Get all pools that support a given asset
   it("Get pools with asset", async function () {
     const pools = await poolRegistry.getPoolsSupportedByAsset(mockWBTC.address);
-    expect(pools[0].toString()).equal("1");
+    expect(pools[0].toString()).equal(comptroller1Proxy.address);
   });
 
   it("Enter Market", async function () {
@@ -328,7 +310,7 @@ describe("PoolRegistry: Tests", function () {
     const category = "High market cap";
     const logoURL = "http://venus.io/pool1";
     const description = "An sample description";
-    const oldMetadata = await poolRegistry.metadata(0);
+    const oldMetadata = await poolRegistry.metadata(comptroller1Proxy.address);
     const newMetadata = {
       riskRating,
       category,
@@ -336,11 +318,11 @@ describe("PoolRegistry: Tests", function () {
       description,
     };
 
-    await expect(poolRegistry.updatePoolMetadata(0, newMetadata))
+    await expect(poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata))
       .to.emit(poolRegistry, "PoolMetadataUpdated")
-      .withArgs(0, oldMetadata, [riskRating, category, logoURL, description]);
+      .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
 
-    const metadata = await poolRegistry.metadata(0);
+    const metadata = await poolRegistry.metadata(comptroller1Proxy.address);
     expect(metadata.riskRating).equal(riskRating);
     expect(metadata.category).equal(category);
     expect(metadata.logoURL).equal(logoURL);
