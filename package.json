@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "0.0.8",
+  "version": "0.0.11",
   "description": "",
   "files": [
     "artifacts",
@@ -8,7 +8,8 @@
     "deploy",
     "helpers",
     "contracts",
-    "deployments"
+    "deployments",
+    "copy_contracts.sh"
   ],
   "scripts": {
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
@@ -17,7 +18,7 @@
     "hardhat:coverage": "hardhat coverage",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments} dist/",
+    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments,copy_contracts.sh} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
     "postinstall": "./copy_contracts.sh"
   },
