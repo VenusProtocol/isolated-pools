@@ -61,8 +61,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-
-
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
     Pool1Comptroller.address,
@@ -74,7 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
-  await ethers.getContractAt("Comptroller", pools[0].comptroller);
+  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
 
   const unitroller = await ethers.getContractAt(
     "Unitroller",
@@ -88,7 +86,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tokenImplementation.deployed();
 
   tx = await poolRegistry.addMarket({
-    poolId: 1,
+    comptroller: comptroller1Proxy.address,
     asset: wBTC.address,
     decimals: 8,
     name: 'Venus WBTC',
@@ -107,7 +105,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   tx = await poolRegistry.addMarket({
-    poolId: 1,
+    comptroller: comptroller1Proxy.address,
     asset: DAI.address,
     decimals: 18,
     name: "Compound DAI",
