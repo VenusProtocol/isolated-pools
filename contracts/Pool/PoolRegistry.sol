@@ -217,6 +217,7 @@ contract PoolRegistry is OwnableUpgradeable {
         address implementation,
         uint256 closeFactor,
         uint256 liquidationIncentive,
+        uint256 minLiquidatableCollateral,
         address priceOracle
     ) external virtual onlyOwner returns (uint256, address) {
         // Input validation
@@ -249,10 +250,14 @@ contract PoolRegistry is OwnableUpgradeable {
                 0,
             "RegistryPool: Failed to set liquidation incentive of Pool."
         );
+
+        comptrollerProxy._setMinLiquidatableCollateral(minLiquidatableCollateral);
+
         require(
             comptrollerProxy._setPriceOracle(PriceOracle(priceOracle)) == 0,
             "RegistryPool: Failed to set price oracle of Pool."
         );
+
 
         // Make msg.sender the admin
         require(

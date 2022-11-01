@@ -108,6 +108,7 @@ describe("UpgradedVBEP20: Tests", function () {
 
     const _closeFactor = convertToUnit(0.05, 18);
     const _liquidationIncentive = convertToUnit(1, 18);
+    const _minLiquidatableCollateral = convertToUnit(100, 18);
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -123,6 +124,7 @@ describe("UpgradedVBEP20: Tests", function () {
       comptroller1.address,
       _closeFactor,
       _liquidationIncentive,
+      _minLiquidatableCollateral,
       priceOracle.address
     );
 

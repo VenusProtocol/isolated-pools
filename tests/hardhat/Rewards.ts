@@ -147,6 +147,7 @@ describe("Rewards: Tests", async function () {
     //Register Pools to the protocol
     const _closeFactor = convertToUnit(0.05, 18);
     const _liquidationIncentive = convertToUnit(1, 18);
+    const _minLiquidatableCollateral = convertToUnit(100, 18);
 
     // Registering the first pool
     await poolRegistry.createRegistryPool(
@@ -154,6 +155,7 @@ describe("Rewards: Tests", async function () {
       comptroller.address,
       _closeFactor,
       _liquidationIncentive,
+      _minLiquidatableCollateral,
       fakePriceOracle.address
     );
 
