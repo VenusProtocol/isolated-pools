@@ -57,6 +57,7 @@ secrets.json
 
 # Build
 dist
+docs
 
 contracts/oracle/*
 
