@@ -87,4 +87,5 @@ abstract contract ComptrollerViewInterface {
     function closeFactorMantissa() virtual external view returns (uint256);
     function maxAssets() virtual external view returns (uint256);
     function liquidationIncentiveMantissa() virtual external view returns (uint256);
+    function minLiquidatableCollateral() virtual external view returns (uint256);
 }
