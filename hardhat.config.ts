@@ -12,6 +12,7 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import { convertToUnit } from "./helpers/utils";
 import { DeployResult } from "hardhat-deploy/types";
+import "solidity-docgen";
 
 // Generate using https://iancoleman.io/bip39/
 const mnemonic = process.env.MNEMONIC || "";
@@ -215,6 +216,9 @@ const config: HardhatUserConfig = {
     acc1:1,
     acc2:2,
   },
+  docgen: {
+    outputDir: './docs',
+  }
 };
 
 function isFork() {
