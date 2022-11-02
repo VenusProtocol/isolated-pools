@@ -43,8 +43,9 @@ let closeFactor1: BigNumberish,
   closeFactor2: BigNumberish,
   liquidationIncentive1: BigNumberish,
   liquidationIncentive2: BigNumberish;
-let protocolShareReserve: ProtocolShareReserve;
-let riskFund: RiskFund;
+  let protocolShareReserve: ProtocolShareReserve;
+  let riskFund: RiskFund;
+const minLiquidatableCollateral = convertToUnit(100, 18);
 
 describe("PoolLens - PoolView Tests", async function () {
   /**
@@ -136,6 +137,7 @@ describe("PoolLens - PoolView Tests", async function () {
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
+      minLiquidatableCollateral,
       priceOracle.address
     );
 
@@ -148,6 +150,7 @@ describe("PoolLens - PoolView Tests", async function () {
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
+      minLiquidatableCollateral,
       priceOracle.address
     );
 
@@ -474,6 +477,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
+      minLiquidatableCollateral,
       priceOracle.address
     );
 
@@ -486,6 +490,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
+      minLiquidatableCollateral,
       priceOracle.address
     );
 

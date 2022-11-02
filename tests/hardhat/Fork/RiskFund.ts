@@ -161,6 +161,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   const _closeFactor = convertToUnit(0.05, 18);
   const _liquidationIncentive = convertToUnit(1, 18);
+  const _minLiquidatableCollateral = convertToUnit(100, 18);
 
   // Deploy Price Oracle
   const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -180,6 +181,7 @@ const riskFundFixture = async (): Promise<void> => {
     comptroller1.address,
     _closeFactor,
     _liquidationIncentive,
+    _minLiquidatableCollateral,
     priceOracle.address
   );
 
@@ -189,6 +191,7 @@ const riskFundFixture = async (): Promise<void> => {
     comptroller2.address,
     _closeFactor,
     _liquidationIncentive,
+    _minLiquidatableCollateral,
     priceOracle.address
   );
 

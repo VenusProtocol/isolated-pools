@@ -48,6 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
+  const minLiquidatableCollateral = convertToUnit(100, 18);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
 
@@ -66,6 +67,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     Pool1Comptroller.address,
     closeFactor,
     liquidationIncentive,
+    minLiquidatableCollateral,
     priceOracle.address
   );
 

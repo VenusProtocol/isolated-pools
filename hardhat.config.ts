@@ -114,6 +114,7 @@ task("addMarket", "Add a market to an existing pool")
       taskArgs.comptroller,
       taskArgs.closeFactor,
       taskArgs.liquidationIncentive,
+      taskArgs.minLiquidatableCollateral,
       taskArgs.oracle
     );
 
