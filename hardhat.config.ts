@@ -218,6 +218,7 @@ const config: HardhatUserConfig = {
   },
   docgen: {
     outputDir: './docs',
+    pages: 'files'
   }
 };
 
