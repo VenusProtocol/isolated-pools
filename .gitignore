@@ -36,7 +36,6 @@ networks/*-settings.json
 outputs/
 Reports/
 scTopics
-*.DS_Store
 test-results.xml
 .tsbuilt
 yarn-error.log
@@ -60,3 +59,6 @@ secrets.json
 dist
 
 contracts/oracle/*
+
+# OSX
+.DS_Store
