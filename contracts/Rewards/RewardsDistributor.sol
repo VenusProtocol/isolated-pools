@@ -31,7 +31,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     uint224 public constant rewardTokenInitialIndex = 1e36;
 
     /// @notice The REWARD TOKEN accrued but not yet transferred to each user
-    mapping(address => uint256) public rewardTokenAccured;
+    mapping(address => uint256) public rewardTokenAccrued;
 
     /// @notice The rate at which rewardToken is distributed to the corresponding borrow market (per block)
     mapping(address => uint256) public rewardTokenBorrowSpeeds;
@@ -198,11 +198,11 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         if (deltaBlocks > 0 && rewardTokenSpeed > 0) {
             uint256 newAccrued = mul_(deltaBlocks, rewardTokenSpeed);
             uint256 contributorAccrued = add_(
-                rewardTokenAccured[contributor],
+                rewardTokenAccrued[contributor],
                 newAccrued
             );
 
-            rewardTokenAccured[contributor] = contributorAccrued;
+            rewardTokenAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
         }
     }
@@ -286,10 +286,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
 
         uint256 supplierAccrued = add_(
-            rewardTokenAccured[supplier],
+            rewardTokenAccrued[supplier],
             supplierDelta
         );
-        rewardTokenAccured[supplier] = supplierAccrued;
+        rewardTokenAccrued[supplier] = supplierAccrued;
 
         emit DistributedSupplierRewardToken(
             VToken(vToken),
@@ -350,10 +350,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
 
         uint256 borrowerAccrued = add_(
-            rewardTokenAccured[borrower],
+            rewardTokenAccrued[borrower],
             borrowerDelta
         );
-        rewardTokenAccured[borrower] = borrowerAccrued;
+        rewardTokenAccrued[borrower] = borrowerAccrued;
 
         emit DistributedBorrowerRewardToken(
             VToken(vToken),
@@ -521,9 +521,9 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             }
         }
         for (uint256 j = 0; j < holders.length; j++) {
-            rewardTokenAccured[holders[j]] = grantRewardTokenInternal(
+            rewardTokenAccrued[holders[j]] = grantRewardTokenInternal(
                 holders[j],
-                rewardTokenAccured[holders[j]]
+                rewardTokenAccrued[holders[j]]
             );
         }
     }
