@@ -295,7 +295,7 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[9]).equal(priceOracle.address);
     expect(venusPool_1_Actual[10]).equal(closeFactor1);
     expect(venusPool_1_Actual[11]).equal(liquidationIncentive1);
-    expect(venusPool_1_Actual[12]).equal(0);
+    expect(venusPool_1_Actual[12]).equal(minLiquidatableCollateral);
     expect(venusPool_1_Actual[13]).equal(0);
 
     const vTokens_Actual = venusPool_1_Actual[14];
@@ -333,7 +333,7 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[9]).equal(priceOracle.address);
     expect(venusPool_1_Actual[10]).equal(closeFactor2);
     expect(venusPool_1_Actual[11]).equal(liquidationIncentive2);
-    expect(venusPool_1_Actual[12]).equal(0);
+    expect(venusPool_1_Actual[12]).equal(minLiquidatableCollateral);
     expect(venusPool_1_Actual[13]).equal(0);
   });
 
@@ -354,7 +354,7 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[9]).equal(priceOracle.address);
     expect(poolData[10]).equal(closeFactor1);
     expect(poolData[11]).equal(liquidationIncentive1);
-    expect(poolData[12]).equal(0);
+    expect(poolData[12]).equal(minLiquidatableCollateral);
     expect(poolData[13]).equal(0);
 
     const vTokens_Actual = poolData[14];
