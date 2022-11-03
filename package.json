@@ -21,7 +21,8 @@
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments,copy_contracts.sh} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
-    "postinstall": "./copy_contracts.sh"
+    "postinstall": "./copy_contracts.sh",
+    "docgen": "hardhat docgen"
   },
   "repository": {
     "type": "git",
