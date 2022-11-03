@@ -407,9 +407,9 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         );
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
-            uint256 rewardTokenAccured = mul_(deltaBlocks, supplySpeed);
+            uint256 accruedSinceUpdate = mul_(deltaBlocks, supplySpeed);
             Double memory ratio = supplyTokens > 0
-                ? fraction(rewardTokenAccured, supplyTokens)
+                ? fraction(accruedSinceUpdate, supplyTokens)
                 : Double({mantissa: 0});
             supplyState.index = safe224(
                 add_(Double({mantissa: supplyState.index}), ratio).mantissa,
@@ -452,9 +452,9 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
                 VToken(vToken).totalBorrows(),
                 marketBorrowIndex
             );
-            uint256 rewardTokenAccured = mul_(deltaBlocks, borrowSpeed);
+            uint256 accruedSinceUpdate = mul_(deltaBlocks, borrowSpeed);
             Double memory ratio = borrowAmount > 0
-                ? fraction(rewardTokenAccured, borrowAmount)
+                ? fraction(accruedSinceUpdate, borrowAmount)
                 : Double({mantissa: 0});
             borrowState.index = safe224(
                 add_(Double({mantissa: borrowState.index}), ratio).mantissa,
