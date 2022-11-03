@@ -681,6 +681,8 @@ contract Comptroller is
         if (repayAmount > maxClose) {
             return uint256(Error.TOO_MUCH_REPAY);
         }
+
+        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -1692,6 +1694,8 @@ contract Comptroller is
         for (uint256 i = 0; i < allMarkets.length; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
+
+        return uint256(Error.NO_ERROR);
     }
 
     /**
