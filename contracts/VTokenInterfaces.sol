@@ -30,13 +30,13 @@ contract VTokenStorage {
     uint8 public decimals;
 
     /**
-    * @notice Risk fund contract address
-    */
+     * @notice Risk fund contract address
+     */
     address payable internal riskFund;
 
     /**
-    * @notice Protocol share Reserve contract address
-    */
+     * @notice Protocol share Reserve contract address
+     */
     address payable internal protocolShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
@@ -354,12 +354,16 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function accrueInterest() external virtual returns (uint256);
 
-    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
+    function healBorrow(
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) external virtual;
 
     function forceLiquidateBorrow(
         address liquidator,
         address borrower,
-        uint repayAmount,
+        uint256 repayAmount,
         VTokenInterface vTokenCollateral,
         bool skipCloseFactorCheck
     ) external virtual returns (uint256);
@@ -413,7 +417,7 @@ abstract contract VBep20Interface is VBep20Storage {
         address payable riskFund;
         address payable protocolShareReserve;
     }
-    
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

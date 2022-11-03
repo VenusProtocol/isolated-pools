@@ -4,26 +4,26 @@ pragma solidity ^0.8.10;
 import "../../contracts/Comptroller.sol";
 
 contract ComptrollerScenario is Comptroller {
-    uint public blockNumber;
+    uint256 public blockNumber;
 
     constructor(address _poolRegistry, address _accessControl)
         Comptroller(_poolRegistry, _accessControl)
-        {}
+    {}
 
-    function fastForward(uint blocks) public returns (uint) {
+    function fastForward(uint256 blocks) public returns (uint256) {
         blockNumber += blocks;
         return blockNumber;
     }
 
-    function setBlockNumber(uint number) public {
+    function setBlockNumber(uint256 number) public {
         blockNumber = number;
     }
 
-    function getBlockNumber() override public view returns (uint) {
+    function getBlockNumber() public view override returns (uint256) {
         return blockNumber;
     }
 
-    function membershipLength(VToken vToken) public view returns (uint) {
+    function membershipLength(VToken vToken) public view returns (uint256) {
         return accountAssets[address(vToken)].length;
     }
 

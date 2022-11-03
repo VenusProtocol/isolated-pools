@@ -6,7 +6,7 @@ import "../../contracts/VToken.sol";
 import "../../contracts/PriceOracle.sol";
 
 interface V1PriceOracleInterface {
-    function assetPrices(address asset) external view returns (uint);
+    function assetPrices(address asset) external view returns (uint256);
 }
 
 contract PriceOracleProxy is PriceOracle {
@@ -38,7 +38,7 @@ contract PriceOracleProxy is PriceOracle {
     address public constant daiOracleKey = address(2);
 
     /// @notice Frozen SAI price (or 0 if not set yet)
-    uint public saiPrice;
+    uint256 public saiPrice;
 
     /**
      * @param guardian_ The address of the guardian, which may set the SAI price once
@@ -49,13 +49,15 @@ contract PriceOracleProxy is PriceOracle {
      * @param cDaiAddress_ The address of cDAI, which will be read from a special oracle key
      * @param cUsdtAddress_ The address of cUSDT, which uses the cUSDC price
      */
-    constructor(address guardian_,
-                address v1PriceOracle_,
-                address cEthAddress_,
-                address cUsdcAddress_,
-                address cSaiAddress_,
-                address cDaiAddress_,
-                address cUsdtAddress_) {
+    constructor(
+        address guardian_,
+        address v1PriceOracle_,
+        address cEthAddress_,
+        address cUsdcAddress_,
+        address cSaiAddress_,
+        address cDaiAddress_,
+        address cUsdtAddress_
+    ) {
         guardian = guardian_;
         v1PriceOracle = V1PriceOracleInterface(v1PriceOracle_);
 
@@ -71,7 +73,12 @@ contract PriceOracleProxy is PriceOracle {
      * @param vToken The vToken to get the underlying price of
      * @return The underlying asset price mantissa (scaled by 1e18)
      */
-    function getUnderlyingPrice(VToken vToken) override public view returns (uint) {
+    function getUnderlyingPrice(VToken vToken)
+        public
+        view
+        override
+        returns (uint256)
+    {
         address vTokenAddress = address(vToken);
 
         if (vTokenAddress == cEthAddress) {
@@ -89,7 +96,10 @@ contract PriceOracleProxy is PriceOracle {
 
         if (vTokenAddress == cSaiAddress) {
             // use the frozen SAI price if set, otherwise use the DAI price
-            return saiPrice > 0 ? saiPrice : v1PriceOracle.assetPrices(daiOracleKey);
+            return
+                saiPrice > 0
+                    ? saiPrice
+                    : v1PriceOracle.assetPrices(daiOracleKey);
         }
 
         // otherwise just read from v1 oracle
@@ -101,7 +111,7 @@ contract PriceOracleProxy is PriceOracle {
      * @notice Set the price of SAI, permanently
      * @param price The price for SAI
      */
-    function setSaiPrice(uint price) public {
+    function setSaiPrice(uint256 price) public {
         require(msg.sender == guardian, "only guardian may set the SAI price");
         require(saiPrice == 0, "SAI price may only be set once");
         require(price < 0.1e18, "SAI price must be < 0.1 ETH");

@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *		within Venus Smart Contract Ecosystem
  */
 contract AccessControlManager is AccessControl {
-
     constructor() {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
@@ -32,11 +31,11 @@ contract AccessControlManager is AccessControl {
     {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
 
-        if(hasRole(role, caller)){
+        if (hasRole(role, caller)) {
             return true;
         } else {
             role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
-           return hasRole(role, caller);
+            return hasRole(role, caller);
         }
     }
 
@@ -56,16 +55,12 @@ contract AccessControlManager is AccessControl {
         address accountToPermit
     ) public {
         bytes32 role;
-        if(contractAddress == address(0)){
-            role = keccak256(
-                abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig)
-            );
+        if (contractAddress == address(0)) {
+            role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
         } else {
-            role = keccak256(
-                abi.encodePacked(contractAddress, functionSig)
-            );
+            role = keccak256(abi.encodePacked(contractAddress, functionSig));
         }
- 
+
         grantRole(role, accountToPermit);
     }
 

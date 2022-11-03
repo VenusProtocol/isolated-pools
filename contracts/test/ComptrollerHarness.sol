@@ -4,40 +4,48 @@ pragma solidity ^0.8.10;
 import "../../contracts/Comptroller.sol";
 import "../../contracts/PriceOracle.sol";
 
-
 contract ComptrollerHarness is Comptroller {
-    uint public blockNumber;
+    uint256 public blockNumber;
 
     constructor(address _poolRegistry, address _accessControl)
         Comptroller(_poolRegistry, _accessControl)
-        {}
+    {}
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
         pauseGuardian = harnessedPauseGuardian;
     }
 
-    function harnessFastForward(uint blocks) public returns (uint) {
+    function harnessFastForward(uint256 blocks) public returns (uint256) {
         blockNumber += blocks;
         return blockNumber;
     }
 
-    function setBlockNumber(uint number) public {
+    function setBlockNumber(uint256 number) public {
         blockNumber = number;
     }
 
-    function getBlockNumber() override public view returns (uint) {
+    function getBlockNumber() public view override returns (uint256) {
         return blockNumber;
     }
 }
 
 contract ComptrollerBorked {
-    function _become(Unitroller unitroller, PriceOracle _oracle, uint _closeFactorMantissa, uint _maxAssets, bool _reinitializing) public {
+    function _become(
+        Unitroller unitroller,
+        PriceOracle _oracle,
+        uint256 _closeFactorMantissa,
+        uint256 _maxAssets,
+        bool _reinitializing
+    ) public {
         _oracle;
         _closeFactorMantissa;
         _maxAssets;
         _reinitializing;
 
-        require(msg.sender == unitroller.admin(), "only unitroller admin can change brains");
+        require(
+            msg.sender == unitroller.admin(),
+            "only unitroller admin can change brains"
+        );
         unitroller._acceptImplementation();
     }
 }
@@ -304,19 +312,23 @@ contract ComptrollerBorked {
 }*/
 
 contract EchoTypesComptroller is UnitrollerAdminStorage {
-    function stringy(string memory s) public pure returns(string memory) {
+    function stringy(string memory s) public pure returns (string memory) {
         return s;
     }
 
-    function addresses(address a) public pure returns(address) {
+    function addresses(address a) public pure returns (address) {
         return a;
     }
 
-    function booly(bool b) public pure returns(bool) {
+    function booly(bool b) public pure returns (bool) {
         return b;
     }
 
-    function listOInts(uint[] memory u) public pure returns(uint[] memory) {
+    function listOInts(uint256[] memory u)
+        public
+        pure
+        returns (uint256[] memory)
+    {
         return u;
     }
 

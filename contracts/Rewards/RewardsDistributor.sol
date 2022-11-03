@@ -24,7 +24,8 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
     /// @notice The REWARD TOKEN borrow index for each market for each supplier as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256)) public rewardTokenSupplierIndex;
+    mapping(address => mapping(address => uint256))
+        public rewardTokenSupplierIndex;
 
     /// @notice The initial REWARD TOKEN index for a market
     uint224 public constant rewardTokenInitialIndex = 1e36;
@@ -64,10 +65,16 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     );
 
     /// @notice Emitted when a new supply-side REWARD TOKEN speed is calculated for a market
-    event RewardTokenSupplySpeedUpdated(VToken indexed vToken, uint256 newSpeed);
+    event RewardTokenSupplySpeedUpdated(
+        VToken indexed vToken,
+        uint256 newSpeed
+    );
 
     /// @notice Emitted when a new borrow-side REWARD TOKEN speed is calculated for a market
-    event RewardTokenBorrowSpeedUpdated(VToken indexed vToken, uint256 newSpeed);
+    event RewardTokenBorrowSpeedUpdated(
+        VToken indexed vToken,
+        uint256 newSpeed
+    );
 
     /// @notice Emitted when REWARD TOKEN is granted by admin
     event RewardTokenGranted(address recipient, uint256 amount);
@@ -79,7 +86,8 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     );
 
     /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256)) public rewardTokenBorrowerIndex;
+    mapping(address => mapping(address => uint256))
+        public rewardTokenBorrowerIndex;
 
     Comptroller private comptroller;
 
@@ -88,7 +96,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20 _rewardToken) public initializer {
+    function initialize(Comptroller _comptroller, IERC20 _rewardToken)
+        public
+        initializer
+    {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
         __Ownable_init();
@@ -143,7 +154,11 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         );
 
         for (uint256 i = 0; i < numTokens; ++i) {
-            setRewardTokenSpeedInternal(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
+            setRewardTokenSpeedInternal(
+                vTokens[i],
+                supplySpeeds[i],
+                borrowSpeeds[i]
+            );
         }
     }
 
@@ -152,10 +167,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
-    function _setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed)
-        public
-        onlyOwner
-    {
+    function _setContributorRewardTokenSpeed(
+        address contributor,
+        uint256 rewardTokenSpeed
+    ) public onlyOwner {
         // note that REWARD TOKEN speed could be set to 0 to halt liquidity rewards for a contributor
         updateContributorRewards(contributor);
         if (rewardTokenSpeed == 0) {
@@ -232,11 +247,16 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
-    function distributeSupplierRewardToken(address vToken, address supplier) public onlyComptroller {
+    function distributeSupplierRewardToken(address vToken, address supplier)
+        public
+        onlyComptroller
+    {
         _distributeSupplierRewardToken(vToken, supplier);
     }
 
-    function _distributeSupplierRewardToken(address vToken, address supplier) internal {
+    function _distributeSupplierRewardToken(address vToken, address supplier)
+        internal
+    {
         // TODO: Don't distribute supplier REWARD TOKEN if the user is not in the supplier market.
         // This check should be as gas efficient as possible as distributeSupplierRewardToken is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
@@ -265,7 +285,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         // Calculate REWARD TOKEN accrued: vTokenAmount * accruedPerVToken
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
 
-        uint256 supplierAccrued = add_(rewardTokenAccured[supplier], supplierDelta);
+        uint256 supplierAccrued = add_(
+            rewardTokenAccured[supplier],
+            supplierDelta
+        );
         rewardTokenAccured[supplier] = supplierAccrued;
 
         emit DistributedSupplierRewardToken(
@@ -326,7 +349,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         // Calculate REWARD TOKEN accrued: vTokenAmount * accruedPerBorrowedUnit
         uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
 
-        uint256 borrowerAccrued = add_(rewardTokenAccured[borrower], borrowerDelta);
+        uint256 borrowerAccrued = add_(
+            rewardTokenAccured[borrower],
+            borrowerDelta
+        );
         rewardTokenAccured[borrower] = borrowerAccrued;
 
         emit DistributedBorrowerRewardToken(
@@ -356,7 +382,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         return amount;
     }
 
-    function updateRewardTokenSupplyIndex(address vToken) external onlyComptroller {
+    function updateRewardTokenSupplyIndex(address vToken)
+        external
+        onlyComptroller
+    {
         _updateRewardTokenSupplyIndex(vToken);
     }
 
@@ -392,7 +421,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
-    function updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) external onlyComptroller {
+    function updateRewardTokenBorrowIndex(
+        address vToken,
+        Exp memory marketBorrowIndex
+    ) external onlyComptroller {
         _updateRewardTokenBorrowIndex(vToken, marketBorrowIndex);
     }
 
@@ -401,9 +433,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param vToken The market whose borrow index to update
      * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
      */
-    function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex)
-        internal
-    {
+    function _updateRewardTokenBorrowIndex(
+        address vToken,
+        Exp memory marketBorrowIndex
+    ) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
         uint32 blockNumber = safe32(
@@ -441,7 +474,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param recipient The address of the recipient to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      */
-    function _grantRewardToken(address recipient, uint256 amount) external onlyOwner {
+    function _grantRewardToken(address recipient, uint256 amount)
+        external
+        onlyOwner
+    {
         uint256 amountLeft = grantRewardTokenInternal(recipient, amount);
         require(amountLeft == 0, "insufficient rewardToken for grant");
         emit RewardTokenGranted(recipient, amount);
@@ -516,7 +552,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     }
 
     modifier onlyComptroller() {
-        require(address(comptroller) == msg.sender, "Only comptroller can call this function");
+        require(
+            address(comptroller) == msg.sender,
+            "Only comptroller can call this function"
+        );
         _;
     }
 }

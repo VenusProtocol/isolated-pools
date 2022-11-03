@@ -4,18 +4,23 @@ pragma solidity ^0.8.10;
 import "../../contracts/PriceOracle.sol";
 
 contract FixedPriceOracle is PriceOracle {
-    uint public price;
+    uint256 public price;
 
-    constructor(uint _price) {
+    constructor(uint256 _price) {
         price = _price;
     }
 
-    function getUnderlyingPrice(VToken vToken) override public view returns (uint) {
+    function getUnderlyingPrice(VToken vToken)
+        public
+        view
+        override
+        returns (uint256)
+    {
         vToken;
         return price;
     }
 
-    function assetPrices(address asset) public view returns (uint) {
+    function assetPrices(address asset) public view returns (uint256) {
         asset;
         return price;
     }
