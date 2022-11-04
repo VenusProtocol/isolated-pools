@@ -115,5 +115,5 @@ contract ComptrollerV1Storage is UnitrollerAdminStorage {
     }
 
     /// @notice True if a certain action is paused on a certain market
-    mapping (address => mapping(Action => bool)) internal _actionPaused;
+    mapping(address => mapping(Action => bool)) internal _actionPaused;
 }

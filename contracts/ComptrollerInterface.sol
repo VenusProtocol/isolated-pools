@@ -10,82 +10,157 @@ abstract contract ComptrollerInterface {
 
     /*** Assets You Are In ***/
 
-    function enterMarkets(address[] calldata vTokens) virtual external returns (uint[] memory);
-    function exitMarket(address vToken) virtual external returns (uint);
+    function enterMarkets(address[] calldata vTokens)
+        external
+        virtual
+        returns (uint256[] memory);
+
+    function exitMarket(address vToken) external virtual returns (uint256);
 
     /*** Policy Hooks ***/
 
-    function mintAllowed(address vToken, address minter, uint mintAmount) virtual external returns (uint);
-    function mintVerify(address vToken, address minter, uint mintAmount, uint mintTokens) virtual external;
+    function mintAllowed(
+        address vToken,
+        address minter,
+        uint256 mintAmount
+    ) external virtual returns (uint256);
 
-    function redeemAllowed(address vToken, address redeemer, uint redeemTokens) virtual external returns (uint);
-    function redeemVerify(address vToken, address redeemer, uint redeemAmount, uint redeemTokens) virtual external;
+    function mintVerify(
+        address vToken,
+        address minter,
+        uint256 mintAmount,
+        uint256 mintTokens
+    ) external virtual;
 
-    function borrowAllowed(address vToken, address borrower, uint borrowAmount) virtual external returns (uint);
-    function borrowVerify(address vToken, address borrower, uint borrowAmount) virtual external;
+    function redeemAllowed(
+        address vToken,
+        address redeemer,
+        uint256 redeemTokens
+    ) external virtual returns (uint256);
+
+    function redeemVerify(
+        address vToken,
+        address redeemer,
+        uint256 redeemAmount,
+        uint256 redeemTokens
+    ) external virtual;
+
+    function borrowAllowed(
+        address vToken,
+        address borrower,
+        uint256 borrowAmount
+    ) external virtual returns (uint256);
+
+    function borrowVerify(
+        address vToken,
+        address borrower,
+        uint256 borrowAmount
+    ) external virtual;
 
     function repayBorrowAllowed(
         address vToken,
         address payer,
         address borrower,
-        uint repayAmount) virtual external returns (uint);
+        uint256 repayAmount
+    ) external virtual returns (uint256);
+
     function repayBorrowVerify(
         address vToken,
         address payer,
         address borrower,
-        uint repayAmount,
-        uint borrowerIndex) virtual external;
+        uint256 repayAmount,
+        uint256 borrowerIndex
+    ) external virtual;
 
     function liquidateBorrowAllowed(
         address vTokenBorrowed,
         address vTokenCollateral,
         address liquidator,
         address borrower,
-        uint repayAmount,
-        bool skipLiquidityCheck) virtual external returns (uint);
+        uint256 repayAmount,
+        bool skipLiquidityCheck
+    ) external virtual returns (uint256);
+
     function liquidateBorrowVerify(
         address vTokenBorrowed,
         address vTokenCollateral,
         address liquidator,
         address borrower,
-        uint repayAmount,
-        uint seizeTokens) virtual external;
+        uint256 repayAmount,
+        uint256 seizeTokens
+    ) external virtual;
 
     function seizeAllowed(
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
         address borrower,
-        uint seizeTokens) virtual external returns (uint);
+        uint256 seizeTokens
+    ) external virtual returns (uint256);
+
     function seizeVerify(
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
         address borrower,
-        uint seizeTokens) virtual external;
+        uint256 seizeTokens
+    ) external virtual;
 
-    function transferAllowed(address vToken, address src, address dst, uint transferTokens) virtual external returns (uint);
-    function transferVerify(address vToken, address src, address dst, uint transferTokens) virtual external;
+    function transferAllowed(
+        address vToken,
+        address src,
+        address dst,
+        uint256 transferTokens
+    ) external virtual returns (uint256);
+
+    function transferVerify(
+        address vToken,
+        address src,
+        address dst,
+        uint256 transferTokens
+    ) external virtual;
 
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(
         address vTokenBorrowed,
         address vTokenCollateral,
-        uint repayAmount) virtual external view returns (uint, uint);
+        uint256 repayAmount
+    ) external view virtual returns (uint256, uint256);
 
-    function getAllMarkets() virtual external view returns (VToken[] memory); 
+    function getAllMarkets() external view virtual returns (VToken[] memory);
 }
 
 abstract contract ComptrollerViewInterface {
-    function markets(address) virtual external view returns (bool, uint);
-    function oracle() virtual external view returns (PriceOracle);
-    function getAssetsIn(address) virtual external view returns (VToken[] memory);
-    function compSpeeds(address) virtual external view returns (uint);
-    function pauseGuardian() virtual external view returns (address);
-    function priceOracle() virtual external view returns (address);
-    function closeFactorMantissa() virtual external view returns (uint256);
-    function maxAssets() virtual external view returns (uint256);
-    function liquidationIncentiveMantissa() virtual external view returns (uint256);
-    function minLiquidatableCollateral() virtual external view returns (uint256);
+    function markets(address) external view virtual returns (bool, uint256);
+
+    function oracle() external view virtual returns (PriceOracle);
+
+    function getAssetsIn(address)
+        external
+        view
+        virtual
+        returns (VToken[] memory);
+
+    function compSpeeds(address) external view virtual returns (uint256);
+
+    function pauseGuardian() external view virtual returns (address);
+
+    function priceOracle() external view virtual returns (address);
+
+    function closeFactorMantissa() external view virtual returns (uint256);
+
+    function maxAssets() external view virtual returns (uint256);
+
+    function liquidationIncentiveMantissa()
+        external
+        view
+        virtual
+        returns (uint256);
+
+    function minLiquidatableCollateral()
+        external
+        view
+        virtual
+        returns (uint256);
 }

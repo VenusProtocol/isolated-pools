@@ -27,17 +27,17 @@ contract PoolRegistry is OwnableUpgradeable {
     VBep20ImmutableProxyFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
-    Shortfall private shortfall;    
+    Shortfall private shortfall;
     address payable private riskFund;
     address payable private protocolShareReserve;
 
     /**
-      * @dev Initializes the deployer to owner.
-      * @param _vTokenFactory vToken factory address.
-      * @param _jumpRateFactory jump rate factory address.
-      * @param _whitePaperFactory white paper factory address.
-      * @param riskFund_ risk fund address.
-      * @param protocolShareReserve_ protocol's shares reserve address.
+     * @dev Initializes the deployer to owner.
+     * @param _vTokenFactory vToken factory address.
+     * @param _jumpRateFactory jump rate factory address.
+     * @param _whitePaperFactory white paper factory address.
+     * @param riskFund_ risk fund address.
+     * @param protocolShareReserve_ protocol's shares reserve address.
      */
     function initialize(
         VBep20ImmutableProxyFactory _vTokenFactory,
@@ -67,7 +67,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
-    
+
     /**
      * @dev Enum for risk rating of Venus interest rate pool.
      */
@@ -78,7 +78,7 @@ contract PoolRegistry is OwnableUpgradeable {
         LOW_RISK,
         MINIMAL_RISK
     }
-    
+
     /**
      * @dev Struct for a Venus interest rate pool metadata.
      */
@@ -106,8 +106,8 @@ contract PoolRegistry is OwnableUpgradeable {
     uint256 private _numberOfPools;
 
     /**
-    * @dev Maps comptroller address to Venus pool Index.
-    */
+     * @dev Maps comptroller address to Venus pool Index.
+     */
     mapping(address => VenusPool) private _poolByComptroller;
 
     /**
@@ -161,7 +161,11 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Emitted when a pool metadata is updated.
      */
-    event PoolMetadataUpdated(address indexed comptroller, VenusPoolMetaData oldMetadata, VenusPoolMetaData newMetadata);
+    event PoolMetadataUpdated(
+        address indexed comptroller,
+        VenusPoolMetaData oldMetadata,
+        VenusPoolMetaData newMetadata
+    );
 
     /**
      * @dev Emitted when a Market is added to the pool.
@@ -179,15 +183,16 @@ contract PoolRegistry is OwnableUpgradeable {
         returns (uint256)
     {
         VenusPool memory venusPool = _poolByComptroller[comptroller];
-        
-        require(venusPool.creator == address(0),
+
+        require(
+            venusPool.creator == address(0),
             "RegistryPool: Pool already exists in the directory."
         );
-        
+
         require(bytes(name).length <= 100, "No pool name supplied.");
 
         _numberOfPools++;
-        
+
         VenusPool memory pool = VenusPool(
             name,
             msg.sender,
@@ -251,13 +256,14 @@ contract PoolRegistry is OwnableUpgradeable {
             "RegistryPool: Failed to set liquidation incentive of Pool."
         );
 
-        comptrollerProxy._setMinLiquidatableCollateral(minLiquidatableCollateral);
+        comptrollerProxy._setMinLiquidatableCollateral(
+            minLiquidatableCollateral
+        );
 
         require(
             comptrollerProxy._setPriceOracle(PriceOracle(priceOracle)) == 0,
             "RegistryPool: Failed to set price oracle of Pool."
         );
-
 
         // Make msg.sender the admin
         require(
@@ -315,9 +321,9 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-    * @param comptroller comptroller of Venus pool.
-    * @notice Returns Metadata of Venus pool.
-    */
+     * @param comptroller comptroller of Venus pool.
+     * @notice Returns Metadata of Venus pool.
+     */
     function getVenusPoolMetadata(address comptroller)
         external
         view
@@ -340,9 +346,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Add a market to an existing pool
      */
-    function addMarket(
-        AddMarketInput memory input
-    ) external {
+    function addMarket(AddMarketInput memory input) external {
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(
@@ -363,33 +367,38 @@ contract PoolRegistry is OwnableUpgradeable {
             );
         }
 
-        Comptroller comptroller = Comptroller(
-            input.comptroller
-        );
+        Comptroller comptroller = Comptroller(input.comptroller);
 
-        VBep20ImmutableProxyFactory.VBep20Args memory initializeArgs = VBep20ImmutableProxyFactory.VBep20Args(
-            input.asset,
-            comptroller,
-            rate,
-            10**input.decimals,
-            input.name,
-            input.symbol,
-            input.decimals,
-            payable(msg.sender),
-            input.accessControlManager,
-            VBep20Interface.RiskManagementInit(
-                address(shortfall),
-                riskFund,
-                protocolShareReserve
-            ),
-            input.vTokenProxyAdmin,
-            input.tokenImplementation_
-        );
+        VBep20ImmutableProxyFactory.VBep20Args
+            memory initializeArgs = VBep20ImmutableProxyFactory.VBep20Args(
+                input.asset,
+                comptroller,
+                rate,
+                10**input.decimals,
+                input.name,
+                input.symbol,
+                input.decimals,
+                payable(msg.sender),
+                input.accessControlManager,
+                VBep20Interface.RiskManagementInit(
+                    address(shortfall),
+                    riskFund,
+                    protocolShareReserve
+                ),
+                input.vTokenProxyAdmin,
+                input.tokenImplementation_
+            );
 
-        VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(initializeArgs);
+        VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(
+            initializeArgs
+        );
 
         comptroller._supportMarket(vToken);
-        comptroller._setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
+        comptroller._setCollateralFactor(
+            vToken,
+            input.collateralFactor,
+            input.liquidationThreshold
+        );
 
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);
@@ -416,7 +425,10 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Update metadata of an existing pool
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external onlyOwner {
+    function updatePoolMetadata(
+        address comptroller,
+        VenusPoolMetaData memory _metadata
+    ) external onlyOwner {
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
         metadata[comptroller] = _metadata;
         emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);

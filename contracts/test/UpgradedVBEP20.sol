@@ -57,7 +57,7 @@ contract UpgradedVBEP20 is VBep20, Initializable {
         admin = admin_;
     }
 
-    function getTokenUnderlying() public view returns(address) {
+    function getTokenUnderlying() public view returns (address) {
         return underlying;
     }
 }

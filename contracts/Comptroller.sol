@@ -10,7 +10,6 @@ import "./Unitroller.sol";
 import "./Rewards/RewardsDistributor.sol";
 import "./Governance/AccessControlManager.sol";
 
-
 /**
  * @title Compound's Comptroller Contract
  * @author Compound
@@ -21,7 +20,6 @@ contract Comptroller is
     ComptrollerErrorReporter,
     ExponentialNoError
 {
-
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
 
@@ -93,7 +91,7 @@ contract Comptroller is
     // PoolRegistry
     address immutable poolRegistry;
 
-	// AccessControlManager
+    // AccessControlManager
     address immutable accessControl;
 
     // List of Reward Distributors added
@@ -105,7 +103,7 @@ contract Comptroller is
     constructor(address _poolRegistry, address _accessControl) {
         admin = msg.sender;
         poolRegistry = _poolRegistry;
-		accessControl = _accessControl;
+        accessControl = _accessControl;
     }
 
     /// @notice Reverts if a certain action is paused on a market
@@ -398,8 +396,8 @@ contract Comptroller is
         }
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
-        AccountLiquiditySnapshot memory snapshot =
-            getHypotheticalLiquiditySnapshot(
+        AccountLiquiditySnapshot
+            memory snapshot = getHypotheticalLiquiditySnapshot(
                 redeemer,
                 VToken(vToken),
                 redeemTokens,
@@ -482,8 +480,8 @@ contract Comptroller is
             require(nextTotalBorrows < borrowCap, "market borrow cap reached");
         }
 
-        AccountLiquiditySnapshot memory snapshot =
-            getHypotheticalLiquiditySnapshot(
+        AccountLiquiditySnapshot
+            memory snapshot = getHypotheticalLiquiditySnapshot(
                 borrower,
                 VToken(vToken),
                 0,
@@ -551,7 +549,7 @@ contract Comptroller is
         uint256 repayAmount
     ) external override returns (uint256) {
         checkActionPauseState(vToken, Action.REPAY);
-        
+
         oracle.updatePrice(vToken);
 
         // Shh - currently unused
@@ -658,11 +656,17 @@ contract Comptroller is
         }
 
         /* The borrower must have shortfall and collateral > threshold in order to be liquidatable */
-        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(borrower, getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(
+            borrower,
+            getLiquidationThreshold
+        );
 
         if (snapshot.totalCollateral <= minLiquidatableCollateral) {
             /* The liquidator should use either liquidateAccount or healAccount */
-            revert MinimalCollateralViolated(minLiquidatableCollateral, snapshot.totalCollateral);
+            revert MinimalCollateralViolated(
+                minLiquidatableCollateral,
+                snapshot.totalCollateral
+            );
         }
 
         if (snapshot.shortfall == 0) {
@@ -739,7 +743,9 @@ contract Comptroller is
         if (seizerContract == address(this)) {
             // If Comptroller is the seizer, just check if collateral's comptroller
             // is equal to the current address
-            if (address(VToken(vTokenCollateral).comptroller()) != address(this)) {
+            if (
+                address(VToken(vTokenCollateral).comptroller()) != address(this)
+            ) {
                 return uint256(Error.COMPTROLLER_MISMATCH);
             }
         } else {
@@ -862,7 +868,6 @@ contract Comptroller is
         }
     }
 
-
     /*** Pool-level operations ***/
 
     /**
@@ -882,31 +887,44 @@ contract Comptroller is
             oracle.updatePrice(address(userAssets[i]));
         }
 
-        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(user, getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(
+            user,
+            getLiquidationThreshold
+        );
 
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
-            revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
+            revert CollateralExceedsThreshold(
+                minLiquidatableCollateral,
+                snapshot.totalCollateral
+            );
         }
         // percentage = collateral / (borrows * liquidation incentive)
-        Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
+        Exp memory collateral = Exp({mantissa: snapshot.totalCollateral});
         Exp memory scaledBorrows = mul_(
-            Exp({ mantissa: snapshot.borrows }),
-            Exp({ mantissa: liquidationIncentiveMantissa })
+            Exp({mantissa: snapshot.borrows}),
+            Exp({mantissa: liquidationIncentiveMantissa})
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanExp(Exp({ mantissa: mantissaOne }), percentage)) {
-            revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
+        if (lessThanExp(Exp({mantissa: mantissaOne}), percentage)) {
+            revert CollateralExceedsThreshold(
+                scaledBorrows.mantissa,
+                collateral.mantissa
+            );
         }
         for (uint256 i = 0; i < userAssets.length; ++i) {
             VToken market = userAssets[i];
 
-            (uint256 oErr, uint256 tokens, uint256 borrowBalance, ) = market.getAccountSnapshot(user);
+            (uint256 oErr, uint256 tokens, uint256 borrowBalance, ) = market
+                .getAccountSnapshot(user);
             if (oErr != 0) {
                 revert SnapshotError();
             }
 
-            uint256 repaymentAmount = mul_ScalarTruncate(percentage, borrowBalance);
+            uint256 repaymentAmount = mul_ScalarTruncate(
+                percentage,
+                borrowBalance
+            );
 
             // Seize the entire collateral
             if (tokens != 0) {
@@ -942,14 +960,23 @@ contract Comptroller is
      * @param borrower the borrower address
      * @param orders an array of liquidation orders
      */
-    function liquidateAccount(address borrower, LiquidationOrder[] calldata orders) external {
+    function liquidateAccount(
+        address borrower,
+        LiquidationOrder[] calldata orders
+    ) external {
         // We will accrue interest and update the oracle prices later during the liquidation
 
-        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(borrower, getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(
+            borrower,
+            getLiquidationThreshold
+        );
 
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             // You should use the regular vToken.liquidateBorrow(...) call
-            revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
+            revert CollateralExceedsThreshold(
+                minLiquidatableCollateral,
+                snapshot.totalCollateral
+            );
         }
 
         uint256 collateralToSeize = mul_ScalarTruncate(
@@ -959,24 +986,35 @@ contract Comptroller is
         if (collateralToSeize >= snapshot.totalCollateral) {
             // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
             // and record bad debt.
-            revert InsufficientCollateral(collateralToSeize, snapshot.totalCollateral);
+            revert InsufficientCollateral(
+                collateralToSeize,
+                snapshot.totalCollateral
+            );
         }
 
-        for (uint i = 0; i < orders.length; ++i) {
+        for (uint256 i = 0; i < orders.length; ++i) {
             LiquidationOrder calldata order = orders[i];
             order.vTokenCollateral.forceLiquidateBorrow(
-                msg.sender, borrower, order.repayAmount, order.vTokenCollateral, true
+                msg.sender,
+                borrower,
+                order.repayAmount,
+                order.vTokenCollateral,
+                true
             );
         }
 
         VToken[] memory markets = accountAssets[borrower];
-        for (uint i = 0; i < markets.length; ++i) {
+        for (uint256 i = 0; i < markets.length; ++i) {
             // Read the balances and exchange rate from the vToken
-            (uint oErr, , uint borrowBalance, ) = markets[i].getAccountSnapshot(borrower);
+            (uint256 oErr, , uint256 borrowBalance, ) = markets[i]
+                .getAccountSnapshot(borrower);
             if (oErr != 0) {
                 revert SnapshotError();
             }
-            require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
+            require(
+                borrowBalance == 0,
+                "Nonzero borrow balance after liquidation"
+            );
         }
     }
 
@@ -998,8 +1036,15 @@ contract Comptroller is
             uint256
         )
     {
-        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(account, getCollateralFactor);
-        return (uint256(Error.NO_ERROR), snapshot.liquidity, snapshot.shortfall);
+        AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(
+            account,
+            getCollateralFactor
+        );
+        return (
+            uint256(Error.NO_ERROR),
+            snapshot.liquidity,
+            snapshot.shortfall
+        );
     }
 
     /**
@@ -1027,15 +1072,19 @@ contract Comptroller is
             uint256
         )
     {
-        AccountLiquiditySnapshot memory snapshot =
-            getHypotheticalLiquiditySnapshot(
+        AccountLiquiditySnapshot
+            memory snapshot = getHypotheticalLiquiditySnapshot(
                 account,
                 VToken(vTokenModify),
                 redeemTokens,
                 borrowAmount,
                 getCollateralFactor
             );
-        return (uint256(Error.NO_ERROR), snapshot.liquidity, snapshot.shortfall);
+        return (
+            uint256(Error.NO_ERROR),
+            snapshot.liquidity,
+            snapshot.shortfall
+        );
     }
 
     /**
@@ -1049,15 +1098,16 @@ contract Comptroller is
      */
     function getCurrentLiquiditySnapshot(
         address account,
-        function (VToken) internal view returns (Exp memory) weight
-    )
-        internal
-        view
-        returns (AccountLiquiditySnapshot memory snapshot)
-    {
-        return getHypotheticalLiquiditySnapshot(
-            account, VToken(address(0)), 0, 0, weight
-        );
+        function(VToken) internal view returns (Exp memory) weight
+    ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
+        return
+            getHypotheticalLiquiditySnapshot(
+                account,
+                VToken(address(0)),
+                0,
+                0,
+                weight
+            );
     }
 
     /**
@@ -1077,12 +1127,8 @@ contract Comptroller is
         VToken vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount,
-        function (VToken) internal view returns (Exp memory) weight
-    )
-        internal
-        view
-        returns (AccountLiquiditySnapshot memory snapshot)
-    {
+        function(VToken) internal view returns (Exp memory) weight
+    ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         // For each asset the account is in
         VToken[] memory assets = accountAssets[account];
         for (uint256 i = 0; i < assets.length; ++i) {
@@ -1100,17 +1146,16 @@ contract Comptroller is
             }
 
             // Get the normalized price of the asset
-            Exp memory oraclePrice = Exp({mantissa: safeGetUnderlyingPrice(asset)});
+            Exp memory oraclePrice = Exp({
+                mantissa: safeGetUnderlyingPrice(asset)
+            });
 
             // Pre-compute conversion factors from vTokens -> usd
             Exp memory vTokenPrice = mul_(
                 Exp({mantissa: exchangeRateMantissa}),
                 oraclePrice
             );
-            Exp memory weightedVTokenPrice = mul_(
-                weight(asset),
-                vTokenPrice
-            );
+            Exp memory weightedVTokenPrice = mul_(weight(asset), vTokenPrice);
 
             // weightedCollateral += weightedVTokenPrice * vTokenBalance
             snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
@@ -1157,18 +1202,26 @@ contract Comptroller is
         // These are safe, as the underflow condition is checked first
         unchecked {
             if (snapshot.weightedCollateral > borrowPlusEffects) {
-                snapshot.liquidity = snapshot.weightedCollateral - borrowPlusEffects;
+                snapshot.liquidity =
+                    snapshot.weightedCollateral -
+                    borrowPlusEffects;
                 snapshot.shortfall = 0;
             } else {
                 snapshot.liquidity = 0;
-                snapshot.shortfall = borrowPlusEffects - snapshot.weightedCollateral;
+                snapshot.shortfall =
+                    borrowPlusEffects -
+                    snapshot.weightedCollateral;
             }
         }
 
         return snapshot;
     }
 
-    function safeGetUnderlyingPrice(VToken asset) internal view returns (uint256) {
+    function safeGetUnderlyingPrice(VToken asset)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(asset);
         if (oraclePriceMantissa == 0) {
             revert PriceError();
@@ -1176,16 +1229,24 @@ contract Comptroller is
         return oraclePriceMantissa;
     }
 
-    function getCollateralFactor(VToken asset) internal view returns (Exp memory) {
-        return Exp({
-            mantissa: markets[address(asset)].collateralFactorMantissa
-        });
+    function getCollateralFactor(VToken asset)
+        internal
+        view
+        returns (Exp memory)
+    {
+        return
+            Exp({mantissa: markets[address(asset)].collateralFactorMantissa});
     }
 
-    function getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
-        return Exp({
-            mantissa: markets[address(asset)].liquidationThresholdMantissa
-        });
+    function getLiquidationThreshold(VToken asset)
+        internal
+        view
+        returns (Exp memory)
+    {
+        return
+            Exp({
+                mantissa: markets[address(asset)].liquidationThresholdMantissa
+            });
     }
 
     /**
@@ -1346,9 +1407,13 @@ contract Comptroller is
             );
         }
 
-        uint256 oldLiquidationThresholdMantissa = market.liquidationThresholdMantissa;
-        if (newLiquidationThresholdMantissa != oldLiquidationThresholdMantissa) {
-            market.liquidationThresholdMantissa = newLiquidationThresholdMantissa;
+        uint256 oldLiquidationThresholdMantissa = market
+            .liquidationThresholdMantissa;
+        if (
+            newLiquidationThresholdMantissa != oldLiquidationThresholdMantissa
+        ) {
+            market
+                .liquidationThresholdMantissa = newLiquidationThresholdMantissa;
             emit NewLiquidationThreshold(
                 vToken,
                 oldLiquidationThresholdMantissa,
@@ -1402,7 +1467,10 @@ contract Comptroller is
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function _supportMarket(VToken vToken) external returns (uint256) {
-        require(msg.sender == poolRegistry, "only poolRegistry can call _supportMarket");
+        require(
+            msg.sender == poolRegistry,
+            "only poolRegistry can call _supportMarket"
+        );
 
         if (markets[address(vToken)].isListed) {
             return
@@ -1452,7 +1520,8 @@ contract Comptroller is
             AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
                 "_setMarketBorrowCaps(VToken[],uint256[])"
-            ), "only whitelisted accounts can set borrow caps"
+            ),
+            "only whitelisted accounts can set borrow caps"
         );
 
         uint256 numMarkets = vTokens.length;
@@ -1483,7 +1552,8 @@ contract Comptroller is
             AccessControlManager(accessControl).isAllowedToCall(
                 msg.sender,
                 "_setMarketSupplyCaps(VToken[],uint256[])"
-            ), "only whitelisted accounts can set supply caps"
+            ),
+            "only whitelisted accounts can set supply caps"
         );
         require(vTokens.length != 0, "invalid number of markets");
         require(
@@ -1507,16 +1577,29 @@ contract Comptroller is
         VToken[] calldata marketsList,
         Action[] calldata actionsList,
         bool paused
-    )
-        external
-    {
+    ) external {
         bool canCallFunction = AccessControlManager(accessControl)
-            .isAllowedToCall(msg.sender, "_setActionsPaused(VToken[],Action[],bool)");
+            .isAllowedToCall(
+                msg.sender,
+                "_setActionsPaused(VToken[],Action[],bool)"
+            );
         require(canCallFunction, "only authorised addresses can pause");
 
-        for (uint marketIdx = 0; marketIdx < marketsList.length; ++marketIdx) {
-            for (uint actionIdx = 0; actionIdx < actionsList.length; ++actionIdx) {
-                setActionPausedInternal(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
+        for (
+            uint256 marketIdx = 0;
+            marketIdx < marketsList.length;
+            ++marketIdx
+        ) {
+            for (
+                uint256 actionIdx = 0;
+                actionIdx < actionsList.length;
+                ++actionIdx
+            ) {
+                setActionPausedInternal(
+                    address(marketsList[marketIdx]),
+                    actionsList[actionIdx],
+                    paused
+                );
             }
         }
     }
@@ -1527,7 +1610,11 @@ contract Comptroller is
      * @param action Action id to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
      */
-    function setActionPausedInternal(address market, Action action, bool paused) internal {
+    function setActionPausedInternal(
+        address market,
+        Action action,
+        bool paused
+    ) internal {
         require(
             markets[market].isListed,
             "cannot pause a market that is not listed"
@@ -1561,9 +1648,9 @@ contract Comptroller is
      * @dev this funciton access is managed by AccessControlManager
      * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
      */
-    function _setMinLiquidatableCollateral(
-        uint256 newMinLiquidatableCollateral
-    ) external {
+    function _setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral)
+        external
+    {
         bool canCallFunction = AccessControlManager(accessControl)
             .isAllowedToCall(
                 msg.sender,
@@ -1612,7 +1699,7 @@ contract Comptroller is
      * @dev The automatic getter may be used to access an individual market.
      * @return The list of market addresses
      */
-    function getAllMarkets() override public view returns (VToken[] memory) {
+    function getAllMarkets() public view override returns (VToken[] memory) {
         return allMarkets;
     }
 
@@ -1626,7 +1713,11 @@ contract Comptroller is
      * @param action Action to check
      * @return true if the action is paused
      */
-    function actionPaused(address market, Action action) public view returns (bool) {
+    function actionPaused(address market, Action action)
+        public
+        view
+        returns (bool)
+    {
         return _actionPaused[market][action];
     }
 
