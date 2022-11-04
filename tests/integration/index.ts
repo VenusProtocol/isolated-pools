@@ -2,17 +2,14 @@ import {
   PoolRegistry,
   AccessControlManager,
   RiskFund,
-  VBep20ImmutableProxyFactory,
+  VTokenProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   ProtocolShareReserve,
-  PriceOracle,
   MockPriceOracle,
   Comptroller,
   VToken,
   MockToken,
-  VBep20,
-  VBep20Immutable,
 } from "../../typechain";
 import chai from "chai";
 import { smock } from "@defi-wonderland/smock";
@@ -35,8 +32,8 @@ const setupTest = deployments.createFixture(
       "AccessControlManager"
     );
     const RiskFund = await ethers.getContract("RiskFund");
-    const VBep20ImmutableFactory = await ethers.getContract(
-      "VBep20ImmutableProxyFactory"
+    const VTokenFactory = await ethers.getContract(
+      "VTokenProxyFactory"
     );
     const JumpRateModelFactory = await ethers.getContract(
       "JumpRateModelFactory"
@@ -65,8 +62,8 @@ const setupTest = deployments.createFixture(
     const vWBTCAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, wBTC.address);
     const vDAIAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, DAI.address);
 
-    const vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
-    const vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
+    const vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
+    const vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
 
     //Enter Markets
@@ -92,7 +89,7 @@ const setupTest = deployments.createFixture(
         PoolRegistry,
         AccessControlManager,
         RiskFund,
-        VBep20ImmutableFactory,
+        VTokenFactory,
         JumpRateModelFactory,
         WhitePaperRateFactory,
         ProtocolShareReserve,
@@ -115,14 +112,14 @@ describe("Positive Cases", () => {
   let PoolRegistry: PoolRegistry;
   let AccessControlManager: AccessControlManager;
   let RiskFund: RiskFund;
-  let VBep20ImmutableFactory: VBep20ImmutableProxyFactory;
+  let VTokenFactory: VTokenProxyFactory;
   let JumpRateModelFactory: JumpRateModelFactory;
   let WhitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let ProtocolShareReserve: ProtocolShareReserve;
   let PriceOracle: MockPriceOracle;
   let Comptroller: Comptroller;
-  let vWBTC: VBep20Immutable;
-  let vDAI: VBep20Immutable;
+  let vWBTC: VToken;
+  let vDAI: VToken;
   let wBTC: MockToken;
   let DAI: MockToken;
   let deployer: string;
@@ -135,7 +132,7 @@ describe("Positive Cases", () => {
       PoolRegistry,
       AccessControlManager,
       RiskFund,
-      VBep20ImmutableFactory,
+      VTokenFactory,
       JumpRateModelFactory,
       WhitePaperRateFactory,
       ProtocolShareReserve,

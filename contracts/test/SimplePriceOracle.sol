@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "../PriceOracle.sol";
-import "../VBep20.sol";
+import "../VToken.sol";
 
 contract SimplePriceOracle is PriceOracle {
     mapping(address => uint256) prices;
@@ -22,7 +22,7 @@ contract SimplePriceOracle is PriceOracle {
         if (compareStrings(vToken.symbol(), "vBNB")) {
             asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         } else {
-            asset = address(VBep20(address(vToken)).underlying());
+            asset = address(VToken(address(vToken)).underlying());
         }
         return asset;
     }

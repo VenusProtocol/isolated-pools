@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../VBep20Immutable.sol";
+import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
-contract VBEP20Harness is VBep20Immutable {
+contract VTokenHarness is VToken {
     uint256 public blockNumber = 100000;
     uint256 public harnessExchangeRate;
     bool public harnessExchangeRateStored;
@@ -24,7 +24,7 @@ contract VBEP20Harness is VBep20Immutable {
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) {
-        initializeVToken(
+        initialize(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -222,7 +222,7 @@ contract VBEP20Harness is VBep20Immutable {
     }
 }
 
-contract VBep20Scenario is VBep20Immutable {
+contract VTokenScenario is VToken {
     constructor(
         address underlying_,
         ComptrollerInterface comptroller_,
@@ -233,9 +233,9 @@ contract VBep20Scenario is VBep20Immutable {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VBep20Interface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement
     ) {
-        initializeVToken(
+        initialize(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -265,7 +265,7 @@ contract VBep20Scenario is VBep20Immutable {
     }
 }
 
-contract CEvil is VBep20Scenario {
+contract VEvil is VTokenScenario {
     constructor(
         address underlying_,
         ComptrollerInterface comptroller_,
@@ -276,9 +276,9 @@ contract CEvil is VBep20Scenario {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VBep20Interface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement
     )
-        VBep20Scenario(
+        VTokenScenario(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -297,7 +297,7 @@ contract CEvil is VBep20Scenario {
         address liquidator,
         address borrower,
         uint256 seizeTokens
-    ) public returns (uint256) {
-        return treasure.seize(liquidator, borrower, seizeTokens);
+    ) public {
+        treasure.seize(liquidator, borrower, seizeTokens);
     }
 }

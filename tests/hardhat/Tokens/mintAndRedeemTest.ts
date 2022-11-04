@@ -8,7 +8,7 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBEP20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
+import { VTokenHarness, ERC20Harness, Comptroller, InterestRateModel } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 import {
@@ -46,7 +46,7 @@ async function preMint(
 }
 
 async function mintFresh(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   minter: Signer,
   mintAmount: BigNumberish
 ) {
@@ -54,7 +54,7 @@ async function mintFresh(
 }
 
 async function preSupply(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   account: Signer,
   tokens: BigNumberish,
   opts: { supply?: boolean } = { supply: true }
@@ -92,7 +92,7 @@ async function preRedeem(
 }
 
 async function redeemFreshTokens(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   redeemer: Signer,
   redeemTokens: BigNumberish,
   redeemAmount: BigNumberish
@@ -102,7 +102,7 @@ async function redeemFreshTokens(
 }
 
 async function redeemFreshAmount(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   redeemer: Signer,
   redeemTokens: BigNumberish,
   redeemAmount: BigNumberish
@@ -113,7 +113,7 @@ async function redeemFreshAmount(
 
 async function quickMint(
   underlying: MockContract<ERC20Harness>,
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   minter: Signer,
   mintAmount: BigNumberish,
   opts: { approve?: boolean, exchangeRate?: BigNumberish, faucet?: boolean } = { approve: true, faucet: true }
@@ -135,7 +135,7 @@ async function quickMint(
 }
 
 async function quickRedeem(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   redeemer: Signer,
   redeemTokens: BigNumberish,
   opts: { supply?: boolean, exchangeRate?: BigNumberish } = { supply: true }
@@ -156,7 +156,7 @@ async function quickRedeem(
 }
 
 async function quickRedeemUnderlying(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   redeemer: Signer,
   redeemAmount: BigNumberish,
   opts: { exchangeRate?: BigNumberish } = {}
@@ -182,7 +182,7 @@ describe('VToken', function () {
 
   let contracts: VTokenTestFixture;
   let comptroller: FakeContract<Comptroller>;
-  let vToken: MockContract<VBEP20Harness>;
+  let vToken: MockContract<VTokenHarness>;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
 

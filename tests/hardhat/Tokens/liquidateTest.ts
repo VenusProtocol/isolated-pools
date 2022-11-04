@@ -9,7 +9,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, VBEP20Harness, AccessControlManager, Shortfall
+  Comptroller, VTokenHarness, AccessControlManager, Shortfall
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -83,11 +83,11 @@ function configure({ comptroller, accessControlManager, collateral, borrowed }: 
 }
 
 async function liquidateFresh(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VBEP20Harness>,
+  vTokenCollateral: MockContract<VTokenHarness>,
   skipLiquidityCheck: boolean = false
 ) {
 
@@ -101,11 +101,11 @@ async function liquidateFresh(
 }
 
 async function liquidate(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VBEP20Harness>
+  vTokenCollateral: MockContract<VTokenHarness>
 ) {
   // make sure to have a block delta so we accrue interest
 
@@ -121,7 +121,7 @@ async function liquidate(
 }
 
 async function seize(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   liquidator: Signer,
   borrower: Signer,
   seizeAmount: BigNumberish

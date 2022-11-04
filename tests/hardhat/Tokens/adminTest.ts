@@ -6,12 +6,12 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBEP20Harness } from "../../../typechain";
+import { VTokenHarness } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
 
-describe('admin / _setPendingAdmin / _acceptAdmin', () => {
-  let vToken: MockContract<VBEP20Harness>;
+describe('admin / setPendingAdmin / acceptAdmin', () => {
+  let vToken: MockContract<VTokenHarness>;
   let root: Signer;
   let rootAddress: string;
   let guy: Signer;
@@ -37,10 +37,10 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
     });
   });
 
-  describe('_setPendingAdmin()', () => {
+  describe('setPendingAdmin()', () => {
     it('should only be callable by admin', async () => {
-      await expect(vToken.connect(guy)._setPendingAdmin(guyAddress))
-        .to.be.revertedWithCustomError(vToken, 'SetPendingAdminOwnerCheck');
+      await expect(vToken.connect(guy).setPendingAdmin(guyAddress))
+        .to.be.revertedWithCustomError(vToken, 'OnlyAdminAllowed');
 
       // Check admin stays the same
       expect(await vToken.admin()).to.equal(rootAddress);
@@ -49,7 +49,7 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should properly set pending admin', async () => {
       //expect(
-        await vToken._setPendingAdmin(guyAddress)
+        await vToken.setPendingAdmin(guyAddress)
       //).toSucceed();
 
       // Check admin stays the same
@@ -59,10 +59,10 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should properly set pending admin twice', async () => {
       //expect(
-        await vToken._setPendingAdmin(guyAddress)
+        await vToken.setPendingAdmin(guyAddress)
       //).toSucceed();
       //expect(
-        await vToken._setPendingAdmin(await accounts[1].getAddress())
+        await vToken.setPendingAdmin(await accounts[1].getAddress())
       //).toSucceed();
 
       // Check admin stays the same
@@ -71,16 +71,16 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
     });
 
     it('should emit event', async () => {
-      expect(await vToken._setPendingAdmin(guyAddress))
+      expect(await vToken.setPendingAdmin(guyAddress))
         .to.emit(vToken, "NewPendingAdmin")
         .withArgs(constants.AddressZero, guyAddress);
     });
   });
 
-  describe('_acceptAdmin()', () => {
+  describe('acceptAdmin()', () => {
     it('should fail when pending admin is zero', async () => {
-      await expect(vToken._acceptAdmin())
-        .to.be.revertedWithCustomError(vToken, "AcceptAdminPendingAdminCheck");
+      await expect(vToken.acceptAdmin())
+        .to.be.revertedWithCustomError(vToken, "OnlyAdminAllowed");
 
       // Check admin stays the same
       expect(await vToken.admin()).to.equal(rootAddress);
@@ -89,10 +89,10 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should fail when called by another account (e.g. root)', async () => {
       //expect(
-        await vToken._setPendingAdmin(guyAddress)
+        await vToken.setPendingAdmin(guyAddress)
       //).toSucceed();
-      await expect(vToken._acceptAdmin())
-        .to.be.revertedWithCustomError(vToken, "AcceptAdminPendingAdminCheck");
+      await expect(vToken.acceptAdmin())
+        .to.be.revertedWithCustomError(vToken, "OnlyAdminAllowed");
 
       // Check admin stays the same
       expect(await vToken.admin()).to.equal(rootAddress);
@@ -101,10 +101,10 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should succeed and set admin and clear pending admin', async () => {
       //expect(
-        await vToken._setPendingAdmin(guyAddress)
+        await vToken.setPendingAdmin(guyAddress)
       //).toSucceed();
       //expect(
-        await vToken.connect(guy)._acceptAdmin()
+        await vToken.connect(guy).acceptAdmin()
       //).toSucceed();
 
       expect(await vToken.admin()).to.equal(guyAddress);
@@ -113,9 +113,9 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should emit log on success', async () => {
       //expect(
-        await vToken._setPendingAdmin(guyAddress)
+        await vToken.setPendingAdmin(guyAddress)
       //).toSucceed();
-      const result = await vToken.connect(guy)._acceptAdmin();
+      const result = await vToken.connect(guy).acceptAdmin();
       expect(result)
         .to.emit(vToken, "NewAdmin")
         .withArgs(rootAddress, guyAddress);

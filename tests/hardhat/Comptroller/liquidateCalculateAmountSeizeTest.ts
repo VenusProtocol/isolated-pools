@@ -8,7 +8,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, Comptroller__factory, PriceOracle, VBep20Immutable, PoolRegistry, AccessControlManager
+  Comptroller, Comptroller__factory, PriceOracle, VToken, PoolRegistry, AccessControlManager
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -20,8 +20,8 @@ const repayAmount = convertToUnit(1, 18);
 
 async function calculateSeizeTokens(
   comptroller: MockContract<Comptroller>,
-  vTokenBorrowed: FakeContract<VBep20Immutable>,
-  vTokenCollateral: FakeContract<VBep20Immutable>,
+  vTokenBorrowed: FakeContract<VToken>,
+  vTokenCollateral: FakeContract<VToken>,
   repayAmount: BigNumberish
 ) {
   return comptroller.liquidateCalculateSeizeTokens(vTokenBorrowed.address, vTokenCollateral.address, repayAmount);
@@ -36,18 +36,18 @@ describe('Comptroller', () => {
   let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
   let oracle: FakeContract<PriceOracle>;
-  let vTokenBorrowed: FakeContract<VBep20Immutable>;
-  let vTokenCollateral: FakeContract<VBep20Immutable>;
+  let vTokenBorrowed: FakeContract<VToken>;
+  let vTokenCollateral: FakeContract<VToken>;
 
   type LiquidateFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>;
     oracle: FakeContract<PriceOracle>;
-    vTokenBorrowed: FakeContract<VBep20Immutable>;
-    vTokenCollateral: FakeContract<VBep20Immutable>;
+    vTokenBorrowed: FakeContract<VToken>;
+    vTokenCollateral: FakeContract<VToken>;
   };
 
-  async function setOraclePrice(vToken: FakeContract<VBep20Immutable>, price: BigNumberish) {
+  async function setOraclePrice(vToken: FakeContract<VToken>, price: BigNumberish) {
     oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(price);
   }
 
@@ -62,8 +62,8 @@ describe('Comptroller', () => {
     await comptroller._setPriceOracle(oracle.address);
     await comptroller._setLiquidationIncentive(convertToUnit("1.1", 18));
 
-    const vTokenBorrowed = await smock.fake<VBep20Immutable>("VBep20Immutable");
-    const vTokenCollateral = await smock.fake<VBep20Immutable>("VBep20Immutable");
+    const vTokenBorrowed = await smock.fake<VToken>("VToken");
+    const vTokenCollateral = await smock.fake<VToken>("VToken");
 
     return { accessControl, comptroller, oracle, vTokenBorrowed, vTokenCollateral };
   }

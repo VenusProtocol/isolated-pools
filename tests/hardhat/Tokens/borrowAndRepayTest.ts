@@ -8,7 +8,7 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBEP20Harness, ERC20Harness, Comptroller, InterestRateModel } from "../../../typechain";
+import { VTokenHarness, ERC20Harness, Comptroller, InterestRateModel } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
 import {
@@ -41,7 +41,7 @@ async function preBorrow(
 }
 
 async function borrowFresh(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   borrower: Signer,
   borrowAmount: BigNumberish
 ) {
@@ -49,7 +49,7 @@ async function borrowFresh(
 }
 
 async function borrow(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   borrower: Signer,
   borrowAmount: BigNumberish
 ) {
@@ -81,7 +81,7 @@ async function preRepay(
 }
 
 async function repayBorrowFresh(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   payer: Signer,
   borrower: Signer,
   repayAmount: BigNumberish
@@ -92,7 +92,7 @@ async function repayBorrowFresh(
 }
 
 async function repayBorrow(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   borrower: Signer,
   repayAmount: BigNumberish
 ) {
@@ -102,7 +102,7 @@ async function repayBorrow(
 }
 
 async function repayBorrowBehalf(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   payer: Signer,
   borrower: Signer,
   repayAmount: BigNumberish
@@ -115,7 +115,7 @@ async function repayBorrowBehalf(
 describe('VToken', function () {
   let contracts: VTokenTestFixture;
   let comptroller: FakeContract<Comptroller>;
-  let vToken: MockContract<VBEP20Harness>;
+  let vToken: MockContract<VTokenHarness>;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
   let root: Signer;

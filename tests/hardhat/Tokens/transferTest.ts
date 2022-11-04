@@ -1,19 +1,13 @@
 import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { Signer, BigNumberish, constants } from "ethers";
+import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBEP20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
-import { convertToUnit } from "../../../helpers/utils";
-import { Error } from "../util/Errors";
-import {
-  getBalances, adjustBalances, preApprove,
-  vTokenTestFixture, VTokenTestFixture
-} from "../util/TokenTestHelpers";
+import { VTokenHarness, Comptroller } from "../../../typechain";
+import { vTokenTestFixture } from "../util/TokenTestHelpers";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 
 describe('VToken', function () {
@@ -22,7 +16,7 @@ describe('VToken', function () {
   let rootAddress: string;
   let guyAddress: string;
   let accounts: Signer[];
-  let vToken: MockContract<VBEP20Harness>;
+  let vToken: MockContract<VTokenHarness>;
   let comptroller: FakeContract<Comptroller>;
 
   beforeEach(async () => {

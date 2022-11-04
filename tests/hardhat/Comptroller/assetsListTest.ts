@@ -7,7 +7,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, PriceOracle, Comptroller__factory, VBep20Immutable, AccessControlManager, PoolRegistry
+  Comptroller, PriceOracle, Comptroller__factory, VToken, AccessControlManager, PoolRegistry
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -19,21 +19,21 @@ describe("assetListTest", () => {
   let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
   let poolRegistry: FakeContract<PoolRegistry>;
-  let OMG: FakeContract<VBep20Immutable>;
-  let ZRX: FakeContract<VBep20Immutable>;
-  let BAT: FakeContract<VBep20Immutable>;
-  let SKT: FakeContract<VBep20Immutable>;
-  let allTokens: FakeContract<VBep20Immutable>[];
+  let OMG: FakeContract<VToken>;
+  let ZRX: FakeContract<VToken>;
+  let BAT: FakeContract<VToken>;
+  let SKT: FakeContract<VToken>;
+  let allTokens: FakeContract<VToken>[];
 
   type AssetListFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>,
     oracle: FakeContract<PriceOracle>,
-    OMG: FakeContract<VBep20Immutable>,
-    ZRX: FakeContract<VBep20Immutable>,
-    BAT: FakeContract<VBep20Immutable>,
-    SKT: FakeContract<VBep20Immutable>,
-    allTokens: FakeContract<VBep20Immutable>[],
+    OMG: FakeContract<VToken>,
+    ZRX: FakeContract<VToken>,
+    BAT: FakeContract<VToken>,
+    SKT: FakeContract<VToken>,
+    allTokens: FakeContract<VToken>[],
     names: string[]
   };
 
@@ -49,7 +49,7 @@ describe("assetListTest", () => {
     const names = ["OMG", "ZRX", "BAT", "sketch"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async (name) => {
-        const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
+        const vToken = await smock.fake<VToken>("VToken");
         if (name !== "sketch") {
           const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
           if (poolRegistryBalance.isZero()) {
@@ -87,7 +87,7 @@ describe("assetListTest", () => {
     ({ comptroller, OMG, ZRX, BAT, SKT, allTokens } = contracts);
   });
 
-  async function checkMarkets(expectedTokens: FakeContract<VBep20Immutable>[]) {
+  async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
     for (let token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
       expect(await comptroller.checkMembership(await customer.getAddress(), token.address)).to.equal(isExpected);
@@ -95,8 +95,8 @@ describe("assetListTest", () => {
   }
 
   async function enterAndCheckMarkets(
-    enterTokens: FakeContract<VBep20Immutable>[],
-    expectedTokens: FakeContract<VBep20Immutable>[],
+    enterTokens: FakeContract<VToken>[],
+    expectedTokens: FakeContract<VToken>[],
     expectedErrors: Error[] | null = null
   ) {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
@@ -118,8 +118,8 @@ describe("assetListTest", () => {
   };
 
   async function exitAndCheckMarkets(
-    exitToken: FakeContract<VBep20Immutable>,
-    expectedTokens: FakeContract<VBep20Immutable>[],
+    exitToken: FakeContract<VToken>,
+    expectedTokens: FakeContract<VToken>[],
     expectedError: Error = Error.NO_ERROR
   ) {
     const reply = await comptroller.connect(customer).callStatic.exitMarket(exitToken.address);
