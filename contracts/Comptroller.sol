@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import "./mixins/WithAdminUpgradeable.sol";
 import "./VToken.sol";
 import "./ErrorReporter.sol";
 import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
-import "./Unitroller.sol";
 import "./Rewards/RewardsDistributor.sol";
 import "./Governance/AccessControlManager.sol";
 
@@ -15,6 +17,7 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is
+    WithAdminUpgradeable,
     ComptrollerV1Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
@@ -104,6 +107,10 @@ contract Comptroller is
         admin = msg.sender;
         poolRegistry = _poolRegistry;
         accessControl = _accessControl;
+    }
+
+    function initialize() public initializer {
+        __WithAdmin_init();
     }
 
     /// @notice Reverts if a certain action is paused on a market
@@ -1628,24 +1635,6 @@ contract Comptroller is
         );
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
-    }
-
-    function _become(Unitroller unitroller) public {
-        require(
-            msg.sender == unitroller.admin(),
-            "only unitroller admin can change brains"
-        );
-        require(
-            unitroller._acceptImplementation() == 0,
-            "change not authorized"
-        );
-    }
-
-    /**
-     * @notice Checks caller is admin, or this contract is becoming the new implementation
-     */
-    function adminOrInitializing() internal view returns (bool) {
-        return msg.sender == admin || msg.sender == comptrollerImplementation;
     }
 
     /**

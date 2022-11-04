@@ -7,7 +7,6 @@ import {
   PoolRegistry,
   Comptroller,
   VBep20Immutable,
-  Unitroller,
   VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
@@ -30,7 +29,6 @@ let mockWBTC: MockToken;
 let vDAI: VBep20Immutable;
 let vWBTC: VBep20Immutable;
 let comptrollerProxy: Comptroller;
-let unitroller: Unitroller;
 let vTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
@@ -105,7 +103,7 @@ describe("Rewards: Tests", async function () {
     fakeAccessControlManager = await smock.fake<AccessControlManager>(
       "AccessControlManager"
     );
-    await fakeAccessControlManager.isAllowedToCall.returns(true);
+    fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
     comptroller = await Comptroller.deploy(
@@ -152,6 +150,7 @@ describe("Rewards: Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
+      proxyAdmin.address,
       comptroller.address,
       _closeFactor,
       _liquidationIncentive,
@@ -166,9 +165,7 @@ describe("Rewards: Tests", async function () {
       "Comptroller",
       pools[0].comptroller
     );
-    unitroller = await ethers.getContractAt("Unitroller", pools[0].comptroller);
-
-    await unitroller._acceptAdmin();
+    await comptrollerProxy.acceptAdmin();
     await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
 
     const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
@@ -224,7 +221,7 @@ describe("Rewards: Tests", async function () {
     vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
     vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
     
-    const [, user] = await ethers.getSigners();
+    const [, , user] = await ethers.getSigners();
 
     //Enter Markets
     await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
@@ -275,7 +272,7 @@ describe("Rewards: Tests", async function () {
   });
 
   it("Should have coorect market addresses", async function () {
-    const [owner, user] = await ethers.getSigners();
+    const [owner] = await ethers.getSigners();
 
     const res = await comptrollerProxy.getAssetsIn(owner.address);
     expect(res[0]).equal(vDAI.address);
@@ -286,7 +283,7 @@ describe("Rewards: Tests", async function () {
   //      was a false-positive. The correct test would need to mint or
   //      borrow some assets (or pretend to do so, using smock).
   it.skip("Claim XVS", async function () {
-    const [owner, user1, user2] = await ethers.getSigners();
+    const [owner, , user1, user2] = await ethers.getSigners();
     await rewardsDistributor["claimRewardToken(address,address[])"](
       user1.address,
       [vWBTC.address, vDAI.address]

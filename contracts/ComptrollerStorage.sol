@@ -4,29 +4,7 @@ pragma solidity ^0.8.10;
 import "./VToken.sol";
 import "./PriceOracle.sol";
 
-contract UnitrollerAdminStorage {
-    /**
-     * @notice Administrator for this contract
-     */
-    address public admin;
-
-    /**
-     * @notice Pending administrator for this contract
-     */
-    address public pendingAdmin;
-
-    /**
-     * @notice Active brains of Unitroller
-     */
-    address public comptrollerImplementation;
-
-    /**
-     * @notice Pending brains of Unitroller
-     */
-    address public pendingComptrollerImplementation;
-}
-
-contract ComptrollerV1Storage is UnitrollerAdminStorage {
+contract ComptrollerV1Storage {
     /**
      * @notice Oracle which gives the price of any given asset
      */

@@ -6,7 +6,6 @@ import {
   Comptroller,
   VBep20Immutable,
   MockPriceOracle,
-  Unitroller,
   VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
@@ -20,10 +19,10 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
+let comptroller1Proxy: Comptroller;
 let mockWBTC: MockToken;
 let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
-let unitroller1: Unitroller;
 let cTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
@@ -121,6 +120,7 @@ describe("UpgradedVBEP20: Tests", function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
+      proxyAdmin.address,
       comptroller1.address,
       _closeFactor,
       _liquidationIncentive,
@@ -130,12 +130,12 @@ describe("UpgradedVBEP20: Tests", function () {
 
     // Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
-    unitroller1 = await ethers.getContractAt(
-      "Unitroller",
+    comptroller1Proxy = await ethers.getContractAt(
+      "Comptroller",
       pools[0].comptroller
     );
 
-    await unitroller1._acceptAdmin();
+    await comptroller1Proxy.acceptAdmin();
 
     const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
     const tokenImplementation = await VBep20Immutable.deploy();

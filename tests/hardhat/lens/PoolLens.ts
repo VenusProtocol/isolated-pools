@@ -5,7 +5,6 @@ import {
   PoolRegistry,
   Comptroller,
   MockPriceOracle,
-  Unitroller,
   VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
@@ -28,9 +27,7 @@ let mockWBTC: MockToken;
 let vDAI: VBep20Immutable;
 let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
-let unitroller1: Unitroller;
 let comptroller1Proxy: Comptroller;
-let unitroller2: Unitroller;
 let comptroller2Proxy: Comptroller;
 let vTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
@@ -134,6 +131,7 @@ describe("PoolLens - PoolView Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
+      proxyAdmin.address,
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
@@ -147,6 +145,7 @@ describe("PoolLens - PoolView Tests", async function () {
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
+      proxyAdmin.address,
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
@@ -184,23 +183,13 @@ describe("PoolLens - PoolView Tests", async function () {
       "Comptroller",
       pools[0].comptroller
     );
-
-    unitroller1 = await ethers.getContractAt(
-      "Unitroller",
-      pools[0].comptroller
-    );
-
-    await unitroller1._acceptAdmin();
+    await comptroller1Proxy.acceptAdmin();
 
     comptroller2Proxy = await ethers.getContractAt(
       "Comptroller",
       pools[1].comptroller
     );
-    unitroller2 = await ethers.getContractAt(
-      "Unitroller",
-      pools[1].comptroller
-    );
-    await unitroller2._acceptAdmin();
+    await comptroller2Proxy.acceptAdmin();
 
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
@@ -477,6 +466,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
+      proxyAdmin.address,
       comptroller1.address,
       closeFactor1,
       liquidationIncentive1,
@@ -490,6 +480,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
+      proxyAdmin.address,
       comptroller2.address,
       closeFactor2,
       liquidationIncentive2,
@@ -527,23 +518,13 @@ describe("PoolLens - VTokens Query Tests", async function () {
       "Comptroller",
       pools[0].comptroller
     );
-
-    unitroller1 = await ethers.getContractAt(
-      "Unitroller",
-      pools[0].comptroller
-    );
-
-    await unitroller1._acceptAdmin();
+    await comptroller1Proxy.acceptAdmin();
 
     comptroller2Proxy = await ethers.getContractAt(
       "Comptroller",
       pools[1].comptroller
     );
-    unitroller2 = await ethers.getContractAt(
-      "Unitroller",
-      pools[1].comptroller
-    );
-    await unitroller2._acceptAdmin();
+    await comptroller2Proxy.acceptAdmin();
 
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,

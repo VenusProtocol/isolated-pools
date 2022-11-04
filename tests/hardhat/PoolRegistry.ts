@@ -6,7 +6,6 @@ import {
   Comptroller,
   VBep20Immutable,
   MockPriceOracle,
-  Unitroller,
   VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
@@ -26,9 +25,7 @@ let vDAI: VBep20Immutable;
 let vWBTC: VBep20Immutable;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
-let unitroller1: Unitroller;
 let comptroller2Proxy: Comptroller;
-let unitroller2: Unitroller;
 let cTokenFactory: VBep20ImmutableProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
@@ -134,6 +131,7 @@ describe("PoolRegistry: Tests", function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
+      proxyAdmin.address,
       comptroller1.address,
       _closeFactor,
       _liquidationIncentive,
@@ -144,6 +142,7 @@ describe("PoolRegistry: Tests", function () {
     // Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
+      proxyAdmin.address,
       comptroller2.address,
       _closeFactor,
       _liquidationIncentive,
@@ -157,23 +156,13 @@ describe("PoolRegistry: Tests", function () {
       "Comptroller",
       pools[0].comptroller
     );
-    unitroller1 = await ethers.getContractAt(
-      "Unitroller",
-      pools[0].comptroller
-    );
-
-    await unitroller1._acceptAdmin();
+    await comptroller1Proxy.acceptAdmin();
 
     comptroller2Proxy = await ethers.getContractAt(
       "Comptroller",
       pools[1].comptroller
     );
-    unitroller2 = await ethers.getContractAt(
-      "Unitroller",
-      pools[1].comptroller
-    );
-
-    await unitroller2._acceptAdmin();
+    await comptroller2Proxy.acceptAdmin();
 
     const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
     const tokenImplementation = await VBep20Immutable.deploy();
