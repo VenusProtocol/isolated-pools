@@ -4,9 +4,9 @@ import {
   MockToken,
   PoolRegistry,
   Comptroller,
-  VBep20Immutable,
+  VToken,
   MockPriceOracle,
-  VBep20ImmutableProxyFactory,
+  VTokenProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -21,12 +21,12 @@ let comptroller1: Comptroller;
 let comptroller2: Comptroller;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let vDAI: VBep20Immutable;
-let vWBTC: VBep20Immutable;
+let vDAI: VToken;
+let vWBTC: VToken;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let comptroller2Proxy: Comptroller;
-let cTokenFactory: VBep20ImmutableProxyFactory;
+let cTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -39,10 +39,10 @@ describe("PoolRegistry: Tests", function () {
    */
   before(async function () {
     const [, user, proxyAdmin] = await ethers.getSigners();
-    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
-      "VBep20ImmutableProxyFactory"
+    const VTokenProxyFactory = await ethers.getContractFactory(
+      "VTokenProxyFactory"
     );
-    cTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+    cTokenFactory = await VTokenProxyFactory.deploy();
     await cTokenFactory.deployed();
     const JumpRateModelFactory = await ethers.getContractFactory(
       "JumpRateModelFactory"
@@ -164,8 +164,8 @@ describe("PoolRegistry: Tests", function () {
     );
     await comptroller2Proxy.acceptAdmin();
 
-    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-    const tokenImplementation = await VBep20Immutable.deploy();
+    const VToken = await ethers.getContractFactory("VToken");
+    const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
     // Deploy VTokens
@@ -214,8 +214,8 @@ describe("PoolRegistry: Tests", function () {
       mockDAI.address
     );
 
-    vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
-    vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
+    vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);

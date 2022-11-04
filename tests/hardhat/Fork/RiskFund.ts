@@ -9,9 +9,9 @@ import {
   ProtocolShareReserve,
   MockToken,
   Comptroller,
-  VBep20Immutable,
+  VToken,
   MockPriceOracle,
-  VBep20ImmutableProxyFactory,
+  VTokenProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   AccessControlManager,
@@ -27,13 +27,11 @@ let comptroller2: Comptroller;
 let mainnetUSDC: MockToken;
 let mainnetBUSD: MockToken;
 let mainnetUSDT: MockToken;
-let cUSDC: VBep20Immutable;
-let cUSDT: VBep20Immutable;
+let cUSDC: VToken;
+let cUSDT: VToken;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
-let unitroller1: Unitroller;
-let unitroller2: Unitroller;
-let vTokenFactory: VBep20ImmutableProxyFactory;
+let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -46,10 +44,10 @@ let usdtUser: any;
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, proxyAdmin] = await ethers.getSigners();
-  const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
-    "VBep20ImmutableProxyFactory"
+  const VTokenProxyFactory = await ethers.getContractFactory(
+    "VTokenProxyFactory"
   );
-  vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+  vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
 
   const JumpRateModelFactory = await ethers.getContractFactory(
@@ -207,8 +205,8 @@ const riskFundFixture = async (): Promise<void> => {
   const comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
   await comptroller2Proxy.acceptAdmin();
 
-  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-  const tokenImplementation = await VBep20Immutable.deploy();
+  const VToken = await ethers.getContractFactory("VToken");
+  const tokenImplementation = await VToken.deploy();
   await tokenImplementation.deployed();
 
   // Deploy CTokens
@@ -257,8 +255,8 @@ const riskFundFixture = async (): Promise<void> => {
     mainnetUSDC.address
   );
 
-  cUSDT = await ethers.getContractAt("VBep20Immutable", cUSDTAddress);
-  cUSDC = await ethers.getContractAt("VBep20Immutable", cUSDCAddress);
+  cUSDT = await ethers.getContractAt("VToken", cUSDTAddress);
+  cUSDC = await ethers.getContractAt("VToken", cUSDCAddress);
 
   // Enter Markets
   await comptroller1Proxy.enterMarkets([cUSDC.address, cUSDT.address]);

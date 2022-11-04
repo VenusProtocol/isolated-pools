@@ -3,12 +3,12 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import "../VBep20Immutable.sol";
+import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
 
-contract VBep20ImmutableProxyFactory {
-    struct VBep20Args {
+contract VTokenProxyFactory {
+    struct VTokenArgs {
         address underlying_;
         ComptrollerInterface comptroller_;
         InterestRateModel interestRateModel_;
@@ -18,20 +18,20 @@ contract VBep20ImmutableProxyFactory {
         uint8 decimals_;
         address payable admin_;
         AccessControlManager accessControlManager_;
-        VBep20Interface.RiskManagementInit riskManagement;
+        VTokenInterface.RiskManagementInit riskManagement;
         address vTokenProxyAdmin_;
-        VBep20Immutable tokenImplementation_;
+        VToken tokenImplementation_;
     }
 
-    function deployVBep20Proxy(VBep20Args memory input)
+    function deployVTokenProxy(VTokenArgs memory input)
         external
-        returns (VBep20Immutable)
+        returns (VToken)
     {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(input.tokenImplementation_),
             input.vTokenProxyAdmin_,
             abi.encodeWithSelector(
-                input.tokenImplementation_.initializeVToken.selector,
+                input.tokenImplementation_.initialize.selector,
                 input.underlying_,
                 input.comptroller_,
                 input.interestRateModel_,
@@ -44,6 +44,6 @@ contract VBep20ImmutableProxyFactory {
                 input.riskManagement
             )
         );
-        return VBep20Immutable(address(proxy));
+        return VToken(address(proxy));
     }
 }

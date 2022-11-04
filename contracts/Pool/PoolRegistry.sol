@@ -6,12 +6,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 import "../Comptroller.sol";
 import "../PriceOracle.sol";
-import "../Factories/VBep20ImmutableProxyFactory.sol";
+import "../Factories/VTokenProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
 import "../JumpRateModelV2.sol";
-import "../VBep20Immutable.sol";
+import "../VToken.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
@@ -23,7 +23,7 @@ import "../VTokenInterfaces.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is OwnableUpgradeable {
-    VBep20ImmutableProxyFactory private vTokenFactory;
+    VTokenProxyFactory private vTokenFactory;
     JumpRateModelFactory private jumpRateFactory;
     WhitePaperInterestRateModelFactory private whitePaperFactory;
     Shortfall private shortfall;
@@ -39,7 +39,7 @@ contract PoolRegistry is OwnableUpgradeable {
      * @param protocolShareReserve_ protocol's shares reserve address.
      */
     function initialize(
-        VBep20ImmutableProxyFactory _vTokenFactory,
+        VTokenProxyFactory _vTokenFactory,
         JumpRateModelFactory _jumpRateFactory,
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         Shortfall _shortfall,
@@ -144,7 +144,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 liquidationThreshold;
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
-        VBep20Immutable tokenImplementation_;
+        VToken tokenImplementation_;
     }
 
     /**
@@ -368,8 +368,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         Comptroller comptroller = Comptroller(input.comptroller);
 
-        VBep20ImmutableProxyFactory.VBep20Args
-            memory initializeArgs = VBep20ImmutableProxyFactory.VBep20Args(
+        VTokenProxyFactory.VTokenArgs
+            memory initializeArgs = VTokenProxyFactory.VTokenArgs(
                 input.asset,
                 comptroller,
                 rate,
@@ -379,7 +379,7 @@ contract PoolRegistry is OwnableUpgradeable {
                 input.decimals,
                 payable(msg.sender),
                 input.accessControlManager,
-                VBep20Interface.RiskManagementInit(
+                VTokenInterface.RiskManagementInit(
                     address(shortfall),
                     riskFund,
                     protocolShareReserve
@@ -388,7 +388,7 @@ contract PoolRegistry is OwnableUpgradeable {
                 input.tokenImplementation_
             );
 
-        VBep20Immutable vToken = vTokenFactory.deployVBep20Proxy(
+        VToken vToken = vTokenFactory.deployVTokenProxy(
             initializeArgs
         );
 
