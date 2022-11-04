@@ -432,6 +432,11 @@ contract Comptroller is
         if (redeemTokens == 0 && redeemAmount > 0) {
             revert("redeemTokens zero");
         }
+
+        // Shh - we don't ever want this hook to be marked pure
+        if (false) {
+            maxAssets = maxAssets;
+        }
     }
 
     /**
