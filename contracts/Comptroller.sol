@@ -89,16 +89,16 @@ contract Comptroller is
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
 
     // PoolRegistry
-    address immutable poolRegistry;
+    address public immutable poolRegistry;
 
     // AccessControlManager
-    address immutable accessControl;
+    address public immutable accessControl;
 
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
     // Used to check if rewards distributor is added
-    mapping(address => bool) rewardsDistributorExists;
+    mapping(address => bool) private rewardsDistributorExists;
 
     constructor(address _poolRegistry, address _accessControl) {
         admin = msg.sender;
