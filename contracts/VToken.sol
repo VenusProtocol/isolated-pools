@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "./mixins/WithAdminUpgradeable.sol";
 import "./ComptrollerInterface.sol";
 import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
@@ -10,16 +13,63 @@ import "./Governance/AccessControlManager.sol";
 
 /**
  * @title Venus VToken Contract
- * @notice Abstract base for VTokens
  * @author Venus Dev Team
  */
-abstract contract VToken is
+contract VToken is
+    WithAdminUpgradeable,
     VTokenInterface,
     ExponentialNoError,
     TokenErrorReporter
 {
+    using SafeERC20 for IERC20;
+
+    /**
+     * @notice Construct a new money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     * @param decimals_ ERC-20 decimal precision of this token
+     * @param admin_ Address of the administrator of this token
+     * @param riskManagement Addresses of risk fund contracts
+     */
+    function initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address payable admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) public initializer {
+        // Creator of the contract is admin during initialization
+        admin = payable(msg.sender);
+
+        // Initialize the market
+        initializeInternal(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            accessControlManager_,
+            riskManagement
+        );
+
+        // Set the proper admin now that initialization is done
+        admin = admin_;
+    }
+
     /**
      * @notice Initialize the money market
+     * @param underlying_ The address of the underlying asset
      * @param comptroller_ The address of the Comptroller
      * @param interestRateModel_ The address of the interest rate model
      * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
@@ -27,7 +77,8 @@ abstract contract VToken is
      * @param symbol_ EIP-20 symbol of this token
      * @param decimals_ EIP-20 decimal precision of this token
      */
-    function initialize(
+    function initializeInternal(
+        address underlying_,
         ComptrollerInterface comptroller_,
         InterestRateModel interestRateModel_,
         uint256 initialExchangeRateMantissa_,
@@ -35,8 +86,8 @@ abstract contract VToken is
         string memory symbol_,
         uint8 decimals_,
         AccessControlManager accessControlManager_,
-        VBep20Interface.RiskManagementInit memory riskManagement
-    ) public {
+        VTokenInterface.RiskManagementInit memory riskManagement
+    ) internal {
         require(msg.sender == admin, "only admin may initialize the market");
         require(
             accrualBlockNumber == 0 && borrowIndex == 0,
@@ -72,6 +123,10 @@ abstract contract VToken is
         shortfall = riskManagement.shortfall;
         riskFund = riskManagement.riskFund;
         protocolShareReserve = riskManagement.protocolShareReserve;
+
+        // Set underlying and sanity check it
+        underlying = underlying_;
+        IERC20(underlying).totalSupply();
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
@@ -516,7 +571,7 @@ abstract contract VToken is
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
      */
-    function mintInternal(uint256 mintAmount) internal nonReentrant {
+    function mint(uint256 mintAmount) external override nonReentrant {
         accrueInterest();
         // mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
         mintFresh(msg.sender, mintAmount);
@@ -590,7 +645,7 @@ abstract contract VToken is
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemTokens The number of vTokens to redeem into underlying
      */
-    function redeemInternal(uint256 redeemTokens) internal nonReentrant {
+    function redeem(uint256 redeemTokens) external override nonReentrant {
         accrueInterest();
         // redeemFresh emits redeem-specific logs on errors, so we don't need to
         redeemFresh(payable(msg.sender), redeemTokens, 0);
@@ -601,8 +656,9 @@ abstract contract VToken is
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemAmount The amount of underlying to receive from redeeming vTokens
      */
-    function redeemUnderlyingInternal(uint256 redeemAmount)
-        internal
+    function redeemUnderlying(uint256 redeemAmount)
+        external
+        override
         nonReentrant
     {
         accrueInterest();
@@ -707,7 +763,7 @@ abstract contract VToken is
      * @notice Sender borrows assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      */
-    function borrowInternal(uint256 borrowAmount) internal nonReentrant {
+    function borrow(uint256 borrowAmount) external override nonReentrant {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         borrowFresh(payable(msg.sender), borrowAmount);
@@ -777,7 +833,11 @@ abstract contract VToken is
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      */
-    function repayBorrowInternal(uint256 repayAmount) internal nonReentrant {
+    function repayBorrow(uint256 repayAmount)
+        external
+        override
+        nonReentrant
+    {
         accrueInterest();
         // repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         repayBorrowFresh(msg.sender, msg.sender, repayAmount);
@@ -788,8 +848,9 @@ abstract contract VToken is
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      */
-    function repayBorrowBehalfInternal(address borrower, uint256 repayAmount)
-        internal
+    function repayBorrowBehalf(address borrower, uint256 repayAmount)
+        external
+        override
         nonReentrant
     {
         accrueInterest();
@@ -869,6 +930,28 @@ abstract contract VToken is
         );
 
         return actualRepayAmount;
+    }
+
+
+    /**
+     * @notice The sender liquidates the borrowers collateral.
+     *  The collateral seized is transferred to the liquidator.
+     * @param borrower The borrower of this vToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
+     */
+    function liquidateBorrow(
+        address borrower,
+        uint256 repayAmount,
+        VTokenInterface vTokenCollateral
+    ) external override {
+        liquidateBorrowInternal(
+            msg.sender,
+            borrower,
+            repayAmount,
+            vTokenCollateral,
+            false
+        );
     }
 
     /**
@@ -994,11 +1077,7 @@ abstract contract VToken is
         if (address(vTokenCollateral) == address(this)) {
             seizeInternal(address(this), liquidator, borrower, seizeTokens);
         } else {
-            require(
-                vTokenCollateral.seize(liquidator, borrower, seizeTokens) ==
-                    NO_ERROR,
-                "token seizure failed"
-            );
+            vTokenCollateral.seize(liquidator, borrower, seizeTokens);
         }
 
         /* We emit a LiquidateBorrow event */
@@ -1088,7 +1167,6 @@ abstract contract VToken is
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function forceLiquidateBorrow(
         address liquidator,
@@ -1096,7 +1174,7 @@ abstract contract VToken is
         uint256 repayAmount,
         VTokenInterface vTokenCollateral,
         bool skipLiquidityCheck
-    ) external override returns (uint256) {
+    ) external override {
         if (msg.sender != address(comptroller)) {
             revert ForceLiquidateBorrowUnauthorized();
         }
@@ -1107,7 +1185,6 @@ abstract contract VToken is
             vTokenCollateral,
             skipLiquidityCheck
         );
-        return NO_ERROR;
     }
 
     /**
@@ -1117,16 +1194,13 @@ abstract contract VToken is
      * @param liquidator The account receiving seized collateral
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function seize(
         address liquidator,
         address borrower,
         uint256 seizeTokens
-    ) external override nonReentrant returns (uint256) {
+    ) external override nonReentrant {
         seizeInternal(msg.sender, liquidator, borrower, seizeTokens);
-
-        return NO_ERROR;
     }
 
     /**
@@ -1201,61 +1275,6 @@ abstract contract VToken is
     }
 
     /*** Admin Functions ***/
-
-    /**
-     * @notice Begins transfer of admin rights. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @dev Admin function to begin change of admin. The newPendingAdmin must call `_acceptAdmin` to finalize the transfer.
-     * @param newPendingAdmin New pending admin.
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _setPendingAdmin(address payable newPendingAdmin)
-        external
-        override
-        returns (uint256)
-    {
-        // Check caller = admin
-        if (msg.sender != admin) {
-            revert SetPendingAdminOwnerCheck();
-        }
-
-        // Save current value, if any, for inclusion in log
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store pendingAdmin with value newPendingAdmin
-        pendingAdmin = newPendingAdmin;
-
-        // Emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin)
-        emit NewPendingAdmin(oldPendingAdmin, newPendingAdmin);
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Accepts transfer of admin rights. msg.sender must be pendingAdmin
-     * @dev Admin function for pending admin to accept role and update admin
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _acceptAdmin() external override returns (uint256) {
-        // Check caller is pendingAdmin and pendingAdmin ≠ address(0)
-        if (msg.sender != pendingAdmin || msg.sender == address(0)) {
-            revert AcceptAdminPendingAdminCheck();
-        }
-
-        // Save current values for inclusion in log
-        address oldAdmin = admin;
-        address oldPendingAdmin = pendingAdmin;
-
-        // Store admin with value pendingAdmin
-        admin = pendingAdmin;
-
-        // Clear the pending value
-        pendingAdmin = payable(address(0));
-
-        emit NewAdmin(oldAdmin, admin);
-        emit NewPendingAdmin(oldPendingAdmin, pendingAdmin);
-
-        return NO_ERROR;
-    }
 
     /**
      * @notice Sets a new comptroller for the market
@@ -1339,12 +1358,13 @@ abstract contract VToken is
     }
 
     /**
-     * @notice Accrues interest and reduces reserves by transferring from msg.sender
-     * @param addAmount Amount of addition to reserves
+     * @notice The sender adds to reserves.
+     * @param addAmount The amount fo underlying token to add as reserves
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _addReservesInternal(uint256 addAmount)
-        internal
+    function _addReserves(uint256 addAmount)
+        external
+        override
         nonReentrant
         returns (uint256)
     {
@@ -1550,31 +1570,6 @@ abstract contract VToken is
         return uint256(NO_ERROR);
     }
 
-    /*** Safe Token ***/
-
-    /**
-     * @notice Gets balance of this contract in terms of the underlying
-     * @dev This excludes the value of the current message, if any
-     * @return The quantity of underlying owned by this contract
-     */
-    function getCashPrior() internal view virtual returns (uint256);
-
-    /**
-     * @dev Performs a transfer in, reverting upon failure. Returns the amount actually transferred to the protocol, in case of a fee.
-     *  This may revert due to insufficient balance or insufficient allowance.
-     */
-    function doTransferIn(address from, uint256 amount)
-        internal
-        virtual
-        returns (uint256);
-
-    /**
-     * @dev Performs a transfer out, ideally returning an explanatory error code upon failure rather than reverting.
-     *  If caller has not called checked protocol's balance, may revert due to insufficient cash held in the contract.
-     *  If caller has checked protocol's balance, and verified it is >= amount, this should not revert in normal conditions.
-     */
-    function doTransferOut(address payable to, uint256 amount) internal virtual;
-
     /*** Reentrancy Guard ***/
 
     /**
@@ -1620,5 +1615,63 @@ abstract contract VToken is
         );
 
         badDebt = badDebt - _badDebt;
+    }
+
+    /**
+     * @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+     * @param token The address of the ERC-20 token to sweep
+     */
+    function sweepToken(IERC20 token) external override {
+        require(
+            msg.sender == admin,
+            "VToken::sweepToken: only admin can sweep tokens"
+        );
+        require(
+            address(token) != underlying,
+            "VToken::sweepToken: can not sweep underlying token"
+        );
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(admin, balance);
+    }
+
+    /*** Safe Token ***/
+
+    /**
+     * @notice Gets balance of this contract in terms of the underlying
+     * @dev This excludes the value of the current message, if any
+     * @return The quantity of underlying tokens owned by this contract
+     */
+    function getCashPrior() internal virtual view returns (uint256) {
+        IERC20 token = IERC20(underlying);
+        return token.balanceOf(address(this));
+    }
+
+    /**
+     * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
+     *      This function returns the actual amount received,
+     *      which may be less than `amount` if there is a fee attached to the transfer.
+     */
+    function doTransferIn(address from, uint256 amount)
+        internal
+        virtual
+        returns (uint256)
+    {
+        IERC20 token = IERC20(underlying);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        token.safeTransferFrom(from, address(this), amount);
+        uint256 balanceAfter = token.balanceOf(address(this));
+        // Return the amount that was *actually* transferred
+        return balanceAfter - balanceBefore;
+    }
+
+    /**
+     * @dev Just a regular ERC-20 transfer, reverts on failure
+     */
+    function doTransferOut(address payable to, uint256 amount)
+        internal
+        virtual
+    {
+        IERC20 token = IERC20(underlying);
+        token.safeTransfer(to, amount);
     }
 }
