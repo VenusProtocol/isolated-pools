@@ -5,12 +5,12 @@ import {
   PoolRegistry,
   Comptroller,
   MockPriceOracle,
-  VBep20ImmutableProxyFactory,
+  VTokenProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   PoolLens,
   AccessControlManager,
-  VBep20Immutable,
+  VToken,
   RiskFund,
   ProtocolShareReserve,
 } from "../../../typechain";
@@ -24,12 +24,12 @@ let comptroller1: Comptroller;
 let comptroller2: Comptroller;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let vDAI: VBep20Immutable;
-let vWBTC: VBep20Immutable;
+let vDAI: VToken;
+let vWBTC: VToken;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let comptroller2Proxy: Comptroller;
-let vTokenFactory: VBep20ImmutableProxyFactory;
+let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let poolLens: PoolLens;
@@ -52,10 +52,10 @@ describe("PoolLens - PoolView Tests", async function () {
     const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
-      "VBep20ImmutableProxyFactory"
+    const VTokenProxyFactory = await ethers.getContractFactory(
+      "VTokenProxyFactory"
     );
-    vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+    vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -170,8 +170,8 @@ describe("PoolLens - PoolView Tests", async function () {
     await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
     await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
 
-    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-    const tokenImplementation = await VBep20Immutable.deploy();
+    const VToken = await ethers.getContractFactory("VToken");
+    const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
     // Get all pools list.
@@ -251,8 +251,8 @@ describe("PoolLens - PoolView Tests", async function () {
       mockDAI.address
     );
 
-    vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
-    vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
+    vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
@@ -392,10 +392,10 @@ describe("PoolLens - VTokens Query Tests", async function () {
     );
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
-    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
-      "VBep20ImmutableProxyFactory"
+    const VTokenProxyFactory = await ethers.getContractFactory(
+      "VTokenProxyFactory"
     );
-    vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+    vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -505,8 +505,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
     await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
     await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
 
-    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-    const tokenImplementation = await VBep20Immutable.deploy();
+    const VToken = await ethers.getContractFactory("VToken");
+    const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
     // Get all pools list.
