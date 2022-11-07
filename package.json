@@ -21,7 +21,8 @@
     "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments,copy_contracts.sh} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
-    "postinstall": "./copy_contracts.sh"
+    "postinstall": "./copy_contracts.sh",
+    "docgen": "hardhat docgen"
   },
   "repository": {
     "type": "git",
@@ -69,6 +70,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.13",
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.7.21",
+    "solidity-docgen": "^0.6.0-beta.29",
     "solparse": "^2.2.8",
     "ts-node": "^10.7.0",
     "typechain": "^5.2.0",
