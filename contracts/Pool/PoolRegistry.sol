@@ -3,10 +3,9 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
-import "../Comptroller.sol";
-import "../Unitroller.sol";
-import "../PriceOracle.sol";
 
+import "../Comptroller.sol";
+import "../PriceOracle.sol";
 import "../Factories/VBep20ImmutableProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
@@ -211,39 +210,42 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Deploys a new Venus pool and adds to the directory.
      * @param name The name of the pool.
-     * @param implementation The Comptroller implementation address.
+     * @param proxyAdmin The address of the ProxyAdmin contract.
+     * @param implementationAddress The Comptroller implementation address.
      * @param closeFactor The pool's close factor (scaled by 1e18).
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
      * @param priceOracle The pool's PriceOracle address.
-     * @return The index of the registered Venus pool and the proxy(Unitroller ) address.
+     * @return index The index of the registered Venus pool.
+     * @return proxyAddress The the Comptroller proxy address.
      */
     function createRegistryPool(
         string memory name,
-        address implementation,
+        address proxyAdmin,
+        address implementationAddress,
         uint256 closeFactor,
         uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral,
         address priceOracle
-    ) external virtual onlyOwner returns (uint256, address) {
+    ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
         // Input validation
         require(
-            implementation != address(0),
+            implementationAddress != address(0),
             "RegistryPool: Invalid Comptroller implementation address."
         );
         require(
             priceOracle != address(0),
             "RegistryPool: Invalid PriceOracle address."
         );
-        // Setup Unitroller(Proxy)
-        Unitroller unitroller = new Unitroller();
-        address proxy = address(unitroller);
-        require(
-            unitroller._setPendingImplementation(implementation) == 0,
-            "RegistryPool: Failed to set pending implementation in Unitroller."
+
+        Comptroller implementation = Comptroller(implementationAddress);
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            implementationAddress,
+            proxyAdmin,
+            abi.encodeWithSelector(implementation.initialize.selector)
         );
-        Comptroller comptrollerImplementation = Comptroller(implementation);
-        comptrollerImplementation._become(unitroller);
-        Comptroller comptrollerProxy = Comptroller(proxy);
+        proxyAddress = address(proxy);
+        Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
         // Set Venus pool parameters
         require(
@@ -266,13 +268,10 @@ contract PoolRegistry is OwnableUpgradeable {
         );
 
         // Make msg.sender the admin
-        require(
-            unitroller._setPendingAdmin(msg.sender) == 0,
-            "RegistryPool: Failed to set pending admin in Unitroller."
-        );
+        comptrollerProxy.setPendingAdmin(msg.sender);
 
         // Register the pool with this PoolRegistry
-        return (_registerPool(name, proxy), proxy);
+        return (_registerPool(name, proxyAddress), proxyAddress);
     }
 
     /**

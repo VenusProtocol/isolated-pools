@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import "./mixins/WithAdminUpgradeable.sol";
 import "./VToken.sol";
 import "./ErrorReporter.sol";
 import "./PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
-import "./Unitroller.sol";
 import "./Rewards/RewardsDistributor.sol";
 import "./Governance/AccessControlManager.sol";
 
@@ -15,6 +17,7 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is
+    WithAdminUpgradeable,
     ComptrollerV1Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
@@ -89,21 +92,25 @@ contract Comptroller is
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
 
     // PoolRegistry
-    address immutable poolRegistry;
+    address public immutable poolRegistry;
 
     // AccessControlManager
-    address immutable accessControl;
+    address public immutable accessControl;
 
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
     // Used to check if rewards distributor is added
-    mapping(address => bool) rewardsDistributorExists;
+    mapping(address => bool) private rewardsDistributorExists;
 
     constructor(address _poolRegistry, address _accessControl) {
         admin = msg.sender;
         poolRegistry = _poolRegistry;
         accessControl = _accessControl;
+    }
+
+    function initialize() public initializer {
+        __WithAdmin_init();
     }
 
     /// @notice Reverts if a certain action is paused on a market
@@ -432,6 +439,11 @@ contract Comptroller is
         if (redeemTokens == 0 && redeemAmount > 0) {
             revert("redeemTokens zero");
         }
+
+        // Shh - we don't ever want this hook to be marked pure
+        if (false) {
+            maxAssets = maxAssets;
+        }
     }
 
     /**
@@ -681,6 +693,8 @@ contract Comptroller is
         if (repayAmount > maxClose) {
             return uint256(Error.TOO_MUCH_REPAY);
         }
+
+        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -1623,24 +1637,6 @@ contract Comptroller is
         emit ActionPausedMarket(VToken(market), action, paused);
     }
 
-    function _become(Unitroller unitroller) public {
-        require(
-            msg.sender == unitroller.admin(),
-            "only unitroller admin can change brains"
-        );
-        require(
-            unitroller._acceptImplementation() == 0,
-            "change not authorized"
-        );
-    }
-
-    /**
-     * @notice Checks caller is admin, or this contract is becoming the new implementation
-     */
-    function adminOrInitializing() internal view returns (bool) {
-        return msg.sender == admin || msg.sender == comptrollerImplementation;
-    }
-
     /**
      * @notice Set the given collateral threshold for non-batch liquidations. Regular liquidations
      *   will fail if the collateral amount is less than this threshold. Liquidators should use batch
@@ -1692,6 +1688,8 @@ contract Comptroller is
         for (uint256 i = 0; i < allMarkets.length; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
+
+        return uint256(Error.NO_ERROR);
     }
 
     /**

@@ -75,12 +75,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const pools = await poolRegistry.callStatic.getAllPools();
   const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-
-  const unitroller = await ethers.getContractAt(
-    "Unitroller",
-    pools[0].comptroller
-  );
-  tx = await unitroller._acceptAdmin();
+  tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
 
   const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");

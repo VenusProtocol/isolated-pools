@@ -673,7 +673,7 @@ contract WBTVToken is
         override(ERC20, PausableToken, StandardToken)
         returns (bool)
     {
-        super.approve(_spender, _value);
+        return super.approve(_spender, _value);
     }
 
     function burn(uint256 value) public override onlyOwner {

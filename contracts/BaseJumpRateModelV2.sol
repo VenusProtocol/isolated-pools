@@ -62,7 +62,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
         address owner_
-    ) internal {
+    ) {
         owner = owner_;
 
         updateJumpRateModelInternal(

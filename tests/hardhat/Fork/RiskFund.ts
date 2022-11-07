@@ -11,7 +11,6 @@ import {
   Comptroller,
   VBep20Immutable,
   MockPriceOracle,
-  Unitroller,
   VBep20ImmutableProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
@@ -178,16 +177,18 @@ const riskFundFixture = async (): Promise<void> => {
   // Registering the first pool
   await poolRegistry.createRegistryPool(
     "Pool 1",
+    proxyAdmin.address,
     comptroller1.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
     priceOracle.address
-  );
+  )
 
   // Registering the second pool
   await poolRegistry.createRegistryPool(
     "Pool 2",
+    proxyAdmin.address,
     comptroller2.address,
     _closeFactor,
     _liquidationIncentive,
@@ -201,14 +202,10 @@ const riskFundFixture = async (): Promise<void> => {
     "Comptroller",
     pools[0].comptroller
   );
-  unitroller1 = await ethers.getContractAt("Unitroller", pools[0].comptroller);
+  await comptroller1Proxy.acceptAdmin();
 
-  await unitroller1._acceptAdmin();
-
-  await ethers.getContractAt("Comptroller", pools[1].comptroller);
-  unitroller2 = await ethers.getContractAt("Unitroller", pools[1].comptroller);
-
-  await unitroller2._acceptAdmin();
+  const comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
+  await comptroller2Proxy.acceptAdmin();
 
   const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
   const tokenImplementation = await VBep20Immutable.deploy();
