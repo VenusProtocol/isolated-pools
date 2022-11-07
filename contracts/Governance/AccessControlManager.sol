@@ -10,6 +10,19 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *		within Venus Smart Contract Ecosystem
  */
 contract AccessControlManager is AccessControl {
+<<<<<<< HEAD
+=======
+
+    /// @notice Emitted when an account is given a permission to a certain contract function
+    /// NOTE: If contract address is 0x000..0 this means that the account is a default admin of this function and
+    /// can call any contract function with this signature
+    event PermissionGranted(address account, address contractAddress, string functionSig);
+
+    /// @notice Emitted when an account is revoked a permission to a certain contract function
+    event PermissionRevoked(address account, address contractAddress, string functionSig);
+
+
+>>>>>>> e56bf74 (add events for permission grant and revoke)
     constructor() {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
@@ -62,6 +75,7 @@ contract AccessControlManager is AccessControl {
         }
 
         grantRole(role, accountToPermit);
+        emit PermissionGranted(accountToPermit,contractAddress,functionSig);
     }
 
     /**
@@ -80,5 +94,6 @@ contract AccessControlManager is AccessControl {
             abi.encodePacked(contractAddress, functionSig)
         );
         revokeRole(role, accountToRevoke);
+        emit PermissionRevoked(accountToRevoke,contractAddress,functionSig);
     }
 }
