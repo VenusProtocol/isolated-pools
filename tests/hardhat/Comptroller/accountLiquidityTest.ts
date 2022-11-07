@@ -8,7 +8,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, Comptroller__factory, PoolRegistry, AccessControlManager, VBep20Immutable, PriceOracle
+  Comptroller, Comptroller__factory, PoolRegistry, AccessControlManager, VToken, PriceOracle
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { Error } from "../util/Errors";
@@ -45,9 +45,9 @@ async function makeVToken(
       underlyingPrice?: string | number
       poolRegistry: FakeContract<PoolRegistry>,
     }
-): Promise<FakeContract<VBep20Immutable>> {
+): Promise<FakeContract<VToken>> {
   accessControl.isAllowedToCall.returns(true);
-  const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
+  const vToken = await smock.fake<VToken>("VToken");
   configureVToken({ vToken, comptroller, exchangeRate });
   if (supportMarket) {
     const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
@@ -69,7 +69,7 @@ async function makeVToken(
 }
 
 function configureVToken({ vToken, comptroller, exchangeRate }: {
-  vToken: FakeContract<VBep20Immutable>,
+  vToken: FakeContract<VToken>,
   comptroller: MockContract<Comptroller>,
   exchangeRate?: BigNumberish
 }) {

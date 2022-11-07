@@ -6,7 +6,7 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { AccessControlManager, VBEP20Harness, Comptroller } from "../../../typechain";
+import { AccessControlManager, VTokenHarness, Comptroller } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
 
@@ -17,7 +17,7 @@ async function setComptrollerTestFixture() {
 }
 
 describe('VToken', function () {
-  let vToken: MockContract<VBEP20Harness>;
+  let vToken: MockContract<VTokenHarness>;
   let comptroller: FakeContract<Comptroller>;
   let newComptroller: FakeContract<Comptroller>;
   let accessControlManager: FakeContract<AccessControlManager>;

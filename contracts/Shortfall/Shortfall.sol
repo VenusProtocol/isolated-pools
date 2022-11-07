@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "../VToken.sol";
-import "../VBep20.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
@@ -262,8 +261,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
-            VBep20 vBep20 = VBep20(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(vBep20.underlying()));
+            VToken vToken = VToken(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(vToken.underlying()));
 
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 if (auction.highestBidder != address(0)) {
@@ -322,8 +321,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         auction.status = AuctionStatus.ENDED;
 
         for (uint256 i = 0; i < auction.markets.length; i++) {
-            VBep20 vBep20 = VBep20(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(vBep20.underlying()));
+            VToken vToken = VToken(address(auction.markets[i]));
+            IERC20 erc20 = IERC20(address(vToken.underlying()));
 
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] *

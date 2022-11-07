@@ -7,7 +7,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, PriceOracle, Comptroller__factory, VBep20Immutable, AccessControlManager, PoolRegistry
+  Comptroller, PriceOracle, Comptroller__factory, VToken, AccessControlManager, PoolRegistry
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 
@@ -22,19 +22,19 @@ describe("healAccount", () => {
   let userAddress: string;
 
   let comptroller: MockContract<Comptroller>;
-  let OMG: FakeContract<VBep20Immutable>;
-  let ZRX: FakeContract<VBep20Immutable>;
-  let BAT: FakeContract<VBep20Immutable>;
+  let OMG: FakeContract<VToken>;
+  let ZRX: FakeContract<VToken>;
+  let BAT: FakeContract<VToken>;
 
   type HealAccountFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>,
     oracle: FakeContract<PriceOracle>,
-    OMG: FakeContract<VBep20Immutable>,
-    ZRX: FakeContract<VBep20Immutable>,
-    BAT: FakeContract<VBep20Immutable>,
-    SKT: FakeContract<VBep20Immutable>,
-    allTokens: FakeContract<VBep20Immutable>[],
+    OMG: FakeContract<VToken>,
+    ZRX: FakeContract<VToken>,
+    BAT: FakeContract<VToken>,
+    SKT: FakeContract<VToken>,
+    allTokens: FakeContract<VToken>[],
     names: string[]
   };
 
@@ -52,7 +52,7 @@ describe("healAccount", () => {
     const names = ["OMG", "ZRX", "BAT"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async (name) => {
-        const vToken = await smock.fake<VBep20Immutable>("VBep20Immutable");
+        const vToken = await smock.fake<VToken>("VToken");
         const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
         if (poolRegistryBalance.isZero()) {
           setBalance(await root.getAddress(), 100n ** 18n)

@@ -15,6 +15,11 @@ contract VTokenStorage {
     bool internal _notEntered;
 
     /**
+     * @notice Underlying asset for this VToken
+     */
+    address public underlying;
+
+    /**
      * @notice EIP-20 token name for this token
      */
     string public name;
@@ -44,16 +49,6 @@ contract VTokenStorage {
 
     // Maximum fraction of interest that can be set aside for reserves
     uint256 internal constant reserveFactorMaxMantissa = 1e18;
-
-    /**
-     * @notice Administrator for this contract
-     */
-    address payable public admin;
-
-    /**
-     * @notice Pending administrator for this contract
-     */
-    address payable public pendingAdmin;
 
     /**
      * @notice Contract which oversees inter-vToken operations
@@ -214,16 +209,6 @@ abstract contract VTokenInterface is VTokenStorage {
     /*** Admin Events ***/
 
     /**
-     * @notice Event emitted when pendingAdmin is changed
-     */
-    event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
-
-    /**
-     * @notice Event emitted when pendingAdmin is accepted, which means admin is updated
-     */
-    event NewAdmin(address oldAdmin, address newAdmin);
-
-    /**
      * @notice Event emitted when comptroller is changed
      */
     event NewComptroller(
@@ -288,6 +273,58 @@ abstract contract VTokenInterface is VTokenStorage {
     );
 
     /*** User Interface ***/
+
+    struct RiskManagementInit {
+        address shortfall;
+        address payable riskFund;
+        address payable protocolShareReserve;
+    }
+
+    /*** User Interface ***/
+
+    function mint(uint256 mintAmount) external virtual;
+
+    function redeem(uint256 redeemTokens) external virtual;
+
+    function redeemUnderlying(uint256 redeemAmount)
+        external
+        virtual;
+
+    function borrow(uint256 borrowAmount) external virtual;
+
+    function repayBorrow(uint256 repayAmount)
+        external
+        virtual;
+
+    function repayBorrowBehalf(address borrower, uint256 repayAmount)
+        external
+        virtual;
+
+    function liquidateBorrow(
+        address borrower,
+        uint256 repayAmount,
+        VTokenInterface vTokenCollateral
+    ) external virtual;
+
+    function healBorrow(
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) external virtual;
+
+    function forceLiquidateBorrow(
+        address liquidator,
+        address borrower,
+        uint256 repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipCloseFactorCheck
+    ) external virtual;
+
+    function seize(
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens
+    ) external virtual;
 
     function transfer(address dst, uint256 amount)
         external
@@ -354,34 +391,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function accrueInterest() external virtual returns (uint256);
 
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
-
-    function forceLiquidateBorrow(
-        address liquidator,
-        address borrower,
-        uint256 repayAmount,
-        VTokenInterface vTokenCollateral,
-        bool skipCloseFactorCheck
-    ) external virtual returns (uint256);
-
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external virtual returns (uint256);
+    function sweepToken(IERC20 token) external virtual;
 
     /*** Admin Functions ***/
-
-    function _setPendingAdmin(address payable newPendingAdmin)
-        external
-        virtual
-        returns (uint256);
-
-    function _acceptAdmin() external virtual returns (uint256);
 
     function _setComptroller(ComptrollerInterface newComptroller)
         external
@@ -402,97 +414,6 @@ abstract contract VTokenInterface is VTokenStorage {
         external
         virtual
         returns (uint256);
-}
-
-contract VBep20Storage {
-    /**
-     * @notice Underlying asset for this VToken
-     */
-    address public underlying;
-}
-
-abstract contract VBep20Interface is VBep20Storage {
-    struct RiskManagementInit {
-        address shortfall;
-        address payable riskFund;
-        address payable protocolShareReserve;
-    }
-
-    /*** User Interface ***/
-
-    function mint(uint256 mintAmount) external virtual returns (uint256);
-
-    function redeem(uint256 redeemTokens) external virtual returns (uint256);
-
-    function redeemUnderlying(uint256 redeemAmount)
-        external
-        virtual
-        returns (uint256);
-
-    function borrow(uint256 borrowAmount) external virtual returns (uint256);
-
-    function repayBorrow(uint256 repayAmount)
-        external
-        virtual
-        returns (uint256);
-
-    function repayBorrowBehalf(address borrower, uint256 repayAmount)
-        external
-        virtual
-        returns (uint256);
-
-    function liquidateBorrow(
-        address borrower,
-        uint256 repayAmount,
-        VTokenInterface vTokenCollateral
-    ) external virtual returns (uint256);
-
-    function sweepToken(IERC20 token) external virtual;
-
-    /*** Admin Functions ***/
 
     function _addReserves(uint256 addAmount) external virtual returns (uint256);
-}
-
-contract CDelegationStorage {
-    /**
-     * @notice Implementation address for this contract
-     */
-    address public implementation;
-}
-
-abstract contract CDelegatorInterface is CDelegationStorage {
-    /**
-     * @notice Emitted when implementation is changed
-     */
-    event NewImplementation(
-        address oldImplementation,
-        address newImplementation
-    );
-
-    /**
-     * @notice Called by the admin to update the implementation of the delegator
-     * @param implementation_ The address of the new implementation for delegation
-     * @param allowResign Flag to indicate whether to call _resignImplementation on the old implementation
-     * @param becomeImplementationData The encoded bytes data to be passed to _becomeImplementation
-     */
-    function _setImplementation(
-        address implementation_,
-        bool allowResign,
-        bytes memory becomeImplementationData
-    ) external virtual;
-}
-
-abstract contract CDelegateInterface is CDelegationStorage {
-    /**
-     * @notice Called by the delegator on a delegate to initialize it for duty
-     * @dev Should revert if any issues arise which make it unfit for delegation
-     * @param data The encoded bytes data for any initialization
-     */
-    function _becomeImplementation(bytes memory data) external virtual;
-
-    /**
-     * @notice Called by the delegator on a delegate to forfeit its responsibility
-     */
-    function _resignImplementation() external virtual;
 }

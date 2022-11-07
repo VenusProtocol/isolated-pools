@@ -1,24 +1,21 @@
 import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { Signer, BigNumberish, constants } from "ethers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { Signer, BigNumberish } from "ethers";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
 import {
-  Comptroller, VBEP20Harness, ERC20Harness, VBEP20Harness__factory, InterestRateModel,
-  Shortfall,
-  ERC20Harness__factory, AccessControlManager,
+  Comptroller, VTokenHarness, ERC20Harness, VTokenHarness__factory, InterestRateModel,
+  Shortfall, ERC20Harness__factory, AccessControlManager,
   RiskFund, ProtocolShareReserve
 } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
-import { Error } from "../util/Errors";
 
 
 export type VTokenContracts = {
-  vToken: MockContract<VBEP20Harness>;
+  vToken: MockContract<VTokenHarness>;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
 };
@@ -34,7 +31,7 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
   interestRateModel.isInterestRateModel.returns(true);
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
-  const vTokenFactory = await smock.mock<VBEP20Harness__factory>("VBEP20Harness");
+  const vTokenFactory = await smock.mock<VTokenHarness__factory>("VTokenHarness");
   const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
@@ -61,7 +58,7 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
 export type VTokenTestFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
   comptroller: FakeContract<Comptroller>;
-  vToken: MockContract<VBEP20Harness>;
+  vToken: MockContract<VTokenHarness>;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
 };
@@ -97,12 +94,12 @@ type HolderSnapshot = {
 }
 
 type BalanceDeltaEntry =
-  [MockContract<VBEP20Harness>, string, keyof HolderSnapshot, string | number] 
-  | [MockContract<VBEP20Harness>, keyof HolderSnapshot, string | number];
+  [MockContract<VTokenHarness>, string, keyof HolderSnapshot, string | number] 
+  | [MockContract<VTokenHarness>, keyof HolderSnapshot, string | number];
 
 
 export async function getBalances(
-  vTokens: MockContract<VBEP20Harness>[],
+  vTokens: MockContract<VTokenHarness>[],
   accounts: string[]
 ): Promise<BalancesSnapshot> {
   const balances: BalancesSnapshot = {};
@@ -130,7 +127,7 @@ export async function getBalances(
 
 export function adjustBalances(balances: BalancesSnapshot, deltas: BalanceDeltaEntry[]) {
   for (let delta of deltas) {
-    let vToken: MockContract<VBEP20Harness>;
+    let vToken: MockContract<VTokenHarness>;
     let account: string;
     let key: keyof HolderSnapshot;
     let diff: string | number;
@@ -148,7 +145,7 @@ export function adjustBalances(balances: BalancesSnapshot, deltas: BalanceDeltaE
 
 export async function preApprove(
   erc20: MockContract<ERC20Harness>,
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   from: Signer,
   amount: BigNumberish,
   opts: { faucet?: boolean } = {}
@@ -161,7 +158,7 @@ export async function preApprove(
 }
 
 export async function pretendBorrow(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   borrower: Signer,
   accountIndex: number,
   marketIndex: number,

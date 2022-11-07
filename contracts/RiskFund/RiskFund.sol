@@ -140,7 +140,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     {
         uint256 totalAmount;
 
-        address underlyingAsset = VBep20Interface(address(vToken)).underlying();
+        address underlyingAsset = VTokenInterface(address(vToken)).underlying();
         uint256 balanceOfUnderlyingAsset = IERC20(underlyingAsset).balanceOf(
             address(this)
         );

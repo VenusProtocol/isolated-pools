@@ -8,7 +8,7 @@ import chai from "chai";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VBEP20Harness, ERC20Harness, Comptroller, InterestRateModel, AccessControlManager } from "../../../typechain";
+import { VTokenHarness, InterestRateModel } from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
@@ -18,7 +18,7 @@ const borrowIndex = convertToUnit("1", 18);
 const borrowRate = convertToUnit("0.000001", 18);
 
 async function pretendBlock(
-  vToken: MockContract<VBEP20Harness>,
+  vToken: MockContract<VTokenHarness>,
   accrualBlock: number | string = blockNumber,
   deltaBlocks: number | string = 1
 ) {
@@ -28,7 +28,7 @@ async function pretendBlock(
 }
 
 async function preAccrue({ vToken, interestRateModel }: {
-  vToken: MockContract<VBEP20Harness>;
+  vToken: MockContract<VTokenHarness>;
   interestRateModel: FakeContract<InterestRateModel>;
 }) {
   interestRateModel.getBorrowRate.reset();
@@ -40,7 +40,7 @@ async function preAccrue({ vToken, interestRateModel }: {
 describe('VToken', () => {
   let root: Signer;
   let accounts: Signer[];
-  let vToken: MockContract<VBEP20Harness>;
+  let vToken: MockContract<VTokenHarness>;
   let interestRateModel: FakeContract<InterestRateModel>;
 
   beforeEach(async () => {

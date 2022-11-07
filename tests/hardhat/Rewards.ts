@@ -6,8 +6,8 @@ import {
   MockToken,
   PoolRegistry,
   Comptroller,
-  VBep20Immutable,
-  VBep20ImmutableProxyFactory,
+  VToken,
+  VTokenProxyFactory,
   JumpRateModelFactory,
   WhitePaperInterestRateModelFactory,
   RewardsDistributor,
@@ -26,10 +26,10 @@ let poolRegistry: MockContract<PoolRegistry>;
 let comptroller: Comptroller;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
-let vDAI: VBep20Immutable;
-let vWBTC: VBep20Immutable;
+let vDAI: VToken;
+let vWBTC: VToken;
 let comptrollerProxy: Comptroller;
-let vTokenFactory: VBep20ImmutableProxyFactory;
+let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let rewardsDistributor: RewardsDistributor;
@@ -45,10 +45,10 @@ describe("Rewards: Tests", async function () {
    */
   before(async function () {
     const [, proxyAdmin] = await ethers.getSigners();
-    const VBep20ImmutableProxyFactory = await ethers.getContractFactory(
-      "VBep20ImmutableProxyFactory"
+    const VTokenProxyFactory = await ethers.getContractFactory(
+      "VTokenProxyFactory"
     );
-    vTokenFactory = await VBep20ImmutableProxyFactory.deploy();
+    vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory(
@@ -168,8 +168,8 @@ describe("Rewards: Tests", async function () {
     await comptrollerProxy.acceptAdmin();
     await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
 
-    const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-    const tokenImplementation = await VBep20Immutable.deploy();
+    const VToken = await ethers.getContractFactory("VToken");
+    const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
     //Deploy VTokens
@@ -218,8 +218,8 @@ describe("Rewards: Tests", async function () {
       mockDAI.address
     );
 
-    vWBTC = await ethers.getContractAt("VBep20Immutable", vWBTCAddress);
-    vDAI = await ethers.getContractAt("VBep20Immutable", vDAIAddress);
+    vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VToken", vDAIAddress);
     
     const [, , user] = await ethers.getSigners();
 

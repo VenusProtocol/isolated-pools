@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "../VBep20.sol";
 import "../VToken.sol";
 import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
@@ -209,9 +208,8 @@ contract PoolLens is ExponentialNoError {
         address underlyingAssetAddress;
         uint256 underlyingDecimals;
 
-        VBep20 vBep20 = VBep20(address(vToken));
-        underlyingAssetAddress = vBep20.underlying();
-        underlyingDecimals = IERC20Metadata(vBep20.underlying()).decimals();
+        underlyingAssetAddress = vToken.underlying();
+        underlyingDecimals = IERC20Metadata(vToken.underlying()).decimals();
 
         return
             VTokenMetadata({
@@ -276,8 +274,7 @@ contract PoolLens is ExponentialNoError {
         uint256 tokenBalance;
         uint256 tokenAllowance;
 
-        VBep20 vBep20 = VBep20(address(vToken));
-        IERC20 underlying = IERC20(vBep20.underlying());
+        IERC20 underlying = IERC20(vToken.underlying());
         tokenBalance = underlying.balanceOf(account);
         tokenAllowance = underlying.allowance(account, address(vToken));
 

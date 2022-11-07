@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 import {
   AccessControlManager,
-  VBep20,
-  VBep20__factory,
+  VToken,
+  VToken__factory,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
@@ -24,8 +24,8 @@ describe("Shortfall: Tests", async function () {
   let mockBUSD: MockToken;
   let mockDAI: MockToken;
   let mockWBTC: MockToken;
-  let cDAI: MockContract<VBep20>;
-  let cWBTC: MockContract<VBep20>;
+  let vDAI: MockContract<VToken>;
+  let vWBTC: MockContract<VToken>;
   let comptroller: MockContract<Comptroller>;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
   let fakePriceOracle: FakeContract<PriceOracle>;
@@ -80,20 +80,21 @@ describe("Shortfall: Tests", async function () {
     comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address)
     poolId = comptroller.address
 
-    cDAI = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
-    cWBTC = await (await smock.mock<VBep20__factory>("VBep20")).deploy()
+    const VToken = await smock.mock<VToken__factory>("VToken");
+    vDAI = await VToken.deploy();
+    vWBTC = await VToken.deploy();
     
-    cWBTC.setVariable("decimals", 8);
-    cDAI.decimals.returns(18);
+    vWBTC.setVariable("decimals", 8);
+    vDAI.decimals.returns(18);
     
-    cDAI.underlying.returns(mockDAI.address)
-    cWBTC.setVariable("underlying", mockWBTC.address)
+    vDAI.underlying.returns(mockDAI.address)
+    vWBTC.setVariable("underlying", mockWBTC.address)
 
-    cDAI.setVariable("shortfall", shortfall.address)
-    cWBTC.setVariable("shortfall", shortfall.address)
+    vDAI.setVariable("shortfall", shortfall.address)
+    vWBTC.setVariable("shortfall", shortfall.address)
 
     comptroller.getAllMarkets.returns((args: any) => {
-      return [cDAI.address, cWBTC.address];
+      return [vDAI.address, vWBTC.address];
     });
 
     fakePriceOracle = await smock.fake<PriceOracle>("PriceOracle");
@@ -102,8 +103,8 @@ describe("Shortfall: Tests", async function () {
     const daiPrice = "1";
 
     fakePriceOracle.getUnderlyingPrice.returns((args: any) => {
-      if (cDAI && cWBTC) {
-        if (args[0] === cDAI.address) {
+      if (vDAI && vWBTC) {
+        if (args[0] === vDAI.address) {
           return convertToUnit(daiPrice, 18);
         } else {
           return convertToUnit(btcPrice, 28);
@@ -120,27 +121,27 @@ describe("Shortfall: Tests", async function () {
   });
 
   it("Should have debt and reserve", async function () {
-    cDAI.badDebt.returns(parseUnits("1000", 18))
-    cWBTC.badDebt.returns(parseUnits("1", 8))
+    vDAI.badDebt.returns(parseUnits("1000", 18))
+    vWBTC.badDebt.returns(parseUnits("1", 8))
 
     expect(await fakeRiskFund.getPoolReserve(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString())
 
-    expect(await cDAI.badDebt()).equal(parseUnits("1000", 18))
-    expect(await cWBTC.badDebt()).equal(parseUnits("1", 8))
+    expect(await vDAI.badDebt()).equal(parseUnits("1000", 18))
+    expect(await vWBTC.badDebt()).equal(parseUnits("1", 8))
   });
 
   it("Should not be able to start auction", async function () {
-    cDAI.badDebt.returns(parseUnits("20", 18))
-    cWBTC.badDebt.returns(parseUnits("0.01", 8))
+    vDAI.badDebt.returns(parseUnits("20", 18))
+    vWBTC.badDebt.returns(parseUnits("0.01", 8))
 
     await expect(shortfall.startAuction(poolId)).to.be.reverted;
   });
 
   it("Scenerio 1 - Start auction", async function () {
-    cDAI.badDebt.returns(parseUnits("10000", 18))
-    cDAI.setVariable("badDebt", parseUnits("10000", 18))
-    cWBTC.badDebt.returns(parseUnits("2", 8))
-    cWBTC.setVariable("badDebt", parseUnits("2", 8))
+    vDAI.badDebt.returns(parseUnits("10000", 18))
+    vDAI.setVariable("badDebt", parseUnits("10000", 18))
+    vWBTC.badDebt.returns(parseUnits("2", 8))
+    vWBTC.setVariable("badDebt", parseUnits("2", 8))
 
     await shortfall.startAuction(poolId);
     
@@ -169,13 +170,13 @@ describe("Shortfall: Tests", async function () {
     expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
 
     let percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
-    let total = (new BigNumber((await cDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
+    let total = (new BigNumber((await vDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
     let amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
     let amountDeducted = (new BigNumber(previousDaiBalance.div(parseUnits("1", 18)).toString())).minus(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toString()).toString()
     expect(amountDeducted).equal(amountToDeduct)
 
     percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
-    total = (new BigNumber((await cWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
+    total = (new BigNumber((await vWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
     amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
     amountDeducted = ((new BigNumber(previousWBTCBalance.toString())).minus((await mockWBTC.balanceOf(owner.address)).toString())).div(parseUnits("1", 8).toString()).toString()
     expect(amountDeducted).equal(amountToDeduct)
@@ -193,18 +194,18 @@ describe("Shortfall: Tests", async function () {
     const auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(2)
 
-    expect(cWBTC.badDebtRecovered).to.have.been.calledOnce;
-    expect(cWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("2", 8));
+    expect(vWBTC.badDebtRecovered).to.have.been.calledOnce;
+    expect(vWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("2", 8));
 
-    expect(cDAI.badDebtRecovered).to.have.been.calledOnce;
-    expect(cDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
+    expect(vDAI.badDebtRecovered).to.have.been.calledOnce;
+    expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
   }); 
 
   it("Scenerio 2 - Start auction", async function () {
-    cDAI.badDebt.returns(parseUnits("10000", 18))
-    cDAI.setVariable("badDebt", parseUnits("10000", 18))
-    cWBTC.badDebt.returns(parseUnits("1", 8))
-    cWBTC.setVariable("badDebt", parseUnits("1", 8))
+    vDAI.badDebt.returns(parseUnits("10000", 18))
+    vDAI.setVariable("badDebt", parseUnits("10000", 18))
+    vWBTC.badDebt.returns(parseUnits("1", 8))
+    vWBTC.setVariable("badDebt", parseUnits("1", 8))
 
     riskFundBalance = "50000"
     fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18))
@@ -236,13 +237,13 @@ describe("Shortfall: Tests", async function () {
     expect(((await mockWBTC.balanceOf(owner.address))).div(parseUnits("1", 8)).toNumber()).lt(previousWBTCBalance.div(parseUnits("1", 8)).toNumber())
 
     let percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
-    let total = (new BigNumber((await cDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
+    let total = (new BigNumber((await vDAI.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString()))
     let amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
     let amountDeducted = (new BigNumber(previousDaiBalance.div(parseUnits("1", 18)).toString())).minus(((await mockDAI.balanceOf(owner.address))).div(parseUnits("1", 18)).toString()).toString()
     expect(amountDeducted).equal(amountToDeduct)
 
     percentageToDeduct = (new BigNumber(auction.startBidBps.toString())).dividedBy(100);
-    total = (new BigNumber((await cWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
+    total = (new BigNumber((await vWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "8").toString()))
     amountToDeduct = ((new BigNumber(total)).times(percentageToDeduct)).dividedBy(100).toString()
     amountDeducted = ((new BigNumber(previousWBTCBalance.toString())).minus((await mockWBTC.balanceOf(owner.address)).toString())).div(parseUnits("1", 8).toString()).toString()
     expect(amountDeducted).equal(amountToDeduct)
@@ -261,10 +262,10 @@ describe("Shortfall: Tests", async function () {
     auction = await shortfall.auctions(poolId);
     expect(auction.status).equal(2)
 
-    expect(cWBTC.badDebtRecovered).to.have.been.calledTwice;
-    expect(cWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("1", 8));
+    expect(vWBTC.badDebtRecovered).to.have.been.calledTwice;
+    expect(vWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("1", 8));
 
-    expect(cDAI.badDebtRecovered).to.have.been.calledTwice;
-    expect(cDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
+    expect(vDAI.badDebtRecovered).to.have.been.calledTwice;
+    expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
   }); 
 });

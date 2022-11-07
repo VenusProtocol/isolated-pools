@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "../../PriceOracle.sol";
-import "../../VBep20.sol";
+import "../../VToken.sol";
 
 contract MockPriceOracle {
     mapping(address => uint256) public assetPrices;
@@ -15,7 +15,7 @@ contract MockPriceOracle {
     }
 
     //https://compound.finance/docs/prices
-    function getUnderlyingPrice(VBep20 vToken) public view returns (uint256) {
+    function getUnderlyingPrice(VToken vToken) public view returns (uint256) {
         return assetPrices[vToken.underlying()];
     }
 
