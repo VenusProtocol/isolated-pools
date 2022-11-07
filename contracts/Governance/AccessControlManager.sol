@@ -10,6 +10,23 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *		within Venus Smart Contract Ecosystem
  */
 contract AccessControlManager is AccessControl {
+
+    /// @notice Emitted when an account is given a permission to a certain contract function
+    /// NOTE: If contract address is 0x000..0 this means that the account is a default admin of this function and
+    /// can call any contract function with this signature
+    event PermissionGranted(
+        address account,
+        address contractAddress,
+        string functionSig
+    );
+
+    /// @notice Emitted when an account is revoked a permission to a certain contract function
+    event PermissionRevoked(
+        address account,
+        address contractAddress,
+        string functionSig
+    );
+
     constructor() {
         // Grant the contract deployer the default admin role: it will be able
         // to grant and revoke any roles
@@ -17,26 +34,45 @@ contract AccessControlManager is AccessControl {
     }
 
     /**
-     * @notice Verifies if the given account can call a praticular contract's function
-     * @dev Since the contract is calling itself this function, we can get contracts address with msg.sender
-     * @param caller contract for which call permissions will be checked
-     * @param functionSig signature e.g. "functionName(uint,bool)"
+     * @notice Verifies if the given account can call a contract's guarded function
+     * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
+     * @param account for which call permissions will be checked
+     * @param functionSig restricted function signature e.g. "functionName(uint,bool)"
      * @return false if the user account cannot call the particular contract function
      *
      */
-    function isAllowedToCall(address caller, string memory functionSig)
+    function isAllowedToCall(address account, string memory functionSig)
         public
         view
         returns (bool)
     {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
 
-        if (hasRole(role, caller)) {
+        if (hasRole(role, account)) {
             return true;
         } else {
             role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
-            return hasRole(role, caller);
+            return hasRole(role, account);
         }
+    }
+
+    /**
+     * @notice Verifies if the given account can call a contract's guarded function
+     * @dev This function is used as a view function to check permissions rather than contract hook for access restriction check.
+     * @param account for which call permissions will be checked against
+     * @param contractAddress address of the restricted contract
+     * @param functionSig signature of the restricted function e.g. "functionName(uint,bool)"
+     * @return false if the user account cannot call the particular contract function
+     */
+    function hasPermission(
+        address account,
+        address contractAddress,
+        string memory functionSig
+    ) public view returns (bool) {
+        bytes32 role = keccak256(
+            abi.encodePacked(contractAddress, functionSig)
+        );
+        return hasRole(role, account);
     }
 
     /**
@@ -48,6 +84,7 @@ contract AccessControlManager is AccessControl {
      *      meaning that this account can access the certain function on ANY contract managed by this ACL
      * @param functionSig signature e.g. "functionName(uint,bool)"
      * @param accountToPermit account that will be given access to the contract function
+     * Emits {PermissionGranted} event.
      */
     function giveCallPermission(
         address contractAddress,
@@ -62,6 +99,7 @@ contract AccessControlManager is AccessControl {
         }
 
         grantRole(role, accountToPermit);
+        emit PermissionGranted(accountToPermit, contractAddress, functionSig);
     }
 
     /**
@@ -70,6 +108,7 @@ contract AccessControlManager is AccessControl {
      * 		May emit a {RoleRevoked} event.
      * @param contractAddress address of contract for which call permissions will be revoked
      * @param functionSig signature e.g. "functionName(uint,bool)"
+     * Emits {PermissionRevoked} event.
      */
     function revokeCallPermission(
         address contractAddress,
@@ -80,5 +119,6 @@ contract AccessControlManager is AccessControl {
             abi.encodePacked(contractAddress, functionSig)
         );
         revokeRole(role, accountToRevoke);
+        emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);
     }
 }
