@@ -49,6 +49,7 @@ describe("Liquidated shares reserves: Tests", function () {
   it("Revert on invalid asset address.", async function () {
     await expect(
       protocolShareReserve.releaseFunds(
+        "0x0000000000000000000000000000000000000111",
         "0x0000000000000000000000000000000000000000",
         10
       )
@@ -57,8 +58,14 @@ describe("Liquidated shares reserves: Tests", function () {
 
   it("Revert on Insufficient balance.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(mockDAI.address, 10)
-    ).to.be.rejectedWith("Liquidated shares Reserves: Insufficient balance");
+      protocolShareReserve.releaseFunds(
+        "0x0000000000000000000000000000000000000111", // Mock comptroller address
+        mockDAI.address,
+        10
+      )
+    ).to.be.rejectedWith(
+      "Liquidated shares Reserves: Insufficient pool balance"
+    );
   });
 
   it("Release liquidated share reserve", async function () {
@@ -66,11 +73,18 @@ describe("Liquidated shares reserves: Tests", function () {
       protocolShareReserve.address,
       convertToUnit(100, 18)
     );
+
+    await protocolShareReserve.updateState(
+      "0x0000000000000000000000000000000000000111", // Mock comptroller address
+      mockDAI.address
+    );
+
     const balance = await mockDAI.balanceOf(protocolShareReserve.address);
 
     expect(balance).equal(convertToUnit(100, 18));
 
     await protocolShareReserve.releaseFunds(
+      "0x0000000000000000000000000000000000000111", // Mock comptroller address
       mockDAI.address,
       convertToUnit(100, 18)
     );

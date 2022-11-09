@@ -332,6 +332,7 @@ describe("Risk Fund: Tests", function () {
         .approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
+
       await cUSDC._reduceReserves(convertToUnit(50, 18));
 
       const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(
@@ -339,6 +340,7 @@ describe("Risk Fund: Tests", function () {
       );
       expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDC.address,
         convertToUnit(50, 18)
       );
@@ -363,6 +365,7 @@ describe("Risk Fund: Tests", function () {
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDC.address,
         convertToUnit(100, 18)
       );
@@ -407,10 +410,12 @@ describe("Risk Fund: Tests", function () {
       expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
 
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDC.address,
         convertToUnit(100, 18)
       );
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDT.address,
         convertToUnit(100, 18)
       );
@@ -480,10 +485,12 @@ describe("Risk Fund: Tests", function () {
       expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
 
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDC.address,
         convertToUnit(100, 18)
       );
       await protocolShareReserve.releaseFunds(
+        comptroller1Proxy.address,
         mainnetUSDT.address,
         convertToUnit(100, 18)
       );
