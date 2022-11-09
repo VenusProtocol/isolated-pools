@@ -24,6 +24,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     address private auctionContractAddress;
     address private accessControl;
     mapping(address => uint256) private poolReserves;
+    mapping(address => uint256) private previousStateForAssets;
+    mapping(address => mapping(address => uint256)) private poolsAssetsReserves;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -128,6 +130,19 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         minAmountToConvert = _minAmountToConvert;
     }
 
+    function updateState(address comptroller, address asset) external {
+        require(
+            asset != address(0),
+            "Liquidated shares Reserves: Asset address invalid"
+        );
+        uint256 currentBalance = IERC20(asset).balanceOf(address(this));
+        if (currentBalance > previousStateForAssets[asset]) {
+            uint256 balanceDifference = currentBalance - previousStateForAssets[asset];
+            previousStateForAssets[asset] += balanceDifference;
+            poolsAssetsReserves[comptroller][asset] += balanceDifference;
+        }
+    }
+
     /**
      * @dev Swap single asset to BUSD.
      * @param vToken VToken
@@ -141,9 +156,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
-        uint256 balanceOfUnderlyingAsset = IERC20(underlyingAsset).balanceOf(
-            address(this)
-        );
+        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(
             address(vToken)
@@ -161,6 +174,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             );
 
             if (amountInUsd >= minAmountToConvert) {
+
+                previousStateForAssets[underlyingAsset] -= balanceOfUnderlyingAsset;
+                poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
+
                 address[] memory path = new address[](2);
                 path[0] = underlyingAsset;
                 path[1] = convertableBUSDAddress;

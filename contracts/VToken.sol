@@ -10,6 +10,7 @@ import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlManager.sol";
+import "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title Venus VToken Contract
@@ -1476,6 +1477,8 @@ contract VToken is
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         doTransferOut(protocolShareReserve, reduceAmount);
+
+        IProtocolShareReserve(protocolShareReserve).updateState(address(comptroller), underlying);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
 

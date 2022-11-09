@@ -12,4 +12,6 @@ interface IRiskFund {
     function transferReserveForAuction(address comptroller, uint256 amount)
         external
         returns (uint256);
+
+    function updateState(address comptroller, address asset) external;
 }
