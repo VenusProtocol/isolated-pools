@@ -10,10 +10,7 @@ abstract contract ComptrollerInterface {
 
     /*** Assets You Are In ***/
 
-    function enterMarkets(address[] calldata vTokens)
-        external
-        virtual
-        returns (uint256[] memory);
+    function enterMarkets(address[] calldata vTokens) external virtual returns (uint256[] memory);
 
     function exitMarket(address vToken) external virtual returns (uint256);
 
@@ -136,11 +133,7 @@ abstract contract ComptrollerViewInterface {
 
     function oracle() external view virtual returns (PriceOracle);
 
-    function getAssetsIn(address)
-        external
-        view
-        virtual
-        returns (VToken[] memory);
+    function getAssetsIn(address) external view virtual returns (VToken[] memory);
 
     function compSpeeds(address) external view virtual returns (uint256);
 
@@ -152,15 +145,7 @@ abstract contract ComptrollerViewInterface {
 
     function maxAssets() external view virtual returns (uint256);
 
-    function liquidationIncentiveMantissa()
-        external
-        view
-        virtual
-        returns (uint256);
+    function liquidationIncentiveMantissa() external view virtual returns (uint256);
 
-    function minLiquidatableCollateral()
-        external
-        view
-        virtual
-        returns (uint256);
+    function minLiquidatableCollateral() external view virtual returns (uint256);
 }

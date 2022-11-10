@@ -1,15 +1,20 @@
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import chai from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
-import chai from "chai";
-const { expect } = chai;
-chai.use(smock.matchers);
 
 import {
-  Comptroller, PriceOracle, Comptroller__factory, VToken, AccessControlManager, PoolRegistry
+  AccessControlManager,
+  Comptroller,
+  Comptroller__factory,
+  PoolRegistry,
+  PriceOracle,
+  VToken,
 } from "../../../typechain";
 
+const { expect } = chai;
+chai.use(smock.matchers);
 
 type PauseFixture = {
   accessControl: FakeContract<AccessControlManager>;
@@ -36,12 +41,12 @@ async function pauseFixture(): Promise<PauseFixture> {
   await comptroller._setPriceOracle(oracle.address);
   const names = ["OMG", "ZRX", "BAT", "sketch"];
   const [OMG, ZRX, BAT, SKT] = await Promise.all(
-    names.map(async (name) => {
+    names.map(async name => {
       const vToken = await smock.fake<VToken>("VToken");
       if (name !== "sketch") {
-        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
         if (poolRegistryBalance.isZero()) {
-          setBalance(await root.getAddress(), 100n ** 18n)
+          await setBalance(await root.getAddress(), 100n ** 18n);
           await root.sendTransaction({
             to: poolRegistry.address,
             value: ethers.utils.parseEther("1"),
@@ -51,13 +56,13 @@ async function pauseFixture(): Promise<PauseFixture> {
         await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
       }
       return vToken;
-    })
+    }),
   );
   const allTokens = [OMG, ZRX, BAT];
   return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names, poolRegistry };
 }
 
-function configure({ accessControl, oracle, allTokens, names }: PauseFixture) {
+function configure({ accessControl, allTokens, names }: PauseFixture) {
   accessControl.isAllowedToCall.reset();
   accessControl.isAllowedToCall.returns(true);
   allTokens.map((vToken, i) => {
@@ -68,12 +73,9 @@ function configure({ accessControl, oracle, allTokens, names }: PauseFixture) {
   });
 }
 
-
 describe("Comptroller", () => {
   let root: Signer;
   let rootAddress: string;
-  let customer: Signer;
-  let accounts: Signer[];
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
   let OMG: FakeContract<VToken>;
@@ -82,7 +84,7 @@ describe("Comptroller", () => {
   let SKT: FakeContract<VToken>;
 
   beforeEach(async () => {
-    [root, customer, ...accounts] = await ethers.getSigners();
+    [root] = await ethers.getSigners();
     const contracts = await loadFixture(pauseFixture);
     configure(contracts);
     ({ accessControl, comptroller, OMG, ZRX, BAT, SKT } = contracts);
@@ -94,13 +96,15 @@ describe("Comptroller", () => {
       accessControl.isAllowedToCall
         .whenCalledWith(rootAddress, "_setActionsPaused(VToken[],Action[],bool)")
         .returns(false);
-      await expect(comptroller._setActionsPaused([OMG.address], [1], true))
-        .to.be.revertedWith("only authorised addresses can pause");
+      await expect(comptroller._setActionsPaused([OMG.address], [1], true)).to.be.revertedWith(
+        "only authorised addresses can pause",
+      );
     });
 
     it("reverts if the market is not listed", async () => {
-      await expect(comptroller._setActionsPaused([SKT.address], [1], true))
-        .to.be.revertedWith("cannot pause a market that is not listed");
+      await expect(comptroller._setActionsPaused([SKT.address], [1], true)).to.be.revertedWith(
+        "cannot pause a market that is not listed",
+      );
     });
 
     it("does nothing if the actions list is empty", async () => {

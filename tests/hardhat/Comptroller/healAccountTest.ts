@@ -1,23 +1,26 @@
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import chai from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
-import chai from "chai";
+
+import { convertToUnit } from "../../../helpers/utils";
+import {
+  AccessControlManager,
+  Comptroller,
+  Comptroller__factory,
+  PoolRegistry,
+  PriceOracle,
+  VToken,
+} from "../../../typechain";
+
 const { expect } = chai;
 chai.use(smock.matchers);
-
-import {
-  Comptroller, PriceOracle, Comptroller__factory, VToken, AccessControlManager, PoolRegistry
-} from "../../../typechain";
-import { convertToUnit } from "../../../helpers/utils";
-
 
 describe("healAccount", () => {
   let root: Signer;
   let liquidator: Signer;
   let user: Signer;
-  let accounts: Signer[];
-  let rootAddress: string;
   let liquidatorAddress: string;
   let userAddress: string;
 
@@ -28,14 +31,14 @@ describe("healAccount", () => {
 
   type HealAccountFixture = {
     accessControl: FakeContract<AccessControlManager>;
-    comptroller: MockContract<Comptroller>,
-    oracle: FakeContract<PriceOracle>,
-    OMG: FakeContract<VToken>,
-    ZRX: FakeContract<VToken>,
-    BAT: FakeContract<VToken>,
-    SKT: FakeContract<VToken>,
-    allTokens: FakeContract<VToken>[],
-    names: string[]
+    comptroller: MockContract<Comptroller>;
+    oracle: FakeContract<PriceOracle>;
+    OMG: FakeContract<VToken>;
+    ZRX: FakeContract<VToken>;
+    BAT: FakeContract<VToken>;
+    SKT: FakeContract<VToken>;
+    allTokens: FakeContract<VToken>[];
+    names: string[];
   };
 
   async function healAccountFixture(): Promise<HealAccountFixture> {
@@ -51,11 +54,11 @@ describe("healAccount", () => {
     await comptroller._setMinLiquidatableCollateral(convertToUnit("100", 18));
     const names = ["OMG", "ZRX", "BAT"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
-      names.map(async (name) => {
+      names.map(async () => {
         const vToken = await smock.fake<VToken>("VToken");
-        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+        const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
         if (poolRegistryBalance.isZero()) {
-          setBalance(await root.getAddress(), 100n ** 18n)
+          await setBalance(await root.getAddress(), 100n ** 18n);
           await root.sendTransaction({
             to: poolRegistry.address,
             value: ethers.utils.parseEther("1"),
@@ -64,7 +67,7 @@ describe("healAccount", () => {
         const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
         await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
         return vToken;
-      })
+      }),
     );
     const allTokens = [OMG, ZRX, BAT];
     return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names };
@@ -78,12 +81,11 @@ describe("healAccount", () => {
       vToken.symbol.returns(names[i]);
       vToken.name.returns(names[i]);
       vToken.getAccountSnapshot.returns([0, 0, 0, 0]);
-    })
+    });
   }
 
   beforeEach(async () => {
-    [root, liquidator, user, ...accounts] = await ethers.getSigners();
-    rootAddress = await root.getAddress();
+    [root, liquidator, user] = await ethers.getSigners();
     liquidatorAddress = await liquidator.getAddress();
     userAddress = await user.getAddress();
     const contracts = await loadFixture(healAccountFixture);
@@ -113,8 +115,10 @@ describe("healAccount", () => {
 
     it("fails if the vToken account snapshot returns an error", async () => {
       ZRX.getAccountSnapshot.whenCalledWith(userAddress).returns([42, 0, 0, 0]);
-      await expect(comptroller.connect(liquidator).healAccount(userAddress))
-        .to.be.revertedWithCustomError(comptroller, "SnapshotError");
+      await expect(comptroller.connect(liquidator).healAccount(userAddress)).to.be.revertedWithCustomError(
+        comptroller,
+        "SnapshotError",
+      );
     });
 
     it("fails if collateral exceeds threshold", async () => {

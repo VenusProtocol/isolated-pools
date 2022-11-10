@@ -1,21 +1,19 @@
-import * as dotenv from "dotenv";
-dotenv.config();
-
-import { HardhatUserConfig, task, types } from "hardhat/config";
-import '@nomicfoundation/hardhat-toolbox';
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-etherscan";
 import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
+import * as dotenv from "dotenv";
 import "hardhat-deploy";
-import { convertToUnit } from "./helpers/utils";
 import { DeployResult } from "hardhat-deploy/types";
+import "hardhat-gas-reporter";
+import { HardhatUserConfig, task, types } from "hardhat/config";
+import "solidity-coverage";
 import "solidity-docgen";
 
-// Generate using https://iancoleman.io/bip39/
-const mnemonic = process.env.MNEMONIC || "";
+import { convertToUnit } from "./helpers/utils";
+
+dotenv.config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -30,33 +28,17 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 task("addMarket", "Add a market to an existing pool")
   .addParam("proxyAdmin", "Admin of vToken proxy")
   .addParam("poolid", "ID of pool to add a market", 1, types.int)
-  .addParam(
-    "asset",
-    "asset (ERC20) address",
-    "0x0000000000000000000000000000000000000000",
-    types.string
-  )
+  .addParam("asset", "asset (ERC20) address", "0x0000000000000000000000000000000000000000", types.string)
   .addParam("decimals", "asset decimal places", 8, types.int)
   .addParam("name", "name of the market", undefined, types.string)
   .addParam("symbol", "symbol of market", undefined, types.string)
   .addParam("rateModel", "0 - WhitePaper ; 1- JumpRate", 0, types.int)
   .addParam("baseRate", "base rate per year", 0, types.int)
-  .addParam(
-    "multiplier",
-    "multiplier per year",
-    "40000000000000000",
-    types.string
-  )
+  .addParam("multiplier", "multiplier per year", "40000000000000000", types.string)
   .addParam("jumpMul", "jump multiplier per yer", 0, types.int)
   .addParam("kink", "kink rate", 0, types.int)
-  .addParam(
-    "collFactor",
-    "collateral factor is exonented to 18 decimals (e.g input = input*10**18)",
-    0.7,
-    types.float
-  )
+  .addParam("collFactor", "collateral factor is exonented to 18 decimals (e.g input = input*10**18)", 0.7, types.float)
   .setAction(async (taskArgs, hre) => {
-
     const VBep20Immutable = await hre.ethers.getContractFactory("VBep20Immutable");
     const tokenImplementation = await VBep20Immutable.deploy();
     await tokenImplementation.deployed();
@@ -76,39 +58,37 @@ task("addMarket", "Add a market to an existing pool")
       jumpMultiplierPerYear: taskArgs.jumpMul,
       kink_: taskArgs.kink,
       collateralFactor: convertToUnit(taskArgs.collFactor, 18),
-      accessControlManager: accessControl.address, 
+      accessControlManager: accessControl.address,
       vTokenProxyAdmin: taskArgs.proxyAdmin,
       tokenImplementation_: tokenImplementation.address,
     });
 
-    console.log("Market " + taskArgs.name + " added successfully to pool " + taskArgs.comptroller)
+    console.log("Market " + taskArgs.name + " added successfully to pool " + taskArgs.comptroller);
   });
 
-  task("deployComptroller", "Deploys a Comptroller Implementation")
+task("deployComptroller", "Deploys a Comptroller Implementation")
   .addParam("contractName", "Contract name, later we can load contracts by name")
   .addParam("poolRegistry", "Address of PoolRegistry Contract")
   .addParam("accessControl", "Address of AccessControlManager contract")
-  .setAction(async (taskArgs,hre) => {
+  .setAction(async (taskArgs, hre) => {
     const { deployer } = await hre.getNamedAccounts();
     const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
       contract: "Comptroller",
       from: deployer,
       args: [taskArgs.poolRegistry, taskArgs.accessControl],
-      log: true
+      log: true,
     });
-  
 
     console.log("Comptroller implementation deployed with address: " + Comptroller.address);
   });
 
-  task("createPool", "Creates a pool via PoolRegistry")
+task("createPool", "Creates a pool via PoolRegistry")
   .addParam("poolName", "Name of the pool")
   .addParam("comptroller", "Address of comptroller implementation")
   .addParam("oracle", "Contract name, later we can load contracts by name")
   .addParam("closeFactor", "Close factor for pool")
   .addParam("liquidationIncentive", "Liquidation incentive for pool")
-  .setAction(async (taskArgs,hre) => {
-    const { deployer } = await hre.getNamedAccounts();
+  .setAction(async (taskArgs, hre) => {
     const poolRegistry = await hre.ethers.getContract("PoolRegistry");
     await poolRegistry.createRegistryPool(
       taskArgs.poolName,
@@ -116,21 +96,17 @@ task("addMarket", "Add a market to an existing pool")
       taskArgs.closeFactor,
       taskArgs.liquidationIncentive,
       taskArgs.minLiquidatableCollateral,
-      taskArgs.oracle
+      taskArgs.oracle,
     );
 
     const pools = await poolRegistry.callStatic.getAllPools();
     await hre.ethers.getContractAt("Comptroller", pools[0].comptroller);
 
-    const unitroller = await hre.ethers.getContractAt(
-      "Unitroller",
-      pools[0].comptroller
-    );
+    const unitroller = await hre.ethers.getContractAt("Unitroller", pools[0].comptroller);
     await unitroller._acceptAdmin();
-  
+
     console.log("Pool " + taskArgs.poolName + " has been sucessfully created");
   });
-
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -144,8 +120,8 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI
-            }
+              yul: !process.env.CI,
+            },
           },
           outputSelection: {
             "*": {
@@ -160,8 +136,8 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI
-            }
+              yul: !process.env.CI,
+            },
           },
           outputSelection: {
             "*": {
@@ -180,15 +156,13 @@ const config: HardhatUserConfig = {
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     testnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       gasPrice: 20000000000,
-      accounts:
-      process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
   gasReporter: {
@@ -213,13 +187,13 @@ const config: HardhatUserConfig = {
   // Hardhat deploy
   namedAccounts: {
     deployer: 0,
-    acc1:1,
-    acc2:2,
+    acc1: 1,
+    acc2: 2,
   },
   docgen: {
-    outputDir: './docs',
-    pages: 'files'
-  }
+    outputDir: "./docs",
+    pages: "files",
+  },
 };
 
 function isFork() {

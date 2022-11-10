@@ -33,7 +33,7 @@ contract Structs {
         uint16 b,
         uint96 c
     ) public {
-        Inner memory inner = Inner({a: a, b: b, c: c});
+        Inner memory inner = Inner({ a: a, b: b, c: c });
         outers[id].inners[msg.sender] = inner;
     }
 }

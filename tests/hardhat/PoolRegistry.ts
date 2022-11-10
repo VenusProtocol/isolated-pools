@@ -1,20 +1,21 @@
-import { ethers } from "hardhat";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { expect } from "chai";
+import { ethers } from "hardhat";
+
+import { convertToUnit } from "../../helpers/utils";
 import {
+  AccessControlManager,
+  Comptroller,
+  JumpRateModelFactory,
+  MockPriceOracle,
   MockToken,
   PoolRegistry,
-  Comptroller,
-  VToken,
-  MockPriceOracle,
-  VTokenProxyFactory,
-  JumpRateModelFactory,
-  WhitePaperInterestRateModelFactory,
-  AccessControlManager,
-  RiskFund,
   ProtocolShareReserve,
+  RiskFund,
+  VToken,
+  VTokenProxyFactory,
+  WhitePaperInterestRateModelFactory,
 } from "../../typechain";
-import { convertToUnit } from "../../helpers/utils";
-import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
@@ -40,20 +41,14 @@ describe("PoolRegistry: Tests", function () {
    */
   before(async function () {
     const [, user, proxyAdmin] = await ethers.getSigners();
-    const VTokenProxyFactory = await ethers.getContractFactory(
-      "VTokenProxyFactory"
-    );
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     cTokenFactory = await VTokenProxyFactory.deploy();
     await cTokenFactory.deployed();
-    const JumpRateModelFactory = await ethers.getContractFactory(
-      "JumpRateModelFactory"
-    );
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
-      "WhitePaperInterestRateModelFactory"
-    );
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -64,18 +59,12 @@ describe("PoolRegistry: Tests", function () {
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy();
 
-    await shortfall.initialize(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-      convertToUnit("10000", 18)
-    );
+    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const ProtocolShareReserve = await ethers.getContractFactory(
-      "ProtocolShareReserve"
-    );
+    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -85,26 +74,18 @@ describe("PoolRegistry: Tests", function () {
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
-      protocolShareReserve.address
+      protocolShareReserve.address,
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>(
-      "AccessControlManager"
-    );
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller1 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller1.deployed();
-    comptroller2 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller2.deployed();
 
     // Deploy Mock Tokens
@@ -137,7 +118,7 @@ describe("PoolRegistry: Tests", function () {
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     // Registering the second pool
@@ -148,21 +129,15 @@ describe("PoolRegistry: Tests", function () {
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     // Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
-    comptroller1Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptroller1Proxy.acceptAdmin();
 
-    comptroller2Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[1].comptroller
-    );
+    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptAdmin();
 
     const VToken = await ethers.getContractFactory("VToken");
@@ -206,23 +181,15 @@ describe("PoolRegistry: Tests", function () {
       tokenImplementation_: tokenImplementation.address,
     });
 
-    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockWBTC.address
-    );
-    const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockDAI.address
-    );
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
 
     vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
     vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
-    await comptroller1Proxy
-      .connect(user)
-      .enterMarkets([vDAI.address, vWBTC.address]);
+    await comptroller1Proxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
 
     // Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
@@ -240,9 +207,7 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Should change pool name", async function () {
-    await expect(
-      poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1 updated")
-    )
+    await expect(poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1 updated"))
       .to.emit(poolRegistry, "PoolNameSet")
       .withArgs(comptroller1Proxy.address, "Pool 1 updated");
     const pools = await poolRegistry.callStatic.getAllPools();
@@ -263,14 +228,10 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Get pool by comptroller", async function () {
-    const pool1 = await poolRegistry.getPoolByComptroller(
-      comptroller1Proxy.address
-    );
+    const pool1 = await poolRegistry.getPoolByComptroller(comptroller1Proxy.address);
     expect(pool1[0]).equal("Pool 1");
 
-    const pool2 = await poolRegistry.getPoolByComptroller(
-      comptroller2Proxy.address
-    );
+    const pool2 = await poolRegistry.getPoolByComptroller(comptroller2Proxy.address);
     expect(pool2[0]).equal("Pool 2");
   });
 
@@ -311,16 +272,9 @@ describe("PoolRegistry: Tests", function () {
       description,
     };
 
-    await expect(
-      poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata)
-    )
+    await expect(poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata))
       .to.emit(poolRegistry, "PoolMetadataUpdated")
-      .withArgs(comptroller1Proxy.address, oldMetadata, [
-        riskRating,
-        category,
-        logoURL,
-        description,
-      ]);
+      .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
 
     const metadata = await poolRegistry.metadata(comptroller1Proxy.address);
     expect(metadata.riskRating).equal(riskRating);
@@ -349,7 +303,7 @@ describe("PoolRegistry: Tests", function () {
         accessControlManager: fakeAccessControlManager.address,
         vTokenProxyAdmin: proxyAdmin.address,
         tokenImplementation_: tokenImplementation.address,
-      })
+      }),
     ).to.be.rejectedWith("Ownable: caller is not the owner");
   });
 });

@@ -1,26 +1,26 @@
-import { ethers } from "hardhat";
-import { expect } from "chai";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { expect } from "chai";
+import { ethers } from "hardhat";
 
+import { convertToUnit } from "../../helpers/utils";
 import {
+  AccessControlManager,
+  Comptroller,
+  JumpRateModelFactory,
   MockToken,
   PoolRegistry,
-  Comptroller,
-  VToken,
-  VTokenProxyFactory,
-  JumpRateModelFactory,
-  WhitePaperInterestRateModelFactory,
-  RewardsDistributor,
   PoolRegistry__factory,
   PriceOracle,
   PriceOracle__factory,
-  AccessControlManager,
   ProtocolShareReserve,
-  RiskFund,
   ProtocolShareReserve__factory,
-  RiskFund__factory
+  RewardsDistributor,
+  RiskFund,
+  RiskFund__factory,
+  VToken,
+  VTokenProxyFactory,
+  WhitePaperInterestRateModelFactory,
 } from "../../typechain";
-import { convertToUnit } from "../../helpers/utils";
 
 let poolRegistry: MockContract<PoolRegistry>;
 let comptroller: Comptroller;
@@ -45,21 +45,15 @@ describe("Rewards: Tests", async function () {
    */
   before(async function () {
     const [, proxyAdmin] = await ethers.getSigners();
-    const VTokenProxyFactory = await ethers.getContractFactory(
-      "VTokenProxyFactory"
-    );
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
-    const JumpRateModelFactory = await ethers.getContractFactory(
-      "JumpRateModelFactory"
-    );
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
-      "WhitePaperInterestRateModelFactory"
-    );
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -67,27 +61,18 @@ describe("Rewards: Tests", async function () {
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const ProtocolShareReserve =
-      await smock.mock<ProtocolShareReserve__factory>(
-        "ProtocolShareReserve"
-      );
+    const ProtocolShareReserve = await smock.mock<ProtocolShareReserve__factory>("ProtocolShareReserve");
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
-    const PoolRegistryFactory = await smock.mock<PoolRegistry__factory>(
-      "PoolRegistry"
-    );
+    const PoolRegistryFactory = await smock.mock<PoolRegistry__factory>("PoolRegistry");
     poolRegistry = await PoolRegistryFactory.deploy();
     await poolRegistry.deployed();
 
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy();
 
-    await shortfall.initialize(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-      convertToUnit("10000", 18)
-    )
+    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
 
     await poolRegistry.initialize(
       vTokenFactory.address,
@@ -95,21 +80,16 @@ describe("Rewards: Tests", async function () {
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
-      protocolShareReserve.address
+      protocolShareReserve.address,
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>(
-      "AccessControlManager"
-    );
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller.deployed();
 
     // Deploy Mock Tokens
@@ -155,16 +135,13 @@ describe("Rewards: Tests", async function () {
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      fakePriceOracle.address
+      fakePriceOracle.address,
     );
 
     // Get all pools list.
     const pools = await poolRegistry.callStatic.getAllPools();
 
-    comptrollerProxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
+    comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptrollerProxy.acceptAdmin();
     await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
 
@@ -209,31 +186,21 @@ describe("Rewards: Tests", async function () {
       tokenImplementation_: tokenImplementation.address,
     });
 
-    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      comptrollerProxy.address,
-      mockWBTC.address
-    );
-    const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      comptrollerProxy.address,
-      mockDAI.address
-    );
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockDAI.address);
 
     vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
     vDAI = await ethers.getContractAt("VToken", vDAIAddress);
-    
+
     const [, , user] = await ethers.getSigners();
 
     //Enter Markets
     await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
-    await comptrollerProxy
-      .connect(user)
-      .enterMarkets([vDAI.address, vWBTC.address]);
+    await comptrollerProxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
 
     //Configure rewards for pool
-    const RewardsDistributor = await ethers.getContractFactory(
-      "RewardsDistributor"
-    );
+    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
     xvs = await MockToken.deploy("Venus Token", "XVS", 18);
     const initialXvs = convertToUnit(1000000, 18);
@@ -247,7 +214,7 @@ describe("Rewards: Tests", async function () {
     await rewardsDistributor._setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
-      [convertToUnit(0.5, 18), convertToUnit(0.5, 18)]
+      [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
     );
   });
 
@@ -266,9 +233,7 @@ describe("Rewards: Tests", async function () {
   });
 
   it("Rewards distributor should have correct balance", async function () {
-    expect(await xvs.balanceOf(rewardsDistributor.address)).equal(
-      convertToUnit(1000000, 18)
-    );
+    expect(await xvs.balanceOf(rewardsDistributor.address)).equal(convertToUnit(1000000, 18));
   });
 
   it("Should have coorect market addresses", async function () {
@@ -283,15 +248,9 @@ describe("Rewards: Tests", async function () {
   //      was a false-positive. The correct test would need to mint or
   //      borrow some assets (or pretend to do so, using smock).
   it.skip("Claim XVS", async function () {
-    const [owner, , user1, user2] = await ethers.getSigners();
-    await rewardsDistributor["claimRewardToken(address,address[])"](
-      user1.address,
-      [vWBTC.address, vDAI.address]
-    );
-    await rewardsDistributor["claimRewardToken(address,address[])"](
-      user2.address,
-      [vWBTC.address, vDAI.address]
-    );
+    const [_owner, user1, user2] = await ethers.getSigners();
+    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+    await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
 
     const test = await xvs.balanceOf(user1.address);
     const test1 = await xvs.balanceOf(user2.address);

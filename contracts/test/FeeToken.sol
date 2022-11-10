@@ -26,11 +26,7 @@ contract FeeToken is FaucetToken {
         owner = _owner;
     }
 
-    function transfer(address dst, uint256 amount)
-        public
-        override
-        returns (bool)
-    {
+    function transfer(address dst, uint256 amount) public override returns (bool) {
         uint256 fee = amount.mul(basisPointFee).div(10000);
         uint256 net = amount.sub(fee);
         balanceOf[owner] = balanceOf[owner].add(fee);

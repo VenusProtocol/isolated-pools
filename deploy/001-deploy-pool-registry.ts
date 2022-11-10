@@ -1,7 +1,8 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { DeployFunction } from "hardhat-deploy/types";
-import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
+import { DeployResult } from "hardhat-deploy/dist/types";
+import { DeployFunction } from "hardhat-deploy/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+
 import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -10,35 +11,26 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const vBep20Factory: DeployResult = await deploy(
-    "VBep20ImmutableProxyFactory",
-    {
-      from: deployer,
-      args: [],
-      log: true,
-      autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
-    }
-  );
+  const vBep20Factory: DeployResult = await deploy("VBep20ImmutableProxyFactory", {
+    from: deployer,
+    args: [],
+    log: true,
+    autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
+  });
 
-  const jumpRateModelFactory: DeployResult = await deploy(
-    "JumpRateModelFactory",
-    {
-      from: deployer,
-      args: [],
-      log: true,
-      autoMine: true,
-    }
-  );
+  const jumpRateModelFactory: DeployResult = await deploy("JumpRateModelFactory", {
+    from: deployer,
+    args: [],
+    log: true,
+    autoMine: true,
+  });
 
-  const whitePaperRateFactory: DeployResult = await deploy(
-    "WhitePaperInterestRateModelFactory",
-    {
-      from: deployer,
-      args: [],
-      log: true,
-      autoMine: true,
-    }
-  );
+  const whitePaperRateFactory: DeployResult = await deploy("WhitePaperInterestRateModelFactory", {
+    from: deployer,
+    args: [],
+    log: true,
+    autoMine: true,
+  });
 
   await deploy("AccessControlManager", {
     from: deployer,
@@ -73,44 +65,43 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
-  
-  
+
   const BUSD = await ethers.getContract("MockBUSD");
 
-  await deploy('Shortfall', {
+  await deploy("Shortfall", {
     from: deployer,
-    contract: 'Shortfall',
+    contract: "Shortfall",
     proxy: {
       owner: deployer,
-      proxyContract: 'OpenZeppelinTransparentProxy',
+      proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
-        methodName: 'initialize',
-        args: [BUSD.address,
-          riskFund.address,
-          convertToUnit(1000, 18)],
+        methodName: "initialize",
+        args: [BUSD.address, riskFund.address, convertToUnit(1000, 18)],
       },
       upgradeIndex: 0,
     },
     autoMine: true,
     log: true,
   });
-  
+
   const shortFall = await ethers.getContract("Shortfall");
 
-  await deploy('PoolRegistry', {
+  await deploy("PoolRegistry", {
     from: deployer,
-    contract: 'PoolRegistry',
+    contract: "PoolRegistry",
     proxy: {
       owner: deployer,
-      proxyContract: 'OpenZeppelinTransparentProxy',
+      proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
-        methodName: 'initialize',
-        args: [vBep20Factory.address,
+        methodName: "initialize",
+        args: [
+          vBep20Factory.address,
           jumpRateModelFactory.address,
           whitePaperRateFactory.address,
           shortFall.address,
           riskFund.address,
-          protocolShareReserve.address],
+          protocolShareReserve.address,
+        ],
       },
       upgradeIndex: 0,
     },
@@ -130,32 +121,32 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     args: [],
   });
-    
+
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setCollateralFactor(VToken,uint256,uint256)",
-    poolRegistry.address
+    poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setLiquidationIncentive(uint)",
-    poolRegistry.address
+    poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_supportMarket(VToken)",
-    poolRegistry.address
+    poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setInterestRateModelFresh(InterestRateModel)",
-    vBep20Factory.address
+    vBep20Factory.address,
   );
   await tx.wait();
 };

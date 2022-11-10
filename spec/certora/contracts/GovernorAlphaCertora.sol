@@ -6,7 +6,11 @@ import "../../../contracts/Governance/GovernorAlpha.sol";
 contract GovernorAlphaCertora is GovernorAlpha {
     Proposal proposal;
 
-    constructor(address timelock_, address comp_, address guardian_) GovernorAlpha(timelock_, comp_, guardian_) public {}
+    constructor(
+        address timelock_,
+        address comp_,
+        address guardian_
+    ) public GovernorAlpha(timelock_, comp_, guardian_) {}
 
     // XXX breaks solver
     /* function certoraPropose() public returns (uint) { */
@@ -17,43 +21,43 @@ contract GovernorAlphaCertora is GovernorAlpha {
     /*     return proposals[proposalId].targets.length; */
     /* } */
 
-    function certoraProposalStart(uint proposalId) public returns (uint) {
+    function certoraProposalStart(uint256 proposalId) public returns (uint256) {
         return proposals[proposalId].startBlock;
     }
 
-    function certoraProposalEnd(uint proposalId) public returns (uint) {
+    function certoraProposalEnd(uint256 proposalId) public returns (uint256) {
         return proposals[proposalId].endBlock;
     }
 
-    function certoraProposalEta(uint proposalId) public returns (uint) {
+    function certoraProposalEta(uint256 proposalId) public returns (uint256) {
         return proposals[proposalId].eta;
     }
 
-    function certoraProposalExecuted(uint proposalId) public returns (bool) {
+    function certoraProposalExecuted(uint256 proposalId) public returns (bool) {
         return proposals[proposalId].executed;
     }
 
-    function certoraProposalState(uint proposalId) public returns (uint) {
-        return uint(state(proposalId));
+    function certoraProposalState(uint256 proposalId) public returns (uint256) {
+        return uint256(state(proposalId));
     }
 
-    function certoraProposalVotesFor(uint proposalId) public returns (uint) {
+    function certoraProposalVotesFor(uint256 proposalId) public returns (uint256) {
         return proposals[proposalId].forVotes;
     }
 
-    function certoraProposalVotesAgainst(uint proposalId) public returns (uint) {
+    function certoraProposalVotesAgainst(uint256 proposalId) public returns (uint256) {
         return proposals[proposalId].againstVotes;
     }
 
-    function certoraVoterVotes(uint proposalId, address voter) public returns (uint) {
+    function certoraVoterVotes(uint256 proposalId, address voter) public returns (uint256) {
         return proposals[proposalId].receipts[voter].votes;
     }
 
-    function certoraTimelockDelay() public returns (uint) {
+    function certoraTimelockDelay() public returns (uint256) {
         return timelock.delay();
     }
 
-    function certoraTimelockGracePeriod() public returns (uint) {
+    function certoraTimelockGracePeriod() public returns (uint256) {
         return timelock.GRACE_PERIOD();
     }
 }

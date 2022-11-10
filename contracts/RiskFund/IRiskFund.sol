@@ -4,14 +4,9 @@ pragma solidity 0.8.13;
 interface IRiskFund {
     function swapAllPoolsAssets() external returns (uint256);
 
-    function getPoolReserve(address comptroller)
-        external
-        view
-        returns (uint256);
+    function getPoolReserve(address comptroller) external view returns (uint256);
 
-    function transferReserveForAuction(address comptroller, uint256 amount)
-        external
-        returns (uint256);
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256);
 
     function updateAssetsState(address comptroller, address asset) external;
 }

@@ -6,18 +6,18 @@ import "./SimulationInterface.sol";
 
 contract UnderlyingModelNonStandard is EIP20NonStandardInterface, SimulationInterface {
     uint256 _totalSupply;
-    mapping (address => uint256) balances;
-    mapping (address => mapping (address => uint256)) allowances;
+    mapping(address => uint256) balances;
+    mapping(address => mapping(address => uint256)) allowances;
 
-    function totalSupply() override external view returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address owner) override external view returns (uint256 balance) {
+    function balanceOf(address owner) external view override returns (uint256 balance) {
         balance = balances[owner];
     }
 
-    function transfer(address dst, uint256 amount) override external {
+    function transfer(address dst, uint256 amount) external override {
         address src = msg.sender;
         require(balances[src] >= amount);
         require(balances[dst] + amount >= balances[dst]);
@@ -26,7 +26,11 @@ contract UnderlyingModelNonStandard is EIP20NonStandardInterface, SimulationInte
         balances[dst] += amount;
     }
 
-    function transferFrom(address src, address dst, uint256 amount) override external {
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 amount
+    ) external override {
         require(allowances[src][msg.sender] >= amount);
         require(balances[src] >= amount);
         require(balances[dst] + amount >= balances[dst]);
@@ -36,15 +40,15 @@ contract UnderlyingModelNonStandard is EIP20NonStandardInterface, SimulationInte
         balances[dst] += amount;
     }
 
-    function approve(address spender, uint256 amount) override external returns (bool success) {
+    function approve(address spender, uint256 amount) external override returns (bool success) {
         allowances[msg.sender][spender] = amount;
     }
 
-    function allowance(address owner, address spender) override external view returns (uint256 remaining) {
+    function allowance(address owner, address spender) external view override returns (uint256 remaining) {
         remaining = allowances[owner][spender];
     }
 
-    function dummy() override external {
+    function dummy() external override {
         return;
     }
 }

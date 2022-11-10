@@ -6,9 +6,7 @@ import "../../contracts/Comptroller.sol";
 contract ComptrollerScenario is Comptroller {
     uint256 public blockNumber;
 
-    constructor(address _poolRegistry, address _accessControl)
-        Comptroller(_poolRegistry, _accessControl)
-    {}
+    constructor(address _poolRegistry, address _accessControl) Comptroller(_poolRegistry, _accessControl) {}
 
     function fastForward(uint256 blocks) public returns (uint256) {
         blockNumber += blocks;

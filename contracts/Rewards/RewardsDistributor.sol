@@ -24,8 +24,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
     /// @notice The REWARD TOKEN borrow index for each market for each supplier as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256))
-        public rewardTokenSupplierIndex;
+    mapping(address => mapping(address => uint256)) public rewardTokenSupplierIndex;
 
     /// @notice The initial REWARD TOKEN index for a market
     uint224 public constant rewardTokenInitialIndex = 1e36;
@@ -65,29 +64,19 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     );
 
     /// @notice Emitted when a new supply-side REWARD TOKEN speed is calculated for a market
-    event RewardTokenSupplySpeedUpdated(
-        VToken indexed vToken,
-        uint256 newSpeed
-    );
+    event RewardTokenSupplySpeedUpdated(VToken indexed vToken, uint256 newSpeed);
 
     /// @notice Emitted when a new borrow-side REWARD TOKEN speed is calculated for a market
-    event RewardTokenBorrowSpeedUpdated(
-        VToken indexed vToken,
-        uint256 newSpeed
-    );
+    event RewardTokenBorrowSpeedUpdated(VToken indexed vToken, uint256 newSpeed);
 
     /// @notice Emitted when REWARD TOKEN is granted by admin
     event RewardTokenGranted(address recipient, uint256 amount);
 
     /// @notice Emitted when a new REWARD TOKEN speed is set for a contributor
-    event ContributorRewardTokenSpeedUpdated(
-        address indexed contributor,
-        uint256 newSpeed
-    );
+    event ContributorRewardTokenSpeedUpdated(address indexed contributor, uint256 newSpeed);
 
     /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256))
-        public rewardTokenBorrowerIndex;
+    mapping(address => mapping(address => uint256)) public rewardTokenBorrowerIndex;
 
     Comptroller private comptroller;
 
@@ -96,20 +85,14 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20 _rewardToken)
-        public
-        initializer
-    {
+    function initialize(Comptroller _comptroller, IERC20 _rewardToken) public initializer {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
         __Ownable_init();
     }
 
     function initializeMarket(address vToken) external onlyComptroller {
-        uint32 blockNumber = safe32(
-            getBlockNumber(),
-            "block number exceeds 32 bits"
-        );
+        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
 
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
@@ -148,17 +131,12 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     ) public onlyOwner {
         uint256 numTokens = vTokens.length;
         require(
-            numTokens == supplySpeeds.length &&
-                numTokens == borrowSpeeds.length,
+            numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
             "Comptroller::_setRewardTokenSpeeds invalid input"
         );
 
         for (uint256 i = 0; i < numTokens; ++i) {
-            setRewardTokenSpeedInternal(
-                vTokens[i],
-                supplySpeeds[i],
-                borrowSpeeds[i]
-            );
+            setRewardTokenSpeedInternal(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
         }
     }
 
@@ -167,10 +145,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
-    function _setContributorRewardTokenSpeed(
-        address contributor,
-        uint256 rewardTokenSpeed
-    ) public onlyOwner {
+    function _setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed) public onlyOwner {
         // note that REWARD TOKEN speed could be set to 0 to halt liquidity rewards for a contributor
         updateContributorRewards(contributor);
         if (rewardTokenSpeed == 0) {
@@ -191,16 +166,10 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     function updateContributorRewards(address contributor) public {
         uint256 rewardTokenSpeed = rewardTokenContributorSpeeds[contributor];
         uint256 blockNumber = getBlockNumber();
-        uint256 deltaBlocks = sub_(
-            blockNumber,
-            lastContributorBlock[contributor]
-        );
+        uint256 deltaBlocks = sub_(blockNumber, lastContributorBlock[contributor]);
         if (deltaBlocks > 0 && rewardTokenSpeed > 0) {
             uint256 newAccrued = mul_(deltaBlocks, rewardTokenSpeed);
-            uint256 contributorAccrued = add_(
-                rewardTokenAccrued[contributor],
-                newAccrued
-            );
+            uint256 contributorAccrued = add_(rewardTokenAccrued[contributor], newAccrued);
 
             rewardTokenAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
@@ -218,10 +187,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         uint256 supplySpeed,
         uint256 borrowSpeed
     ) internal {
-        require(
-            comptroller.isMarketListed(vToken),
-            "rewardToken market is not listed"
-        );
+        require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
         if (rewardTokenSupplySpeeds[address(vToken)] != supplySpeed) {
             // Supply speed updated so let's update supply state to ensure that
@@ -238,7 +204,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             // Borrow speed updated so let's update borrow state to ensure that
             //  1. REWARD TOKEN accrued properly for the old speed, and
             //  2. REWARD TOKEN accrued at the new speed starts after this block.
-            Exp memory borrowIndex = Exp({mantissa: vToken.borrowIndex()});
+            Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
             _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
 
             // Update speed and emit event
@@ -247,16 +213,11 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
-    function distributeSupplierRewardToken(address vToken, address supplier)
-        public
-        onlyComptroller
-    {
+    function distributeSupplierRewardToken(address vToken, address supplier) public onlyComptroller {
         _distributeSupplierRewardToken(vToken, supplier);
     }
 
-    function _distributeSupplierRewardToken(address vToken, address supplier)
-        internal
-    {
+    function _distributeSupplierRewardToken(address vToken, address supplier) internal {
         // TODO: Don't distribute supplier REWARD TOKEN if the user is not in the supplier market.
         // This check should be as gas efficient as possible as distributeSupplierRewardToken is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
@@ -276,27 +237,17 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per vToken accrued
-        Double memory deltaIndex = Double({
-            mantissa: sub_(supplyIndex, supplierIndex)
-        });
+        Double memory deltaIndex = Double({ mantissa: sub_(supplyIndex, supplierIndex) });
 
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
 
         // Calculate REWARD TOKEN accrued: vTokenAmount * accruedPerVToken
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
 
-        uint256 supplierAccrued = add_(
-            rewardTokenAccrued[supplier],
-            supplierDelta
-        );
+        uint256 supplierAccrued = add_(rewardTokenAccrued[supplier], supplierDelta);
         rewardTokenAccrued[supplier] = supplierAccrued;
 
-        emit DistributedSupplierRewardToken(
-            VToken(vToken),
-            supplier,
-            supplierDelta,
-            supplyIndex
-        );
+        emit DistributedSupplierRewardToken(VToken(vToken), supplier, supplierDelta, supplyIndex);
     }
 
     function distributeBorrowerRewardToken(
@@ -337,30 +288,17 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per borrowed unit accrued
-        Double memory deltaIndex = Double({
-            mantissa: sub_(borrowIndex, borrowerIndex)
-        });
+        Double memory deltaIndex = Double({ mantissa: sub_(borrowIndex, borrowerIndex) });
 
-        uint256 borrowerAmount = div_(
-            VToken(vToken).borrowBalanceStored(borrower),
-            marketBorrowIndex
-        );
+        uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
 
         // Calculate REWARD TOKEN accrued: vTokenAmount * accruedPerBorrowedUnit
         uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
 
-        uint256 borrowerAccrued = add_(
-            rewardTokenAccrued[borrower],
-            borrowerDelta
-        );
+        uint256 borrowerAccrued = add_(rewardTokenAccrued[borrower], borrowerDelta);
         rewardTokenAccrued[borrower] = borrowerAccrued;
 
-        emit DistributedBorrowerRewardToken(
-            VToken(vToken),
-            borrower,
-            borrowerDelta,
-            borrowIndex
-        );
+        emit DistributedBorrowerRewardToken(VToken(vToken), borrower, borrowerDelta, borrowIndex);
     }
 
     /**
@@ -370,10 +308,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      * @return The amount of REWARD TOKEN which was NOT transferred to the user
      */
-    function grantRewardTokenInternal(address user, uint256 amount)
-        internal
-        returns (uint256)
-    {
+    function grantRewardTokenInternal(address user, uint256 amount) internal returns (uint256) {
         uint256 rewardTokenRemaining = rewardToken.balanceOf(address(this));
         if (amount > 0 && amount <= rewardTokenRemaining) {
             rewardToken.transfer(user, amount);
@@ -382,10 +317,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         return amount;
     }
 
-    function updateRewardTokenSupplyIndex(address vToken)
-        external
-        onlyComptroller
-    {
+    function updateRewardTokenSupplyIndex(address vToken) external onlyComptroller {
         _updateRewardTokenSupplyIndex(vToken);
     }
 
@@ -397,22 +329,16 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     function _updateRewardTokenSupplyIndex(address vToken) internal {
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
-        uint32 blockNumber = safe32(
-            getBlockNumber(),
-            "block number exceeds 32 bits"
-        );
-        uint256 deltaBlocks = sub_(
-            uint256(blockNumber),
-            uint256(supplyState.block)
-        );
+        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
             uint256 accruedSinceUpdate = mul_(deltaBlocks, supplySpeed);
             Double memory ratio = supplyTokens > 0
                 ? fraction(accruedSinceUpdate, supplyTokens)
-                : Double({mantissa: 0});
+                : Double({ mantissa: 0 });
             supplyState.index = safe224(
-                add_(Double({mantissa: supplyState.index}), ratio).mantissa,
+                add_(Double({ mantissa: supplyState.index }), ratio).mantissa,
                 "new index exceeds 224 bits"
             );
             supplyState.block = blockNumber;
@@ -421,10 +347,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         }
     }
 
-    function updateRewardTokenBorrowIndex(
-        address vToken,
-        Exp memory marketBorrowIndex
-    ) external onlyComptroller {
+    function updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) external onlyComptroller {
         _updateRewardTokenBorrowIndex(vToken, marketBorrowIndex);
     }
 
@@ -433,31 +356,19 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param vToken The market whose borrow index to update
      * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
      */
-    function _updateRewardTokenBorrowIndex(
-        address vToken,
-        Exp memory marketBorrowIndex
-    ) internal {
+    function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
-        uint32 blockNumber = safe32(
-            getBlockNumber(),
-            "block number exceeds 32 bits"
-        );
-        uint256 deltaBlocks = sub_(
-            uint256(blockNumber),
-            uint256(borrowState.block)
-        );
+        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
-            uint256 borrowAmount = div_(
-                VToken(vToken).totalBorrows(),
-                marketBorrowIndex
-            );
+            uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
             uint256 accruedSinceUpdate = mul_(deltaBlocks, borrowSpeed);
             Double memory ratio = borrowAmount > 0
                 ? fraction(accruedSinceUpdate, borrowAmount)
-                : Double({mantissa: 0});
+                : Double({ mantissa: 0 });
             borrowState.index = safe224(
-                add_(Double({mantissa: borrowState.index}), ratio).mantissa,
+                add_(Double({ mantissa: borrowState.index }), ratio).mantissa,
                 "new index exceeds 224 bits"
             );
             borrowState.block = blockNumber;
@@ -474,10 +385,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param recipient The address of the recipient to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      */
-    function _grantRewardToken(address recipient, uint256 amount)
-        external
-        onlyOwner
-    {
+    function _grantRewardToken(address recipient, uint256 amount) external onlyOwner {
         uint256 amountLeft = grantRewardTokenInternal(recipient, amount);
         require(amountLeft == 0, "insufficient rewardToken for grant");
         emit RewardTokenGranted(recipient, amount);
@@ -498,19 +406,12 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     ) internal {
         for (uint256 i = 0; i < vTokens.length; i++) {
             VToken vToken = vTokens[i];
-            require(
-                comptroller.isMarketListed(vToken),
-                "market must be listed"
-            );
+            require(comptroller.isMarketListed(vToken), "market must be listed");
             if (borrowers == true) {
-                Exp memory borrowIndex = Exp({mantissa: vToken.borrowIndex()});
+                Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
                 _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
                 for (uint256 j = 0; j < holders.length; j++) {
-                    _distributeBorrowerRewardToken(
-                        address(vToken),
-                        holders[j],
-                        borrowIndex
-                    );
+                    _distributeBorrowerRewardToken(address(vToken), holders[j], borrowIndex);
                 }
             }
             if (suppliers == true) {
@@ -521,10 +422,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             }
         }
         for (uint256 j = 0; j < holders.length; j++) {
-            rewardTokenAccrued[holders[j]] = grantRewardTokenInternal(
-                holders[j],
-                rewardTokenAccrued[holders[j]]
-            );
+            rewardTokenAccrued[holders[j]] = grantRewardTokenInternal(holders[j], rewardTokenAccrued[holders[j]]);
         }
     }
 
@@ -552,10 +450,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     }
 
     modifier onlyComptroller() {
-        require(
-            address(comptroller) == msg.sender,
-            "Only comptroller can call this function"
-        );
+        require(address(comptroller) == msg.sender, "Only comptroller can call this function");
         _;
     }
 }
