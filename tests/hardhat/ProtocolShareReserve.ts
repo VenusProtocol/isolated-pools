@@ -69,13 +69,15 @@ describe("Liquidated shares reserves: Tests", function () {
   });
 
   it("Release liquidated share reserve", async function () {
+    const comptrollerAddress = "0x0000000000000000000000000000000000000111";
+
     await mockDAI.transfer(
       protocolShareReserve.address,
       convertToUnit(100, 18)
     );
 
     await protocolShareReserve.updateAssetsState(
-      "0x0000000000000000000000000000000000000111", // Mock comptroller address
+      comptrollerAddress, // Mock comptroller address
       mockDAI.address
     );
 
@@ -83,11 +85,25 @@ describe("Liquidated shares reserves: Tests", function () {
 
     expect(balance).equal(convertToUnit(100, 18));
 
-    await protocolShareReserve.releaseFunds(
-      "0x0000000000000000000000000000000000000111", // Mock comptroller address
-      mockDAI.address,
-      convertToUnit(100, 18)
+    let protocolUSDT = await protocolShareReserve.getPoolAssetReserve(
+      comptrollerAddress,
+      mockDAI.address
     );
+
+    expect(protocolUSDT).equal(convertToUnit(100, 18));
+
+    await protocolShareReserve.releaseFunds(
+      comptrollerAddress, // Mock comptroller address
+      mockDAI.address,
+      convertToUnit(90, 18)
+    );
+
+    protocolUSDT = await protocolShareReserve.getPoolAssetReserve(
+      comptrollerAddress,
+      mockDAI.address
+    );
+
+    expect(protocolUSDT).equal(convertToUnit(10, 18));
 
     const riskFundBal = await mockDAI.balanceOf(fakeRiskFund.address);
     const liquidatedShareBal = await mockDAI.balanceOf(
@@ -97,8 +113,8 @@ describe("Liquidated shares reserves: Tests", function () {
       protocolShareReserve.address
     );
 
-    expect(riskFundBal).equal(convertToUnit(30, 18));
-    expect(liquidatedShareBal).equal(convertToUnit(70, 18));
-    expect(protocolShareReserveBal).equal("0");
+    expect(riskFundBal).equal(convertToUnit(27, 18));
+    expect(liquidatedShareBal).equal(convertToUnit(63, 18));
+    expect(protocolShareReserveBal).equal(convertToUnit(10, 18));
   });
 });
