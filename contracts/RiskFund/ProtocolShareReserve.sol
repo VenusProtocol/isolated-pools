@@ -12,7 +12,12 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
 
     address private liquidatedShares;
     address private riskFund;
+
+    // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) private previousStateForAssets;
+
+    // Store the asset's reserve per pool in the ProtocolShareReserve.
+    // Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) private poolsAssetsReserves;
 
     /**
@@ -39,7 +44,16 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
         riskFund = _riskFund;
     }
 
-    function updateState(address comptroller, address asset) external {
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to protocol share reserve.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset) external {
+        require(
+            comptroller != address(0),
+            "Liquidated shares Reserves: Comptroller address invalid"
+        );
         require(
             asset != address(0),
             "Liquidated shares Reserves: Asset address invalid"
@@ -50,6 +64,24 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
             previousStateForAssets[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
         }
+    }
+
+    /**
+     * @dev Get the Amount of the asset in the protocol share reserve for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     * @return Asset's reserve in protocol share reserve.
+     */
+    function getPoolAssetReserve(address comptroller, address asset) external view returns(uint256) {
+        require(
+            comptroller != address(0),
+            "Liquidated shares Reserves: Comptroller address invalid"
+        );
+        require(
+            asset != address(0),
+            "Liquidated shares Reserves: Asset address invalid"
+        );
+        return poolsAssetsReserves[comptroller][asset];
     }
 
     /**
@@ -71,10 +103,6 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
             amount <= poolsAssetsReserves[comptroller][asset],
             "Liquidated shares Reserves: Insufficient pool balance"
         );
-        require(
-            amount <= previousStateForAssets[asset],
-            "Liquidated shares Reserves: Insufficient balance"
-        );
 
         previousStateForAssets[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
@@ -93,7 +121,9 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
                 div_(Exp({mantissa: 30 * expScale}), 100)
             ).mantissa
         );
-        IRiskFund(riskFund).updateState(comptroller, asset);
+
+        // Update the pool's asset's state in the risk funf for the above transfer.
+        IRiskFund(riskFund).updateAssetsState(comptroller, asset);
 
         return amount;
     }

@@ -74,7 +74,7 @@ describe("Liquidated shares reserves: Tests", function () {
       convertToUnit(100, 18)
     );
 
-    await protocolShareReserve.updateState(
+    await protocolShareReserve.updateAssetsState(
       "0x0000000000000000000000000000000000000111", // Mock comptroller address
       mockDAI.address
     );

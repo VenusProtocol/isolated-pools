@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity 0.8.13;
 
 interface IRiskFund {
     function swapAllPoolsAssets() external returns (uint256);
@@ -13,5 +13,5 @@ interface IRiskFund {
         external
         returns (uint256);
 
-    function updateState(address comptroller, address asset) external;
+    function updateAssetsState(address comptroller, address asset) external;
 }

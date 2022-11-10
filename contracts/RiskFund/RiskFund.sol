@@ -23,8 +23,15 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     address private convertableBUSDAddress;
     address private auctionContractAddress;
     address private accessControl;
+
+    // Store BUSD's reserve for specific pool.
     mapping(address => uint256) private poolReserves;
+    
+    // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) private previousStateForAssets;
+    
+    // Store the asset's reserve per pool in the ProtocolShareReserve.
+    // Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) private poolsAssetsReserves;
 
     /**
@@ -130,7 +137,16 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         minAmountToConvert = _minAmountToConvert;
     }
 
-    function updateState(address comptroller, address asset) external {
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset) external {
+        require(
+            comptroller != address(0),
+            "Liquidated shares Reserves: Comptroller address invalid"
+        );
         require(
             asset != address(0),
             "Liquidated shares Reserves: Asset address invalid"
@@ -141,6 +157,24 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             previousStateForAssets[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
         }
+    }
+
+    /**
+     * @dev Get the Amount of the asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     * @return Asset's reserve in risk fund.
+     */
+    function getPoolAssetReserve(address comptroller, address asset) external view returns(uint256) {
+        require(
+            comptroller != address(0),
+            "Liquidated shares Reserves: Comptroller address invalid"
+        );
+        require(
+            asset != address(0),
+            "Liquidated shares Reserves: Asset address invalid"
+        );
+        return poolsAssetsReserves[comptroller][asset];
     }
 
     /**
