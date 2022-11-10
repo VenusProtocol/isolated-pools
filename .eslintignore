@@ -2,3 +2,7 @@ node_modules
 artifacts
 cache
 coverage
+dist
+# ignoring scenario dir because it contains deprecated saddle code and will be removed
+scenario
+typechain
