@@ -9,11 +9,12 @@ import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
 import "../Pool/PoolRegistry.sol";
+import "./ReserveHelpers.sol";
 
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is OwnableUpgradeable, ExponentialNoError {
+contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
     using SafeERC20 for IERC20;
 
     address private poolRegistry;
@@ -26,13 +27,6 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
 
     // Store base asset's reserve for specific pool.
     mapping(address => uint256) private poolReserves;
-
-    // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
-    mapping(address => uint256) private previousStateForAssets;
-
-    // Store the asset's reserve per pool in the ProtocolShareReserve.
-    // Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) private poolsAssetsReserves;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -87,7 +81,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @dev convertable base asset setter
      * @param _convertableBaseAsset Address of the asset.
      */
-    function setConvertableBaseAsset(address _convertableBaseAsset) external onlyOwner {
+    function setConvertableBaseAsset(address _convertableBaseAsset)
+        external
+        onlyOwner
+    {
         require(
             _convertableBaseAsset != address(0),
             "Risk Fund: Asset address invalid"
@@ -147,54 +144,6 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             "Risk Fund: Invalid min amout to convert"
         );
         minAmountToConvert = _minAmountToConvert;
-    }
-
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     */
-    function updateAssetsState(address comptroller, address asset) external {
-        require(
-            comptroller != address(0),
-            "Liquidated shares Reserves: Comptroller address invalid"
-        );
-        require(
-            asset != address(0),
-            "Liquidated shares Reserves: Asset address invalid"
-        );
-        uint256 currentBalance = IERC20(asset).balanceOf(address(this));
-        if (currentBalance > previousStateForAssets[asset]) {
-            uint256 balanceDifference;
-            unchecked{
-                balanceDifference = currentBalance -
-                previousStateForAssets[asset];
-            }
-            previousStateForAssets[asset] += balanceDifference;
-            poolsAssetsReserves[comptroller][asset] += balanceDifference;
-        }
-    }
-
-    /**
-     * @dev Get the Amount of the asset in the risk fund for the specific pool.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     * @return Asset's reserve in risk fund.
-     */
-    function getPoolAssetReserve(address comptroller, address asset)
-        external
-        view
-        returns (uint256)
-    {
-        require(
-            comptroller != address(0),
-            "Liquidated shares Reserves: Comptroller address invalid"
-        );
-        require(
-            asset != address(0),
-            "Liquidated shares Reserves: Asset address invalid"
-        );
-        return poolsAssetsReserves[comptroller][asset];
     }
 
     /**
