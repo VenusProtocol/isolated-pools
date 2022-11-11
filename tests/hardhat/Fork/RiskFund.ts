@@ -33,6 +33,7 @@ let cUSDT: VToken;
 let cUSDC2: VToken;
 let cUSDT2: VToken;
 let cUSDT3: VToken;
+let bUSDT3: VToken;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let comptroller2Proxy: Comptroller;
@@ -334,6 +335,24 @@ const riskFundFixture = async (): Promise<void> => {
     tokenImplementation_: tokenImplementation.address,
   });
 
+  await poolRegistry.addMarket({
+    comptroller: comptroller3Proxy.address,
+    asset: mainnetBUSD.address,
+    decimals: 8,
+    name: "BUSDT",
+    symbol: "bUSDT",
+    rateModel: 0,
+    baseRatePerYear: 0,
+    multiplierPerYear: "40000000000000000",
+    jumpMultiplierPerYear: 0,
+    kink_: 0,
+    collateralFactor: convertToUnit(0.7, 18),
+    liquidationThreshold: convertToUnit(0.7, 18),
+    accessControlManager: fakeAccessControlManager.address,
+    vTokenProxyAdmin: proxyAdmin.address,
+    tokenImplementation_: tokenImplementation.address,
+  });
+
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(
     comptroller1Proxy.address,
     mainnetUSDT.address
@@ -359,11 +378,17 @@ const riskFundFixture = async (): Promise<void> => {
     mainnetUSDT.address
   );
 
+  const bUSDT3Address = await poolRegistry.getVTokenForAsset(
+    comptroller3Proxy.address,
+    mainnetBUSD.address
+  );
+
   cUSDT = await ethers.getContractAt("VToken", cUSDT1Address);
   cUSDC = await ethers.getContractAt("VToken", cUSDC1Address);
   cUSDT2 = await ethers.getContractAt("VToken", cUSDT2Address);
   cUSDC2 = await ethers.getContractAt("VToken", cUSDC2Address);
   cUSDT3 = await ethers.getContractAt("VToken", cUSDT3Address);
+  bUSDT3 = await ethers.getContractAt("VToken", bUSDT3Address);
 
   // Enter Markets
 
@@ -375,7 +400,9 @@ const riskFundFixture = async (): Promise<void> => {
     .connect(user)
     .enterMarkets([cUSDC2.address, cUSDT2.address]);
 
-  await comptroller3Proxy.connect(user).enterMarkets([cUSDT3.address]);
+  await comptroller3Proxy
+    .connect(user)
+    .enterMarkets([cUSDT3.address, bUSDT3.address]);
 
   // Set Oracle
   await comptroller1Proxy._setPriceOracle(priceOracle.address);
@@ -390,7 +417,7 @@ const riskFundFixture = async (): Promise<void> => {
   await riskFund.initialize(
     pancakeSwapRouter.address,
     convertToUnit(10, 18),
-    convertToUnit(20, 18),
+    convertToUnit(10, 18),
     mainnetBUSD.address,
     fakeAccessControlManager.address
   );
@@ -457,10 +484,10 @@ describe("Risk Fund: Tests", function () {
       await protocolShareReserve.releaseFunds(
         comptroller1Proxy.address,
         mainnetUSDC.address,
-        convertToUnit(50, 18)
+        convertToUnit(30, 18)
       );
       const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
-      expect(riskFundUSDCBal).equal(convertToUnit(15, 18));
+      expect(riskFundUSDCBal).equal(convertToUnit(9, 18));
 
       const amount = await riskFund.callStatic.swapAllPoolsAssets();
       expect(amount).equal("0");
@@ -703,11 +730,18 @@ describe("Risk Fund: Tests", function () {
 
       await cUSDT3.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
+      await mainnetBUSD
+        .connect(busdUser)
+        .approve(bUSDT3.address, convertToUnit(1000, 18));
+
+      await bUSDT3.connect(busdUser)._addReserves(convertToUnit(50, 18));
+
       await cUSDT._reduceReserves(convertToUnit(110, 18));
       await cUSDC._reduceReserves(convertToUnit(120, 18));
       await cUSDT2._reduceReserves(convertToUnit(150, 18));
       await cUSDC2._reduceReserves(convertToUnit(160, 18));
       await cUSDT3._reduceReserves(convertToUnit(175, 18));
+      await bUSDT3._reduceReserves(convertToUnit(50, 18));
 
       let protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(
         comptroller1Proxy.address,
@@ -729,12 +763,17 @@ describe("Risk Fund: Tests", function () {
         comptroller3Proxy.address,
         mainnetUSDT.address
       );
+      let protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(
+        comptroller3Proxy.address,
+        mainnetBUSD.address
+      );
 
       expect(protocolUSDTFor1).equal(convertToUnit(110, 18));
       expect(protocolUSDTFor2).equal(convertToUnit(150, 18));
       expect(protocolUSDTFor3).equal(convertToUnit(175, 18));
       expect(protocolUSDCFor1).equal(convertToUnit(120, 18));
       expect(protocolUSDCFor2).equal(convertToUnit(160, 18));
+      expect(protocolBUSDTFor3).equal(convertToUnit(50, 18));
 
       await protocolShareReserve.releaseFunds(
         comptroller1Proxy.address,
@@ -766,6 +805,12 @@ describe("Risk Fund: Tests", function () {
         convertToUnit(80, 18)
       );
 
+      await protocolShareReserve.releaseFunds(
+        comptroller3Proxy.address,
+        mainnetBUSD.address,
+        convertToUnit(50, 18)
+      );
+
       protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(
         comptroller1Proxy.address,
         mainnetUSDT.address
@@ -786,12 +831,17 @@ describe("Risk Fund: Tests", function () {
         comptroller3Proxy.address,
         mainnetUSDT.address
       );
+      protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(
+        comptroller3Proxy.address,
+        mainnetBUSD.address
+      );
 
       expect(protocolUSDTFor1).equal(convertToUnit(10, 18));
       expect(protocolUSDTFor2).equal(convertToUnit(40, 18));
       expect(protocolUSDTFor3).equal(convertToUnit(45, 18));
       expect(protocolUSDCFor1).equal(convertToUnit(30, 18));
       expect(protocolUSDCFor2).equal(convertToUnit(80, 18));
+      expect(protocolBUSDTFor3).equal(convertToUnit(0, 18));
 
       let riskUSDTFor1 = await riskFund.getPoolAssetReserve(
         comptroller1Proxy.address,
@@ -813,14 +863,19 @@ describe("Risk Fund: Tests", function () {
         comptroller3Proxy.address,
         mainnetUSDT.address
       );
-
-      await riskFund.swapAllPoolsAssets();
+      let riskBUSDTFor3 = await riskFund.getPoolAssetReserve(
+        comptroller3Proxy.address,
+        mainnetBUSD.address
+      );
 
       expect(riskUSDTFor1).equal(convertToUnit(30, 18));
       expect(riskUSDCFor1).equal(convertToUnit(27, 18));
       expect(riskUSDTFor2).equal(convertToUnit(33, 18));
       expect(riskUSDCFor2).equal(convertToUnit(24, 18));
       expect(riskUSDTFor3).equal(convertToUnit(39, 18));
+      expect(riskBUSDTFor3).equal(convertToUnit(15, 18));
+
+      await riskFund.swapAllPoolsAssets();
 
       riskUSDTFor1 = await riskFund.getPoolAssetReserve(
         comptroller1Proxy.address,
@@ -842,12 +897,17 @@ describe("Risk Fund: Tests", function () {
         comptroller3Proxy.address,
         mainnetUSDT.address
       );
+      riskBUSDTFor3 = await riskFund.getPoolAssetReserve(
+        comptroller3Proxy.address,
+        mainnetBUSD.address
+      );
 
       expect(riskUSDTFor1).equal(0);
       expect(riskUSDCFor1).equal(0);
       expect(riskUSDTFor2).equal(0);
       expect(riskUSDCFor2).equal(0);
       expect(riskUSDTFor3).equal(0);
+      expect(riskBUSDTFor3).equal(0);
 
       const poolReserve1 = await riskFund.getPoolReserve(
         comptroller1Proxy.address
@@ -870,7 +930,7 @@ describe("Risk Fund: Tests", function () {
         convertToUnit(9, 17)
       );
       expect(poolReserve3).to.be.closeTo(
-        convertToUnit(38, 18),
+        convertToUnit(53, 18),
         convertToUnit(9, 17)
       );
     });

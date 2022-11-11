@@ -26,10 +26,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
 
     // Store BUSD's reserve for specific pool.
     mapping(address => uint256) private poolReserves;
-    
+
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) private previousStateForAssets;
-    
+
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) private poolsAssetsReserves;
@@ -153,7 +153,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         );
         uint256 currentBalance = IERC20(asset).balanceOf(address(this));
         if (currentBalance > previousStateForAssets[asset]) {
-            uint256 balanceDifference = currentBalance - previousStateForAssets[asset];
+            uint256 balanceDifference = currentBalance -
+                previousStateForAssets[asset];
             previousStateForAssets[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
         }
@@ -165,7 +166,11 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
      * @param asset Asset address.
      * @return Asset's reserve in risk fund.
      */
-    function getPoolAssetReserve(address comptroller, address asset) external view returns(uint256) {
+    function getPoolAssetReserve(address comptroller, address asset)
+        external
+        view
+        returns (uint256)
+    {
         require(
             comptroller != address(0),
             "Liquidated shares Reserves: Comptroller address invalid"
@@ -190,7 +195,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
-        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
+        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][
+            underlyingAsset
+        ];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(
             address(vToken)
@@ -208,27 +215,34 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             );
 
             if (amountInUsd >= minAmountToConvert) {
+                previousStateForAssets[
+                    underlyingAsset
+                ] -= balanceOfUnderlyingAsset;
+                poolsAssetsReserves[comptroller][
+                    underlyingAsset
+                ] -= balanceOfUnderlyingAsset;
 
-                previousStateForAssets[underlyingAsset] -= balanceOfUnderlyingAsset;
-                poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
-
-                address[] memory path = new address[](2);
-                path[0] = underlyingAsset;
-                path[1] = convertableBUSDAddress;
-                IERC20(underlyingAsset).safeApprove(
-                    pancakeSwapRouter,
-                    balanceOfUnderlyingAsset
-                );
-                uint256[] memory amounts = IPancakeswapV2Router(
-                    pancakeSwapRouter
-                ).swapExactTokensForTokens(
-                        balanceOfUnderlyingAsset,
-                        amountOutMin,
-                        path,
-                        address(this),
-                        block.timestamp
+                if (underlyingAsset != convertableBUSDAddress) {
+                    address[] memory path = new address[](2);
+                    path[0] = underlyingAsset;
+                    path[1] = convertableBUSDAddress;
+                    IERC20(underlyingAsset).safeApprove(
+                        pancakeSwapRouter,
+                        balanceOfUnderlyingAsset
                     );
-                totalAmount = amounts[1];
+                    uint256[] memory amounts = IPancakeswapV2Router(
+                        pancakeSwapRouter
+                    ).swapExactTokensForTokens(
+                            balanceOfUnderlyingAsset,
+                            amountOutMin,
+                            path,
+                            address(this),
+                            block.timestamp
+                        );
+                    totalAmount = amounts[1];
+                } else {
+                    totalAmount = balanceOfUnderlyingAsset;
+                }
             }
         }
         return totalAmount;

@@ -122,7 +122,7 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
             ).mantissa
         );
 
-        // Update the pool's asset's state in the risk funf for the above transfer.
+        // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund).updateAssetsState(comptroller, asset);
 
         return amount;
