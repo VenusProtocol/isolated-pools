@@ -5,8 +5,14 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../ExponentialNoError.sol";
+import "./IRiskFund.sol";
+import "./ReserveHelpers.sol";
 
-contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
+contract ProtocolShareReserve is
+    OwnableUpgradeable,
+    ExponentialNoError,
+    ReserveHelpers
+{
     using SafeERC20 for IERC20;
 
     address private liquidatedShares;
@@ -42,19 +48,23 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
      * @param amount Amount to release.
      * @return Number of total released tokens.
      */
-    function releaseFunds(address asset, uint256 amount)
-        external
-        onlyOwner
-        returns (uint256)
-    {
+    function releaseFunds(
+        address comptroller,
+        address asset,
+        uint256 amount
+    ) external onlyOwner returns (uint256) {
         require(
             asset != address(0),
             "Liquidated shares Reserves: Asset address invalid"
         );
         require(
-            amount <= IERC20(asset).balanceOf(address(this)),
-            "Liquidated shares Reserves: Insufficient balance"
+            amount <= poolsAssetsReserves[comptroller][asset],
+            "Liquidated shares Reserves: Insufficient pool balance"
         );
+
+        assetsReserves[asset] -= amount;
+        poolsAssetsReserves[comptroller][asset] -= amount;
+
         IERC20(asset).safeTransfer(
             liquidatedShares,
             mul_(
@@ -69,6 +79,10 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError {
                 div_(Exp({mantissa: 30 * expScale}), 100)
             ).mantissa
         );
+
+        // Update the pool asset's state in the risk fund for the above transfer.
+        IRiskFund(riskFund).updateAssetsState(comptroller, asset);
+
         return amount;
     }
 }

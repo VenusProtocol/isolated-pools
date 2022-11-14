@@ -7,12 +7,14 @@ import {
   MockToken,
   RiskFund,
   ProtocolShareReserve,
+  Comptroller,
 } from "../../typechain";
 import { convertToUnit } from "../../helpers/utils";
 
 let mockDAI: MockToken;
 let fakeRiskFund: FakeContract<RiskFund>;
 let fakeLiquidatedShares: FakeContract<RiskFund>;
+let fakeComptroller: FakeContract<Comptroller>;
 let protocolShareReserve: ProtocolShareReserve;
 
 const fixture = async (): Promise<void> => {
@@ -23,6 +25,7 @@ const fixture = async (): Promise<void> => {
   // Fake contracts
   fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
   fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
+  fakeComptroller = await smock.fake<Comptroller>("Comptroller");
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory(
@@ -49,6 +52,7 @@ describe("Liquidated shares reserves: Tests", function () {
   it("Revert on invalid asset address.", async function () {
     await expect(
       protocolShareReserve.releaseFunds(
+        fakeComptroller.address,
         "0x0000000000000000000000000000000000000000",
         10
       )
@@ -57,8 +61,14 @@ describe("Liquidated shares reserves: Tests", function () {
 
   it("Revert on Insufficient balance.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(mockDAI.address, 10)
-    ).to.be.rejectedWith("Liquidated shares Reserves: Insufficient balance");
+      protocolShareReserve.releaseFunds(
+        fakeComptroller.address, // Mock comptroller address
+        mockDAI.address,
+        10
+      )
+    ).to.be.rejectedWith(
+      "Liquidated shares Reserves: Insufficient pool balance"
+    );
   });
 
   it("Release liquidated share reserve", async function () {
@@ -66,14 +76,36 @@ describe("Liquidated shares reserves: Tests", function () {
       protocolShareReserve.address,
       convertToUnit(100, 18)
     );
+
+    fakeComptroller.isComptroller.returns(true);
+    await protocolShareReserve.updateAssetsState(
+      fakeComptroller.address, // Mock comptroller address
+      mockDAI.address
+    );
+
     const balance = await mockDAI.balanceOf(protocolShareReserve.address);
 
     expect(balance).equal(convertToUnit(100, 18));
 
-    await protocolShareReserve.releaseFunds(
-      mockDAI.address,
-      convertToUnit(100, 18)
+    let protocolUSDT = await protocolShareReserve.getPoolAssetReserve(
+      fakeComptroller.address,
+      mockDAI.address
     );
+
+    expect(protocolUSDT).equal(convertToUnit(100, 18));
+
+    await protocolShareReserve.releaseFunds(
+      fakeComptroller.address, // Mock comptroller address
+      mockDAI.address,
+      convertToUnit(90, 18)
+    );
+
+    protocolUSDT = await protocolShareReserve.getPoolAssetReserve(
+      fakeComptroller.address,
+      mockDAI.address
+    );
+
+    expect(protocolUSDT).equal(convertToUnit(10, 18));
 
     const riskFundBal = await mockDAI.balanceOf(fakeRiskFund.address);
     const liquidatedShareBal = await mockDAI.balanceOf(
@@ -83,8 +115,8 @@ describe("Liquidated shares reserves: Tests", function () {
       protocolShareReserve.address
     );
 
-    expect(riskFundBal).equal(convertToUnit(30, 18));
-    expect(liquidatedShareBal).equal(convertToUnit(70, 18));
-    expect(protocolShareReserveBal).equal("0");
+    expect(riskFundBal).equal(convertToUnit(27, 18));
+    expect(liquidatedShareBal).equal(convertToUnit(63, 18));
+    expect(protocolShareReserveBal).equal(convertToUnit(10, 18));
   });
 });

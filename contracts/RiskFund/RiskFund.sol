@@ -9,35 +9,38 @@ import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
 import "../Pool/PoolRegistry.sol";
+import "./ReserveHelpers.sol";
 
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is OwnableUpgradeable, ExponentialNoError {
+contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
     using SafeERC20 for IERC20;
 
     address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     uint256 private amountOutMin;
-    address private convertableBUSDAddress;
+    address private convertableBaseAsset;
     address private auctionContractAddress;
     address private accessControl;
+
+    // Store base asset's reserve for specific pool.
     mapping(address => uint256) private poolReserves;
 
     /**
      * @dev Initializes the deployer to owner.
      * @param _pancakeSwapRouter Address of the pancake swap router.
      * @param _amountOutMin Min amount out for the pancake swap.
-     * @param _minAmountToConvert Asset should be worth of min amount to convert to BUSD
-     * @param _convertableBUSDAddress Address of the BUSD
+     * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
+     * @param _convertableBaseAsset Address of the base asset
      * @param _accessControl Address of the access control contract.
      */
     function initialize(
         address _pancakeSwapRouter,
         uint256 _amountOutMin,
         uint256 _minAmountToConvert,
-        address _convertableBUSDAddress,
+        address _convertableBaseAsset,
         address _accessControl
     ) public initializer {
         require(
@@ -45,8 +48,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             "Risk Fund: Pancake swap address invalid"
         );
         require(
-            _convertableBUSDAddress != address(0),
-            "Risk Fund: BUSD address invalid"
+            _convertableBaseAsset != address(0),
+            "Risk Fund: Base asset address invalid"
         );
         require(
             _minAmountToConvert > 0,
@@ -58,7 +61,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         pancakeSwapRouter = _pancakeSwapRouter;
         amountOutMin = _amountOutMin;
         minAmountToConvert = _minAmountToConvert;
-        convertableBUSDAddress = _convertableBUSDAddress;
+        convertableBaseAsset = _convertableBaseAsset;
         accessControl = _accessControl;
     }
 
@@ -72,6 +75,21 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             "Risk Fund: Pool registry address invalid"
         );
         poolRegistry = _poolRegistry;
+    }
+
+    /**
+     * @dev convertable base asset setter
+     * @param _convertableBaseAsset Address of the asset.
+     */
+    function setConvertableBaseAsset(address _convertableBaseAsset)
+        external
+        onlyOwner
+    {
+        require(
+            _convertableBaseAsset != address(0),
+            "Risk Fund: Asset address invalid"
+        );
+        convertableBaseAsset = _convertableBaseAsset;
     }
 
     /**
@@ -129,10 +147,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     }
 
     /**
-     * @dev Swap single asset to BUSD.
+     * @dev Swap single asset to Base asset.
      * @param vToken VToken
      * @param comptroller comptorller address
-     * @return Number of BUSD tokens.
+     * @return Number of swapped tokens.
      */
     function swapAsset(VToken vToken, address comptroller)
         internal
@@ -141,9 +159,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
-        uint256 balanceOfUnderlyingAsset = IERC20(underlyingAsset).balanceOf(
-            address(this)
-        );
+        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][
+            underlyingAsset
+        ];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(
             address(vToken)
@@ -161,32 +179,41 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             );
 
             if (amountInUsd >= minAmountToConvert) {
-                address[] memory path = new address[](2);
-                path[0] = underlyingAsset;
-                path[1] = convertableBUSDAddress;
-                IERC20(underlyingAsset).safeApprove(
-                    pancakeSwapRouter,
-                    balanceOfUnderlyingAsset
-                );
-                uint256[] memory amounts = IPancakeswapV2Router(
-                    pancakeSwapRouter
-                ).swapExactTokensForTokens(
-                        balanceOfUnderlyingAsset,
-                        amountOutMin,
-                        path,
-                        address(this),
-                        block.timestamp
+                assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
+                poolsAssetsReserves[comptroller][
+                    underlyingAsset
+                ] -= balanceOfUnderlyingAsset;
+
+                if (underlyingAsset != convertableBaseAsset) {
+                    address[] memory path = new address[](2);
+                    path[0] = underlyingAsset;
+                    path[1] = convertableBaseAsset;
+                    IERC20(underlyingAsset).safeApprove(
+                        pancakeSwapRouter,
+                        balanceOfUnderlyingAsset
                     );
-                totalAmount = amounts[1];
+                    uint256[] memory amounts = IPancakeswapV2Router(
+                        pancakeSwapRouter
+                    ).swapExactTokensForTokens(
+                            balanceOfUnderlyingAsset,
+                            amountOutMin,
+                            path,
+                            address(this),
+                            block.timestamp
+                        );
+                    totalAmount = amounts[1];
+                } else {
+                    totalAmount = balanceOfUnderlyingAsset;
+                }
             }
         }
         return totalAmount;
     }
 
     /**
-     * @dev Swap assets of selected pools into BUSD tokens.
-     * @param venusPools Array of Pools to swap for BUSD
-     * @return Number of BUSD tokens.
+     * @dev Swap assets of selected pools into base tokens.
+     * @param venusPools Array of Pools to swap
+     * @return Number of swapped tokens.
      */
     function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools)
         public
@@ -214,8 +241,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
     }
 
     /**
-     * @dev Swap assets of all pools into BUSD tokens.
-     * @return Number of BUSD tokens.
+     * @dev Swap assets of all pools into base asset's tokens.
+     * @return Number of swapped tokens.
      */
     function swapAllPoolsAssets() external returns (uint256) {
         require(
@@ -276,7 +303,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError {
             "Risk Fund: Insufficient pool reserve."
         );
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20(convertableBUSDAddress).safeTransfer(
+        IERC20(convertableBaseAsset).safeTransfer(
             auctionContractAddress,
             amount
         );

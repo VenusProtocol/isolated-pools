@@ -10,6 +10,7 @@ import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlManager.sol";
+import "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title Venus VToken Contract
@@ -833,11 +834,7 @@ contract VToken is
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      */
-    function repayBorrow(uint256 repayAmount)
-        external
-        override
-        nonReentrant
-    {
+    function repayBorrow(uint256 repayAmount) external override nonReentrant {
         accrueInterest();
         // repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         repayBorrowFresh(msg.sender, msg.sender, repayAmount);
@@ -931,7 +928,6 @@ contract VToken is
 
         return actualRepayAmount;
     }
-
 
     /**
      * @notice The sender liquidates the borrowers collateral.
@@ -1477,6 +1473,12 @@ contract VToken is
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         doTransferOut(protocolShareReserve, reduceAmount);
 
+        // Update the pool asset's state in the protocol share reserve for the above transfer.
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying
+        );
+
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
 
         return NO_ERROR;
@@ -1641,7 +1643,7 @@ contract VToken is
      * @dev This excludes the value of the current message, if any
      * @return The quantity of underlying tokens owned by this contract
      */
-    function getCashPrior() internal virtual view returns (uint256) {
+    function getCashPrior() internal view virtual returns (uint256) {
         IERC20 token = IERC20(underlying);
         return token.balanceOf(address(this));
     }

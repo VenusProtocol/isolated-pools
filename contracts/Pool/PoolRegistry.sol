@@ -345,7 +345,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Add a market to an existing pool
      */
-    function addMarket(AddMarketInput memory input) external {
+    function addMarket(AddMarketInput memory input) external onlyOwner {
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(
@@ -368,8 +368,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         Comptroller comptroller = Comptroller(input.comptroller);
 
-        VTokenProxyFactory.VTokenArgs
-            memory initializeArgs = VTokenProxyFactory.VTokenArgs(
+        VTokenProxyFactory.VTokenArgs memory initializeArgs = VTokenProxyFactory
+            .VTokenArgs(
                 input.asset,
                 comptroller,
                 rate,
@@ -388,9 +388,7 @@ contract PoolRegistry is OwnableUpgradeable {
                 input.tokenImplementation_
             );
 
-        VToken vToken = vTokenFactory.deployVTokenProxy(
-            initializeArgs
-        );
+        VToken vToken = vTokenFactory.deployVTokenProxy(initializeArgs);
 
         comptroller._supportMarket(vToken);
         comptroller._setCollateralFactor(
