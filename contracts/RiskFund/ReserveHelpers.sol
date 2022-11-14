@@ -13,7 +13,8 @@ contract ReserveHelpers {
 
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
+    mapping(address => mapping(address => uint256))
+        internal poolsAssetsReserves;
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
@@ -33,9 +34,8 @@ contract ReserveHelpers {
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
             uint256 balanceDifference;
-            unchecked{
-                balanceDifference = currentBalance -
-                assetReserve;
+            unchecked {
+                balanceDifference = currentBalance - assetReserve;
             }
             assetsReserves[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;

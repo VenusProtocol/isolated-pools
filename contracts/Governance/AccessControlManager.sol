@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  *		within Venus Smart Contract Ecosystem
  */
 contract AccessControlManager is AccessControl {
-
     /// @notice Emitted when an account is given a permission to a certain contract function
     /// NOTE: If contract address is 0x000..0 this means that the account is a default admin of this function and
     /// can call any contract function with this signature
