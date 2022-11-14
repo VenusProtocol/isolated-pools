@@ -1,18 +1,24 @@
-import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { Signer, BigNumberish } from "ethers";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
-const { expect } = chai;
-chai.use(smock.matchers);
+import { BigNumberish, Signer } from "ethers";
+import { ethers } from "hardhat";
 
-import {
-  Comptroller, VTokenHarness, ERC20Harness, VTokenHarness__factory, InterestRateModel,
-  Shortfall, ERC20Harness__factory, AccessControlManager,
-  RiskFund, ProtocolShareReserve
-} from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
+import {
+  AccessControlManager,
+  Comptroller,
+  ERC20Harness,
+  ERC20Harness__factory,
+  InterestRateModel,
+  ProtocolShareReserve,
+  RiskFund,
+  Shortfall,
+  VTokenHarness,
+  VTokenHarness__factory,
+} from "../../../typechain";
 
+chai.use(smock.matchers);
 
 export type VTokenContracts = {
   vToken: MockContract<VTokenHarness>;
@@ -20,12 +26,18 @@ export type VTokenContracts = {
   interestRateModel: FakeContract<InterestRateModel>;
 };
 
-export async function makeVToken({ name, comptroller, accessControlManager, admin, shortfall }: {
-  name: string,
-  comptroller: FakeContract<Comptroller>,
-  accessControlManager: FakeContract<AccessControlManager>,
-  admin: Signer,
-  shortfall: FakeContract<Shortfall>,
+export async function makeVToken({
+  name,
+  comptroller,
+  accessControlManager,
+  admin,
+  shortfall,
+}: {
+  name: string;
+  comptroller: FakeContract<Comptroller>;
+  accessControlManager: FakeContract<AccessControlManager>;
+  admin: Signer;
+  shortfall: FakeContract<Shortfall>;
 }): Promise<VTokenContracts> {
   const interestRateModel = await smock.fake<InterestRateModel>("InterestRateModel");
   interestRateModel.isInterestRateModel.returns(true);
@@ -41,7 +53,7 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
     interestRateModel.address,
     initialExchangeRateMantissa,
     `v${name}`,
-    
+
     `v${name}`,
     8,
     await admin.getAddress(),
@@ -49,8 +61,8 @@ export async function makeVToken({ name, comptroller, accessControlManager, admi
     {
       shortfall: shortfall.address,
       riskFund: riskFund.address,
-      protocolShareReserve: protocolShareReserve.address
-    }
+      protocolShareReserve: protocolShareReserve.address,
+    },
   );
   return { vToken, underlying, interestRateModel };
 }
@@ -70,19 +82,24 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
   const shortfall = await smock.fake<Shortfall>("Shortfall");
   accessControlManager.isAllowedToCall.returns(true);
 
-  const [admin, ] = await ethers.getSigners();
-  const { vToken, interestRateModel, underlying } =
-    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall});
+  const [admin] = await ethers.getSigners();
+  const { vToken, interestRateModel, underlying } = await makeVToken({
+    name: "BAT",
+    comptroller,
+    accessControlManager,
+    admin,
+    shortfall,
+  });
 
   return { accessControlManager, comptroller, vToken, interestRateModel, underlying };
 }
 
 type BalancesSnapshot = {
-  [vToken: string]: HoldersSnapshot
+  [vToken: string]: HoldersSnapshot;
 };
 
 type HoldersSnapshot = {
-  [holder: string]: HolderSnapshot
+  [holder: string]: HolderSnapshot;
 };
 
 type HolderSnapshot = {
@@ -91,27 +108,26 @@ type HolderSnapshot = {
   tokens: string;
   borrows: string;
   reserves?: string;
-}
+};
 
 type BalanceDeltaEntry =
-  [MockContract<VTokenHarness>, string, keyof HolderSnapshot, string | number] 
+  | [MockContract<VTokenHarness>, string, keyof HolderSnapshot, string | number]
   | [MockContract<VTokenHarness>, keyof HolderSnapshot, string | number];
-
 
 export async function getBalances(
   vTokens: MockContract<VTokenHarness>[],
-  accounts: string[]
+  accounts: string[],
 ): Promise<BalancesSnapshot> {
   const balances: BalancesSnapshot = {};
-  for (let vToken of vTokens) {
-    const vBalances: HoldersSnapshot = balances[vToken.address] = {};
+  for (const vToken of vTokens) {
+    const vBalances: HoldersSnapshot = (balances[vToken.address] = {});
     const underlying = await ethers.getContractAt("ERC20Harness", await vToken.underlying());
-    for (let account of accounts) {
+    for (const account of accounts) {
       vBalances[account] = {
         eth: (await ethers.provider.getBalance(account)).toString(),
         cash: (await underlying.balanceOf(account)).toString(),
         tokens: (await vToken.balanceOf(account)).toString(),
-        borrows: (await vToken.harnessAccountBorrows(account)).principal.toString()
+        borrows: (await vToken.harnessAccountBorrows(account)).principal.toString(),
       };
     }
     vBalances[vToken.address] = {
@@ -119,26 +135,27 @@ export async function getBalances(
       cash: (await underlying.balanceOf(vToken.address)).toString(),
       tokens: (await vToken.totalSupply()).toString(),
       borrows: (await vToken.totalBorrows()).toString(),
-      reserves: (await vToken.totalReserves()).toString()
+      reserves: (await vToken.totalReserves()).toString(),
     };
   }
   return balances;
 }
 
 export function adjustBalances(balances: BalancesSnapshot, deltas: BalanceDeltaEntry[]) {
-  for (let delta of deltas) {
+  for (const delta of deltas) {
     let vToken: MockContract<VTokenHarness>;
     let account: string;
     let key: keyof HolderSnapshot;
     let diff: string | number;
     if (delta.length == 4) {
-      ([vToken, account, key, diff] = delta);
+      [vToken, account, key, diff] = delta;
     } else {
-      ([vToken, key, diff] = delta);
+      [vToken, key, diff] = delta;
       account = vToken.address;
     }
-    balances[vToken.address][account][key] =
-      new BigNumber(balances[vToken.address][account][key]!).plus(diff).toString();
+    balances[vToken.address][account][key] = new BigNumber(balances[vToken.address][account][key]!)
+      .plus(diff)
+      .toString();
   }
   return balances;
 }
@@ -148,7 +165,7 @@ export async function preApprove(
   vToken: MockContract<VTokenHarness>,
   from: Signer,
   amount: BigNumberish,
-  opts: { faucet?: boolean } = {}
+  opts: { faucet?: boolean } = {},
 ) {
   if (opts.faucet) {
     await erc20.connect(from).harnessSetBalance(await from.getAddress(), amount);
@@ -163,7 +180,7 @@ export async function pretendBorrow(
   accountIndex: number,
   marketIndex: number,
   principalRaw: BigNumberish,
-  blockNumber: number = 2e7
+  blockNumber: number = 2e7,
 ) {
   await vToken.harnessSetTotalBorrows(principalRaw);
   await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, convertToUnit(accountIndex, 18));

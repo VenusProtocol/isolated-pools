@@ -13,18 +13,10 @@ contract AccessControlManager is AccessControl {
     /// @notice Emitted when an account is given a permission to a certain contract function
     /// NOTE: If contract address is 0x000..0 this means that the account is a default admin of this function and
     /// can call any contract function with this signature
-    event PermissionGranted(
-        address account,
-        address contractAddress,
-        string functionSig
-    );
+    event PermissionGranted(address account, address contractAddress, string functionSig);
 
     /// @notice Emitted when an account is revoked a permission to a certain contract function
-    event PermissionRevoked(
-        address account,
-        address contractAddress,
-        string functionSig
-    );
+    event PermissionRevoked(address account, address contractAddress, string functionSig);
 
     constructor() {
         // Grant the contract deployer the default admin role: it will be able
@@ -40,11 +32,7 @@ contract AccessControlManager is AccessControl {
      * @return false if the user account cannot call the particular contract function
      *
      */
-    function isAllowedToCall(address account, string memory functionSig)
-        public
-        view
-        returns (bool)
-    {
+    function isAllowedToCall(address account, string memory functionSig) public view returns (bool) {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
 
         if (hasRole(role, account)) {
@@ -68,9 +56,7 @@ contract AccessControlManager is AccessControl {
         address contractAddress,
         string memory functionSig
     ) public view returns (bool) {
-        bytes32 role = keccak256(
-            abi.encodePacked(contractAddress, functionSig)
-        );
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         return hasRole(role, account);
     }
 
@@ -114,9 +100,7 @@ contract AccessControlManager is AccessControl {
         string memory functionSig,
         address accountToRevoke
     ) public {
-        bytes32 role = keccak256(
-            abi.encodePacked(contractAddress, functionSig)
-        );
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         revokeRole(role, accountToRevoke);
         emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);
     }

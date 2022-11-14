@@ -13,8 +13,7 @@ contract ReserveHelpers {
 
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256))
-        internal poolsAssetsReserves;
+    mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
@@ -26,10 +25,7 @@ contract ReserveHelpers {
             ComptrollerInterface(comptroller).isComptroller(),
             "Liquidated shares Reserves: Comptroller address invalid"
         );
-        require(
-            asset != address(0),
-            "Liquidated shares Reserves: Asset address invalid"
-        );
+        require(asset != address(0), "Liquidated shares Reserves: Asset address invalid");
         uint256 currentBalance = IERC20(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
@@ -48,19 +44,12 @@ contract ReserveHelpers {
      * @param asset Asset address.
      * @return Asset's reserve in risk fund.
      */
-    function getPoolAssetReserve(address comptroller, address asset)
-        external
-        view
-        returns (uint256)
-    {
+    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
         require(
             ComptrollerInterface(comptroller).isComptroller(),
             "Liquidated shares Reserves: Comptroller address invalid"
         );
-        require(
-            asset != address(0),
-            "Liquidated shares Reserves: Asset address invalid"
-        );
+        require(asset != address(0), "Liquidated shares Reserves: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
     }
 }

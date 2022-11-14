@@ -1,22 +1,23 @@
-import { ethers } from "hardhat";
-import { expect } from "chai";
-import {
-  MockToken,
-  PoolRegistry,
-  Comptroller,
-  MockPriceOracle,
-  VTokenProxyFactory,
-  JumpRateModelFactory,
-  WhitePaperInterestRateModelFactory,
-  PoolLens,
-  AccessControlManager,
-  VToken,
-  RiskFund,
-  ProtocolShareReserve,
-} from "../../../typechain";
-import { convertToUnit } from "../../../helpers/utils";
-import { BigNumberish, Signer } from "ethers";
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { expect } from "chai";
+import { BigNumberish } from "ethers";
+import { ethers } from "hardhat";
+
+import { convertToUnit } from "../../../helpers/utils";
+import {
+  AccessControlManager,
+  Comptroller,
+  JumpRateModelFactory,
+  MockPriceOracle,
+  MockToken,
+  PoolLens,
+  PoolRegistry,
+  ProtocolShareReserve,
+  RiskFund,
+  VToken,
+  VTokenProxyFactory,
+  WhitePaperInterestRateModelFactory,
+} from "../../../typechain";
 
 let poolRegistry: PoolRegistry;
 let poolRegistryAddress: string;
@@ -33,15 +34,14 @@ let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let poolLens: PoolLens;
-let owner: Signer;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let closeFactor1: BigNumberish,
   closeFactor2: BigNumberish,
   liquidationIncentive1: BigNumberish,
   liquidationIncentive2: BigNumberish;
-  let protocolShareReserve: ProtocolShareReserve;
-  let riskFund: RiskFund;
+let protocolShareReserve: ProtocolShareReserve;
+let riskFund: RiskFund;
 const minLiquidatableCollateral = convertToUnit(100, 18);
 
 describe("PoolLens - PoolView Tests", async function () {
@@ -52,21 +52,15 @@ describe("PoolLens - PoolView Tests", async function () {
     const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    const VTokenProxyFactory = await ethers.getContractFactory(
-      "VTokenProxyFactory"
-    );
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
-    const JumpRateModelFactory = await ethers.getContractFactory(
-      "JumpRateModelFactory"
-    );
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
-      "WhitePaperInterestRateModelFactory"
-    );
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -77,18 +71,12 @@ describe("PoolLens - PoolView Tests", async function () {
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy();
 
-    await shortfall.initialize(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-      convertToUnit("10000", 18)
-    )
+    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const ProtocolShareReserve = await ethers.getContractFactory(
-      "ProtocolShareReserve"
-    );
+    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -98,28 +86,20 @@ describe("PoolLens - PoolView Tests", async function () {
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
-      protocolShareReserve.address
+      protocolShareReserve.address,
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>(
-      "AccessControlManager"
-    );
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller1 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller1.deployed();
-    comptroller2 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller2.deployed();
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -136,7 +116,7 @@ describe("PoolLens - PoolView Tests", async function () {
       closeFactor1,
       liquidationIncentive1,
       minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -150,7 +130,7 @@ describe("PoolLens - PoolView Tests", async function () {
       closeFactor2,
       liquidationIncentive2,
       minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -179,16 +159,10 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(pools[0].name).equal("Pool 1");
     expect(pools[1].name).equal("Pool 2");
 
-    comptroller1Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptroller1Proxy.acceptAdmin();
 
-    comptroller2Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[1].comptroller
-    );
+    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptAdmin();
 
     await poolRegistry.addMarket({
@@ -241,24 +215,15 @@ describe("PoolLens - PoolView Tests", async function () {
       description: "Pool2 description",
     });
 
-
-    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockWBTC.address
-    );
-    const vDAIAddress = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockDAI.address
-    );
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
 
     vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
     vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
-    await comptroller1Proxy
-      .connect(owner)
-      .enterMarkets([vDAI.address, vWBTC.address]);
+    await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
 
     //Set Oracle
     await comptroller1Proxy._setPriceOracle(priceOracle.address);
@@ -291,18 +256,10 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockWBTC.address
-    );
-    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
-      vTokenAddress_WBTC
-    );
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
     const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
-    assertVTokenMetadata(
-      vTokenMetadata_WBTC_Actual,
-      vTokenMetadata_WBTC_Expected
-    );
+    assertVTokenMetadata(vTokenMetadata_WBTC_Actual, vTokenMetadata_WBTC_Expected);
 
     // get VToken for Asset-2 : DAI
     const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
@@ -327,10 +284,7 @@ describe("PoolLens - PoolView Tests", async function () {
   });
 
   it("getPoolData By Comptroller", async function () {
-    const poolData = await poolLens.getPoolByComptroller(
-      poolRegistryAddress,
-      comptroller1Proxy.address
-    );
+    const poolData = await poolLens.getPoolByComptroller(poolRegistryAddress, comptroller1Proxy.address);
 
     // expect(poolData[0]).equal(1);
     expect(poolData[0]).equal("Pool 1");
@@ -350,32 +304,16 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockWBTC.address
-    );
-    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(
-      vTokenAddress_WBTC
-    );
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenMetadata_WBTC_Expected = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
     const vTokenMetadata_WBTC_Actual = vTokens_Actual[0];
-    assertVTokenMetadata(
-      vTokenMetadata_WBTC_Actual,
-      vTokenMetadata_WBTC_Expected
-    );
+    assertVTokenMetadata(vTokenMetadata_WBTC_Actual, vTokenMetadata_WBTC_Expected);
 
     // get VToken for Asset-2 : DAI
-    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockDAI.address
-    );
-    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(
-      vTokenAddress_DAI
-    );
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
+    const vTokenMetadata_DAI_Expected = await poolLens.vTokenMetadata(vTokenAddress_DAI);
     const vTokenMetadata_DAI_Actual = vTokens_Actual[1];
-    assertVTokenMetadata(
-      vTokenMetadata_DAI_Actual,
-      vTokenMetadata_DAI_Expected
-    );
+    assertVTokenMetadata(vTokenMetadata_DAI_Actual, vTokenMetadata_DAI_Expected);
   });
 });
 
@@ -387,26 +325,18 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const [owner, proxyAdmin] = await ethers.getSigners();
     ownerAddress = await owner.getAddress();
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>(
-      "AccessControlManager"
-    );
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
-    const VTokenProxyFactory = await ethers.getContractFactory(
-      "VTokenProxyFactory"
-    );
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
-    const JumpRateModelFactory = await ethers.getContractFactory(
-      "JumpRateModelFactory"
-    );
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
-      "WhitePaperInterestRateModelFactory"
-    );
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -417,18 +347,12 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy();
 
-    await shortfall.initialize(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-      convertToUnit("10000", 18)
-    )
+    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const ProtocolShareReserve = await ethers.getContractFactory(
-      "ProtocolShareReserve"
-    );
+    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -438,7 +362,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
-      protocolShareReserve.address
+      protocolShareReserve.address,
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);
@@ -446,15 +370,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller1 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller1.deployed();
-    comptroller2 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller2.deployed();
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -471,7 +389,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       closeFactor1,
       liquidationIncentive1,
       minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -485,7 +403,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       closeFactor2,
       liquidationIncentive2,
       minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -514,16 +432,10 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(pools[0].name).equal("Pool 1");
     expect(pools[1].name).equal("Pool 2");
 
-    comptroller1Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptroller1Proxy.acceptAdmin();
 
-    comptroller2Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[1].comptroller
-    );
+    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptAdmin();
 
     await poolRegistry.addMarket({
@@ -582,13 +494,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
 
   it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
-    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(
-      comptroller1Proxy.address,
-      mockWBTC.address
-    );
-    const vTokenMetadata_Actual = await poolLens.vTokenMetadata(
-      vTokenAddress_WBTC
-    );
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenMetadata_Actual = await poolLens.vTokenMetadata(vTokenAddress_WBTC);
 
     const vTokenMetadata_Actual_Parsed: any = cullTuple(vTokenMetadata_Actual);
     expect(vTokenMetadata_Actual_Parsed["vToken"]).equal(vTokenAddress_WBTC);
@@ -608,10 +515,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
   });
 });
 
-const assertVTokenMetadata = (
-  vTokenMetadata_Actual: any,
-  vTokenMetadata_Expected: any
-) => {
+const assertVTokenMetadata = (vTokenMetadata_Actual: any, vTokenMetadata_Expected: any) => {
   expect(vTokenMetadata_Actual[0]).equal(vTokenMetadata_Expected[0]);
   expect(vTokenMetadata_Actual[1]).equal(vTokenMetadata_Expected[1]);
   expect(vTokenMetadata_Actual[2]).equal(vTokenMetadata_Expected[2]);

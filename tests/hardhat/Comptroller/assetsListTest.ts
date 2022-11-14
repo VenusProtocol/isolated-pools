@@ -1,22 +1,26 @@
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import chai from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { setBalance, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { smock, MockContract, FakeContract } from "@defi-wonderland/smock";
-import chai from "chai";
-const { expect } = chai;
-chai.use(smock.matchers);
 
-import {
-  Comptroller, PriceOracle, Comptroller__factory, VToken, AccessControlManager, PoolRegistry
-} from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
+import {
+  AccessControlManager,
+  Comptroller,
+  Comptroller__factory,
+  PoolRegistry,
+  PriceOracle,
+  VToken,
+} from "../../../typechain";
 import { Error } from "../util/Errors";
 
+const { expect } = chai;
+chai.use(smock.matchers);
 
 describe("assetListTest", () => {
   let root: Signer;
   let customer: Signer;
-  let accounts: Signer[];
   let comptroller: MockContract<Comptroller>;
   let poolRegistry: FakeContract<PoolRegistry>;
   let OMG: FakeContract<VToken>;
@@ -27,14 +31,14 @@ describe("assetListTest", () => {
 
   type AssetListFixture = {
     accessControl: FakeContract<AccessControlManager>;
-    comptroller: MockContract<Comptroller>,
-    oracle: FakeContract<PriceOracle>,
-    OMG: FakeContract<VToken>,
-    ZRX: FakeContract<VToken>,
-    BAT: FakeContract<VToken>,
-    SKT: FakeContract<VToken>,
-    allTokens: FakeContract<VToken>[],
-    names: string[]
+    comptroller: MockContract<Comptroller>;
+    oracle: FakeContract<PriceOracle>;
+    OMG: FakeContract<VToken>;
+    ZRX: FakeContract<VToken>;
+    BAT: FakeContract<VToken>;
+    SKT: FakeContract<VToken>;
+    allTokens: FakeContract<VToken>[];
+    names: string[];
   };
 
   async function assetListFixture(): Promise<AssetListFixture> {
@@ -48,12 +52,12 @@ describe("assetListTest", () => {
     await comptroller._setPriceOracle(oracle.address);
     const names = ["OMG", "ZRX", "BAT", "sketch"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
-      names.map(async (name) => {
+      names.map(async name => {
         const vToken = await smock.fake<VToken>("VToken");
         if (name !== "sketch") {
-          const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address)
+          const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
           if (poolRegistryBalance.isZero()) {
-            setBalance(await root.getAddress(), 100n ** 18n)
+            await setBalance(await root.getAddress(), 100n ** 18n);
             await root.sendTransaction({
               to: poolRegistry.address,
               value: ethers.utils.parseEther("1"),
@@ -63,7 +67,7 @@ describe("assetListTest", () => {
           await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
         }
         return vToken;
-      })
+      }),
     );
     const allTokens = [OMG, ZRX, BAT, SKT];
     return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names };
@@ -77,18 +81,18 @@ describe("assetListTest", () => {
       vToken.symbol.returns(names[i]);
       vToken.name.returns(names[i]);
       vToken.getAccountSnapshot.returns([0, 0, 0, 0]);
-    })
+    });
   }
 
   beforeEach(async () => {
-    [root, customer, ...accounts] = await ethers.getSigners();
+    [root, customer] = await ethers.getSigners();
     const contracts = await loadFixture(assetListFixture);
     configure(contracts);
     ({ comptroller, OMG, ZRX, BAT, SKT, allTokens } = contracts);
   });
 
   async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
-    for (let token of allTokens) {
+    for (const token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
       expect(await comptroller.checkMembership(await customer.getAddress(), token.address)).to.equal(isExpected);
     }
@@ -97,7 +101,7 @@ describe("assetListTest", () => {
   async function enterAndCheckMarkets(
     enterTokens: FakeContract<VToken>[],
     expectedTokens: FakeContract<VToken>[],
-    expectedErrors: Error[] | null = null
+    expectedErrors: Error[] | null = null,
   ) {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
     const receipt = await comptroller.connect(customer).enterMarkets(enterTokens.map(t => t.address));
@@ -109,18 +113,18 @@ describe("assetListTest", () => {
       expect(tokenReply).to.equal(expectedErrors_[i]);
     });
 
-    expect(receipt).to.emit(comptroller, "MarketEntered");
+    expect(receipt).to.emit(comptroller, "MarketEntered"); // eslint-disable-line @typescript-eslint/no-floating-promises
     expect(assetsIn).to.deep.equal(expectedTokens.map(t => t.address));
 
     await checkMarkets(expectedTokens);
 
     return receipt;
-  };
+  }
 
   async function exitAndCheckMarkets(
     exitToken: FakeContract<VToken>,
     expectedTokens: FakeContract<VToken>[],
-    expectedError: Error = Error.NO_ERROR
+    expectedError: Error = Error.NO_ERROR,
   ) {
     const reply = await comptroller.connect(customer).callStatic.exitMarket(exitToken.address);
     const receipt = await comptroller.connect(customer).exitMarket(exitToken.address);
@@ -129,13 +133,14 @@ describe("assetListTest", () => {
     expect(assetsIn).to.deep.equal(expectedTokens.map(t => t.address));
     await checkMarkets(expectedTokens);
     return receipt;
-  };
+  }
 
   describe("enterMarkets", () => {
     it("properly emits events", async () => {
       const tx1 = await enterAndCheckMarkets([OMG], [OMG]);
       const tx2 = await enterAndCheckMarkets([OMG], [OMG]);
-      expect(tx1).to.emit(comptroller, "MarketEntered")
+      expect(tx1) // eslint-disable-line @typescript-eslint/no-floating-promises
+        .to.emit(comptroller, "MarketEntered")
         .withArgs(OMG.address, customer);
       expect((await tx2.wait()).events).to.be.empty;
     });
@@ -159,11 +164,7 @@ describe("assetListTest", () => {
     });
 
     it("returns a list of codes mapping to user's ultimate membership in given addresses", async () => {
-      await enterAndCheckMarkets(
-        [OMG, ZRX, BAT],
-        [OMG, ZRX, BAT],
-        [Error.NO_ERROR, Error.NO_ERROR, Error.NO_ERROR]
-      );
+      await enterAndCheckMarkets([OMG, ZRX, BAT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.NO_ERROR, Error.NO_ERROR]);
       await enterAndCheckMarkets([OMG, SKT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.MARKET_NOT_LISTED]);
     });
   });
@@ -238,7 +239,7 @@ describe("assetListTest", () => {
 
     it("reverts when called by not a ctoken", async () => {
       await expect(
-        comptroller.connect(customer).borrowAllowed(BAT.address, await customer.getAddress(), 1)
+        comptroller.connect(customer).borrowAllowed(BAT.address, await customer.getAddress(), 1),
       ).to.be.revertedWith("sender must be vToken");
 
       const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());

@@ -1,21 +1,22 @@
-import { ethers } from "hardhat";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { expect } from "chai";
+import { ethers } from "hardhat";
+
+import { convertToUnit } from "../../helpers/utils";
 import {
+  AccessControlManager,
+  Comptroller,
+  JumpRateModelFactory,
+  MockPriceOracle,
   MockToken,
   PoolRegistry,
-  Comptroller,
-  VToken,
-  MockPriceOracle,
-  VTokenProxyFactory,
-  JumpRateModelFactory,
-  WhitePaperInterestRateModelFactory,
-  AccessControlManager,
-  RiskFund,
   ProtocolShareReserve,
+  RiskFund,
   TransparentUpgradeableProxy,
+  VToken,
+  VTokenProxyFactory,
+  WhitePaperInterestRateModelFactory,
 } from "../../typechain";
-import { convertToUnit } from "../../helpers/utils";
-import { FakeContract, smock } from "@defi-wonderland/smock";
 
 let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
@@ -38,21 +39,15 @@ describe("UpgradedVToken: Tests", function () {
   let proxyAdmin;
   before(async function () {
     [, proxyAdmin] = await ethers.getSigners();
-    const VTokenProxyFactory = await ethers.getContractFactory(
-      "VTokenProxyFactory"
-    );
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
-    const JumpRateModelFactory = await ethers.getContractFactory(
-      "JumpRateModelFactory"
-    );
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
     jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory(
-      "WhitePaperInterestRateModelFactory"
-    );
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
@@ -63,18 +58,12 @@ describe("UpgradedVToken: Tests", function () {
     const Shortfall = await ethers.getContractFactory("Shortfall");
     const shortfall = await Shortfall.deploy();
 
-    await shortfall.initialize(
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-      convertToUnit("10000", 18)
-    );
+    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
     const RiskFund = await ethers.getContractFactory("RiskFund");
     riskFund = await RiskFund.deploy();
     await riskFund.deployed();
 
-    const ProtocolShareReserve = await ethers.getContractFactory(
-      "ProtocolShareReserve"
-    );
+    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
     protocolShareReserve = await ProtocolShareReserve.deploy();
     await protocolShareReserve.deployed();
 
@@ -84,21 +73,16 @@ describe("UpgradedVToken: Tests", function () {
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
-      protocolShareReserve.address
+      protocolShareReserve.address,
     );
 
     await shortfall.setPoolRegistry(poolRegistry.address);
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>(
-      "AccessControlManager"
-    );
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller1 = await Comptroller.deploy(
-      poolRegistry.address,
-      fakeAccessControlManager.address
-    );
+    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller1.deployed();
 
     // Deploy Mock Tokens
@@ -125,15 +109,12 @@ describe("UpgradedVToken: Tests", function () {
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      priceOracle.address
+      priceOracle.address,
     );
 
     // Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
-    comptroller1Proxy = await ethers.getContractAt(
-      "Comptroller",
-      pools[0].comptroller
-    );
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
 
     await comptroller1Proxy.acceptAdmin();
 
@@ -160,10 +141,7 @@ describe("UpgradedVToken: Tests", function () {
       tokenImplementation_: tokenImplementation.address,
     });
 
-    const vWBTCAddress = await poolRegistry.getVTokenForAsset(
-      pools[0].comptroller,
-      mockWBTC.address
-    );
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(pools[0].comptroller, mockWBTC.address);
 
     vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
   });
@@ -173,15 +151,10 @@ describe("UpgradedVToken: Tests", function () {
     const vTokenDeploy = await vToken.deploy();
     await vTokenDeploy.deployed();
 
-    transparentProxy = await ethers.getContractAt(
-      "TransparentUpgradeableProxy",
-      vWBTC.address
-    );
+    transparentProxy = await ethers.getContractAt("TransparentUpgradeableProxy", vWBTC.address);
     await transparentProxy.connect(proxyAdmin).upgradeTo(vTokenDeploy.address);
 
-    const upgradeTo = await transparentProxy
-      .connect(proxyAdmin)
-      .callStatic.implementation();
+    const upgradeTo = await transparentProxy.connect(proxyAdmin).callStatic.implementation();
     expect(upgradeTo).to.be.equal(vTokenDeploy.address);
   });
 });

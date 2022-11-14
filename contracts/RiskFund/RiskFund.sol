@@ -43,18 +43,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
         address _convertableBaseAsset,
         address _accessControl
     ) public initializer {
-        require(
-            _pancakeSwapRouter != address(0),
-            "Risk Fund: Pancake swap address invalid"
-        );
-        require(
-            _convertableBaseAsset != address(0),
-            "Risk Fund: Base asset address invalid"
-        );
-        require(
-            _minAmountToConvert > 0,
-            "Risk Fund: Invalid min amout to convert"
-        );
+        require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
+        require(_convertableBaseAsset != address(0), "Risk Fund: Base asset address invalid");
+        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
 
         __Ownable_init();
 
@@ -70,10 +61,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param _poolRegistry Address of the pool registry.
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        require(
-            _poolRegistry != address(0),
-            "Risk Fund: Pool registry address invalid"
-        );
+        require(_poolRegistry != address(0), "Risk Fund: Pool registry address invalid");
         poolRegistry = _poolRegistry;
     }
 
@@ -81,14 +69,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @dev convertable base asset setter
      * @param _convertableBaseAsset Address of the asset.
      */
-    function setConvertableBaseAsset(address _convertableBaseAsset)
-        external
-        onlyOwner
-    {
-        require(
-            _convertableBaseAsset != address(0),
-            "Risk Fund: Asset address invalid"
-        );
+    function setConvertableBaseAsset(address _convertableBaseAsset) external onlyOwner {
+        require(_convertableBaseAsset != address(0), "Risk Fund: Asset address invalid");
         convertableBaseAsset = _convertableBaseAsset;
     }
 
@@ -96,14 +78,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @dev Auction contract address setter
      * @param _auctionContractAddress Address of the auction contract.
      */
-    function setAuctionContractAddress(address _auctionContractAddress)
-        external
-        onlyOwner
-    {
-        require(
-            _auctionContractAddress != address(0),
-            "Risk Fund: Auction contract address invalid"
-        );
+    function setAuctionContractAddress(address _auctionContractAddress) external onlyOwner {
+        require(_auctionContractAddress != address(0), "Risk Fund: Auction contract address invalid");
         auctionContractAddress = _auctionContractAddress;
     }
 
@@ -111,14 +87,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @dev Pancake swap router address setter
      * @param _pancakeSwapRouter Address of the pancake swap router.
      */
-    function setPancakeSwapRouter(address _pancakeSwapRouter)
-        external
-        onlyOwner
-    {
-        require(
-            _pancakeSwapRouter != address(0),
-            "Risk Fund: Pancake swap address invalid"
-        );
+    function setPancakeSwapRouter(address _pancakeSwapRouter) external onlyOwner {
+        require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         pancakeSwapRouter = _pancakeSwapRouter;
     }
 
@@ -135,14 +105,8 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @dev Min amout to convert setter
      * @param _minAmountToConvert Min amout to convert.
      */
-    function setMinAmountToConvert(uint256 _minAmountToConvert)
-        external
-        onlyOwner
-    {
-        require(
-            _minAmountToConvert > 0,
-            "Risk Fund: Invalid min amout to convert"
-        );
+    function setMinAmountToConvert(uint256 _minAmountToConvert) external onlyOwner {
+        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
         minAmountToConvert = _minAmountToConvert;
     }
 
@@ -152,55 +116,36 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param comptroller comptorller address
      * @return Number of swapped tokens.
      */
-    function swapAsset(VToken vToken, address comptroller)
-        internal
-        returns (uint256)
-    {
+    function swapAsset(VToken vToken, address comptroller) internal returns (uint256) {
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
-        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][
-            underlyingAsset
-        ];
+        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
 
-        ComptrollerViewInterface(comptroller).oracle().updatePrice(
-            address(vToken)
-        );
+        ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
 
-        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller)
-            .oracle()
-            .getUnderlyingPrice(vToken);
+        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(vToken);
 
         if (balanceOfUnderlyingAsset > 0) {
-            Exp memory oraclePrice = Exp({mantissa: underlyingAssetPrice});
-            uint256 amountInUsd = mul_ScalarTruncate(
-                oraclePrice,
-                balanceOfUnderlyingAsset
-            );
+            Exp memory oraclePrice = Exp({ mantissa: underlyingAssetPrice });
+            uint256 amountInUsd = mul_ScalarTruncate(oraclePrice, balanceOfUnderlyingAsset);
 
             if (amountInUsd >= minAmountToConvert) {
                 assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
-                poolsAssetsReserves[comptroller][
-                    underlyingAsset
-                ] -= balanceOfUnderlyingAsset;
+                poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
 
                 if (underlyingAsset != convertableBaseAsset) {
                     address[] memory path = new address[](2);
                     path[0] = underlyingAsset;
                     path[1] = convertableBaseAsset;
-                    IERC20(underlyingAsset).safeApprove(
-                        pancakeSwapRouter,
-                        balanceOfUnderlyingAsset
+                    IERC20(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
+                    uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
+                        balanceOfUnderlyingAsset,
+                        amountOutMin,
+                        path,
+                        address(this),
+                        block.timestamp
                     );
-                    uint256[] memory amounts = IPancakeswapV2Router(
-                        pancakeSwapRouter
-                    ).swapExactTokensForTokens(
-                            balanceOfUnderlyingAsset,
-                            amountOutMin,
-                            path,
-                            address(this),
-                            block.timestamp
-                        );
                     totalAmount = amounts[1];
                 } else {
                     totalAmount = balanceOfUnderlyingAsset;
@@ -215,24 +160,17 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param venusPools Array of Pools to swap
      * @return Number of swapped tokens.
      */
-    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools)
-        public
-        returns (uint256)
-    {
+    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools) public returns (uint256) {
         uint256 totalAmount;
         for (uint256 i; i < venusPools.length; ++i) {
             if (venusPools[i].comptroller != address(0)) {
-                VToken[] memory vTokens = ComptrollerInterface(
-                    venusPools[i].comptroller
-                ).getAllMarkets();
+                VToken[] memory vTokens = ComptrollerInterface(venusPools[i].comptroller).getAllMarkets();
 
                 for (uint256 j; j < vTokens.length; ++j) {
                     address comptroller = venusPools[i].comptroller;
                     VToken vToken = vTokens[j];
                     uint256 swappedTokens = swapAsset(vToken, comptroller);
-                    poolReserves[comptroller] =
-                        poolReserves[comptroller] +
-                        swappedTokens;
+                    poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
                     totalAmount = totalAmount + swappedTokens;
                 }
             }
@@ -245,15 +183,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @return Number of swapped tokens.
      */
     function swapAllPoolsAssets() external returns (uint256) {
-        require(
-            poolRegistry != address(0),
-            "Risk fund: Invalid pool registry."
-        );
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(
-            poolRegistry
-        );
-        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface
-            .getAllPools();
+        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
+        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistry);
+        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
 
         uint256 totalAmount = swapPoolsAssets(venusPools);
 
@@ -265,11 +197,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param comptroller comptroller of the pool.
      * @return Number reserved tokens.
      */
-    function getPoolReserve(address comptroller)
-        external
-        view
-        returns (uint256)
-    {
+    function getPoolReserve(address comptroller) external view returns (uint256) {
         return poolReserves[comptroller];
     }
 
@@ -279,34 +207,18 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount)
-        external
-        returns (uint256)
-    {
-        bool canTransferFunds = AccessControlManager(accessControl)
-            .isAllowedToCall(
-                msg.sender,
-                "transferReserveForAuction(uint256,uint256)"
-            );
-
-        require(
-            canTransferFunds,
-            "Risk fund: Not authorized to transfer funds."
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
+        bool canTransferFunds = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "transferReserveForAuction(uint256,uint256)"
         );
 
-        require(
-            auctionContractAddress != address(0),
-            "Risk Fund: Auction contract invalid address."
-        );
-        require(
-            amount <= poolReserves[comptroller],
-            "Risk Fund: Insufficient pool reserve."
-        );
+        require(canTransferFunds, "Risk fund: Not authorized to transfer funds.");
+
+        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
+        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20(convertableBaseAsset).safeTransfer(
-            auctionContractAddress,
-            amount
-        );
+        IERC20(convertableBaseAsset).safeTransfer(auctionContractAddress, amount);
         return amount;
     }
 }

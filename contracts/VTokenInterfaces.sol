@@ -144,12 +144,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interest is accrued
      */
-    event AccrueInterest(
-        uint256 cashPrior,
-        uint256 interestAccumulated,
-        uint256 borrowIndex,
-        uint256 totalBorrows
-    );
+    event AccrueInterest(uint256 cashPrior, uint256 interestAccumulated, uint256 borrowIndex, uint256 totalBorrows);
 
     /**
      * @notice Event emitted when tokens are minted
@@ -164,12 +159,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when underlying is borrowed
      */
-    event Borrow(
-        address borrower,
-        uint256 borrowAmount,
-        uint256 accountBorrows,
-        uint256 totalBorrows
-    );
+    event Borrow(address borrower, uint256 borrowAmount, uint256 accountBorrows, uint256 totalBorrows);
 
     /**
      * @notice Event emitted when a borrow is repaid
@@ -188,12 +178,7 @@ abstract contract VTokenInterface is VTokenStorage {
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtIncreased(
-        address borrower,
-        uint256 badDebtDelta,
-        uint256 badDebtOld,
-        uint256 badDebtNew
-    );
+    event BadDebtIncreased(address borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
 
     /**
      * @notice Event emitted when a borrow is liquidated
@@ -211,10 +196,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when comptroller is changed
      */
-    event NewComptroller(
-        ComptrollerInterface oldComptroller,
-        ComptrollerInterface newComptroller
-    );
+    event NewComptroller(ComptrollerInterface oldComptroller, ComptrollerInterface newComptroller);
 
     /**
      * @notice Event emitted when comptroller is changed
@@ -227,36 +209,22 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interestRateModel is changed
      */
-    event NewMarketInterestRateModel(
-        InterestRateModel oldInterestRateModel,
-        InterestRateModel newInterestRateModel
-    );
+    event NewMarketInterestRateModel(InterestRateModel oldInterestRateModel, InterestRateModel newInterestRateModel);
 
     /**
      * @notice Event emitted when the reserve factor is changed
      */
-    event NewReserveFactor(
-        uint256 oldReserveFactorMantissa,
-        uint256 newReserveFactorMantissa
-    );
+    event NewReserveFactor(uint256 oldReserveFactorMantissa, uint256 newReserveFactorMantissa);
 
     /**
      * @notice Event emitted when the reserves are added
      */
-    event ReservesAdded(
-        address benefactor,
-        uint256 addAmount,
-        uint256 newTotalReserves
-    );
+    event ReservesAdded(address benefactor, uint256 addAmount, uint256 newTotalReserves);
 
     /**
      * @notice Event emitted when the reserves are reduced
      */
-    event ReservesReduced(
-        address admin,
-        uint256 reduceAmount,
-        uint256 newTotalReserves
-    );
+    event ReservesReduced(address admin, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
@@ -266,11 +234,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice EIP20 Approval event
      */
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 amount
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /*** User Interface ***/
 
@@ -292,9 +256,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function repayBorrow(uint256 repayAmount) external virtual;
 
-    function repayBorrowBehalf(address borrower, uint256 repayAmount)
-        external
-        virtual;
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external virtual;
 
     function liquidateBorrow(
         address borrower,
@@ -322,10 +284,7 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 seizeTokens
     ) external virtual;
 
-    function transfer(address dst, uint256 amount)
-        external
-        virtual
-        returns (bool);
+    function transfer(address dst, uint256 amount) external virtual returns (bool);
 
     function transferFrom(
         address src,
@@ -333,23 +292,13 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 amount
     ) external virtual returns (bool);
 
-    function approve(address spender, uint256 amount)
-        external
-        virtual
-        returns (bool);
+    function approve(address spender, uint256 amount) external virtual returns (bool);
 
-    function allowance(address owner, address spender)
-        external
-        view
-        virtual
-        returns (uint256);
+    function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
 
-    function balanceOfUnderlying(address owner)
-        external
-        virtual
-        returns (uint256);
+    function balanceOfUnderlying(address owner) external virtual returns (uint256);
 
     function getAccountSnapshot(address account)
         external
@@ -368,16 +317,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 
-    function borrowBalanceCurrent(address account)
-        external
-        virtual
-        returns (uint256);
+    function borrowBalanceCurrent(address account) external virtual returns (uint256);
 
-    function borrowBalanceStored(address account)
-        external
-        view
-        virtual
-        returns (uint256);
+    function borrowBalanceStored(address account) external view virtual returns (uint256);
 
     function exchangeRateCurrent() external virtual returns (uint256);
 
@@ -391,25 +333,13 @@ abstract contract VTokenInterface is VTokenStorage {
 
     /*** Admin Functions ***/
 
-    function _setComptroller(ComptrollerInterface newComptroller)
-        external
-        virtual
-        returns (uint256);
+    function _setComptroller(ComptrollerInterface newComptroller) external virtual returns (uint256);
 
-    function _setReserveFactor(uint256 newReserveFactorMantissa)
-        external
-        virtual
-        returns (uint256);
+    function _setReserveFactor(uint256 newReserveFactorMantissa) external virtual returns (uint256);
 
-    function _reduceReserves(uint256 reduceAmount)
-        external
-        virtual
-        returns (uint256);
+    function _reduceReserves(uint256 reduceAmount) external virtual returns (uint256);
 
-    function _setInterestRateModel(InterestRateModel newInterestRateModel)
-        external
-        virtual
-        returns (uint256);
+    function _setInterestRateModel(InterestRateModel newInterestRateModel) external virtual returns (uint256);
 
     function _addReserves(uint256 addAmount) external virtual returns (uint256);
 }

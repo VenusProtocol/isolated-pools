@@ -1,7 +1,8 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { DeployFunction } from "hardhat-deploy/types";
-import { DeployResult } from "hardhat-deploy/dist/types";
 import { ethers } from "hardhat";
+import { DeployResult } from "hardhat-deploy/dist/types";
+import { DeployFunction } from "hardhat-deploy/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+
 import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -36,10 +37,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   try {
     priceOracle = await ethers.getContract("PriceOracle");
-    console.log("Price Oracle Obtained")
+    console.log("Price Oracle Obtained");
   } catch (e) {
     priceOracle = await ethers.getContract("MockPriceOracle");
-    console.log("Mock Oracle Obtained")
+    console.log("Mock Oracle Obtained");
     tx = await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
     await tx.wait();
     tx = await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
@@ -68,7 +69,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     closeFactor,
     liquidationIncentive,
     minLiquidatableCollateral,
-    priceOracle.address
+    priceOracle.address,
   );
 
   await tx.wait();
@@ -86,11 +87,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     comptroller: comptroller1Proxy.address,
     asset: wBTC.address,
     decimals: 8,
-    name: 'Venus WBTC',
-    symbol: 'vWBTC',
+    name: "Venus WBTC",
+    symbol: "vWBTC",
     rateModel: 0,
     baseRatePerYear: 0,
-    multiplierPerYear: '40000000000000000',
+    multiplierPerYear: "40000000000000000",
     jumpMultiplierPerYear: 0,
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
@@ -119,7 +120,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait();
-
 };
 
 func.tags = ["Pools"];

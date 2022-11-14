@@ -34,14 +34,7 @@ contract FaucetNonStandardToken is NonStandardToken {
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
-    )
-        NonStandardToken(
-            _initialAmount,
-            _tokenName,
-            _decimalUnits,
-            _tokenSymbol
-        )
-    {}
+    ) NonStandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
 
     function allocateTo(address _owner, uint256 value) public {
         balanceOf[_owner] += value;
@@ -59,11 +52,7 @@ contract FaucetTokenReEntrantHarness {
     using SafeMath for uint256;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     string public name;
     string public symbol;
@@ -96,9 +85,7 @@ contract FaucetTokenReEntrantHarness {
         string memory _reEntryFun = reEntryFun;
         if (compareStrings(_reEntryFun, funName)) {
             reEntryFun = ""; // Clear re-entry fun
-            (bool success, bytes memory returndata) = msg.sender.call(
-                reEntryCallData
-            );
+            (bool success, bytes memory returndata) = msg.sender.call(reEntryCallData);
             assembly {
                 if eq(success, 0) {
                     revert(add(returndata, 0x20), returndatasize())
@@ -109,14 +96,8 @@ contract FaucetTokenReEntrantHarness {
         _;
     }
 
-    function compareStrings(string memory a, string memory b)
-        internal
-        pure
-        returns (bool)
-    {
-        return
-            keccak256(abi.encodePacked((a))) ==
-            keccak256(abi.encodePacked((b)));
+    function compareStrings(string memory a, string memory b) internal pure returns (bool) {
+        return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
     }
 
     function allocateTo(address _owner, uint256 value) public {
@@ -129,36 +110,20 @@ contract FaucetTokenReEntrantHarness {
         return totalSupply_;
     }
 
-    function allowance(address owner, address spender)
-        public
-        reEnter("allowance")
-        returns (uint256 remaining)
-    {
+    function allowance(address owner, address spender) public reEnter("allowance") returns (uint256 remaining) {
         return allowance_[owner][spender];
     }
 
-    function approve(address spender, uint256 amount)
-        public
-        reEnter("approve")
-        returns (bool success)
-    {
+    function approve(address spender, uint256 amount) public reEnter("approve") returns (bool success) {
         _approve(msg.sender, spender, amount);
         return true;
     }
 
-    function balanceOf(address owner)
-        public
-        reEnter("balanceOf")
-        returns (uint256 balance)
-    {
+    function balanceOf(address owner) public reEnter("balanceOf") returns (uint256 balance) {
         return balanceOf_[owner];
     }
 
-    function transfer(address dst, uint256 amount)
-        public
-        reEnter("transfer")
-        returns (bool success)
-    {
+    function transfer(address dst, uint256 amount) public reEnter("transfer") returns (bool success) {
         _transfer(msg.sender, dst, amount);
         return true;
     }

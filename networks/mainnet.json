@@ -1,4 +1,4 @@
-{  
+{
   "Contracts": {
     "AAVE": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
     "cAAVEDelegate": "0xa035b9e130f2b1aedc733eefb1c67ba4c503491f",
@@ -247,24 +247,24 @@
   },
   "GovernorBravo": {
     "GovernorBravoDelegateG1": {
-        "name": "GovernorBravoDelegate",
-        "contract": "GovernorBravoDelegate",
-        "address": "0xAAAaaAAAaaaa8FdB04F544F4EEe52939CddCe378"
+      "name": "GovernorBravoDelegate",
+      "contract": "GovernorBravoDelegate",
+      "address": "0xAAAaaAAAaaaa8FdB04F544F4EEe52939CddCe378"
     },
     "GovernorBravoDelegateG2": {
-        "name": "GovernorBravoDelegate",
-        "contract": "GovernorBravoDelegate",
-        "address": "0x563a63d650a5d259abae9248dddc6867813d3f87"
+      "name": "GovernorBravoDelegate",
+      "contract": "GovernorBravoDelegate",
+      "address": "0x563a63d650a5d259abae9248dddc6867813d3f87"
     },
     "GovernorBravoDelegator": {
-        "name": "GovernorBravoDelegator",
-        "contract": "GovernorBravoDelegator",
-        "address": "0xc0da02939e1441f497fd74f78ce7decb17b66529"
+      "name": "GovernorBravoDelegator",
+      "contract": "GovernorBravoDelegator",
+      "address": "0xc0da02939e1441f497fd74f78ce7decb17b66529"
     },
     "GovernorBravoDelegate": {
-        "name": "GovernorBravoDelegate",
-        "contract": "GovernorBravoDelegate",
-        "address": "0x30065B703DE5d473975A2db5bBB790A23FD6EFbD"
+      "name": "GovernorBravoDelegate",
+      "contract": "GovernorBravoDelegate",
+      "address": "0x30065B703DE5d473975A2db5bBB790A23FD6EFbD"
     }
   },
   "Timelock": {

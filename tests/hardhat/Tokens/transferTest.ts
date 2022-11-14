@@ -1,36 +1,35 @@
-import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { Signer } from "ethers";
+import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
+import { Signer } from "ethers";
+import { ethers } from "hardhat";
+
+import { Comptroller, VTokenHarness } from "../../../typechain";
+import { vTokenTestFixture } from "../util/TokenTestHelpers";
+
 const { expect } = chai;
 chai.use(smock.matchers);
 
-import { VTokenHarness, Comptroller } from "../../../typechain";
-import { vTokenTestFixture } from "../util/TokenTestHelpers";
-import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
-
-describe('VToken', function () {
+describe("VToken", function () {
   let root: Signer;
   let guy: Signer;
   let rootAddress: string;
   let guyAddress: string;
-  let accounts: Signer[];
   let vToken: MockContract<VTokenHarness>;
   let comptroller: FakeContract<Comptroller>;
 
   beforeEach(async () => {
-    [root, guy, ...accounts] = await ethers.getSigners();
+    [root, guy] = await ethers.getSigners();
     rootAddress = await root.getAddress();
     guyAddress = await guy.getAddress();
     ({ vToken, comptroller } = await loadFixture(vTokenTestFixture));
   });
 
-  describe('transfer', () => {
+  describe("transfer", () => {
     it("cannot transfer from a zero balance", async () => {
       expect(await vToken.balanceOf(rootAddress)).to.equal(0);
-      await expect(vToken.transfer(guyAddress, 100))
-        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+      await expect(vToken.transfer(guyAddress, 100)).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("transfers 50 tokens", async () => {
@@ -44,8 +43,7 @@ describe('VToken', function () {
     it("doesn't transfer when src == dst", async () => {
       await vToken.harnessSetBalance(rootAddress, 100);
       expect(await vToken.balanceOf(rootAddress)).to.equal(100);
-      await expect(vToken.transfer(rootAddress, 50))
-        .to.be.revertedWithCustomError(vToken, 'TransferNotAllowed');
+      await expect(vToken.transfer(rootAddress, 50)).to.be.revertedWithCustomError(vToken, "TransferNotAllowed");
     });
 
     it("rejects transfer when not allowed and reverts if not verified", async () => {
@@ -54,7 +52,7 @@ describe('VToken', function () {
 
       comptroller.transferAllowed.returns(11);
       await expect(vToken.transfer(rootAddress, 50))
-        .to.be.revertedWithCustomError(vToken, 'TransferComptrollerRejection')
+        .to.be.revertedWithCustomError(vToken, "TransferComptrollerRejection")
         .withArgs(11);
 
       //comptroller.transferAllowed.returns(Error.NO_ERROR);

@@ -7,9 +7,7 @@ import "../../contracts/PriceOracle.sol";
 contract ComptrollerHarness is Comptroller {
     uint256 public blockNumber;
 
-    constructor(address _poolRegistry, address _accessControl)
-        Comptroller(_poolRegistry, _accessControl)
-    {}
+    constructor(address _poolRegistry, address _accessControl) Comptroller(_poolRegistry, _accessControl) {}
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
         pauseGuardian = harnessedPauseGuardian;
@@ -42,11 +40,7 @@ contract EchoTypesComptroller {
         return b;
     }
 
-    function listOInts(uint256[] memory u)
-        public
-        pure
-        returns (uint256[] memory)
-    {
+    function listOInts(uint256[] memory u) public pure returns (uint256[] memory) {
         return u;
     }
 

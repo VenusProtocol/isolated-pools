@@ -1,23 +1,25 @@
-import { ethers } from "hardhat";
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { Signer, BigNumberish, constants } from "ethers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
-const { expect } = chai;
-chai.use(smock.matchers);
+import { BigNumberish, Signer, constants } from "ethers";
+import { ethers } from "hardhat";
 
-import {
-  Comptroller, VTokenHarness, AccessControlManager, Shortfall
-} from "../../../typechain";
 import { convertToUnit } from "../../../helpers/utils";
+import { AccessControlManager, Comptroller, Shortfall, VTokenHarness } from "../../../typechain";
 import { Error } from "../util/Errors";
 import {
-  getBalances, adjustBalances, preApprove, pretendBorrow,
-  makeVToken, VTokenContracts
+  VTokenContracts,
+  adjustBalances,
+  getBalances,
+  makeVToken,
+  preApprove,
+  pretendBorrow,
 } from "../util/TokenTestHelpers";
 
+const { expect } = chai;
+chai.use(smock.matchers);
 
 const repayAmount = convertToUnit("10", 18);
 const seizeTokens = convertToUnit("40", 18); // forced, repayAmount * 4
@@ -36,11 +38,9 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
   const shortfall = await smock.fake<Shortfall>("Shortfall");
-  const [admin, liquidator, borrower,] = await ethers.getSigners();
-  const borrowed =
-    await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall});
-  const collateral =
-    await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin, shortfall});
+  const [admin, liquidator, borrower] = await ethers.getSigners();
+  const borrowed = await makeVToken({ name: "BAT", comptroller, accessControlManager, admin, shortfall });
+  const collateral = await makeVToken({ name: "ZRX", comptroller, accessControlManager, admin, shortfall });
   await collateral.vToken.harnessSetExchangeRate(exchangeRate);
 
   // setup for success in liquidating
@@ -88,15 +88,14 @@ async function liquidateFresh(
   borrower: Signer,
   repayAmount: BigNumberish,
   vTokenCollateral: MockContract<VTokenHarness>,
-  skipLiquidityCheck: boolean = false
+  skipLiquidityCheck: boolean = false,
 ) {
-
   return vToken.harnessLiquidateBorrowFresh(
     await liquidator.getAddress(),
     await borrower.getAddress(),
     repayAmount,
     vTokenCollateral.address,
-    skipLiquidityCheck
+    skipLiquidityCheck,
   );
 }
 
@@ -105,7 +104,7 @@ async function liquidate(
   liquidator: Signer,
   borrower: Signer,
   repayAmount: BigNumberish,
-  vTokenCollateral: MockContract<VTokenHarness>
+  vTokenCollateral: MockContract<VTokenHarness>,
 ) {
   // make sure to have a block delta so we accrue interest
 
@@ -113,29 +112,22 @@ async function liquidate(
 
   await vTokenCollateral.harnessFastForward(1);
 
-  return vToken.connect(liquidator).liquidateBorrow(
-    await borrower.getAddress(),
-    repayAmount,
-    vTokenCollateral.address
-  );
+  return vToken.connect(liquidator).liquidateBorrow(await borrower.getAddress(), repayAmount, vTokenCollateral.address);
 }
 
 async function seize(
   vToken: MockContract<VTokenHarness>,
   liquidator: Signer,
   borrower: Signer,
-  seizeAmount: BigNumberish
+  seizeAmount: BigNumberish,
 ) {
-
   return vToken.seize(await liquidator.getAddress(), await borrower.getAddress(), seizeAmount);
 }
 
-describe('VToken', function () {
-  let root: Signer;
+describe("VToken", function () {
+  let _root: Signer;
   let liquidator: Signer;
   let borrower: Signer;
-  let accounts: Signer[];
-  let accessControlManager: FakeContract<AccessControlManager>;
   let comptroller: FakeContract<Comptroller>;
   let borrowed: VTokenContracts;
   let collateral: VTokenContracts;
@@ -143,82 +135,91 @@ describe('VToken', function () {
   const protocolSeizeShareMantissa = convertToUnit("0.028", 18); // 2.8%
 
   const protocolShareTokens = new BigNumber(seizeTokens)
-    .multipliedBy(protocolSeizeShareMantissa).dividedBy(convertToUnit("1", 18)).toString();
-  const liquidatorShareTokens = new BigNumber(seizeTokens)
-    .minus(protocolShareTokens).toString();
+    .multipliedBy(protocolSeizeShareMantissa)
+    .dividedBy(convertToUnit("1", 18))
+    .toString();
+  const liquidatorShareTokens = new BigNumber(seizeTokens).minus(protocolShareTokens).toString();
   const addReservesAmount = new BigNumber(protocolShareTokens)
-    .multipliedBy(exchangeRate).dividedBy(convertToUnit("1", 18)).toString();
+    .multipliedBy(exchangeRate)
+    .dividedBy(convertToUnit("1", 18))
+    .toString();
 
   beforeEach(async () => {
-    [root, liquidator, borrower, ...accounts] = await ethers.getSigners();
+    [_root, liquidator, borrower] = await ethers.getSigners();
     const contracts = await loadFixture(liquidateTestFixture);
     configure(contracts);
-    ({ accessControlManager, comptroller, borrowed, collateral } = contracts);
+    ({ comptroller, borrowed, collateral } = contracts);
   });
 
-  describe('liquidateBorrowFresh', () => {
+  describe("liquidateBorrowFresh", () => {
     it("fails if comptroller tells it to", async () => {
       comptroller.liquidateBorrowAllowed.returns(11);
       await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateComptrollerRejection')
+        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateComptrollerRejection")
         .withArgs(11);
     });
 
     it("proceeds if comptroller tells it to", async () => {
-      //expect(
-      await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)
-      //).toSucceed();
+      await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
     });
 
     it("fails if market not fresh", async () => {
       await borrowed.vToken.harnessFastForward(5);
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateFreshnessCheck');
+      await expect(
+        liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken),
+      ).to.be.revertedWithCustomError(borrowed.vToken, "LiquidateFreshnessCheck");
     });
 
     it("fails if collateral market not fresh", async () => {
       await borrowed.vToken.harnessFastForward(5);
       await collateral.vToken.harnessFastForward(5);
       await borrowed.vToken.accrueInterest();
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateCollateralFreshnessCheck');
+      await expect(
+        liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken),
+      ).to.be.revertedWithCustomError(borrowed.vToken, "LiquidateCollateralFreshnessCheck");
     });
 
     it("fails if borrower is equal to liquidator", async () => {
-      await expect(liquidateFresh(borrowed.vToken, borrower, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateLiquidatorIsBorrower');
+      await expect(
+        liquidateFresh(borrowed.vToken, borrower, borrower, repayAmount, collateral.vToken),
+      ).to.be.revertedWithCustomError(borrowed.vToken, "LiquidateLiquidatorIsBorrower");
     });
 
     it("fails if repayAmount = 0", async () => {
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, 0, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateCloseAmountIsZero');
+      await expect(
+        liquidateFresh(borrowed.vToken, liquidator, borrower, 0, collateral.vToken),
+      ).to.be.revertedWithCustomError(borrowed.vToken, "LiquidateCloseAmountIsZero");
     });
 
     it("fails if calculating seize tokens fails and does not adjust balances", async () => {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
-      const beforeBalances =
-        await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+      const beforeBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
       comptroller.liquidateCalculateSeizeTokens.reverts("Oups");
-    
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
-      const afterBalances =
-        await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be
+        .reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
+      const afterBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
       expect(afterBalances).to.deep.equal(beforeBalances);
     });
 
     it("fails if repay fails", async () => {
       comptroller.repayBorrowAllowed.returns(11);
       await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'RepayBorrowComptrollerRejection')
+        .to.be.revertedWithCustomError(borrowed.vToken, "RepayBorrowComptrollerRejection")
         .withArgs(11);
     });
 
     it("reverts if seize fails", async () => {
       comptroller.seizeAllowed.returns(11);
       await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, 'LiquidateSeizeComptrollerRejection')
+        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateSeizeComptrollerRejection")
         .withArgs(11);
     });
 
@@ -226,85 +227,98 @@ describe('VToken', function () {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
 
-      const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
-    
+      const beforeBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
+
       const result = await liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
-      const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
-      //expect(
-      //  result
-      //).toSucceed();
-      expect(result)
+      const afterBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
+
+      await expect(result)
         .to.emit(borrowed.vToken, "LiquidateBorrow")
         .withArgs(liquidatorAddress, borrowerAddress, repayAmount, collateral.vToken.address, seizeTokens);
 
-      expect(result)
+      await expect(result)
         .to.emit(borrowed.underlying, "Transfer")
         .withArgs(liquidatorAddress, borrowed.vToken.address, repayAmount);
 
-      expect(result)
+      await expect(result)
         .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, liquidatorAddress, liquidatorShareTokens);
 
-      expect(result)
+      await expect(result)
         .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, collateral.vToken.address, protocolShareTokens);
 
-      expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [borrowed.vToken, 'cash', repayAmount],
-        [borrowed.vToken, 'borrows', -repayAmount],
-        [borrowed.vToken, liquidatorAddress, 'cash', -repayAmount],
-        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
-        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
-        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens]
-      ]));
+      expect(afterBalances).to.deep.equal(
+        adjustBalances(beforeBalances, [
+          [borrowed.vToken, "cash", repayAmount],
+          [borrowed.vToken, "borrows", -repayAmount],
+          [borrowed.vToken, liquidatorAddress, "cash", -repayAmount],
+          [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
+          [borrowed.vToken, borrowerAddress, "borrows", -repayAmount],
+          [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
+          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens],
+        ]),
+      );
     });
   });
 
-  describe('liquidateBorrow', () => {
+  describe("liquidateBorrow", () => {
     it("emits a liquidation failure if borrowed asset interest accrual fails", async () => {
       borrowed.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("emits a liquidation failure if collateral asset interest accrual fails", async () => {
       collateral.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from liquidateBorrowFresh without emitting any extra logs", async () => {
-      await expect(liquidate(borrowed.vToken, liquidator, borrower, 0, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateCloseAmountIsZero");
+      await expect(
+        liquidate(borrowed.vToken, liquidator, borrower, 0, collateral.vToken),
+      ).to.be.revertedWithCustomError(borrowed.vToken, "LiquidateCloseAmountIsZero");
     });
 
     it("returns success from liquidateBorrowFresh and transfers the correct amounts", async () => {
       const liquidatorAddress = await liquidator.getAddress();
       const borrowerAddress = await borrower.getAddress();
-      const beforeBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+      const beforeBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
       const result = await liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken);
       const receipt = await result.wait();
       const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toString();
-      const afterBalances = await getBalances([borrowed.vToken, collateral.vToken], [liquidatorAddress, borrowerAddress]);
+      const afterBalances = await getBalances(
+        [borrowed.vToken, collateral.vToken],
+        [liquidatorAddress, borrowerAddress],
+      );
       //expect(result).toSucceed();
-      expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [borrowed.vToken, 'cash', repayAmount],
-        [borrowed.vToken, 'borrows', -repayAmount],
-        [borrowed.vToken, liquidatorAddress, 'eth', -gasCost],
-        [borrowed.vToken, liquidatorAddress, 'cash', -repayAmount],
-        [collateral.vToken, liquidatorAddress, 'eth', -gasCost],
-        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
-        [borrowed.vToken, borrowerAddress, 'borrows', -repayAmount],
-        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
-      ]));
+      expect(afterBalances).to.deep.equal(
+        adjustBalances(beforeBalances, [
+          [borrowed.vToken, "cash", repayAmount],
+          [borrowed.vToken, "borrows", -repayAmount],
+          [borrowed.vToken, liquidatorAddress, "eth", -gasCost],
+          [borrowed.vToken, liquidatorAddress, "cash", -repayAmount],
+          [collateral.vToken, liquidatorAddress, "eth", -gasCost],
+          [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
+          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [borrowed.vToken, borrowerAddress, "borrows", -repayAmount],
+          [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
+          [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens], // total supply decreases
+        ]),
+      );
     });
   });
 
-  describe('seize', () => {
+  describe("seize", () => {
     // XXX verify callers are properly checked
 
     it("fails if seize is not allowed", async () => {
@@ -316,14 +330,16 @@ describe('VToken', function () {
 
     it("fails if vTokenBalances[borrower] < amount", async () => {
       await collateral.vToken.harnessSetBalance(await borrower.getAddress(), 1);
-      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
-        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens)).to.be.revertedWithPanic(
+        PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
+      );
     });
 
     it("fails if vTokenBalances[liquidator] overflows", async () => {
       await collateral.vToken.harnessSetBalance(await liquidator.getAddress(), constants.MaxUint256);
-      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
-        .to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens)).to.be.revertedWithPanic(
+        PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
+      );
     });
 
     it("succeeds, updates balances, adds to reserves, and emits Transfer and ReservesAdded events", async () => {
@@ -333,25 +349,27 @@ describe('VToken', function () {
       const beforeBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
       const result = await seize(collateral.vToken, liquidator, borrower, seizeTokens);
       const afterBalances = await getBalances([collateral.vToken], [liquidatorAddress, borrowerAddress]);
-      //expect(result).toSucceed();
-      expect(result)
+
+      await expect(result)
         .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, liquidatorAddress, liquidatorShareTokens);
 
-      expect(result)
+      await expect(result)
         .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, collateral.vToken.address, protocolShareTokens);
 
-      expect(result)
+      await expect(result)
         .to.emit(collateral.vToken, "ReservesAdded")
         .withArgs(collateral.vToken.address, addReservesAmount, addReservesAmount);
 
-      expect(afterBalances).to.deep.equal(adjustBalances(beforeBalances, [
-        [collateral.vToken, liquidatorAddress, 'tokens', liquidatorShareTokens],
-        [collateral.vToken, borrowerAddress, 'tokens', -seizeTokens],
-        [collateral.vToken, collateral.vToken.address, 'reserves', addReservesAmount],
-        [collateral.vToken, collateral.vToken.address, 'tokens', -protocolShareTokens], // total supply decreases
-      ]));
+      expect(afterBalances).to.deep.equal(
+        adjustBalances(beforeBalances, [
+          [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
+          [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
+          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens], // total supply decreases
+        ]),
+      );
     });
   });
 });

@@ -72,12 +72,7 @@ contract PriceOracleProxy is PriceOracle {
      * @param vToken The vToken to get the underlying price of
      * @return The underlying asset price mantissa (scaled by 1e18)
      */
-    function getUnderlyingPrice(VToken vToken)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getUnderlyingPrice(VToken vToken) public view override returns (uint256) {
         address vTokenAddress = address(vToken);
 
         if (vTokenAddress == cEthAddress) {
@@ -95,10 +90,7 @@ contract PriceOracleProxy is PriceOracle {
 
         if (vTokenAddress == cSaiAddress) {
             // use the frozen SAI price if set, otherwise use the DAI price
-            return
-                saiPrice > 0
-                    ? saiPrice
-                    : v1PriceOracle.assetPrices(daiOracleKey);
+            return saiPrice > 0 ? saiPrice : v1PriceOracle.assetPrices(daiOracleKey);
         }
 
         // otherwise just read from v1 oracle

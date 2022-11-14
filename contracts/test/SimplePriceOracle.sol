@@ -13,11 +13,7 @@ contract SimplePriceOracle is PriceOracle {
         uint256 newPriceMantissa
     );
 
-    function _getUnderlyingAddress(VToken vToken)
-        private
-        view
-        returns (address)
-    {
+    function _getUnderlyingAddress(VToken vToken) private view returns (address) {
         address asset;
         if (compareStrings(vToken.symbol(), "vBNB")) {
             asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -27,25 +23,13 @@ contract SimplePriceOracle is PriceOracle {
         return asset;
     }
 
-    function getUnderlyingPrice(VToken vToken)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getUnderlyingPrice(VToken vToken) public view override returns (uint256) {
         return prices[_getUnderlyingAddress(vToken)];
     }
 
-    function setUnderlyingPrice(VToken vToken, uint256 underlyingPriceMantissa)
-        public
-    {
+    function setUnderlyingPrice(VToken vToken, uint256 underlyingPriceMantissa) public {
         address asset = _getUnderlyingAddress(vToken);
-        emit PricePosted(
-            asset,
-            prices[asset],
-            underlyingPriceMantissa,
-            underlyingPriceMantissa
-        );
+        emit PricePosted(asset, prices[asset], underlyingPriceMantissa, underlyingPriceMantissa);
         prices[asset] = underlyingPriceMantissa;
     }
 
@@ -59,13 +43,8 @@ contract SimplePriceOracle is PriceOracle {
         return prices[asset];
     }
 
-    function compareStrings(string memory a, string memory b)
-        internal
-        pure
-        returns (bool)
-    {
-        return (keccak256(abi.encodePacked((a))) ==
-            keccak256(abi.encodePacked((b))));
+    function compareStrings(string memory a, string memory b) internal pure returns (bool) {
+        return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
     function updatePrice(address vToken) external override {}

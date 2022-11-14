@@ -23,10 +23,7 @@ contract VTokenProxyFactory {
         VToken tokenImplementation_;
     }
 
-    function deployVTokenProxy(VTokenArgs memory input)
-        external
-        returns (VToken)
-    {
+    function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(input.tokenImplementation_),
             input.vTokenProxyAdmin_,

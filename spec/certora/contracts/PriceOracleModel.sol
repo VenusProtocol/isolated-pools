@@ -3,13 +3,13 @@ pragma solidity ^0.8.10;
 import "../../../contracts/PriceOracle.sol";
 
 contract PriceOracleModel is PriceOracle {
-    uint dummy;
+    uint256 dummy;
 
-    function isPriceOracle() override external pure returns (bool) {
+    function isPriceOracle() external pure override returns (bool) {
         return true;
     }
 
-    function getUnderlyingPrice(VToken vToken) override external view returns (uint) {
+    function getUnderlyingPrice(VToken vToken) external view override returns (uint256) {
         return dummy;
     }
 }

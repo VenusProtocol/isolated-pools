@@ -38,23 +38,12 @@ contract VTokenHarness is VToken {
         );
     }
 
-    function doTransferOut(address payable to, uint256 amount)
-        internal
-        override
-    {
-        require(
-            failTransferToAddresses[to] == false,
-            "HARNESS_TOKEN_TRANSFER_OUT_FAILED"
-        );
+    function doTransferOut(address payable to, uint256 amount) internal override {
+        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
         return super.doTransferOut(to, amount);
     }
 
-    function exchangeRateStoredInternal()
-        internal
-        view
-        override
-        returns (uint256)
-    {
+    function exchangeRateStoredInternal() internal view override returns (uint256) {
         if (harnessExchangeRateStored) {
             return harnessExchangeRate;
         }
@@ -116,10 +105,7 @@ contract VTokenHarness is VToken {
         failTransferToAddresses[_to] = _fail;
     }
 
-    function harnessMintFresh(address account, uint256 mintAmount)
-        public
-        returns (uint256)
-    {
+    function harnessMintFresh(address account, uint256 mintAmount) public returns (uint256) {
         super.mintFresh(account, mintAmount);
         return NO_ERROR;
     }
@@ -133,11 +119,7 @@ contract VTokenHarness is VToken {
         return NO_ERROR;
     }
 
-    function harnessAccountBorrows(address account)
-        public
-        view
-        returns (uint256 principal, uint256 interestIndex)
-    {
+    function harnessAccountBorrows(address account) public view returns (uint256 principal, uint256 interestIndex) {
         BorrowSnapshot memory snapshot = accountBorrows[account];
         return (snapshot.principal, snapshot.interestIndex);
     }
@@ -147,20 +129,14 @@ contract VTokenHarness is VToken {
         uint256 principal,
         uint256 interestIndex
     ) public {
-        accountBorrows[account] = BorrowSnapshot({
-            principal: principal,
-            interestIndex: interestIndex
-        });
+        accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
     function harnessSetBorrowIndex(uint256 borrowIndex_) public {
         borrowIndex = borrowIndex_;
     }
 
-    function harnessBorrowFresh(address payable account, uint256 borrowAmount)
-        public
-        returns (uint256)
-    {
+    function harnessBorrowFresh(address payable account, uint256 borrowAmount) public returns (uint256) {
         borrowFresh(account, borrowAmount);
         return NO_ERROR;
     }
@@ -181,39 +157,23 @@ contract VTokenHarness is VToken {
         VToken vTokenCollateral,
         bool skipLiquidityCheck
     ) public returns (uint256) {
-        liquidateBorrowFresh(
-            liquidator,
-            borrower,
-            repayAmount,
-            vTokenCollateral,
-            skipLiquidityCheck
-        );
+        liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
         return NO_ERROR;
     }
 
-    function harnessReduceReservesFresh(uint256 amount)
-        public
-        returns (uint256)
-    {
+    function harnessReduceReservesFresh(uint256 amount) public returns (uint256) {
         return _reduceReservesFresh(amount);
     }
 
-    function harnessSetReserveFactorFresh(uint256 newReserveFactorMantissa)
-        public
-        returns (uint256)
-    {
+    function harnessSetReserveFactorFresh(uint256 newReserveFactorMantissa) public returns (uint256) {
         return _setReserveFactorFresh(newReserveFactorMantissa);
     }
 
-    function harnessSetInterestRateModelFresh(
-        InterestRateModel newInterestRateModel
-    ) public returns (uint256) {
+    function harnessSetInterestRateModelFresh(InterestRateModel newInterestRateModel) public returns (uint256) {
         return _setInterestRateModelFresh(newInterestRateModel);
     }
 
-    function harnessSetInterestRateModel(address newInterestRateModelAddress)
-        public
-    {
+    function harnessSetInterestRateModel(address newInterestRateModelAddress) public {
         interestRateModel = InterestRateModel(newInterestRateModelAddress);
     }
 
@@ -258,9 +218,7 @@ contract VTokenScenario is VToken {
     }
 
     function getBlockNumber() internal view override returns (uint256) {
-        ComptrollerScenario comptrollerScenario = ComptrollerScenario(
-            address(comptroller)
-        );
+        ComptrollerScenario comptrollerScenario = ComptrollerScenario(address(comptroller));
         return comptrollerScenario.blockNumber();
     }
 }
