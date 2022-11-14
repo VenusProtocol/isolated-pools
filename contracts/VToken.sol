@@ -1478,7 +1478,7 @@ contract VToken is
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         doTransferOut(protocolShareReserve, reduceAmount);
 
-        // Update the pool's asset's state in the protocol share reserve for the above transfer.
+        // Update the pool asset's state in the protocol share reserve for the above transfer.
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying);
 
         emit ReservesReduced(admin, reduceAmount, totalReservesNew);
