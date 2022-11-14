@@ -345,7 +345,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @notice Add a market to an existing pool
      */
-    function addMarket(AddMarketInput memory input) external {
+    function addMarket(AddMarketInput memory input) external onlyOwner {
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(

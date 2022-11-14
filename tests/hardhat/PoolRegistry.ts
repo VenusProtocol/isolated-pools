@@ -32,6 +32,7 @@ let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
+let tokenImplementation: VToken;
 
 describe("PoolRegistry: Tests", function () {
   /**
@@ -165,7 +166,7 @@ describe("PoolRegistry: Tests", function () {
     await comptroller2Proxy.acceptAdmin();
 
     const VToken = await ethers.getContractFactory("VToken");
-    const tokenImplementation = await VToken.deploy();
+    tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
     // Deploy VTokens
@@ -239,7 +240,9 @@ describe("PoolRegistry: Tests", function () {
   });
 
   it("Should change pool name", async function () {
-    await expect(poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1 updated"))
+    await expect(
+      poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1 updated")
+    )
       .to.emit(poolRegistry, "PoolNameSet")
       .withArgs(comptroller1Proxy.address, "Pool 1 updated");
     const pools = await poolRegistry.callStatic.getAllPools();
@@ -308,14 +311,45 @@ describe("PoolRegistry: Tests", function () {
       description,
     };
 
-    await expect(poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata))
+    await expect(
+      poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata)
+    )
       .to.emit(poolRegistry, "PoolMetadataUpdated")
-      .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
+      .withArgs(comptroller1Proxy.address, oldMetadata, [
+        riskRating,
+        category,
+        logoURL,
+        description,
+      ]);
 
     const metadata = await poolRegistry.metadata(comptroller1Proxy.address);
     expect(metadata.riskRating).equal(riskRating);
     expect(metadata.category).equal(category);
     expect(metadata.logoURL).equal(logoURL);
     expect(metadata.description).equal(description);
+  });
+
+  it("Revert on addMarket by non owner user", async () => {
+    const [, user, proxyAdmin] = await ethers.getSigners();
+
+    await expect(
+      poolRegistry.connect(user).addMarket({
+        comptroller: comptroller2Proxy.address,
+        asset: mockWBTC.address,
+        decimals: 8,
+        name: "Compound WBTC",
+        symbol: "vWBTC",
+        rateModel: 0,
+        baseRatePerYear: 0,
+        multiplierPerYear: "40000000000000000",
+        jumpMultiplierPerYear: 0,
+        kink_: 0,
+        collateralFactor: convertToUnit(0.7, 18),
+        liquidationThreshold: convertToUnit(0.7, 18),
+        accessControlManager: fakeAccessControlManager.address,
+        vTokenProxyAdmin: proxyAdmin.address,
+        tokenImplementation_: tokenImplementation.address,
+      })
+    ).to.be.rejectedWith("Ownable: caller is not the owner");
   });
 });
