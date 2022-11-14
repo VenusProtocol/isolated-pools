@@ -9,7 +9,7 @@ contract ReserveHelpers {
     using SafeERC20 for IERC20;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
-    mapping(address => uint256) internal previousStateForAssets;
+    mapping(address => uint256) internal assetsReserves;
 
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
@@ -30,13 +30,14 @@ contract ReserveHelpers {
             "Liquidated shares Reserves: Asset address invalid"
         );
         uint256 currentBalance = IERC20(asset).balanceOf(address(this));
-        if (currentBalance > previousStateForAssets[asset]) {
+        uint256 assetReserve = assetsReserves[asset];
+        if (currentBalance > assetReserve) {
             uint256 balanceDifference;
             unchecked{
                 balanceDifference = currentBalance -
-                previousStateForAssets[asset];
+                assetReserve;
             }
-            previousStateForAssets[asset] += balanceDifference;
+            assetsReserves[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
         }
     }

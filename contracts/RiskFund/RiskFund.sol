@@ -179,7 +179,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
             );
 
             if (amountInUsd >= minAmountToConvert) {
-                previousStateForAssets[
+                assetsReserves[
                     underlyingAsset
                 ] -= balanceOfUnderlyingAsset;
                 poolsAssetsReserves[comptroller][

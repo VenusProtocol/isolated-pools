@@ -62,7 +62,7 @@ contract ProtocolShareReserve is
             "Liquidated shares Reserves: Insufficient pool balance"
         );
 
-        previousStateForAssets[asset] -= amount;
+        assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
 
         IERC20(asset).safeTransfer(
