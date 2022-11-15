@@ -25,10 +25,7 @@ contract ReserveHelpers {
      * @param asset Asset address.
      */
     function updateAssetsState(address comptroller, address asset) external {
-        require(
-            ComptrollerInterface(comptroller).isComptroller(),
-            "ReserveHelpers: Comptroller address invalid"
-        );
+        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         uint256 currentBalance = IERC20(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
@@ -50,10 +47,7 @@ contract ReserveHelpers {
      * @return Asset's reserve in risk fund.
      */
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
-        require(
-            ComptrollerInterface(comptroller).isComptroller(),
-            "ReserveHelpers: Comptroller address invalid"
-        );
+        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
     }
