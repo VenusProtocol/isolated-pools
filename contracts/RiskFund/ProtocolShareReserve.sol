@@ -11,21 +11,21 @@ import "./ReserveHelpers.sol";
 contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
     using SafeERC20 for IERC20;
 
-    address private liquidatedShares;
+    address private protocolIncome;
     address private riskFund;
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _liquidatedShares  Liquidated shares address.
+     * @param _protocolIncome  remaining protocol income.
      * @param _riskFund Risk fund address.
      */
-    function initialize(address _liquidatedShares, address _riskFund) public initializer {
-        require(_liquidatedShares != address(0), "Liquidated shares Reserves: Liquidated shares address invalid");
-        require(_riskFund != address(0), "Liquidated shares Reserves: Risk Fund address invalid");
+    function initialize(address _protocolIncome, address _riskFund) public initializer {
+        require(_protocolIncome != address(0), "ProtocolShareReserve: Liquidated shares address invalid");
+        require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
         __Ownable_init();
 
-        liquidatedShares = _liquidatedShares;
+        protocolIncome = _protocolIncome;
         riskFund = _riskFund;
     }
 
@@ -40,17 +40,17 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError, Reserve
         address asset,
         uint256 amount
     ) external onlyOwner returns (uint256) {
-        require(asset != address(0), "Liquidated shares Reserves: Asset address invalid");
+        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(
             amount <= poolsAssetsReserves[comptroller][asset],
-            "Liquidated shares Reserves: Insufficient pool balance"
+            "ProtocolShareReserve: Insufficient pool balance"
         );
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
 
         IERC20(asset).safeTransfer(
-            liquidatedShares,
+            protocolIncome,
             mul_(Exp({ mantissa: amount }), div_(Exp({ mantissa: 70 * expScale }), 100)).mantissa
         );
         IERC20(asset).safeTransfer(

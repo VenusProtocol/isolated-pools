@@ -15,6 +15,10 @@ contract ReserveHelpers {
     // Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
+    // Event emitted after the updation of the assets reserves.
+    // amount -> reserve increased by amount.
+    event AssetsReservesUpdated(address comptroller, address asset, uint256 amount);
+
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
      * @param comptroller  Comptroller address(pool).
@@ -23,9 +27,9 @@ contract ReserveHelpers {
     function updateAssetsState(address comptroller, address asset) external {
         require(
             ComptrollerInterface(comptroller).isComptroller(),
-            "Liquidated shares Reserves: Comptroller address invalid"
+            "ReserveHelpers: Comptroller address invalid"
         );
-        require(asset != address(0), "Liquidated shares Reserves: Asset address invalid");
+        require(asset != address(0), "ReserveHelpers: Asset address invalid");
         uint256 currentBalance = IERC20(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
@@ -35,6 +39,7 @@ contract ReserveHelpers {
             }
             assetsReserves[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
+            emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
     }
 
@@ -47,9 +52,15 @@ contract ReserveHelpers {
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
         require(
             ComptrollerInterface(comptroller).isComptroller(),
-            "Liquidated shares Reserves: Comptroller address invalid"
+            "ReserveHelpers: Comptroller address invalid"
         );
-        require(asset != address(0), "Liquidated shares Reserves: Asset address invalid");
+        require(asset != address(0), "ReserveHelpers: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     */
+    uint256[48] private __gap;
 }
