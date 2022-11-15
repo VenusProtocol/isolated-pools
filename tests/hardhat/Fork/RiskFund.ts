@@ -349,9 +349,9 @@ const riskFundFixture = async (): Promise<void> => {
   );
   await riskFund.setPoolRegistry(poolRegistry.address);
 
-  const fakeLiquidatedShares = await smock.fake<RiskFund>("RiskFund");
+  const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
 
-  await protocolShareReserve.initialize(fakeLiquidatedShares.address, riskFund.address);
+  await protocolShareReserve.initialize(fakeProtocolIncome.address, riskFund.address);
 };
 
 describe("Risk Fund: Tests", function () {
