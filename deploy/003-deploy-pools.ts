@@ -8,7 +8,7 @@ import { convertToUnit } from "../helpers/utils";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, proxyAdmin } = await getNamedAccounts();
   //=======================
   // DEPLOY MOCK TOKENS
   //========================
@@ -65,7 +65,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
-    deployer,
+    proxyAdmin,
     Pool1Comptroller.address,
     closeFactor,
     liquidationIncentive,
