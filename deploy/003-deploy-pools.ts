@@ -80,8 +80,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
 
-  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-  const tokenImplementation = await VBep20Immutable.deploy();
+  const VToken = await ethers.getContractFactory("VToken");
+  const tokenImplementation = await VToken.deploy();
   await tokenImplementation.deployed();
 
   tx = await poolRegistry.addMarket({
