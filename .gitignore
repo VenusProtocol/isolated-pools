@@ -60,6 +60,7 @@ dist
 docs
 
 contracts/oracle/*
+deployments/localhost
 
 # OSX
 .DS_Store
