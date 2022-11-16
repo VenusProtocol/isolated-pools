@@ -145,7 +145,7 @@ const config: HardhatUserConfig = {
             },
           },
         },
-      },
+      }
     ],
   },
   networks: {
