@@ -11,7 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const vBep20Factory: DeployResult = await deploy("VBep20ImmutableProxyFactory", {
+  const vBep20Factory: DeployResult = await deploy("VTokenProxyFactory", {
     from: deployer,
     args: [],
     log: true,

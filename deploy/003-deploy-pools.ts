@@ -65,6 +65,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
+    deployer,
     Pool1Comptroller.address,
     closeFactor,
     liquidationIncentive,
