@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "../../contracts/VToken.sol";
-import "../../contracts/PriceOracle.sol";
 
 interface V1PriceOracleInterface {
     function assetPrices(address asset) external view returns (uint256);
@@ -69,12 +69,10 @@ contract PriceOracleProxy is PriceOracle {
 
     /**
      * @notice Get the underlying price of a listed vToken asset
-     * @param vToken The vToken to get the underlying price of
+     * @param vTokenAddress The vToken address to get the underlying price of
      * @return The underlying asset price mantissa (scaled by 1e18)
      */
-    function getUnderlyingPrice(VToken vToken) public view override returns (uint256) {
-        address vTokenAddress = address(vToken);
-
+    function getUnderlyingPrice(address vTokenAddress) public view override returns (uint256) {
         if (vTokenAddress == cEthAddress) {
             // ether always worth 1
             return 1e18;

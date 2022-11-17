@@ -124,7 +124,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
 
-        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(vToken);
+        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(
+            address(vToken)
+        );
 
         if (balanceOfUnderlyingAsset > 0) {
             Exp memory oraclePrice = Exp({ mantissa: underlyingAssetPrice });

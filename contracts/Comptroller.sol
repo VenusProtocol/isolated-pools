@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./mixins/WithAdminUpgradeable.sol";
 import "./VToken.sol";
 import "./ErrorReporter.sol";
-import "./PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Rewards/RewardsDistributor.sol";
@@ -421,7 +421,7 @@ contract Comptroller is
             assert(markets[vToken].accountMembership[borrower]);
         }
 
-        if (oracle.getUnderlyingPrice(VToken(vToken)) == 0) {
+        if (oracle.getUnderlyingPrice(vToken) == 0) {
             return uint256(Error.PRICE_ERROR);
         }
 
@@ -1048,7 +1048,7 @@ contract Comptroller is
     }
 
     function safeGetUnderlyingPrice(VToken asset) internal view returns (uint256) {
-        uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(asset);
+        uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(address(asset));
         if (oraclePriceMantissa == 0) {
             revert PriceError();
         }
@@ -1077,8 +1077,8 @@ contract Comptroller is
         uint256 actualRepayAmount
     ) external view override returns (uint256, uint256) {
         /* Read oracle prices for borrowed and collateral markets */
-        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(VToken(vTokenBorrowed));
-        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(VToken(vTokenCollateral));
+        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(vTokenBorrowed);
+        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(vTokenCollateral);
         if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
             return (uint256(Error.PRICE_ERROR), 0);
         }
@@ -1185,7 +1185,7 @@ contract Comptroller is
         }
 
         // If collateral factor != 0, fail if price == 0
-        if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(vToken) == 0) {
+        if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
             revert PriceError();
         }
 

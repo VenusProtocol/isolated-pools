@@ -4,9 +4,9 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
 import "../VToken.sol";
-import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
 
@@ -168,7 +168,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             uint256 marketBadDebt = vTokens[i].badDebt();
 
             priceOracle.updatePrice(address(vTokens[i]));
-            uint256 usdValue = (priceOracle.getUnderlyingPrice(vTokens[i]) * marketBadDebt) / 10**18;
+            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / 10**18;
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = vTokens[i];

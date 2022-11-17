@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
-import "./PriceOracle.sol";
 
 contract ComptrollerV1Storage {
     /**
