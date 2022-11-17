@@ -25,9 +25,9 @@ let poolRegistry: PoolRegistry;
 let comptroller1: Comptroller;
 let comptroller2: Comptroller;
 let comptroller3: Comptroller;
-let mainnetUSDC: MockToken;
-let mainnetBUSD: MockToken;
-let mainnetUSDT: MockToken;
+let USDC: MockToken;
+let BUSD: MockToken;
+let USDT: MockToken;
 let cUSDC: VToken;
 let cUSDT: VToken;
 let cUSDC2: VToken;
@@ -44,13 +44,16 @@ let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
-let pancakeSwapRouter: PancakeRouter;
+let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
 let busdUser: any;
 let usdcUser: any;
 let usdtUser: any;
 
+const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, proxyAdmin] = await ethers.getSigners();
+  const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
+  [busdUser, usdcUser, usdtUser] = signers;
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -121,17 +124,31 @@ const riskFundFixture = async (): Promise<void> => {
     params: ["0xE4FEb3e94B4128d973A366dc4814167a90629A08"],
   });
 
-  // Get signers
-  busdUser = await ethers.getSigner("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
-  usdcUser = await ethers.getSigner("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
-  usdtUser = await ethers.getSigner("0xE4FEb3e94B4128d973A366dc4814167a90629A08");
+  if (FORK_MAINNET) {
+    busdUser = await ethers.getSigner("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
+    usdcUser = await ethers.getSigner("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
+    usdtUser = await ethers.getSigner("0xE4FEb3e94B4128d973A366dc4814167a90629A08");
 
-  // Connecting to tokens
-  mainnetUSDC = await MockToken__factory.connect("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", user);
+    USDC = await MockToken__factory.connect("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", user);
+    BUSD = await MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
+    USDT = await MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
+  } else {
+    const MockToken = await ethers.getContractFactory("MockToken");
+    USDC = await MockToken.deploy("Mock USDC", "USDC", 18);
+    await USDC.deployed();
+    await USDC.faucet(convertToUnit(1000000, 18));
+    await USDC.transfer(usdcUser.address, convertToUnit(1000000, 18));
 
-  mainnetBUSD = await MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
+    BUSD = await MockToken.deploy("Mock BUSD", "BUSD", 18);
+    await BUSD.deployed();
+    await BUSD.faucet(convertToUnit(1000000, 18));
+    await BUSD.transfer(busdUser.address, convertToUnit(1000000, 18));
 
-  mainnetUSDT = await MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
+    USDT = await MockToken.deploy("Mock USDT", "USDT", 18);
+    await USDT.deployed();
+    await USDT.faucet(convertToUnit(1000000, 18));
+    await USDT.transfer(usdtUser.address, convertToUnit(1000000, 18));
+  }
 
   const _closeFactor = convertToUnit(0.05, 18);
   const _liquidationIncentive = convertToUnit(1, 18);
@@ -145,9 +162,9 @@ const riskFundFixture = async (): Promise<void> => {
   const usdcPrice = "1";
   const busdPrice = "1.1";
 
-  await priceOracle.setPrice(mainnetUSDC.address, convertToUnit(usdcPrice, 18));
-  await priceOracle.setPrice(mainnetUSDT.address, convertToUnit(usdtPrice, 18));
-  await priceOracle.setPrice(mainnetBUSD.address, convertToUnit(busdPrice, 18));
+  await priceOracle.setPrice(USDC.address, convertToUnit(usdcPrice, 18));
+  await priceOracle.setPrice(USDT.address, convertToUnit(usdtPrice, 18));
+  await priceOracle.setPrice(BUSD.address, convertToUnit(busdPrice, 18));
 
   // Registering the first pool
   await poolRegistry.createRegistryPool(
@@ -200,7 +217,7 @@ const riskFundFixture = async (): Promise<void> => {
   // Deploy CTokens
   await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
-    asset: mainnetUSDT.address,
+    asset: USDT.address,
     decimals: 8,
     name: "Compound USDT",
     symbol: "cUSDT",
@@ -218,7 +235,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
-    asset: mainnetUSDC.address,
+    asset: USDC.address,
     decimals: 18,
     name: "Compound USDC",
     symbol: "cUSDC",
@@ -236,7 +253,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await poolRegistry.addMarket({
     comptroller: comptroller2Proxy.address,
-    asset: mainnetUSDT.address,
+    asset: USDT.address,
     decimals: 8,
     name: "Compound USDT",
     symbol: "cUSDT",
@@ -254,7 +271,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await poolRegistry.addMarket({
     comptroller: comptroller2Proxy.address,
-    asset: mainnetUSDC.address,
+    asset: USDC.address,
     decimals: 18,
     name: "Compound USDC",
     symbol: "cUSDC",
@@ -272,7 +289,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await poolRegistry.addMarket({
     comptroller: comptroller3Proxy.address,
-    asset: mainnetUSDT.address,
+    asset: USDT.address,
     decimals: 8,
     name: "Compound USDT",
     symbol: "cUSDT",
@@ -290,7 +307,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await poolRegistry.addMarket({
     comptroller: comptroller3Proxy.address,
-    asset: mainnetBUSD.address,
+    asset: BUSD.address,
     decimals: 8,
     name: "BUSDT",
     symbol: "bUSDT",
@@ -306,17 +323,17 @@ const riskFundFixture = async (): Promise<void> => {
     tokenImplementation_: tokenImplementation.address,
   });
 
-  const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mainnetUSDT.address);
+  const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);
 
-  const cUSDC1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mainnetUSDC.address);
+  const cUSDC1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDC.address);
 
-  const cUSDT2Address = await poolRegistry.getVTokenForAsset(comptroller2Proxy.address, mainnetUSDT.address);
+  const cUSDT2Address = await poolRegistry.getVTokenForAsset(comptroller2Proxy.address, USDT.address);
 
-  const cUSDC2Address = await poolRegistry.getVTokenForAsset(comptroller2Proxy.address, mainnetUSDC.address);
+  const cUSDC2Address = await poolRegistry.getVTokenForAsset(comptroller2Proxy.address, USDC.address);
 
-  const cUSDT3Address = await poolRegistry.getVTokenForAsset(comptroller3Proxy.address, mainnetUSDT.address);
+  const cUSDT3Address = await poolRegistry.getVTokenForAsset(comptroller3Proxy.address, USDT.address);
 
-  const bUSDT3Address = await poolRegistry.getVTokenForAsset(comptroller3Proxy.address, mainnetBUSD.address);
+  const bUSDT3Address = await poolRegistry.getVTokenForAsset(comptroller3Proxy.address, BUSD.address);
 
   cUSDT = await ethers.getContractAt("VToken", cUSDT1Address);
   cUSDC = await ethers.getContractAt("VToken", cUSDC1Address);
@@ -338,13 +355,32 @@ const riskFundFixture = async (): Promise<void> => {
   await comptroller2Proxy._setPriceOracle(priceOracle.address);
   await comptroller3Proxy._setPriceOracle(priceOracle.address);
 
-  pancakeSwapRouter = await PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
+  if (FORK_MAINNET) {
+    pancakeSwapRouter = await PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
+  } else {
+    const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
+    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
+      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+      admin.address,
+    );
+    await pancakeSwapRouter.deployed();
+    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
+    // Send some BNB to account so it can faucet money from mock tokens
+    const tx = await admin.sendTransaction({
+      to: pancakeSwapRouter.address,
+      value: ethers.utils.parseEther("10"),
+    });
+    await tx.wait();
+    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+  }
 
   await riskFund.initialize(
     pancakeSwapRouter.address,
     convertToUnit(10, 18),
     convertToUnit(10, 18),
-    mainnetBUSD.address,
+    BUSD.address,
     fakeAccessControlManager.address,
   );
   await riskFund.setPoolRegistry(poolRegistry.address);
@@ -388,16 +424,16 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Below min threshold amount", async function () {
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
       await cUSDC._reduceReserves(convertToUnit(50, 18));
 
-      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDC.address, convertToUnit(30, 18));
-      const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(30, 18));
+      const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(9, 18));
 
       const amount = await riskFund.callStatic.swapAllPoolsAssets();
@@ -405,54 +441,54 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Above min threshold amount", async function () {
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
 
-      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDC.address, convertToUnit(100, 18));
-      const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
+      const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
       await riskFund.swapAllPoolsAssets();
-      const balanceAfter = await mainnetUSDC.balanceOf(riskFund.address);
+      const balanceAfter = await USDC.balanceOf(riskFund.address);
       expect(balanceAfter).equal("0");
 
-      const balanceBUSD = await mainnetBUSD.balanceOf(riskFund.address);
+      const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(30, 18)), Number(convertToUnit(3, 17)));
     });
 
     it("Add two assets to riskFund", async function () {
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
 
       await cUSDT.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
       await cUSDT._reduceReserves(convertToUnit(100, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
 
-      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
-      const protocolReserveUSDTBal = await mainnetUSDT.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDTBal = await USDT.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDC.address, convertToUnit(100, 18));
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDT.address, convertToUnit(100, 18));
-      const riskFundUSDCBal = await mainnetUSDC.balanceOf(riskFund.address);
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, convertToUnit(100, 18));
+      const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
-      const riskFundUSDTBal = await mainnetUSDT.balanceOf(riskFund.address);
+      const riskFundUSDTBal = await USDT.balanceOf(riskFund.address);
       expect(riskFundUSDTBal).equal(convertToUnit(30, 18));
 
       await riskFund.swapAllPoolsAssets();
-      const balanceBUSD = await mainnetBUSD.balanceOf(riskFund.address);
+      const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
 
       const pool1Reserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
@@ -480,30 +516,30 @@ describe("Risk Fund: Tests", function () {
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
 
       await cUSDT.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
       await cUSDT._reduceReserves(convertToUnit(100, 18));
       await cUSDC._reduceReserves(convertToUnit(100, 18));
-      const protocolReserveUSDCBal = await mainnetUSDC.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
-      const protocolReserveUSDTBal = await mainnetUSDT.balanceOf(protocolShareReserve.address);
+      const protocolReserveUSDTBal = await USDT.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDC.address, convertToUnit(100, 18));
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDT.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, convertToUnit(100, 18));
       await riskFund.swapAllPoolsAssets();
 
-      const beforeTransfer = await mainnetBUSD.balanceOf(auctionContract);
+      const beforeTransfer = await BUSD.balanceOf(auctionContract);
       await riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
-      const afterTransfer = await mainnetBUSD.balanceOf(auctionContract);
-      const remainingBalance = await mainnetBUSD.balanceOf(riskFund.address);
+      const afterTransfer = await BUSD.balanceOf(auctionContract);
+      const remainingBalance = await BUSD.balanceOf(riskFund.address);
       const poolReserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
 
       const amount = Number(afterTransfer) - Number(beforeTransfer);
@@ -515,11 +551,11 @@ describe("Risk Fund: Tests", function () {
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
 
       await cUSDT.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
@@ -537,27 +573,27 @@ describe("Risk Fund: Tests", function () {
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT.address, convertToUnit(1000, 18));
 
       await cUSDT.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDC.connect(usdcUser).approve(cUSDC2.address, convertToUnit(1000, 18));
+      await USDC.connect(usdcUser).approve(cUSDC2.address, convertToUnit(1000, 18));
 
       await cUSDC2.connect(usdcUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT2.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT2.address, convertToUnit(1000, 18));
 
       await cUSDT2.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetUSDT.connect(usdtUser).approve(cUSDT3.address, convertToUnit(1000, 18));
+      await USDT.connect(usdtUser).approve(cUSDT3.address, convertToUnit(1000, 18));
 
       await cUSDT3.connect(usdtUser)._addReserves(convertToUnit(200, 18));
 
-      await mainnetBUSD.connect(busdUser).approve(bUSDT3.address, convertToUnit(1000, 18));
+      await BUSD.connect(busdUser).approve(bUSDT3.address, convertToUnit(1000, 18));
 
       await bUSDT3.connect(busdUser)._addReserves(convertToUnit(50, 18));
 
@@ -568,30 +604,12 @@ describe("Risk Fund: Tests", function () {
       await cUSDT3._reduceReserves(convertToUnit(175, 18));
       await bUSDT3._reduceReserves(convertToUnit(50, 18));
 
-      let protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller1Proxy.address,
-        mainnetUSDT.address,
-      );
-      let protocolUSDCFor1 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller1Proxy.address,
-        mainnetUSDC.address,
-      );
-      let protocolUSDTFor2 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller2Proxy.address,
-        mainnetUSDT.address,
-      );
-      let protocolUSDCFor2 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller2Proxy.address,
-        mainnetUSDC.address,
-      );
-      let protocolUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller3Proxy.address,
-        mainnetUSDT.address,
-      );
-      let protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller3Proxy.address,
-        mainnetBUSD.address,
-      );
+      let protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
+      let protocolUSDCFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
+      let protocolUSDTFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
+      let protocolUSDCFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
+      let protocolUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
+      let protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
 
       expect(protocolUSDTFor1).equal(convertToUnit(110, 18));
       expect(protocolUSDTFor2).equal(convertToUnit(150, 18));
@@ -600,27 +618,24 @@ describe("Risk Fund: Tests", function () {
       expect(protocolUSDCFor2).equal(convertToUnit(160, 18));
       expect(protocolBUSDTFor3).equal(convertToUnit(50, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDT.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller2Proxy.address, mainnetUSDT.address, convertToUnit(110, 18));
+      await protocolShareReserve.releaseFunds(comptroller2Proxy.address, USDT.address, convertToUnit(110, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller3Proxy.address, mainnetUSDT.address, convertToUnit(130, 18));
+      await protocolShareReserve.releaseFunds(comptroller3Proxy.address, USDT.address, convertToUnit(130, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, mainnetUSDC.address, convertToUnit(90, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(90, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller2Proxy.address, mainnetUSDC.address, convertToUnit(80, 18));
+      await protocolShareReserve.releaseFunds(comptroller2Proxy.address, USDC.address, convertToUnit(80, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller3Proxy.address, mainnetBUSD.address, convertToUnit(50, 18));
+      await protocolShareReserve.releaseFunds(comptroller3Proxy.address, BUSD.address, convertToUnit(50, 18));
 
-      protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDT.address);
-      protocolUSDCFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDC.address);
-      protocolUSDTFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDT.address);
-      protocolUSDCFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDC.address);
-      protocolUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(comptroller3Proxy.address, mainnetUSDT.address);
-      protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(
-        comptroller3Proxy.address,
-        mainnetBUSD.address,
-      );
+      protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
+      protocolUSDCFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
+      protocolUSDTFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
+      protocolUSDCFor2 = await protocolShareReserve.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
+      protocolUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
+      protocolBUSDTFor3 = await protocolShareReserve.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
 
       expect(protocolUSDTFor1).equal(convertToUnit(10, 18));
       expect(protocolUSDTFor2).equal(convertToUnit(40, 18));
@@ -629,12 +644,12 @@ describe("Risk Fund: Tests", function () {
       expect(protocolUSDCFor2).equal(convertToUnit(80, 18));
       expect(protocolBUSDTFor3).equal(convertToUnit(0, 18));
 
-      let riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDT.address);
-      let riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDC.address);
-      let riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDT.address);
-      let riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDC.address);
-      let riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, mainnetUSDT.address);
-      let riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, mainnetBUSD.address);
+      let riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
+      let riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
+      let riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
+      let riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
+      let riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
+      let riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
 
       expect(riskUSDTFor1).equal(convertToUnit(30, 18));
       expect(riskUSDCFor1).equal(convertToUnit(27, 18));
@@ -645,12 +660,12 @@ describe("Risk Fund: Tests", function () {
 
       await riskFund.swapAllPoolsAssets();
 
-      riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDT.address);
-      riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, mainnetUSDC.address);
-      riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDT.address);
-      riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, mainnetUSDC.address);
-      riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, mainnetUSDT.address);
-      riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, mainnetBUSD.address);
+      riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
+      riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
+      riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
+      riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
+      riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
+      riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
 
       expect(riskUSDTFor1).equal(0);
       expect(riskUSDCFor1).equal(0);
