@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "../VToken.sol";
 
 contract SimplePriceOracle is PriceOracle {
@@ -13,22 +13,23 @@ contract SimplePriceOracle is PriceOracle {
         uint256 newPriceMantissa
     );
 
-    function _getUnderlyingAddress(VToken vToken) private view returns (address) {
+    function _getUnderlyingAddress(address vTokenAddress) private view returns (address) {
+        VToken vToken = VToken(vTokenAddress);
         address asset;
         if (compareStrings(vToken.symbol(), "vBNB")) {
             asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         } else {
-            asset = address(VToken(address(vToken)).underlying());
+            asset = address(vToken.underlying());
         }
         return asset;
     }
 
-    function getUnderlyingPrice(VToken vToken) public view override returns (uint256) {
+    function getUnderlyingPrice(address vToken) public view override returns (uint256) {
         return prices[_getUnderlyingAddress(vToken)];
     }
 
     function setUnderlyingPrice(VToken vToken, uint256 underlyingPriceMantissa) public {
-        address asset = _getUnderlyingAddress(vToken);
+        address asset = _getUnderlyingAddress(address(vToken));
         emit PricePosted(asset, prices[asset], underlyingPriceMantissa, underlyingPriceMantissa);
         prices[asset] = underlyingPriceMantissa;
     }
