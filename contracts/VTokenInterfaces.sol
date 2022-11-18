@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";

@@ -3,9 +3,9 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
 import "../Comptroller.sol";
-import "../PriceOracle.sol";
 import "../Factories/VTokenProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";

@@ -25,7 +25,6 @@
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
     "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments,copy_contracts.sh} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
-    "postinstall": "./copy_contracts.sh",
     "docgen": "hardhat docgen"
   },
   "repository": {
@@ -57,7 +56,7 @@
     "@types/node": "^12.20.50",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
-    "@venusprotocol/oracle": "^1.2.0",
+    "@venusprotocol/oracle": "^1.3.3",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
     "dotenv": "^10.0.0",

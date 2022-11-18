@@ -1,6 +1,6 @@
 pragma solidity ^0.8.10;
 
-import "../../../contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
 contract PriceOracleModel is PriceOracle {
     uint256 dummy;

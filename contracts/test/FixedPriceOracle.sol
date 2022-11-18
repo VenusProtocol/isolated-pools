@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
 contract FixedPriceOracle is PriceOracle {
     uint256 public price;
@@ -10,7 +10,7 @@ contract FixedPriceOracle is PriceOracle {
         price = _price;
     }
 
-    function getUnderlyingPrice(VToken vToken) public view override returns (uint256) {
+    function getUnderlyingPrice(address vToken) public view override returns (uint256) {
         vToken;
         return price;
     }

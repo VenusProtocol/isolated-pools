@@ -3,9 +3,9 @@ pragma solidity 0.8.13;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
 import "../VToken.sol";
-import "../PriceOracle.sol";
 import "../ComptrollerInterface.sol";
 import "../Pool/PoolRegistryInterface.sol";
 import "../Pool/PoolRegistry.sol";
@@ -281,7 +281,10 @@ contract PoolLens is ExponentialNoError {
         PriceOracle priceOracle = comptroller.oracle();
 
         return
-            VTokenUnderlyingPrice({ vToken: address(vToken), underlyingPrice: priceOracle.getUnderlyingPrice(vToken) });
+            VTokenUnderlyingPrice({
+                vToken: address(vToken),
+                underlyingPrice: priceOracle.getUnderlyingPrice(address(vToken))
+            });
     }
 
     /**
