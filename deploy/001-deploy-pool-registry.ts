@@ -115,13 +115,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   let tx = await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
   await tx.wait();
 
-  await deploy("MockPriceOracle", {
-    from: deployer,
-    log: true,
-    autoMine: true,
-    args: [],
-  });
-
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "_setCollateralFactor(VToken,uint256,uint256)",
@@ -152,9 +145,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
+    "_setMinLiquidatableCollateral(uint256)",
+    poolRegistry.address,
+  );
+  await tx.wait();
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
     "_setInterestRateModelFresh(InterestRateModel)",
     vBep20Factory.address,
   );
+
   await tx.wait();
 };
 
