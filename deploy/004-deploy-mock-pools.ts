@@ -7,14 +7,25 @@ import { convertToUnit } from "../helpers/utils";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-  const { deployer, proxyAdmin } = await getNamedAccounts();
+  const { deployer, proxyAdmin} = await getNamedAccounts();
 
   const BNX = await ethers.getContract("MockBNX");
   const BSW = await ethers.getContract("MockBSW");
 
+  let priceOracle;
   let tx;
 
-  let priceOracle = await ethers.getContractAt("ResilientOracle","0x42DE63c6895120FAC208a98b20705fb1F2917e0d");
+  try {
+    priceOracle = await ethers.getContract("PriceOracle");
+    console.log("Price Oracle Obtained");
+  } catch (e) {
+    //TODO: remove hardcoded address and use the external deployment instead
+    priceOracle = await ethers.getContractAt("ResilientOracle","0x2CF834C9f0e5A39EFAC32b80Bef385e2D4385047");
+    tx = await priceOracle.setPrice(BNX.address, convertToUnit(1, 18));
+    await tx.wait();
+    tx = await priceOracle.setPrice(BSW.address, convertToUnit(1, 18));
+    await tx.wait();
+  }
   console.log("Price Oracle Obtained with address: " + priceOracle.address);
 
 
@@ -26,14 +37,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
 
-  const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
+  const Pool1Comptroller: DeployResult = await deploy("Pool 2", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
     log: true,
     autoMine: true,
   });
-  console.log(1);
+
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
     proxyAdmin,
@@ -43,17 +54,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     minLiquidatableCollateral,
     priceOracle.address,
   );
-
   await tx.wait();
-  console.log(2);
+
   const pools = await poolRegistry.callStatic.getAllPools();
-  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  console.log(3);
+  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
   tx = await comptroller1Proxy.acceptAdmin();
-  console.log(4);
   await tx.wait();
   
-
   const VToken = await ethers.getContractFactory("VToken");
   const vBNXImplementation = await VToken.deploy();
   await vBNXImplementation.deployed();
@@ -61,7 +68,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
     asset: BNX.address,
-    decimals: 8,
+    decimals: 18,
     name: "Venus BNX",
     symbol: "vBNX",
     rateModel: 0,
@@ -76,9 +83,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     tokenImplementation_: vBNXImplementation.address,
   });
   await tx.wait();
-
-  console.log(5);
-
 
   const vBSWImplementation = await VToken.deploy();
   await vBSWImplementation.deployed();
