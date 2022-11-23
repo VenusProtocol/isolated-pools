@@ -161,7 +161,7 @@ const config: HardhatUserConfig = {
       live: false,
       gasPrice: 20000000000,
       accounts: {
-        mnemonic: process.env.MNEMONIC,
+        mnemonic: process.env.MNEMONIC || "",
       },
     },
   },
