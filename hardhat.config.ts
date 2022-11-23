@@ -153,7 +153,7 @@ const config: HardhatUserConfig = {
     development: {
       url: "http://127.0.0.1:8545/",
       chainId: 31337,
-      live: false
+      live: false,
     },
     bsctestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
@@ -161,7 +161,7 @@ const config: HardhatUserConfig = {
       live: false,
       gasPrice: 20000000000,
       accounts: {
-        mnemonic: process.env.MNEMONIC
+        mnemonic: process.env.MNEMONIC,
       },
     },
   },
@@ -199,12 +199,12 @@ const config: HardhatUserConfig = {
     contracts: [
       {
         artifacts: "node_modules/@venusprotocol/oracle/artifacts",
-      }
+      },
     ],
     deployments: {
       bsctestnet: ["node_modules/@venusprotocol/oracle/deployments"],
-    }
-  }
+    },
+  },
 };
 
 function isFork() {
@@ -219,12 +219,12 @@ function isFork() {
         accounts: {
           accountsBalance: "1000000000000000000",
         },
-        live: false
+        live: false,
       }
     : {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
-        live: false
+        live: false,
       };
 }
 

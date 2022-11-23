@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-  const { deployer} = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
   //=======================
   // DEPLOY MOCK TOKENS
   //========================
@@ -24,7 +24,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
-
 };
 
 func.tags = ["MockTokens"];
