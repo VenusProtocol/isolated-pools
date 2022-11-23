@@ -155,7 +155,7 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       live: false
     },
-    testnet: {
+    bsctestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: false,
@@ -195,6 +195,17 @@ const config: HardhatUserConfig = {
     outputDir: "./docs",
     pages: "files",
   },
+  external: {
+    contracts: [
+      {
+        artifacts: "node_modules/@venusprotocol/oracle/artifacts",
+        deploy: "node_modules/@venusprotocol/oracle/deploy"
+      }
+    ],
+    deployments: {
+      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments"],
+    }
+  }
 };
 
 function isFork() {

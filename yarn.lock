@@ -1437,10 +1437,10 @@
     "@typescript-eslint/types" "5.42.1"
     eslint-visitor-keys "^3.3.0"
 
-"@venusprotocol/oracle@^1.3.3":
-  version "1.3.3"
-  resolved "https://registry.npmjs.org/@venusprotocol/oracle/-/oracle-1.3.3.tgz#e0e088c2eebf3e851b88b47a81092b54ac2255a5"
-  integrity sha512-+BpAvJryKpp4bzOb11BSMvZsWZxqMyyDFgtIQFJ6+AC3uLa2/8Z+vu555Awy0WEJFjQhAFy6zVx4Z1taHDRL0Q==
+"@venusprotocol/oracle@^1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.4.0.tgz#d55a87c21d715c1b9f0f4d119909ba481cf5c4db"
+  integrity sha512-o/odunVyc1wFv2hAO6vWayQ6M9ionidT4TC+TK54ubIIpqkjwRLPiOL37ZB+niQfZZ+/P8xlJACzpwZgjNJO3Q==
   dependencies:
     "@openzeppelin/contracts" "^4.6.0"
     "@openzeppelin/contracts-upgradeable" "^4.7.3"
