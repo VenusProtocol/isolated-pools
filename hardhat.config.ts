@@ -199,7 +199,6 @@ const config: HardhatUserConfig = {
     contracts: [
       {
         artifacts: "node_modules/@venusprotocol/oracle/artifacts",
-        deploy: "node_modules/@venusprotocol/oracle/deploy"
       }
     ],
     deployments: {
