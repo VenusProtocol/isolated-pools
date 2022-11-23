@@ -1,13 +1,11 @@
-import { ethers } from "hardhat";
-import { DeployResult } from "hardhat-deploy/dist/types";
+import { network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-  const { deployer, proxyAdmin } = await getNamedAccounts();
+  const { deployer} = await getNamedAccounts();
   //=======================
   // DEPLOY MOCK TOKENS
   //========================
@@ -30,5 +28,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["MockTokens"];
+func.skip = async () => network.live == true;
 
 export default func;

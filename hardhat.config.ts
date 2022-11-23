@@ -4,7 +4,6 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
-import { ethers, utils, Wallet } from "ethers";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
@@ -154,14 +153,12 @@ const config: HardhatUserConfig = {
     development: {
       url: "http://127.0.0.1:8545/",
       chainId: 31337,
-    },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      live: false
     },
     testnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
+      live: false,
       gasPrice: 20000000000,
       accounts: {
         mnemonic: process.env.MNEMONIC
@@ -212,10 +209,12 @@ function isFork() {
         accounts: {
           accountsBalance: "1000000000000000000",
         },
+        live: false
       }
     : {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
+        live: false
       };
 }
 
