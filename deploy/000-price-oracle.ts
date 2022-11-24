@@ -1,4 +1,4 @@
-import deployOracle from "@venusprotocol/oracle/deploy/oracles";
+import deployOracle from "@venusprotocol/oracle/deploy/1-deploy-oracles";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 deployOracle.tags = ["Oracle"];
