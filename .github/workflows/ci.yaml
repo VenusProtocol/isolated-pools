@@ -29,8 +29,6 @@ jobs:
   build:
     runs-on: ubuntu-18.04
     env:
-      FORK_MAINNET: ${{ secrets.FORK_MAINNET }}
-      QUICK_NODE_KEY: ${{ secrets.QUICK_NODE_KEY }}
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v2
@@ -46,15 +44,9 @@ jobs:
       - name: Install solidity
         run: yarn global add solc@0.8.13
 
-      - name: "Create env file"
-        run: |
-          touch .env
-          echo FORK_MAINNET=${{ secrets.FORK_MAINNET }} >> .env
-          echo QUICK_NODE_KEY=${{ secrets.QUICK_NODE_KEY }} >> .env
-
       - name: Run hardhat compile and tests coverage
         run: |
-          source .env
+          source .env.test
           yarn hardhat:compile && yarn hardhat:coverage
 
       - name: Code Coverage Report

@@ -455,8 +455,9 @@ library PancakeLibrary {
     ) internal view returns (uint256 reserveA, uint256 reserveB) {
         (address token0, ) = sortTokens(tokenA, tokenB);
         pairFor(factory, tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IPancakePair(pairFor(factory, tokenA, tokenB)).getReserves();
-        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        // Always have reserves
+        uint256 mockReserves = 100000 * 1e18;
+        (reserveA, reserveB) = (mockReserves, mockReserves);
     }
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
@@ -823,11 +824,8 @@ contract PancakeRouter is IPancakeRouter02 {
             (address input, address output) = (path[i], path[i + 1]);
             (address token0, ) = PancakeLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
-            (uint256 amount0Out, uint256 amount1Out) = input == token0
-                ? (uint256(0), amountOut)
-                : (amountOut, uint256(0));
-            address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
-            IPancakePair(PancakeLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
+            // Mocking transfer tokens out directly from token contract instead of PancakePairs
+            IERC20(output).transfer(_to, amounts[1]);
         }
     }
 
