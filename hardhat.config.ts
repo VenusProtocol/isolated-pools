@@ -189,6 +189,7 @@ const config: HardhatUserConfig = {
     deployer: 0,
     acc1: 1,
     acc2: 2,
+    proxyAdmin: 3,
   },
   docgen: {
     outputDir: "./docs",

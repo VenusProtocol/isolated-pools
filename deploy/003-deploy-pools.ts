@@ -8,7 +8,7 @@ import { convertToUnit } from "../helpers/utils";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { deployer, proxyAdmin } = await getNamedAccounts();
   //=======================
   // DEPLOY MOCK TOKENS
   //========================
@@ -65,6 +65,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
+    proxyAdmin,
     Pool1Comptroller.address,
     closeFactor,
     liquidationIncentive,
@@ -79,8 +80,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
 
-  const VBep20Immutable = await ethers.getContractFactory("VBep20Immutable");
-  const tokenImplementation = await VBep20Immutable.deploy();
+  const VToken = await ethers.getContractFactory("VToken");
+  const tokenImplementation = await VToken.deploy();
   await tokenImplementation.deployed();
 
   tx = await poolRegistry.addMarket({
