@@ -16,8 +16,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   let tx;
 
   const priceOracle = await ethers.getContract("ResilientOracle");
-  console.log(priceOracle.address);
-  // console.log("Price Oracle Obtained with address: " + priceOracle.address);
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
@@ -27,7 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
 
-  const Pool1Comptroller: DeployResult = await deploy("Pool 2", {
+  const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
@@ -47,7 +45,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
-  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
+
+  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
   tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
 
