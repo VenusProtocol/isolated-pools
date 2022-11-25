@@ -45,7 +45,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
-
   const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
   tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
