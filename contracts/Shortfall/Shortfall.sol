@@ -40,7 +40,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice Emitted when a auction starts
     event AuctionStarted(
-        address comptroller,
+        address indexed comptroller,
         uint256 startBlock,
         AuctionType auctionType,
         VToken[] markets,
@@ -50,12 +50,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     );
 
     /// @notice Emitted when a bid is placed
-    event BidPlaced(address comptroller, uint256 bidBps, address bidder);
+    event BidPlaced(address indexed comptroller, uint256 bidBps, address indexed bidder);
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
-        address comptroller,
-        address highestBidder,
+        address indexed comptroller,
+        address indexed highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
         VToken[] markets,
@@ -63,7 +63,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     );
 
     /// @notice Emitted when a auction is restarted
-    event AuctionRestarted(address comptroller);
+    event AuctionRestarted(address indexed comptroller);
 
     /// @notice Pool registry address
     address public poolRegistry;

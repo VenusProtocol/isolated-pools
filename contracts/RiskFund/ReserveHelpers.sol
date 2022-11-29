@@ -17,7 +17,7 @@ contract ReserveHelpers {
 
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
-    event AssetsReservesUpdated(address comptroller, address asset, uint256 amount);
+    event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
