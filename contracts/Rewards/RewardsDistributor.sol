@@ -409,14 +409,14 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         for (uint256 i; i < vTokensCount; ++i) {
             VToken vToken = vTokens[i];
             require(comptroller.isMarketListed(vToken), "market must be listed");
-            if (borrowers == true) {
+            if (borrowers) {
                 Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
                 _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
                 for (uint256 j; j < holdersCount; ++j) {
                     _distributeBorrowerRewardToken(address(vToken), holders[j], borrowIndex);
                 }
             }
-            if (suppliers == true) {
+            if (suppliers) {
                 _updateRewardTokenSupplyIndex(address(vToken));
                 for (uint256 j; j < holdersCount; ++j) {
                     _distributeSupplierRewardToken(address(vToken), holders[j]);
