@@ -28,7 +28,7 @@ contract AccessControlManager is AccessControl {
      * @notice Verifies if the given account can call a contract's guarded function
      * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
      * @param account for which call permissions will be checked
-     * @param functionSig restricted function signature e.g. "functionName(uint,bool)"
+     * @param functionSig restricted function signature e.g. "functionName(uint256,bool)"
      * @return false if the user account cannot call the particular contract function
      *
      */
@@ -48,7 +48,7 @@ contract AccessControlManager is AccessControl {
      * @dev This function is used as a view function to check permissions rather than contract hook for access restriction check.
      * @param account for which call permissions will be checked against
      * @param contractAddress address of the restricted contract
-     * @param functionSig signature of the restricted function e.g. "functionName(uint,bool)"
+     * @param functionSig signature of the restricted function e.g. "functionName(uint256,bool)"
      * @return false if the user account cannot call the particular contract function
      */
     function hasPermission(
@@ -67,7 +67,7 @@ contract AccessControlManager is AccessControl {
      * @param contractAddress address of contract for which call permissions will be granted
      * NOTE: if contractAddress is zero address, the account can access the certain function
      *      on **any** contract managed by this ACL
-     * @param functionSig signature e.g. "functionName(uint,bool)"
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
      * @param accountToPermit account that will be given access to the contract function
      * Emits {PermissionGranted} event.
      */
@@ -86,7 +86,7 @@ contract AccessControlManager is AccessControl {
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
      * 		May emit a {RoleRevoked} event.
      * @param contractAddress address of contract for which call permissions will be revoked
-     * @param functionSig signature e.g. "functionName(uint,bool)"
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
      * Emits {PermissionRevoked} event.
      */
     function revokeCallPermission(
