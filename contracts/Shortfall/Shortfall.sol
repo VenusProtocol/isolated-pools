@@ -65,6 +65,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when a auction is restarted
     event AuctionRestarted(address indexed comptroller);
 
+    /// @notice Emitted when pool registry address is updated
+    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted when minimum pool bad debt is updated
+    event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
+
     /// @notice Pool registry address
     address public poolRegistry;
 
@@ -115,7 +121,9 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+        uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
+        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
     }
 
     /**
@@ -124,7 +132,9 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
+        address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
