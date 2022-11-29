@@ -164,11 +164,13 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools) public returns (uint256) {
         uint256 totalAmount;
-        for (uint256 i; i < venusPools.length; ++i) {
+        uint256 poolsCount = venusPools.length;
+        for (uint256 i; i < poolsCount; ++i) {
             if (venusPools[i].comptroller != address(0)) {
                 VToken[] memory vTokens = ComptrollerInterface(venusPools[i].comptroller).getAllMarkets();
 
-                for (uint256 j; j < vTokens.length; ++j) {
+                uint256 vTokensCount = vTokens.length;
+                for (uint256 j; j < vTokensCount; ++j) {
                     address comptroller = venusPools[i].comptroller;
                     VToken vToken = vTokens[j];
                     uint256 swappedTokens = swapAsset(vToken, comptroller);
