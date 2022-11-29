@@ -1,6 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { constants } from "ethers";
 import { ethers, network } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -50,6 +51,7 @@ let usdcUser: any;
 let usdtUser: any;
 
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
@@ -400,20 +402,118 @@ describe("Risk Fund: Tests", function () {
   });
 
   describe("Test all setters", async function () {
-    it("Revert on invalid Pool registry address.", async function () {
-      await expect(riskFund.setPoolRegistry("0x0000000000000000000000000000000000000000")).to.be.rejectedWith(
-        "Risk Fund: Pool registry address invalid",
-      );
+    describe("setPoolRegistry", async function () {
+      it("reverts on invalid PoolRegistry address", async function () {
+        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.rejectedWith(
+          "Risk Fund: Pool registry address invalid",
+        );
+      });
+
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits PoolRegistryUpdated event", async function () {
+        const newPoolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
+        const tx = riskFund.setPoolRegistry(newPoolRegistry.address);
+        await expect(tx)
+          .to.emit(riskFund, "PoolRegistryUpdated")
+          .withArgs(poolRegistry.address, newPoolRegistry.address);
+      });
     });
 
-    it("Revert on invalid Pancake swap address.", async function () {
-      await expect(riskFund.setPancakeSwapRouter("0x0000000000000000000000000000000000000000")).to.be.rejectedWith(
-        "Risk Fund: Pancake swap address invalid",
-      );
+    describe("setConvertableBaseAsset", async function () {
+      it("Reverts on invalid Pool registry address", async function () {
+        await expect(riskFund.setConvertableBaseAsset(constants.AddressZero)).to.be.rejectedWith(
+          "Risk Fund: Asset address invalid",
+        );
+      });
+
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setConvertableBaseAsset(BUSD.address)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits ConvertableBaseAssetUpdated event", async function () {
+        const newBaseAsset = await smock.fake<MockToken>("PoolRegistry");
+        const tx = riskFund.setConvertableBaseAsset(newBaseAsset.address);
+        await expect(tx).to.emit(riskFund, "ConvertableBaseAssetUpdated").withArgs(BUSD.address, newBaseAsset.address);
+      });
     });
 
-    it("Revert on invalid min amount to convert.", async function () {
-      await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amout to convert");
+    describe("setAuctionContractAddress", async function () {
+      it("Reverts on invalid Auction contract address", async function () {
+        await expect(riskFund.setAuctionContractAddress(constants.AddressZero)).to.be.rejectedWith(
+          "Risk Fund: Auction contract address invalid",
+        );
+      });
+
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setAuctionContractAddress(someNonzeroAddress)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits AuctionContractUpdated event", async function () {
+        const tx = riskFund.setAuctionContractAddress(someNonzeroAddress);
+        await expect(tx)
+          .to.emit(riskFund, "AuctionContractUpdated")
+          .withArgs(constants.AddressZero, someNonzeroAddress);
+      });
+    });
+
+    describe("setPancakeSwapRouter", async function () {
+      it("Reverts on invalid PancakeSwap router contract address", async function () {
+        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.rejectedWith(
+          "Risk Fund: PancakeSwap address invalid",
+        );
+      });
+
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits PancakeSwapRouterUpdated event", async function () {
+        const tx = riskFund.setPancakeSwapRouter(someNonzeroAddress);
+        await expect(tx)
+          .to.emit(riskFund, "PancakeSwapRouterUpdated")
+          .withArgs(pancakeSwapRouter.address, someNonzeroAddress);
+      });
+    });
+
+    describe("setAmountOutMin", async function () {
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setAmountOutMin(1)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits AmountOutMinUpdated event", async function () {
+        const tx = riskFund.setAmountOutMin(1);
+        await expect(tx).to.emit(riskFund, "AmountOutMinUpdated").withArgs(convertToUnit(10, 18), 1);
+      });
+    });
+
+    describe("setMinAmountToConvert", async function () {
+      it("reverts on invalid min amount to convert", async function () {
+        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amout to convert");
+      });
+
+      it("fails if called by a non-owner", async function () {
+        await expect(riskFund.connect(usdcUser).setMinAmountToConvert(1)).to.be.rejectedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("emits MinAmountToConvertUpdated event", async function () {
+        const tx = riskFund.setMinAmountToConvert(1);
+        await expect(tx).to.emit(riskFund, "MinAmountToConvertUpdated").withArgs(convertToUnit(10, 18), 1);
+      });
     });
   });
 
