@@ -135,7 +135,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             "Comptroller::_setRewardTokenSpeeds invalid input"
         );
 
-        for (uint256 i = 0; i < numTokens; ++i) {
+        for (uint256 i; i < numTokens; ++i) {
             setRewardTokenSpeedInternal(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
         }
     }
@@ -406,24 +406,24 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     ) internal {
         uint256 vTokensCount = vTokens.length;
         uint256 holdersCount = holders.length;
-        for (uint256 i = 0; i < vTokensCount; ++i) {
+        for (uint256 i; i < vTokensCount; ++i) {
             VToken vToken = vTokens[i];
             require(comptroller.isMarketListed(vToken), "market must be listed");
             if (borrowers == true) {
                 Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
                 _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
-                for (uint256 j = 0; j < holdersCount; ++j) {
+                for (uint256 j; j < holdersCount; ++j) {
                     _distributeBorrowerRewardToken(address(vToken), holders[j], borrowIndex);
                 }
             }
             if (suppliers == true) {
                 _updateRewardTokenSupplyIndex(address(vToken));
-                for (uint256 j = 0; j < holdersCount; ++j) {
+                for (uint256 j; j < holdersCount; ++j) {
                     _distributeSupplierRewardToken(address(vToken), holders[j]);
                 }
             }
         }
-        for (uint256 j = 0; j < holdersCount; ++j) {
+        for (uint256 j; j < holdersCount; ++j) {
             rewardTokenAccrued[holders[j]] = grantRewardTokenInternal(holders[j], rewardTokenAccrued[holders[j]]);
         }
     }

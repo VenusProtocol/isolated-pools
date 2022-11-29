@@ -147,7 +147,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
 
         uint256 marketsCount = auction.markets.length;
-        for (uint256 i = 0; i < marketsCount; ++i) {
+        for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = auction.markets[i];
             auction.marketDebt[vToken] = 0;
             auction.highestBidBps = 0;
@@ -159,12 +159,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         VToken[] memory vTokens = _getAllMarkets(comptroller);
         marketsCount = vTokens.length;
         PriceOracle priceOracle = _getPriceOracle(comptroller);
-        uint256 poolBadDebt = 0;
+        uint256 poolBadDebt;
 
         uint256[] memory marketsDebt = new uint256[](marketsCount);
         auction.markets = new VToken[](marketsCount);
 
-        for (uint256 i = 0; i < marketsCount; ++i) {
+        for (uint256 i; i < marketsCount; ++i) {
             uint256 marketBadDebt = vTokens[i].badDebt();
 
             priceOracle.updatePrice(address(vTokens[i]));
@@ -234,7 +234,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         );
 
         uint256 marketsCount = auction.markets.length;
-        for (uint256 i = 0; i < marketsCount; ++i) {
+        for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20 erc20 = IERC20(address(vToken.underlying()));
 
@@ -281,7 +281,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         auction.status = AuctionStatus.ENDED;
 
-        for (uint256 i = 0; i < marketsCount; ++i) {
+        for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20 erc20 = IERC20(address(vToken.underlying()));
 
