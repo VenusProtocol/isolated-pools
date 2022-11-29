@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
@@ -81,6 +81,8 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     Comptroller private comptroller;
 
     IERC20 private rewardToken;
+
+    using SafeERC20 for IERC20;
 
     /**
      * @dev Initializes the deployer to owner.
@@ -311,7 +313,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     function grantRewardTokenInternal(address user, uint256 amount) internal returns (uint256) {
         uint256 rewardTokenRemaining = rewardToken.balanceOf(address(this));
         if (amount > 0 && amount <= rewardTokenRemaining) {
-            rewardToken.transfer(user, amount);
+            rewardToken.safeTransfer(user, amount);
             return 0;
         }
         return amount;
