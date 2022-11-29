@@ -126,14 +126,6 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Modifier to allow only pool registry to call functions
-     */
-    modifier onlyPoolRegistry() {
-        require(msg.sender == poolRegistry, "caller is not pool registry");
-        _;
-    }
-
-    /**
      * @notice Start a auction
      * @param comptroller comptroller of the pool
      */
