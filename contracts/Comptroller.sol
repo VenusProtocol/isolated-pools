@@ -133,7 +133,7 @@ contract Comptroller is
         uint256 len = vTokens.length;
 
         uint256[] memory results = new uint256[](len);
-        for (uint256 i = 0; i < len; ++i) {
+        for (uint256 i; i < len; ++i) {
             VToken vToken = VToken(vTokens[i]);
 
             results[i] = uint256(addToMarketInternal(vToken, msg.sender));
@@ -157,7 +157,7 @@ contract Comptroller is
             return Error.MARKET_NOT_LISTED;
         }
 
-        if (marketToJoin.accountMembership[borrower] == true) {
+        if (marketToJoin.accountMembership[borrower]) {
             // already joined
             return Error.NO_ERROR;
         }
@@ -215,7 +215,7 @@ contract Comptroller is
         VToken[] memory userAssetList = accountAssets[msg.sender];
         uint256 len = userAssetList.length;
         uint256 assetIndex = len;
-        for (uint256 i = 0; i < len; ++i) {
+        for (uint256 i; i < len; ++i) {
             if (userAssetList[i] == vToken) {
                 assetIndex = i;
                 break;
@@ -267,7 +267,8 @@ contract Comptroller is
         require(nextTotalSupply <= supplyCap, "market supply cap reached");
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
         }
@@ -322,7 +323,8 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
         }
@@ -446,7 +448,8 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
@@ -505,7 +508,8 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
@@ -677,7 +681,8 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vTokenCollateral);
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, liquidator);
@@ -740,7 +745,8 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
@@ -786,9 +792,10 @@ contract Comptroller is
      */
     function healAccount(address user) external {
         VToken[] memory userAssets = accountAssets[user];
+        uint256 userAssetsCount = userAssets.length;
         address liquidator = msg.sender;
         // We need all user's markets to be fresh for the computations to be correct
-        for (uint256 i = 0; i < userAssets.length; ++i) {
+        for (uint256 i; i < userAssetsCount; ++i) {
             userAssets[i].accrueInterest();
             oracle.updatePrice(address(userAssets[i]));
         }
@@ -798,6 +805,7 @@ contract Comptroller is
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
+
         // percentage = collateral / (borrows * liquidation incentive)
         Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory scaledBorrows = mul_(
@@ -809,14 +817,11 @@ contract Comptroller is
         if (lessThanExp(Exp({ mantissa: mantissaOne }), percentage)) {
             revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
         }
-        for (uint256 i = 0; i < userAssets.length; ++i) {
+
+        for (uint256 i; i < userAssetsCount; ++i) {
             VToken market = userAssets[i];
 
-            (uint256 oErr, uint256 tokens, uint256 borrowBalance, ) = market.getAccountSnapshot(user);
-            if (oErr != 0) {
-                revert SnapshotError();
-            }
-
+            (uint256 tokens, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, user);
             uint256 repaymentAmount = mul_ScalarTruncate(percentage, borrowBalance);
 
             // Seize the entire collateral
@@ -873,7 +878,8 @@ contract Comptroller is
             revert InsufficientCollateral(collateralToSeize, snapshot.totalCollateral);
         }
 
-        for (uint256 i = 0; i < orders.length; ++i) {
+        uint256 ordersCount = orders.length;
+        for (uint256 i; i < ordersCount; ++i) {
             LiquidationOrder calldata order = orders[i];
             order.vTokenCollateral.forceLiquidateBorrow(
                 msg.sender,
@@ -885,7 +891,8 @@ contract Comptroller is
         }
 
         VToken[] memory markets = accountAssets[borrower];
-        for (uint256 i = 0; i < markets.length; ++i) {
+        uint256 marketsCount = markets.length;
+        for (uint256 i; i < marketsCount; ++i) {
             // Read the balances and exchange rate from the vToken
             (uint256 oErr, , uint256 borrowBalance, ) = markets[i].getAccountSnapshot(borrower);
             if (oErr != 0) {
@@ -990,15 +997,15 @@ contract Comptroller is
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         // For each asset the account is in
         VToken[] memory assets = accountAssets[account];
-        for (uint256 i = 0; i < assets.length; ++i) {
+        uint256 assetsCount = assets.length;
+        for (uint256 i; i < assetsCount; ++i) {
             VToken asset = assets[i];
 
             // Read the balances and exchange rate from the vToken
-            (uint256 oErr, uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = asset
-                .getAccountSnapshot(account);
-            if (oErr != 0) {
-                revert SnapshotError();
-            }
+            (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
+                asset,
+                account
+            );
 
             // Get the normalized price of the asset
             Exp memory oraclePrice = Exp({ mantissa: safeGetUnderlyingPrice(asset) });
@@ -1254,7 +1261,8 @@ contract Comptroller is
 
         _addMarketInternal(address(vToken));
 
-        for (uint256 i = 0; i < rewardsDistributors.length; ++i) {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
 
@@ -1262,7 +1270,8 @@ contract Comptroller is
     }
 
     function _addMarketInternal(address vToken) internal {
-        for (uint256 i = 0; i < allMarkets.length; ++i) {
+        uint256 marketsCount = allMarkets.length;
+        for (uint256 i; i < marketsCount; ++i) {
             require(allMarkets[i] != VToken(vToken), "market already added");
         }
         allMarkets.push(VToken(vToken));
@@ -1288,7 +1297,7 @@ contract Comptroller is
 
         require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
 
-        for (uint256 i = 0; i < numMarkets; ++i) {
+        for (uint256 i; i < numMarkets; ++i) {
             borrowCaps[address(vTokens[i])] = newBorrowCaps[i];
             emit NewBorrowCap(vTokens[i], newBorrowCaps[i]);
         }
@@ -1305,10 +1314,12 @@ contract Comptroller is
             AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketSupplyCaps(VToken[],uint256[])"),
             "only whitelisted accounts can set supply caps"
         );
-        require(vTokens.length != 0, "invalid number of markets");
-        require(vTokens.length == newSupplyCaps.length, "invalid number of markets");
+        uint256 vTokensCount = vTokens.length;
 
-        for (uint256 i = 0; i < vTokens.length; ++i) {
+        require(vTokensCount != 0, "invalid number of markets");
+        require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
+
+        for (uint256 i; i < vTokensCount; ++i) {
             supplyCaps[address(vTokens[i])] = newSupplyCaps[i];
             emit NewSupplyCap(vTokens[i], newSupplyCaps[i]);
         }
@@ -1331,8 +1342,10 @@ contract Comptroller is
         );
         require(canCallFunction, "only authorised addresses can pause");
 
-        for (uint256 marketIdx = 0; marketIdx < marketsList.length; ++marketIdx) {
-            for (uint256 actionIdx = 0; actionIdx < actionsList.length; ++actionIdx) {
+        uint256 marketsCount = marketsList.length;
+        uint256 actionsCount = actionsList.length;
+        for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
+            for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
                 setActionPausedInternal(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
             }
         }
@@ -1386,7 +1399,8 @@ contract Comptroller is
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
-        for (uint256 i = 0; i < allMarkets.length; ++i) {
+        uint256 marketsCount = allMarkets.length;
+        for (uint256 i; i < marketsCount; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
 
@@ -1430,5 +1444,30 @@ contract Comptroller is
 
     function getBlockNumber() public view virtual returns (uint256) {
         return block.number;
+    }
+
+    /**
+     * @dev Returns supply and borrow balances of user in vToken, reverts on failure
+     * @param vToken market to query
+     * @param user user address
+     * @return vTokenBalance balance of vTokens, the same as vToken.balanceOf(user)
+     * @return borrowBalance borrowed amount, including the interest
+     * @return exchangeRateMantissa stored exchange rate
+     */
+    function _safeGetAccountSnapshot(VToken vToken, address user)
+        internal
+        view
+        returns (
+            uint256 vTokenBalance,
+            uint256 borrowBalance,
+            uint256 exchangeRateMantissa
+        )
+    {
+        uint256 err;
+        (err, vTokenBalance, borrowBalance, exchangeRateMantissa) = vToken.getAccountSnapshot(user);
+        if (err != 0) {
+            revert SnapshotError();
+        }
+        return (vTokenBalance, borrowBalance, exchangeRateMantissa);
     }
 }

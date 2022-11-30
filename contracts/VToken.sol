@@ -149,7 +149,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
         }
 
         /* Get the allowance, infinite for the account owner */
-        uint256 startingAllowance = 0;
+        uint256 startingAllowance;
         if (spender == src) {
             startingAllowance = type(uint256).max;
         } else {
