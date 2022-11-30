@@ -202,19 +202,30 @@ describe("Rewards: Tests", async function () {
     //Configure rewards for pool
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
+
+    const rewardsDistributor2 = await RewardsDistributor.deploy();
+
     xvs = await MockToken.deploy("Venus Token", "XVS", 18);
     const initialXvs = convertToUnit(1000000, 18);
     await xvs.faucet(initialXvs);
     await xvs.transfer(rewardsDistributor.address, initialXvs);
 
     await rewardsDistributor.initialize(comptrollerProxy.address, xvs.address);
+    await rewardsDistributor2.initialize(comptrollerProxy.address, mockDAI.address);
 
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
+    await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
 
     await rewardsDistributor._setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+    );
+
+    await rewardsDistributor2._setRewardTokenSpeeds(
+      [vWBTC.address, vDAI.address],
+      [convertToUnit(0.4, 18), convertToUnit(0.3, 18)],
+      [convertToUnit(0.2, 18), convertToUnit(0.1, 18)],
     );
   });
 
@@ -236,12 +247,34 @@ describe("Rewards: Tests", async function () {
     expect(await xvs.balanceOf(rewardsDistributor.address)).equal(convertToUnit(1000000, 18));
   });
 
-  it("Should have coorect market addresses", async function () {
+  it("Should have correct market addresses", async function () {
     const [owner] = await ethers.getSigners();
 
     const res = await comptrollerProxy.getAssetsIn(owner.address);
     expect(res[0]).equal(vDAI.address);
     expect(res[1]).equal(vWBTC.address);
+  });
+
+  it("Comptroller returns correct reward speeds", async function () {
+    const res = await comptrollerProxy.getRewardsByMarket(vDAI.address);
+    expect(res[0][0]).equal(xvs.address);
+    expect(res[0][1].toString()).equal(convertToUnit(0.5, 18));
+    expect(res[0][2].toString()).equal(convertToUnit(0.5, 18));
+    expect(res[1][0]).equal(mockDAI.address);
+    expect(res[1][1].toString()).equal(convertToUnit(0.3, 18));
+    expect(res[1][2].toString()).equal(convertToUnit(0.1, 18));
+  });
+
+  it("Cannot add reward distributors with duplicate reward tokens", async function () {
+    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+    rewardsDistributor = await RewardsDistributor.deploy();
+
+    const rewardsDistributorDuplicate = await RewardsDistributor.deploy();
+    await rewardsDistributorDuplicate.initialize(comptrollerProxy.address, xvs.address);
+
+    await await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributorDuplicate.address)).to.be.revertedWith(
+      "distributor already exists with this reward",
+    );
   });
 
   //TODO: Test reward accruals. This test used to pass before, but it

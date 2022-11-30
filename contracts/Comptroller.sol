@@ -38,6 +38,12 @@ contract Comptroller is
         uint256 shortfall;
     }
 
+    struct RewardSpeeds {
+        address rewardToken;
+        uint256 supplySpeed;
+        uint256 borrowSpeed;
+    }
+
     // closeFactorMantissa must be strictly greater than this value
     uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
 
@@ -1050,6 +1056,15 @@ contract Comptroller is
 
         require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
 
+        uint256 rewardsDistributorsLength = rewardsDistributors.length;
+        for (uint256 i; i < rewardsDistributorsLength; ++i) {
+            address rewardToken = address(rewardsDistributors[i].rewardToken());
+            require(
+                rewardToken != address(_rewardsDistributor.rewardToken()),
+                "distributor already exists with this reward"
+            );
+        }
+
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
@@ -1123,6 +1138,25 @@ contract Comptroller is
         seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
 
         return (uint256(Error.NO_ERROR), seizeTokens);
+    }
+
+    /**
+     * @notice Returns reward speed given a vToken
+     * @param vToken The vToken to get the reward speeds for
+     * @return rewardSpeeds Array of total supply and borrow speeds and reward token for all reward distributors
+     */
+    function getRewardsByMarket(address vToken) external view returns (RewardSpeeds[] memory rewardSpeeds) {
+        uint256 rewardsDistributorsLength = rewardsDistributors.length;
+        RewardSpeeds[] memory rewardSpeeds = new RewardSpeeds[](rewardsDistributorsLength);
+        for (uint256 i; i < rewardsDistributorsLength; ++i) {
+            address rewardToken = address(rewardsDistributors[i].rewardToken());
+            rewardSpeeds[i] = RewardSpeeds({
+                rewardToken: rewardToken,
+                supplySpeed: rewardsDistributors[i].rewardTokenSupplySpeeds(vToken),
+                borrowSpeed: rewardsDistributors[i].rewardTokenBorrowSpeeds(vToken)
+            });
+        }
+        return rewardSpeeds;
     }
 
     function initialize() public initializer {
