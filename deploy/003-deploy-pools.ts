@@ -121,6 +121,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     tokenImplementation_: tokenImplementation.address,
   });
   await tx.wait();
+
+  comptroller1Proxy._setMarketBorrowCaps(
+    [tokenImplementation.address],
+    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
+  );
 };
 
 func.tags = ["Pools"];
