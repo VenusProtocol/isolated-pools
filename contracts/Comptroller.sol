@@ -106,7 +106,7 @@ contract Comptroller is
     }
 
     /**
-     * @notice Add assets to be included in account liquidity calculation
+     * @notice Add assets to be included in account liquidity calculation; enabeling them to be used as collateral
      * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return Success indicator for whether each corresponding market was entered
      */
@@ -124,7 +124,7 @@ contract Comptroller is
     }
 
     /**
-     * @notice Removes asset from sender's account liquidity calculation
+     * @notice Removes asset from sender's account liquidity calculation; disabeling them as collateral
      * @dev Sender must not have an outstanding borrow balance in the asset,
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
@@ -807,8 +807,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets the closeFactor used when liquidating borrows
-     * @dev Admin function to set closeFactor
+     * @notice Sets the closeFactor to use when liquidating borrows
+     * @dev Only callable by the admin
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @return uint 0=success, otherwise a failure
      */
@@ -825,7 +825,7 @@ contract Comptroller is
 
     /**
      * @notice Sets the collateralFactor for a market
-     * @dev Restricted function to set per-market collateralFactor
+     * @dev This function is restricted by the AccessControlManager
      * @param vToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
@@ -883,7 +883,7 @@ contract Comptroller is
 
     /**
      * @notice Sets liquidationIncentive
-     * @dev Admin function to set liquidationIncentive
+     * @dev This function is restricted by the AccessControlManager
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
@@ -911,7 +911,7 @@ contract Comptroller is
 
     /**
      * @notice Add the market to the markets mapping and set it as listed
-     * @dev Admin function to set isListed and add support for the market
+     * @dev Only callable by the PoolRegistry
      * @param vToken The address of the market (token) to list
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
@@ -941,7 +941,8 @@ contract Comptroller is
 
     /**
      * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
-     * @dev Admin or borrowCapGuardian function to set the borrow caps. A borrow cap of 0 corresponds to unlimited borrowing.
+     * @dev This function is restricted by the AccessControlManager
+     * @dev A borrow cap of 0 corresponds to unlimited borrowing.
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
      */
@@ -967,7 +968,8 @@ contract Comptroller is
 
     /**
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
-     * @dev Admin function to set the supply caps. A supply cap of 0 corresponds to Minting NotAllowed.
+     * @dev This function is restricted by the AccessControlManager
+     * @dev A supply cap of 0 corresponds to Minting NotAllowed.
      * @param vTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
      */
@@ -988,7 +990,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Pause/unpause certain actions
+     * @notice Pause/unpause specified actions
+     * @dev This function is restricted by the AccessControlManager
      * @param marketsList Markets to pause/unpause the actions on
      * @param actionsList List of action ids to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
@@ -1017,7 +1020,7 @@ contract Comptroller is
      * @notice Set the given collateral threshold for non-batch liquidations. Regular liquidations
      *   will fail if the collateral amount is less than this threshold. Liquidators should use batch
      *   operations like liquidateAccount or healAccount.
-     * @dev this funciton access is managed by AccessControlManager
+     * @dev This function is restricted by the AccessControlManager
      * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
      */
     function _setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral) external {
@@ -1035,6 +1038,11 @@ contract Comptroller is
         emit NewMinLiquidatableCollateral(oldMinLiquidatableCollateral, newMinLiquidatableCollateral);
     }
 
+    /**
+     * @notice Add a new RewardsDistributor and initialize it with all markets
+     * @dev Only callable by the admin
+     * @param _rewardsDistributor Address of the RewardDistributor contract to add
+     */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external returns (uint256) {
         if (msg.sender != admin) {
             return fail(Error.UNAUTHORIZED, FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK);
@@ -1058,7 +1066,7 @@ contract Comptroller is
     /**
      * @notice Returns the assets an account has entered
      * @param account The address of the account to pull assets for
-     * @return A dynamic list with the assets the account has entered
+     * @return A list with the assets the account has entered
      */
     function getAssetsIn(address account) external view returns (VToken[] memory) {
         VToken[] memory assetsIn = accountAssets[account];
@@ -1067,10 +1075,10 @@ contract Comptroller is
     }
 
     /**
-     * @notice Returns whether the given account is entered in the given asset
+     * @notice Returns whether the given account is entered in a given market
      * @param account The address of the account to check
      * @param vToken The vToken to check
-     * @return True if the account is in the asset, otherwise false.
+     * @return True if the account is in the market specified, otherwise false.
      */
     function checkMembership(address account, VToken vToken) external view returns (bool) {
         return markets[address(vToken)].accountMembership[account];
@@ -1124,8 +1132,9 @@ contract Comptroller is
     /*** Admin Functions ***/
 
     /**
-     * @notice Sets a new price oracle for the comptroller
-     * @dev Admin function to set a new price oracle
+     * @notice Sets a new PriceOracle for the Comptroller
+     * @dev Only callable by the admin
+     * @param newOracle Address of the new PriceOracle to set
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function _setPriceOracle(PriceOracle newOracle) public returns (uint256) {
@@ -1149,8 +1158,9 @@ contract Comptroller is
     /*** Liquidity/Liquidation Calculations ***/
 
     /**
-     * @notice Determine the current account liquidity wrt collateral requirements
+     * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param account The account get liquidity for
      * @return (possible error code (semi-opaque),
                 account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
@@ -1212,6 +1222,11 @@ contract Comptroller is
         return allMarkets;
     }
 
+    /**
+     * @notice Check if a market is marked as listed (active)
+     * @param vToken vToken Address for the market to check
+     * @return True if listed otherwise false
+     */
     function isMarketListed(VToken vToken) public view returns (bool) {
         return markets[address(vToken)].isListed;
     }
@@ -1220,26 +1235,23 @@ contract Comptroller is
      * @notice Checks if a certain action is paused on a market
      * @param market vToken address
      * @param action Action to check
-     * @return true if the action is paused
+     * @return True if the action is paused otherwise false
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
     }
 
     /**
-     * @notice Returns true if the given vToken market has been deprecated
+     * @notice Check if a vToken market has been deprecated
      * @dev All borrows in a deprecated vToken market can be immediately liquidated
      * @param vToken The market to check if deprecated
+     * @return True if the given vToken market has been deprecated
      */
     function isDeprecated(VToken vToken) public view returns (bool) {
         return
             markets[address(vToken)].collateralFactorMantissa == 0 &&
             actionPaused(address(vToken), Action.BORROW) &&
             vToken.reserveFactorMantissa() == 1e18;
-    }
-
-    function getBlockNumber() public view virtual returns (uint256) {
-        return block.number;
     }
 
     /**
@@ -1275,6 +1287,11 @@ contract Comptroller is
         return Error.NO_ERROR;
     }
 
+    /**
+     * @notice Internal function to validate that a market hasn't already been added
+     * and if it hasn't adds it
+     * @param vToken The market to support
+     */
     function _addMarketInternal(address vToken) internal {
         uint256 marketsCount = allMarkets.length;
         for (uint256 i; i < marketsCount; ++i) {
@@ -1299,6 +1316,13 @@ contract Comptroller is
         emit ActionPausedMarket(VToken(market), action, paused);
     }
 
+    /**
+     * @dev Internal function to check that vTokens can be safelly redeemed for the underlying asset
+     * @param vToken Address of the vTokens to redeem
+     * @param redeemer Account redeeming the tokens
+     * @param redeemTokens The number of tokens to redeem
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
     function redeemAllowedInternal(
         address vToken,
         address redeemer,
@@ -1332,7 +1356,7 @@ contract Comptroller is
      * @notice Get the total collateral, weighted collateral, borrow balance, liquidity, shortfall
      * @param account The account to get the snapshot for
      * @param weight The function to compute the weight of the collateral – either collateral factor or
-     *  liquidation threshold. Accepts the address of the VToken and returns the weight as Exp.
+     *  liquidation threshold. Accepts the address of the vToken and returns the weight as Exp.
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
@@ -1352,7 +1376,7 @@ contract Comptroller is
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
      * @param weight The function to compute the weight of the collateral – either collateral factor or
-         liquidation threshold. Accepts the address of the VToken and returns the
+         liquidation threshold. Accepts the address of the VToken and returns the weight
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
@@ -1423,6 +1447,11 @@ contract Comptroller is
         return snapshot;
     }
 
+    /**
+     * @dev Retrieves price from oracle for an asset and checks it is nonzero
+     * @param asset Address for asset to query price
+     * @return Underlying price
+     */
     function safeGetUnderlyingPrice(VToken asset) internal view returns (uint256) {
         uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(address(asset));
         if (oraclePriceMantissa == 0) {
@@ -1432,7 +1461,7 @@ contract Comptroller is
     }
 
     /**
-     * @dev Retrieves price from oracle for an asset and checks it is nonzero
+     * @dev Return collateral factor for a market
      * @param asset Address for asset
      * @return Collateral factor as exponential
      */
@@ -1440,17 +1469,22 @@ contract Comptroller is
         return Exp({ mantissa: markets[address(asset)].collateralFactorMantissa });
     }
 
+    /**
+     * @dev Retrieves liquidation threshold for a market as an exponential
+     * @param asset Address for asset to liquidation threshold
+     * @return Liquidaton threshold as exponential
+     */
     function getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
         return Exp({ mantissa: markets[address(asset)].liquidationThresholdMantissa });
     }
 
     /**
      * @dev Returns supply and borrow balances of user in vToken, reverts on failure
-     * @param vToken market to query
-     * @param user user address
-     * @return vTokenBalance balance of vTokens, the same as vToken.balanceOf(user)
-     * @return borrowBalance borrowed amount, including the interest
-     * @return exchangeRateMantissa stored exchange rate
+     * @param vToken Market to query
+     * @param user Account address
+     * @return vTokenBalance Balance of vTokens, the same as vToken.balanceOf(user)
+     * @return borrowBalance Borrowed amount, including the interest
+     * @return exchangeRateMantissa Stored exchange rate
      */
     function _safeGetAccountSnapshot(VToken vToken, address user)
         internal
