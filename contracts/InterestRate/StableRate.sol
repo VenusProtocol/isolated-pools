@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import "./IStableRate.sol";
 
 /**
  * @title Logic for Venus stable rate.
  */
-abstract contract StableRateModel is IStableRateModel {
+abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
     event NewStableInterestParams(
         uint256 baseRatePerBlockForStable,
         uint256 multiplierPerBlock,
@@ -18,11 +20,6 @@ abstract contract StableRateModel is IStableRateModel {
     );
 
     uint256 private constant BASE = 1e18;
-
-    /**
-     * @notice The address of the owner, i.e. the Timelock contract, which can update parameters directly
-     */
-    address public owner;
 
     /**
      * @notice The approximate number of blocks per year that is assumed by the interest rate model
@@ -65,7 +62,6 @@ abstract contract StableRateModel is IStableRateModel {
     uint256 public optimalStableLoanRate;
 
     /**
-     * @param _owner The address of the owner, i.e. the Timelock contract (which has the ability to update parameters directly)
      * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
@@ -74,8 +70,7 @@ abstract contract StableRateModel is IStableRateModel {
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
      * @param _optimalStableLoanRate Optimal stable loan rate percentage.
      */
-    constructor(
-        address _owner,
+    function initialize(
         uint256 _baseRatePerBlockForStable,
         uint256 _multiplierPerBlock,
         uint256 _multiplierPerBlockForStable,
@@ -83,8 +78,8 @@ abstract contract StableRateModel is IStableRateModel {
         uint256 _kink,
         uint256 _stableRatePremium,
         uint256 _optimalStableLoanRate
-    ) {
-        owner = _owner;
+    ) public initializer {
+        __Ownable_init();
 
         updateJumpRateModelInternal(
             _baseRatePerBlockForStable,
@@ -115,9 +110,7 @@ abstract contract StableRateModel is IStableRateModel {
         uint256 _kink,
         uint256 _stableRatePremium,
         uint256 _optimalStableLoanRate
-    ) external virtual {
-        require(msg.sender == owner, "only the owner may call this function.");
-
+    ) external virtual onlyOwner {
         updateJumpRateModelInternal(
             _baseRatePerBlockForStable,
             _multiplierPerBlock,
