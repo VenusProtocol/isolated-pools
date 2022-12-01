@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../InterestRateModel.sol";
+import "./IStableRate.sol";
 
 /**
  * @title Logic for Venus stable rate.
  */
-abstract contract StableRateModel is InterestRateModel {
+abstract contract StableRateModel is IStableRateModel {
     event NewStableInterestParams(
         uint256 baseRatePerBlockForStable,
         uint256 multiplierPerBlock,
@@ -99,7 +99,7 @@ abstract contract StableRateModel is InterestRateModel {
 
     /**
      * @notice Update the parameters of the interest rate model (only callable by owner, i.e. Timelock)
-    * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
@@ -114,11 +114,11 @@ abstract contract StableRateModel is InterestRateModel {
         uint256 _jumpMultiplierPerBlockForStable,
         uint256 _kink,
         uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate  
+        uint256 _optimalStableLoanRate
     ) external virtual {
         require(msg.sender == owner, "only the owner may call this function.");
 
-       updateJumpRateModelInternal(
+        updateJumpRateModelInternal(
             _baseRatePerBlockForStable,
             _multiplierPerBlock,
             _multiplierPerBlockForStable,
@@ -149,49 +149,88 @@ abstract contract StableRateModel is InterestRateModel {
         return (borrows * BASE) / (cash + borrows - reserves);
     }
 
+    /**
+     * @notice Calculates the stable loan rate of the market: `stableborrows / totalborrows`
+     * @param stableborrows The amount of stable borrows in the market
+     * @param totalborrows The amount of total borrows in the market
+     * @return The stable loan rate as a mantissa between [0, BASE]
+     */
+    function stableLoanRate(uint256 stableborrows, uint256 totalborrows) public pure returns (uint256) {
+        // Loan rate is 0 when there are no stable borrows
+        if (totalborrows == 0) {
+            return 0;
+        }
+
+        return (stableborrows * BASE) / totalborrows;
+    }
+
+    /**
+     * @notice Calculates the stable loan rate of the market: `stableborrows / totalborrows`
+     * @param loanRate Loan rate for stable borrows in the market
+     * @return The difference between the loan rate and optimal loan rate as a mantissa between [0, BASE]
+     */
+    function calculateLoanRateDiff(uint256 loanRate) public view returns (uint256) {
+        if (loanRate == 0) {
+            return 0;
+        }
+
+        if (optimalStableLoanRate > loanRate) {
+            return 0;
+        }
+
+        return ((loanRate - optimalStableLoanRate) * BASE) / (BASE - optimalStableLoanRate);
+    }
+
     function getBorrowRateInternal(
         uint256 cash,
-        uint256 borrows,
+        uint256 stableborrows,
+        uint256 totalborrows,
         uint256 reserves
     ) internal view returns (uint256) {
-        uint256 util = utilizationRate(cash, borrows, reserves);
+        uint256 util = utilizationRate(cash, totalborrows, reserves);
+        uint256 loanRate = stableLoanRate(stableborrows, totalborrows);
+        uint256 excessLoanRate = calculateLoanRateDiff(loanRate);
 
         if (util <= kink) {
             return
                 ((util * multiplierPerBlock) / BASE) +
                 baseRatePerBlockForStable +
                 ((util * multiplierPerBlockForStable) / BASE) +
-                stableRatePremium;
+                stableRatePremium *
+                excessLoanRate;
         } else {
             uint256 excessUtil = util - kink;
             return
                 ((kink * multiplierPerBlock) / BASE) +
                 baseRatePerBlockForStable +
-                ((excessUtil * multiplierPerBlockForStable) / BASE) +
-                stableRatePremium;
+                ((kink * multiplierPerBlockForStable) / BASE) +
+                ((excessUtil * jumpMultiplierPerBlockForStable) / BASE) +
+                stableRatePremium *
+                excessLoanRate;
         }
     }
 
     /**
      * @notice Calculates the current supply rate per block
      * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
+     * @param stableborrows The amount of stable borrows in the market
+     * @param totalborrows The amount of total borrows in the market
      * @param reserves The amount of reserves in the market
      * @param reserveFactorMantissa The current reserve factor for the market
      * @return The supply rate percentage per block as a mantissa (scaled by BASE)
      */
     function getSupplyRate(
         uint256 cash,
-        uint256 borrows,
+        uint256 stableborrows,
+        uint256 totalborrows,
         uint256 reserves,
         uint256 reserveFactorMantissa
     ) public view virtual override returns (uint256) {
         uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRateInternal(cash, borrows, reserves);
+        uint256 borrowRate = getBorrowRateInternal(cash, stableborrows, totalborrows, reserves);
         uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
-        return (utilizationRate(cash, borrows, reserves) * rateToPool) / BASE;
+        return (utilizationRate(cash, totalborrows, reserves) * rateToPool) / BASE;
     }
-
 
     /**
      * @notice Internal function to update the parameters of the interest rate model
@@ -210,7 +249,7 @@ abstract contract StableRateModel is InterestRateModel {
         uint256 _jumpMultiplierPerBlockForStable,
         uint256 _kink,
         uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate  
+        uint256 _optimalStableLoanRate
     ) internal {
         baseRatePerBlockForStable = _baseRatePerBlockForStable / blocksPerYear;
         multiplierPerBlock = (_multiplierPerBlock * BASE) / (blocksPerYear * _kink);
