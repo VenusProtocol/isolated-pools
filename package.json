@@ -8,8 +8,7 @@
     "deploy",
     "helpers",
     "contracts",
-    "deployments",
-    "copy_contracts.sh"
+    "deployments"
   ],
   "scripts": {
     "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
@@ -23,7 +22,7 @@
     "lint:ts:fix": "eslint --fix --ext .js,.ts .",
     "prettier": "prettier --write \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments,copy_contracts.sh} dist/",
+    "build": "rm -rf dist && tsc --declaration && hardhat compile && cp -r ./{package.json,yarn.lock,artifacts,networks,contracts,deployments} dist/",
     "publish:dist": "yarn build && yarn publish dist -f --access public",
     "docgen": "hardhat docgen"
   },
