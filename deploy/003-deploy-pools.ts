@@ -126,6 +126,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     [tokenImplementation.address],
     ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
   );
+
+  comptroller1Proxy._setMarketSupplyCaps(
+    [tokenImplementation.address],
+    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
+  );
 };
 
 func.tags = ["Pools"];
