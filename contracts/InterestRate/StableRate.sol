@@ -212,6 +212,7 @@ abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
      * @param reserveFactorMantissa The current reserve factor for the market
      * @return The supply rate percentage per block as a mantissa (scaled by BASE)
      */
+     // Has to refactor the supply rate.
     function getSupplyRate(
         uint256 cash,
         uint256 stableborrows,
