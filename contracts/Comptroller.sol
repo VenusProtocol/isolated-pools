@@ -23,6 +23,42 @@ contract Comptroller is
     ComptrollerErrorReporter,
     ExponentialNoError
 {
+    struct LiquidationOrder {
+        VToken vTokenCollateral;
+        VToken vTokenBorrowed;
+        uint256 repayAmount;
+    }
+
+    struct AccountLiquiditySnapshot {
+        uint256 totalCollateral;
+        uint256 weightedCollateral;
+        uint256 borrows;
+        uint256 effects;
+        uint256 liquidity;
+        uint256 shortfall;
+    }
+
+    // closeFactorMantissa must be strictly greater than this value
+    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
+
+    // closeFactorMantissa must not exceed this value
+    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
+
+    // No collateralFactorMantissa may exceed this value
+    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
+
+    // PoolRegistry
+    address public immutable poolRegistry;
+
+    // AccessControlManager
+    address public immutable accessControl;
+
+    // List of Reward Distributors added
+    RewardsDistributor[] private rewardsDistributors;
+
+    // Used to check if rewards distributor is added
+    mapping(address => bool) private rewardsDistributorExists;
+
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
 
@@ -63,69 +99,14 @@ contract Comptroller is
     /// @notice Emitted when supply cap for a vToken is changed
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
-    // closeFactorMantissa must be strictly greater than this value
-    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
-
-    // closeFactorMantissa must not exceed this value
-    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
-
-    // No collateralFactorMantissa may exceed this value
-    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-
-    // PoolRegistry
-    address public immutable poolRegistry;
-
-    // AccessControlManager
-    address public immutable accessControl;
-
-    // List of Reward Distributors added
-    RewardsDistributor[] private rewardsDistributors;
-
-    // Used to check if rewards distributor is added
-    mapping(address => bool) private rewardsDistributorExists;
-
     constructor(address _poolRegistry, address _accessControl) {
         admin = msg.sender;
         poolRegistry = _poolRegistry;
         accessControl = _accessControl;
     }
 
-    function initialize() public initializer {
-        __WithAdmin_init();
-    }
-
-    /// @notice Reverts if a certain action is paused on a market
-    /// @param market Market to check
-    /// @param action Action to check
-    function checkActionPauseState(address market, Action action) private view {
-        require(!actionPaused(market, action), "action is paused");
-    }
-
-    /*** Assets You Are In ***/
-
     /**
-     * @notice Returns the assets an account has entered
-     * @param account The address of the account to pull assets for
-     * @return A dynamic list with the assets the account has entered
-     */
-    function getAssetsIn(address account) external view returns (VToken[] memory) {
-        VToken[] memory assetsIn = accountAssets[account];
-
-        return assetsIn;
-    }
-
-    /**
-     * @notice Returns whether the given account is entered in the given asset
-     * @param account The address of the account to check
-     * @param vToken The vToken to check
-     * @return True if the account is in the asset, otherwise false.
-     */
-    function checkMembership(address account, VToken vToken) external view returns (bool) {
-        return markets[address(vToken)].accountMembership[account];
-    }
-
-    /**
-     * @notice Add assets to be included in account liquidity calculation
+     * @notice Add assets to be included in account liquidity calculation; enabeling them to be used as collateral
      * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return Success indicator for whether each corresponding market was entered
      */
@@ -143,40 +124,7 @@ contract Comptroller is
     }
 
     /**
-     * @notice Add the market to the borrower's "assets in" for liquidity calculations
-     * @param vToken The market to enter
-     * @param borrower The address of the account to modify
-     * @return Success indicator for whether the market was entered
-     */
-    function addToMarketInternal(VToken vToken, address borrower) internal returns (Error) {
-        checkActionPauseState(address(vToken), Action.ENTER_MARKET);
-        Market storage marketToJoin = markets[address(vToken)];
-
-        if (!marketToJoin.isListed) {
-            // market is not listed, cannot join
-            return Error.MARKET_NOT_LISTED;
-        }
-
-        if (marketToJoin.accountMembership[borrower]) {
-            // already joined
-            return Error.NO_ERROR;
-        }
-
-        // survived the gauntlet, add to list
-        // NOTE: we store these somewhat redundantly as a significant optimization
-        //  this avoids having to iterate through the list for the most common use cases
-        //  that is, only when we need to perform liquidity checks
-        //  and not whenever we want to check if an account is in a particular market
-        marketToJoin.accountMembership[borrower] = true;
-        accountAssets[borrower].push(vToken);
-
-        emit MarketEntered(vToken, borrower);
-
-        return Error.NO_ERROR;
-    }
-
-    /**
-     * @notice Removes asset from sender's account liquidity calculation
+     * @notice Removes asset from sender's account liquidity calculation; disabeling them as collateral
      * @dev Sender must not have an outstanding borrow balance in the asset,
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
@@ -327,35 +275,6 @@ contract Comptroller is
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
-        }
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    function redeemAllowedInternal(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) internal view returns (uint256) {
-        if (!markets[vToken].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
-        }
-
-        /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!markets[vToken].accountMembership[redeemer]) {
-            return uint256(Error.NO_ERROR);
-        }
-
-        /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
-        AccountLiquiditySnapshot memory snapshot = getHypotheticalLiquiditySnapshot(
-            redeemer,
-            VToken(vToken),
-            redeemTokens,
-            0,
-            getCollateralFactor
-        );
-        if (snapshot.shortfall > 0) {
-            return uint256(Error.INSUFFICIENT_LIQUIDITY);
         }
 
         return uint256(Error.NO_ERROR);
@@ -835,21 +754,6 @@ contract Comptroller is
         }
     }
 
-    struct LiquidationOrder {
-        VToken vTokenCollateral;
-        VToken vTokenBorrowed;
-        uint256 repayAmount;
-    }
-
-    struct AccountLiquiditySnapshot {
-        uint256 totalCollateral;
-        uint256 weightedCollateral;
-        uint256 borrows;
-        uint256 effects;
-        uint256 liquidity;
-        uint256 shortfall;
-    }
-
     /**
      * @notice Liquidates all borrows of the borrower. Callable only if the collateral is less than
      *   a predefined threshold, and the account collateral can be seized to cover all borrows. If
@@ -902,11 +806,361 @@ contract Comptroller is
         }
     }
 
+    /**
+     * @notice Sets the closeFactor to use when liquidating borrows
+     * @dev Only callable by the admin
+     * @param newCloseFactorMantissa New close factor, scaled by 1e18
+     * @return uint 0=success, otherwise a failure
+     */
+    function _setCloseFactor(uint256 newCloseFactorMantissa) external returns (uint256) {
+        // Check caller is admin
+        require(msg.sender == admin, "only admin can set close factor");
+
+        uint256 oldCloseFactorMantissa = closeFactorMantissa;
+        closeFactorMantissa = newCloseFactorMantissa;
+        emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Sets the collateralFactor for a market
+     * @dev This function is restricted by the AccessControlManager
+     * @param vToken The market to set the factor on
+     * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
+     * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
+     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
+     */
+    function _setCollateralFactor(
+        VToken vToken,
+        uint256 newCollateralFactorMantissa,
+        uint256 newLiquidationThresholdMantissa
+    ) external returns (uint256) {
+        bool isAllowedToCall = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "_setCollateralFactor(VToken,uint256,uint256)"
+        );
+
+        if (!isAllowedToCall) {
+            revert Unauthorized();
+        }
+
+        // Verify market is listed
+        Market storage market = markets[address(vToken)];
+        if (!market.isListed) {
+            revert MarketNotListed(address(vToken));
+        }
+
+        // Check collateral factor <= 0.9
+        if (newCollateralFactorMantissa > collateralFactorMaxMantissa) {
+            revert InvalidCollateralFactor();
+        }
+
+        // Ensure that liquidation threshold <= CF
+        if (newLiquidationThresholdMantissa > newCollateralFactorMantissa) {
+            revert InvalidLiquidationThreshold();
+        }
+
+        // If collateral factor != 0, fail if price == 0
+        if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
+            revert PriceError();
+        }
+
+        uint256 oldCollateralFactorMantissa = market.collateralFactorMantissa;
+        if (newCollateralFactorMantissa != oldCollateralFactorMantissa) {
+            market.collateralFactorMantissa = newCollateralFactorMantissa;
+            emit NewCollateralFactor(vToken, oldCollateralFactorMantissa, newCollateralFactorMantissa);
+        }
+
+        uint256 oldLiquidationThresholdMantissa = market.liquidationThresholdMantissa;
+        if (newLiquidationThresholdMantissa != oldLiquidationThresholdMantissa) {
+            market.liquidationThresholdMantissa = newLiquidationThresholdMantissa;
+            emit NewLiquidationThreshold(vToken, oldLiquidationThresholdMantissa, newLiquidationThresholdMantissa);
+        }
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Sets liquidationIncentive
+     * @dev This function is restricted by the AccessControlManager
+     * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
+     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
+     */
+    function _setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external returns (uint256) {
+        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "_setLiquidationIncentive(uint)"
+        );
+        // Check if caller is allowed to call this function
+        if (!canCallFunction) {
+            return fail(Error.UNAUTHORIZED, FailureInfo.SET_LIQUIDATION_INCENTIVE_OWNER_CHECK);
+        }
+
+        // Save current value for use in log
+        uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
+
+        // Set liquidation incentive to new incentive
+        liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
+
+        // Emit event with old incentive, new incentive
+        emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Add the market to the markets mapping and set it as listed
+     * @dev Only callable by the PoolRegistry
+     * @param vToken The address of the market (token) to list
+     * @return uint 0=success, otherwise a failure. (See enum Error for details)
+     */
+    function _supportMarket(VToken vToken) external returns (uint256) {
+        require(msg.sender == poolRegistry, "only poolRegistry can call _supportMarket");
+
+        if (markets[address(vToken)].isListed) {
+            return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
+        }
+
+        vToken.isVToken(); // Sanity check to make sure its really a VToken
+
+        Market storage newMarket = markets[address(vToken)];
+        newMarket.isListed = true;
+        newMarket.collateralFactorMantissa = 0;
+        newMarket.liquidationThresholdMantissa = 0;
+
+        _addMarketInternal(address(vToken));
+
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            rewardsDistributors[i].initializeMarket(address(vToken));
+        }
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
+     * @dev This function is restricted by the AccessControlManager
+     * @dev A borrow cap of 0 corresponds to unlimited borrowing.
+     * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
+     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
+     */
+    function _setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
+        // NOTE: previous code restricted this function with
+        // msg.sender == admin || msg.sender == borrowCapGuardian
+        // Please consider adjusting deployment script before Testnet
+        require(
+            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketBorrowCaps(VToken[],uint256[])"),
+            "only whitelisted accounts can set borrow caps"
+        );
+
+        uint256 numMarkets = vTokens.length;
+        uint256 numBorrowCaps = newBorrowCaps.length;
+
+        require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
+
+        for (uint256 i; i < numMarkets; ++i) {
+            borrowCaps[address(vTokens[i])] = newBorrowCaps[i];
+            emit NewBorrowCap(vTokens[i], newBorrowCaps[i]);
+        }
+    }
+
+    /**
+     * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
+     * @dev This function is restricted by the AccessControlManager
+     * @dev A supply cap of 0 corresponds to Minting NotAllowed.
+     * @param vTokens The addresses of the markets (tokens) to change the supply caps for
+     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
+     */
+    function _setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
+        require(
+            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketSupplyCaps(VToken[],uint256[])"),
+            "only whitelisted accounts can set supply caps"
+        );
+        uint256 vTokensCount = vTokens.length;
+
+        require(vTokensCount != 0, "invalid number of markets");
+        require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            supplyCaps[address(vTokens[i])] = newSupplyCaps[i];
+            emit NewSupplyCap(vTokens[i], newSupplyCaps[i]);
+        }
+    }
+
+    /**
+     * @notice Pause/unpause specified actions
+     * @dev This function is restricted by the AccessControlManager
+     * @param marketsList Markets to pause/unpause the actions on
+     * @param actionsList List of action ids to pause/unpause
+     * @param paused The new paused state (true=paused, false=unpaused)
+     */
+    function _setActionsPaused(
+        VToken[] calldata marketsList,
+        Action[] calldata actionsList,
+        bool paused
+    ) external {
+        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "_setActionsPaused(VToken[],Action[],bool)"
+        );
+        require(canCallFunction, "only authorised addresses can pause");
+
+        uint256 marketsCount = marketsList.length;
+        uint256 actionsCount = actionsList.length;
+        for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
+            for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
+                setActionPausedInternal(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
+            }
+        }
+    }
+
+    /**
+     * @notice Set the given collateral threshold for non-batch liquidations. Regular liquidations
+     *   will fail if the collateral amount is less than this threshold. Liquidators should use batch
+     *   operations like liquidateAccount or healAccount.
+     * @dev This function is restricted by the AccessControlManager
+     * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
+     */
+    function _setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral) external {
+        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "_setMinLiquidatableCollateral(uint256)"
+        );
+
+        if (!canCallFunction) {
+            revert Unauthorized();
+        }
+
+        uint256 oldMinLiquidatableCollateral = minLiquidatableCollateral;
+        minLiquidatableCollateral = newMinLiquidatableCollateral;
+        emit NewMinLiquidatableCollateral(oldMinLiquidatableCollateral, newMinLiquidatableCollateral);
+    }
+
+    /**
+     * @notice Add a new RewardsDistributor and initialize it with all markets
+     * @dev Only callable by the admin
+     * @param _rewardsDistributor Address of the RewardDistributor contract to add
+     */
+    function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external returns (uint256) {
+        if (msg.sender != admin) {
+            return fail(Error.UNAUTHORIZED, FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK);
+        }
+
+        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
+
+        rewardsDistributors.push(_rewardsDistributor);
+        rewardsDistributorExists[address(_rewardsDistributor)] = true;
+
+        uint256 marketsCount = allMarkets.length;
+        for (uint256 i; i < marketsCount; ++i) {
+            _rewardsDistributor.initializeMarket(address(allMarkets[i]));
+        }
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /*** Assets You Are In ***/
+
+    /**
+     * @notice Returns the assets an account has entered
+     * @param account The address of the account to pull assets for
+     * @return A list with the assets the account has entered
+     */
+    function getAssetsIn(address account) external view returns (VToken[] memory) {
+        VToken[] memory assetsIn = accountAssets[account];
+
+        return assetsIn;
+    }
+
+    /**
+     * @notice Returns whether the given account is entered in a given market
+     * @param account The address of the account to check
+     * @param vToken The vToken to check
+     * @return True if the account is in the market specified, otherwise false.
+     */
+    function checkMembership(address account, VToken vToken) external view returns (bool) {
+        return markets[address(vToken)].accountMembership[account];
+    }
+
+    /**
+     * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
+     * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
+     * @param vTokenBorrowed The address of the borrowed vToken
+     * @param vTokenCollateral The address of the collateral vToken
+     * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
+     * @return (errorCode, number of vTokenCollateral tokens to be seized in a liquidation)
+     */
+    function liquidateCalculateSeizeTokens(
+        address vTokenBorrowed,
+        address vTokenCollateral,
+        uint256 actualRepayAmount
+    ) external view override returns (uint256, uint256) {
+        /* Read oracle prices for borrowed and collateral markets */
+        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(vTokenBorrowed);
+        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(vTokenCollateral);
+        if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
+            return (uint256(Error.PRICE_ERROR), 0);
+        }
+
+        /*
+         * Get the exchange rate and calculate the number of collateral tokens to seize:
+         *  seizeAmount = actualRepayAmount * liquidationIncentive * priceBorrowed / priceCollateral
+         *  seizeTokens = seizeAmount / exchangeRate
+         *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
+         */
+        uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
+        uint256 seizeTokens;
+        Exp memory numerator;
+        Exp memory denominator;
+        Exp memory ratio;
+
+        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
+        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
+        ratio = div_(numerator, denominator);
+
+        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+
+        return (uint256(Error.NO_ERROR), seizeTokens);
+    }
+
+    function initialize() public initializer {
+        __WithAdmin_init();
+    }
+
+    /*** Admin Functions ***/
+
+    /**
+     * @notice Sets a new PriceOracle for the Comptroller
+     * @dev Only callable by the admin
+     * @param newOracle Address of the new PriceOracle to set
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _setPriceOracle(PriceOracle newOracle) public returns (uint256) {
+        // Check caller is admin
+        if (msg.sender != admin) {
+            return fail(Error.UNAUTHORIZED, FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK);
+        }
+
+        // Track the old oracle for the comptroller
+        PriceOracle oldOracle = oracle;
+
+        // Set comptroller's oracle to newOracle
+        oracle = newOracle;
+
+        // Emit NewPriceOracle(oldOracle, newOracle)
+        emit NewPriceOracle(oldOracle, newOracle);
+
+        return uint256(Error.NO_ERROR);
+    }
+
     /*** Liquidity/Liquidation Calculations ***/
 
     /**
-     * @notice Determine the current account liquidity wrt collateral requirements
+     * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param account The account get liquidity for
      * @return (possible error code (semi-opaque),
                 account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
@@ -960,10 +1214,149 @@ contract Comptroller is
     }
 
     /**
+     * @notice Return all of the markets
+     * @dev The automatic getter may be used to access an individual market.
+     * @return The list of market addresses
+     */
+    function getAllMarkets() public view override returns (VToken[] memory) {
+        return allMarkets;
+    }
+
+    /**
+     * @notice Check if a market is marked as listed (active)
+     * @param vToken vToken Address for the market to check
+     * @return True if listed otherwise false
+     */
+    function isMarketListed(VToken vToken) public view returns (bool) {
+        return markets[address(vToken)].isListed;
+    }
+
+    /**
+     * @notice Checks if a certain action is paused on a market
+     * @param market vToken address
+     * @param action Action to check
+     * @return True if the action is paused otherwise false
+     */
+    function actionPaused(address market, Action action) public view returns (bool) {
+        return _actionPaused[market][action];
+    }
+
+    /**
+     * @notice Check if a vToken market has been deprecated
+     * @dev All borrows in a deprecated vToken market can be immediately liquidated
+     * @param vToken The market to check if deprecated
+     * @return True if the given vToken market has been deprecated
+     */
+    function isDeprecated(VToken vToken) public view returns (bool) {
+        return
+            markets[address(vToken)].collateralFactorMantissa == 0 &&
+            actionPaused(address(vToken), Action.BORROW) &&
+            vToken.reserveFactorMantissa() == 1e18;
+    }
+
+    /**
+     * @notice Add the market to the borrower's "assets in" for liquidity calculations
+     * @param vToken The market to enter
+     * @param borrower The address of the account to modify
+     * @return Success indicator for whether the market was entered
+     */
+    function addToMarketInternal(VToken vToken, address borrower) internal returns (Error) {
+        checkActionPauseState(address(vToken), Action.ENTER_MARKET);
+        Market storage marketToJoin = markets[address(vToken)];
+
+        if (!marketToJoin.isListed) {
+            // market is not listed, cannot join
+            return Error.MARKET_NOT_LISTED;
+        }
+
+        if (marketToJoin.accountMembership[borrower]) {
+            // already joined
+            return Error.NO_ERROR;
+        }
+
+        // survived the gauntlet, add to list
+        // NOTE: we store these somewhat redundantly as a significant optimization
+        //  this avoids having to iterate through the list for the most common use cases
+        //  that is, only when we need to perform liquidity checks
+        //  and not whenever we want to check if an account is in a particular market
+        marketToJoin.accountMembership[borrower] = true;
+        accountAssets[borrower].push(vToken);
+
+        emit MarketEntered(vToken, borrower);
+
+        return Error.NO_ERROR;
+    }
+
+    /**
+     * @notice Internal function to validate that a market hasn't already been added
+     * and if it hasn't adds it
+     * @param vToken The market to support
+     */
+    function _addMarketInternal(address vToken) internal {
+        uint256 marketsCount = allMarkets.length;
+        for (uint256 i; i < marketsCount; ++i) {
+            require(allMarkets[i] != VToken(vToken), "market already added");
+        }
+        allMarkets.push(VToken(vToken));
+    }
+
+    /**
+     * @dev Pause/unpause an action on a market
+     * @param market Market to pause/unpause the action on
+     * @param action Action id to pause/unpause
+     * @param paused The new paused state (true=paused, false=unpaused)
+     */
+    function setActionPausedInternal(
+        address market,
+        Action action,
+        bool paused
+    ) internal {
+        require(markets[market].isListed, "cannot pause a market that is not listed");
+        _actionPaused[market][action] = paused;
+        emit ActionPausedMarket(VToken(market), action, paused);
+    }
+
+    /**
+     * @dev Internal function to check that vTokens can be safelly redeemed for the underlying asset
+     * @param vToken Address of the vTokens to redeem
+     * @param redeemer Account redeeming the tokens
+     * @param redeemTokens The number of tokens to redeem
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function redeemAllowedInternal(
+        address vToken,
+        address redeemer,
+        uint256 redeemTokens
+    ) internal view returns (uint256) {
+        if (!markets[vToken].isListed) {
+            return uint256(Error.MARKET_NOT_LISTED);
+        }
+
+        /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
+        if (!markets[vToken].accountMembership[redeemer]) {
+            return uint256(Error.NO_ERROR);
+        }
+
+        /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
+        AccountLiquiditySnapshot memory snapshot = getHypotheticalLiquiditySnapshot(
+            redeemer,
+            VToken(vToken),
+            redeemTokens,
+            0,
+            getCollateralFactor
+        );
+        if (snapshot.shortfall > 0) {
+            return uint256(Error.INSUFFICIENT_LIQUIDITY);
+        }
+
+        return uint256(Error.NO_ERROR);
+    }
+
+    /**
      * @notice Get the total collateral, weighted collateral, borrow balance, liquidity, shortfall
      * @param account The account to get the snapshot for
      * @param weight The function to compute the weight of the collateral – either collateral factor or
-     *  liquidation threshold. Accepts the address of the VToken and returns the weight as Exp.
+     *  liquidation threshold. Accepts the address of the vToken and returns the weight as Exp.
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
@@ -983,7 +1376,7 @@ contract Comptroller is
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
      * @param weight The function to compute the weight of the collateral – either collateral factor or
-         liquidation threshold. Accepts the address of the VToken and returns the
+         liquidation threshold. Accepts the address of the VToken and returns the weight
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
@@ -1054,6 +1447,11 @@ contract Comptroller is
         return snapshot;
     }
 
+    /**
+     * @dev Retrieves price from oracle for an asset and checks it is nonzero
+     * @param asset Address for asset to query price
+     * @return Underlying price
+     */
     function safeGetUnderlyingPrice(VToken asset) internal view returns (uint256) {
         uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(address(asset));
         if (oraclePriceMantissa == 0) {
@@ -1062,397 +1460,31 @@ contract Comptroller is
         return oraclePriceMantissa;
     }
 
+    /**
+     * @dev Return collateral factor for a market
+     * @param asset Address for asset
+     * @return Collateral factor as exponential
+     */
     function getCollateralFactor(VToken asset) internal view returns (Exp memory) {
         return Exp({ mantissa: markets[address(asset)].collateralFactorMantissa });
     }
 
+    /**
+     * @dev Retrieves liquidation threshold for a market as an exponential
+     * @param asset Address for asset to liquidation threshold
+     * @return Liquidaton threshold as exponential
+     */
     function getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
         return Exp({ mantissa: markets[address(asset)].liquidationThresholdMantissa });
     }
 
     /**
-     * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
-     * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
-     * @param vTokenBorrowed The address of the borrowed vToken
-     * @param vTokenCollateral The address of the collateral vToken
-     * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
-     * @return (errorCode, number of vTokenCollateral tokens to be seized in a liquidation)
-     */
-    function liquidateCalculateSeizeTokens(
-        address vTokenBorrowed,
-        address vTokenCollateral,
-        uint256 actualRepayAmount
-    ) external view override returns (uint256, uint256) {
-        /* Read oracle prices for borrowed and collateral markets */
-        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(vTokenBorrowed);
-        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(vTokenCollateral);
-        if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
-            return (uint256(Error.PRICE_ERROR), 0);
-        }
-
-        /*
-         * Get the exchange rate and calculate the number of collateral tokens to seize:
-         *  seizeAmount = actualRepayAmount * liquidationIncentive * priceBorrowed / priceCollateral
-         *  seizeTokens = seizeAmount / exchangeRate
-         *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
-         */
-        uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
-        Exp memory ratio;
-
-        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
-
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
-
-        return (uint256(Error.NO_ERROR), seizeTokens);
-    }
-
-    /*** Admin Functions ***/
-
-    /**
-     * @notice Sets a new price oracle for the comptroller
-     * @dev Admin function to set a new price oracle
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-     */
-    function _setPriceOracle(PriceOracle newOracle) public returns (uint256) {
-        // Check caller is admin
-        if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK);
-        }
-
-        // Track the old oracle for the comptroller
-        PriceOracle oldOracle = oracle;
-
-        // Set comptroller's oracle to newOracle
-        oracle = newOracle;
-
-        // Emit NewPriceOracle(oldOracle, newOracle)
-        emit NewPriceOracle(oldOracle, newOracle);
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
-     * @notice Sets the closeFactor used when liquidating borrows
-     * @dev Admin function to set closeFactor
-     * @param newCloseFactorMantissa New close factor, scaled by 1e18
-     * @return uint 0=success, otherwise a failure
-     */
-    function _setCloseFactor(uint256 newCloseFactorMantissa) external returns (uint256) {
-        // Check caller is admin
-        require(msg.sender == admin, "only admin can set close factor");
-
-        uint256 oldCloseFactorMantissa = closeFactorMantissa;
-        closeFactorMantissa = newCloseFactorMantissa;
-        emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
-     * @notice Sets the collateralFactor for a market
-     * @dev Restricted function to set per-market collateralFactor
-     * @param vToken The market to set the factor on
-     * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
-     * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
-     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
-     */
-    function _setCollateralFactor(
-        VToken vToken,
-        uint256 newCollateralFactorMantissa,
-        uint256 newLiquidationThresholdMantissa
-    ) external returns (uint256) {
-        bool isAllowedToCall = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "_setCollateralFactor(VToken,uint256,uint256)"
-        );
-
-        if (!isAllowedToCall) {
-            revert Unauthorized();
-        }
-
-        // Verify market is listed
-        Market storage market = markets[address(vToken)];
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
-
-        // Check collateral factor <= 0.9
-        if (newCollateralFactorMantissa > collateralFactorMaxMantissa) {
-            revert InvalidCollateralFactor();
-        }
-
-        // Ensure that liquidation threshold <= CF
-        if (newLiquidationThresholdMantissa > newCollateralFactorMantissa) {
-            revert InvalidLiquidationThreshold();
-        }
-
-        // If collateral factor != 0, fail if price == 0
-        if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
-            revert PriceError();
-        }
-
-        uint256 oldCollateralFactorMantissa = market.collateralFactorMantissa;
-        if (newCollateralFactorMantissa != oldCollateralFactorMantissa) {
-            market.collateralFactorMantissa = newCollateralFactorMantissa;
-            emit NewCollateralFactor(vToken, oldCollateralFactorMantissa, newCollateralFactorMantissa);
-        }
-
-        uint256 oldLiquidationThresholdMantissa = market.liquidationThresholdMantissa;
-        if (newLiquidationThresholdMantissa != oldLiquidationThresholdMantissa) {
-            market.liquidationThresholdMantissa = newLiquidationThresholdMantissa;
-            emit NewLiquidationThreshold(vToken, oldLiquidationThresholdMantissa, newLiquidationThresholdMantissa);
-        }
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
-     * @notice Sets liquidationIncentive
-     * @dev Admin function to set liquidationIncentive
-     * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
-     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
-     */
-    function _setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "_setLiquidationIncentive(uint)"
-        );
-        // Check if caller is allowed to call this function
-        if (!canCallFunction) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_LIQUIDATION_INCENTIVE_OWNER_CHECK);
-        }
-
-        // Save current value for use in log
-        uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
-
-        // Set liquidation incentive to new incentive
-        liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
-
-        // Emit event with old incentive, new incentive
-        emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
-     * @notice Add the market to the markets mapping and set it as listed
-     * @dev Admin function to set isListed and add support for the market
-     * @param vToken The address of the market (token) to list
-     * @return uint 0=success, otherwise a failure. (See enum Error for details)
-     */
-    function _supportMarket(VToken vToken) external returns (uint256) {
-        require(msg.sender == poolRegistry, "only poolRegistry can call _supportMarket");
-
-        if (markets[address(vToken)].isListed) {
-            return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
-        }
-
-        vToken.isVToken(); // Sanity check to make sure its really a VToken
-
-        Market storage newMarket = markets[address(vToken)];
-        newMarket.isListed = true;
-        newMarket.collateralFactorMantissa = 0;
-        newMarket.liquidationThresholdMantissa = 0;
-
-        _addMarketInternal(address(vToken));
-
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].initializeMarket(address(vToken));
-        }
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    function _addMarketInternal(address vToken) internal {
-        uint256 marketsCount = allMarkets.length;
-        for (uint256 i; i < marketsCount; ++i) {
-            require(allMarkets[i] != VToken(vToken), "market already added");
-        }
-        allMarkets.push(VToken(vToken));
-    }
-
-    /**
-     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
-     * @dev Admin or borrowCapGuardian function to set the borrow caps. A borrow cap of 0 corresponds to unlimited borrowing.
-     * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
-     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
-     */
-    function _setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
-        // NOTE: previous code restricted this function with
-        // msg.sender == admin || msg.sender == borrowCapGuardian
-        // Please consider adjusting deployment script before Testnet
-        require(
-            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketBorrowCaps(VToken[],uint256[])"),
-            "only whitelisted accounts can set borrow caps"
-        );
-
-        uint256 numMarkets = vTokens.length;
-        uint256 numBorrowCaps = newBorrowCaps.length;
-
-        require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
-
-        for (uint256 i; i < numMarkets; ++i) {
-            borrowCaps[address(vTokens[i])] = newBorrowCaps[i];
-            emit NewBorrowCap(vTokens[i], newBorrowCaps[i]);
-        }
-    }
-
-    /**
-     * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
-     * @dev Admin function to set the supply caps. A supply cap of 0 corresponds to Minting NotAllowed.
-     * @param vTokens The addresses of the markets (tokens) to change the supply caps for
-     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
-     */
-    function _setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
-        require(
-            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketSupplyCaps(VToken[],uint256[])"),
-            "only whitelisted accounts can set supply caps"
-        );
-        uint256 vTokensCount = vTokens.length;
-
-        require(vTokensCount != 0, "invalid number of markets");
-        require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
-
-        for (uint256 i; i < vTokensCount; ++i) {
-            supplyCaps[address(vTokens[i])] = newSupplyCaps[i];
-            emit NewSupplyCap(vTokens[i], newSupplyCaps[i]);
-        }
-    }
-
-    /**
-     * @notice Pause/unpause certain actions
-     * @param marketsList Markets to pause/unpause the actions on
-     * @param actionsList List of action ids to pause/unpause
-     * @param paused The new paused state (true=paused, false=unpaused)
-     */
-    function _setActionsPaused(
-        VToken[] calldata marketsList,
-        Action[] calldata actionsList,
-        bool paused
-    ) external {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "_setActionsPaused(VToken[],Action[],bool)"
-        );
-        require(canCallFunction, "only authorised addresses can pause");
-
-        uint256 marketsCount = marketsList.length;
-        uint256 actionsCount = actionsList.length;
-        for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
-            for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
-                setActionPausedInternal(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
-            }
-        }
-    }
-
-    /**
-     * @dev Pause/unpause an action on a market
-     * @param market Market to pause/unpause the action on
-     * @param action Action id to pause/unpause
-     * @param paused The new paused state (true=paused, false=unpaused)
-     */
-    function setActionPausedInternal(
-        address market,
-        Action action,
-        bool paused
-    ) internal {
-        require(markets[market].isListed, "cannot pause a market that is not listed");
-        _actionPaused[market][action] = paused;
-        emit ActionPausedMarket(VToken(market), action, paused);
-    }
-
-    /**
-     * @notice Set the given collateral threshold for non-batch liquidations. Regular liquidations
-     *   will fail if the collateral amount is less than this threshold. Liquidators should use batch
-     *   operations like liquidateAccount or healAccount.
-     * @dev this funciton access is managed by AccessControlManager
-     * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
-     */
-    function _setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral) external {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "_setMinLiquidatableCollateral(uint256)"
-        );
-
-        if (!canCallFunction) {
-            revert Unauthorized();
-        }
-
-        uint256 oldMinLiquidatableCollateral = minLiquidatableCollateral;
-        minLiquidatableCollateral = newMinLiquidatableCollateral;
-        emit NewMinLiquidatableCollateral(oldMinLiquidatableCollateral, newMinLiquidatableCollateral);
-    }
-
-    function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external returns (uint256) {
-        if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK);
-        }
-
-        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
-
-        rewardsDistributors.push(_rewardsDistributor);
-        rewardsDistributorExists[address(_rewardsDistributor)] = true;
-
-        uint256 marketsCount = allMarkets.length;
-        for (uint256 i; i < marketsCount; ++i) {
-            _rewardsDistributor.initializeMarket(address(allMarkets[i]));
-        }
-
-        return uint256(Error.NO_ERROR);
-    }
-
-    /**
-     * @notice Return all of the markets
-     * @dev The automatic getter may be used to access an individual market.
-     * @return The list of market addresses
-     */
-    function getAllMarkets() public view override returns (VToken[] memory) {
-        return allMarkets;
-    }
-
-    function isMarketListed(VToken vToken) public view returns (bool) {
-        return markets[address(vToken)].isListed;
-    }
-
-    /**
-     * @notice Checks if a certain action is paused on a market
-     * @param market vToken address
-     * @param action Action to check
-     * @return true if the action is paused
-     */
-    function actionPaused(address market, Action action) public view returns (bool) {
-        return _actionPaused[market][action];
-    }
-
-    /**
-     * @notice Returns true if the given vToken market has been deprecated
-     * @dev All borrows in a deprecated vToken market can be immediately liquidated
-     * @param vToken The market to check if deprecated
-     */
-    function isDeprecated(VToken vToken) public view returns (bool) {
-        return
-            markets[address(vToken)].collateralFactorMantissa == 0 &&
-            actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == 1e18;
-    }
-
-    function getBlockNumber() public view virtual returns (uint256) {
-        return block.number;
-    }
-
-    /**
      * @dev Returns supply and borrow balances of user in vToken, reverts on failure
-     * @param vToken market to query
-     * @param user user address
-     * @return vTokenBalance balance of vTokens, the same as vToken.balanceOf(user)
-     * @return borrowBalance borrowed amount, including the interest
-     * @return exchangeRateMantissa stored exchange rate
+     * @param vToken Market to query
+     * @param user Account address
+     * @return vTokenBalance Balance of vTokens, the same as vToken.balanceOf(user)
+     * @return borrowBalance Borrowed amount, including the interest
+     * @return exchangeRateMantissa Stored exchange rate
      */
     function _safeGetAccountSnapshot(VToken vToken, address user)
         internal
@@ -1469,5 +1501,12 @@ contract Comptroller is
             revert SnapshotError();
         }
         return (vTokenBalance, borrowBalance, exchangeRateMantissa);
+    }
+
+    /// @notice Reverts if a certain action is paused on a market
+    /// @param market Market to check
+    /// @param action Action to check
+    function checkActionPauseState(address market, Action action) private view {
+        require(!actionPaused(market, action), "action is paused");
     }
 }

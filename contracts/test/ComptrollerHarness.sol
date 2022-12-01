@@ -21,10 +21,6 @@ contract ComptrollerHarness is Comptroller {
     function setBlockNumber(uint256 number) public {
         blockNumber = number;
     }
-
-    function getBlockNumber() public view override returns (uint256) {
-        return blockNumber;
-    }
 }
 
 contract EchoTypesComptroller {

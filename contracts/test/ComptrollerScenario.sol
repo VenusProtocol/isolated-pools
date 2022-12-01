@@ -17,10 +17,6 @@ contract ComptrollerScenario is Comptroller {
         blockNumber = number;
     }
 
-    function getBlockNumber() public view override returns (uint256) {
-        return blockNumber;
-    }
-
     function membershipLength(VToken vToken) public view returns (uint256) {
         return accountAssets[address(vToken)].length;
     }
