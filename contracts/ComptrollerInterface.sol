@@ -148,4 +148,6 @@ abstract contract ComptrollerViewInterface {
     function liquidationIncentiveMantissa() external view virtual returns (uint256);
 
     function minLiquidatableCollateral() external view virtual returns (uint256);
+
+    function getXVSRewardsByMarket(address) external view virtual returns (uint256, uint256);
 }

@@ -80,7 +80,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
 
     Comptroller private comptroller;
 
-    IERC20 private rewardToken;
+    IERC20 public rewardToken;
 
     /**
      * @dev Initializes the deployer to owner.
