@@ -71,7 +71,7 @@ contract ComptrollerV1Storage {
     // NOTE: please remove this as it is not used anymore
     address public borrowCapGuardian;
 
-    // @notice Borrow caps enforced by borrowAllowed for each vToken address. Defaults to zero which corresponds to unlimited borrowing.
+    // @notice Borrow caps enforced by borrowAllowed for each vToken address. Defaults to zero which restricts borrowing.
     mapping(address => uint256) public borrowCaps;
 
     /// @notice Minimal collateral required for regular (non-batch) liquidations

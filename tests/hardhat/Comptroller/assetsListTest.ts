@@ -89,6 +89,15 @@ describe("assetListTest", () => {
     const contracts = await loadFixture(assetListFixture);
     configure(contracts);
     ({ comptroller, OMG, ZRX, BAT, SKT, allTokens } = contracts);
+    const [addresses, caps] = allTokens.reduce(
+      (acc: [string[], string[]], curr) => {
+        acc[0].push(curr.address);
+        acc[1].push("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        return acc;
+      },
+      [[], []],
+    );
+    await comptroller._setMarketBorrowCaps(addresses, caps);
   });
 
   async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {

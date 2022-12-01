@@ -347,8 +347,8 @@ contract Comptroller is
         }
 
         uint256 borrowCap = borrowCaps[vToken];
-        // Borrow cap of 0 corresponds to unlimited borrowing
-        if (borrowCap != 0) {
+        // Borrow cap of -1 corresponds to unlimited borrowing
+        if (borrowCap != type(uint128).max) {
             uint256 totalBorrows = VToken(vToken).totalBorrows();
             uint256 nextTotalBorrows = add_(totalBorrows, borrowAmount);
             require(nextTotalBorrows < borrowCap, "market borrow cap reached");
@@ -942,14 +942,11 @@ contract Comptroller is
     /**
      * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
      * @dev This function is restricted by the AccessControlManager
-     * @dev A borrow cap of 0 corresponds to unlimited borrowing.
+     * @dev A borrow cap of -1 corresponds to unlimited borrowing.
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
-     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
+     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of -1 corresponds to unlimited borrowing.
      */
     function _setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
-        // NOTE: previous code restricted this function with
-        // msg.sender == admin || msg.sender == borrowCapGuardian
-        // Please consider adjusting deployment script before Testnet
         require(
             AccessControlManager(accessControl).isAllowedToCall(msg.sender, "_setMarketBorrowCaps(VToken[],uint256[])"),
             "only whitelisted accounts can set borrow caps"
