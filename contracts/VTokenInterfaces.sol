@@ -131,6 +131,16 @@ contract VTokenStorage {
      * @notice Storage of Shortfall contract address
      */
     address public shortfall;
+
+    /**
+     * @notice Total amount of outstanding stable borrows of the underlying in this market
+     */
+    uint256 public stableDebt;
+
+    /**
+     * @notice Accumulator of the total earned stable interest rate since the opening of the market
+     */
+    uint256 public stableBorrowIndex;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
