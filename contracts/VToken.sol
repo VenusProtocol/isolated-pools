@@ -1318,18 +1318,6 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
     /*** Handling Bad Debt and Shortfall ***/
 
     /**
-     * @notice Tracks market bad debt.
-     * @dev Called only when bad debt is detected during liquidation.
-     * @param borrower The borrow account which is liquidated
-     */
-    function accountBadDebtDetected(address borrower) internal {
-        BorrowSnapshot storage borrowSnapshot = accountBorrows[borrower];
-        badDebt = badDebt + borrowSnapshot.principal * (borrowIndex / borrowSnapshot.interestIndex);
-        totalBorrows = totalBorrows - borrowSnapshot.principal;
-        borrowSnapshot.principal = 0;
-    }
-
-    /**
      * @notice Updates bad debt
      * @dev Called only when bad debt is recovered from action
      * @param _badDebt The amount of bad debt recovered
