@@ -43,16 +43,25 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await Comptroller.connect(await ethers.getSigner(acc1)).enterMarkets([vDAI.address, vWBTC.address]);
   await Comptroller.connect(await ethers.getSigner(acc2)).enterMarkets([vDAI.address, vWBTC.address]);
 
-  //Enable Access to Supply Caps
+  //Enable access to setting supply and borrow caps
   await AccessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "setMarketSupplyCaps(address[],uint256[])",
     deployer,
   );
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setMarketBorrowCaps(address[],uint256[])",
+    deployer,
+  );
 
-  //Set Supply Caps
+  //Set supply caps
   const supply = convertToUnit(10, 6);
   await Comptroller.setMarketSupplyCaps([vDAI.address, vWBTC.address], [supply, supply]);
+
+  //Set borrow caps
+  const borrowCap = convertToUnit(10, 6);
+  await Comptroller.setMarketBorrowCaps([vDAI.address, vWBTC.address], [borrowCap, borrowCap]);
 
   return {
     fixture: {
