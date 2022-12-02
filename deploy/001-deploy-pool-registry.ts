@@ -152,7 +152,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setInterestRateModelFresh(InterestRateModel)",
+    "setInterestRateModel(address)",
     vBep20Factory.address,
   );
   await tx.wait();

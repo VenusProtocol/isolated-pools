@@ -31,9 +31,9 @@ describe("VToken", function () {
     newComptroller.isComptroller.returns(true);
   });
 
-  describe("_setComptroller", () => {
+  describe("setComptroller", () => {
     it("should fail if called by non-admin", async () => {
-      await expect(vToken.connect(guy)._setComptroller(newComptroller.address)).to.be.revertedWithCustomError(
+      await expect(vToken.connect(guy).setComptroller(newComptroller.address)).to.be.revertedWithCustomError(
         vToken,
         "SetComptrollerOwnerCheck",
       );
@@ -41,7 +41,7 @@ describe("VToken", function () {
     });
 
     it("reverts if passed a contract that doesn't implement isComptroller", async () => {
-      await expect(vToken._setComptroller(accessControlManager.address)).to.be.revertedWithoutReason();
+      await expect(vToken.setComptroller(accessControlManager.address)).to.be.revertedWithoutReason();
       expect(await vToken.comptroller()).to.equal(comptroller.address);
     });
 
@@ -49,12 +49,12 @@ describe("VToken", function () {
       // extremely unlikely to occur, of course, but let's be exhaustive
       const badComptroller = await smock.fake<Comptroller>("Comptroller");
       badComptroller.isComptroller.returns(false);
-      await expect(vToken._setComptroller(badComptroller.address)).to.be.revertedWith("marker method returned false");
+      await expect(vToken.setComptroller(badComptroller.address)).to.be.revertedWith("marker method returned false");
       expect(await vToken.comptroller()).to.equal(comptroller.address);
     });
 
     it("updates comptroller and emits log on success", async () => {
-      const result = await vToken._setComptroller(newComptroller.address);
+      const result = await vToken.setComptroller(newComptroller.address);
 
       await expect(result).to.emit(vToken, "NewComptroller").withArgs(comptroller.address, newComptroller.address);
       expect(await vToken.comptroller()).to.equal(newComptroller.address);

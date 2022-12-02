@@ -333,13 +333,13 @@ abstract contract VTokenInterface is VTokenStorage {
 
     /*** Admin Functions ***/
 
-    function _setComptroller(ComptrollerInterface newComptroller) external virtual returns (uint256);
+    function setComptroller(ComptrollerInterface newComptroller) external virtual;
 
-    function _setReserveFactor(uint256 newReserveFactorMantissa) external virtual returns (uint256);
+    function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
 
-    function _reduceReserves(uint256 reduceAmount) external virtual returns (uint256);
+    function reduceReserves(uint256 reduceAmount) external virtual;
 
-    function _setInterestRateModel(InterestRateModel newInterestRateModel) external virtual returns (uint256);
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
 
-    function _addReserves(uint256 addAmount) external virtual returns (uint256);
+    function addReserves(uint256 addAmount) external virtual;
 }
