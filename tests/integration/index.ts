@@ -90,23 +90,7 @@ describe("Positive Cases", () => {
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({
-      PoolRegistry,
-      AccessControlManager,
-      RiskFund,
-      VTokenFactory,
-      JumpRateModelFactory,
-      WhitePaperRateFactory,
-      ProtocolShareReserve,
-      PriceOracle,
-      Comptroller,
-      vWBTC,
-      vDAI,
-      wBTC,
-      DAI,
-      acc1,
-      acc2,
-    } = fixture);
+    ({ PoolRegistry, AccessControlManager, Comptroller, vWBTC, vDAI, wBTC, DAI, acc1, acc2 } = fixture);
   });
   describe("Setup", () => {
     it("PoolRegistry should be initialized properly", async function () {
