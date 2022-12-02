@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
  */
 contract AccessControlManager is AccessControl {
     /// @notice Emitted when an account is given a permission to a certain contract function
-    /// NOTE: If contract address is 0x000..0 this means that the account is a default admin of this function and
+    /// @dev If contract address is 0x000..0 this means that the account is a default admin of this function and
     /// can call any contract function with this signature
     event PermissionGranted(address account, address contractAddress, string functionSig);
 
@@ -28,7 +28,7 @@ contract AccessControlManager is AccessControl {
      * @notice Verifies if the given account can call a contract's guarded function
      * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
      * @param account for which call permissions will be checked
-     * @param functionSig restricted function signature e.g. "functionName(uint,bool)"
+     * @param functionSig restricted function signature e.g. "functionName(uint256,bool)"
      * @return false if the user account cannot call the particular contract function
      *
      */
@@ -38,7 +38,7 @@ contract AccessControlManager is AccessControl {
         if (hasRole(role, account)) {
             return true;
         } else {
-            role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
+            role = keccak256(abi.encodePacked(address(0), functionSig));
             return hasRole(role, account);
         }
     }
@@ -48,7 +48,7 @@ contract AccessControlManager is AccessControl {
      * @dev This function is used as a view function to check permissions rather than contract hook for access restriction check.
      * @param account for which call permissions will be checked against
      * @param contractAddress address of the restricted contract
-     * @param functionSig signature of the restricted function e.g. "functionName(uint,bool)"
+     * @param functionSig signature of the restricted function e.g. "functionName(uint256,bool)"
      * @return false if the user account cannot call the particular contract function
      */
     function hasPermission(
@@ -63,26 +63,19 @@ contract AccessControlManager is AccessControl {
     /**
      * @notice Gives a function call permission to one single account
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
-     * 		May emit a {RoleGranted} event.
      * @param contractAddress address of contract for which call permissions will be granted
-     * NOTE: if contractAddress is zero address, we give the account DEFAULT_ADMIN_ROLE,
-     *      meaning that this account can access the certain function on ANY contract managed by this ACL
-     * @param functionSig signature e.g. "functionName(uint,bool)"
+     * @dev if contractAddress is zero address, the account can access the specified function
+     *      on **any** contract managed by this ACL
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
      * @param accountToPermit account that will be given access to the contract function
-     * Emits {PermissionGranted} event.
+     * @custom:events Emits a {RoleGranted} and {PermissionGranted} events.
      */
     function giveCallPermission(
         address contractAddress,
         string memory functionSig,
         address accountToPermit
     ) public {
-        bytes32 role;
-        if (contractAddress == address(0)) {
-            role = keccak256(abi.encodePacked(DEFAULT_ADMIN_ROLE, functionSig));
-        } else {
-            role = keccak256(abi.encodePacked(contractAddress, functionSig));
-        }
-
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         grantRole(role, accountToPermit);
         emit PermissionGranted(accountToPermit, contractAddress, functionSig);
     }
@@ -92,8 +85,8 @@ contract AccessControlManager is AccessControl {
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
      * 		May emit a {RoleRevoked} event.
      * @param contractAddress address of contract for which call permissions will be revoked
-     * @param functionSig signature e.g. "functionName(uint,bool)"
-     * Emits {PermissionRevoked} event.
+     * @param functionSig signature e.g. "functionName(uint256,bool)"
+     * @custom:events Emits {RoleRevoked} and {PermissionRevoked} events.
      */
     function revokeCallPermission(
         address contractAddress,

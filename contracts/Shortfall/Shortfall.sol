@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
@@ -65,6 +65,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when a auction is restarted
     event AuctionRestarted(address indexed comptroller);
 
+    /// @notice Emitted when pool registry address is updated
+    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted when minimum pool bad debt is updated
+    event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
+
     /// @notice Pool registry address
     address public poolRegistry;
 
@@ -87,17 +93,19 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public constant waitForFirstBidder = 100;
 
     /// @notice BUSD contract address
-    IERC20 private BUSD;
+    IERC20Upgradeable private BUSD;
 
     /// @notice Auctions for each pool
     mapping(address => Auction) public auctions;
+
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @notice Initalize the shortfall contract
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
     function initialize(
-        IERC20 _BUSD,
+        IERC20Upgradeable _BUSD,
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
     ) public initializer {
@@ -113,7 +121,9 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+        uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
+        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
     }
 
     /**
@@ -122,15 +132,9 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
+        address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
-    }
-
-    /**
-     * @notice Modifier to allow only pool registry to call functions
-     */
-    modifier onlyPoolRegistry() {
-        require(msg.sender == poolRegistry, "caller is not pool registry");
-        _;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
@@ -236,23 +240,23 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(vToken.underlying()));
+            IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 if (auction.highestBidder != address(0)) {
                     uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) /
                         MAX_BPS);
-                    erc20.transfer(auction.highestBidder, previousBidAmount);
+                    erc20.safeTransfer(auction.highestBidder, previousBidAmount);
                 }
 
                 uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps) / MAX_BPS);
-                erc20.transferFrom(msg.sender, address(this), currentBidAmount);
+                erc20.safeTransferFrom(msg.sender, address(this), currentBidAmount);
             } else {
                 if (auction.highestBidder != address(0)) {
-                    erc20.transfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                    erc20.safeTransfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
                 }
 
-                erc20.transferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
+                erc20.safeTransferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
         }
 
@@ -283,14 +287,14 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(address(auction.markets[i]));
-            IERC20 erc20 = IERC20(address(vToken.underlying()));
+            IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) / MAX_BPS);
-                erc20.transfer(address(auction.markets[i]), bidAmount);
+                erc20.safeTransfer(address(auction.markets[i]), bidAmount);
                 marketsDebt[i] = bidAmount;
             } else {
-                erc20.transfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
+                erc20.safeTransfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
                 marketsDebt[i] = auction.marketDebt[auction.markets[i]];
             }
 
@@ -301,12 +305,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
             riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
+            BUSD.safeTransfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
             uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
             riskFund.transferReserveForAuction(comptroller, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
-            BUSD.transfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
+            BUSD.safeTransfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
         }
 
         emit AuctionClosed(

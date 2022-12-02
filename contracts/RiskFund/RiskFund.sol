@@ -25,13 +25,31 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
     address private auctionContractAddress;
     address private accessControl;
 
-    // Store base asset's reserve for specific pool.
+    // Store base asset's reserve for specific pool
     mapping(address => uint256) private poolReserves;
+
+    /// @notice Emitted when pool registry address is updated
+    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
+    /// @notice Emitted when convertable base asset address is updated
+    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
+
+    /// @notice Emitted when auction contract address is updated
+    event AuctionContractUpdated(address indexed oldAuctionContract, address indexed newAuctionContract);
+
+    /// @notice Emitted when PancakeSwap router contract address is updated
+    event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
+
+    /// @notice Emitted when min amount out for PancakeSwap is updated
+    event AmountOutMinUpdated(uint256 oldAmountOutMin, uint256 newAmountOutMin);
+
+    /// @notice Emitted when minimum amount to convert is updated
+    event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _pancakeSwapRouter Address of the pancake swap router.
-     * @param _amountOutMin Min amount out for the pancake swap.
+     * @param _pancakeSwapRouter Address of the PancakeSwap router
+     * @param _amountOutMin Min amount out for the PancakeSwap
      * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
      * @param _convertableBaseAsset Address of the base asset
      * @param _accessControl Address of the access control contract.
@@ -62,7 +80,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
         require(_poolRegistry != address(0), "Risk Fund: Pool registry address invalid");
+        address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
@@ -71,7 +91,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function setConvertableBaseAsset(address _convertableBaseAsset) external onlyOwner {
         require(_convertableBaseAsset != address(0), "Risk Fund: Asset address invalid");
+        address oldBaseAsset = convertableBaseAsset;
         convertableBaseAsset = _convertableBaseAsset;
+        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertableBaseAsset);
     }
 
     /**
@@ -80,7 +102,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function setAuctionContractAddress(address _auctionContractAddress) external onlyOwner {
         require(_auctionContractAddress != address(0), "Risk Fund: Auction contract address invalid");
+        address oldAuctionContractAddress = auctionContractAddress;
         auctionContractAddress = _auctionContractAddress;
+        emit AuctionContractUpdated(oldAuctionContractAddress, _auctionContractAddress);
     }
 
     /**
@@ -88,8 +112,10 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      * @param _pancakeSwapRouter Address of the pancake swap router.
      */
     function setPancakeSwapRouter(address _pancakeSwapRouter) external onlyOwner {
-        require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
+        require(_pancakeSwapRouter != address(0), "Risk Fund: PancakeSwap address invalid");
+        address oldPancakeSwapRouter = pancakeSwapRouter;
         pancakeSwapRouter = _pancakeSwapRouter;
+        emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, _pancakeSwapRouter);
     }
 
     /**
@@ -98,7 +124,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function setAmountOutMin(uint256 _amountOutMin) external onlyOwner {
         require(_amountOutMin >= 0, "Risk Fund: Min amount out invalid");
+        uint256 oldAmountOutMin = amountOutMin;
         amountOutMin = _amountOutMin;
+        emit AmountOutMinUpdated(oldAmountOutMin, _amountOutMin);
     }
 
     /**
@@ -107,7 +135,9 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
      */
     function setMinAmountToConvert(uint256 _minAmountToConvert) external onlyOwner {
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
+        uint256 oldMinAmountToConvert = minAmountToConvert;
         minAmountToConvert = _minAmountToConvert;
+        emit MinAmountToConvertUpdated(oldMinAmountToConvert, _minAmountToConvert);
     }
 
     /**
