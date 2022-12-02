@@ -226,7 +226,7 @@ describe("PoolLens - PoolView Tests", async function () {
     await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
 
     //Set Oracle
-    await comptroller1Proxy._setPriceOracle(priceOracle.address);
+    await comptroller1Proxy.setPriceOracle(priceOracle.address);
 
     const PoolLens = await ethers.getContractFactory("PoolLens");
     poolLens = await PoolLens.deploy();

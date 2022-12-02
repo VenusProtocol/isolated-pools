@@ -126,7 +126,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param supplySpeeds New supply-side REWARD TOKEN speed for the corresponding market.
      * @param borrowSpeeds New borrow-side REWARD TOKEN speed for the corresponding market.
      */
-    function _setRewardTokenSpeeds(
+    function setRewardTokenSpeeds(
         VToken[] memory vTokens,
         uint256[] memory supplySpeeds,
         uint256[] memory borrowSpeeds
@@ -134,11 +134,11 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
-            "Comptroller::_setRewardTokenSpeeds invalid input"
+            "RewardsDistributor::setRewardTokenSpeeds invalid input"
         );
 
         for (uint256 i; i < numTokens; ++i) {
-            setRewardTokenSpeedInternal(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
+            _setRewardTokenSpeed(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
         }
     }
 
@@ -147,7 +147,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
-    function _setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed) public onlyOwner {
+    function setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed) public onlyOwner {
         // note that REWARD TOKEN speed could be set to 0 to halt liquidity rewards for a contributor
         updateContributorRewards(contributor);
         if (rewardTokenSpeed == 0) {
@@ -184,7 +184,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param supplySpeed New supply-side REWARD TOKEN speed for market
      * @param borrowSpeed New borrow-side REWARD TOKEN speed for market
      */
-    function setRewardTokenSpeedInternal(
+    function _setRewardTokenSpeed(
         VToken vToken,
         uint256 supplySpeed,
         uint256 borrowSpeed
@@ -310,7 +310,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      * @return The amount of REWARD TOKEN which was NOT transferred to the user
      */
-    function grantRewardTokenInternal(address user, uint256 amount) internal returns (uint256) {
+    function _grantRewardToken(address user, uint256 amount) internal returns (uint256) {
         uint256 rewardTokenRemaining = rewardToken.balanceOf(address(this));
         if (amount > 0 && amount <= rewardTokenRemaining) {
             rewardToken.safeTransfer(user, amount);
@@ -387,8 +387,8 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param recipient The address of the recipient to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      */
-    function _grantRewardToken(address recipient, uint256 amount) external onlyOwner {
-        uint256 amountLeft = grantRewardTokenInternal(recipient, amount);
+    function grantRewardToken(address recipient, uint256 amount) external onlyOwner {
+        uint256 amountLeft = _grantRewardToken(recipient, amount);
         require(amountLeft == 0, "insufficient rewardToken for grant");
         emit RewardTokenGranted(recipient, amount);
     }
@@ -400,7 +400,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param borrowers Whether or not to claim REWARD TOKEN earned by borrowing
      * @param suppliers Whether or not to claim REWARD TOKEN earned by supplying
      */
-    function claimRewardToken(
+    function _claimRewardToken(
         address[] memory holders,
         VToken[] memory vTokens,
         bool borrowers,
@@ -426,7 +426,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
             }
         }
         for (uint256 j; j < holdersCount; ++j) {
-            rewardTokenAccrued[holders[j]] = grantRewardTokenInternal(holders[j], rewardTokenAccrued[holders[j]]);
+            rewardTokenAccrued[holders[j]] = _grantRewardToken(holders[j], rewardTokenAccrued[holders[j]]);
         }
     }
 
@@ -446,7 +446,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
     function claimRewardToken(address holder, VToken[] memory vTokens) public {
         address[] memory holders = new address[](1);
         holders[0] = holder;
-        claimRewardToken(holders, vTokens, true, true);
+        _claimRewardToken(holders, vTokens, true, true);
     }
 
     function getBlockNumber() public view virtual returns (uint256) {

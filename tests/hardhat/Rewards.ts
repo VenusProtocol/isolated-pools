@@ -143,7 +143,7 @@ describe("Rewards: Tests", async function () {
 
     comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptrollerProxy.acceptAdmin();
-    await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
+    await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
     const VToken = await ethers.getContractFactory("VToken");
     const tokenImplementation = await VToken.deploy();
@@ -216,13 +216,13 @@ describe("Rewards: Tests", async function () {
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
 
-    await rewardsDistributor._setRewardTokenSpeeds(
+    await rewardsDistributor.setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
     );
 
-    await rewardsDistributor2._setRewardTokenSpeeds(
+    await rewardsDistributor2.setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.4, 18), convertToUnit(0.3, 18)],
       [convertToUnit(0.2, 18), convertToUnit(0.1, 18)],

@@ -49,7 +49,7 @@ describe("assetListTest", () => {
     const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
-    await comptroller._setPriceOracle(oracle.address);
+    await comptroller.setPriceOracle(oracle.address);
     const names = ["OMG", "ZRX", "BAT", "sketch"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async name => {
@@ -64,7 +64,7 @@ describe("assetListTest", () => {
             });
           }
           const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-          await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
+          await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
         }
         return vToken;
       }),
@@ -97,7 +97,7 @@ describe("assetListTest", () => {
       },
       [[], []],
     );
-    await comptroller._setMarketBorrowCaps(addresses, caps);
+    await comptroller.setMarketBorrowCaps(addresses, caps);
   });
 
   async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
@@ -168,7 +168,7 @@ describe("assetListTest", () => {
     it("the market must be listed for add to succeed", async () => {
       await enterAndCheckMarkets([SKT], [], [Error.MARKET_NOT_LISTED]);
       const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-      await comptroller.connect(poolRegistrySigner)._supportMarket(SKT.address);
+      await comptroller.connect(poolRegistrySigner).supportMarket(SKT.address);
       await enterAndCheckMarkets([SKT], [SKT]);
     });
 

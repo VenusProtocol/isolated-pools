@@ -31,7 +31,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const DAI = await ethers.getContract("MockDAI");
 
   // Set Oracle
-  await Comptroller._setPriceOracle(PriceOracle.address);
+  await Comptroller.setPriceOracle(PriceOracle.address);
 
   const vWBTCAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, wBTC.address);
   const vDAIAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, DAI.address);
@@ -43,16 +43,25 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await Comptroller.connect(await ethers.getSigner(acc1)).enterMarkets([vDAI.address, vWBTC.address]);
   await Comptroller.connect(await ethers.getSigner(acc2)).enterMarkets([vDAI.address, vWBTC.address]);
 
-  //Enable Access to Supply Caps
+  //Enable access to setting supply and borrow caps
   await AccessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setMarketSupplyCaps(VToken[],uint256[])",
+    "setMarketSupplyCaps(address[],uint256[])",
+    deployer,
+  );
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setMarketBorrowCaps(address[],uint256[])",
     deployer,
   );
 
-  //Set Supply Caps
+  //Set supply caps
   const supply = convertToUnit(10, 6);
-  await Comptroller._setMarketSupplyCaps([vDAI.address, vWBTC.address], [supply, supply]);
+  await Comptroller.setMarketSupplyCaps([vDAI.address, vWBTC.address], [supply, supply]);
+
+  //Set borrow caps
+  const borrowCap = convertToUnit(10, 6);
+  await Comptroller.setMarketBorrowCaps([vDAI.address, vWBTC.address], [borrowCap, borrowCap]);
 
   return {
     fixture: {
@@ -90,23 +99,7 @@ describe("Positive Cases", () => {
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({
-      PoolRegistry,
-      AccessControlManager,
-      RiskFund,
-      VTokenFactory,
-      JumpRateModelFactory,
-      WhitePaperRateFactory,
-      ProtocolShareReserve,
-      PriceOracle,
-      Comptroller,
-      vWBTC,
-      vDAI,
-      wBTC,
-      DAI,
-      acc1,
-      acc2,
-    } = fixture);
+    ({ PoolRegistry, AccessControlManager, Comptroller, vWBTC, vDAI, wBTC, DAI, acc1, acc2 } = fixture);
   });
   describe("Setup", () => {
     it("PoolRegistry should be initialized properly", async function () {
@@ -124,19 +117,19 @@ describe("Positive Cases", () => {
     it("PoolRegistry has the required permissions ", async function () {
       let canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_setCollateralFactor(VToken,uint256,uint256)",
+        "setCollateralFactor(address,uint256,uint256)",
       );
       expect(canCall).to.be.true;
 
       canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_supportMarket(VToken)",
+        "supportMarket(address)",
       );
       expect(canCall).to.be.true;
 
       canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_setLiquidationIncentive(uint)",
+        "setLiquidationIncentive(uint256)",
       );
       expect(canCall).to.be.true;
     });

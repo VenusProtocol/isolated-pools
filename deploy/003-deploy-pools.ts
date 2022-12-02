@@ -122,12 +122,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   await tx.wait();
 
-  comptroller1Proxy._setMarketBorrowCaps(
+  comptroller1Proxy.setMarketBorrowCaps(
     [tokenImplementation.address],
     ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
   );
 
-  comptroller1Proxy._setMarketSupplyCaps(
+  comptroller1Proxy.setMarketSupplyCaps(
     [tokenImplementation.address],
     ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
   );
