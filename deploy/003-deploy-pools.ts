@@ -7,7 +7,7 @@ import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
-  const { deploy } = deployments;
+  const { deploy, deplo } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
   //=======================
   // DEPLOY MOCK TOKENS
@@ -63,10 +63,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
+  const Beacon: DeployResult = await deploy("Beacon", {
+    contract: "Beacon",
+    from: deployer,
+    args: [Pool1Comptroller.address],
+    log: true,
+    autoMine: true
+  })
+
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
     proxyAdmin,
-    Pool1Comptroller.address,
+    Beacon.address,
     closeFactor,
     liquidationIncentive,
     minLiquidatableCollateral,

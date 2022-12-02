@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../Comptroller.sol";
 import "../Factories/VTokenProxyFactory.sol";
@@ -194,7 +195,7 @@ contract PoolRegistry is OwnableUpgradeable {
      * @dev Deploys a new Venus pool and adds to the directory.
      * @param name The name of the pool.
      * @param proxyAdmin The address of the ProxyAdmin contract.
-     * @param implementationAddress The Comptroller implementation address.
+     * @param implementationAddress The upgradeable beacon contract address for Comptroller implementation.
      * @param closeFactor The pool's close factor (scaled by 1e18).
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
      * @param priceOracle The pool's PriceOracle address.
@@ -216,11 +217,11 @@ contract PoolRegistry is OwnableUpgradeable {
 
         Comptroller implementation = Comptroller(implementationAddress);
 
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+        BeaconProxy proxy = new BeaconProxy(
             implementationAddress,
-            proxyAdmin,
             abi.encodeWithSelector(implementation.initialize.selector)
         );
+
         proxyAddress = address(proxy);
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
