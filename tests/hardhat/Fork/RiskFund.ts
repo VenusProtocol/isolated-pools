@@ -353,9 +353,9 @@ const riskFundFixture = async (): Promise<void> => {
   await comptroller3Proxy.connect(user).enterMarkets([cUSDT3.address, bUSDT3.address]);
 
   // Set Oracle
-  await comptroller1Proxy._setPriceOracle(priceOracle.address);
-  await comptroller2Proxy._setPriceOracle(priceOracle.address);
-  await comptroller3Proxy._setPriceOracle(priceOracle.address);
+  await comptroller1Proxy.setPriceOracle(priceOracle.address);
+  await comptroller2Proxy.setPriceOracle(priceOracle.address);
+  await comptroller3Proxy.setPriceOracle(priceOracle.address);
 
   if (FORK_MAINNET) {
     pancakeSwapRouter = await PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);

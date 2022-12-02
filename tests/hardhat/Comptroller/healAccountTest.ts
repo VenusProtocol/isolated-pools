@@ -49,9 +49,9 @@ describe("healAccount", () => {
     const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
-    await comptroller._setPriceOracle(oracle.address);
-    await comptroller._setLiquidationIncentive(convertToUnit("1.1", 18));
-    await comptroller._setMinLiquidatableCollateral(convertToUnit("100", 18));
+    await comptroller.setPriceOracle(oracle.address);
+    await comptroller.setLiquidationIncentive(convertToUnit("1.1", 18));
+    await comptroller.setMinLiquidatableCollateral(convertToUnit("100", 18));
     const names = ["OMG", "ZRX", "BAT"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async () => {
@@ -65,7 +65,7 @@ describe("healAccount", () => {
           });
         }
         const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-        await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
+        await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
         return vToken;
       }),
     );
@@ -122,7 +122,7 @@ describe("healAccount", () => {
     });
 
     it("fails if collateral exceeds threshold", async () => {
-      await comptroller._setMinLiquidatableCollateral("2199999999999999999");
+      await comptroller.setMinLiquidatableCollateral("2199999999999999999");
       await expect(comptroller.connect(liquidator).healAccount(userAddress))
         .to.be.revertedWithCustomError(comptroller, "CollateralExceedsThreshold")
         .withArgs("2199999999999999999", "2200000000000000000");

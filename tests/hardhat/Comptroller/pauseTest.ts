@@ -38,7 +38,7 @@ async function pauseFixture(): Promise<PauseFixture> {
 
   accessControl.isAllowedToCall.returns(true);
   const [root] = await ethers.getSigners();
-  await comptroller._setPriceOracle(oracle.address);
+  await comptroller.setPriceOracle(oracle.address);
   const names = ["OMG", "ZRX", "BAT", "sketch"];
   const [OMG, ZRX, BAT, SKT] = await Promise.all(
     names.map(async name => {
@@ -53,7 +53,7 @@ async function pauseFixture(): Promise<PauseFixture> {
           });
         }
         const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-        await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
+        await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
       }
       return vToken;
     }),
@@ -91,43 +91,43 @@ describe("Comptroller", () => {
     rootAddress = await root.getAddress();
   });
 
-  describe("_setActionsPaused", () => {
+  describe("setActionsPaused", () => {
     it("reverts if AccessControlManager does not allow it", async () => {
       accessControl.isAllowedToCall
-        .whenCalledWith(rootAddress, "_setActionsPaused(VToken[],Action[],bool)")
+        .whenCalledWith(rootAddress, "setActionsPaused(address[],uint256[],bool)")
         .returns(false);
-      await expect(comptroller._setActionsPaused([OMG.address], [1], true)).to.be.revertedWith(
+      await expect(comptroller.setActionsPaused([OMG.address], [1], true)).to.be.revertedWith(
         "only authorised addresses can pause",
       );
     });
 
     it("reverts if the market is not listed", async () => {
-      await expect(comptroller._setActionsPaused([SKT.address], [1], true)).to.be.revertedWith(
+      await expect(comptroller.setActionsPaused([SKT.address], [1], true)).to.be.revertedWith(
         "cannot pause a market that is not listed",
       );
     });
 
     it("does nothing if the actions list is empty", async () => {
-      await comptroller._setActionsPaused([OMG.address, ZRX.address], [], true);
+      await comptroller.setActionsPaused([OMG.address, ZRX.address], [], true);
       expect(await comptroller.actionPaused(OMG.address, 1)).to.equal(false);
       expect(await comptroller.actionPaused(ZRX.address, 2)).to.equal(false);
     });
 
     it("does nothing if the markets list is empty", async () => {
-      await comptroller._setActionsPaused([], [1, 2, 3, 4, 5], true);
+      await comptroller.setActionsPaused([], [1, 2, 3, 4, 5], true);
       expect(await comptroller.actionPaused(OMG.address, 1)).to.equal(false);
       expect(await comptroller.actionPaused(ZRX.address, 2)).to.equal(false);
     });
 
     it("can pause one action on several markets", async () => {
-      await comptroller._setActionsPaused([OMG.address, BAT.address], [1], true);
+      await comptroller.setActionsPaused([OMG.address, BAT.address], [1], true);
       expect(await comptroller.actionPaused(OMG.address, 1)).to.equal(true);
       expect(await comptroller.actionPaused(ZRX.address, 1)).to.equal(false);
       expect(await comptroller.actionPaused(BAT.address, 1)).to.equal(true);
     });
 
     it("can pause several actions on one market", async () => {
-      await comptroller._setActionsPaused([OMG.address], [3, 5, 6], true);
+      await comptroller.setActionsPaused([OMG.address], [3, 5, 6], true);
       expect(await comptroller.actionPaused(OMG.address, 3)).to.equal(true);
       expect(await comptroller.actionPaused(OMG.address, 4)).to.equal(false);
       expect(await comptroller.actionPaused(OMG.address, 5)).to.equal(true);
@@ -135,8 +135,8 @@ describe("Comptroller", () => {
     });
 
     it("can pause and unpause several actions on several markets", async () => {
-      await comptroller._setActionsPaused([OMG.address, BAT.address, ZRX.address], [3, 4, 5, 6], true);
-      await comptroller._setActionsPaused([ZRX.address, BAT.address], [3, 5], false);
+      await comptroller.setActionsPaused([OMG.address, BAT.address, ZRX.address], [3, 4, 5, 6], true);
+      await comptroller.setActionsPaused([ZRX.address, BAT.address], [3, 5], false);
       expect(await comptroller.actionPaused(OMG.address, 3)).to.equal(true);
       expect(await comptroller.actionPaused(OMG.address, 4)).to.equal(true);
       expect(await comptroller.actionPaused(OMG.address, 5)).to.equal(true);

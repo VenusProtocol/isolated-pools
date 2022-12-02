@@ -124,28 +124,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setCollateralFactor(VToken,uint256,uint256)",
+    "setCollateralFactor(address,uint256,uint256)",
     poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setLiquidationIncentive(uint)",
+    "setLiquidationIncentive(uint256)",
     poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setMinLiquidatableCollateral(uint256)",
+    "setMinLiquidatableCollateral(uint256)",
     poolRegistry.address,
   );
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_supportMarket(VToken)",
+    "supportMarket(address)",
     poolRegistry.address,
   );
   await tx.wait();

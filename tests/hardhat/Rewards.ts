@@ -143,7 +143,7 @@ describe("Rewards: Tests", async function () {
 
     comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
     await comptrollerProxy.acceptAdmin();
-    await comptrollerProxy._setPriceOracle(fakePriceOracle.address);
+    await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
     const VToken = await ethers.getContractFactory("VToken");
     const tokenImplementation = await VToken.deploy();

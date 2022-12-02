@@ -33,7 +33,7 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);
-  await comptroller._setPriceOracle(oracle.address);
+  await comptroller.setPriceOracle(oracle.address);
   return { accessControl, comptroller, oracle, poolRegistry };
 }
 
@@ -61,19 +61,19 @@ async function makeVToken({
   configureVToken({ vToken, comptroller, exchangeRate });
   if (supportMarket) {
     const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-    await comptroller.connect(poolRegistrySigner)._supportMarket(vToken.address);
+    await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
   }
   if (underlyingPrice) {
     oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(convertToUnit(underlyingPrice, 18));
   }
   if (collateralFactor) {
-    await comptroller._setCollateralFactor(
+    await comptroller.setCollateralFactor(
       vToken.address,
       convertToUnit(collateralFactor, 18),
       convertToUnit(collateralFactor, 18),
     );
   }
-  await comptroller._setMarketSupplyCaps([vToken.address], [100000000000]);
+  await comptroller.setMarketSupplyCaps([vToken.address], [100000000000]);
 
   return vToken;
 }

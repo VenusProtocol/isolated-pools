@@ -31,7 +31,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const DAI = await ethers.getContract("MockDAI");
 
   // Set Oracle
-  await Comptroller._setPriceOracle(PriceOracle.address);
+  await Comptroller.setPriceOracle(PriceOracle.address);
 
   const vWBTCAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, wBTC.address);
   const vDAIAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, DAI.address);
@@ -46,13 +46,13 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   //Enable Access to Supply Caps
   await AccessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "_setMarketSupplyCaps(VToken[],uint256[])",
+    "setMarketSupplyCaps(address[],uint256[])",
     deployer,
   );
 
   //Set Supply Caps
   const supply = convertToUnit(10, 6);
-  await Comptroller._setMarketSupplyCaps([vDAI.address, vWBTC.address], [supply, supply]);
+  await Comptroller.setMarketSupplyCaps([vDAI.address, vWBTC.address], [supply, supply]);
 
   return {
     fixture: {
@@ -124,19 +124,19 @@ describe("Positive Cases", () => {
     it("PoolRegistry has the required permissions ", async function () {
       let canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_setCollateralFactor(VToken,uint256,uint256)",
+        "setCollateralFactor(address,uint256,uint256)",
       );
       expect(canCall).to.be.true;
 
       canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_supportMarket(VToken)",
+        "supportMarket(address)",
       );
       expect(canCall).to.be.true;
 
       canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
-        "_setLiquidationIncentive(uint)",
+        "setLiquidationIncentive(uint256)",
       );
       expect(canCall).to.be.true;
     });

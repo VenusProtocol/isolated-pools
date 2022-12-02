@@ -62,8 +62,8 @@ describe("Comptroller", () => {
     const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
-    await comptroller._setPriceOracle(oracle.address);
-    await comptroller._setLiquidationIncentive(convertToUnit("1.1", 18));
+    await comptroller.setPriceOracle(oracle.address);
+    await comptroller.setLiquidationIncentive(convertToUnit("1.1", 18));
 
     const vTokenBorrowed = await smock.fake<VToken>("VToken");
     const vTokenCollateral = await smock.fake<VToken>("VToken");
@@ -142,7 +142,7 @@ describe("Comptroller", () => {
 
         await setOraclePrice(vTokenCollateral, collateralPrice);
         await setOraclePrice(vTokenBorrowed, borrowedPrice);
-        await comptroller._setLiquidationIncentive(liquidationIncentive);
+        await comptroller.setLiquidationIncentive(liquidationIncentive);
         vTokenCollateral.exchangeRateStored.returns(exchangeRate);
 
         const seizeAmount = (repayAmount * liquidationIncentive * borrowedPrice) / collateralPrice;
