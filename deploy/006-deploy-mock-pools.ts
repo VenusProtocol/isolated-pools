@@ -38,8 +38,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     args: [Pool1Comptroller.address],
     log: true,
-    autoMine: true
-  })
+    autoMine: true,
+  });
 
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
@@ -66,8 +66,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     args: [vToken.address],
     log: true,
-    autoMine: true
-  })
+    autoMine: true,
+  });
 
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
@@ -111,8 +111,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   console.log("Pools added to pool: " + comptroller1Proxy.address);
 
-  const bnxVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BNX.address)
-  const bswVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BSW.address)
+  const bnxVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BNX.address);
+  const bswVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BSW.address);
 
   comptroller1Proxy.setMarketBorrowCaps(
     [bnxVToken.address],
