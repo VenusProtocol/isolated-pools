@@ -14,7 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   let tx;
 
-  let priceOracle = await ethers.getContract("ResilientOracle");
+  const priceOracle = await ethers.getContract("ResilientOracle");
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
