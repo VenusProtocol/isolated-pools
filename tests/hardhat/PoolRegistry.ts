@@ -215,18 +215,6 @@ describe("PoolRegistry: Tests", function () {
     await poolRegistry.setPoolName(comptroller1Proxy.address, "Pool 1");
   });
 
-  it("Bookmark pool and get the bookmarked pools", async function () {
-    const pools = await poolRegistry.callStatic.getAllPools();
-    await poolRegistry.bookmarkPool(pools[0].comptroller);
-
-    const [owner] = await ethers.getSigners();
-
-    const bookmarkedPools = await poolRegistry.getBookmarks(owner.address);
-
-    expect(bookmarkedPools.length).equal(1);
-    expect(bookmarkedPools[0]).equal(pools[0].comptroller);
-  });
-
   it("Get pool by comptroller", async function () {
     const pool1 = await poolRegistry.getPoolByComptroller(comptroller1Proxy.address);
     expect(pool1[0]).equal("Pool 1");

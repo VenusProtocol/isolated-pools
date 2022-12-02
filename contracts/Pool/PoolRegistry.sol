@@ -110,11 +110,6 @@ contract PoolRegistry is OwnableUpgradeable {
     mapping(address => VenusPool) private _poolByComptroller;
 
     /**
-     * @dev Maps Ethereum accounts to arrays of Venus pool Comptroller proxy contract addresses.
-     */
-    mapping(address => address[]) private _bookmarks;
-
-    /**
      * @dev Maps pool id to asset to vToken.
      */
     mapping(address => mapping(address => address)) private _vTokens;
@@ -267,13 +262,6 @@ contract PoolRegistry is OwnableUpgradeable {
     }
 
     /**
-     * @notice Bookmarks a Venus pool Unitroller (Comptroller proxy) contract addresses.
-     */
-    function bookmarkPool(address comptroller) external {
-        _bookmarks[msg.sender].push(comptroller);
-    }
-
-    /**
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
@@ -300,13 +288,6 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory) {
         return metadata[comptroller];
-    }
-
-    /**
-     * @notice Returns arrays of Venus pool Unitroller (Comptroller proxy) contract addresses bookmarked by `account`.
-     */
-    function getBookmarks(address account) external view returns (address[] memory) {
-        return _bookmarks[account];
     }
 
     /**
