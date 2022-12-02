@@ -47,11 +47,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param reserves The amount of reserves in the market (currently unused)
      * @return The utilization rate as a mantissa between [0, BASE]
      */
-    function utilizationRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) public pure returns (uint256) {
+    function utilizationRate(uint256 cash, uint256 borrows, uint256 reserves) public pure returns (uint256) {
         // Utilization rate is 0 when there are no borrows
         if (borrows == 0) {
             return 0;
@@ -67,11 +63,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param reserves The amount of reserves in the market
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
-    function getBorrowRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) public view override returns (uint256) {
+    function getBorrowRate(uint256 cash, uint256 borrows, uint256 reserves) public view override returns (uint256) {
         uint256 ur = utilizationRate(cash, borrows, reserves);
         return ((ur * multiplierPerBlock) / BASE) + baseRatePerBlock;
     }

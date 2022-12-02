@@ -16,24 +16,11 @@ abstract contract ComptrollerInterface {
 
     /*** Policy Hooks ***/
 
-    function mintAllowed(
-        address vToken,
-        address minter,
-        uint256 mintAmount
-    ) external virtual returns (uint256);
+    function mintAllowed(address vToken, address minter, uint256 mintAmount) external virtual returns (uint256);
 
-    function mintVerify(
-        address vToken,
-        address minter,
-        uint256 mintAmount,
-        uint256 mintTokens
-    ) external virtual;
+    function mintVerify(address vToken, address minter, uint256 mintAmount, uint256 mintTokens) external virtual;
 
-    function redeemAllowed(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) external virtual returns (uint256);
+    function redeemAllowed(address vToken, address redeemer, uint256 redeemTokens) external virtual returns (uint256);
 
     function redeemVerify(
         address vToken,
@@ -42,17 +29,9 @@ abstract contract ComptrollerInterface {
         uint256 redeemTokens
     ) external virtual;
 
-    function borrowAllowed(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external virtual returns (uint256);
+    function borrowAllowed(address vToken, address borrower, uint256 borrowAmount) external virtual returns (uint256);
 
-    function borrowVerify(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external virtual;
+    function borrowVerify(address vToken, address borrower, uint256 borrowAmount) external virtual;
 
     function repayBorrowAllowed(
         address vToken,
@@ -110,12 +89,7 @@ abstract contract ComptrollerInterface {
         uint256 transferTokens
     ) external virtual returns (uint256);
 
-    function transferVerify(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external virtual;
+    function transferVerify(address vToken, address src, address dst, uint256 transferTokens) external virtual;
 
     /*** Liquidity/Liquidation Calculations ***/
 

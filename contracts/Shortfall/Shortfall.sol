@@ -104,11 +104,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Initalize the shortfall contract
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
-    function initialize(
-        IERC20Upgradeable _BUSD,
-        IRiskFund _riskFund,
-        uint256 _minimumPoolBadDebt
-    ) public initializer {
+    function initialize(IERC20Upgradeable _BUSD, IRiskFund _riskFund, uint256 _minimumPoolBadDebt) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;

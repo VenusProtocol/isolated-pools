@@ -80,11 +80,7 @@ contract Dai is LibNote {
         return transferFrom(msg.sender, dst, wad);
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 wad
-    ) public returns (bool) {
+    function transferFrom(address src, address dst, uint256 wad) public returns (bool) {
         require(balanceOf[src] >= wad, "Dai/insufficient-balance");
         if (src != msg.sender && allowance[src][msg.sender] != uint256(-1)) {
             require(allowance[src][msg.sender] >= wad, "Dai/insufficient-allowance");
@@ -128,11 +124,7 @@ contract Dai is LibNote {
         transferFrom(usr, msg.sender, wad);
     }
 
-    function move(
-        address src,
-        address dst,
-        uint256 wad
-    ) external {
+    function move(address src, address dst, uint256 wad) external {
         transferFrom(src, dst, wad);
     }
 

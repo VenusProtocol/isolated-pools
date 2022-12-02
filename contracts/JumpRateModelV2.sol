@@ -17,11 +17,7 @@ contract JumpRateModelV2 is InterestRateModel, BaseJumpRateModelV2 {
      * @param reserves The amount of reserves in the market
      * @return The borrow rate percentage per block as a mantissa (scaled by 1e18)
      */
-    function getBorrowRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) external view override returns (uint256) {
+    function getBorrowRate(uint256 cash, uint256 borrows, uint256 reserves) external view override returns (uint256) {
         return getBorrowRateInternal(cash, borrows, reserves);
     }
 

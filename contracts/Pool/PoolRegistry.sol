@@ -315,7 +315,7 @@ contract PoolRegistry is OwnableUpgradeable {
             input.asset,
             comptroller,
             rate,
-            10**input.decimals,
+            10 ** input.decimals,
             input.name,
             input.symbol,
             input.decimals,

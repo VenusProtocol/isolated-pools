@@ -56,11 +56,10 @@ contract PoolLens is ExponentialNoError {
      * @param venusPool The VenusPool Object from PoolRegistry.
      * @notice Returns enriched PoolData.
      */
-    function getPoolDataFromVenusPool(address poolRegistryAddress, PoolRegistry.VenusPool memory venusPool)
-        public
-        view
-        returns (PoolData memory)
-    {
+    function getPoolDataFromVenusPool(
+        address poolRegistryAddress,
+        PoolRegistry.VenusPool memory venusPool
+    ) public view returns (PoolData memory) {
         //get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
@@ -102,11 +101,10 @@ contract PoolLens is ExponentialNoError {
      * @param comptroller The Comptroller implementation address.
      * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
      */
-    function getPoolByComptroller(address poolRegistryAddress, address comptroller)
-        external
-        view
-        returns (PoolData memory)
-    {
+    function getPoolByComptroller(
+        address poolRegistryAddress,
+        address comptroller
+    ) external view returns (PoolData memory) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return getPoolDataFromVenusPool(poolRegistryAddress, poolRegistryInterface.getPoolByComptroller(comptroller));
     }
@@ -131,11 +129,10 @@ contract PoolLens is ExponentialNoError {
      * @param asset The underlyingAsset of VToken.
      * @notice Returns all Pools supported by an Asset.
      */
-    function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getPoolsSupportedByAsset(
+        address poolRegistryAddress,
+        address asset
+    ) external view returns (uint256[] memory) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return poolRegistryInterface.getPoolsSupportedByAsset(asset);
     }
@@ -251,10 +248,10 @@ contract PoolLens is ExponentialNoError {
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
      */
-    function vTokenBalancesAll(VToken[] calldata vTokens, address payable account)
-        external
-        returns (VTokenBalances[] memory)
-    {
+    function vTokenBalancesAll(
+        VToken[] calldata vTokens,
+        address payable account
+    ) external returns (VTokenBalances[] memory) {
         uint256 vTokenCount = vTokens.length;
         VTokenBalances[] memory res = new VTokenBalances[](vTokenCount);
         for (uint256 i; i < vTokenCount; ++i) {
@@ -290,11 +287,9 @@ contract PoolLens is ExponentialNoError {
      * @param vTokens The list of vToken Addresses.
      * @notice Returns the underlyingPrice Info of all VTokens.
      */
-    function vTokenUnderlyingPriceAll(VToken[] calldata vTokens)
-        external
-        view
-        returns (VTokenUnderlyingPrice[] memory)
-    {
+    function vTokenUnderlyingPriceAll(
+        VToken[] calldata vTokens
+    ) external view returns (VTokenUnderlyingPrice[] memory) {
         uint256 vTokenCount = vTokens.length;
         VTokenUnderlyingPrice[] memory res = new VTokenUnderlyingPrice[](vTokenCount);
         for (uint256 i; i < vTokenCount; ++i) {

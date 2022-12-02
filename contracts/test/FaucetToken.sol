@@ -138,22 +138,14 @@ contract FaucetTokenReEntrantHarness {
         return true;
     }
 
-    function _approve(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal {
+    function _approve(address owner, address spender, uint256 amount) internal {
         require(spender != address(0));
         require(owner != address(0));
         allowance_[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
-    function _transfer(
-        address src,
-        address dst,
-        uint256 amount
-    ) internal {
+    function _transfer(address src, address dst, uint256 amount) internal {
         require(dst != address(0));
         balanceOf_[src] = balanceOf_[src].sub(amount);
         balanceOf_[dst] = balanceOf_[dst].add(amount);

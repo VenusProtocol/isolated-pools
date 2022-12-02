@@ -42,11 +42,7 @@ contract ExponentialNoError {
     /**
      * @dev Multiply an Exp by a scalar, truncate, then add an to an unsigned integer, returning an unsigned integer.
      */
-    function mul_ScalarTruncateAddUInt(
-        Exp memory a,
-        uint256 scalar,
-        uint256 addend
-    ) internal pure returns (uint256) {
+    function mul_ScalarTruncateAddUInt(Exp memory a, uint256 scalar, uint256 addend) internal pure returns (uint256) {
         Exp memory product = mul_(a, scalar);
         return add_(truncate(product), addend);
     }
@@ -80,12 +76,12 @@ contract ExponentialNoError {
     }
 
     function safe224(uint256 n, string memory errorMessage) internal pure returns (uint224) {
-        require(n < 2**224, errorMessage);
+        require(n < 2 ** 224, errorMessage);
         return uint224(n);
     }
 
     function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
+        require(n < 2 ** 32, errorMessage);
         return uint32(n);
     }
 

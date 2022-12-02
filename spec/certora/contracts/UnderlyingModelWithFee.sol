@@ -29,11 +29,7 @@ contract UnderlyingModelWithFee is EIP20NonStandardInterface, SimulationInterfac
         balances[dst] += actualAmount;
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override {
+    function transferFrom(address src, address dst, uint256 amount) external override {
         uint256 actualAmount = amount + fee;
         require(actualAmount > fee);
         require(allowances[src][msg.sender] >= actualAmount);

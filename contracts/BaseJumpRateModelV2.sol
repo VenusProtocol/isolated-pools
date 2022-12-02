@@ -93,11 +93,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param reserves The amount of reserves in the market (currently unused)
      * @return The utilization rate as a mantissa between [0, BASE]
      */
-    function utilizationRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) public pure returns (uint256) {
+    function utilizationRate(uint256 cash, uint256 borrows, uint256 reserves) public pure returns (uint256) {
         // Utilization rate is 0 when there are no borrows
         if (borrows == 0) {
             return 0;
@@ -113,11 +109,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param reserves The amount of reserves in the market
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
-    function getBorrowRateInternal(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) internal view returns (uint256) {
+    function getBorrowRateInternal(uint256 cash, uint256 borrows, uint256 reserves) internal view returns (uint256) {
         uint256 util = utilizationRate(cash, borrows, reserves);
 
         if (util <= kink) {

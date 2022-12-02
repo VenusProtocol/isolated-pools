@@ -86,11 +86,7 @@ contract VTokenHarness is VToken {
         totalReserves = totalReserves_;
     }
 
-    function harnessExchangeRateDetails(
-        uint256 totalSupply_,
-        uint256 totalBorrows_,
-        uint256 totalReserves_
-    ) public {
+    function harnessExchangeRateDetails(uint256 totalSupply_, uint256 totalBorrows_, uint256 totalReserves_) public {
         totalSupply = totalSupply_;
         totalBorrows = totalBorrows_;
         totalReserves = totalReserves_;
@@ -124,11 +120,7 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
-    function harnessSetAccountBorrows(
-        address account,
-        uint256 principal,
-        uint256 interestIndex
-    ) public {
+    function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) public {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
@@ -141,11 +133,7 @@ contract VTokenHarness is VToken {
         return NO_ERROR;
     }
 
-    function harnessRepayBorrowFresh(
-        address payer,
-        address account,
-        uint256 repayAmount
-    ) public returns (uint256) {
+    function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) public returns (uint256) {
         repayBorrowFresh(payer, account, repayAmount);
         return NO_ERROR;
     }
@@ -250,12 +238,7 @@ contract VEvil is VTokenScenario {
         )
     {}
 
-    function evilSeize(
-        VToken treasure,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) public {
+    function evilSeize(VToken treasure, address liquidator, address borrower, uint256 seizeTokens) public {
         treasure.seize(liquidator, borrower, seizeTokens);
     }
 }

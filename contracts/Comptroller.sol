@@ -198,11 +198,7 @@ contract Comptroller is
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
      * @return 0 if the mint is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function mintAllowed(
-        address vToken,
-        address minter,
-        uint256 mintAmount
-    ) external override returns (uint256) {
+    function mintAllowed(address vToken, address minter, uint256 mintAmount) external override returns (uint256) {
         checkActionPauseState(vToken, Action.MINT);
 
         // Shh - currently unused
@@ -262,11 +258,7 @@ contract Comptroller is
      * @param redeemTokens The number of vTokens to exchange for the underlying asset in the market
      * @return 0 if the redeem is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function redeemAllowed(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) external override returns (uint256) {
+    function redeemAllowed(address vToken, address redeemer, uint256 redeemTokens) external override returns (uint256) {
         checkActionPauseState(vToken, Action.REDEEM);
 
         oracle.updatePrice(vToken);
@@ -321,11 +313,7 @@ contract Comptroller is
      * @param borrowAmount The amount of underlying the account would borrow
      * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function borrowAllowed(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external override returns (uint256) {
+    function borrowAllowed(address vToken, address borrower, uint256 borrowAmount) external override returns (uint256) {
         checkActionPauseState(vToken, Action.BORROW);
 
         oracle.updatePrice(vToken);
@@ -389,11 +377,7 @@ contract Comptroller is
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
      */
-    function borrowVerify(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external override {
+    function borrowVerify(address vToken, address borrower, uint256 borrowAmount) external override {
         // Shh - currently unused
         vToken;
         borrower;
@@ -687,12 +671,7 @@ contract Comptroller is
      * @param dst The account which receives the tokens
      * @param transferTokens The number of vTokens to transfer
      */
-    function transferVerify(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external override {
+    function transferVerify(address vToken, address src, address dst, uint256 transferTokens) external override {
         // Shh - currently unused
         vToken;
         src;
@@ -999,11 +978,7 @@ contract Comptroller is
      * @param actionsList List of action ids to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
      */
-    function _setActionsPaused(
-        VToken[] calldata marketsList,
-        Action[] calldata actionsList,
-        bool paused
-    ) external {
+    function _setActionsPaused(VToken[] calldata marketsList, Action[] calldata actionsList, bool paused) external {
         bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
             msg.sender,
             "_setActionsPaused(VToken[],Action[],bool)"
@@ -1196,15 +1171,7 @@ contract Comptroller is
                 account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
      */
-    function getAccountLiquidity(address account)
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getAccountLiquidity(address account) public view returns (uint256, uint256, uint256) {
         AccountLiquiditySnapshot memory snapshot = getCurrentLiquiditySnapshot(account, getCollateralFactor);
         return (uint256(Error.NO_ERROR), snapshot.liquidity, snapshot.shortfall);
     }
@@ -1225,15 +1192,7 @@ contract Comptroller is
         address vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount
-    )
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    ) public view returns (uint256, uint256, uint256) {
         AccountLiquiditySnapshot memory snapshot = getHypotheticalLiquiditySnapshot(
             account,
             VToken(vTokenModify),
@@ -1337,11 +1296,7 @@ contract Comptroller is
      * @param action Action id to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
      */
-    function setActionPausedInternal(
-        address market,
-        Action action,
-        bool paused
-    ) internal {
+    function setActionPausedInternal(address market, Action action, bool paused) internal {
         require(markets[market].isListed, "cannot pause a market that is not listed");
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
@@ -1392,11 +1347,10 @@ contract Comptroller is
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
      */
-    function getCurrentLiquiditySnapshot(address account, function(VToken) internal view returns (Exp memory) weight)
-        internal
-        view
-        returns (AccountLiquiditySnapshot memory snapshot)
-    {
+    function getCurrentLiquiditySnapshot(
+        address account,
+        function(VToken) internal view returns (Exp memory) weight
+    ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         return getHypotheticalLiquiditySnapshot(account, VToken(address(0)), 0, 0, weight);
     }
 
@@ -1517,15 +1471,10 @@ contract Comptroller is
      * @return borrowBalance Borrowed amount, including the interest
      * @return exchangeRateMantissa Stored exchange rate
      */
-    function _safeGetAccountSnapshot(VToken vToken, address user)
-        internal
-        view
-        returns (
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRateMantissa
-        )
-    {
+    function _safeGetAccountSnapshot(
+        VToken vToken,
+        address user
+    ) internal view returns (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) {
         uint256 err;
         (err, vTokenBalance, borrowBalance, exchangeRateMantissa) = vToken.getAccountSnapshot(user);
         if (err != 0) {

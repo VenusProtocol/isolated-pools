@@ -258,17 +258,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external virtual;
 
-    function liquidateBorrow(
-        address borrower,
-        uint256 repayAmount,
-        VTokenInterface vTokenCollateral
-    ) external virtual;
+    function liquidateBorrow(address borrower, uint256 repayAmount, VTokenInterface vTokenCollateral) external virtual;
 
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
 
     function forceLiquidateBorrow(
         address liquidator,
@@ -278,19 +270,11 @@ abstract contract VTokenInterface is VTokenStorage {
         bool skipCloseFactorCheck
     ) external virtual;
 
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external virtual;
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external virtual;
 
     function transfer(address dst, uint256 amount) external virtual returns (bool);
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external virtual returns (bool);
+    function transferFrom(address src, address dst, uint256 amount) external virtual returns (bool);
 
     function approve(address spender, uint256 amount) external virtual returns (bool);
 
@@ -300,16 +284,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function balanceOfUnderlying(address owner) external virtual returns (uint256);
 
-    function getAccountSnapshot(address account)
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
+    function getAccountSnapshot(address account) external view virtual returns (uint256, uint256, uint256, uint256);
 
     function borrowRatePerBlock() external view virtual returns (uint256);
 

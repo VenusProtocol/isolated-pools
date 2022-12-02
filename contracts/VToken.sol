@@ -131,12 +131,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param tokens The number of tokens to transfer
      * @return 0 if the transfer succeeded, else revert
      */
-    function transferTokens(
-        address spender,
-        address src,
-        address dst,
-        uint256 tokens
-    ) internal returns (uint256) {
+    function transferTokens(address spender, address src, address dst, uint256 tokens) internal returns (uint256) {
         /* Fail if transfer not allowed */
         uint256 allowed = comptroller.transferAllowed(address(this), src, dst, tokens);
         if (allowed != 0) {
@@ -199,11 +194,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param amount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override nonReentrant returns (bool) {
+    function transferFrom(address src, address dst, uint256 amount) external override nonReentrant returns (bool) {
         return transferTokens(msg.sender, src, dst, amount) == NO_ERROR;
     }
 
@@ -258,17 +249,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param account Address of the account to snapshot
      * @return (possible error, token balance, borrow balance, exchange rate mantissa)
      */
-    function getAccountSnapshot(address account)
-        external
-        view
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function getAccountSnapshot(address account) external view override returns (uint256, uint256, uint256, uint256) {
         return (NO_ERROR, accountTokens[account], borrowBalanceStoredInternal(account), exchangeRateStoredInternal());
     }
 
@@ -561,11 +542,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
-    function redeemFresh(
-        address payable redeemer,
-        uint256 redeemTokensIn,
-        uint256 redeemAmountIn
-    ) internal {
+    function redeemFresh(address payable redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
         /* exchangeRate = invoke Exchange Rate Stored() */
@@ -727,11 +704,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param repayAmount the amount of underlying tokens being returned, or -1 for the full outstanding amount
      * @return (uint) the actual repayment amount.
      */
-    function repayBorrowFresh(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) internal returns (uint256) {
+    function repayBorrowFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
         uint256 allowed = comptroller.repayBorrowAllowed(address(this), payer, borrower, repayAmount);
         if (allowed != 0) {
@@ -920,11 +893,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param borrower account to heal
      * @param repayAmount amount to repay
      */
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external override nonReentrant {
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external override nonReentrant {
         if (msg.sender != address(comptroller)) {
             revert HealBorrowUnauthorized();
         }
@@ -991,11 +960,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
      */
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external override nonReentrant {
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external override nonReentrant {
         seizeInternal(msg.sender, liquidator, borrower, seizeTokens);
     }
 
@@ -1008,12 +973,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
      */
-    function seizeInternal(
-        address seizerContract,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) internal {
+    function seizeInternal(address seizerContract, address liquidator, address borrower, uint256 seizeTokens) internal {
         /* Fail if seize not allowed */
         uint256 allowed = comptroller.seizeAllowed(address(this), seizerContract, liquidator, borrower, seizeTokens);
         if (allowed != 0) {

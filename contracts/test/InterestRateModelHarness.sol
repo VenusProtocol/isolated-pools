@@ -24,11 +24,7 @@ contract InterestRateModelHarness is InterestRateModel {
         borrowRate = borrowRate_;
     }
 
-    function getBorrowRate(
-        uint256 _cash,
-        uint256 _borrows,
-        uint256 _reserves
-    ) public view override returns (uint256) {
+    function getBorrowRate(uint256 _cash, uint256 _borrows, uint256 _reserves) public view override returns (uint256) {
         _cash; // unused
         _borrows; // unused
         _reserves; // unused

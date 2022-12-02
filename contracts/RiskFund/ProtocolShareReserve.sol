@@ -35,11 +35,7 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError, Reserve
      * @param amount Amount to release.
      * @return Number of total released tokens.
      */
-    function releaseFunds(
-        address comptroller,
-        address asset,
-        uint256 amount
-    ) external onlyOwner returns (uint256) {
+    function releaseFunds(address comptroller, address asset, uint256 amount) external onlyOwner returns (uint256) {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 

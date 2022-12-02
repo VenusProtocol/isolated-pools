@@ -127,11 +127,7 @@ contract BasicToken is ERC20Basic {
 abstract contract ERC20 is ERC20Basic {
     function allowance(address _owner, address _spender) public view virtual returns (uint256);
 
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) public virtual returns (bool);
+    function transferFrom(address _from, address _to, uint256 _value) public virtual returns (bool);
 
     function approve(address _spender, uint256 _value) public virtual returns (bool);
 
@@ -158,11 +154,7 @@ contract StandardToken is ERC20, BasicToken {
      * @param _to address The address which you want to transfer to
      * @param _value uint256 the amount of tokens to be transferred
      */
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) public virtual override returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _value) public virtual override returns (bool) {
         require(_value <= balances[_from]);
         require(_value <= allowed[_from][msg.sender]);
         require(_to != address(0));
@@ -248,11 +240,7 @@ abstract contract DetailedERC20 is ERC20 {
     string public symbol;
     uint8 public decimals;
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) {
+    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
@@ -451,13 +439,10 @@ contract Pausable is Ownable {
  * @dev StandardToken modified with pausable transfers.
  **/
 contract PausableToken is StandardToken, Pausable {
-    function transfer(address _to, uint256 _value)
-        public
-        virtual
-        override(BasicToken, ERC20Basic)
-        whenNotPaused
-        returns (bool)
-    {
+    function transfer(
+        address _to,
+        uint256 _value
+    ) public virtual override(BasicToken, ERC20Basic) whenNotPaused returns (bool) {
         return super.transfer(_to, _value);
     }
 
@@ -473,23 +458,17 @@ contract PausableToken is StandardToken, Pausable {
         return super.approve(_spender, _value);
     }
 
-    function increaseApproval(address _spender, uint256 _addedValue)
-        public
-        virtual
-        override
-        whenNotPaused
-        returns (bool success)
-    {
+    function increaseApproval(
+        address _spender,
+        uint256 _addedValue
+    ) public virtual override whenNotPaused returns (bool success) {
         return super.increaseApproval(_spender, _addedValue);
     }
 
-    function decreaseApproval(address _spender, uint256 _subtractedValue)
-        public
-        virtual
-        override
-        whenNotPaused
-        returns (bool success)
-    {
+    function decreaseApproval(
+        address _spender,
+        uint256 _subtractedValue
+    ) public virtual override whenNotPaused returns (bool success) {
         return super.decreaseApproval(_spender, _subtractedValue);
     }
 }
@@ -539,28 +518,15 @@ contract Claimable is Ownable {
  * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
  */
 library SafeERC20 {
-    function safeTransfer(
-        ERC20Basic _token,
-        address _to,
-        uint256 _value
-    ) internal {
+    function safeTransfer(ERC20Basic _token, address _to, uint256 _value) internal {
         require(_token.transfer(_to, _value));
     }
 
-    function safeTransferFrom(
-        ERC20 _token,
-        address _from,
-        address _to,
-        uint256 _value
-    ) internal {
+    function safeTransferFrom(ERC20 _token, address _from, address _to, uint256 _value) internal {
         require(_token.transferFrom(_from, _to, _value));
     }
 
-    function safeApprove(
-        ERC20 _token,
-        address _spender,
-        uint256 _value
-    ) internal {
+    function safeApprove(ERC20 _token, address _spender, uint256 _value) internal {
         require(_token.approve(_spender, _value));
     }
 }
@@ -605,11 +571,10 @@ contract WBTVToken is
     PausableToken,
     OwnableContract
 {
-    function approve(address _spender, uint256 _value)
-        public
-        override(ERC20, PausableToken, StandardToken)
-        returns (bool)
-    {
+    function approve(
+        address _spender,
+        uint256 _value
+    ) public override(ERC20, PausableToken, StandardToken) returns (bool) {
         return super.approve(_spender, _value);
     }
 
@@ -629,27 +594,24 @@ contract WBTVToken is
         super.transferOwnership(_newOwner);
     }
 
-    function increaseApproval(address _spender, uint256 _addedValue)
-        public
-        override(PausableToken, StandardToken)
-        returns (bool)
-    {
+    function increaseApproval(
+        address _spender,
+        uint256 _addedValue
+    ) public override(PausableToken, StandardToken) returns (bool) {
         return super.increaseApproval(_spender, _addedValue);
     }
 
-    function decreaseApproval(address _spender, uint256 _subtractedValue)
-        public
-        override(PausableToken, StandardToken)
-        returns (bool)
-    {
+    function decreaseApproval(
+        address _spender,
+        uint256 _subtractedValue
+    ) public override(PausableToken, StandardToken) returns (bool) {
         return super.decreaseApproval(_spender, _subtractedValue);
     }
 
-    function transfer(address _to, uint256 _value)
-        public
-        override(BasicToken, ERC20Basic, PausableToken)
-        returns (bool)
-    {
+    function transfer(
+        address _to,
+        uint256 _value
+    ) public override(BasicToken, ERC20Basic, PausableToken) returns (bool) {
         return super.transfer(_to, _value);
     }
 

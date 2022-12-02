@@ -20,9 +20,7 @@ abstract contract PoolRegistryInterface {
     function getPoolsSupportedByAsset(address asset) external view virtual returns (uint256[] memory);
 
     /*** get metadata of a Pool by comptroller ***/
-    function getVenusPoolMetadata(address comptroller)
-        external
-        view
-        virtual
-        returns (PoolRegistry.VenusPoolMetaData memory);
+    function getVenusPoolMetadata(
+        address comptroller
+    ) external view virtual returns (PoolRegistry.VenusPoolMetaData memory);
 }

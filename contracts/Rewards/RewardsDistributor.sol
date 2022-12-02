@@ -184,11 +184,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param supplySpeed New supply-side REWARD TOKEN speed for market
      * @param borrowSpeed New borrow-side REWARD TOKEN speed for market
      */
-    function setRewardTokenSpeedInternal(
-        VToken vToken,
-        uint256 supplySpeed,
-        uint256 borrowSpeed
-    ) internal {
+    function setRewardTokenSpeedInternal(VToken vToken, uint256 supplySpeed, uint256 borrowSpeed) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
         if (rewardTokenSupplySpeeds[address(vToken)] != supplySpeed) {
@@ -266,11 +262,7 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
      */
-    function _distributeBorrowerRewardToken(
-        address vToken,
-        address borrower,
-        Exp memory marketBorrowIndex
-    ) internal {
+    function _distributeBorrowerRewardToken(address vToken, address borrower, Exp memory marketBorrowIndex) internal {
         // TODO: Don't distribute supplier REWARD TOKEN if the user is not in the borrower market.
         // This check should be as gas efficient as possible as distributeBorrowerRewardToken is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
