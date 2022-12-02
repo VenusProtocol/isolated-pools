@@ -216,13 +216,13 @@ describe("Rewards: Tests", async function () {
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
     await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
 
-    await rewardsDistributor._setRewardTokenSpeeds(
+    await rewardsDistributor.setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
       [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
     );
 
-    await rewardsDistributor2._setRewardTokenSpeeds(
+    await rewardsDistributor2.setRewardTokenSpeeds(
       [vWBTC.address, vDAI.address],
       [convertToUnit(0.4, 18), convertToUnit(0.3, 18)],
       [convertToUnit(0.2, 18), convertToUnit(0.1, 18)],
