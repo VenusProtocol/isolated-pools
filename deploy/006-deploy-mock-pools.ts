@@ -7,7 +7,7 @@ import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
-  const { deploy, deplo } = deployments;
+  const { deploy } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
 
   const BNX = await ethers.getContract("MockBNX");
