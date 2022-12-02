@@ -192,7 +192,7 @@ describe("PoolRegistry: Tests", function () {
     await comptroller1Proxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
 
     // Set Oracle
-    await comptroller1Proxy._setPriceOracle(priceOracle.address);
+    await comptroller1Proxy.setPriceOracle(priceOracle.address);
   });
 
   it("Pools should have correct names", async function () {

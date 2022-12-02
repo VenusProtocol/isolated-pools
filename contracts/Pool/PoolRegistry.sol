@@ -225,19 +225,16 @@ contract PoolRegistry is OwnableUpgradeable {
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
         // Set Venus pool parameters
+        require(comptrollerProxy.setCloseFactor(closeFactor) == 0, "RegistryPool: Failed to set close factor of Pool.");
         require(
-            comptrollerProxy._setCloseFactor(closeFactor) == 0,
-            "RegistryPool: Failed to set close factor of Pool."
-        );
-        require(
-            comptrollerProxy._setLiquidationIncentive(liquidationIncentive) == 0,
+            comptrollerProxy.setLiquidationIncentive(liquidationIncentive) == 0,
             "RegistryPool: Failed to set liquidation incentive of Pool."
         );
 
-        comptrollerProxy._setMinLiquidatableCollateral(minLiquidatableCollateral);
+        comptrollerProxy.setMinLiquidatableCollateral(minLiquidatableCollateral);
 
         require(
-            comptrollerProxy._setPriceOracle(PriceOracle(priceOracle)) == 0,
+            comptrollerProxy.setPriceOracle(PriceOracle(priceOracle)) == 0,
             "RegistryPool: Failed to set price oracle of Pool."
         );
 
@@ -328,8 +325,8 @@ contract PoolRegistry is OwnableUpgradeable {
 
         VToken vToken = vTokenFactory.deployVTokenProxy(initializeArgs);
 
-        comptroller._supportMarket(vToken);
-        comptroller._setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
+        comptroller.supportMarket(vToken);
+        comptroller.setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);

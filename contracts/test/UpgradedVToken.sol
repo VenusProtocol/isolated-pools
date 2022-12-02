@@ -41,7 +41,7 @@ contract UpgradedVToken is VToken {
         admin = payable(msg.sender);
 
         // Initialize the market
-        initializeInternal(
+        _initialize(
             underlying_,
             comptroller_,
             interestRateModel_,

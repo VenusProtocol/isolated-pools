@@ -94,6 +94,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   console.log("Pools added to pool: " + comptroller1Proxy.address);
+  comptroller1Proxy.setMarketBorrowCaps(
+    [vBNXImplementation.address],
+    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
+  );
+
+  comptroller1Proxy.setMarketSupplyCaps(
+    [vBSWImplementation.address],
+    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
+  );
 };
 
 func.tags = ["Pools"];
