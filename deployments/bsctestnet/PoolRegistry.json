@@ -1,5 +1,5 @@
 {
-  "address": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+  "address": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
   "abi": [
     {
       "anonymous": false,
@@ -142,12 +142,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
           "internalType": "address",
           "name": "comptroller",
           "type": "address"
@@ -186,37 +180,75 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
           "internalType": "address",
-          "name": "comptrollerAddress",
+          "name": "comptroller",
           "type": "address"
         },
         {
+          "components": [
+            {
+              "internalType": "enum PoolRegistry.RiskRating",
+              "name": "riskRating",
+              "type": "uint8"
+            },
+            {
+              "internalType": "string",
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "logoURL",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "description",
+              "type": "string"
+            }
+          ],
           "indexed": false,
-          "internalType": "enum PoolRegistry.RiskRating",
-          "name": "riskRating",
-          "type": "uint8"
+          "internalType": "struct PoolRegistry.VenusPoolMetaData",
+          "name": "oldMetadata",
+          "type": "tuple"
         },
         {
+          "components": [
+            {
+              "internalType": "enum PoolRegistry.RiskRating",
+              "name": "riskRating",
+              "type": "uint8"
+            },
+            {
+              "internalType": "string",
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "logoURL",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "description",
+              "type": "string"
+            }
+          ],
           "indexed": false,
-          "internalType": "string",
-          "name": "category",
-          "type": "string"
+          "internalType": "struct PoolRegistry.VenusPoolMetaData",
+          "name": "newMetadata",
+          "type": "tuple"
         }
       ],
-      "name": "PoolMedatataUpdated",
+      "name": "PoolMetadataUpdated",
       "type": "event"
     },
     {
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "address",
           "name": "comptroller",
           "type": "address"
@@ -235,18 +267,13 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
+          "indexed": true,
+          "internalType": "address",
+          "name": "comptroller",
+          "type": "address"
         },
         {
           "components": [
-            {
-              "internalType": "uint256",
-              "name": "poolId",
-              "type": "uint256"
-            },
             {
               "internalType": "string",
               "name": "name",
@@ -287,9 +314,9 @@
         {
           "components": [
             {
-              "internalType": "uint256",
-              "name": "poolId",
-              "type": "uint256"
+              "internalType": "address",
+              "name": "comptroller",
+              "type": "address"
             },
             {
               "internalType": "address",
@@ -357,7 +384,7 @@
               "type": "address"
             },
             {
-              "internalType": "contract VBep20Immutable",
+              "internalType": "contract VToken",
               "name": "tokenImplementation_",
               "type": "address"
             }
@@ -394,7 +421,12 @@
         },
         {
           "internalType": "address",
-          "name": "implementation",
+          "name": "proxyAdmin",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "implementationAddress",
           "type": "address"
         },
         {
@@ -408,6 +440,11 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "minLiquidatableCollateral",
+          "type": "uint256"
+        },
+        {
           "internalType": "address",
           "name": "priceOracle",
           "type": "address"
@@ -417,12 +454,12 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "index",
           "type": "uint256"
         },
         {
           "internalType": "address",
-          "name": "",
+          "name": "proxyAddress",
           "type": "address"
         }
       ],
@@ -435,11 +472,6 @@
       "outputs": [
         {
           "components": [
-            {
-              "internalType": "uint256",
-              "name": "poolId",
-              "type": "uint256"
-            },
             {
               "internalType": "string",
               "name": "name",
@@ -506,11 +538,6 @@
         {
           "components": [
             {
-              "internalType": "uint256",
-              "name": "poolId",
-              "type": "uint256"
-            },
-            {
               "internalType": "string",
               "name": "name",
               "type": "string"
@@ -539,76 +566,6 @@
           "internalType": "struct PoolRegistry.VenusPool",
           "name": "",
           "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "poolId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getPoolByID",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "poolId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "comptroller",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "blockPosted",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "timestampPosted",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct PoolRegistry.VenusPool",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "comptroller",
-          "type": "address"
-        }
-      ],
-      "name": "getPoolIDByComptroller",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -625,9 +582,9 @@
       "name": "getPoolsSupportedByAsset",
       "outputs": [
         {
-          "internalType": "uint256[]",
+          "internalType": "address[]",
           "name": "",
-          "type": "uint256[]"
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",
@@ -636,9 +593,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "poolId",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "comptroller",
+          "type": "address"
         },
         {
           "internalType": "address",
@@ -660,9 +617,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "poolId",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "comptroller",
+          "type": "address"
         }
       ],
       "name": "getVenusPoolMetadata",
@@ -701,7 +658,7 @@
     {
       "inputs": [
         {
-          "internalType": "contract VBep20ImmutableProxyFactory",
+          "internalType": "contract VTokenProxyFactory",
           "name": "_vTokenFactory",
           "type": "address"
         },
@@ -739,9 +696,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
+          "internalType": "address",
           "name": "",
-          "type": "uint256"
+          "type": "address"
         }
       ],
       "name": "metadata",
@@ -793,9 +750,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "poolId",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "comptroller",
+          "type": "address"
         },
         {
           "internalType": "string",
@@ -824,9 +781,9 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "poolId",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "comptroller",
+          "type": "address"
         },
         {
           "components": [
@@ -883,74 +840,74 @@
       "type": "constructor"
     }
   ],
-  "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
+  "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
   "receipt": {
     "to": null,
-    "from": "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706",
-    "contractAddress": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+    "from": "0xe68E7b83578a9Da30b53bbBDE5A775A62E6C2EA7",
+    "contractAddress": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
     "transactionIndex": 0,
-    "gasUsed": "898781",
-    "logsBloom": "0x10000000000020000000000000000000400000000000000000800008000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000002000001000000000000000000000000000000000000020000080000000000000800000000800000000000000000000000400000000000000000000000000000000000000000000080000000000000800000000000000001200000000000000400000000000000000000000000000000000000000020000000100000000000040000000000000400000000000000000420000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0xe24244ced353dafdeac518e9d408f3e4b0556a985f27809fcd621e10a0ab9cc1",
-    "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
+    "gasUsed": "898793",
+    "logsBloom": "0x00000000000000000000000000000000400000000000000000800000000000000000000000000000000000000000000000000000008000000008000000000000000000400000000000000000000002000001000000000000000000000000000000004000120000000000000000000800000000800000000000000000000000400000000000000000000000200000000000000040000080000000000000800000000000000000000000000000000400000000000000000000000000000000020000000020000000000000000000040000000000000400000000000000000020000000000000000008000000000000000000000000000000000000000000000000",
+    "blockHash": "0xbcc522670250c4d4be57545c71c0e395e4e46e80e3f7b541c64c7a3918d312f2",
+    "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
     "logs": [
       {
         "transactionIndex": 0,
-        "blockNumber": 23870992,
-        "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
-        "address": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+        "blockNumber": 24711657,
+        "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
+        "address": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
         "topics": [
           "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
-          "0x000000000000000000000000fa30b07676b2fe9ed3b6ca99065651380dc32f34"
+          "0x000000000000000000000000759145046b32bfaa5e0f17cb93bdda84b2cd8a5a"
         ],
         "data": "0x",
         "logIndex": 0,
-        "blockHash": "0xe24244ced353dafdeac518e9d408f3e4b0556a985f27809fcd621e10a0ab9cc1"
+        "blockHash": "0xbcc522670250c4d4be57545c71c0e395e4e46e80e3f7b541c64c7a3918d312f2"
       },
       {
         "transactionIndex": 0,
-        "blockNumber": 23870992,
-        "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
-        "address": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+        "blockNumber": 24711657,
+        "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
+        "address": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
         "topics": [
           "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
           "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "0x0000000000000000000000002ce1d0ffd7e869d9df33e28552b12ddded326706"
+          "0x000000000000000000000000e68e7b83578a9da30b53bbbde5a775a62e6c2ea7"
         ],
         "data": "0x",
         "logIndex": 1,
-        "blockHash": "0xe24244ced353dafdeac518e9d408f3e4b0556a985f27809fcd621e10a0ab9cc1"
+        "blockHash": "0xbcc522670250c4d4be57545c71c0e395e4e46e80e3f7b541c64c7a3918d312f2"
       },
       {
         "transactionIndex": 0,
-        "blockNumber": 23870992,
-        "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
-        "address": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+        "blockNumber": 24711657,
+        "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
+        "address": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
         "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
         "logIndex": 2,
-        "blockHash": "0xe24244ced353dafdeac518e9d408f3e4b0556a985f27809fcd621e10a0ab9cc1"
+        "blockHash": "0xbcc522670250c4d4be57545c71c0e395e4e46e80e3f7b541c64c7a3918d312f2"
       },
       {
         "transactionIndex": 0,
-        "blockNumber": 23870992,
-        "transactionHash": "0x63c6aac3c931dc3ecfb32b8b328fd2eca936396fde6edc8c66b1e3247de6f357",
-        "address": "0xB0c59fCA8f4e5450CFb1778FF93B2EdDaA8D2823",
+        "blockNumber": 24711657,
+        "transactionHash": "0x199db00aeff15c739c21afed2525ebc642e48cf6300d7a0b86569e639cb26237",
+        "address": "0x6e8813dD1a5714182C700A6ba3A05a482b36dEdf",
         "topics": ["0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f"],
-        "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070dc71004e763cc634e11095f19c0b1cf90f30f6",
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000baf91ca40e0c4daf33f5a87dcbdabe24e0801e51",
         "logIndex": 3,
-        "blockHash": "0xe24244ced353dafdeac518e9d408f3e4b0556a985f27809fcd621e10a0ab9cc1"
+        "blockHash": "0xbcc522670250c4d4be57545c71c0e395e4e46e80e3f7b541c64c7a3918d312f2"
       }
     ],
-    "blockNumber": 23870992,
-    "cumulativeGasUsed": "898781",
+    "blockNumber": 24711657,
+    "cumulativeGasUsed": "898793",
     "status": 1,
     "byzantium": true
   },
   "args": [
-    "0xfA30B07676B2fE9Ed3b6Ca99065651380dC32F34",
-    "0x70Dc71004e763cc634e11095F19C0b1Cf90F30f6",
-    "0xcc2a9a5b0000000000000000000000007f1aaaab320dbcdddbd2365922c3f0792c8a0fa50000000000000000000000004dd12b01f7a368f180ee25341aa3244e76c98c4d0000000000000000000000000cf20204ccfc0a1fb804b9d21a4206417e775f1d0000000000000000000000004e3c48545b33301d98c1197227815b43f40c5f490000000000000000000000005d253904be28182e1405f813db3ae6dc1660ca44000000000000000000000000a99e5efd98e0b7041a332afa10cf2ade10205f8b"
+    "0x759145046b32BFAA5E0f17cb93BDDa84b2Cd8a5a",
+    "0xbaf91cA40e0c4DAf33F5A87DcBdaBe24e0801e51",
+    "0xcc2a9a5b000000000000000000000000e916e4e75044659cc2fc8ad0f989e868a8b3f0310000000000000000000000009a2245f910654cfe2e446cfffb69bc45839a9d330000000000000000000000007ed56cc5408a45d5f886c1c8188f8e23ee7d8cfb000000000000000000000000d350494d58a6ed7af6a7296ea4cb62574a2d3e01000000000000000000000000fafb200b50a5953ec78f8cae9eaa0653c370a8bb000000000000000000000000f897c8f984b2ae489a27b651b6d8c897146dd826"
   ],
   "numDeployments": 1,
   "solcInputHash": "0e89febeebc7444140de8e67c9067d2c",
@@ -960,15 +917,15 @@
   "execute": {
     "methodName": "initialize",
     "args": [
-      "0x7f1aaaAB320dbcdDDBD2365922c3F0792C8a0Fa5",
-      "0x4DD12B01f7a368F180eE25341AA3244e76c98C4D",
-      "0x0CF20204CCFC0A1fb804b9d21a4206417e775F1D",
-      "0x4E3c48545b33301d98c1197227815B43f40c5F49",
-      "0x5d253904BE28182E1405F813db3aE6Dc1660ca44",
-      "0xa99e5efD98e0b7041A332AFa10CF2adE10205F8b"
+      "0xE916E4e75044659cc2Fc8ad0F989E868A8b3F031",
+      "0x9A2245f910654cfe2e446cFfFB69Bc45839a9d33",
+      "0x7ed56CC5408a45D5F886c1c8188F8E23ee7d8cFB",
+      "0xD350494D58a6ed7AF6A7296ea4cb62574A2d3E01",
+      "0xFAFb200B50a5953ec78F8Cae9Eaa0653C370A8BB",
+      "0xF897c8f984B2ae489A27b651b6D8C897146dD826"
     ]
   },
-  "implementation": "0xfA30B07676B2fE9Ed3b6Ca99065651380dC32F34",
+  "implementation": "0x759145046b32BFAA5E0f17cb93BDDa84b2Cd8a5a",
   "devdoc": {
     "details": "This contract implements a proxy that is upgradeable by an admin. To avoid https://medium.com/nomic-labs-blog/malicious-backdoors-in-ethereum-proxies-62629adf3357[proxy selector clashing], which can potentially be used in an attack, this contract uses the https://blog.openzeppelin.com/the-transparent-proxy-pattern/[transparent proxy pattern]. This pattern implies two things that go hand in hand: 1. If any account other than the admin calls the proxy, the call will be forwarded to the implementation, even if that call matches one of the admin functions exposed by the proxy itself. 2. If the admin calls the proxy, it can access the admin functions, but its calls will never be forwarded to the implementation. If the admin tries to call a function on the implementation it will fail with an error that says \"admin cannot fallback to proxy target\". These properties mean that the admin account can only be used for admin actions like upgrading the proxy or changing the admin, so it's best if it's a dedicated account that is not used for anything else. This will avoid headaches due to sudden errors when trying to call a function from the proxy implementation. Our recommendation is for the dedicated account to be an instance of the {ProxyAdmin} contract. If set up this way, you should think of the `ProxyAdmin` instance as the real administrative interface of your proxy.",
     "kind": "dev",

@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -9,43 +9,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
-  //=======================
-  // DEPLOY MOCK TOKENS
-  //========================
-  await deploy("MockBTC", {
-    from: deployer,
-    contract: "MockToken",
-    args: ["Bitcoin", "BTC", 8],
-    log: true,
-    autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
-  });
 
-  const wBTC = await ethers.getContract("MockBTC");
+  const BNX = await ethers.getContract("MockBNX");
+  const BSW = await ethers.getContract("MockBSW");
 
-  await deploy("MockDAI", {
-    from: deployer,
-    contract: "MockToken",
-    args: ["MakerDAO", "DAI", 18],
-    log: true,
-    autoMine: true,
-  });
-
-  const DAI = await ethers.getContract("MockDAI");
-
-  let priceOracle;
   let tx;
 
-  try {
-    priceOracle = await ethers.getContract("PriceOracle");
-    console.log("Price Oracle Obtained");
-  } catch (e) {
-    priceOracle = await ethers.getContract("MockPriceOracle");
-    console.log("Mock Oracle Obtained");
-    tx = await priceOracle.setPrice(wBTC.address, convertToUnit(10, 18));
-    await tx.wait();
-    tx = await priceOracle.setPrice(DAI.address, convertToUnit(1, 18));
-    await tx.wait();
-  }
+  const priceOracle = await ethers.getContract("ResilientOracle");
 
   const closeFactor = convertToUnit(0.05, 18);
   const liquidationIncentive = convertToUnit(1, 18);
@@ -55,7 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
 
-  const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
+  const Pool1Comptroller: DeployResult = await deploy("Pool 2", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
@@ -72,43 +42,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     minLiquidatableCollateral,
     priceOracle.address,
   );
-
   await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
-  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+  const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
   tx = await comptroller1Proxy.acceptAdmin();
   await tx.wait();
 
   const VToken = await ethers.getContractFactory("VToken");
-  const tokenImplementation = await VToken.deploy();
-  await tokenImplementation.deployed();
+  const vBNXImplementation = await VToken.deploy();
+  await vBNXImplementation.deployed();
 
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
-    asset: wBTC.address,
-    decimals: 8,
-    name: "Venus WBTC",
-    symbol: "vWBTC",
-    rateModel: 0,
-    baseRatePerYear: 0,
-    multiplierPerYear: "40000000000000000",
-    jumpMultiplierPerYear: 0,
-    kink_: 0,
-    collateralFactor: convertToUnit(0.7, 18),
-    liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: deployer,
-    tokenImplementation_: tokenImplementation.address,
-  });
-  await tx.wait();
-
-  tx = await poolRegistry.addMarket({
-    comptroller: comptroller1Proxy.address,
-    asset: DAI.address,
+    asset: BNX.address,
     decimals: 18,
-    name: "Compound DAI",
-    symbol: "cDAI",
+    name: "Venus BNX",
+    symbol: "vBNX",
     rateModel: 0,
     baseRatePerYear: 0,
     multiplierPerYear: "40000000000000000",
@@ -117,23 +67,48 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: deployer,
-    tokenImplementation_: tokenImplementation.address,
+    vTokenProxyAdmin: proxyAdmin,
+    tokenImplementation_: vBNXImplementation.address,
   });
   await tx.wait();
 
-  comptroller1Proxy.setMarketBorrowCaps(
-    [tokenImplementation.address],
-    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
-  );
+  const vBSWImplementation = await VToken.deploy();
+  await vBSWImplementation.deployed();
 
-  comptroller1Proxy.setMarketSupplyCaps(
-    [tokenImplementation.address],
-    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
-  );
+  tx = await poolRegistry.addMarket({
+    comptroller: comptroller1Proxy.address,
+    asset: BSW.address,
+    decimals: 18,
+    name: "Venus BSW",
+    symbol: "vBSW",
+    rateModel: 0,
+    baseRatePerYear: 0,
+    multiplierPerYear: "40000000000000000",
+    jumpMultiplierPerYear: 0,
+    kink_: 0,
+    collateralFactor: convertToUnit(0.7, 18),
+    liquidationThreshold: convertToUnit(0.7, 18),
+    accessControlManager: accessControlManager.address,
+    vTokenProxyAdmin: proxyAdmin,
+    tokenImplementation_: vBSWImplementation.address,
+  });
+
+  const PoolLens = await ethers.getContract("PoolLens");
+
+  const vBSWAddress = await PoolLens.getVTokenForAsset(poolRegistry.address, comptroller1Proxy.address, BSW.address);
+
+  const vBNXAddress = await PoolLens.getVTokenForAsset(poolRegistry.address, comptroller1Proxy.address, BNX.address);
+
+  const INT_MAX = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+  comptroller1Proxy._setMarketBorrowCaps([vBNXAddress, vBSWAddress], [INT_MAX, INT_MAX]);
+
+  comptroller1Proxy._setMarketSupplyCaps([vBNXAddress, vBSWAddress], [INT_MAX, INT_MAX]);
+
+  console.log("Pools added to pool: " + comptroller1Proxy.address);
 };
 
 func.tags = ["Pools"];
-func.dependencies = ["PoolsRegistry"];
+func.skip = async () => network.live == true;
 
 export default func;
