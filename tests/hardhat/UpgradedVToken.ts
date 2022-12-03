@@ -13,7 +13,6 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
-  VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
@@ -23,7 +22,6 @@ let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
 let comptroller1Proxy: Comptroller;
 let mockWBTC: MockToken;
-let vWBTC: VToken;
 let priceOracle: MockPriceOracle;
 let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
@@ -152,10 +150,6 @@ describe("UpgradedVToken: Tests", function () {
       vTokenProxyAdmin: proxyAdmin.address,
       tokenImplementation_: vTokenBeacon.address,
     });
-
-    const vWBTCAddress = await poolRegistry.getVTokenForAsset(pools[0].comptroller, mockWBTC.address);
-
-    vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
   });
 
   it("Upgrade the vToken contract", async function () {
@@ -163,9 +157,14 @@ describe("UpgradedVToken: Tests", function () {
     const vTokenDeploy = await vToken.deploy();
     await vTokenDeploy.deployed();
 
-    await vTokenBeacon.upgradeTo(vTokenDeploy.address)
-
+    await vTokenBeacon.upgradeTo(vTokenDeploy.address);
     const upgradeTo = await vTokenBeacon.callStatic.implementation();
     expect(upgradeTo).to.be.equal(vTokenDeploy.address);
+
+    const pools = await poolRegistry.callStatic.getAllPools();
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(pools[0].comptroller, mockWBTC.address);
+    const vWBTC = await ethers.getContractAt("UpgradedVToken", vWBTCAddress);
+
+    expect(2).to.be.equal(await vWBTC.version());
   });
 });

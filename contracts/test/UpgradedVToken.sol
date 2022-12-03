@@ -60,4 +60,9 @@ contract UpgradedVToken is VToken {
     function getTokenUnderlying() public view returns (address) {
         return underlying;
     }
+
+    /// @notice We added this new function to test contract upgrade
+    function version() external view returns (uint256) {
+        return 2;
+    }
 }
