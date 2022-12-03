@@ -209,9 +209,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             BUSD.safeTransfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
-            uint256 remainingRiskFundSeizedAmount = auction.seizedRiskFund - riskFundBidAmount;
-            riskFund.transferReserveForAuction(comptroller, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
-            BUSD.safeTransfer(auction.highestBidder, auction.seizedRiskFund - remainingRiskFundSeizedAmount);
+            riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
+            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
         }
 
         emit AuctionClosed(
