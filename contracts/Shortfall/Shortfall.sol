@@ -119,6 +119,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Update minimum pool bad debt to start auction
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     * @custom:events Emits MinimumPoolBadDebtUpdated on success
+     * @custom:access Restricted to owner
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
@@ -127,8 +129,11 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice After Pool Registry is deployed we need to set the pool registry address
+     * @notice Sets the pool registry this shortfall supports
+     * @dev After Pool Registry is deployed we need to set the pool registry address
      * @param _poolRegistry Address of pool registry contract
+     * @custom:events Emits PoolRegistryUpdated on success
+     * @custom:access Restricted to owner
      */
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
@@ -138,12 +143,13 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Start a auction
-     * @param comptroller comptroller of the pool
+     * @notice Start a auction when there is not currently one active
+     * @param comptroller Comptroller address of the pool
+     * @custom:events Emits AuctionStarted event on success
+     * @custom:access Restricted to owner
      */
     function startAuction(address comptroller) public onlyOwner {
         Auction storage auction = auctions[comptroller];
-
         require(
             (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
                 auction.status == AuctionStatus.ENDED,
@@ -218,9 +224,10 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Place a bid in a auction
-     * @param comptroller comptroller of the pool
-     * @param bidBps The bid m% or n%
+     * @notice Place a bid greater than the previous in an ongoing auction
+     * @param comptroller Comptroller address of the pool
+     * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
+     * @custom:events Emits BidPlaced event on success
      */
     function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -269,7 +276,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Close an auction
-     * @param comptroller comptroller of the pool
+     * @param comptroller Comptroller address of the pool
+     * @custom:events Emits AuctionClosed event on successful close
      */
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -325,7 +333,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Restart an auction
-     * @param comptroller ID of the pool
+     * @param comptroller Address of the pool
+     * @custom:events Emits AuctionRestarted event on successful restart
      */
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
@@ -344,8 +353,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @dev Returns the price oracle of the pool
-     * @param comptroller address of the pool's comptroller
-     * @return oracle the pool's price oracle
+     * @param comptroller Address of the pool's comptroller
+     * @return oracle The pool's price oracle
      */
     function _getPriceOracle(address comptroller) internal view returns (PriceOracle) {
         return PriceOracle(ComptrollerViewInterface(comptroller).oracle());
@@ -353,8 +362,8 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /**
      * @dev Returns all markets of the pool
-     * @param comptroller address of the pool's comptroller
-     * @return markets the pool's markets as VToken array
+     * @param comptroller Address of the pool's comptroller
+     * @return markets The pool's markets as VToken array
      */
     function _getAllMarkets(address comptroller) internal view returns (VToken[] memory) {
         return ComptrollerInterface(comptroller).getAllMarkets();
