@@ -13,7 +13,6 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
-  VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
@@ -162,7 +161,7 @@ describe("UpgradedVToken: Tests", function () {
     const vTokenDeploy = await vToken.deploy();
     await vTokenDeploy.deployed();
 
-    await vTokenBeacon.upgradeTo(vTokenDeploy.address)
+    await vTokenBeacon.upgradeTo(vTokenDeploy.address);
 
     const upgradeTo = await vTokenBeacon.callStatic.implementation();
     expect(upgradeTo).to.be.equal(vTokenDeploy.address);
