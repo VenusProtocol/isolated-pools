@@ -5,6 +5,7 @@ import { ethers } from "hardhat";
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
+  Beacon,
   Comptroller,
   JumpRateModelFactory,
   MockPriceOracle,
@@ -12,17 +13,16 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
-  TransparentUpgradeableProxy,
   VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 
 let poolRegistry: PoolRegistry;
-let comptroller1: Comptroller;
+let comptrollerBeacon: Beacon;
+let vTokenBeacon: Beacon;
 let comptroller1Proxy: Comptroller;
 let mockWBTC: MockToken;
-let vWBTC: VToken;
 let priceOracle: MockPriceOracle;
 let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
@@ -30,7 +30,6 @@ let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
-let transparentProxy: TransparentUpgradeableProxy;
 
 describe("UpgradedVToken: Tests", function () {
   /**
@@ -82,8 +81,20 @@ describe("UpgradedVToken: Tests", function () {
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
-    await comptroller1.deployed();
+    const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    await comptroller.deployed();
+
+    const VTokenContract = await ethers.getContractFactory("VToken");
+    const vToken = await VTokenContract.deploy();
+    await vToken.deployed();
+
+    const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
+    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
+    await comptrollerBeacon.deployed();
+
+    const VTokenBeacon = await ethers.getContractFactory("Beacon");
+    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+    await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
     const MockWBTC = await ethers.getContractFactory("MockToken");
@@ -105,7 +116,7 @@ describe("UpgradedVToken: Tests", function () {
     await poolRegistry.createRegistryPool(
       "Pool 1",
       proxyAdmin.address,
-      comptroller1.address,
+      comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
@@ -138,7 +149,7 @@ describe("UpgradedVToken: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
+      tokenImplementation_: vTokenBeacon.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(pools[0].comptroller, mockWBTC.address);
@@ -151,10 +162,9 @@ describe("UpgradedVToken: Tests", function () {
     const vTokenDeploy = await vToken.deploy();
     await vTokenDeploy.deployed();
 
-    transparentProxy = await ethers.getContractAt("TransparentUpgradeableProxy", vWBTC.address);
-    await transparentProxy.connect(proxyAdmin).upgradeTo(vTokenDeploy.address);
+    await vTokenBeacon.upgradeTo(vTokenDeploy.address)
 
-    const upgradeTo = await transparentProxy.connect(proxyAdmin).callStatic.implementation();
+    const upgradeTo = await vTokenBeacon.callStatic.implementation();
     expect(upgradeTo).to.be.equal(vTokenDeploy.address);
   });
 });
