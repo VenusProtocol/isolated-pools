@@ -7,6 +7,7 @@ import { ethers, network } from "hardhat";
 import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
+  Beacon,
   Comptroller,
   JumpRateModelFactory,
   MockPriceOracle,
@@ -23,9 +24,8 @@ import {
 } from "../../../typechain";
 
 let poolRegistry: PoolRegistry;
-let comptroller1: Comptroller;
-let comptroller2: Comptroller;
-let comptroller3: Comptroller;
+let comptrollerBeacon: Beacon;
+let vTokenBeacon: Beacon;
 let USDC: MockToken;
 let BUSD: MockToken;
 let USDT: MockToken;
@@ -100,15 +100,20 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
+  const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  await comptroller.deployed();
 
-  comptroller1 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
-  await comptroller1.deployed();
+  const VTokenContract = await ethers.getContractFactory("VToken");
+  const vToken = await VTokenContract.deploy();
+  await vToken.deployed();
 
-  comptroller2 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
-  await comptroller2.deployed();
+  const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
+  comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
+  await comptrollerBeacon.deployed();
 
-  comptroller3 = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
-  await comptroller3.deployed();
+  const VTokenBeacon = await ethers.getContractFactory("Beacon");
+  vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+  await vTokenBeacon.deployed();
 
   // Impersonate Accounts.
   await network.provider.request({
@@ -172,7 +177,7 @@ const riskFundFixture = async (): Promise<void> => {
   await poolRegistry.createRegistryPool(
     "Pool 1",
     proxyAdmin.address,
-    comptroller1.address,
+    comptrollerBeacon.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
@@ -183,7 +188,7 @@ const riskFundFixture = async (): Promise<void> => {
   await poolRegistry.createRegistryPool(
     "Pool 2",
     proxyAdmin.address,
-    comptroller2.address,
+    comptrollerBeacon.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
@@ -194,7 +199,7 @@ const riskFundFixture = async (): Promise<void> => {
   await poolRegistry.createRegistryPool(
     "Pool 3",
     proxyAdmin.address,
-    comptroller3.address,
+    comptrollerBeacon.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
@@ -232,7 +237,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   await poolRegistry.addMarket({
@@ -250,7 +255,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   await poolRegistry.addMarket({
@@ -268,7 +273,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   await poolRegistry.addMarket({
@@ -286,7 +291,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   await poolRegistry.addMarket({
@@ -304,7 +309,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   await poolRegistry.addMarket({
@@ -322,7 +327,7 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: fakeAccessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
-    tokenImplementation_: tokenImplementation.address,
+    tokenImplementation_: vTokenBeacon.address,
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);
