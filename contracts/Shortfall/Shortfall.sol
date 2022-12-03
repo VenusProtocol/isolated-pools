@@ -11,6 +11,8 @@ import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
 
 contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     /// @notice Type of auction
     enum AuctionType {
         LARGE_POOL_DEBT,
@@ -37,6 +39,33 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 startBidBps;
         mapping(VToken => uint256) marketDebt;
     }
+
+    /// @notice Pool registry address
+    address public poolRegistry;
+
+    /// @notice Risk fund address
+    IRiskFund private riskFund;
+
+    /// @notice Minimum USD debt in pool for shortfall to trigger
+    uint256 public minimumPoolBadDebt;
+
+    /// @notice Incentive to auction participants.
+    uint256 private constant incentiveBps = 1000; /// @notice 10%
+
+    /// @notice Max basis points i.e., 100%
+    uint256 private constant MAX_BPS = 10000;
+
+    /// @notice Time to wait for next bidder. wait for 10 blocks
+    uint256 public constant nextBidderBlockLimit = 10;
+
+    /// @notice Time to wait for first bidder. wait for 100 blocks
+    uint256 public constant waitForFirstBidder = 100;
+
+    /// @notice BUSD contract address
+    IERC20Upgradeable private BUSD;
+
+    /// @notice Auctions for each pool
+    mapping(address => Auction) public auctions;
 
     /// @notice Emitted when a auction starts
     event AuctionStarted(
@@ -71,35 +100,6 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
-    /// @notice Pool registry address
-    address public poolRegistry;
-
-    /// @notice Risk fund address
-    IRiskFund private riskFund;
-
-    /// @notice Minimum USD debt in pool for shortfall to trigger
-    uint256 public minimumPoolBadDebt;
-
-    /// @notice Incentive to auction participants.
-    uint256 private constant incentiveBps = 1000; /// @notice 10%
-
-    /// @notice Max basis points i.e., 100%
-    uint256 private constant MAX_BPS = 10000;
-
-    /// @notice Time to wait for next bidder. wait for 10 blocks
-    uint256 public constant nextBidderBlockLimit = 10;
-
-    /// @notice Time to wait for first bidder. wait for 100 blocks
-    uint256 public constant waitForFirstBidder = 100;
-
-    /// @notice BUSD contract address
-    IERC20Upgradeable private BUSD;
-
-    /// @notice Auctions for each pool
-    mapping(address => Auction) public auctions;
-
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
     /**
      * @notice Initalize the shortfall contract
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
@@ -108,119 +108,12 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         IERC20Upgradeable _BUSD,
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
-    ) public initializer {
+    ) external initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
         BUSD = _BUSD;
         riskFund = _riskFund;
-    }
-
-    /**
-     * @notice Update minimum pool bad debt to start auction
-     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
-     * @custom:events Emits MinimumPoolBadDebtUpdated on success
-     * @custom:access Restricted to owner
-     */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
-        uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
-        minimumPoolBadDebt = _minimumPoolBadDebt;
-        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
-    }
-
-    /**
-     * @notice Sets the pool registry this shortfall supports
-     * @dev After Pool Registry is deployed we need to set the pool registry address
-     * @param _poolRegistry Address of pool registry contract
-     * @custom:events Emits PoolRegistryUpdated on success
-     * @custom:access Restricted to owner
-     */
-    function setPoolRegistry(address _poolRegistry) public onlyOwner {
-        require(_poolRegistry != address(0), "invalid address");
-        address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
-    }
-
-    /**
-     * @notice Start a auction when there is not currently one active
-     * @param comptroller Comptroller address of the pool
-     * @custom:events Emits AuctionStarted event on success
-     * @custom:access Restricted to owner
-     */
-    function startAuction(address comptroller) public onlyOwner {
-        Auction storage auction = auctions[comptroller];
-        require(
-            (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
-                auction.status == AuctionStatus.ENDED,
-            "auction is on-going"
-        );
-
-        uint256 marketsCount = auction.markets.length;
-        for (uint256 i; i < marketsCount; ++i) {
-            VToken vToken = auction.markets[i];
-            auction.marketDebt[vToken] = 0;
-            auction.highestBidBps = 0;
-            auction.highestBidBlock = 0;
-        }
-
-        delete auction.markets;
-
-        VToken[] memory vTokens = _getAllMarkets(comptroller);
-        marketsCount = vTokens.length;
-        PriceOracle priceOracle = _getPriceOracle(comptroller);
-        uint256 poolBadDebt;
-
-        uint256[] memory marketsDebt = new uint256[](marketsCount);
-        auction.markets = new VToken[](marketsCount);
-
-        for (uint256 i; i < marketsCount; ++i) {
-            uint256 marketBadDebt = vTokens[i].badDebt();
-
-            priceOracle.updatePrice(address(vTokens[i]));
-            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / 1e18;
-
-            poolBadDebt = poolBadDebt + usdValue;
-            auction.markets[i] = vTokens[i];
-            auction.marketDebt[vTokens[i]] = marketBadDebt;
-            marketsDebt[i] = marketBadDebt;
-        }
-
-        require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
-
-        uint256 riskFundBalance = riskFund.getPoolReserve(comptroller);
-        uint256 remainingRiskFundBalance = riskFundBalance;
-
-        if (poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS) >= riskFundBalance) {
-            auction.startBidBps = ((MAX_BPS - incentiveBps) * remainingRiskFundBalance) / poolBadDebt;
-            remainingRiskFundBalance = 0;
-            auction.auctionType = AuctionType.LARGE_POOL_DEBT;
-        } else {
-            uint256 maxSeizeableRiskFundBalance = remainingRiskFundBalance;
-            uint256 incentivizedRiskFundBalance = ((incentiveBps * poolBadDebt) / MAX_BPS) + poolBadDebt;
-            if (incentivizedRiskFundBalance < remainingRiskFundBalance) {
-                maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
-            }
-
-            remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
-            auction.auctionType = AuctionType.LARGE_RISK_FUND;
-            auction.startBidBps = MAX_BPS;
-        }
-
-        auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
-        auction.startBlock = block.number;
-        auction.status = AuctionStatus.STARTED;
-        auction.highestBidder = address(0);
-
-        emit AuctionStarted(
-            comptroller,
-            auction.startBlock,
-            auction.auctionType,
-            auction.markets,
-            marketsDebt,
-            auction.seizedRiskFund,
-            auction.startBidBps
-        );
     }
 
     /**
@@ -349,6 +242,113 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         emit AuctionRestarted(comptroller);
         startAuction(comptroller);
+    }
+
+    /**
+     * @notice Update minimum pool bad debt to start auction
+     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     * @custom:events Emits MinimumPoolBadDebtUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+        uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
+        minimumPoolBadDebt = _minimumPoolBadDebt;
+        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
+    }
+
+    /**
+     * @notice Sets the pool registry this shortfall supports
+     * @dev After Pool Registry is deployed we need to set the pool registry address
+     * @param _poolRegistry Address of pool registry contract
+     * @custom:events Emits PoolRegistryUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function setPoolRegistry(address _poolRegistry) public onlyOwner {
+        require(_poolRegistry != address(0), "invalid address");
+        address oldPoolRegistry = poolRegistry;
+        poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+    }
+
+    /**
+     * @notice Start a auction when there is not currently one active
+     * @param comptroller Comptroller address of the pool
+     * @custom:events Emits AuctionStarted event on success
+     * @custom:access Restricted to owner
+     */
+    function startAuction(address comptroller) public onlyOwner {
+        Auction storage auction = auctions[comptroller];
+        require(
+            (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
+                auction.status == AuctionStatus.ENDED,
+            "auction is on-going"
+        );
+
+        uint256 marketsCount = auction.markets.length;
+        for (uint256 i; i < marketsCount; ++i) {
+            VToken vToken = auction.markets[i];
+            auction.marketDebt[vToken] = 0;
+            auction.highestBidBps = 0;
+            auction.highestBidBlock = 0;
+        }
+
+        delete auction.markets;
+
+        VToken[] memory vTokens = _getAllMarkets(comptroller);
+        marketsCount = vTokens.length;
+        PriceOracle priceOracle = _getPriceOracle(comptroller);
+        uint256 poolBadDebt;
+
+        uint256[] memory marketsDebt = new uint256[](marketsCount);
+        auction.markets = new VToken[](marketsCount);
+
+        for (uint256 i; i < marketsCount; ++i) {
+            uint256 marketBadDebt = vTokens[i].badDebt();
+
+            priceOracle.updatePrice(address(vTokens[i]));
+            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / 1e18;
+
+            poolBadDebt = poolBadDebt + usdValue;
+            auction.markets[i] = vTokens[i];
+            auction.marketDebt[vTokens[i]] = marketBadDebt;
+            marketsDebt[i] = marketBadDebt;
+        }
+
+        require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
+
+        uint256 riskFundBalance = riskFund.getPoolReserve(comptroller);
+        uint256 remainingRiskFundBalance = riskFundBalance;
+
+        if (poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS) >= riskFundBalance) {
+            auction.startBidBps = ((MAX_BPS - incentiveBps) * remainingRiskFundBalance) / poolBadDebt;
+            remainingRiskFundBalance = 0;
+            auction.auctionType = AuctionType.LARGE_POOL_DEBT;
+        } else {
+            uint256 maxSeizeableRiskFundBalance = remainingRiskFundBalance;
+            uint256 incentivizedRiskFundBalance = ((incentiveBps * poolBadDebt) / MAX_BPS) + poolBadDebt;
+            if (incentivizedRiskFundBalance < remainingRiskFundBalance) {
+                maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
+            }
+
+            remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
+            auction.auctionType = AuctionType.LARGE_RISK_FUND;
+            auction.startBidBps = MAX_BPS;
+        }
+
+        auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
+        auction.startBlock = block.number;
+        auction.status = AuctionStatus.STARTED;
+        auction.highestBidder = address(0);
+
+        emit AuctionStarted(
+            comptroller,
+            auction.startBlock,
+            auction.auctionType,
+            auction.markets,
+            marketsDebt,
+            auction.seizedRiskFund,
+            auction.startBidBps
+        );
     }
 
     /**
