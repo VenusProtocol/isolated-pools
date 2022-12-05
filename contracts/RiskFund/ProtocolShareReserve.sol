@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../ExponentialNoError.sol";
 import "./IRiskFund.sol";
 import "./ReserveHelpers.sol";
 
-contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
-    using SafeERC20 for IERC20;
+contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
     address private riskFund;
@@ -46,11 +46,11 @@ contract ProtocolShareReserve is OwnableUpgradeable, ExponentialNoError, Reserve
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
 
-        IERC20(asset).safeTransfer(
+        IERC20Upgradeable(asset).safeTransfer(
             protocolIncome,
             mul_(Exp({ mantissa: amount }), div_(Exp({ mantissa: 70 * expScale }), 100)).mantissa
         );
-        IERC20(asset).safeTransfer(
+        IERC20Upgradeable(asset).safeTransfer(
             riskFund,
             mul_(Exp({ mantissa: amount }), div_(Exp({ mantissa: 30 * expScale }), 100)).mantissa
         );

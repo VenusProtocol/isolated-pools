@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../ComptrollerInterface.sol";
 
 contract ReserveHelpers {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) internal assetsReserves;
@@ -27,7 +27,7 @@ contract ReserveHelpers {
     function updateAssetsState(address comptroller, address asset) external {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
-        uint256 currentBalance = IERC20(asset).balanceOf(address(this));
+        uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
             uint256 balanceDifference;
