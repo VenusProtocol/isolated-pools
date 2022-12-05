@@ -122,7 +122,6 @@ describe("PoolLens - PoolView Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       closeFactor1,
       liquidationIncentive1,
@@ -136,7 +135,6 @@ describe("PoolLens - PoolView Tests", async function () {
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       closeFactor2,
       liquidationIncentive2,
@@ -191,7 +189,7 @@ describe("PoolLens - PoolView Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.addMarket({
@@ -209,7 +207,7 @@ describe("PoolLens - PoolView Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -405,7 +403,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       closeFactor1,
       liquidationIncentive1,
@@ -419,7 +416,6 @@ describe("PoolLens - VTokens Query Tests", async function () {
     //Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       closeFactor2,
       liquidationIncentive2,
@@ -474,7 +470,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.addMarket({
@@ -492,7 +488,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {

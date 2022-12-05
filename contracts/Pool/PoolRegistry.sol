@@ -140,7 +140,7 @@ contract PoolRegistry is OwnableUpgradeable {
         uint256 liquidationThreshold;
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
-        VToken tokenImplementation_;
+        address beaconAddress;
     }
 
     /**
@@ -194,8 +194,7 @@ contract PoolRegistry is OwnableUpgradeable {
     /**
      * @dev Deploys a new Venus pool and adds to the directory.
      * @param name The name of the pool.
-     * @param proxyAdmin The address of the ProxyAdmin contract.
-     * @param implementationAddress The upgradeable beacon contract address for Comptroller implementation.
+     * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation.
      * @param closeFactor The pool's close factor (scaled by 1e18).
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
      * @param priceOracle The pool's PriceOracle address.
@@ -204,23 +203,17 @@ contract PoolRegistry is OwnableUpgradeable {
      */
     function createRegistryPool(
         string memory name,
-        address proxyAdmin,
-        address implementationAddress,
+        address beaconAddress,
         uint256 closeFactor,
         uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral,
         address priceOracle
     ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
         // Input validation
-        require(implementationAddress != address(0), "RegistryPool: Invalid Comptroller implementation address.");
+        require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
         require(priceOracle != address(0), "RegistryPool: Invalid PriceOracle address.");
 
-        Comptroller implementation = Comptroller(implementationAddress);
-
-        BeaconProxy proxy = new BeaconProxy(
-            implementationAddress,
-            abi.encodeWithSelector(implementation.initialize.selector)
-        );
+        BeaconProxy proxy = new BeaconProxy(beaconAddress, abi.encodeWithSelector(Comptroller.initialize.selector));
 
         proxyAddress = address(proxy);
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
@@ -321,7 +314,7 @@ contract PoolRegistry is OwnableUpgradeable {
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
             input.vTokenProxyAdmin,
-            input.tokenImplementation_
+            input.beaconAddress
         );
 
         VToken vToken = vTokenFactory.deployVTokenProxy(initializeArgs);

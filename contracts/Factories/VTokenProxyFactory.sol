@@ -20,14 +20,14 @@ contract VTokenProxyFactory {
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
         address vTokenProxyAdmin_;
-        VToken tokenImplementation_;
+        address beaconAddress;
     }
 
     function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
         BeaconProxy proxy = new BeaconProxy(
-            address(input.tokenImplementation_),
+            input.beaconAddress,
             abi.encodeWithSelector(
-                input.tokenImplementation_.initialize.selector,
+                VToken.initialize.selector,
                 input.underlying_,
                 input.comptroller_,
                 input.interestRateModel_,

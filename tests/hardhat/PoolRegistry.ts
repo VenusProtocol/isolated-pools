@@ -124,7 +124,6 @@ describe("PoolRegistry: Tests", function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
@@ -135,7 +134,6 @@ describe("PoolRegistry: Tests", function () {
     // Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
@@ -171,7 +169,7 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.addMarket({
@@ -189,7 +187,7 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
@@ -301,7 +299,7 @@ describe("PoolRegistry: Tests", function () {
         liquidationThreshold: convertToUnit(0.7, 18),
         accessControlManager: fakeAccessControlManager.address,
         vTokenProxyAdmin: proxyAdmin.address,
-        tokenImplementation_: tokenImplementation.address,
+        beaconAddress: tokenImplementation.address,
       }),
     ).to.be.rejectedWith("Ownable: caller is not the owner");
   });

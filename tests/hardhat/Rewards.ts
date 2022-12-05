@@ -144,7 +144,6 @@ describe("Rewards: Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
-      proxyAdmin.address,
       comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
@@ -179,7 +178,7 @@ describe("Rewards: Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.addMarket({
@@ -197,7 +196,7 @@ describe("Rewards: Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: vTokenBeacon.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);
