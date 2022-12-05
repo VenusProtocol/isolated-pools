@@ -67,7 +67,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         uint256 _minAmountToConvert,
         address _convertableBaseAsset,
         address _accessControl
-    ) public initializer {
+    ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertableBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
@@ -148,12 +148,81 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
+     * @dev Swap assets of all pools into base asset's tokens.
+     * @return Number of swapped tokens.
+     */
+    function swapAllPoolsAssets() external returns (uint256) {
+        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
+        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistry);
+        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
+
+        uint256 totalAmount = swapPoolsAssets(venusPools);
+
+        return totalAmount;
+    }
+
+    /**
+     * @dev Transfer tokens for auction.
+     * @param comptroller comptroller of the pool.
+     * @param amount Amount to be transferred to auction contract.
+     * @return Number reserved tokens.
+     */
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
+        bool canTransferFunds = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "transferReserveForAuction(uint256,uint256)"
+        );
+
+        require(canTransferFunds, "Risk fund: Not authorized to transfer funds.");
+
+        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
+        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
+        poolReserves[comptroller] = poolReserves[comptroller] - amount;
+        IERC20Upgradeable(convertableBaseAsset).safeTransfer(auctionContractAddress, amount);
+        return amount;
+    }
+
+    /**
+     * @dev Get pool reserve by pool id.
+     * @param comptroller comptroller of the pool.
+     * @return Number reserved tokens.
+     */
+    function getPoolReserve(address comptroller) external view returns (uint256) {
+        return poolReserves[comptroller];
+    }
+
+    /**
+     * @dev Swap assets of selected pools into base tokens.
+     * @param venusPools Array of Pools to swap
+     * @return Number of swapped tokens.
+     */
+    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools) public returns (uint256) {
+        uint256 totalAmount;
+        uint256 poolsCount = venusPools.length;
+        for (uint256 i; i < poolsCount; ++i) {
+            if (venusPools[i].comptroller != address(0)) {
+                VToken[] memory vTokens = ComptrollerInterface(venusPools[i].comptroller).getAllMarkets();
+
+                uint256 vTokensCount = vTokens.length;
+                for (uint256 j; j < vTokensCount; ++j) {
+                    address comptroller = venusPools[i].comptroller;
+                    VToken vToken = vTokens[j];
+                    uint256 swappedTokens = _swapAsset(vToken, comptroller);
+                    poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
+                    totalAmount = totalAmount + swappedTokens;
+                }
+            }
+        }
+        return totalAmount;
+    }
+
+    /**
      * @dev Swap single asset to Base asset.
      * @param vToken VToken
      * @param comptroller comptorller address
      * @return Number of swapped tokens.
      */
-    function swapAsset(VToken vToken, address comptroller) internal returns (uint256) {
+    function _swapAsset(VToken vToken, address comptroller) internal returns (uint256) {
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
@@ -192,74 +261,5 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
             }
         }
         return totalAmount;
-    }
-
-    /**
-     * @dev Swap assets of selected pools into base tokens.
-     * @param venusPools Array of Pools to swap
-     * @return Number of swapped tokens.
-     */
-    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools) public returns (uint256) {
-        uint256 totalAmount;
-        uint256 poolsCount = venusPools.length;
-        for (uint256 i; i < poolsCount; ++i) {
-            if (venusPools[i].comptroller != address(0)) {
-                VToken[] memory vTokens = ComptrollerInterface(venusPools[i].comptroller).getAllMarkets();
-
-                uint256 vTokensCount = vTokens.length;
-                for (uint256 j; j < vTokensCount; ++j) {
-                    address comptroller = venusPools[i].comptroller;
-                    VToken vToken = vTokens[j];
-                    uint256 swappedTokens = swapAsset(vToken, comptroller);
-                    poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
-                    totalAmount = totalAmount + swappedTokens;
-                }
-            }
-        }
-        return totalAmount;
-    }
-
-    /**
-     * @dev Swap assets of all pools into base asset's tokens.
-     * @return Number of swapped tokens.
-     */
-    function swapAllPoolsAssets() external returns (uint256) {
-        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistry);
-        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
-
-        uint256 totalAmount = swapPoolsAssets(venusPools);
-
-        return totalAmount;
-    }
-
-    /**
-     * @dev Get pool reserve by pool id.
-     * @param comptroller comptroller of the pool.
-     * @return Number reserved tokens.
-     */
-    function getPoolReserve(address comptroller) external view returns (uint256) {
-        return poolReserves[comptroller];
-    }
-
-    /**
-     * @dev Transfer tokens for auction.
-     * @param comptroller comptroller of the pool.
-     * @param amount Amount to be transferred to auction contract.
-     * @return Number reserved tokens.
-     */
-    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
-        bool canTransferFunds = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "transferReserveForAuction(uint256,uint256)"
-        );
-
-        require(canTransferFunds, "Risk fund: Not authorized to transfer funds.");
-
-        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
-        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
-        poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20Upgradeable(convertableBaseAsset).safeTransfer(auctionContractAddress, amount);
-        return amount;
     }
 }
