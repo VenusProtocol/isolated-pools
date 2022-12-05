@@ -6,9 +6,10 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { convertToUnit } from "../helpers/utils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments, getNamedAccounts }: any = hre;
+  const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
+  const deployerSigner = await hre.ethers.getNamedSigner("deployer");
 
   const BNX = await ethers.getContract("MockBNX");
   const BSW = await ethers.getContract("MockBSW");
@@ -25,7 +26,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await ethers.getContract("AccessControlManager");
 
-  const Pool1Comptroller: DeployResult = await deploy("Pool 1", {
+  const Pool1Comptroller: DeployResult = await deploy("Pool 2", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
@@ -43,13 +44,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
-    proxyAdmin,
     ComptrollerBeacon.address,
     closeFactor,
     liquidationIncentive,
     minLiquidatableCollateral,
     priceOracle.address,
   );
+
   await tx.wait();
 
   const pools = await poolRegistry.callStatic.getAllPools();
@@ -61,7 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vToken = await VToken.deploy();
   await vToken.deployed();
 
-  const VTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
+  const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
     contract: "Beacon",
     from: deployer,
     args: [vToken.address],
@@ -84,7 +85,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
-    tokenImplementation_: VTokenBeacon.address,
+    beaconAddress: vTokenBeacon.address,
   });
   await tx.wait();
 
@@ -106,23 +107,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
-    tokenImplementation_: VTokenBeacon.address,
+    beaconAddress: vTokenBeacon.address,
   });
 
+  const PoolLens = await ethers.getContract("PoolLens");
+
+  const vBSWAddress = await PoolLens.getVTokenForAsset(poolRegistry.address, comptroller1Proxy.address, BSW.address);
+
+  const vBNXAddress = await PoolLens.getVTokenForAsset(poolRegistry.address, comptroller1Proxy.address, BNX.address);
+
+  const INT_MAX = ethers.constants.MaxUint256;
+
+  comptroller1Proxy.connect(deployerSigner).setMarketBorrowCaps([vBNXAddress, vBSWAddress], [INT_MAX, INT_MAX]);
+
+  comptroller1Proxy.connect(deployerSigner).setMarketSupplyCaps([vBNXAddress, vBSWAddress], [INT_MAX, INT_MAX]);
+
   console.log("Pools added to pool: " + comptroller1Proxy.address);
-
-  const bnxVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BNX.address);
-  const bswVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BSW.address);
-
-  comptroller1Proxy.setMarketBorrowCaps(
-    [bnxVToken.address],
-    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
-  );
-
-  comptroller1Proxy.setMarketSupplyCaps(
-    [bswVToken.address],
-    ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
-  );
 };
 
 func.tags = ["Pools"];
