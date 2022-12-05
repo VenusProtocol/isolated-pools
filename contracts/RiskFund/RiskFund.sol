@@ -231,6 +231,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
                     address[] memory path = new address[](2);
                     path[0] = underlyingAsset;
                     path[1] = convertibleBaseAsset;
+                    IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, 0);
                     IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
                     uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
                         balanceOfUnderlyingAsset,
