@@ -1,8 +1,9 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { constants } from "ethers";
-import { ethers, network } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -53,9 +54,65 @@ let usdtUser: any;
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
 
+const initPancakeSwapRouter = async (
+  admin: SignerWithAddress,
+): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
+  let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
+  if (FORK_MAINNET) {
+    pancakeSwapRouter = PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
+  } else {
+    const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
+    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
+      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+      admin.address,
+    );
+    await pancakeSwapRouter.deployed();
+    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
+    // Send some BNB to account so it can faucet money from mock tokens
+    const tx = await admin.sendTransaction({
+      to: pancakeSwapRouter.address,
+      value: ethers.utils.parseEther("10"),
+    });
+    await tx.wait();
+    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+  }
+  return pancakeSwapRouter;
+};
+
+const initMainnetUser = async (user: string) => {
+  await impersonateAccount(user);
+  return ethers.getSigner(user);
+};
+
+const initMockToken = async (name: string, symbol: string, user: SignerWithAddress): Promise<MockToken> => {
+  const MockToken = await ethers.getContractFactory("MockToken");
+  const token = await MockToken.deploy(name, symbol, 18);
+  await token.deployed();
+  await token.faucet(convertToUnit(1000000, 18));
+  await token.transfer(user.address, convertToUnit(1000000, 18));
+  return token;
+};
+
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
-  [busdUser, usdcUser, usdtUser] = signers;
+  if (FORK_MAINNET) {
+    busdUser = await initMainnetUser("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
+    usdcUser = await initMainnetUser("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
+    usdtUser = await initMainnetUser("0xE4FEb3e94B4128d973A366dc4814167a90629A08");
+
+    USDC = MockToken__factory.connect("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", user);
+    BUSD = MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
+    USDT = MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
+  } else {
+    [busdUser, usdcUser, usdtUser] = signers;
+
+    USDC = await initMockToken("Mock USDC", "USDC", usdcUser);
+    BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
+    USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
+  }
+
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -68,36 +125,45 @@ const riskFundFixture = async (): Promise<void> => {
   whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
   await whitePaperRateFactory.deployed();
 
-  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-  poolRegistry = await PoolRegistry.deploy();
-  await poolRegistry.deployed();
+  pancakeSwapRouter = await initPancakeSwapRouter(admin);
+
+  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
-  riskFund = await RiskFund.deploy();
-  await riskFund.deployed();
+  riskFund = await upgrades.deployProxy(RiskFund, [
+    pancakeSwapRouter.address,
+    convertToUnit(10, 18),
+    convertToUnit(10, 18),
+    BUSD.address,
+    fakeAccessControlManager.address,
+  ]);
 
+  const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = await ProtocolShareReserve.deploy();
-  await protocolShareReserve.deployed();
+  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
+    fakeProtocolIncome.address,
+    riskFund.address,
+  ]);
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await Shortfall.deploy();
+  const shortfall = await upgrades.deployProxy(Shortfall, [
+    ethers.constants.AddressZero,
+    ethers.constants.AddressZero,
+    convertToUnit("10000", 18),
+  ]);
 
-  await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
-
-  await poolRegistry.initialize(
+  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+  poolRegistry = await upgrades.deployProxy(PoolRegistry, [
     vTokenFactory.address,
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
-  );
+  ]);
 
   await shortfall.setPoolRegistry(poolRegistry.address);
-
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
@@ -114,48 +180,6 @@ const riskFundFixture = async (): Promise<void> => {
   const VTokenBeacon = await ethers.getContractFactory("Beacon");
   vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
   await vTokenBeacon.deployed();
-
-  // Impersonate Accounts.
-  await network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: ["0xFd2FB1D2f41347527492656aD76E86820e5735F2"],
-  });
-
-  await network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: ["0x64f87BCa71227b97D2762907871E8188b4B1DddF"],
-  });
-
-  await network.provider.request({
-    method: "hardhat_impersonateAccount",
-    params: ["0xE4FEb3e94B4128d973A366dc4814167a90629A08"],
-  });
-
-  if (FORK_MAINNET) {
-    busdUser = await ethers.getSigner("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
-    usdcUser = await ethers.getSigner("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
-    usdtUser = await ethers.getSigner("0xE4FEb3e94B4128d973A366dc4814167a90629A08");
-
-    USDC = await MockToken__factory.connect("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", user);
-    BUSD = await MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
-    USDT = await MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
-  } else {
-    const MockToken = await ethers.getContractFactory("MockToken");
-    USDC = await MockToken.deploy("Mock USDC", "USDC", 18);
-    await USDC.deployed();
-    await USDC.faucet(convertToUnit(1000000, 18));
-    await USDC.transfer(usdcUser.address, convertToUnit(1000000, 18));
-
-    BUSD = await MockToken.deploy("Mock BUSD", "BUSD", 18);
-    await BUSD.deployed();
-    await BUSD.faucet(convertToUnit(1000000, 18));
-    await BUSD.transfer(busdUser.address, convertToUnit(1000000, 18));
-
-    USDT = await MockToken.deploy("Mock USDT", "USDT", 18);
-    await USDT.deployed();
-    await USDT.faucet(convertToUnit(1000000, 18));
-    await USDT.transfer(usdtUser.address, convertToUnit(1000000, 18));
-  }
 
   const _closeFactor = convertToUnit(0.05, 18);
   const _liquidationIncentive = convertToUnit(1, 18);
@@ -359,39 +383,7 @@ const riskFundFixture = async (): Promise<void> => {
   await comptroller2Proxy.setPriceOracle(priceOracle.address);
   await comptroller3Proxy.setPriceOracle(priceOracle.address);
 
-  if (FORK_MAINNET) {
-    pancakeSwapRouter = await PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
-  } else {
-    const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
-    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
-      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-      admin.address,
-    );
-    await pancakeSwapRouter.deployed();
-    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
-    // Send some BNB to account so it can faucet money from mock tokens
-    const tx = await admin.sendTransaction({
-      to: pancakeSwapRouter.address,
-      value: ethers.utils.parseEther("10"),
-    });
-    await tx.wait();
-    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-  }
-
-  await riskFund.initialize(
-    pancakeSwapRouter.address,
-    convertToUnit(10, 18),
-    convertToUnit(10, 18),
-    BUSD.address,
-    fakeAccessControlManager.address,
-  );
   await riskFund.setPoolRegistry(poolRegistry.address);
-
-  const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
-
-  await protocolShareReserve.initialize(fakeProtocolIncome.address, riskFund.address);
 };
 
 describe("Risk Fund: Tests", function () {

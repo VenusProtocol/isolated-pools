@@ -46,6 +46,13 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
      * @dev Initializes the deployer to owner.
      * @param _pancakeSwapRouter Address of the PancakeSwap router

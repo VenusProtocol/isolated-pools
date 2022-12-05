@@ -1,6 +1,6 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import {
@@ -13,6 +13,7 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
+  Shortfall,
   VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
@@ -32,8 +33,6 @@ let cTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let protocolShareReserve: ProtocolShareReserve;
-let riskFund: RiskFund;
 let tokenImplementation: VToken;
 
 describe("PoolRegistry: Tests", function () {
@@ -53,32 +52,19 @@ describe("PoolRegistry: Tests", function () {
     whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
+    const shortfall = await smock.fake<Shortfall>("Shortfall");
+    const riskFund = await smock.fake<RiskFund>("RiskFund");
+    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
+
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await PoolRegistry.deploy();
-    await poolRegistry.deployed();
-
-    const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy();
-
-    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
-    const RiskFund = await ethers.getContractFactory("RiskFund");
-    riskFund = await RiskFund.deploy();
-    await riskFund.deployed();
-
-    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-    protocolShareReserve = await ProtocolShareReserve.deploy();
-    await protocolShareReserve.deployed();
-
-    await poolRegistry.initialize(
+    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
       cTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
       protocolShareReserve.address,
-    );
-
-    await shortfall.setPoolRegistry(poolRegistry.address);
+    ]);
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);

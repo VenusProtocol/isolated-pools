@@ -1,23 +1,22 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumberish } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
   Comptroller,
-  JumpRateModelFactory,
   MockPriceOracle,
   MockToken,
   PoolLens,
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
+  Shortfall,
   VToken,
-  VTokenProxyFactory,
-  WhitePaperInterestRateModelFactory,
 } from "../../../typechain";
 
 let poolRegistry: PoolRegistry;
@@ -31,19 +30,44 @@ let vWBTC: VToken;
 let priceOracle: MockPriceOracle;
 let comptroller1Proxy: Comptroller;
 let comptroller2Proxy: Comptroller;
-let vTokenFactory: VTokenProxyFactory;
-let jumpRateFactory: JumpRateModelFactory;
-let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let poolLens: PoolLens;
 let ownerAddress: string;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let closeFactor1: BigNumberish,
-  closeFactor2: BigNumberish,
-  liquidationIncentive1: BigNumberish,
-  liquidationIncentive2: BigNumberish;
-let protocolShareReserve: ProtocolShareReserve;
-let riskFund: RiskFund;
+let closeFactor1: BigNumberish;
+let closeFactor2: BigNumberish;
+let liquidationIncentive1: BigNumberish;
+let liquidationIncentive2: BigNumberish;
 const minLiquidatableCollateral = convertToUnit(100, 18);
+
+const poolRegistryFixture = async (): Promise<PoolRegistry> => {
+  const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
+  const vTokenFactory = await VTokenProxyFactory.deploy();
+  await vTokenFactory.deployed();
+
+  const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
+  const jumpRateFactory = await JumpRateModelFactory.deploy();
+  await jumpRateFactory.deployed();
+
+  const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
+  const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+  await whitePaperRateFactory.deployed();
+
+  const shortfall = await smock.fake<Shortfall>("Shortfall");
+  const riskFund = await smock.fake<RiskFund>("Shortfall");
+  const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
+
+  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+  poolRegistry = await upgrades.deployProxy(PoolRegistry, [
+    vTokenFactory.address,
+    jumpRateFactory.address,
+    whitePaperRateFactory.address,
+    shortfall.address,
+    riskFund.address,
+    protocolShareReserve.address,
+  ]);
+
+  return poolRegistry;
+};
 
 describe("PoolLens - PoolView Tests", async function () {
   /**
@@ -51,47 +75,8 @@ describe("PoolLens - PoolView Tests", async function () {
    */
   before(async function () {
     const [owner, proxyAdmin] = await ethers.getSigners();
-    ownerAddress = await owner.getAddress();
-
-    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
-    vTokenFactory = await VTokenProxyFactory.deploy();
-    await vTokenFactory.deployed();
-
-    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
-    jumpRateFactory = await JumpRateModelFactory.deploy();
-    await jumpRateFactory.deployed();
-
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
-    whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
-    await whitePaperRateFactory.deployed();
-
-    const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await PoolRegistry.deploy();
-    await poolRegistry.deployed();
-
-    const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy();
-
-    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
-    const RiskFund = await ethers.getContractFactory("RiskFund");
-    riskFund = await RiskFund.deploy();
-    await riskFund.deployed();
-
-    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-    protocolShareReserve = await ProtocolShareReserve.deploy();
-    await protocolShareReserve.deployed();
-
-    await poolRegistry.initialize(
-      vTokenFactory.address,
-      jumpRateFactory.address,
-      whitePaperRateFactory.address,
-      shortfall.address,
-      riskFund.address,
-      protocolShareReserve.address,
-    );
-
-    await shortfall.setPoolRegistry(poolRegistry.address);
-
+    ownerAddress = owner.address;
+    poolRegistry = await loadFixture(poolRegistryFixture);
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
@@ -337,44 +322,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
-    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
-    vTokenFactory = await VTokenProxyFactory.deploy();
-    await vTokenFactory.deployed();
-
-    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
-    jumpRateFactory = await JumpRateModelFactory.deploy();
-    await jumpRateFactory.deployed();
-
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
-    whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
-    await whitePaperRateFactory.deployed();
-
-    const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await PoolRegistry.deploy();
-    await poolRegistry.deployed();
-
-    const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy();
-
-    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
-    const RiskFund = await ethers.getContractFactory("RiskFund");
-    riskFund = await RiskFund.deploy();
-    await riskFund.deployed();
-
-    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-    protocolShareReserve = await ProtocolShareReserve.deploy();
-    await protocolShareReserve.deployed();
-
-    await poolRegistry.initialize(
-      vTokenFactory.address,
-      jumpRateFactory.address,
-      whitePaperRateFactory.address,
-      shortfall.address,
-      riskFund.address,
-      protocolShareReserve.address,
-    );
-
-    await shortfall.setPoolRegistry(poolRegistry.address);
+    poolRegistry = await loadFixture(poolRegistryFixture);
 
     poolRegistryAddress = poolRegistry.address;
 

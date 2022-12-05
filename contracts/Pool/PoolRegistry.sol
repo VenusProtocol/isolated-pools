@@ -31,6 +31,13 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     address payable private riskFund;
     address payable private protocolShareReserve;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
      * @dev Initializes the deployer to owner.
      * @param _vTokenFactory vToken factory address.

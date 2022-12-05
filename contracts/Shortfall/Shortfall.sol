@@ -100,6 +100,13 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
      * @notice Initalize the shortfall contract
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction

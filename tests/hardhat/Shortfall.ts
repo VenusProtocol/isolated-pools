@@ -5,7 +5,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import {
@@ -55,8 +55,11 @@ async function shortfallFixture() {
   fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const Shortfall = await smock.mock<Shortfall__factory>("Shortfall");
-  shortfall = await Shortfall.deploy();
-  await shortfall.initialize(mockBUSD.address, fakeRiskFund.address, parseUnits(minimumPoolBadDebt, "18"));
+  shortfall = await upgrades.deployProxy(Shortfall, [
+    mockBUSD.address,
+    fakeRiskFund.address,
+    parseUnits(minimumPoolBadDebt, "18"),
+  ]);
 
   [owner, poolRegistry, someone, bidder1, bidder2] = await ethers.getSigners();
   await shortfall.setPoolRegistry(poolRegistry.address);
@@ -431,10 +434,10 @@ describe("Shortfall: Tests", async function () {
     });
   });
 
-  describe("Restart Action", async function () {
+  describe("Restart Auction", async function () {
     beforeEach(setup);
 
-    it(" Can't restart auction early ", async function () {
+    it("Can't restart auction early ", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
       await vDAI.setVariable("badDebt", parseUnits("10000", 18));
       vWBTC.badDebt.returns(parseUnits("2", 8));

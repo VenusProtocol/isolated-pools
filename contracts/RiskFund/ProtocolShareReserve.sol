@@ -14,6 +14,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     address private protocolIncome;
     address private riskFund;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
      * @dev Initializes the deployer to owner.
      * @param _protocolIncome  remaining protocol income.
