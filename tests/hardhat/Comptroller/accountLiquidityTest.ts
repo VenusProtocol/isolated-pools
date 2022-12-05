@@ -30,6 +30,7 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   const comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
   const comptroller = await comptrollerFactory.deploy(poolRegistry.address, accessControl.address);
+  await comptroller.initialize();
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);

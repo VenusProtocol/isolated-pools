@@ -37,11 +37,7 @@ contract UpgradedVToken is VToken {
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public reinitializer(2) {
-        // Creator of the contract is admin during initialization
-        admin = payable(msg.sender);
-
-        // Initialize the market
-        _initialize(
+        super._initialize(
             underlying_,
             comptroller_,
             interestRateModel_,
@@ -49,12 +45,10 @@ contract UpgradedVToken is VToken {
             name_,
             symbol_,
             decimals_,
+            admin_,
             accessControlManager_,
             riskManagement
         );
-
-        // Set the proper admin now that initialization is done
-        admin = admin_;
     }
 
     function getTokenUnderlying() public view returns (address) {

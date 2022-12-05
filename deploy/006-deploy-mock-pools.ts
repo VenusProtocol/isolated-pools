@@ -55,7 +55,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const pools = await poolRegistry.callStatic.getAllPools();
   const comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  tx = await comptroller1Proxy.acceptAdmin();
+  tx = await comptroller1Proxy.acceptOwnership();
   await tx.wait();
 
   const VToken = await ethers.getContractFactory("VToken");

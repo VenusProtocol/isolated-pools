@@ -155,7 +155,7 @@ describe("Rewards: Tests", async function () {
     const pools = await poolRegistry.callStatic.getAllPools();
 
     comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-    await comptrollerProxy.acceptAdmin();
+    await comptrollerProxy.acceptOwnership();
     await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
     const VToken = await ethers.getContractFactory("VToken");

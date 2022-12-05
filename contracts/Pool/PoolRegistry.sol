@@ -232,8 +232,8 @@ contract PoolRegistry is OwnableUpgradeable {
             "RegistryPool: Failed to set price oracle of Pool."
         );
 
-        // Make msg.sender the admin
-        comptrollerProxy.setPendingAdmin(msg.sender);
+        // Start transferring ownership to msg.sender
+        comptrollerProxy.transferOwnership(msg.sender);
 
         // Register the pool with this PoolRegistry
         return (_registerPool(name, proxyAddress), proxyAddress);
@@ -247,7 +247,7 @@ contract PoolRegistry is OwnableUpgradeable {
 
         // Note: Compiler throws stack to deep if autoformatted with Prettier
         // prettier-ignore
-        require(msg.sender == _comptroller.admin() || msg.sender == owner());
+        require(msg.sender == _comptroller.owner() || msg.sender == owner());
         _poolByComptroller[comptroller].name = name;
         emit PoolNameSet(comptroller, name);
     }

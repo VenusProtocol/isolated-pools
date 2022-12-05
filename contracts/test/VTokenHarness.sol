@@ -6,13 +6,13 @@ import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
 contract VTokenHarness is VToken {
-    uint256 public blockNumber = 100000;
+    uint256 public blockNumber;
     uint256 public harnessExchangeRate;
     bool public harnessExchangeRateStored;
 
     mapping(address => bool) public failTransferToAddresses;
 
-    constructor(
+    function initializeHarness(
         address underlying_,
         ComptrollerInterface comptroller_,
         InterestRateModel interestRateModel_,
@@ -23,8 +23,9 @@ contract VTokenHarness is VToken {
         address payable admin_,
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
-    ) {
-        initialize(
+    ) external initializer {
+        blockNumber = 100000;
+        super._initialize(
             underlying_,
             comptroller_,
             interestRateModel_,

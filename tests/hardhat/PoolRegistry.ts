@@ -144,10 +144,10 @@ describe("PoolRegistry: Tests", function () {
     // Setup Proxies
     const pools = await poolRegistry.callStatic.getAllPools();
     comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-    await comptroller1Proxy.acceptAdmin();
+    await comptroller1Proxy.acceptOwnership();
 
     comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
-    await comptroller2Proxy.acceptAdmin();
+    await comptroller2Proxy.acceptOwnership();
 
     const VToken = await ethers.getContractFactory("VToken");
     tokenImplementation = await VToken.deploy();

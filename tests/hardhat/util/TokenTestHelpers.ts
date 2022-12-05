@@ -47,7 +47,8 @@ export async function makeVToken({
   const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
-  const vToken = await vTokenFactory.deploy(
+  const vToken = await vTokenFactory.deploy();
+  await vToken.initializeHarness(
     underlying.address,
     comptroller.address,
     interestRateModel.address,

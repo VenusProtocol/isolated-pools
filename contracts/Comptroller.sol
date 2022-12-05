@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-import "./mixins/WithAdminUpgradeable.sol";
 import "./VToken.sol";
 import "./ErrorReporter.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
@@ -17,7 +16,7 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is
-    WithAdminUpgradeable,
+    Ownable2StepUpgradeable,
     ComptrollerV1Storage,
     ComptrollerInterface,
     ComptrollerErrorReporter,
@@ -53,10 +52,12 @@ contract Comptroller is
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
 
-    // PoolRegistry
+    // PoolRegistry, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable poolRegistry;
 
-    // AccessControlManager
+    // AccessControlManager, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable accessControl;
 
     // List of Reward Distributors added
@@ -105,10 +106,16 @@ contract Comptroller is
     /// @notice Emitted when supply cap for a vToken is changed
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
-    constructor(address _poolRegistry, address _accessControl) {
-        admin = msg.sender;
-        poolRegistry = _poolRegistry;
-        accessControl = _accessControl;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address poolRegistry_, address accessControl_) {
+        // Note that the contract is upgradeable. We only initialize immutables in the
+        // constructor. Use initialize() or reinitializers to set the state variables.
+        poolRegistry = poolRegistry_;
+        accessControl = accessControl_;
+    }
+
+    function initialize() public initializer {
+        __Ownable2Step_init();
     }
 
     /**
@@ -820,7 +827,7 @@ contract Comptroller is
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external returns (uint256) {
         // Check caller is admin
-        require(msg.sender == admin, "only admin can set close factor");
+        require(msg.sender == owner(), "only admin can set close factor");
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
@@ -1047,7 +1054,7 @@ contract Comptroller is
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external returns (uint256) {
-        if (msg.sender != admin) {
+        if (msg.sender != owner()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK);
         }
 
@@ -1156,10 +1163,6 @@ contract Comptroller is
         return rewardSpeeds;
     }
 
-    function initialize() public initializer {
-        __WithAdmin_init();
-    }
-
     /*** Admin Functions ***/
 
     /**
@@ -1170,7 +1173,7 @@ contract Comptroller is
      */
     function setPriceOracle(PriceOracle newOracle) public returns (uint256) {
         // Check caller is admin
-        if (msg.sender != admin) {
+        if (msg.sender != owner()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK);
         }
 
