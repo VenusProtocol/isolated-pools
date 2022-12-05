@@ -33,10 +33,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
+  const ComptrollerBeacon: DeployResult = await deploy("ComptrollerBeacon", {
+    contract: "Beacon",
+    from: deployer,
+    args: [Pool1Comptroller.address],
+    log: true,
+    autoMine: true,
+  });
+
   tx = await poolRegistry.createRegistryPool(
     "Pool 1",
     proxyAdmin,
-    Pool1Comptroller.address,
+    ComptrollerBeacon.address,
     closeFactor,
     liquidationIncentive,
     minLiquidatableCollateral,
@@ -50,8 +58,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   const VToken = await ethers.getContractFactory("VToken");
-  const vBNXImplementation = await VToken.deploy();
-  await vBNXImplementation.deployed();
+  const vToken = await VToken.deploy();
+  await vToken.deployed();
+
+  const VTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
+    contract: "Beacon",
+    from: deployer,
+    args: [vToken.address],
+    log: true,
+    autoMine: true,
+  });
 
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
@@ -68,7 +84,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
-    tokenImplementation_: vBNXImplementation.address,
+    tokenImplementation_: VTokenBeacon.address,
   });
   await tx.wait();
 
@@ -90,17 +106,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     liquidationThreshold: convertToUnit(0.7, 18),
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
-    tokenImplementation_: vBSWImplementation.address,
+    tokenImplementation_: VTokenBeacon.address,
   });
 
   console.log("Pools added to pool: " + comptroller1Proxy.address);
+
+  const bnxVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BNX.address);
+  const bswVToken = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, BSW.address);
+
   comptroller1Proxy.setMarketBorrowCaps(
-    [vBNXImplementation.address],
+    [bnxVToken.address],
     ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
   );
 
   comptroller1Proxy.setMarketSupplyCaps(
-    [vBSWImplementation.address],
+    [bswVToken.address],
     ["0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
   );
 };

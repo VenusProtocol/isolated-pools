@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
@@ -20,15 +20,14 @@ contract VTokenProxyFactory {
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
         address vTokenProxyAdmin_;
-        VToken tokenImplementation_;
+        address beaconAddress;
     }
 
     function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(input.tokenImplementation_),
-            input.vTokenProxyAdmin_,
+        BeaconProxy proxy = new BeaconProxy(
+            input.beaconAddress,
             abi.encodeWithSelector(
-                input.tokenImplementation_.initialize.selector,
+                VToken.initialize.selector,
                 input.underlying_,
                 input.comptroller_,
                 input.interestRateModel_,
@@ -41,6 +40,7 @@ contract VTokenProxyFactory {
                 input.riskManagement
             )
         );
+
         return VToken(address(proxy));
     }
 }

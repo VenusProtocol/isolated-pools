@@ -5,6 +5,7 @@ import { ethers } from "hardhat";
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
+  Beacon,
   Comptroller,
   JumpRateModelFactory,
   MockToken,
@@ -23,7 +24,8 @@ import {
 } from "../../typechain";
 
 let poolRegistry: MockContract<PoolRegistry>;
-let comptroller: Comptroller;
+let comptrollerBeacon: Beacon;
+let vTokenBeacon: Beacon;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let vDAI: VToken;
@@ -89,8 +91,20 @@ describe("Rewards: Tests", async function () {
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
     await comptroller.deployed();
+
+    const VTokenContract = await ethers.getContractFactory("VToken");
+    const vToken = await VTokenContract.deploy();
+    await vToken.deployed();
+
+    const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
+    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
+    await comptrollerBeacon.deployed();
+
+    const VTokenBeacon = await ethers.getContractFactory("Beacon");
+    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+    await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
     const MockToken = await ethers.getContractFactory("MockToken");
@@ -130,8 +144,7 @@ describe("Rewards: Tests", async function () {
     // Registering the first pool
     await poolRegistry.createRegistryPool(
       "Pool 1",
-      proxyAdmin.address,
-      comptroller.address,
+      comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
@@ -165,7 +178,7 @@ describe("Rewards: Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     await poolRegistry.addMarket({
@@ -183,7 +196,7 @@ describe("Rewards: Tests", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
-      tokenImplementation_: tokenImplementation.address,
+      beaconAddress: vTokenBeacon.address,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);
