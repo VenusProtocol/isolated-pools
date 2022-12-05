@@ -11,8 +11,8 @@
     "deployments"
   ],
   "scripts": {
-    "test": "yarn remove ethers && yarn remove ethereum-waffle && rebuild=true ./script/test && yarn add ethers@5.6.4 && yarn add ethereum-waffle@3.4.4",
-    "hardhat:test": "hardhat test",
+    "test": "hardhat test",
+    "test:integration": "hardhat test tests/integration/index.ts",
     "hardhat:compile": "hardhat compile",
     "hardhat:coverage": "hardhat coverage",
     "lint": "yarn lint:sol && yarn lint:ts && yarn prettier:check",
