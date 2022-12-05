@@ -112,6 +112,7 @@ contract Comptroller is
         // constructor. Use initialize() or reinitializers to set the state variables.
         poolRegistry = poolRegistry_;
         accessControl = accessControl_;
+        _disableInitializers();
     }
 
     function initialize() public initializer {

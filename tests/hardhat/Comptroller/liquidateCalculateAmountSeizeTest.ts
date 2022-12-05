@@ -3,7 +3,7 @@ import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumberish, constants } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -57,9 +57,11 @@ describe("Comptroller", () => {
   async function liquidateFixture(): Promise<LiquidateFixture> {
     const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
     const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
-    const ComptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    const comptroller = await ComptrollerFactory.deploy(poolRegistry.address, accessControl.address);
-    await comptroller.initialize();
+    const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
+    const comptroller = await upgrades.deployProxy(Comptroller, [], {
+      constructorArgs: [poolRegistry.address, accessControl.address],
+      initializer: "initialize()",
+    });
     const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);

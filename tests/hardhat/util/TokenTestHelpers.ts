@@ -2,7 +2,7 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -43,27 +43,31 @@ export async function makeVToken({
   interestRateModel.isInterestRateModel.returns(true);
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
-  const vTokenFactory = await smock.mock<VTokenHarness__factory>("VTokenHarness");
+  const VToken = await smock.mock<VTokenHarness__factory>("VTokenHarness");
   const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
-  const vToken = await vTokenFactory.deploy();
-  await vToken.initializeHarness(
-    underlying.address,
-    comptroller.address,
-    interestRateModel.address,
-    initialExchangeRateMantissa,
-    `v${name}`,
-
-    `v${name}`,
-    8,
-    await admin.getAddress(),
-    accessControlManager.address,
-    {
-      shortfall: shortfall.address,
-      riskFund: riskFund.address,
-      protocolShareReserve: protocolShareReserve.address,
-    },
+  const initializer =
+    "initializeHarness(address,address,address,uint256,string,string,uint8,address,address,(address,address,address))";
+  const vToken = await upgrades.deployProxy(
+    VToken,
+    [
+      underlying.address,
+      comptroller.address,
+      interestRateModel.address,
+      initialExchangeRateMantissa,
+      `v${name}`,
+      `v${name}`,
+      8,
+      await admin.getAddress(),
+      accessControlManager.address,
+      {
+        shortfall: shortfall.address,
+        riskFund: riskFund.address,
+        protocolShareReserve: protocolShareReserve.address,
+      },
+    ],
+    { initializer },
   );
   return { vToken, underlying, interestRateModel };
 }
