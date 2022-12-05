@@ -67,7 +67,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         address _convertibleBaseAsset,
         address _accessControl,
         address _shortfall
-    ) public initializer {
+    ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
@@ -137,13 +137,72 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
+     * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
+     * @param underlyingAssets Array of assets to swap for base asset
+     * @param amountsOutMin Minimum amount to recieve for swap
+     * @return Number of swapped tokens.
+     */
+    function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
+        external
+        returns (uint256)
+    {
+        bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "swapPoolsAssets(address[],uint256[])"
+        );
+        require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
+        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
+        require(
+            underlyingAssets.length == amountsOutMin.length,
+            "Risk fund: underlyingAssets and amountsOutMin are unequal lengths"
+        );
+
+        uint256 totalAmount;
+        uint256 underlyingAssetsCount = underlyingAssets.length;
+        for (uint256 i; i < underlyingAssetsCount; ++i) {
+            VToken vToken = VToken(underlyingAssets[i]);
+            address comptroller = address(vToken.comptroller());
+            uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i]);
+            poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
+            totalAmount = totalAmount + swappedTokens;
+        }
+
+        return totalAmount;
+    }
+
+    /**
+     * @dev Transfer tokens for auction.
+     * @param comptroller Comptroller of the pool.
+     * @param amount Amount to be transferred to auction contract.
+     * @return Number reserved tokens.
+     */
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
+        require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
+
+        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
+        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
+        poolReserves[comptroller] = poolReserves[comptroller] - amount;
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auctionContractAddress, amount);
+        return amount;
+    }
+
+    /**
+     * @dev Get pool reserve by pool id.
+     * @param comptroller Comptroller address of the pool.
+     * @return Number of reserved tokens.
+     */
+    function getPoolReserve(address comptroller) external view returns (uint256) {
+        return poolReserves[comptroller];
+    }
+
+    /**
      * @dev Swap single asset to base asset.
      * @param vToken VToken
      * @param comptroller Comptroller address
      * @param amountOutMin Minimum amount to receive for swap
      * @return Number of swapped tokens.
      */
-    function swapAsset(
+    function _swapAsset(
         VToken vToken,
         address comptroller,
         uint256 amountOutMin
@@ -187,64 +246,5 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
             }
         }
         return totalAmount;
-    }
-
-    /**
-     * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
-     * @param underlyingAssets Array of assets to swap for base asset
-     * @param amountsOutMin Minimum amount to recieve for swap
-     * @return Number of swapped tokens.
-     */
-    function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
-        external
-        returns (uint256)
-    {
-        bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "swapPoolsAssets(address[],uint256[])"
-        );
-        require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
-        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
-        require(
-            underlyingAssets.length == amountsOutMin.length,
-            "Risk fund: underlyingAssets and amountsOutMin are unequal lengths"
-        );
-
-        uint256 totalAmount;
-        uint256 underlyingAssetsCount = underlyingAssets.length;
-        for (uint256 i; i < underlyingAssetsCount; ++i) {
-            VToken vToken = VToken(underlyingAssets[i]);
-            address comptroller = address(vToken.comptroller());
-            uint256 swappedTokens = swapAsset(vToken, comptroller, amountsOutMin[i]);
-            poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
-            totalAmount = totalAmount + swappedTokens;
-        }
-
-        return totalAmount;
-    }
-
-    /**
-     * @dev Get pool reserve by pool id.
-     * @param comptroller Comptroller address of the pool.
-     * @return Number of reserved tokens.
-     */
-    function getPoolReserve(address comptroller) external view returns (uint256) {
-        return poolReserves[comptroller];
-    }
-
-    /**
-     * @dev Transfer tokens for auction.
-     * @param comptroller Comptroller of the pool.
-     * @param amount Amount to be transferred to auction contract.
-     * @return Number reserved tokens.
-     */
-    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
-        require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
-
-        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
-        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
-        poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auctionContractAddress, amount);
-        return amount;
     }
 }
