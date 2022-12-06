@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "./mixins/WithAdminUpgradeable.sol";
 import "./ComptrollerInterface.sol";
 import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
@@ -16,8 +16,8 @@ import "./RiskFund/IProtocolShareReserve.sol";
  * @title Venus VToken Contract
  * @author Venus Dev Team
  */
-contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, TokenErrorReporter {
-    using SafeERC20 for IERC20;
+contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError, TokenErrorReporter {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @notice Construct a new money market
@@ -43,9 +43,6 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public initializer {
-        // Creator of the contract is admin during initialization
-        admin = payable(msg.sender);
-
         // Initialize the market
         _initialize(
             underlying_,
@@ -55,12 +52,10 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
             name_,
             symbol_,
             decimals_,
+            admin_,
             accessControlManager_,
             riskManagement
         );
-
-        // Set the proper admin now that initialization is done
-        admin = admin_;
     }
 
     /**
@@ -81,10 +76,11 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
+        address payable admin_,
         AccessControlManager accessControlManager_,
         VTokenInterface.RiskManagementInit memory riskManagement
-    ) internal {
-        require(msg.sender == admin, "only admin may initialize the market");
+    ) internal onlyInitializing {
+        __Ownable2Step_init();
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
         _setAccessControlAddress(accessControlManager_);
@@ -111,10 +107,11 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
 
         // Set underlying and sanity check it
         underlying = underlying_;
-        IERC20(underlying).totalSupply();
+        IERC20Upgradeable(underlying).totalSupply();
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
+        _transferOwnership(admin_);
     }
 
     /**
@@ -1055,7 +1052,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      */
     function setComptroller(ComptrollerInterface newComptroller) public override {
         // Check caller is admin
-        if (msg.sender != admin) {
+        if (msg.sender != owner()) {
             revert SetComptrollerOwnerCheck();
         }
 
@@ -1157,14 +1154,14 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
         // Store reserves[n+1] = reserves[n] + actualAddAmount
         totalReserves = totalReservesNew;
 
-        /* Emit NewReserves(admin, actualAddAmount, reserves[n+1]) */
+        /* Emit NewReserves(sender, actualAddAmount, reserves[n+1]) */
         emit ReservesAdded(msg.sender, actualAddAmount, totalReservesNew);
 
         return actualAddAmount;
     }
 
     /**
-     * @notice Accrues interest and reduces reserves by transferring to admin
+     * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
      * @param reduceAmount Amount of reduction to reserves
      */
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
@@ -1173,7 +1170,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
     }
 
     /**
-     * @notice Reduces reserves by transferring to admin
+     * @notice Reduces reserves by transferring to the protocol reserve contract
      * @dev Requires fresh interest accrual
      * @param reduceAmount Amount of reduction to reserves
      */
@@ -1212,7 +1209,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
         // Update the pool asset's state in the protocol share reserve for the above transfer.
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying);
 
-        emit ReservesReduced(admin, reduceAmount, totalReservesNew);
+        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**
@@ -1268,7 +1265,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @param newAccessControlManager The new address of the AccessControlManager
      */
     function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
-        require(msg.sender == admin, "only admin can set ACL address");
+        require(msg.sender == owner(), "only admin can set ACL address");
         _setAccessControlAddress(newAccessControlManager);
     }
 
@@ -1313,11 +1310,11 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
      * @param token The address of the ERC-20 token to sweep
      */
-    function sweepToken(IERC20 token) external override {
-        require(msg.sender == admin, "VToken::sweepToken: only admin can sweep tokens");
+    function sweepToken(IERC20Upgradeable token) external override {
+        require(msg.sender == owner(), "VToken::sweepToken: only admin can sweep tokens");
         require(address(token) != underlying, "VToken::sweepToken: can not sweep underlying token");
         uint256 balance = token.balanceOf(address(this));
-        token.safeTransfer(admin, balance);
+        token.safeTransfer(owner(), balance);
     }
 
     /*** Safe Token ***/
@@ -1328,7 +1325,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20 token = IERC20(underlying);
+        IERC20Upgradeable token = IERC20Upgradeable(underlying);
         return token.balanceOf(address(this));
     }
 
@@ -1338,7 +1335,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      *      which may be less than `amount` if there is a fee attached to the transfer.
      */
     function _doTransferIn(address from, uint256 amount) internal virtual returns (uint256) {
-        IERC20 token = IERC20(underlying);
+        IERC20Upgradeable token = IERC20Upgradeable(underlying);
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -1350,7 +1347,7 @@ contract VToken is WithAdminUpgradeable, VTokenInterface, ExponentialNoError, To
      * @dev Just a regular ERC-20 transfer, reverts on failure
      */
     function _doTransferOut(address payable to, uint256 amount) internal virtual {
-        IERC20 token = IERC20(underlying);
+        IERC20Upgradeable token = IERC20Upgradeable(underlying);
         token.safeTransfer(to, amount);
     }
 }

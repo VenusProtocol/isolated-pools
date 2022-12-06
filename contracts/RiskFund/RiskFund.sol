@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../VToken.sol";
 import "../Pool/PoolRegistry.sol";
@@ -14,8 +14,8 @@ import "./ReserveHelpers.sol";
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
-    using SafeERC20 for IERC20;
+contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private poolRegistry;
     address private pancakeSwapRouter;
@@ -65,7 +65,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
         require(_convertableBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
 
-        __Ownable_init();
+        __Ownable2Step_init();
 
         pancakeSwapRouter = _pancakeSwapRouter;
         amountOutMin = _amountOutMin;
@@ -170,7 +170,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
                     address[] memory path = new address[](2);
                     path[0] = underlyingAsset;
                     path[1] = convertableBaseAsset;
-                    IERC20(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
+                    IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
                     uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
                         balanceOfUnderlyingAsset,
                         amountOutMin,
@@ -252,7 +252,7 @@ contract RiskFund is OwnableUpgradeable, ExponentialNoError, ReserveHelpers {
         require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20(convertableBaseAsset).safeTransfer(auctionContractAddress, amount);
+        IERC20Upgradeable(convertableBaseAsset).safeTransfer(auctionContractAddress, amount);
         return amount;
     }
 }

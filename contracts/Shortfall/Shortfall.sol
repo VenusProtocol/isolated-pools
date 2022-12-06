@@ -1,7 +1,7 @@
 /// @notice  SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
@@ -10,7 +10,7 @@ import "../VToken.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
 
-contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -109,7 +109,7 @@ contract Shortfall is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
     ) external initializer {
-        __Ownable_init();
+        __Ownable2Step_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
         BUSD = _BUSD;

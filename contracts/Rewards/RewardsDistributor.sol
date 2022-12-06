@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
 
-contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
+contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     struct RewardToken {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
         uint224 index;
@@ -80,17 +80,17 @@ contract RewardsDistributor is ExponentialNoError, OwnableUpgradeable {
 
     Comptroller private comptroller;
 
-    IERC20 public rewardToken;
+    IERC20Upgradeable public rewardToken;
 
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20 _rewardToken) public initializer {
+    function initialize(Comptroller _comptroller, IERC20Upgradeable _rewardToken) public initializer {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
-        __Ownable_init();
+        __Ownable2Step_init();
     }
 
     function initializeMarket(address vToken) external onlyComptroller {

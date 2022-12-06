@@ -125,7 +125,7 @@ describe("UpgradedVToken: Tests", function () {
     const pools = await poolRegistry.callStatic.getAllPools();
     comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
 
-    await comptroller1Proxy.acceptAdmin();
+    await comptroller1Proxy.acceptOwnership();
 
     const VToken = await ethers.getContractFactory("VToken");
     const tokenImplementation = await VToken.deploy();
