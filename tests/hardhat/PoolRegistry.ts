@@ -1,4 +1,5 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -19,27 +20,27 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 
-let poolRegistry: PoolRegistry;
-let comptrollerBeacon: Beacon;
-let vTokenBeacon: Beacon;
-let mockDAI: MockToken;
-let mockWBTC: MockToken;
-let vDAI: VToken;
-let vWBTC: VToken;
-let priceOracle: MockPriceOracle;
-let comptroller1Proxy: Comptroller;
-let comptroller2Proxy: Comptroller;
-let cTokenFactory: VTokenProxyFactory;
-let jumpRateFactory: JumpRateModelFactory;
-let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let tokenImplementation: VToken;
-
 describe("PoolRegistry: Tests", function () {
+  let poolRegistry: PoolRegistry;
+  let comptrollerBeacon: Beacon;
+  let vTokenBeacon: Beacon;
+  let mockDAI: MockToken;
+  let mockWBTC: MockToken;
+  let vDAI: VToken;
+  let vWBTC: VToken;
+  let priceOracle: MockPriceOracle;
+  let comptroller1Proxy: Comptroller;
+  let comptroller2Proxy: Comptroller;
+  let cTokenFactory: VTokenProxyFactory;
+  let jumpRateFactory: JumpRateModelFactory;
+  let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
+  let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let tokenImplementation: VToken;
+
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  before(async function () {
+  const poolRegistryFixture = async () => {
     const [, user, proxyAdmin] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     cTokenFactory = await VTokenProxyFactory.deploy();
@@ -188,6 +189,33 @@ describe("PoolRegistry: Tests", function () {
 
     // Set Oracle
     await comptroller1Proxy.setPriceOracle(priceOracle.address);
+  };
+
+  beforeEach(async () => {
+    await loadFixture(poolRegistryFixture);
+  });
+
+  describe("setPoolName", async () => {
+    const newName = "My fancy pool";
+
+    it("reverts if not called by owner", async () => {
+      const [, user] = await ethers.getSigners();
+      await expect(poolRegistry.connect(user).setPoolName(comptroller1Proxy.address, newName)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("sets new pool name", async () => {
+      await poolRegistry.setPoolName(comptroller1Proxy.address, newName);
+      const poolInfo = await poolRegistry.getPoolByComptroller(comptroller1Proxy.address);
+      expect(poolInfo.name).to.equal(newName);
+    });
+
+    it("emits PoolNameSet event", async () => {
+      const oldName = "Pool 1";
+      const tx = await poolRegistry.setPoolName(comptroller1Proxy.address, newName);
+      await expect(tx).to.emit(poolRegistry, "PoolNameSet").withArgs(comptroller1Proxy.address, oldName, newName);
+    });
   });
 
   it("Pools should have correct names", async function () {
