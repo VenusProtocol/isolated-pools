@@ -272,12 +272,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     /**
      * @notice Modify existing Venus pool name.
      */
-    function setPoolName(address comptroller, string calldata name) external {
-        Comptroller _comptroller = Comptroller(comptroller);
-
-        // Note: Compiler throws stack to deep if autoformatted with Prettier
-        // prettier-ignore
-        require(msg.sender == _comptroller.owner() || msg.sender == owner());
+    function setPoolName(address comptroller, string calldata name) external onlyOwner {
         _poolByComptroller[comptroller].name = name;
         emit PoolNameSet(comptroller, name);
     }
