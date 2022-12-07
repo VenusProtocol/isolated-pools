@@ -125,7 +125,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     /**
      * @dev Emitted when a pool name is set.
      */
-    event PoolNameSet(address indexed comptroller, string name);
+    event PoolNameSet(address indexed comptroller, string oldName, string newName);
 
     /**
      * @dev Emitted when a pool metadata is updated.
@@ -273,8 +273,9 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      * @notice Modify existing Venus pool name.
      */
     function setPoolName(address comptroller, string calldata name) external onlyOwner {
+        string memory oldName = _poolByComptroller[comptroller].name;
         _poolByComptroller[comptroller].name = name;
-        emit PoolNameSet(comptroller, name);
+        emit PoolNameSet(comptroller, oldName, name);
     }
 
     /**
