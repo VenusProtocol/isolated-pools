@@ -81,6 +81,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.0",
     "@openzeppelin/contracts-upgradeable": "^4.8.0",
+    "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "@solidity-parser/parser": "^0.13.2",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14"

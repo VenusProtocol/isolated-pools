@@ -1,7 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import { Comptroller, MockToken, ProtocolShareReserve, RiskFund } from "../../typechain";
@@ -24,10 +24,10 @@ const fixture = async (): Promise<void> => {
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = await ProtocolShareReserve.deploy();
-  await protocolShareReserve.deployed();
-
-  await protocolShareReserve.initialize(fakeProtocolIncome.address, fakeRiskFund.address);
+  protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
+    fakeProtocolIncome.address,
+    fakeRiskFund.address,
+  ]);
 };
 
 describe("ProtocolShareReserve: Tests", function () {

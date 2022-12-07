@@ -19,6 +19,13 @@ import "./RiskFund/IProtocolShareReserve.sol";
 contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError, TokenErrorReporter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset

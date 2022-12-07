@@ -1,20 +1,18 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
   Comptroller,
-  JumpRateModelFactory,
-  MockPriceOracle,
   MockToken,
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
-  VTokenProxyFactory,
-  WhitePaperInterestRateModelFactory,
+  Shortfall,
 } from "../../typechain";
 
 let poolRegistry: PoolRegistry;
@@ -22,59 +20,40 @@ let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
 let comptroller1Proxy: Comptroller;
 let mockWBTC: MockToken;
-let priceOracle: MockPriceOracle;
-let vTokenFactory: VTokenProxyFactory;
-let jumpRateFactory: JumpRateModelFactory;
-let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let protocolShareReserve: ProtocolShareReserve;
-let riskFund: RiskFund;
 
 describe("UpgradedVToken: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  let proxyAdmin;
+  let proxyAdmin: SignerWithAddress;
   before(async function () {
     [, proxyAdmin] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
-    vTokenFactory = await VTokenProxyFactory.deploy();
+    const vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
 
     const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
-    jumpRateFactory = await JumpRateModelFactory.deploy();
+    const jumpRateFactory = await JumpRateModelFactory.deploy();
     await jumpRateFactory.deployed();
 
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
-    whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+    const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
     await whitePaperRateFactory.deployed();
 
+    const shortfall = await smock.fake<Shortfall>("Shortfall");
+    const riskFund = await smock.fake<RiskFund>("RiskFund");
+    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
+
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await PoolRegistry.deploy();
-    await poolRegistry.deployed();
-
-    const Shortfall = await ethers.getContractFactory("Shortfall");
-    const shortfall = await Shortfall.deploy();
-
-    await shortfall.initialize(ethers.constants.AddressZero, ethers.constants.AddressZero, convertToUnit("10000", 18));
-    const RiskFund = await ethers.getContractFactory("RiskFund");
-    riskFund = await RiskFund.deploy();
-    await riskFund.deployed();
-
-    const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-    protocolShareReserve = await ProtocolShareReserve.deploy();
-    await protocolShareReserve.deployed();
-
-    await poolRegistry.initialize(
+    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
       vTokenFactory.address,
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
       riskFund.address,
       protocolShareReserve.address,
-    );
-
-    await shortfall.setPoolRegistry(poolRegistry.address);
+    ]);
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
@@ -105,7 +84,7 @@ describe("UpgradedVToken: Tests", function () {
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    priceOracle = await MockPriceOracle.deploy();
+    const priceOracle = await MockPriceOracle.deploy();
 
     const btcPrice = "21000.34";
 

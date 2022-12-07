@@ -2,7 +2,7 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -28,9 +28,11 @@ interface AccountLiquidityTestFixture {
 async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
-  const comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-  const comptroller = await comptrollerFactory.deploy(poolRegistry.address, accessControl.address);
-  await comptroller.initialize();
+  const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
+  const comptroller = await upgrades.deployProxy(Comptroller, [], {
+    constructorArgs: [poolRegistry.address, accessControl.address],
+    initializer: "initialize()",
+  });
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);
