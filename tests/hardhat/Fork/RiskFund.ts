@@ -43,7 +43,7 @@ let comptroller3Proxy: Comptroller;
 let vTokenFactory: VTokenProxyFactory;
 let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
+let accessControlManager: AccessControlManager;
 let protocolShareReserve: ProtocolShareReserve;
 let riskFund: RiskFund;
 let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
@@ -127,8 +127,9 @@ const riskFundFixture = async (): Promise<void> => {
 
   pancakeSwapRouter = await initPancakeSwapRouter(admin);
 
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
+  const AccessControlManagerFactory = await ethers.getContractFactory("AccessControlManager");
+  accessControlManager = await AccessControlManagerFactory.deploy();
+  await accessControlManager.deployed();
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [
@@ -136,7 +137,7 @@ const riskFundFixture = async (): Promise<void> => {
     convertToUnit(10, 18),
     convertToUnit(10, 18),
     BUSD.address,
-    fakeAccessControlManager.address,
+    accessControlManager.address,
   ]);
 
   const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
@@ -163,10 +164,36 @@ const riskFundFixture = async (): Promise<void> => {
     protocolShareReserve.address,
   ]);
 
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setCollateralFactor(address,uint256,uint256)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setLiquidationIncentive(uint256)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setMinLiquidatableCollateral(uint256)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "supportMarket(address)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(ethers.constants.AddressZero, "swapAllPoolsAssets()", admin.address);
+
   await shortfall.setPoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address, accessControlManager.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -232,6 +259,12 @@ const riskFundFixture = async (): Promise<void> => {
   comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
   await comptroller1Proxy.acceptOwnership();
 
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "transferReserveForAuction(address,uint256)",
+    admin.address,
+  );
+
   comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
   await comptroller2Proxy.acceptOwnership();
 
@@ -256,7 +289,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -274,7 +307,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -292,7 +325,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -310,7 +343,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -328,7 +361,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -346,7 +379,7 @@ const riskFundFixture = async (): Promise<void> => {
     kink_: 0,
     collateralFactor: convertToUnit(0.7, 18),
     liquidationThreshold: convertToUnit(0.7, 18),
-    accessControlManager: fakeAccessControlManager.address,
+    accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
   });
@@ -512,6 +545,27 @@ describe("Risk Fund: Tests", function () {
   });
 
   describe("Risk fund transfers", async function () {
+    it("Checks access control", async function () {
+      const [admin] = await ethers.getSigners();
+      // Revoke
+      await accessControlManager.revokeCallPermission(
+        ethers.constants.AddressZero,
+        "swapAllPoolsAssets()",
+        admin.address,
+      );
+      // Fails
+      await expect(riskFund.swapAllPoolsAssets()).to.be.rejectedWith("Risk fund: Not authorized to swap pool assets.");
+
+      // Reset
+      await accessControlManager.giveCallPermission(
+        ethers.constants.AddressZero,
+        "swapAllPoolsAssets()",
+        admin.address,
+      );
+      // Succeeds
+      await riskFund.swapAllPoolsAssets();
+    });
+
     it("Convert to BUSD without funds", async function () {
       const amount = await riskFund.callStatic.swapAllPoolsAssets();
       expect(amount).equal("0");
@@ -642,6 +696,7 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Should revert the transfer to auction transaction", async function () {
+      const [admin] = await ethers.getSigners();
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
@@ -657,10 +712,23 @@ describe("Risk Fund: Tests", function () {
       await cUSDC.reduceReserves(convertToUnit(100, 18));
       await riskFund.swapAllPoolsAssets();
 
-      fakeAccessControlManager.isAllowedToCall.returns(false);
+      // revoke
+      await accessControlManager.revokeCallPermission(
+        ethers.constants.AddressZero,
+        "transferReserveForAuction(address,uint256)",
+        admin.address,
+      );
+
       await expect(
         riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
       ).to.be.rejectedWith("Risk fund: Not authorized to transfer funds.");
+
+      // reset
+      await accessControlManager.giveCallPermission(
+        ethers.constants.AddressZero,
+        "transferReserveForAuction(address,uint256)",
+        admin.address,
+      );
     });
 
     it("Transfer single asset from multiple pools to riskFund.", async function () {

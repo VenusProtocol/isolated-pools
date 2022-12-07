@@ -152,6 +152,11 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @return Number of swapped tokens.
      */
     function swapAllPoolsAssets() external returns (uint256) {
+        bool canSwapAllPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
+            msg.sender,
+            "swapAllPoolsAssets()"
+        );
+        require(canSwapAllPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistry);
         PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
@@ -170,7 +175,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
         bool canTransferFunds = AccessControlManager(accessControl).isAllowedToCall(
             msg.sender,
-            "transferReserveForAuction(uint256,uint256)"
+            "transferReserveForAuction(address,uint256)"
         );
 
         require(canTransferFunds, "Risk fund: Not authorized to transfer funds.");
