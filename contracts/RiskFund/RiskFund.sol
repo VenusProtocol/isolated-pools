@@ -20,7 +20,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
-    uint256 private amountOutMin;
     address private convertableBaseAsset;
     address private auctionContractAddress;
     address private accessControl;
@@ -56,14 +55,12 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /**
      * @dev Initializes the deployer to owner.
      * @param _pancakeSwapRouter Address of the PancakeSwap router
-     * @param _amountOutMin Min amount out for the PancakeSwap
      * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
      * @param _convertableBaseAsset Address of the base asset
      * @param _accessControl Address of the access control contract.
      */
     function initialize(
         address _pancakeSwapRouter,
-        uint256 _amountOutMin,
         uint256 _minAmountToConvert,
         address _convertableBaseAsset,
         address _accessControl
@@ -75,7 +72,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         __Ownable2Step_init();
 
         pancakeSwapRouter = _pancakeSwapRouter;
-        amountOutMin = _amountOutMin;
         minAmountToConvert = _minAmountToConvert;
         convertableBaseAsset = _convertableBaseAsset;
         accessControl = _accessControl;
@@ -126,17 +122,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
-     * @dev Min amount out setter
-     * @param _amountOutMin Min amount out for the pancake swap.
-     */
-    function setAmountOutMin(uint256 _amountOutMin) external onlyOwner {
-        require(_amountOutMin >= 0, "Risk Fund: Min amount out invalid");
-        uint256 oldAmountOutMin = amountOutMin;
-        amountOutMin = _amountOutMin;
-        emit AmountOutMinUpdated(oldAmountOutMin, _amountOutMin);
-    }
-
-    /**
      * @dev Min amout to convert setter
      * @param _minAmountToConvert Min amout to convert.
      */
@@ -148,20 +133,35 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
-     * @dev Swap assets of all pools into base asset's tokens.
+     * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
+     * @param underlyingAssets Array of assets to swap for base asset
+     * @param amountsOutMin Minimum amount to recieve for swap
      * @return Number of swapped tokens.
      */
-    function swapAllPoolsAssets() external returns (uint256) {
-        bool canSwapAllPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
+    function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
+        external
+        returns (uint256)
+    {
+        bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
             msg.sender,
-            "swapAllPoolsAssets()"
+            "swapPoolsAssets(address[],uint256[])"
         );
-        require(canSwapAllPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
+        require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistry);
-        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
+        require(
+            underlyingAssets.length == amountsOutMin.length,
+            "Risk fund: underlyingAssets and amountsOutMin should be the same length"
+        );
 
-        uint256 totalAmount = swapPoolsAssets(venusPools);
+        uint256 totalAmount;
+        uint256 underlyingAssetsCount = underlyingAssets.length;
+        for (uint256 i; i < underlyingAssetsCount; ++i) {
+            VToken vToken = VToken(underlyingAssets[i]);
+            address comptroller = address(vToken.comptroller());
+            uint256 swappedTokens = swapAsset(vToken, comptroller, amountsOutMin[i]);
+            poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
+            totalAmount = totalAmount + swappedTokens;
+        }
 
         return totalAmount;
     }
@@ -196,38 +196,19 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         return poolReserves[comptroller];
     }
 
-    /**
-     * @dev Swap assets of selected pools into base tokens.
-     * @param venusPools Array of Pools to swap
-     * @return Number of swapped tokens.
-     */
-    function swapPoolsAssets(PoolRegistry.VenusPool[] memory venusPools) public returns (uint256) {
-        uint256 totalAmount;
-        uint256 poolsCount = venusPools.length;
-        for (uint256 i; i < poolsCount; ++i) {
-            if (venusPools[i].comptroller != address(0)) {
-                VToken[] memory vTokens = ComptrollerInterface(venusPools[i].comptroller).getAllMarkets();
-
-                uint256 vTokensCount = vTokens.length;
-                for (uint256 j; j < vTokensCount; ++j) {
-                    address comptroller = venusPools[i].comptroller;
-                    VToken vToken = vTokens[j];
-                    uint256 swappedTokens = _swapAsset(vToken, comptroller);
-                    poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
-                    totalAmount = totalAmount + swappedTokens;
-                }
-            }
-        }
-        return totalAmount;
-    }
-
-    /**
+    /*
      * @dev Swap single asset to Base asset.
      * @param vToken VToken
      * @param comptroller comptorller address
+     * @param amountOutMin Minimum amount to receive for swap
      * @return Number of swapped tokens.
      */
-    function _swapAsset(VToken vToken, address comptroller) internal returns (uint256) {
+    function swapAsset(
+        VToken vToken,
+        address comptroller,
+        uint256 amountOutMin
+    ) internal returns (uint256) {
+        require(amountOutMin != 0, "RiskFund: amountOutMin must be greater than 0 to swap vToken");
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
