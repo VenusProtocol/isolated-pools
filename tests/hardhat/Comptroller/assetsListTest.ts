@@ -1,7 +1,7 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
-import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -19,8 +19,8 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 describe("assetListTest", () => {
-  let root: Signer;
-  let customer: Signer;
+  let root: SignerWithAddress;
+  let customer: SignerWithAddress;
   let comptroller: MockContract<Comptroller>;
   let poolRegistry: FakeContract<PoolRegistry>;
   let OMG: FakeContract<VToken>;
@@ -60,7 +60,7 @@ describe("assetListTest", () => {
         if (name !== "sketch") {
           const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
           if (poolRegistryBalance.isZero()) {
-            await setBalance(await root.getAddress(), 100n ** 18n);
+            await setBalance(root.address, 100n ** 18n);
             await root.sendTransaction({
               to: poolRegistry.address,
               value: ethers.utils.parseEther("1"),
@@ -106,7 +106,7 @@ describe("assetListTest", () => {
   async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
     for (const token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
-      expect(await comptroller.checkMembership(await customer.getAddress(), token.address)).to.equal(isExpected);
+      expect(await comptroller.checkMembership(customer.address, token.address)).to.equal(isExpected);
     }
   }
 
@@ -117,7 +117,7 @@ describe("assetListTest", () => {
   ) {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
     const receipt = await comptroller.connect(customer).enterMarkets(enterTokens.map(t => t.address));
-    const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+    const assetsIn = await comptroller.getAssetsIn(customer.address);
 
     const expectedErrors_ = expectedErrors || enterTokens.map(_ => Error.NO_ERROR);
 
@@ -140,7 +140,7 @@ describe("assetListTest", () => {
   ) {
     const reply = await comptroller.connect(customer).callStatic.exitMarket(exitToken.address);
     const receipt = await comptroller.connect(customer).exitMarket(exitToken.address);
-    const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+    const assetsIn = await comptroller.getAssetsIn(customer.address);
     expect(reply).to.equal(expectedError);
     expect(assetsIn).to.deep.equal(expectedTokens.map(t => t.address));
     await checkMarkets(expectedTokens);
@@ -240,9 +240,9 @@ describe("assetListTest", () => {
   describe("entering from borrowAllowed", () => {
     it("enters when called by a ctoken", async () => {
       await setBalance(await BAT.wallet.getAddress(), 10n ** 18n);
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
 
-      const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+      const assetsIn = await comptroller.getAssetsIn(customer.address);
 
       expect(assetsIn).to.deep.equal([BAT.address]);
 
@@ -251,10 +251,10 @@ describe("assetListTest", () => {
 
     it("reverts when called by not a ctoken", async () => {
       await expect(
-        comptroller.connect(customer).borrowAllowed(BAT.address, await customer.getAddress(), 1),
-      ).to.be.revertedWith("sender must be vToken");
+        comptroller.connect(customer).preBorrowHook(BAT.address, await customer.getAddress(), 1),
+      ).to.be.revertedWithCustomError(comptroller, "UnexpectedSender");
 
-      const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+      const assetsIn = await comptroller.getAssetsIn(customer.address);
 
       expect(assetsIn).to.deep.equal([]);
 
@@ -263,11 +263,11 @@ describe("assetListTest", () => {
 
     it("adds to the asset list only once", async () => {
       await setBalance(await BAT.wallet.getAddress(), 10n ** 18n);
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
 
       await enterAndCheckMarkets([BAT], [BAT]);
 
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
       const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
       expect(assetsIn).to.deep.equal([BAT.address]);
     });

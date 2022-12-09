@@ -1,7 +1,8 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
-import { Signer } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
 import {
@@ -40,7 +41,6 @@ async function pauseFixture(): Promise<PauseFixture> {
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);
-  const [root] = await ethers.getSigners();
   await comptroller.setPriceOracle(oracle.address);
   const names = ["OMG", "ZRX", "BAT", "sketch"];
   const [OMG, ZRX, BAT, SKT] = await Promise.all(
@@ -49,14 +49,9 @@ async function pauseFixture(): Promise<PauseFixture> {
       if (name !== "sketch") {
         const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
         if (poolRegistryBalance.isZero()) {
-          await setBalance(await root.getAddress(), 100n ** 18n);
-          await root.sendTransaction({
-            to: poolRegistry.address,
-            value: ethers.utils.parseEther("1"),
-          });
+          await setBalance(poolRegistry.address, parseEther("1"));
         }
-        const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
-        await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
+        await comptroller.connect(poolRegistry.wallet).supportMarket(vToken.address);
       }
       return vToken;
     }),
@@ -77,8 +72,7 @@ function configure({ accessControl, allTokens, names }: PauseFixture) {
 }
 
 describe("Comptroller", () => {
-  let root: Signer;
-  let rootAddress: string;
+  let root: SignerWithAddress;
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
   let OMG: FakeContract<VToken>;
@@ -91,17 +85,16 @@ describe("Comptroller", () => {
     const contracts = await loadFixture(pauseFixture);
     configure(contracts);
     ({ accessControl, comptroller, OMG, ZRX, BAT, SKT } = contracts);
-    rootAddress = await root.getAddress();
   });
 
   describe("setActionsPaused", () => {
     it("reverts if AccessControlManager does not allow it", async () => {
       accessControl.isAllowedToCall
-        .whenCalledWith(rootAddress, "setActionsPaused(address[],uint256[],bool)")
+        .whenCalledWith(root.address, "setActionsPaused(address[],uint256[],bool)")
         .returns(false);
-      await expect(comptroller.setActionsPaused([OMG.address], [1], true)).to.be.revertedWith(
-        "only authorised addresses can pause",
-      );
+      await expect(comptroller.setActionsPaused([OMG.address], [1], true))
+        .to.be.revertedWithCustomError(comptroller, "Unauthorized")
+        .withArgs(root.address, comptroller.address, "setActionsPaused(address[],uint256[],bool)");
     });
 
     it("reverts if the market is not listed", async () => {

@@ -106,6 +106,60 @@ contract Comptroller is
     /// @notice Emitted when supply cap for a vToken is changed
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
+    /// @notice Thrown when collateral factor exceeds the upper bound
+    error InvalidCollateralFactor();
+
+    /// @notice Thrown when liquidation threshold exceeds the collateral factor
+    error InvalidLiquidationThreshold();
+
+    /// @notice Thrown when the action is prohibited by AccessControlManager
+    error Unauthorized(address sender, address calledContract, string methodSignature);
+
+    /// @notice Thrown when the action is only available to specific sender, but the real sender was different
+    error UnexpectedSender(address expectedSender, address actualSender);
+
+    /// @notice Thrown when the oracle returns an invalid price for some asset
+    error PriceError(address vToken);
+
+    /// @notice Thrown if VToken unexpectedly returned a nonzero error code while trying to get account snapshot
+    error SnapshotError(address vToken, address user);
+
+    /// @notice Thrown when the market is not listed
+    error MarketNotListed(address market);
+
+    /// @notice Thrown when a market has an unexpected comptroller
+    error ComptrollerMismatch();
+
+    /**
+     * @notice Throwed during the liquidation if user's total collateral amount is lower than
+     *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
+     *   or healAccount) are available.
+     */
+    error MinimalCollateralViolated(uint256 expectedGreaterThan, uint256 actual);
+    error CollateralExceedsThreshold(uint256 expectedLessThanOrEqualTo, uint256 actual);
+    error InsufficientCollateral(uint256 collateralToSeize, uint256 availableCollateral);
+
+    /// @notice Thrown when the account doesn't have enough liquidity to redeem or borrow
+    error InsufficientLiquidity();
+
+    /// @notice Thrown when trying to liquidate a healthy account
+    error InsufficientShortfall();
+
+    /// @notice Thrown when trying to repay more than allowed by close factor
+    error TooMuchRepay();
+
+    /// @notice Thrown if the user is trying to exit a market in which they have an outstanding debt
+    error NonzeroBorrowBalance();
+
+    /// @notice Thrown when trying to perform an action that is paused
+    error ActionPaused(address market, Action action);
+
+    /// @notice Thrown when trying to add a market that is already listed
+    error MarketAlreadyListed(address market);
+
+    /// @notice Thrown if the supply cap is exceeded
+    error SupplyCapExceeded(address market, uint256 cap);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address poolRegistry_, address accessControl_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
@@ -115,7 +169,7 @@ contract Comptroller is
         _disableInitializers();
     }
 
-    function initialize() public initializer {
+    function initialize() external initializer {
         __Ownable2Step_init();
     }
 
@@ -124,7 +178,7 @@ contract Comptroller is
      * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return Success indicator for whether each corresponding market was entered
      */
-    function enterMarkets(address[] memory vTokens) public override returns (uint256[] memory) {
+    function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
 
         uint256[] memory results = new uint256[](len);
@@ -344,7 +398,7 @@ contract Comptroller is
 
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
-            require(msg.sender == vToken, "sender must be vToken");
+            _checkSenderIs(vToken);
 
             // attempt to add borrower to the market
             Error err = _addToMarket(VToken(msg.sender), borrower);
@@ -824,17 +878,11 @@ contract Comptroller is
      * @notice Sets the closeFactor to use when liquidating borrows
      * @dev Only callable by the admin
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
-     * @return uint 0=success, otherwise a failure
      */
-    function setCloseFactor(uint256 newCloseFactorMantissa) external returns (uint256) {
-        // Check caller is admin
-        require(msg.sender == owner(), "only admin can set close factor");
-
+    function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
         emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
-
-        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -843,21 +891,13 @@ contract Comptroller is
      * @param vToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
-     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
     function setCollateralFactor(
         VToken vToken,
         uint256 newCollateralFactorMantissa,
         uint256 newLiquidationThresholdMantissa
-    ) external returns (uint256) {
-        bool isAllowedToCall = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "setCollateralFactor(address,uint256,uint256)"
-        );
-
-        if (!isAllowedToCall) {
-            revert Unauthorized();
-        }
+    ) external {
+        _checkAccessAllowed("setCollateralFactor(address,uint256,uint256)");
 
         // Verify market is listed
         Market storage market = markets[address(vToken)];
@@ -891,25 +931,15 @@ contract Comptroller is
             market.liquidationThresholdMantissa = newLiquidationThresholdMantissa;
             emit NewLiquidationThreshold(vToken, oldLiquidationThresholdMantissa, newLiquidationThresholdMantissa);
         }
-
-        return uint256(Error.NO_ERROR);
     }
 
     /**
      * @notice Sets liquidationIncentive
      * @dev This function is restricted by the AccessControlManager
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
-     * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
-    function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external returns (uint256) {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "setLiquidationIncentive(uint256)"
-        );
-        // Check if caller is allowed to call this function
-        if (!canCallFunction) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_LIQUIDATION_INCENTIVE_OWNER_CHECK);
-        }
+    function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
+        _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
         // Save current value for use in log
         uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
@@ -919,8 +949,6 @@ contract Comptroller is
 
         // Emit event with old incentive, new incentive
         emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
-
-        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -929,8 +957,8 @@ contract Comptroller is
      * @param vToken The address of the market (token) to list
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
-    function supportMarket(VToken vToken) external returns (uint256) {
-        require(msg.sender == poolRegistry, "only poolRegistry can call supportMarket");
+    function supportMarket(VToken vToken) external {
+        _checkSenderIs(poolRegistry);
 
         if (markets[address(vToken)].isListed) {
             return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
@@ -961,10 +989,7 @@ contract Comptroller is
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of -1 corresponds to unlimited borrowing.
      */
     function setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
-        require(
-            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "setMarketBorrowCaps(address[],uint256[])"),
-            "only whitelisted accounts can set borrow caps"
-        );
+        _checkAccessAllowed("setMarketBorrowCaps(address[],uint256[])");
 
         uint256 numMarkets = vTokens.length;
         uint256 numBorrowCaps = newBorrowCaps.length;
@@ -985,10 +1010,7 @@ contract Comptroller is
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
      */
     function setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
-        require(
-            AccessControlManager(accessControl).isAllowedToCall(msg.sender, "setMarketSupplyCaps(address[],uint256[])"),
-            "only whitelisted accounts can set supply caps"
-        );
+        _checkAccessAllowed("setMarketSupplyCaps(address[],uint256[])");
         uint256 vTokensCount = vTokens.length;
 
         require(vTokensCount != 0, "invalid number of markets");
@@ -1012,11 +1034,7 @@ contract Comptroller is
         Action[] calldata actionsList,
         bool paused
     ) external {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "setActionsPaused(address[],uint256[],bool)"
-        );
-        require(canCallFunction, "only authorised addresses can pause");
+        _checkAccessAllowed("setActionsPaused(address[],uint256[],bool)");
 
         uint256 marketsCount = marketsList.length;
         uint256 actionsCount = actionsList.length;
@@ -1035,14 +1053,7 @@ contract Comptroller is
      * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
      */
     function setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral) external {
-        bool canCallFunction = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "setMinLiquidatableCollateral(uint256)"
-        );
-
-        if (!canCallFunction) {
-            revert Unauthorized();
-        }
+        _checkAccessAllowed("setMinLiquidatableCollateral(uint256)");
 
         uint256 oldMinLiquidatableCollateral = minLiquidatableCollateral;
         minLiquidatableCollateral = newMinLiquidatableCollateral;
@@ -1054,11 +1065,7 @@ contract Comptroller is
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      */
-    function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external returns (uint256) {
-        if (msg.sender != owner()) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.ADD_REWARDS_DISTRIBUTOR_OWNER_CHECK);
-        }
-
+    function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
 
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
@@ -1077,8 +1084,6 @@ contract Comptroller is
         for (uint256 i; i < marketsCount; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
-
-        return uint256(Error.NO_ERROR);
     }
 
     /*** Assets You Are In ***/
@@ -1170,24 +1175,12 @@ contract Comptroller is
      * @notice Sets a new PriceOracle for the Comptroller
      * @dev Only callable by the admin
      * @param newOracle Address of the new PriceOracle to set
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     * @custom:events Emits NewPriceOracle on success
      */
-    function setPriceOracle(PriceOracle newOracle) public returns (uint256) {
-        // Check caller is admin
-        if (msg.sender != owner()) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK);
-        }
-
-        // Track the old oracle for the comptroller
+    function setPriceOracle(PriceOracle newOracle) public onlyOwner {
         PriceOracle oldOracle = oracle;
-
-        // Set comptroller's oracle to newOracle
         oracle = newOracle;
-
-        // Emit NewPriceOracle(oldOracle, newOracle)
         emit NewPriceOracle(oldOracle, newOracle);
-
-        return uint256(Error.NO_ERROR);
     }
 
     /*** Liquidity/Liquidation Calculations ***/
@@ -1536,6 +1529,24 @@ contract Comptroller is
             revert SnapshotError();
         }
         return (vTokenBalance, borrowBalance, exchangeRateMantissa);
+    }
+
+    /// @notice Reverts if the call is not allowed by AccessControlManager
+    /// @param signature Method signature
+    function _checkAccessAllowed(string memory signature) internal view {
+        bool isAllowedToCall = AccessControlManager(accessControl).isAllowedToCall(msg.sender, signature);
+
+        if (!isAllowedToCall) {
+            revert Unauthorized(msg.sender, address(this), signature);
+        }
+    }
+
+    /// @notice Reverts if the call is not from expectedSender
+    /// @param expectedSender Expected transaction sender
+    function _checkSenderIs(address expectedSender) internal view {
+        if (msg.sender != expectedSender) {
+            revert UnexpectedSender(expectedSender, msg.sender);
+        }
     }
 
     /// @notice Reverts if a certain action is paused on a market

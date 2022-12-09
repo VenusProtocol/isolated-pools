@@ -81,7 +81,7 @@ contract ComptrollerErrorReporter {
     error InvalidLiquidationThreshold();
 
     error LiquidityComputationFailure(Error err);
-    error Unauthorized();
+    error Unauthorized(address sender, address calledContract, string methodSignature);
     error PriceError();
     error SnapshotError();
     error MarketNotListed(address market);
