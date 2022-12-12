@@ -4,7 +4,6 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import "./VToken.sol";
-import "./ErrorReporter.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
@@ -15,13 +14,7 @@ import "./Governance/AccessControlManager.sol";
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract Comptroller is
-    Ownable2StepUpgradeable,
-    ComptrollerV1Storage,
-    ComptrollerInterface,
-    ComptrollerErrorReporter,
-    ExponentialNoError
-{
+contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
     struct LiquidationOrder {
         VToken vTokenCollateral;
         VToken vTokenBorrowed;
@@ -42,6 +35,8 @@ contract Comptroller is
         uint256 supplySpeed;
         uint256 borrowSpeed;
     }
+
+    uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
     uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
@@ -160,6 +155,9 @@ contract Comptroller is
     /// @notice Thrown if the supply cap is exceeded
     error SupplyCapExceeded(address market, uint256 cap);
 
+    /// @notice Thrown if the borrow cap is exceeded
+    error BorrowCapExceeded(address market, uint256 cap);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address poolRegistry_, address accessControl_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
@@ -176,7 +174,7 @@ contract Comptroller is
     /**
      * @notice Add assets to be included in account liquidity calculation; enabeling them to be used as collateral
      * @param vTokens The list of addresses of the vToken markets to be enabled
-     * @return Success indicator for whether each corresponding market was entered
+     * @return errors An array of NO_ERROR for compatibility with Venus core tooling
      */
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
@@ -185,7 +183,8 @@ contract Comptroller is
         for (uint256 i; i < len; ++i) {
             VToken vToken = VToken(vTokens[i]);
 
-            results[i] = uint256(_addToMarket(vToken, msg.sender));
+            _addToMarket(vToken, msg.sender);
+            results[i] = NO_ERROR;
         }
 
         return results;
@@ -196,31 +195,27 @@ contract Comptroller is
      * @dev Sender must not have an outstanding borrow balance in the asset,
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
-     * @return Whether or not the account successfully exited the market
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function exitMarket(address vTokenAddress) external override returns (uint256) {
         _checkActionPauseState(vTokenAddress, Action.EXIT_MARKET);
         VToken vToken = VToken(vTokenAddress);
         /* Get sender tokensHeld and amountOwed underlying from the vToken */
-        (uint256 oErr, uint256 tokensHeld, uint256 amountOwed, ) = vToken.getAccountSnapshot(msg.sender);
-        require(oErr == 0, "exitMarket: getAccountSnapshot failed"); // semi-opaque error code
+        (uint256 tokensHeld, uint256 amountOwed, ) = _safeGetAccountSnapshot(vToken, msg.sender);
 
         /* Fail if the sender has a borrow balance */
         if (amountOwed != 0) {
-            return fail(Error.NONZERO_BORROW_BALANCE, FailureInfo.EXIT_MARKET_BALANCE_OWED);
+            revert NonzeroBorrowBalance();
         }
 
         /* Fail if the sender is not permitted to redeem all of their tokens */
-        uint256 allowed = _redeemAllowed(vTokenAddress, msg.sender, tokensHeld);
-        if (allowed != 0) {
-            return failOpaque(Error.REJECTION, FailureInfo.EXIT_MARKET_REJECTION, allowed);
-        }
+        _checkRedeemAllowed(vTokenAddress, msg.sender, tokensHeld);
 
         Market storage marketToExit = markets[address(vToken)];
 
         /* Return true if the sender is not already ‘in’ the market */
         if (!marketToExit.accountMembership[msg.sender]) {
-            return uint256(Error.NO_ERROR);
+            return NO_ERROR;
         }
 
         /* Set vToken account membership to false */
@@ -248,7 +243,7 @@ contract Comptroller is
 
         emit MarketExited(vToken, msg.sender);
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /*** Policy Hooks ***/
@@ -258,7 +253,7 @@ contract Comptroller is
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
-     * @return 0 if the mint is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function mintAllowed(
         address vToken,
@@ -272,7 +267,7 @@ contract Comptroller is
         mintAmount;
 
         if (!markets[vToken].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+            revert MarketNotListed(address(vToken));
         }
 
         uint256 supplyCap = supplyCaps[vToken];
@@ -289,7 +284,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -322,7 +317,7 @@ contract Comptroller is
      * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
      * @param redeemTokens The number of vTokens to exchange for the underlying asset in the market
-     * @return 0 if the redeem is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function redeemAllowed(
         address vToken,
@@ -330,13 +325,8 @@ contract Comptroller is
         uint256 redeemTokens
     ) external override returns (uint256) {
         _checkActionPauseState(vToken, Action.REDEEM);
-
         oracle.updatePrice(vToken);
-
-        uint256 allowed = _redeemAllowed(vToken, redeemer, redeemTokens);
-        if (allowed != uint256(Error.NO_ERROR)) {
-            return allowed;
-        }
+        _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
@@ -345,7 +335,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -381,7 +371,7 @@ contract Comptroller is
      * @param vToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
-     * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function borrowAllowed(
         address vToken,
@@ -393,33 +383,32 @@ contract Comptroller is
         oracle.updatePrice(vToken);
 
         if (!markets[vToken].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+            revert MarketNotListed(address(vToken));
         }
 
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
             _checkSenderIs(vToken);
 
-            // attempt to add borrower to the market
-            Error err = _addToMarket(VToken(msg.sender), borrower);
-            if (err != Error.NO_ERROR) {
-                return uint256(err);
-            }
+            // attempt to add borrower to the market or revert
+            _addToMarket(VToken(msg.sender), borrower);
 
             // it should be impossible to break the important invariant
             assert(markets[vToken].accountMembership[borrower]);
         }
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
-            return uint256(Error.PRICE_ERROR);
+            revert PriceError(address(vToken));
         }
 
         uint256 borrowCap = borrowCaps[vToken];
-        // Borrow cap of -1 corresponds to unlimited borrowing
-        if (borrowCap != type(uint128).max) {
+        // Skipping the cap check for uncapped coins to save some gas
+        if (borrowCap != type(uint256).max) {
             uint256 totalBorrows = VToken(vToken).totalBorrows();
-            uint256 nextTotalBorrows = add_(totalBorrows, borrowAmount);
-            require(nextTotalBorrows < borrowCap, "market borrow cap reached");
+            uint256 nextTotalBorrows = totalBorrows + borrowAmount;
+            if (nextTotalBorrows > borrowCap) {
+                revert BorrowCapExceeded(vToken, borrowCap);
+            }
         }
 
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
@@ -431,7 +420,7 @@ contract Comptroller is
         );
 
         if (snapshot.shortfall > 0) {
-            return uint256(Error.INSUFFICIENT_LIQUIDITY);
+            revert InsufficientLiquidity();
         }
 
         // Keep the flywheel moving
@@ -442,7 +431,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -473,7 +462,7 @@ contract Comptroller is
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
-     * @return 0 if the repay is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function repayBorrowAllowed(
         address vToken,
@@ -491,7 +480,7 @@ contract Comptroller is
         repayAmount;
 
         if (!markets[vToken].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+            revert MarketNotListed(address(vToken));
         }
 
         // Keep the flywheel moving
@@ -502,7 +491,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -540,6 +529,7 @@ contract Comptroller is
      * @param borrower The address of the borrower
      * @param repayAmount The amount of underlying being repaid
      * @param skipLiquidityCheck Allows the borrow to be liquidated regardless of the account liquidity
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function liquidateBorrowAllowed(
         address vTokenBorrowed,
@@ -560,16 +550,21 @@ contract Comptroller is
         // Shh - currently unused
         liquidator;
 
-        if (!markets[vTokenBorrowed].isListed || !markets[vTokenCollateral].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+        if (!markets[vTokenBorrowed].isListed) {
+            revert MarketNotListed(address(vTokenBorrowed));
+        }
+        if (!markets[vTokenCollateral].isListed) {
+            revert MarketNotListed(address(vTokenCollateral));
         }
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
         /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
         if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed))) {
-            require(borrowBalance >= repayAmount, "Can not repay more than the total borrow");
-            return uint256(Error.NO_ERROR);
+            if (repayAmount > borrowBalance) {
+                revert TooMuchRepay();
+            }
+            return NO_ERROR;
         }
 
         /* The borrower must have shortfall and collateral > threshold in order to be liquidatable */
@@ -581,16 +576,16 @@ contract Comptroller is
         }
 
         if (snapshot.shortfall == 0) {
-            return uint256(Error.INSUFFICIENT_SHORTFALL);
+            revert InsufficientShortfall();
         }
 
         /* The liquidator may not repay more than what is allowed by the closeFactor */
         uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactorMantissa }), borrowBalance);
         if (repayAmount > maxClose) {
-            return uint256(Error.TOO_MUCH_REPAY);
+            revert TooMuchRepay();
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -630,6 +625,7 @@ contract Comptroller is
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param seizeTokens The number of collateral tokens to seize
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function seizeAllowed(
         address vTokenCollateral,
@@ -647,23 +643,23 @@ contract Comptroller is
         seizeTokens;
 
         if (!markets[vTokenCollateral].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+            revert MarketNotListed(vTokenCollateral);
         }
 
         if (seizerContract == address(this)) {
             // If Comptroller is the seizer, just check if collateral's comptroller
             // is equal to the current address
             if (address(VToken(vTokenCollateral).comptroller()) != address(this)) {
-                return uint256(Error.COMPTROLLER_MISMATCH);
+                revert ComptrollerMismatch();
             }
         } else {
             // If the seizer is not the Comptroller, check that the seizer is a
             // listed market, and that the markets' comptrollers match
             if (!markets[seizerContract].isListed) {
-                return uint256(Error.MARKET_NOT_LISTED);
+                revert MarketNotListed(seizerContract);
             }
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
-                return uint256(Error.COMPTROLLER_MISMATCH);
+                revert ComptrollerMismatch();
             }
         }
 
@@ -675,7 +671,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -712,7 +708,7 @@ contract Comptroller is
      * @param src The account which sources the tokens
      * @param dst The account which receives the tokens
      * @param transferTokens The number of vTokens to transfer
-     * @return 0 if the transfer is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
+     * @return error Always NO_ERROR for compatilibity with Venus core tooling
      */
     function transferAllowed(
         address vToken,
@@ -726,10 +722,7 @@ contract Comptroller is
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
-        uint256 allowed = _redeemAllowed(vToken, src, transferTokens);
-        if (allowed != uint256(Error.NO_ERROR)) {
-            return allowed;
-        }
+        _checkRedeemAllowed(vToken, src, transferTokens);
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
@@ -739,7 +732,7 @@ contract Comptroller is
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
         }
 
-        return uint256(Error.NO_ERROR);
+        return NO_ERROR;
     }
 
     /**
@@ -865,11 +858,7 @@ contract Comptroller is
         VToken[] memory markets = accountAssets[borrower];
         uint256 marketsCount = markets.length;
         for (uint256 i; i < marketsCount; ++i) {
-            // Read the balances and exchange rate from the vToken
-            (uint256 oErr, , uint256 borrowBalance, ) = markets[i].getAccountSnapshot(borrower);
-            if (oErr != 0) {
-                revert SnapshotError();
-            }
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(markets[i], borrower);
             require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
         }
     }
@@ -917,7 +906,7 @@ contract Comptroller is
 
         // If collateral factor != 0, fail if price == 0
         if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
-            revert PriceError();
+            revert PriceError(address(vToken));
         }
 
         uint256 oldCollateralFactorMantissa = market.collateralFactorMantissa;
@@ -955,13 +944,12 @@ contract Comptroller is
      * @notice Add the market to the markets mapping and set it as listed
      * @dev Only callable by the PoolRegistry
      * @param vToken The address of the market (token) to list
-     * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
     function supportMarket(VToken vToken) external {
         _checkSenderIs(poolRegistry);
 
         if (markets[address(vToken)].isListed) {
-            return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
+            revert MarketAlreadyListed(address(vToken));
         }
 
         vToken.isVToken(); // Sanity check to make sure its really a VToken
@@ -977,8 +965,6 @@ contract Comptroller is
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
-
-        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -1115,19 +1101,17 @@ contract Comptroller is
      * @param vTokenBorrowed The address of the borrowed vToken
      * @param vTokenCollateral The address of the collateral vToken
      * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
-     * @return (errorCode, number of vTokenCollateral tokens to be seized in a liquidation)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return tokensToSeize Number of vTokenCollateral tokens to be seized in a liquidation
      */
     function liquidateCalculateSeizeTokens(
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 actualRepayAmount
-    ) external view override returns (uint256, uint256) {
+    ) external view override returns (uint256 error, uint256 tokensToSeize) {
         /* Read oracle prices for borrowed and collateral markets */
-        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(vTokenBorrowed);
-        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(vTokenCollateral);
-        if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
-            return (uint256(Error.PRICE_ERROR), 0);
-        }
+        uint256 priceBorrowedMantissa = _safeGetUnderlyingPrice(VToken(vTokenBorrowed));
+        uint256 priceCollateralMantissa = _safeGetUnderlyingPrice(VToken(vTokenCollateral));
 
         /*
          * Get the exchange rate and calculate the number of collateral tokens to seize:
@@ -1147,7 +1131,7 @@ contract Comptroller is
 
         seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
 
-        return (uint256(Error.NO_ERROR), seizeTokens);
+        return (NO_ERROR, seizeTokens);
     }
 
     /**
@@ -1189,21 +1173,21 @@ contract Comptroller is
      * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
-     * @return (possible error code (semi-opaque),
-                account liquidity in excess of collateral requirements,
-     *          account shortfall below collateral requirements)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Account liquidity in excess of collateral requirements,
+     * @return shortfall Account shortfall below collateral requirements
      */
     function getAccountLiquidity(address account)
         public
         view
         returns (
-            uint256,
-            uint256,
-            uint256
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
         )
     {
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getCollateralFactor);
-        return (uint256(Error.NO_ERROR), snapshot.liquidity, snapshot.shortfall);
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
 
     /**
@@ -1213,9 +1197,9 @@ contract Comptroller is
      * @param account The account to determine liquidity for
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
-     * @return (possible error code (semi-opaque),
-                hypothetical account liquidity in excess of collateral requirements,
-     *          hypothetical account shortfall below collateral requirements)
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Hypothetical account liquidity in excess of collateral requirements,
+     * @return shortfall Hypothetical account shortfall below collateral requirements
      */
     function getHypotheticalAccountLiquidity(
         address account,
@@ -1226,9 +1210,9 @@ contract Comptroller is
         public
         view
         returns (
-            uint256,
-            uint256,
-            uint256
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
         )
     {
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
@@ -1238,13 +1222,13 @@ contract Comptroller is
             borrowAmount,
             _getCollateralFactor
         );
-        return (uint256(Error.NO_ERROR), snapshot.liquidity, snapshot.shortfall);
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
 
     /**
      * @notice Return all of the markets
      * @dev The automatic getter may be used to access an individual market.
-     * @return The list of market addresses
+     * @return markets The list of market addresses
      */
     function getAllMarkets() public view override returns (VToken[] memory) {
         return allMarkets;
@@ -1253,7 +1237,7 @@ contract Comptroller is
     /**
      * @notice Check if a market is marked as listed (active)
      * @param vToken vToken Address for the market to check
-     * @return True if listed otherwise false
+     * @return listed True if listed otherwise false
      */
     function isMarketListed(VToken vToken) public view returns (bool) {
         return markets[address(vToken)].isListed;
@@ -1263,7 +1247,7 @@ contract Comptroller is
      * @notice Checks if a certain action is paused on a market
      * @param market vToken address
      * @param action Action to check
-     * @return True if the action is paused otherwise false
+     * @return paused True if the action is paused otherwise false
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
@@ -1273,7 +1257,7 @@ contract Comptroller is
      * @notice Check if a vToken market has been deprecated
      * @dev All borrows in a deprecated vToken market can be immediately liquidated
      * @param vToken The market to check if deprecated
-     * @return True if the given vToken market has been deprecated
+     * @return deprecated True if the given vToken market has been deprecated
      */
     function isDeprecated(VToken vToken) public view returns (bool) {
         return
@@ -1286,20 +1270,18 @@ contract Comptroller is
      * @notice Add the market to the borrower's "assets in" for liquidity calculations
      * @param vToken The market to enter
      * @param borrower The address of the account to modify
-     * @return Success indicator for whether the market was entered
      */
-    function _addToMarket(VToken vToken, address borrower) internal returns (Error) {
+    function _addToMarket(VToken vToken, address borrower) internal {
         _checkActionPauseState(address(vToken), Action.ENTER_MARKET);
         Market storage marketToJoin = markets[address(vToken)];
 
         if (!marketToJoin.isListed) {
-            // market is not listed, cannot join
-            return Error.MARKET_NOT_LISTED;
+            revert MarketNotListed(address(vToken));
         }
 
         if (marketToJoin.accountMembership[borrower]) {
             // already joined
-            return Error.NO_ERROR;
+            return;
         }
 
         // survived the gauntlet, add to list
@@ -1311,8 +1293,6 @@ contract Comptroller is
         accountAssets[borrower].push(vToken);
 
         emit MarketEntered(vToken, borrower);
-
-        return Error.NO_ERROR;
     }
 
     /**
@@ -1323,7 +1303,9 @@ contract Comptroller is
     function _addMarket(address vToken) internal {
         uint256 marketsCount = allMarkets.length;
         for (uint256 i; i < marketsCount; ++i) {
-            require(allMarkets[i] != VToken(vToken), "market already added");
+            if (allMarkets[i] == VToken(vToken)) {
+                revert MarketAlreadyListed(vToken);
+            }
         }
         allMarkets.push(VToken(vToken));
     }
@@ -1349,20 +1331,19 @@ contract Comptroller is
      * @param vToken Address of the vTokens to redeem
      * @param redeemer Account redeeming the tokens
      * @param redeemTokens The number of tokens to redeem
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _redeemAllowed(
+    function _checkRedeemAllowed(
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) internal view returns (uint256) {
+    ) internal view {
         if (!markets[vToken].isListed) {
-            return uint256(Error.MARKET_NOT_LISTED);
+            revert MarketNotListed(address(vToken));
         }
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
         if (!markets[vToken].accountMembership[redeemer]) {
-            return uint256(Error.NO_ERROR);
+            return;
         }
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
@@ -1374,10 +1355,8 @@ contract Comptroller is
             _getCollateralFactor
         );
         if (snapshot.shortfall > 0) {
-            return uint256(Error.INSUFFICIENT_LIQUIDITY);
+            revert InsufficientLiquidity();
         }
-
-        return uint256(Error.NO_ERROR);
     }
 
     /**
@@ -1483,7 +1462,7 @@ contract Comptroller is
     function _safeGetUnderlyingPrice(VToken asset) internal view returns (uint256) {
         uint256 oraclePriceMantissa = oracle.getUnderlyingPrice(address(asset));
         if (oraclePriceMantissa == 0) {
-            revert PriceError();
+            revert PriceError(address(asset));
         }
         return oraclePriceMantissa;
     }
@@ -1526,7 +1505,7 @@ contract Comptroller is
         uint256 err;
         (err, vTokenBalance, borrowBalance, exchangeRateMantissa) = vToken.getAccountSnapshot(user);
         if (err != 0) {
-            revert SnapshotError();
+            revert SnapshotError(address(vToken), user);
         }
         return (vTokenBalance, borrowBalance, exchangeRateMantissa);
     }
@@ -1553,6 +1532,8 @@ contract Comptroller is
     /// @param market Market to check
     /// @param action Action to check
     function _checkActionPauseState(address market, Action action) private view {
-        require(!actionPaused(market, action), "action is paused");
+        if (actionPaused(market, action)) {
+            revert ActionPaused(market, action);
+        }
     }
 }

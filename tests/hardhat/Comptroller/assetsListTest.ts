@@ -103,18 +103,18 @@ describe("assetListTest", () => {
     await comptroller.setMarketBorrowCaps(addresses, caps);
   });
 
-  async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
+  const checkMarkets = async (expectedTokens: FakeContract<VToken>[]) => {
     for (const token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
       expect(await comptroller.checkMembership(customer.address, token.address)).to.equal(isExpected);
     }
-  }
+  };
 
-  async function enterAndCheckMarkets(
+  const enterAndCheckMarkets = async (
     enterTokens: FakeContract<VToken>[],
     expectedTokens: FakeContract<VToken>[],
     expectedErrors: Error[] | null = null,
-  ) {
+  ) => {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
     const receipt = await comptroller.connect(customer).enterMarkets(enterTokens.map(t => t.address));
     const assetsIn = await comptroller.getAssetsIn(customer.address);
@@ -131,7 +131,7 @@ describe("assetListTest", () => {
     await checkMarkets(expectedTokens);
 
     return receipt;
-  }
+  };
 
   async function exitAndCheckMarkets(
     exitToken: FakeContract<VToken>,
@@ -169,7 +169,8 @@ describe("assetListTest", () => {
     });
 
     it("the market must be listed for add to succeed", async () => {
-      await enterAndCheckMarkets([SKT], [], [Error.MARKET_NOT_LISTED]);
+      const tx = comptroller.connect(customer).enterMarkets([SKT.address]);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "MarketNotListed").withArgs(SKT.address);
       const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
       await comptroller.connect(poolRegistrySigner).supportMarket(SKT.address);
       await enterAndCheckMarkets([SKT], [SKT]);
@@ -177,7 +178,8 @@ describe("assetListTest", () => {
 
     it("returns a list of codes mapping to user's ultimate membership in given addresses", async () => {
       await enterAndCheckMarkets([OMG, ZRX, BAT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.NO_ERROR, Error.NO_ERROR]);
-      await enterAndCheckMarkets([OMG, SKT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.MARKET_NOT_LISTED]);
+      const tx = comptroller.connect(customer).enterMarkets([OMG.address, SKT.address]);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "MarketNotListed").withArgs(SKT.address);
     });
   });
 
@@ -186,7 +188,8 @@ describe("assetListTest", () => {
       await enterAndCheckMarkets([OMG], [OMG]);
       OMG.getAccountSnapshot.returns([0, 1, 2, 1]);
 
-      await exitAndCheckMarkets(OMG, [OMG], Error.NONZERO_BORROW_BALANCE);
+      const tx = comptroller.connect(customer).exitMarket(OMG.address);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "NonzeroBorrowBalance");
     });
 
     it("rejects unless redeem allowed", async () => {
@@ -196,7 +199,8 @@ describe("assetListTest", () => {
       BAT.getAccountSnapshot.returns([0, 0, 2, 1]);
 
       // BAT has a negative balance and there's no supply, thus account should be underwater
-      await exitAndCheckMarkets(OMG, [OMG, BAT], Error.REJECTION);
+      const tx = comptroller.connect(customer).exitMarket(OMG.address);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "InsufficientLiquidity");
     });
 
     it("accepts when you're not in the market already", async () => {

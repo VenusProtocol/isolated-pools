@@ -8,7 +8,6 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, ERC20Harness, InterestRateModel, VTokenHarness } from "../../../typechain";
-import { Error } from "../util/Errors";
 import {
   VTokenTestFixture,
   adjustBalances,
