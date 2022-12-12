@@ -134,6 +134,12 @@ contract VTokenStorage {
 }
 
 abstract contract VTokenInterface is VTokenStorage {
+    struct RiskManagementInit {
+        address shortfall;
+        address payable riskFund;
+        address payable protocolShareReserve;
+    }
+
     /**
      * @notice Indicator that this is a VToken contract (for inspection)
      */
@@ -238,33 +244,25 @@ abstract contract VTokenInterface is VTokenStorage {
 
     /*** User Interface ***/
 
-    struct RiskManagementInit {
-        address shortfall;
-        address payable riskFund;
-        address payable protocolShareReserve;
-    }
+    function mint(uint256 mintAmount) external virtual returns (uint256);
 
-    /*** User Interface ***/
+    function mintBehalf(address minter, uint256 mintAllowed) external virtual returns (uint256);
 
-    function mint(uint256 mintAmount) external virtual;
+    function redeem(uint256 redeemTokens) external virtual returns (uint256);
 
-    function mintBehalf(address minter, uint256 mintAllowed) external virtual;
+    function redeemUnderlying(uint256 redeemAmount) external virtual returns (uint256);
 
-    function redeem(uint256 redeemTokens) external virtual;
+    function borrow(uint256 borrowAmount) external virtual returns (uint256);
 
-    function redeemUnderlying(uint256 redeemAmount) external virtual;
+    function repayBorrow(uint256 repayAmount) external virtual returns (uint256);
 
-    function borrow(uint256 borrowAmount) external virtual;
-
-    function repayBorrow(uint256 repayAmount) external virtual;
-
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external virtual;
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external virtual returns (uint256);
 
     function liquidateBorrow(
         address borrower,
         uint256 repayAmount,
         VTokenInterface vTokenCollateral
-    ) external virtual;
+    ) external virtual returns (uint256);
 
     function healBorrow(
         address payer,

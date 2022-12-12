@@ -128,14 +128,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param src The address of the source account
      * @param dst The address of the destination account
      * @param tokens The number of tokens to transfer
-     * @return 0 if the transfer succeeded, else revert
      */
     function _transferTokens(
         address spender,
         address src,
         address dst,
         uint256 tokens
-    ) internal returns (uint256) {
+    ) internal {
         /* Fail if transfer not allowed */
         uint256 allowed = comptroller.transferAllowed(address(this), src, dst, tokens);
         if (allowed != 0) {
@@ -162,7 +161,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
-        // (No safe failures beyond this point)
 
         accountTokens[src] = srvTokensNew;
         accountTokens[dst] = dstTokensNew;
@@ -177,8 +175,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // unused function
         // comptroller.transferVerify(address(this), src, dst, tokens);
-
-        return NO_ERROR;
     }
 
     /**
@@ -188,7 +184,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return success True if the transfer suceeded, reverts otherwise
      */
     function transfer(address dst, uint256 amount) external override nonReentrant returns (bool) {
-        return _transferTokens(msg.sender, msg.sender, dst, amount) == NO_ERROR;
+        _transferTokens(msg.sender, msg.sender, dst, amount);
+        return true;
     }
 
     /**
@@ -203,7 +200,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         address dst,
         uint256 amount
     ) external override nonReentrant returns (bool) {
-        return _transferTokens(msg.sender, src, dst, amount) == NO_ERROR;
+        _transferTokens(msg.sender, src, dst, amount);
+        return true;
     }
 
     /**
@@ -469,22 +467,26 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function mint(uint256 mintAmount) external override nonReentrant {
+    function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
         _mintFresh(msg.sender, msg.sender, mintAmount);
+        return NO_ERROR;
     }
 
     /**
      * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant {
+    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
         _mintFresh(msg.sender, minter, mintAmount);
+        return NO_ERROR;
     }
 
     /**
@@ -555,22 +557,26 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender redeems vTokens in exchange for the underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemTokens The number of vTokens to redeem into underlying
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function redeem(uint256 redeemTokens) external override nonReentrant {
+    function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
         _redeemFresh(payable(msg.sender), redeemTokens, 0);
+        return NO_ERROR;
     }
 
     /**
      * @notice Sender redeems vTokens in exchange for a specified amount of underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemAmount The amount of underlying to receive from redeeming vTokens
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function redeemUnderlying(uint256 redeemAmount) external override nonReentrant {
+    function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
         _redeemFresh(payable(msg.sender), 0, redeemAmount);
+        return NO_ERROR;
     }
 
     /**
@@ -657,11 +663,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Sender borrows assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function borrow(uint256 borrowAmount) external override nonReentrant {
+    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         _borrowFresh(payable(msg.sender), borrowAmount);
+        return NO_ERROR;
     }
 
     /**
@@ -721,22 +729,26 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function repayBorrow(uint256 repayAmount) external override nonReentrant {
+    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
+        return NO_ERROR;
     }
 
     /**
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant {
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         _repayBorrowFresh(msg.sender, borrower, repayAmount);
+        return NO_ERROR;
     }
 
     /**
@@ -806,13 +818,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param borrower The borrower of this vToken to be liquidated
      * @param repayAmount The amount of the underlying borrowed asset to repay
      * @param vTokenCollateral The market in which to seize collateral from the borrower
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
      */
     function liquidateBorrow(
         address borrower,
         uint256 repayAmount,
         VTokenInterface vTokenCollateral
-    ) external override {
+    ) external override returns (uint256) {
         _liquidateBorrow(msg.sender, borrower, repayAmount, vTokenCollateral, false);
+        return NO_ERROR;
     }
 
     /**
