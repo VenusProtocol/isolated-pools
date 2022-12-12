@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
+import "../InterestRate/StableRate.sol";
 
 /**
  * @title Venus's VToken Contract
@@ -23,6 +24,7 @@ contract UpgradedVToken is VToken {
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
      * @param riskManagement Addresses of risk fund contracts
+     * @param stableRateModel_ The address of the stable interest rate model
      */
 
     function initializeV2(
@@ -35,7 +37,8 @@ contract UpgradedVToken is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) public reinitializer(2) {
         super._initialize(
             underlying_,
@@ -47,7 +50,8 @@ contract UpgradedVToken is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 

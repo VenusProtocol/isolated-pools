@@ -7,6 +7,7 @@ import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
 import "./Governance/AccessControlManager.sol";
+import "./InterestRate/StableRate.sol";
 
 contract VTokenStorage {
     /**
@@ -133,14 +134,24 @@ contract VTokenStorage {
     address public shortfall;
 
     /**
+     * @notice Model which tells what the current stable interest rate should be
+     */
+    StableRateModel public stableRateModel;
+
+    /**
      * @notice Total amount of outstanding stable borrows of the underlying in this market
      */
-    uint256 public stableDebt;
+    uint256 public stableBorrows;
 
     /**
      * @notice Accumulator of the total earned stable interest rate since the opening of the market
      */
     uint256 public stableBorrowIndex;
+
+    /**
+     * @notice Average of all of the stable borrows
+     */
+    uint256 public averageStableBorrowRate;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -239,6 +250,11 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when protocol seize share is changed
      */
     event NewProtocolSeizeShare(uint256 oldProtocolSeizeShareMantissa, uint256 newProtocolSeizeShareMantissa);
+
+    /**
+     * @notice Event emitted when stableInterestRateModel is changed
+     */
+    event NewMarketStableInterestRateModel(StableRateModel oldInterestRateModel, StableRateModel newInterestRateModel);
 
     /**
      * @notice Event emitted when the reserve factor is changed
@@ -363,6 +379,8 @@ abstract contract VTokenInterface is VTokenStorage {
     function reduceReserves(uint256 reduceAmount) external virtual;
 
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
+
+    function _setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual returns (uint256);
 
     function addReserves(uint256 addAmount) external virtual;
 }

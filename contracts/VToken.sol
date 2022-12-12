@@ -48,7 +48,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) public initializer {
         // Initialize the market
         _initialize(
@@ -61,7 +62,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 
@@ -85,7 +87,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel
     ) internal onlyInitializing {
         __Ownable2Step_init();
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
@@ -104,6 +107,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // Set the interest rate model (depends on block number / borrow index)
         _setInterestRateModelFresh(interestRateModel_);
+
+        // Set the interest rate model (depends on block number / borrow index)
+        err = _setStableInterestRateModelFresh(stableRateModel);
+        require(err == NO_ERROR, "setting interest rate model failed");
 
         name = name_;
         symbol = symbol_;
@@ -1347,6 +1354,58 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // Emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel)
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
+    }
+
+    /**
+     * @notice accrues interest and updates the stable interest rate model using _setStableInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the stable interest rate model
+     * @param newStableInterestRateModel the new interest rate model to use
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
+        accrueInterest();
+        // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
+        return _setStableInterestRateModelFresh(newStableInterestRateModel);
+    }
+
+    /**
+     * @notice updates the stable interest rate model (*requires fresh interest accrual)
+     * @dev Admin function to update the stable interest rate model
+     * @param newStableInterestRateModel the new stable interest rate model to use
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal returns (uint256) {
+        // Used to store old model for use in the event that is emitted on success
+        StableRateModel oldStableInterestRateModel;
+
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "_setStableInterestRateModelFresh(StableRateModel)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetInterestRateModelOwnerCheck();
+        }
+
+        // We fail gracefully unless market's block number equals current block number
+        if (accrualBlockNumber != getBlockNumber()) {
+            revert SetInterestRateModelFreshCheck();
+        }
+
+        // Track the market's current stable interest rate model
+        oldStableInterestRateModel = stableRateModel;
+
+        // Ensure invoke newInterestRateModel.isInterestRateModel() returns true
+        require(newStableInterestRateModel.isInterestRateModel(), "marker method returned false");
+
+        // Set the interest rate model to newStableInterestRateModel
+        stableRateModel = newStableInterestRateModel;
+
+        // Emit NewMarketStableInterestRateModel(oldStableInterestRateModel, newStableInterestRateModel)
+        emit NewMarketStableInterestRateModel(oldStableInterestRateModel, newStableInterestRateModel);
+
+        return NO_ERROR;
     }
 
     /**

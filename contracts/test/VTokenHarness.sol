@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
+import "../InterestRate/StableRate.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -22,7 +23,8 @@ contract VTokenHarness is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) external initializer {
         blockNumber = 100000;
         super._initialize(
@@ -35,7 +37,8 @@ contract VTokenHarness is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 
@@ -189,7 +192,8 @@ contract VTokenScenario is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) {
         initialize(
             underlying_,
@@ -201,7 +205,8 @@ contract VTokenScenario is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 
@@ -230,7 +235,8 @@ contract VEvil is VTokenScenario {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     )
         VTokenScenario(
             underlying_,
@@ -242,7 +248,8 @@ contract VEvil is VTokenScenario {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         )
     {}
 
