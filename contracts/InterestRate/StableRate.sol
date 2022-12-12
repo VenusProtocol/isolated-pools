@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -174,12 +174,12 @@ abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
         return ((loanRate - optimalStableLoanRate) * BASE) / (BASE - optimalStableLoanRate);
     }
 
-    function getBorrowRateInternal(
+    function getBorrowRate(
         uint256 cash,
         uint256 stableborrows,
         uint256 totalborrows,
         uint256 reserves
-    ) internal view returns (uint256) {
+    ) external view returns (uint256) {
         uint256 util = utilizationRate(cash, totalborrows, reserves);
         uint256 loanRate = stableLoanRate(stableborrows, totalborrows);
         uint256 excessLoanRate = calculateLoanRateDiff(loanRate);
@@ -201,29 +201,6 @@ abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
                 stableRatePremium *
                 excessLoanRate;
         }
-    }
-
-    /**
-     * @notice Calculates the current supply rate per block
-     * @param cash The amount of cash in the market
-     * @param stableborrows The amount of stable borrows in the market
-     * @param totalborrows The amount of total borrows in the market
-     * @param reserves The amount of reserves in the market
-     * @param reserveFactorMantissa The current reserve factor for the market
-     * @return The supply rate percentage per block as a mantissa (scaled by BASE)
-     */
-     // Has to refactor the supply rate.
-    function getSupplyRate(
-        uint256 cash,
-        uint256 stableborrows,
-        uint256 totalborrows,
-        uint256 reserves,
-        uint256 reserveFactorMantissa
-    ) public view virtual override returns (uint256) {
-        uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRateInternal(cash, stableborrows, totalborrows, reserves);
-        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
-        return (utilizationRate(cash, totalborrows, reserves) * rateToPool) / BASE;
     }
 
     /**

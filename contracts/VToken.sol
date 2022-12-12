@@ -11,6 +11,7 @@ import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlManager.sol";
 import "./RiskFund/IProtocolShareReserve.sol";
+import "./InterestRate/StableRate.sol";
 
 /**
  * @title Venus VToken Contract
@@ -37,6 +38,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
      * @param riskManagement Addresses of risk fund contracts
+     * @param stableRateModel_ Address of the stable interest rate model
      */
     function initialize(
         address underlying_,
@@ -303,7 +305,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return rate The supply interest rate per block, scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getSupplyRate(_getCashPrior(), totalBorrows, totalReserves, reserveFactorMantissa);
+        uint256 utilizationRate = interestRateModel.utilizationRate(getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrows = totalBorrows - stableBorrows;
+        uint256 averageMarketBorrowRate = ((variableBorrows * variableBorrowRate) +
+            (stableBorrows * averageStableBorrowRate)) / totalBorrows;
+        return
+            (averageMarketBorrowRate * utilizationRate * (reserveFactorMaxMantissa - reserveFactorMantissa)) /
+            reserveFactorMaxMantissa;
     }
 
     /**

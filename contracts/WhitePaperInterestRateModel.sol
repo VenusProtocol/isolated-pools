@@ -51,7 +51,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
         uint256 cash,
         uint256 borrows,
         uint256 reserves
-    ) public pure returns (uint256) {
+    ) public pure override returns (uint256) {
         // Utilization rate is 0 when there are no borrows
         if (borrows == 0) {
             return 0;
