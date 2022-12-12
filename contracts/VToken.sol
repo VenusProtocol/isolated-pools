@@ -111,7 +111,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         _setInterestRateModelFresh(interestRateModel_);
 
         // Set the interest rate model (depends on block number / borrow index)
-        err = _setStableInterestRateModelFresh(stableRateModel);
+        uint256 err = _setStableInterestRateModelFresh(stableRateModel);
         require(err == NO_ERROR, "setting interest rate model failed");
 
         name = name_;
@@ -305,8 +305,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return rate The supply interest rate per block, scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
-        uint256 utilizationRate = interestRateModel.utilizationRate(getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(getCashPrior(), totalBorrows, totalReserves);
+        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
         uint256 variableBorrows = totalBorrows - stableBorrows;
         uint256 averageMarketBorrowRate = ((variableBorrows * variableBorrowRate) +
             (stableBorrows * averageStableBorrowRate)) / totalBorrows;
@@ -1398,7 +1398,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
 
         // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != getBlockNumber()) {
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert SetInterestRateModelFreshCheck();
         }
 
