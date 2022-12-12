@@ -75,24 +75,4 @@ contract WhitePaperInterestRateModel is InterestRateModel {
         uint256 ur = utilizationRate(cash, borrows, reserves);
         return ((ur * multiplierPerBlock) / BASE) + baseRatePerBlock;
     }
-
-    /**
-     * @notice Calculates the current supply rate per block
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market
-     * @param reserveFactorMantissa The current reserve factor for the market
-     * @return The supply rate percentage per block as a mantissa (scaled by BASE)
-     */
-    function getSupplyRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 reserveFactorMantissa
-    ) public view override returns (uint256) {
-        uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRate(cash, borrows, reserves);
-        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
-        return (utilizationRate(cash, borrows, reserves) * rateToPool) / BASE;
-    }
 }

@@ -41,7 +41,7 @@ contract InterestRateModelHarness is InterestRateModel {
         uint256 _borrows,
         uint256 _reserves,
         uint256 _reserveFactor
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         _cash; // unused
         _borrows; // unused
         _reserves; // unused
