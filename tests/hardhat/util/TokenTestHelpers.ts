@@ -1,3 +1,4 @@
+import { StableRateModel } from './../../../typechain/StableRateModel.d';
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
@@ -41,6 +42,8 @@ export async function makeVToken({
 }): Promise<VTokenContracts> {
   const interestRateModel = await smock.fake<InterestRateModel>("InterestRateModel");
   interestRateModel.isInterestRateModel.returns(true);
+  const stableInterestRateModel = await smock.fake<StableRateModel>("StableRateModel");
+  stableInterestRateModel.isInterestRateModel.returns(true);
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
   const VToken = await smock.mock<VTokenHarness__factory>("VTokenHarness");
@@ -48,7 +51,7 @@ export async function makeVToken({
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const initializer =
-    "initializeHarness(address,address,address,uint256,string,string,uint8,address,address,(address,address,address))";
+    "initializeHarness(address,address,address,uint256,string,string,uint8,address,address,(address,address,address),address)";
   const vToken = await upgrades.deployProxy(
     VToken,
     [
@@ -66,6 +69,7 @@ export async function makeVToken({
         riskFund: riskFund.address,
         protocolShareReserve: protocolShareReserve.address,
       },
+      stableInterestRateModel.address
     ],
     { initializer },
   );

@@ -35,7 +35,6 @@ async function preAccrue({
 }) {
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getBorrowRate.returns(borrowRate);
-  interestRateModel.getSupplyRate.reset();
   await vToken.harnessExchangeRateDetails(0, 0, 0);
 }
 

@@ -69,8 +69,6 @@ function configure({ comptroller, accessControlManager, collateral, borrowed }: 
   for (const model of [borrowed.interestRateModel, collateral.interestRateModel]) {
     model.getBorrowRate.reset();
     model.getBorrowRate.returns(0);
-    model.getSupplyRate.reset();
-    model.getSupplyRate.returns(0);
   }
 }
 

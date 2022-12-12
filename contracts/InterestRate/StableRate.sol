@@ -8,7 +8,7 @@ import "./IStableRate.sol";
 /**
  * @title Logic for Venus stable rate.
  */
-abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
+contract StableRateModel is OwnableUpgradeable {
     event NewStableInterestParams(
         uint256 baseRatePerBlockForStable,
         uint256 multiplierPerBlock,
@@ -18,6 +18,9 @@ abstract contract StableRateModel is OwnableUpgradeable, IStableRateModel {
         uint256 stableRatePremium,
         uint256 optimalStableLoanRate
     );
+
+    /// @notice Indicator that this is an InterestRateModel contract (for inspection)
+    bool public constant isInterestRateModel = true;
 
     uint256 private constant BASE = 1e18;
 

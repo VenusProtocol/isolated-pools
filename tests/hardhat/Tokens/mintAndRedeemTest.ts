@@ -37,7 +37,6 @@ async function preMint(
   comptroller.preMintHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
 
   const minterAddress = await minter.getAddress();
   await underlying.harnessSetFailTransferFromAddress(minterAddress, false);
@@ -74,7 +73,6 @@ async function preRedeem(
   comptroller.preRedeemHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
   await underlying.harnessSetBalance(vToken.address, redeemAmount);
 
   const redeemerAddress = await redeemer.getAddress();

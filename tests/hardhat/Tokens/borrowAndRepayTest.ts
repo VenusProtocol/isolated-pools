@@ -21,7 +21,6 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
   comptroller.preBorrowHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
 
   const borrowerAddress = await borrower.getAddress();
   await underlying.harnessSetBalance(vToken.address, borrowAmount);
@@ -46,7 +45,6 @@ async function preRepay(contracts: VTokenTestFixture, benefactor: Signer, borrow
   comptroller.preRepayHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
 
   await underlying.harnessSetFailTransferFromAddress(await benefactor.getAddress(), false);
   await underlying.harnessSetFailTransferFromAddress(await borrower.getAddress(), false);
