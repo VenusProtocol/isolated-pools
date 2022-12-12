@@ -185,7 +185,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
-     * @return Whether or not the transfer succeeded
+     * @return success True if the transfer suceeded, reverts otherwise
      */
     function transfer(address dst, uint256 amount) external override nonReentrant returns (bool) {
         return _transferTokens(msg.sender, msg.sender, dst, amount) == NO_ERROR;
@@ -196,7 +196,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param src The address of the source account
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
-     * @return Whether or not the transfer succeeded
+     * @return success True if the transfer suceeded, reverts otherwise
      */
     function transferFrom(
         address src,
@@ -212,7 +212,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      *  and is subject to issues noted [here](https://eips.ethereum.org/EIPS/eip-20#approve)
      * @param spender The address of the account which may transfer tokens
      * @param amount The number of tokens that are approved (uint256.max means infinite)
-     * @return Whether or not the approval succeeded
+     * @return success Whether or not the approval succeeded
      */
     function approve(address spender, uint256 amount) external override returns (bool) {
         address src = msg.sender;
@@ -225,7 +225,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
-     * @return The number of tokens allowed to be spent (-1 means infinite)
+     * @return amount The number of tokens allowed to be spent (-1 means infinite)
      */
     function allowance(address owner, address spender) external view override returns (uint256) {
         return transferAllowances[owner][spender];
@@ -234,7 +234,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Get the token balance of the `owner`
      * @param owner The address of the account to query
-     * @return The number of tokens owned by `owner`
+     * @return amount The number of tokens owned by `owner`
      */
     function balanceOf(address owner) external view override returns (uint256) {
         return accountTokens[owner];
@@ -244,7 +244,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Get the underlying balance of the `owner`
      * @dev This also accrues interest in a transaction
      * @param owner The address of the account to query
-     * @return The amount of underlying owned by `owner`
+     * @return amount The amount of underlying owned by `owner`
      */
     function balanceOfUnderlying(address owner) external override returns (uint256) {
         Exp memory exchangeRate = Exp({ mantissa: exchangeRateCurrent() });
@@ -255,17 +255,20 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Get a snapshot of the account's balances, and the cached exchange rate
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
-     * @return (possible error, token balance, borrow balance, exchange rate mantissa)
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return vTokenBalance User's balance of vTokens
+     * @return borrowBalance Amount owed in terms of underlying
+     * @return exchangeRate Stored exchange rate
      */
     function getAccountSnapshot(address account)
         external
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 error,
+            uint256 vTokenBalance,
+            uint256 borrowBalance,
+            uint256 exchangeRate
         )
     {
         return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
@@ -281,7 +284,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Returns the current per-block borrow interest rate for this vToken
-     * @return The borrow interest rate per block, scaled by 1e18
+     * @return rate The borrow interest rate per block, scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
         return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
@@ -289,7 +292,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Returns the current per-block supply interest rate for this v
-     * @return The supply interest rate per block, scaled by 1e18
+     * @return rate The supply interest rate per block, scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
         return interestRateModel.getSupplyRate(_getCashPrior(), totalBorrows, totalReserves, reserveFactorMantissa);
@@ -297,7 +300,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Returns the current total borrows plus accrued interest
-     * @return The total borrows with interest
+     * @return totalBorrows The total borrows with interest
      */
     function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -307,7 +310,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
      * @param account The address whose balance should be calculated after updating borrowIndex
-     * @return The calculated balance
+     * @return borrowBalance The calculated balance
      */
     function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -317,7 +320,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Return the borrow balance of account based on stored data
      * @param account The address whose balance should be calculated
-     * @return The calculated balance
+     * @return borrowBalance The calculated balance
      */
     function borrowBalanceStored(address account) public view override returns (uint256) {
         return _borrowBalanceStored(account);
@@ -326,7 +329,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Return the borrow balance of account based on stored data
      * @param account The address whose balance should be calculated
-     * @return (error code, the calculated balance or 0 if error code is non-zero)
+     * @return borrowBalance the calculated balance
      */
     function _borrowBalanceStored(address account) internal view returns (uint256) {
         /* Get borrowBalance and borrowIndex */
@@ -349,7 +352,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Accrue interest then return the up-to-date exchange rate
-     * @return Calculated exchange rate scaled by 1e18
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
      */
     function exchangeRateCurrent() public override nonReentrant returns (uint256) {
         accrueInterest();
@@ -359,7 +362,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Calculates the exchange rate from the underlying to the VToken
      * @dev This function does not accrue interest before calculating the exchange rate
-     * @return Calculated exchange rate scaled by 1e18
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
      */
     function exchangeRateStored() public view override returns (uint256) {
         return _exchangeRateStored();
@@ -368,7 +371,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Calculates the exchange rate from the underlying to the VToken
      * @dev This function does not accrue interest before calculating the exchange rate
-     * @return calculated exchange rate scaled by 1e18
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
      */
     function _exchangeRateStored() internal view virtual returns (uint256) {
         uint256 _totalSupply = totalSupply;
@@ -393,7 +396,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Get cash balance of this vToken in the underlying asset
-     * @return The quantity of underlying asset owned by this contract
+     * @return cash The quantity of underlying asset owned by this contract
      */
     function getCash() external view override returns (uint256) {
         return _getCashPrior();
