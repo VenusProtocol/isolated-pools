@@ -252,6 +252,15 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         emit DistributedSupplierRewardToken(VToken(vToken), supplier, supplierDelta, supplyIndex);
     }
 
+    /**
+     * @notice Calculate reward token accrued by a borrower and possibly transfer it to them
+     *         Borrowers will begin to accrue after the first interaction with the protocol.
+     * @dev This function should only be called when the user has a borrow position in the market
+     *      (e.g. Comptroller.borrowAllowed, and Comptroller.repayBorrowAllowed)
+     *      We avoid an external call to check if they are in the market to save gas because this function is called in many places.
+     * @param vToken The market in which the borrower is interacting
+     * @param borrower The address of the borrower to distribute REWARD TOKEN to
+     */
     function distributeBorrowerRewardToken(
         address vToken,
         address borrower,
@@ -261,8 +270,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Calculate REWARD TOKEN accrued by a borrower and possibly transfer it to them
-     * @dev Borrowers will not begin to accrue until after the first interaction with the protocol.
+     * @notice Calculate reward token accrued by a borrower and possibly transfer it to them
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
      */
@@ -271,10 +279,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         address borrower,
         Exp memory marketBorrowIndex
     ) internal {
-        // TODO: Don't distribute supplier REWARD TOKEN if the user is not in the borrower market.
-        // This check should be as gas efficient as possible as distributeBorrowerRewardToken is called in many places.
-        // - We really don't want to call an external contract as that's quite expensive.
-
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowIndex = borrowState.index;
         uint256 borrowerIndex = rewardTokenBorrowerIndex[vToken][borrower];
