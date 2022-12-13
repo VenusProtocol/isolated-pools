@@ -1,4 +1,3 @@
-import { StableRateModel } from './../../../typechain/StableRateModel.d';
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
@@ -18,6 +17,7 @@ import {
   VTokenHarness,
   VTokenHarness__factory,
 } from "../../../typechain";
+import { StableRateModel } from "./../../../typechain/StableRateModel.d";
 
 chai.use(smock.matchers);
 
@@ -69,7 +69,7 @@ export async function makeVToken({
         riskFund: riskFund.address,
         protocolShareReserve: protocolShareReserve.address,
       },
-      stableInterestRateModel.address
+      stableInterestRateModel.address,
     ],
     { initializer },
   );

@@ -1,7 +1,7 @@
-import { ethers } from 'hardhat';
 import { MockContract, MockContractFactory, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import { StableRateModel, StableRateModel__factory } from "../../typechain";
@@ -10,7 +10,7 @@ let stableRateModelFactory: MockContractFactory<StableRateModel__factory>;
 let stableRateModel: MockContract<StableRateModel>;
 
 const fixture = async (): Promise<void> => {
-  const [owner] = await ethers.getSigners()
+  const [owner] = await ethers.getSigners();
   stableRateModelFactory = await smock.mock<StableRateModel__factory>("StableRateModel");
   stableRateModel = await stableRateModelFactory.deploy(
     convertToUnit(1, 10),
@@ -20,7 +20,7 @@ const fixture = async (): Promise<void> => {
     convertToUnit(6, 17),
     convertToUnit(1, 12),
     convertToUnit(4, 17),
-    owner.address
+    owner.address,
   );
   await stableRateModel.deployed();
 };
@@ -83,28 +83,38 @@ describe("StableRateModel: Tests", function () {
     expect(ut).equals(0);
   });
 
-	it("Utilization Rate", async function () {
+  it("Utilization Rate", async function () {
     const ut = await stableRateModel.utilizationRate(convertToUnit(8, 20), convertToUnit(2, 20), convertToUnit(2, 20));
-		expect(ut).equals(convertToUnit(25, 16));
+    expect(ut).equals(convertToUnit(25, 16));
   });
 
-	it("Return 0 as stableLoanRate for borrows equal to zero", async function () {
+  it("Return 0 as stableLoanRate for borrows equal to zero", async function () {
     const loanRate = await stableRateModel.stableLoanRate(0, 0);
     expect(loanRate).equals(0);
   });
 
-	it("Stable loan Rate", async function () {
+  it("Stable loan Rate", async function () {
     const loanRate = await stableRateModel.stableLoanRate(convertToUnit(8, 20), convertToUnit(80, 20));
-		expect(loanRate).equals(convertToUnit(10, 16));
+    expect(loanRate).equals(convertToUnit(10, 16));
   });
 
-	it("Calculate stable borrow rate when utilization rate is below kink", async function () {
-    const rate = await stableRateModel.getBorrowRate(convertToUnit(8, 20), convertToUnit(2, 20), convertToUnit(4, 20), convertToUnit(2, 20));
-    expect(rate).to.be.closeTo(Number(convertToUnit(16, 10)), Number(convertToUnit(1, 10)))
+  it("Calculate stable borrow rate when utilization rate is below kink", async function () {
+    const rate = await stableRateModel.getBorrowRate(
+      convertToUnit(8, 20),
+      convertToUnit(2, 20),
+      convertToUnit(4, 20),
+      convertToUnit(2, 20),
+    );
+    expect(rate).to.be.closeTo(Number(convertToUnit(16, 10)), Number(convertToUnit(1, 10)));
   });
 
   it("Calculate stable borrow rate when utilization rate is above kink", async function () {
-    const rate = await stableRateModel.getBorrowRate(convertToUnit(8, 20), convertToUnit(3, 20), convertToUnit(4, 20), convertToUnit(2, 20));
-		expect(rate).to.be.closeTo(Number(convertToUnit(58, 10)), Number(convertToUnit(1, 10)))
+    const rate = await stableRateModel.getBorrowRate(
+      convertToUnit(8, 20),
+      convertToUnit(3, 20),
+      convertToUnit(4, 20),
+      convertToUnit(2, 20),
+    );
+    expect(rate).to.be.closeTo(Number(convertToUnit(58, 10)), Number(convertToUnit(1, 10)));
   });
 });
