@@ -19,6 +19,7 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RiskFund,
+  Shortfall,
   VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
@@ -45,6 +46,7 @@ let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let accessControlManager: AccessControlManager;
 let protocolShareReserve: ProtocolShareReserve;
+let shortfall: FakeContract<Shortfall>;
 let riskFund: RiskFund;
 let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
 let busdUser: any;
@@ -131,12 +133,19 @@ const riskFundFixture = async (): Promise<void> => {
   accessControlManager = await AccessControlManagerFactory.deploy();
   await accessControlManager.deployed();
 
+  shortfall = await smock.fake<Shortfall>("Shortfall");
+  await admin.sendTransaction({
+    to: shortfall.address,
+    value: ethers.utils.parseEther("1"), // 1 ether
+  });
+
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [
     pancakeSwapRouter.address,
     convertToUnit(10, 18),
     BUSD.address,
     accessControlManager.address,
+    shortfall.address,
   ]);
 
   const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
@@ -144,13 +153,6 @@ const riskFundFixture = async (): Promise<void> => {
   protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
     fakeProtocolIncome.address,
     riskFund.address,
-  ]);
-
-  const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await upgrades.deployProxy(Shortfall, [
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    convertToUnit("10000", 18),
   ]);
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
@@ -193,7 +195,7 @@ const riskFundFixture = async (): Promise<void> => {
     admin.address,
   );
 
-  await shortfall.setPoolRegistry(poolRegistry.address);
+  await shortfall.connect(shortfall.wallet).setPoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptroller = await Comptroller.deploy(poolRegistry.address, accessControlManager.address);
@@ -685,14 +687,14 @@ describe("Risk Fund: Tests", function () {
   describe("Transfer to Auction contract", async function () {
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
-        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
+        riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
       ).to.be.rejectedWith("Risk Fund: Auction contract invalid address.");
 
       const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setAuctionContractAddress(auctionContract);
 
       await expect(
-        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
+        riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
       ).to.be.rejectedWith("Risk Fund: Insufficient pool reserve.");
     });
 
@@ -730,7 +732,9 @@ describe("Risk Fund: Tests", function () {
       );
 
       const beforeTransfer = await BUSD.balanceOf(auctionContract);
-      await riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
+      await riskFund
+        .connect(shortfall.wallet)
+        .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
       const afterTransfer = await BUSD.balanceOf(auctionContract);
       const remainingBalance = await BUSD.balanceOf(riskFund.address);
       const poolReserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
@@ -775,7 +779,7 @@ describe("Risk Fund: Tests", function () {
 
       await expect(
         riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
-      ).to.be.rejectedWith("Risk fund: Not authorized to transfer funds.");
+      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
 
       // reset
       await accessControlManager.giveCallPermission(
