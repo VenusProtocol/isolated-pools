@@ -150,7 +150,21 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
-    hardhat: isFork(),
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      loggingEnabled: false,
+      live: false,
+    },
+    mainnetfork: {
+      allowUnlimitedContractSize: false,
+      loggingEnabled: false,
+      url: process.env.FORK_MAINNET_RPC as string,
+      forking: {
+        url: process.env.FORK_MAINNET_RPC as string,
+        blockNumber: 21068448,
+      },
+      live: false,
+    },
     development: {
       url: "http://127.0.0.1:8545/",
       chainId: 31337,
@@ -207,26 +221,5 @@ const config: HardhatUserConfig = {
     },
   },
 };
-
-function isFork() {
-  return process.env.FORK_MAINNET === "true"
-    ? {
-        allowUnlimitedContractSize: false,
-        loggingEnabled: false,
-        forking: {
-          url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,
-          blockNumber: 21068448,
-        },
-        accounts: {
-          accountsBalance: "1000000000000000000",
-        },
-        live: false,
-      }
-    : {
-        allowUnlimitedContractSize: true,
-        loggingEnabled: false,
-        live: false,
-      };
-}
 
 export default config;
