@@ -313,8 +313,16 @@ describe("Shortfall: Tests", async function () {
 
       //simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18));
-
-      await shortfall.closeAuction(poolAddress);
+      await expect(shortfall.closeAuction(poolAddress))
+        .to.emit(shortfall, "AuctionClosed")
+        .withArgs(
+          comptroller.address,
+          bidder2.address,
+          1800,
+          parseUnits("10000", 18),
+          [vDAI.address, vWBTC.address],
+          [parseUnits("1800", 18), "36000000"],
+        );
 
       const auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(2);
@@ -420,7 +428,16 @@ describe("Shortfall: Tests", async function () {
       //simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
 
-      await shortfall.closeAuction(poolAddress);
+      await expect(shortfall.closeAuction(poolAddress))
+        .to.emit(shortfall, "AuctionClosed")
+        .withArgs(
+          comptroller.address,
+          bidder2.address,
+          1800,
+          "6138067320000000000000",
+          [vDAI.address, vWBTC.address],
+          [parseUnits("10000", 18), "100000000"],
+        );
       auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(2);
 
