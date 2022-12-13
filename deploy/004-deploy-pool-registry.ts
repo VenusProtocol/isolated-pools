@@ -166,8 +166,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 
   tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "swapAllPoolsAssets(uint256)",
+    riskFund.address,
+    "swapPoolsAssets(address[],uint256[])",
     deployer,
   );
   await tx.wait();
