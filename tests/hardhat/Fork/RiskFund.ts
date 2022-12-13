@@ -136,7 +136,7 @@ const riskFundFixture = async (): Promise<void> => {
   shortfall = await smock.fake<Shortfall>("Shortfall");
   await admin.sendTransaction({
     to: shortfall.address,
-    value: ethers.utils.parseEther("1"), // 1 ether
+    value: ethers.utils.parseEther(".5"), // 1 ether
   });
 
   const RiskFund = await ethers.getContractFactory("RiskFund");

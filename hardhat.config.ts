@@ -16,6 +16,27 @@ import { convertToUnit } from "./helpers/utils";
 
 dotenv.config();
 
+function isFork() {
+  return process.env.FORK_MAINNET === "true"
+    ? {
+        allowUnlimitedContractSize: false,
+        loggingEnabled: false,
+        forking: {
+          url: process.env.FORK_MAINNET_RPC,
+          blockNumber: 21068448,
+        },
+        accounts: {
+          accountsBalance: "1000000000000000000",
+        },
+        live: false,
+      }
+    : {
+        allowUnlimitedContractSize: true,
+        loggingEnabled: false,
+        live: false,
+      };
+}
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -207,26 +228,5 @@ const config: HardhatUserConfig = {
     },
   },
 };
-
-function isFork() {
-  return process.env.FORK_MAINNET === "true"
-    ? {
-        allowUnlimitedContractSize: false,
-        loggingEnabled: false,
-        forking: {
-          url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,
-          blockNumber: 21068448,
-        },
-        accounts: {
-          accountsBalance: "1000000000000000000",
-        },
-        live: false,
-      }
-    : {
-        allowUnlimitedContractSize: true,
-        loggingEnabled: false,
-        live: false,
-      };
-}
 
 export default config;
