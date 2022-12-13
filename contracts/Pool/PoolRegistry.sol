@@ -83,6 +83,12 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         uint256 initialSupply;
         uint256 supplyCap;
         uint256 borrowCap;
+        uint256 baseRatePerBlockForStable;
+        uint256 multiplierPerBlockForStable;
+        uint256 jumpMultiplierPerBlockForStable;
+        uint256 kinkForStable;
+        uint256 stableRatePremium;
+        uint256 optimalStableLoanRate;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -239,7 +245,16 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             rate = InterestRateModel(whitePaperFactory.deploy(input.baseRatePerYear, input.multiplierPerYear));
         }
 
-        StableRateModel stableRateModel = new StableRateModel();
+        StableRateModel stableRateModel = new StableRateModel(
+            input.baseRatePerBlockForStable,
+            input.multiplierPerYear,
+            input.multiplierPerBlockForStable,
+            input.jumpMultiplierPerBlockForStable,
+            input.kinkForStable,
+            input.stableRatePremium,
+            input.optimalStableLoanRate,
+            msg.sender
+        );
 
         Comptroller comptroller = Comptroller(input.comptroller);
 

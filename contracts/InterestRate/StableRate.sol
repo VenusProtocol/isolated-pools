@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
-import "./IStableRate.sol";
-
 /**
  * @title Logic for Venus stable rate.
  */
-contract StableRateModel is OwnableUpgradeable {
+contract StableRateModel {
     event NewStableInterestParams(
         uint256 baseRatePerBlockForStable,
         uint256 multiplierPerBlock,
@@ -65,6 +61,11 @@ contract StableRateModel is OwnableUpgradeable {
     uint256 public optimalStableLoanRate;
 
     /**
+     * @notice The address of the owner, i.e. the Timelock contract, which can update parameters directly
+     */
+    address public owner;
+
+    /**
      * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
@@ -73,16 +74,17 @@ contract StableRateModel is OwnableUpgradeable {
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
      * @param _optimalStableLoanRate Optimal stable loan rate percentage.
      */
-    function initialize(
+    constructor(
         uint256 _baseRatePerBlockForStable,
         uint256 _multiplierPerBlock,
         uint256 _multiplierPerBlockForStable,
         uint256 _jumpMultiplierPerBlockForStable,
         uint256 _kink,
         uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate
-    ) public initializer {
-        __Ownable_init();
+        uint256 _optimalStableLoanRate,
+        address owner_
+    ) {
+        owner = owner_;
 
         updateStableRateModelInternal(
             _baseRatePerBlockForStable,
@@ -113,7 +115,9 @@ contract StableRateModel is OwnableUpgradeable {
         uint256 _kink,
         uint256 _stableRatePremium,
         uint256 _optimalStableLoanRate
-    ) external virtual onlyOwner {
+    ) external virtual {
+        require(msg.sender == owner, "StableRateModel: only owner may call this function.");
+
         updateStableRateModelInternal(
             _baseRatePerBlockForStable,
             _multiplierPerBlock,
