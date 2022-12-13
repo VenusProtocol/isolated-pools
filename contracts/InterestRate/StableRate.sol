@@ -84,7 +84,7 @@ contract StableRateModel is OwnableUpgradeable {
     ) public initializer {
         __Ownable_init();
 
-        updateJumpRateModelInternal(
+        updateStableRateModelInternal(
             _baseRatePerBlockForStable,
             _multiplierPerBlock,
             _multiplierPerBlockForStable,
@@ -105,7 +105,7 @@ contract StableRateModel is OwnableUpgradeable {
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
      * @param _optimalStableLoanRate Optimal stable loan rate percentage.
      */
-    function updateJumpRateModel(
+    function updateStableRateModel(
         uint256 _baseRatePerBlockForStable,
         uint256 _multiplierPerBlock,
         uint256 _multiplierPerBlockForStable,
@@ -114,7 +114,7 @@ contract StableRateModel is OwnableUpgradeable {
         uint256 _stableRatePremium,
         uint256 _optimalStableLoanRate
     ) external virtual onlyOwner {
-        updateJumpRateModelInternal(
+        updateStableRateModelInternal(
             _baseRatePerBlockForStable,
             _multiplierPerBlock,
             _multiplierPerBlockForStable,
@@ -165,7 +165,7 @@ contract StableRateModel is OwnableUpgradeable {
      * @param loanRate Loan rate for stable borrows in the market
      * @return The difference between the loan rate and optimal loan rate as a mantissa between [0, BASE]
      */
-    function calculateLoanRateDiff(uint256 loanRate) public view returns (uint256) {
+    function calculateLoanRateDiff(uint256 loanRate) internal view returns (uint256) {
         if (loanRate == 0) {
             return 0;
         }
@@ -192,8 +192,8 @@ contract StableRateModel is OwnableUpgradeable {
                 ((util * multiplierPerBlock) / BASE) +
                 baseRatePerBlockForStable +
                 ((util * multiplierPerBlockForStable) / BASE) +
-                stableRatePremium *
-                excessLoanRate;
+                (stableRatePremium *
+                excessLoanRate) / BASE;
         } else {
             uint256 excessUtil = util - kink;
             return
@@ -201,8 +201,8 @@ contract StableRateModel is OwnableUpgradeable {
                 baseRatePerBlockForStable +
                 ((kink * multiplierPerBlockForStable) / BASE) +
                 ((excessUtil * jumpMultiplierPerBlockForStable) / BASE) +
-                stableRatePremium *
-                excessLoanRate;
+                (stableRatePremium *
+                excessLoanRate) / BASE;
         }
     }
 
@@ -216,7 +216,7 @@ contract StableRateModel is OwnableUpgradeable {
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
      * @param _optimalStableLoanRate Optimal stable loan rate percentage.
      */
-    function updateJumpRateModelInternal(
+    function updateStableRateModelInternal(
         uint256 _baseRatePerBlockForStable,
         uint256 _multiplierPerBlock,
         uint256 _multiplierPerBlockForStable,
