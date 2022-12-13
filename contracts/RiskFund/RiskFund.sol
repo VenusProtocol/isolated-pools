@@ -23,6 +23,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     address private convertableBaseAsset;
     address private auctionContractAddress;
     address private accessControl;
+    address private shortfall;
 
     // Store base asset's reserve for specific pool
     mapping(address => uint256) private poolReserves;
@@ -57,13 +58,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param _pancakeSwapRouter Address of the PancakeSwap router
      * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
      * @param _convertableBaseAsset Address of the base asset
-     * @param _accessControl Address of the access control contract.
+     * @param _shortfall Address of the shortfall contract.
      */
     function initialize(
         address _pancakeSwapRouter,
         uint256 _minAmountToConvert,
         address _convertableBaseAsset,
-        address _accessControl
+        address _accessControl,
+        address _shortfall
     ) public initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertableBaseAsset != address(0), "Risk Fund: Base asset address invalid");
@@ -75,6 +77,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         minAmountToConvert = _minAmountToConvert;
         convertableBaseAsset = _convertableBaseAsset;
         accessControl = _accessControl;
+        shortfall = _shortfall;
     }
 
     /**
@@ -235,12 +238,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @return Number reserved tokens.
      */
     function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
-        bool canTransferFunds = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "transferReserveForAuction(address,uint256)"
-        );
-
-        require(canTransferFunds, "Risk fund: Not authorized to transfer funds.");
+        require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
 
         require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
