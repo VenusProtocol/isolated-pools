@@ -344,9 +344,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          */
         uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
 
-        unchecked { 
-            return principalTimesIndex / borrowSnapshot.interestIndex;
-        }
+        return principalTimesIndex / borrowSnapshot.interestIndex;
     }
 
     /**
@@ -387,8 +385,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              */
             uint256 totalCash = _getCashPrior();
             uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
-            uint256 exchangeRate = unchecked{
-                (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
+            uint256 exchangeRate;
+            unchecked {
+                exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
             }
 
             return exchangeRate;

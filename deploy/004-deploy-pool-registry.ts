@@ -164,13 +164,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     deployer,
   );
   await tx.wait();
-
-  tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "transferReserveForAuction(address, uint256)",
-    shortFall.address,
-  );
-  await tx.wait();
 };
 
 func.tags = ["PoolsRegistry"];
