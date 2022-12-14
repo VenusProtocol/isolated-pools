@@ -132,7 +132,7 @@ describe("UpgradedVToken: Tests", function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply
+      supplyCap: initialSupply,
     });
   });
 

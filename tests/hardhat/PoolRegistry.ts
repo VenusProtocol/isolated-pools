@@ -90,7 +90,7 @@ describe("PoolRegistry: Tests", function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
-      supplyCap: INITIAL_SUPPLY
+      supplyCap: INITIAL_SUPPLY,
     };
     return { ...defaults, ...overwrites };
   };
@@ -222,7 +222,7 @@ describe("PoolRegistry: Tests", function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
-      supplyCap: INITIAL_SUPPLY
+      supplyCap: INITIAL_SUPPLY,
     });
 
     await poolRegistry.addMarket({
@@ -242,7 +242,7 @@ describe("PoolRegistry: Tests", function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
-      supplyCap: INITIAL_SUPPLY
+      supplyCap: INITIAL_SUPPLY,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
@@ -299,7 +299,7 @@ describe("PoolRegistry: Tests", function () {
 
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
-      
+
       await poolRegistry.addMarket(await withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(vTokenAddress).to.be.a.properAddress;

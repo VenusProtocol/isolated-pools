@@ -92,7 +92,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     vTokenProxyAdmin: proxyAdmin,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap
+    supplyCap,
   });
   await tx.wait();
 
@@ -119,7 +119,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     vTokenProxyAdmin: proxyAdmin,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap
+    supplyCap,
   });
 
   const PoolLens = await ethers.getContract("PoolLens");

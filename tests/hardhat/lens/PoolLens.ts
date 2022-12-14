@@ -183,7 +183,7 @@ describe("PoolLens - PoolView Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply
+      supplyCap: initialSupply,
     });
 
     await poolRegistry.addMarket({
@@ -203,7 +203,7 @@ describe("PoolLens - PoolView Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply
+      supplyCap: initialSupply,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -435,7 +435,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply
+      supplyCap: initialSupply,
     });
 
     initialSupply = convertToUnit(1, 18);
@@ -459,7 +459,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply
+      supplyCap: initialSupply,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {

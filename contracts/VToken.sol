@@ -483,7 +483,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         _mintFreshBehalf(msg.sender, minter, mintAmount);
     }
 
-    function _mintFreshBehalf(address sender, address minter, uint256 mintAmount) internal {
+    function _mintFreshBehalf(
+        address sender,
+        address minter,
+        uint256 mintAmount
+    ) internal {
         /* Fail if mint not allowed */
         uint256 allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
         if (allowed != 0) {

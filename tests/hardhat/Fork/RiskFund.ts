@@ -311,7 +311,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   await poolRegistry.addMarket({
@@ -331,7 +331,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   await USDT.faucet(initialSupply);
@@ -354,7 +354,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   await USDC.faucet(initialSupply);
@@ -377,7 +377,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   await USDT.faucet(initialSupply);
@@ -400,7 +400,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   await BUSD.faucet(initialSupply);
@@ -423,7 +423,7 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
-    supplyCap: initialSupply
+    supplyCap: initialSupply,
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);
