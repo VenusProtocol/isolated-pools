@@ -483,6 +483,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         _mintFreshBehalf(msg.sender, minter, mintAmount);
     }
 
+    /**
+     * @notice Sender supplies assets into the market and minter receives vTokens in exchange
+     * @dev Assumes interest has already been accrued up to the current block
+     * @param sender The address which provides assets on behalf of minter
+     * @param minter The address of the account which is supplying the assets
+     * @param mintAmount The amount of the underlying asset to supply
+     */
     function _mintFreshBehalf(
         address sender,
         address minter,
