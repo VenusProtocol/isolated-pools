@@ -501,6 +501,13 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["vTokenDecimals"]).equal("8");
     expect(vTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
   });
+
+  it("is correct minted for user", async () => {
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenBalance = await poolLens.callStatic.vTokenBalances(vTokenAddress_WBTC, ownerAddress);
+    expect(vTokenBalance["balanceOfUnderlying"]).equal(convertToUnit(1, 8));
+    expect(vTokenBalance["balanceOf"]).equal(convertToUnit(1, 18));
+  });
 });
 
 const assertVTokenMetadata = (vTokenMetadata_Actual: any, vTokenMetadata_Expected: any) => {
