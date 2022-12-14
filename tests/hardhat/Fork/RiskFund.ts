@@ -424,7 +424,7 @@ const riskFundFixture = async (): Promise<void> => {
   await riskFund.setPoolRegistry(poolRegistry.address);
 };
 
-describe.only("Risk Fund: Tests", function () {
+describe("Risk Fund: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
