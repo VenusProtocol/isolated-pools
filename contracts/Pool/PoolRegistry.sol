@@ -24,46 +24,6 @@ import "../VTokenInterfaces.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is Ownable2StepUpgradeable {
-    VTokenProxyFactory private vTokenFactory;
-    JumpRateModelFactory private jumpRateFactory;
-    WhitePaperInterestRateModelFactory private whitePaperFactory;
-    Shortfall private shortfall;
-    address payable private riskFund;
-    address payable private protocolShareReserve;
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        // Note that the contract is upgradeable. Use initialize() or reinitializers
-        // to set the state variables.
-        _disableInitializers();
-    }
-
-    /**
-     * @dev Initializes the deployer to owner.
-     * @param _vTokenFactory vToken factory address.
-     * @param _jumpRateFactory jump rate factory address.
-     * @param _whitePaperFactory white paper factory address.
-     * @param riskFund_ risk fund address.
-     * @param protocolShareReserve_ protocol's shares reserve address.
-     */
-    function initialize(
-        VTokenProxyFactory _vTokenFactory,
-        JumpRateModelFactory _jumpRateFactory,
-        WhitePaperInterestRateModelFactory _whitePaperFactory,
-        Shortfall _shortfall,
-        address payable riskFund_,
-        address payable protocolShareReserve_
-    ) public initializer {
-        __Ownable2Step_init();
-
-        vTokenFactory = _vTokenFactory;
-        jumpRateFactory = _jumpRateFactory;
-        whitePaperFactory = _whitePaperFactory;
-        shortfall = _shortfall;
-        riskFund = riskFund_;
-        protocolShareReserve = protocolShareReserve_;
-    }
-
     /**
      * @dev Struct for a Venus interest rate pool.
      */
@@ -96,6 +56,36 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         string description;
     }
 
+    enum InterestRateModels {
+        WhitePaper,
+        JumpRate
+    }
+
+    struct AddMarketInput {
+        address comptroller;
+        address asset;
+        uint8 decimals;
+        string name;
+        string symbol;
+        InterestRateModels rateModel;
+        uint256 baseRatePerYear;
+        uint256 multiplierPerYear;
+        uint256 jumpMultiplierPerYear;
+        uint256 kink_;
+        uint256 collateralFactor;
+        uint256 liquidationThreshold;
+        AccessControlManager accessControlManager;
+        address vTokenProxyAdmin;
+        address beaconAddress;
+    }
+
+    VTokenProxyFactory private vTokenFactory;
+    JumpRateModelFactory private jumpRateFactory;
+    WhitePaperInterestRateModelFactory private whitePaperFactory;
+    Shortfall private shortfall;
+    address payable private riskFund;
+    address payable private protocolShareReserve;
+
     /**
      * @dev Maps venus pool id to metadata
      */
@@ -127,29 +117,6 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      */
     mapping(address => address[]) private _supportedPools;
 
-    enum InterestRateModels {
-        WhitePaper,
-        JumpRate
-    }
-
-    struct AddMarketInput {
-        address comptroller;
-        address asset;
-        uint8 decimals;
-        string name;
-        string symbol;
-        InterestRateModels rateModel;
-        uint256 baseRatePerYear;
-        uint256 multiplierPerYear;
-        uint256 jumpMultiplierPerYear;
-        uint256 kink_;
-        uint256 collateralFactor;
-        uint256 liquidationThreshold;
-        AccessControlManager accessControlManager;
-        address vTokenProxyAdmin;
-        address beaconAddress;
-    }
-
     /**
      * @dev Emitted when a new Venus pool is added to the directory.
      */
@@ -158,7 +125,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     /**
      * @dev Emitted when a pool name is set.
      */
-    event PoolNameSet(address indexed comptroller, string name);
+    event PoolNameSet(address indexed comptroller, string oldName, string newName);
 
     /**
      * @dev Emitted when a pool metadata is updated.
@@ -174,28 +141,37 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      */
     event MarketAdded(address indexed comptroller, address vTokenAddress);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /**
-     * @dev Adds a new Venus pool to the directory (without checking msg.sender).
-     * @param name The name of the pool.
-     * @param comptroller The pool's Comptroller proxy contract address.
-     * @return The index of the registered Venus pool.
+     * @dev Initializes the deployer to owner.
+     * @param _vTokenFactory vToken factory address.
+     * @param _jumpRateFactory jump rate factory address.
+     * @param _whitePaperFactory white paper factory address.
+     * @param riskFund_ risk fund address.
+     * @param protocolShareReserve_ protocol's shares reserve address.
      */
-    function _registerPool(string memory name, address comptroller) internal returns (uint256) {
-        VenusPool memory venusPool = _poolByComptroller[comptroller];
+    function initialize(
+        VTokenProxyFactory _vTokenFactory,
+        JumpRateModelFactory _jumpRateFactory,
+        WhitePaperInterestRateModelFactory _whitePaperFactory,
+        Shortfall _shortfall,
+        address payable riskFund_,
+        address payable protocolShareReserve_
+    ) external initializer {
+        __Ownable2Step_init();
 
-        require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
-
-        require(bytes(name).length <= 100, "No pool name supplied.");
-
-        _numberOfPools++;
-
-        VenusPool memory pool = VenusPool(name, msg.sender, comptroller, block.number, block.timestamp);
-
-        _poolsByID[_numberOfPools] = comptroller;
-        _poolByComptroller[comptroller] = pool;
-
-        emit PoolRegistered(comptroller, pool);
-        return _numberOfPools;
+        vTokenFactory = _vTokenFactory;
+        jumpRateFactory = _jumpRateFactory;
+        whitePaperFactory = _whitePaperFactory;
+        shortfall = _shortfall;
+        riskFund = riskFund_;
+        protocolShareReserve = protocolShareReserve_;
     }
 
     /**
@@ -247,48 +223,6 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Modify existing Venus pool name.
-     */
-    function setPoolName(address comptroller, string calldata name) external {
-        Comptroller _comptroller = Comptroller(comptroller);
-
-        // Note: Compiler throws stack to deep if autoformatted with Prettier
-        // prettier-ignore
-        require(msg.sender == _comptroller.owner() || msg.sender == owner());
-        _poolByComptroller[comptroller].name = name;
-        emit PoolNameSet(comptroller, name);
-    }
-
-    /**
-     * @notice Returns arrays of all Venus pools' data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
-     */
-    function getAllPools() external view returns (VenusPool[] memory) {
-        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; ++i) {
-            address comptroller = _poolsByID[i];
-            _pools[i - 1] = (_poolByComptroller[comptroller]);
-        }
-        return _pools;
-    }
-
-    /**
-     * @param comptroller The Comptroller implementation address.
-     * @notice Returns Venus pool.
-     */
-    function getPoolByComptroller(address comptroller) external view returns (VenusPool memory) {
-        return _poolByComptroller[comptroller];
-    }
-
-    /**
-     * @param comptroller comptroller of Venus pool.
-     * @notice Returns Metadata of Venus pool.
-     */
-    function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory) {
-        return metadata[comptroller];
-    }
-
-    /**
      * @notice Add a market to an existing pool
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
@@ -335,12 +269,13 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         emit MarketAdded(address(comptroller), address(vToken));
     }
 
-    function getVTokenForAsset(address comptroller, address asset) external view returns (address) {
-        return _vTokens[comptroller][asset];
-    }
-
-    function getPoolsSupportedByAsset(address asset) external view returns (address[] memory) {
-        return _supportedPools[asset];
+    /**
+     * @notice Modify existing Venus pool name.
+     */
+    function setPoolName(address comptroller, string calldata name) external onlyOwner {
+        string memory oldName = _poolByComptroller[comptroller].name;
+        _poolByComptroller[comptroller].name = name;
+        emit PoolNameSet(comptroller, oldName, name);
     }
 
     /**
@@ -350,5 +285,66 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
         metadata[comptroller] = _metadata;
         emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);
+    }
+
+    /**
+     * @notice Returns arrays of all Venus pools' data.
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     */
+    function getAllPools() external view returns (VenusPool[] memory) {
+        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
+        for (uint256 i = 1; i <= _numberOfPools; ++i) {
+            address comptroller = _poolsByID[i];
+            _pools[i - 1] = (_poolByComptroller[comptroller]);
+        }
+        return _pools;
+    }
+
+    /**
+     * @param comptroller The Comptroller implementation address.
+     * @notice Returns Venus pool.
+     */
+    function getPoolByComptroller(address comptroller) external view returns (VenusPool memory) {
+        return _poolByComptroller[comptroller];
+    }
+
+    /**
+     * @param comptroller comptroller of Venus pool.
+     * @notice Returns Metadata of Venus pool.
+     */
+    function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory) {
+        return metadata[comptroller];
+    }
+
+    function getVTokenForAsset(address comptroller, address asset) external view returns (address) {
+        return _vTokens[comptroller][asset];
+    }
+
+    function getPoolsSupportedByAsset(address asset) external view returns (address[] memory) {
+        return _supportedPools[asset];
+    }
+
+    /**
+     * @dev Adds a new Venus pool to the directory (without checking msg.sender).
+     * @param name The name of the pool.
+     * @param comptroller The pool's Comptroller proxy contract address.
+     * @return The index of the registered Venus pool.
+     */
+    function _registerPool(string memory name, address comptroller) internal returns (uint256) {
+        VenusPool memory venusPool = _poolByComptroller[comptroller];
+
+        require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
+
+        require(bytes(name).length <= 100, "No pool name supplied.");
+
+        _numberOfPools++;
+
+        VenusPool memory pool = VenusPool(name, msg.sender, comptroller, block.number, block.timestamp);
+
+        _poolsByID[_numberOfPools] = comptroller;
+        _poolByComptroller[comptroller] = pool;
+
+        emit PoolRegistered(comptroller, pool);
+        return _numberOfPools;
     }
 }
