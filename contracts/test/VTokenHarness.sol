@@ -107,7 +107,7 @@ contract VTokenHarness is VToken {
     }
 
     function harnessMintFresh(address account, uint256 mintAmount) external {
-        super._mintFresh(account, mintAmount);
+        super._mintFresh(account, account, mintAmount);
     }
 
     function harnessRedeemFresh(
