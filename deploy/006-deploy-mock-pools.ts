@@ -70,6 +70,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
+  const initialSupply = convertToUnit(1, 18);
+  const supplyCap = convertToUnit(10000, 18);
+  await BNX.faucet(initialSupply);
+  await BNX.approve(poolRegistry.address, initialSupply);
+
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
     asset: BNX.address,
@@ -86,11 +91,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
     beaconAddress: vTokenBeacon.address,
+    initialSupply,
+    supplyCap
   });
   await tx.wait();
 
   const vBSWImplementation = await VToken.deploy();
   await vBSWImplementation.deployed();
+
+  await BSW.faucet(initialSupply);
+  await BSW.approve(poolRegistry.address, initialSupply);
 
   tx = await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
@@ -108,6 +118,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin,
     beaconAddress: vTokenBeacon.address,
+    initialSupply,
+    supplyCap
   });
 
   const PoolLens = await ethers.getContract("PoolLens");

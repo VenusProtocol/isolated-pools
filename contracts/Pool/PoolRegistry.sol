@@ -78,6 +78,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         address vTokenProxyAdmin;
         address beaconAddress;
         uint256 initialSupply;
+        uint256 supplyCap;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -264,14 +265,22 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         comptroller.supportMarket(vToken);
         comptroller.setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
+        uint256[] memory newSupplyCaps = new uint256[](1);
+        VToken[] memory vTokens = new VToken[](1);
+
+        newSupplyCaps[0] = input.supplyCap;
+        vTokens[0] = vToken;
+
+        comptroller.setMarketSupplyCaps(vTokens, newSupplyCaps);
+
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
         token.transferFrom(owner(), address(this), input.initialSupply);
-        // token.approve(address(vToken), input.initialSupply);
+        token.approve(address(vToken), input.initialSupply);
 
-        // vToken.mintBehalf(owner(), input.initialSupply);
+        vToken.mintBehalf(owner(), input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }

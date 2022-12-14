@@ -182,7 +182,8 @@ describe("PoolLens - PoolView Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply
+      initialSupply,
+      supplyCap: initialSupply
     });
 
     await poolRegistry.addMarket({
@@ -201,7 +202,8 @@ describe("PoolLens - PoolView Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply
+      initialSupply,
+      supplyCap: initialSupply
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -412,12 +414,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
     comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptOwnership();
 
-    const initialSupply = convertToUnit(1000, 18);
+    let initialSupply = convertToUnit(1, 8);
     await mockWBTC.faucet(initialSupply);
     await mockWBTC.approve(poolRegistry.address, initialSupply);
-
-    await mockDAI.faucet(initialSupply);
-    await mockDAI.approve(poolRegistry.address, initialSupply);
 
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
@@ -435,8 +434,13 @@ describe("PoolLens - VTokens Query Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply
+      initialSupply,
+      supplyCap: initialSupply
     });
+
+    initialSupply = convertToUnit(1, 18);
+    await mockDAI.faucet(initialSupply);
+    await mockDAI.approve(poolRegistry.address, initialSupply);
 
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
@@ -454,7 +458,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply
+      initialSupply,
+      supplyCap: initialSupply
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -488,8 +493,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");
-    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal("0");
-    expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal(convertToUnit(1, 18));
+    expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal(convertToUnit(1, 8));
     expect(vTokenMetadata_Actual_Parsed["isListed"]).equal("true");
     expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("700000000000000000");
     expect(vTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);

@@ -89,7 +89,8 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply: INITIAL_SUPPLY
+      initialSupply: INITIAL_SUPPLY,
+      supplyCap: INITIAL_SUPPLY
     };
     return { ...defaults, ...overwrites };
   };
@@ -220,7 +221,8 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply: INITIAL_SUPPLY
+      initialSupply: INITIAL_SUPPLY,
+      supplyCap: INITIAL_SUPPLY
     });
 
     await poolRegistry.addMarket({
@@ -239,7 +241,8 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply: INITIAL_SUPPLY
+      initialSupply: INITIAL_SUPPLY,
+      supplyCap: INITIAL_SUPPLY
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);

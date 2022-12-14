@@ -173,6 +173,12 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
+    "setMarketSupplyCaps(address[],uint256[])",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
     "setLiquidationIncentive(uint256)",
     poolRegistry.address,
   );
@@ -304,7 +310,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   await poolRegistry.addMarket({
@@ -323,7 +330,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   await USDT.faucet(initialSupply);
@@ -345,7 +353,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   await USDC.faucet(initialSupply);
@@ -367,7 +376,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   await USDT.faucet(initialSupply);
@@ -389,7 +399,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   await BUSD.faucet(initialSupply);
@@ -411,7 +422,8 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
-    initialSupply
+    initialSupply,
+    supplyCap: initialSupply
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);

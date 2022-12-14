@@ -131,7 +131,8 @@ describe("UpgradedVToken: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
-      initialSupply
+      initialSupply,
+      supplyCap: initialSupply
     });
   });
 
