@@ -490,7 +490,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
      */
-    function _mintFresh(address sender, address minter, uint256 mintAmount) internal {
+    function _mintFresh(
+        address sender,
+        address minter,
+        uint256 mintAmount
+    ) internal {
         /* Fail if mint not allowed */
         uint256 allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
         if (allowed != 0) {
