@@ -31,6 +31,7 @@ import {
 
 const WP_RATE_MODEL = 0;
 const JUMP_RATE_MODEL = 1;
+const INITIAL_SUPPLY = convertToUnit(1000, 18);
 
 interface NewMarketParameters {
   comptroller: string;
@@ -48,6 +49,7 @@ interface NewMarketParameters {
   accessControlManager: string;
   vTokenProxyAdmin: string;
   beaconAddress: string;
+  initialSupply: BigNumberish;
 }
 
 describe("PoolRegistry: Tests", function () {
@@ -70,7 +72,7 @@ describe("PoolRegistry: Tests", function () {
   let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
-  const withDefaultMarketParameters = (overwrites: Partial<NewMarketParameters> = {}) => {
+  const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
     const defaults = {
       comptroller: comptroller1Proxy.address,
       asset: mockToken.address,
@@ -87,6 +89,7 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply: INITIAL_SUPPLY
     };
     return { ...defaults, ...overwrites };
   };
@@ -194,6 +197,12 @@ describe("PoolRegistry: Tests", function () {
     comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptOwnership();
 
+    await mockWBTC.faucet(INITIAL_SUPPLY);
+    await mockWBTC.approve(poolRegistry.address, INITIAL_SUPPLY);
+
+    await mockDAI.faucet(INITIAL_SUPPLY);
+    await mockDAI.approve(poolRegistry.address, INITIAL_SUPPLY);
+
     // Deploy VTokens
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
@@ -211,6 +220,7 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply: INITIAL_SUPPLY
     });
 
     await poolRegistry.addMarket({
@@ -229,6 +239,7 @@ describe("PoolRegistry: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply: INITIAL_SUPPLY
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
@@ -273,7 +284,7 @@ describe("PoolRegistry: Tests", function () {
 
   describe("addMarket", async () => {
     it("reverts if called by a non-owner", async () => {
-      await expect(poolRegistry.connect(user).addMarket(withDefaultMarketParameters({}))).to.be.rejectedWith(
+      await expect(poolRegistry.connect(user).addMarket(await withDefaultMarketParameters({}))).to.be.rejectedWith(
         "Ownable: caller is not the owner",
       );
     });
@@ -282,7 +293,11 @@ describe("PoolRegistry: Tests", function () {
       expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
         constants.AddressZero,
       );
-      await poolRegistry.addMarket(withDefaultMarketParameters());
+
+      await mockToken.faucet(INITIAL_SUPPLY);
+      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+      
+      await poolRegistry.addMarket(await withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(vTokenAddress).to.be.a.properAddress;
       expect(vTokenAddress).to.not.equal(constants.AddressZero);
@@ -298,8 +313,11 @@ describe("PoolRegistry: Tests", function () {
     });
 
     it("sets rate model to a new JumpRateModel with the correct parameters", async () => {
+      await mockToken.faucet(INITIAL_SUPPLY);
+      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+
       await poolRegistry.addMarket(
-        withDefaultMarketParameters({
+        await withDefaultMarketParameters({
           comptroller: comptroller1Proxy.address,
           rateModel: JUMP_RATE_MODEL,
           jumpMultiplierPerYear: convertToUnit("1.1", 18),

@@ -473,6 +473,70 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param mintAmount The amount of the underlying asset to supply
+     */
+    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant {
+        accrueInterest();
+        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+        _mintFreshBehalf(msg.sender, minter, mintAmount);
+    }
+
+    function _mintFreshBehalf(address sender, address minter, uint256 mintAmount) internal {
+        /* Fail if mint not allowed */
+        uint256 allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
+        if (allowed != 0) {
+            revert MintComptrollerRejection(allowed);
+        }
+
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
+            revert MintFreshnessCheck();
+        }
+
+        Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
+
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+        // (No safe failures beyond this point)
+
+        /*
+         *  We call `_doTransferIn` for the minter and the mintAmount.
+         *  Note: The vToken must handle variations between ERC-20 and ETH underlying.
+         *  `_doTransferIn` reverts if anything goes wrong, since we can't be sure if
+         *  side-effects occurred. The function returns the amount actually transferred,
+         *  in case of a fee. On success, the vToken holds an additional `actualMintAmount`
+         *  of cash.
+         */
+        uint256 actualMintAmount = _doTransferIn(sender, mintAmount);
+
+        /*
+         * We get the current exchange rate and calculate the number of vTokens to be minted:
+         *  mintTokens = actualMintAmount / exchangeRate
+         */
+
+        uint256 mintTokens = div_(actualMintAmount, exchangeRate);
+
+        /*
+         * We calculate the new total supply of vTokens and minter token balance, checking for overflow:
+         *  totalSupplyNew = totalSupply + mintTokens
+         *  accountTokensNew = accountTokens[minter] + mintTokens
+         * And write them into storage
+         */
+        totalSupply = totalSupply + mintTokens;
+        accountTokens[minter] = accountTokens[minter] + mintTokens;
+
+        /* We emit a Mint event, and a Transfer event */
+        emit Mint(minter, actualMintAmount, mintTokens);
+        emit Transfer(address(this), minter, mintTokens);
+
+        /* We call the defense hook */
+        // unused function
+        // comptroller.mintVerify(address(this), minter, actualMintAmount, mintTokens);
+    }
+
+    /**
      * @notice User supplies assets into the market and receives vTokens in exchange
      * @dev Assumes interest has already been accrued up to the current block
      * @param minter The address of the account which is supplying the assets

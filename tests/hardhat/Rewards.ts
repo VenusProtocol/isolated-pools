@@ -145,6 +145,13 @@ describe("Rewards: Tests", async function () {
     const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
+    const initialSupply = convertToUnit(1000, 18);
+    await mockWBTC.faucet(initialSupply);
+    await mockWBTC.approve(poolRegistry.address, initialSupply);
+
+    await mockDAI.faucet(initialSupply);
+    await mockDAI.approve(poolRegistry.address, initialSupply);
+
     //Deploy VTokens
     await poolRegistry.addMarket({
       comptroller: comptrollerProxy.address,
@@ -162,6 +169,7 @@ describe("Rewards: Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply
     });
 
     await poolRegistry.addMarket({
@@ -180,6 +188,7 @@ describe("Rewards: Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);

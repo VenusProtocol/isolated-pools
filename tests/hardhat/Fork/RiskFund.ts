@@ -280,6 +280,13 @@ const riskFundFixture = async (): Promise<void> => {
   const tokenImplementation = await VToken.deploy();
   await tokenImplementation.deployed();
 
+  const initialSupply = convertToUnit(1000, 18);
+  await USDT.faucet(initialSupply);
+  await USDT.approve(poolRegistry.address, initialSupply);
+
+  await USDC.faucet(initialSupply);
+  await USDC.approve(poolRegistry.address, initialSupply);
+
   // Deploy CTokens
   await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
@@ -297,6 +304,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
 
   await poolRegistry.addMarket({
@@ -315,7 +323,11 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
+
+  await USDT.faucet(initialSupply);
+  await USDT.approve(poolRegistry.address, initialSupply);
 
   await poolRegistry.addMarket({
     comptroller: comptroller2Proxy.address,
@@ -333,7 +345,11 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
+
+  await USDC.faucet(initialSupply);
+  await USDC.approve(poolRegistry.address, initialSupply);
 
   await poolRegistry.addMarket({
     comptroller: comptroller2Proxy.address,
@@ -351,7 +367,11 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
+
+  await USDT.faucet(initialSupply);
+  await USDT.approve(poolRegistry.address, initialSupply);
 
   await poolRegistry.addMarket({
     comptroller: comptroller3Proxy.address,
@@ -369,7 +389,11 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
+
+  await BUSD.faucet(initialSupply);
+  await BUSD.approve(poolRegistry.address, initialSupply);
 
   await poolRegistry.addMarket({
     comptroller: comptroller3Proxy.address,
@@ -387,6 +411,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
+    initialSupply
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);

@@ -77,6 +77,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
         address beaconAddress;
+        uint256 initialSupply;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -223,7 +224,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Add a market to an existing pool
+     * @notice Add a market to an existing pool and then mint to provide initial supply
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
         InterestRateModel rate;
@@ -265,6 +266,12 @@ contract PoolRegistry is Ownable2StepUpgradeable {
 
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);
+
+        IERC20Upgradeable token = IERC20Upgradeable(input.asset);
+        token.transferFrom(owner(), address(this), input.initialSupply);
+        // token.approve(address(vToken), input.initialSupply);
+
+        // vToken.mintBehalf(owner(), input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }

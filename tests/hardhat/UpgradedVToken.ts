@@ -110,6 +110,10 @@ describe("UpgradedVToken: Tests", function () {
     const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
+    const initialSupply = convertToUnit(1000, 18);
+    await mockWBTC.faucet(initialSupply);
+    await mockWBTC.approve(poolRegistry.address, initialSupply);
+
     // Deploy VTokens
     await poolRegistry.addMarket({
       comptroller: pools[0].comptroller,
@@ -127,6 +131,7 @@ describe("UpgradedVToken: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply
     });
   });
 
