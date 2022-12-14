@@ -486,12 +486,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice User supplies assets into the market and receives vTokens in exchange
      * @dev Assumes interest has already been accrued up to the current block
-     * @param sender The address of the account which is sending the assets for supply
+     * @param payer The address of the account which is sending the assets for supply
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
      */
     function _mintFresh(
-        address sender,
+        address payer,
         address minter,
         uint256 mintAmount
     ) internal {
@@ -520,7 +520,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          *  in case of a fee. On success, the vToken holds an additional `actualMintAmount`
          *  of cash.
          */
-        uint256 actualMintAmount = _doTransferIn(sender, mintAmount);
+        uint256 actualMintAmount = _doTransferIn(payer, mintAmount);
 
         /*
          * We get the current exchange rate and calculate the number of vTokens to be minted:
