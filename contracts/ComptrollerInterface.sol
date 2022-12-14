@@ -16,86 +16,41 @@ abstract contract ComptrollerInterface {
 
     /*** Policy Hooks ***/
 
-    function mintAllowed(
+    function preMintHook(
         address vToken,
         address minter,
         uint256 mintAmount
-    ) external virtual returns (uint256);
-
-    function mintVerify(
-        address vToken,
-        address minter,
-        uint256 mintAmount,
-        uint256 mintTokens
     ) external virtual;
 
-    function redeemAllowed(
+    function preRedeemHook(
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) external virtual returns (uint256);
-
-    function redeemVerify(
-        address vToken,
-        address redeemer,
-        uint256 redeemAmount,
-        uint256 redeemTokens
     ) external virtual;
 
-    function borrowAllowed(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external virtual returns (uint256);
-
-    function borrowVerify(
+    function preBorrowHook(
         address vToken,
         address borrower,
         uint256 borrowAmount
     ) external virtual;
 
-    function repayBorrowAllowed(
+    function preRepayHook(
         address vToken,
         address payer,
         address borrower,
         uint256 repayAmount
-    ) external virtual returns (uint256);
-
-    function repayBorrowVerify(
-        address vToken,
-        address payer,
-        address borrower,
-        uint256 repayAmount,
-        uint256 borrowerIndex
     ) external virtual;
 
-    function liquidateBorrowAllowed(
+    function preLiquidateHook(
         address vTokenBorrowed,
         address vTokenCollateral,
         address liquidator,
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
-    ) external virtual returns (uint256);
-
-    function liquidateBorrowVerify(
-        address vTokenBorrowed,
-        address vTokenCollateral,
-        address liquidator,
-        address borrower,
-        uint256 repayAmount,
-        uint256 seizeTokens
     ) external virtual;
 
-    function seizeAllowed(
-        address vTokenCollateral,
-        address vTokenBorrowed,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external virtual returns (uint256);
-
-    function seizeVerify(
+    function preSeizeHook(
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
@@ -103,14 +58,7 @@ abstract contract ComptrollerInterface {
         uint256 seizeTokens
     ) external virtual;
 
-    function transferAllowed(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external virtual returns (uint256);
-
-    function transferVerify(
+    function preTransferHook(
         address vToken,
         address src,
         address dst,

@@ -253,18 +253,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function mintAllowed(
+    function preMintHook(
         address vToken,
         address minter,
         uint256 mintAmount
-    ) external override returns (uint256) {
+    ) external override {
         _checkActionPauseState(vToken, Action.MINT);
-
-        // Shh - currently unused
-        minter;
-        mintAmount;
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -283,33 +278,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates mint and reverts on rejection. May emit logs.
-     * @param vToken Asset being minted
-     * @param minter The address minting the tokens
-     * @param actualMintAmount The amount of the underlying asset being minted
-     * @param mintTokens The number of tokens being minted
-     */
-    function mintVerify(
-        address vToken,
-        address minter,
-        uint256 actualMintAmount,
-        uint256 mintTokens
-    ) external override {
-        // Shh - currently unused
-        vToken;
-        minter;
-        actualMintAmount;
-        mintTokens;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -317,13 +285,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
      * @param redeemTokens The number of vTokens to exchange for the underlying asset in the market
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function redeemAllowed(
+    function preRedeemHook(
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) external override returns (uint256) {
+    ) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
         oracle.updatePrice(vToken);
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
@@ -334,36 +301,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates redeem and reverts on rejection. May emit logs.
-     * @param vToken Asset being redeemed
-     * @param redeemer The address redeeming the tokens
-     * @param redeemAmount The amount of the underlying asset being redeemed
-     * @param redeemTokens The number of tokens being redeemed
-     */
-    function redeemVerify(
-        address vToken,
-        address redeemer,
-        uint256 redeemAmount,
-        uint256 redeemTokens
-    ) external override {
-        // Shh - currently unused
-        vToken;
-        redeemer;
-
-        // Require tokens is zero or amount is also zero
-        if (redeemTokens == 0 && redeemAmount > 0) {
-            revert("redeemTokens zero");
-        }
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -371,13 +308,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function borrowAllowed(
+    function preBorrowHook(
         address vToken,
         address borrower,
         uint256 borrowAmount
-    ) external override returns (uint256) {
+    ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
         oracle.updatePrice(vToken);
@@ -430,30 +366,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates borrow and reverts on rejection. May emit logs.
-     * @param vToken Asset whose underlying is being borrowed
-     * @param borrower The address borrowing the underlying
-     * @param borrowAmount The amount of the underlying asset requested to borrow
-     */
-    function borrowVerify(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external override {
-        // Shh - currently unused
-        vToken;
-        borrower;
-        borrowAmount;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -462,21 +374,19 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function repayBorrowAllowed(
+    function preRepayHook(
         address vToken,
         address payer,
         address borrower,
         uint256 repayAmount
-    ) external override returns (uint256) {
+    ) external override {
         _checkActionPauseState(vToken, Action.REPAY);
 
         oracle.updatePrice(vToken);
 
         // Shh - currently unused
         payer;
-        borrower;
         repayAmount;
 
         if (!markets[vToken].isListed) {
@@ -490,35 +400,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates repayBorrow and reverts on rejection. May emit logs.
-     * @param vToken Asset being repaid
-     * @param payer The address repaying the borrow
-     * @param borrower The address of the borrower
-     * @param actualRepayAmount The amount of underlying being repaid
-     */
-    function repayBorrowVerify(
-        address vToken,
-        address payer,
-        address borrower,
-        uint256 actualRepayAmount,
-        uint256 borrowerIndex
-    ) external override {
-        // Shh - currently unused
-        vToken;
-        payer;
-        borrower;
-        actualRepayAmount;
-        borrowerIndex;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -529,16 +410,15 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param borrower The address of the borrower
      * @param repayAmount The amount of underlying being repaid
      * @param skipLiquidityCheck Allows the borrow to be liquidated regardless of the account liquidity
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function liquidateBorrowAllowed(
+    function preLiquidateHook(
         address vTokenBorrowed,
         address vTokenCollateral,
         address liquidator,
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
-    ) external override returns (uint256) {
+    ) external override {
         // Pause Action.LIQUIDATE on BORROWED TOKEN to prevent liquidating it.
         // If we want to pause liquidating to vTokenCollateral, we should pause
         // Action.SEIZE on it
@@ -564,7 +444,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
             }
-            return NO_ERROR;
+            return;
         }
 
         /* The borrower must have shortfall and collateral > threshold in order to be liquidatable */
@@ -584,38 +464,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         if (repayAmount > maxClose) {
             revert TooMuchRepay();
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates liquidateBorrow and reverts on rejection. May emit logs.
-     * @param vTokenBorrowed Asset which was borrowed by the borrower
-     * @param vTokenCollateral Asset which was used as collateral and will be seized
-     * @param liquidator The address repaying the borrow and seizing the collateral
-     * @param borrower The address of the borrower
-     * @param actualRepayAmount The amount of underlying being repaid
-     */
-    function liquidateBorrowVerify(
-        address vTokenBorrowed,
-        address vTokenCollateral,
-        address liquidator,
-        address borrower,
-        uint256 actualRepayAmount,
-        uint256 seizeTokens
-    ) external override {
-        // Shh - currently unused
-        vTokenBorrowed;
-        vTokenCollateral;
-        liquidator;
-        borrower;
-        actualRepayAmount;
-        seizeTokens;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -625,15 +473,14 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param seizeTokens The number of collateral tokens to seize
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
-    function seizeAllowed(
+    function preSeizeHook(
         address vTokenCollateral,
         address seizerContract,
         address liquidator,
         address borrower,
         uint256 seizeTokens
-    ) external override returns (uint256) {
+    ) external override {
         // Pause Action.SEIZE on COLLATERAL to prevent seizing it.
         // If we want to pause liquidating vTokenBorrowed, we should pause
         // Action.LIQUIDATE on it
@@ -670,36 +517,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates seize and reverts on rejection. May emit logs.
-     * @param vTokenCollateral Asset which was used as collateral and will be seized
-     * @param vTokenBorrowed Asset which was borrowed by the borrower
-     * @param liquidator The address repaying the borrow and seizing the collateral
-     * @param borrower The address of the borrower
-     * @param seizeTokens The number of collateral tokens to seize
-     */
-    function seizeVerify(
-        address vTokenCollateral,
-        address vTokenBorrowed,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external override {
-        // Shh - currently unused
-        vTokenCollateral;
-        vTokenBorrowed;
-        liquidator;
-        borrower;
-        seizeTokens;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
-        }
     }
 
     /**
@@ -708,14 +525,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param src The account which sources the tokens
      * @param dst The account which receives the tokens
      * @param transferTokens The number of vTokens to transfer
-     * @return error Always NO_ERROR for compatilibity with Venus core tooling
      */
-    function transferAllowed(
+    function preTransferHook(
         address vToken,
         address src,
         address dst,
         uint256 transferTokens
-    ) external override returns (uint256) {
+    ) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
 
         oracle.updatePrice(vToken);
@@ -730,33 +546,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
-        }
-
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Validates transfer and reverts on rejection. May emit logs.
-     * @param vToken Asset being transferred
-     * @param src The account which sources the tokens
-     * @param dst The account which receives the tokens
-     * @param transferTokens The number of vTokens to transfer
-     */
-    function transferVerify(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external override {
-        // Shh - currently unused
-        vToken;
-        src;
-        dst;
-        transferTokens;
-
-        // Shh - we don't ever want this hook to be marked pure
-        if (false) {
-            maxAssets = maxAssets;
         }
     }
 

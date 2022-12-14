@@ -173,8 +173,8 @@ contract VTokenHarness is VToken {
         interestRateModel = InterestRateModel(newInterestRateModelAddress);
     }
 
-    function harnessCallBorrowAllowed(uint256 amount) public returns (uint256) {
-        return comptroller.borrowAllowed(address(this), msg.sender, amount);
+    function harnessCallPreBorrowHook(uint256 amount) public {
+        comptroller.preBorrowHook(address(this), msg.sender, amount);
     }
 }
 

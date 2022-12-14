@@ -57,17 +57,9 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
 function configure({ comptroller, accessControlManager, collateral, borrowed }: LiquidateTestFixture) {
   accessControlManager.isAllowedToCall.returns(true);
 
-  comptroller.liquidateBorrowAllowed.reset();
-  comptroller.liquidateBorrowAllowed.returns(Error.NO_ERROR);
-  comptroller.liquidateBorrowVerify.reset();
-
-  comptroller.repayBorrowAllowed.reset();
-  comptroller.repayBorrowAllowed.returns(Error.NO_ERROR);
-  comptroller.repayBorrowVerify.reset();
-
-  comptroller.seizeAllowed.reset();
-  comptroller.seizeAllowed.returns(Error.NO_ERROR);
-  comptroller.seizeVerify.reset();
+  comptroller.preLiquidateHook.reset();
+  comptroller.preRepayHook.reset();
+  comptroller.preSeizeHook.reset();
 
   comptroller.liquidateCalculateSeizeTokens.reset();
   comptroller.liquidateCalculateSeizeTokens.returns([Error.NO_ERROR, seizeTokens]);
@@ -153,10 +145,9 @@ describe("VToken", function () {
 
   describe("liquidateBorrowFresh", () => {
     it("fails if comptroller tells it to", async () => {
-      comptroller.liquidateBorrowAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateComptrollerRejection")
-        .withArgs(11);
+      comptroller.preLiquidateHook.reverts();
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be
+        .reverted;
     });
 
     it("proceeds if comptroller tells it to", async () => {
@@ -210,17 +201,15 @@ describe("VToken", function () {
     });
 
     it("fails if repay fails", async () => {
-      comptroller.repayBorrowAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, "RepayBorrowComptrollerRejection")
-        .withArgs(11);
+      comptroller.preRepayHook.reverts();
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be
+        .reverted;
     });
 
     it("reverts if seize fails", async () => {
-      comptroller.seizeAllowed.returns(11);
-      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken))
-        .to.be.revertedWithCustomError(borrowed.vToken, "LiquidateSeizeComptrollerRejection")
-        .withArgs(11);
+      comptroller.preSeizeHook.reverts();
+      await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be
+        .reverted;
     });
 
     it("transfers the cash, borrows, tokens, and emits Transfer, LiquidateBorrow events", async () => {
@@ -322,10 +311,8 @@ describe("VToken", function () {
     // XXX verify callers are properly checked
 
     it("fails if seize is not allowed", async () => {
-      comptroller.seizeAllowed.returns(11);
-      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens))
-        .to.be.revertedWithCustomError(collateral.vToken, "LiquidateSeizeComptrollerRejection")
-        .withArgs(11);
+      comptroller.preSeizeHook.reverts();
+      await expect(seize(collateral.vToken, liquidator, borrower, seizeTokens)).to.be.reverted;
     });
 
     it("fails if vTokenBalances[borrower] < amount", async () => {

@@ -241,8 +241,8 @@ describe("assetListTest", () => {
     });
   });
 
-  describe("entering from borrowAllowed", () => {
-    it("enters when called by a ctoken", async () => {
+  describe("entering from preBorrowHook", () => {
+    it("enters when called by a vToken", async () => {
       await setBalance(await BAT.wallet.getAddress(), 10n ** 18n);
       await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
 
@@ -253,7 +253,7 @@ describe("assetListTest", () => {
       await checkMarkets([BAT]);
     });
 
-    it("reverts when called by not a ctoken", async () => {
+    it("reverts when called by not a vToken", async () => {
       await expect(
         comptroller.connect(customer).preBorrowHook(BAT.address, await customer.getAddress(), 1),
       ).to.be.revertedWithCustomError(comptroller, "UnexpectedSender");

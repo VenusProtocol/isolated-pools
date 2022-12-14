@@ -34,9 +34,7 @@ async function preMint(
   const { comptroller, interestRateModel, underlying, vToken } = contracts;
   await preApprove(underlying, vToken, minter, mintAmount, { faucet: true });
 
-  comptroller.mintAllowed.reset();
-  comptroller.mintAllowed.returns(Error.NO_ERROR);
-  comptroller.mintVerify.reset();
+  comptroller.preMintHook.reset();
 
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getSupplyRate.reset();
@@ -73,9 +71,7 @@ async function preRedeem(
   const { comptroller, vToken, interestRateModel, underlying } = contracts;
   await preSupply(vToken, redeemer, redeemTokens, { supply: true });
 
-  comptroller.redeemAllowed.reset();
-  comptroller.redeemAllowed.returns(Error.NO_ERROR);
-  comptroller.redeemVerify.reset();
+  comptroller.preRedeemHook.reset();
 
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getSupplyRate.reset();
@@ -180,10 +176,8 @@ describe("VToken", function () {
     });
 
     it("fails if comptroller tells it to", async () => {
-      comptroller.mintAllowed.returns(11);
-      await expect(mintFresh(vToken, minter, mintAmount))
-        .to.be.revertedWithCustomError(vToken, "MintComptrollerRejection")
-        .withArgs(11);
+      comptroller.preMintHook.reverts();
+      await expect(mintFresh(vToken, minter, mintAmount)).to.be.reverted;
     });
 
     it("proceeds if comptroller tells it to", async () => {
@@ -290,10 +284,8 @@ describe("VToken", function () {
       });
 
       it("fails if comptroller tells it to", async () => {
-        comptroller.redeemAllowed.returns(11);
-        await expect(redeemFresh(vToken, redeemer, redeemTokens, redeemAmount))
-          .to.be.revertedWithCustomError(vToken, "RedeemComptrollerRejection")
-          .withArgs(11);
+        comptroller.preRedeemHook.reverts();
+        await expect(redeemFresh(vToken, redeemer, redeemTokens, redeemAmount)).to.be.reverted;
       });
 
       it("fails if not fresh", async () => {

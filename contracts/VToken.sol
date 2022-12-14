@@ -136,10 +136,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 tokens
     ) internal {
         /* Fail if transfer not allowed */
-        uint256 allowed = comptroller.transferAllowed(address(this), src, dst, tokens);
-        if (allowed != 0) {
-            revert TransferComptrollerRejection(allowed);
-        }
+        comptroller.preTransferHook(address(this), src, dst, tokens);
 
         /* Do not allow self-transfers */
         if (src == dst) {
@@ -172,9 +169,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Transfer event */
         emit Transfer(src, dst, tokens);
-
-        // unused function
-        // comptroller.transferVerify(address(this), src, dst, tokens);
     }
 
     /**
@@ -502,10 +496,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 mintAmount
     ) internal {
         /* Fail if mint not allowed */
-        uint256 allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
-        if (allowed != 0) {
-            revert MintComptrollerRejection(allowed);
-        }
+        comptroller.preMintHook(address(this), minter, mintAmount);
 
         /* Verify market's block number equals current block number */
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -547,10 +538,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         /* We emit a Mint event, and a Transfer event */
         emit Mint(minter, actualMintAmount, mintTokens);
         emit Transfer(address(this), minter, mintTokens);
-
-        /* We call the defense hook */
-        // unused function
-        // comptroller.mintVerify(address(this), minter, actualMintAmount, mintTokens);
     }
 
     /**
@@ -593,6 +580,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     ) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
+            revert RedeemFreshnessCheck();
+        }
+
         /* exchangeRate = invoke Exchange Rate Stored() */
         Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
 
@@ -617,16 +609,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             redeemAmount = redeemAmountIn;
         }
 
-        /* Fail if redeem not allowed */
-        uint256 allowed = comptroller.redeemAllowed(address(this), redeemer, redeemTokens);
-        if (allowed != 0) {
-            revert RedeemComptrollerRejection(allowed);
+        // Require tokens is zero or amount is also zero
+        if (redeemTokens == 0 && redeemAmount > 0) {
+            revert("redeemTokens zero");
         }
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
-            revert RedeemFreshnessCheck();
-        }
+        /* Fail if redeem not allowed */
+        comptroller.preRedeemHook(address(this), redeemer, redeemTokens);
 
         /* Fail gracefully if protocol has insufficient cash */
         if (_getCashPrior() < redeemAmount) {
@@ -655,9 +644,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), redeemTokens);
         emit Redeem(redeemer, redeemAmount, redeemTokens);
-
-        /* We call the defense hook */
-        comptroller.redeemVerify(address(this), redeemer, redeemAmount, redeemTokens);
     }
 
     /**
@@ -678,10 +664,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function _borrowFresh(address payable borrower, uint256 borrowAmount) internal {
         /* Fail if borrow not allowed */
-        uint256 allowed = comptroller.borrowAllowed(address(this), borrower, borrowAmount);
-        if (allowed != 0) {
-            revert BorrowComptrollerRejection(allowed);
-        }
+        comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
         /* Verify market's block number equals current block number */
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -764,10 +747,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 repayAmount
     ) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
-        uint256 allowed = comptroller.repayBorrowAllowed(address(this), payer, borrower, repayAmount);
-        if (allowed != 0) {
-            revert RepayBorrowComptrollerRejection(allowed);
-        }
+        comptroller.preRepayHook(address(this), payer, borrower, repayAmount);
 
         /* Verify market's block number equals current block number */
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -876,7 +856,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         bool skipLiquidityCheck
     ) internal {
         /* Fail if liquidate not allowed */
-        uint256 err = comptroller.liquidateBorrowAllowed(
+        comptroller.preLiquidateHook(
             liquidator,
             address(vTokenCollateral),
             liquidator,
@@ -884,9 +864,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             repayAmount,
             skipLiquidityCheck
         );
-        if (err != 0) {
-            revert LiquidateComptrollerRejection(err);
-        }
 
         /* Verify market's block number equals current block number */
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -1048,10 +1025,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 seizeTokens
     ) internal {
         /* Fail if seize not allowed */
-        uint256 allowed = comptroller.seizeAllowed(address(this), seizerContract, liquidator, borrower, seizeTokens);
-        if (allowed != 0) {
-            revert LiquidateSeizeComptrollerRejection(allowed);
-        }
+        comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower, seizeTokens);
 
         /* Fail if borrower = liquidator */
         if (borrower == liquidator) {
