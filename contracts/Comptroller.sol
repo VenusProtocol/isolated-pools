@@ -172,9 +172,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
-     * @notice Add assets to be included in account liquidity calculation; enabeling them to be used as collateral
+     * @notice Add assets to be included in account liquidity calculation; enabling them to be used as collateral
      * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return errors An array of NO_ERROR for compatibility with Venus core tooling
+     * @custom:events MarketEntered is emitted for each market on success
+     * @custom:error ActionPaused error is thrown if entering any of the markets is paused
+     * @custom:error MarketNotListed error is thrown if any of the markets is not listed
+     * @custom:access Not restricted
      */
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
@@ -196,6 +200,14 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
      * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:events MarketExited is emitted on success
+     * @custom:error ActionPaused error is thrown if exiting the market is paused
+     * @custom:error NonzeroBorrowBalance error is thrown if the user has an outstanding borrow in this market
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error InsufficientLiquidity error is thrown if exiting the market would lead to user's insolvency
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted
      */
     function exitMarket(address vTokenAddress) external override returns (uint256) {
         _checkActionPauseState(vTokenAddress, Action.EXIT_MARKET);
@@ -253,6 +265,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
+     * @custom:error ActionPaused error is thrown if supplying to this market is paused
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error SupplyCapExceeded error is thrown if the total supply exceeds the cap after minting
+     * @custom:access Not restricted
      */
     function preMintHook(
         address vToken,
@@ -289,6 +305,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
      * @param redeemTokens The number of vTokens to exchange for the underlying asset in the market
+     * @custom:error ActionPaused error is thrown if withdrawals are paused in this market
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error InsufficientLiquidity error is thrown if the withdrawal would lead to user's insolvency
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted
      */
     function preRedeemHook(
         address vToken,
@@ -312,6 +334,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
+     * @custom:error ActionPaused error is thrown if borrowing is paused in this market
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error InsufficientLiquidity error is thrown if there is not enough collateral to borrow
+     * @custom:error BorrowCapExceeded is thrown if the borrow cap will be exceeded should this borrow succeed
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted if vToken is enabled as collateral, otherwise only vToken
      */
     function preBorrowHook(
         address vToken,
@@ -378,6 +407,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
+     * @custom:error ActionPaused error is thrown if repayments are paused in this market
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:access Not restricted
      */
     function preRepayHook(
         address vToken,
@@ -414,6 +446,14 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param borrower The address of the borrower
      * @param repayAmount The amount of underlying being repaid
      * @param skipLiquidityCheck Allows the borrow to be liquidated regardless of the account liquidity
+     * @custom:error ActionPaused error is thrown if liquidations are paused in this market
+     * @custom:error MarketNotListed error is thrown if either collateral or borrowed token is not listed
+     * @custom:error TooMuchRepay error is thrown if the liquidator is trying to repay more than allowed by close factor
+     * @custom:error MinimalCollateralViolated is thrown if the users' total collateral is lower than the threshold for non-batch liquidations
+     * @custom:error InsufficientShortfall is thrown when trying to liquidate a healthy account
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted if vToken is enabled as collateral, otherwise only vToken
      */
     function preLiquidateHook(
         address vTokenBorrowed,
@@ -477,6 +517,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param seizeTokens The number of collateral tokens to seize
+     * @custom:error ActionPaused error is thrown if seizing this type of collateral is paused
+     * @custom:error MarketNotListed error is thrown if either collateral or borrowed token is not listed
+     * @custom:error ComptrollerMismatch error is when seizer contract or seized asset belong to different pools
+     * @custom:access Not restricted
      */
     function preSeizeHook(
         address vTokenCollateral,
@@ -529,6 +573,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param src The account which sources the tokens
      * @param dst The account which receives the tokens
      * @param transferTokens The number of vTokens to transfer
+     * @custom:error ActionPaused error is thrown if withdrawals are paused in this market
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error InsufficientLiquidity error is thrown if the withdrawal would lead to user's insolvency
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted
      */
     function preTransferHook(
         address vToken,
@@ -560,8 +610,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      *   borrows, and treats the rest of the debt as bad debt (for each market).
      *   The sender has to repay a certain percentage of the debt, computed as
      *   collateral / (borrows * liquidationIncentive).
-     * @dev Reverts in case of failure
      * @param user account to heal
+     * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted
      */
     function healAccount(address user) external {
         VToken[] memory userAssets = accountAssets[user];
@@ -615,6 +668,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      *   below the threshold, and the account is insolvent, use healAccount.
      * @param borrower the borrower address
      * @param orders an array of liquidation orders
+     * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for a batch liquidation
+     * @custom:error InsufficientCollateral error is thrown when there is not enough collateral to cover the debt
+     * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
+     * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
+     * @custom:access Not restricted
      */
     function liquidateAccount(address borrower, LiquidationOrder[] calldata orders) external {
         // We will accrue interest and update the oracle prices later during the liquidation
@@ -658,8 +716,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
     /**
      * @notice Sets the closeFactor to use when liquidating borrows
-     * @dev Only callable by the admin
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
+     * @custom:events Emits NewCloseFactor on success
+     * @custom:access Only Governance
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
@@ -673,6 +732,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
+     * @custom:events Emits NewCollateralFactor when collateral factor is updated
+     *    and NewLiquidationThreshold when liquidation threshold is updated
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
+     * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is higher than collateral factor
+     * @custom:error PriceError is thrown when the oracle returns an invalid price for the asset
+     * @custom:access Controlled by AccessControlManager
      */
     function setCollateralFactor(
         VToken vToken,
@@ -719,6 +785,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Sets liquidationIncentive
      * @dev This function is restricted by the AccessControlManager
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
+     * @custom:events Emits NewLiquidationIncentive on success
+     * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
@@ -737,6 +805,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Add the market to the markets mapping and set it as listed
      * @dev Only callable by the PoolRegistry
      * @param vToken The address of the market (token) to list
+     * @custom:error MarketAlreadyListed is thrown if the market is already listed in this pool
+     * @custom:access Only PoolRegistry
      */
     function supportMarket(VToken vToken) external {
         _checkSenderIs(poolRegistry);
@@ -766,6 +836,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @dev A borrow cap of -1 corresponds to unlimited borrowing.
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of -1 corresponds to unlimited borrowing.
+     * @custom:access Controlled by AccessControlManager
      */
     function setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
         _checkAccessAllowed("setMarketBorrowCaps(address[],uint256[])");
@@ -784,9 +855,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /**
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
      * @dev This function is restricted by the AccessControlManager
-     * @dev A supply cap of 0 corresponds to Minting NotAllowed.
+     * @dev A supply cap of -1 corresponds to unlimited supply.
      * @param vTokens The addresses of the markets (tokens) to change the supply caps for
-     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to Minting NotAllowed.
+     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of -1 corresponds to unlimited supply.
+     * @custom:access Controlled by AccessControlManager
      */
     function setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
         _checkAccessAllowed("setMarketSupplyCaps(address[],uint256[])");
@@ -807,6 +879,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param marketsList Markets to pause/unpause the actions on
      * @param actionsList List of action ids to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
+     * @custom:access Controlled by AccessControlManager
      */
     function setActionsPaused(
         VToken[] calldata marketsList,
@@ -830,6 +903,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      *   operations like liquidateAccount or healAccount.
      * @dev This function is restricted by the AccessControlManager
      * @param newMinLiquidatableCollateral The new min liquidatable collateral (in USD).
+     * @custom:access Controlled by AccessControlManager
      */
     function setMinLiquidatableCollateral(uint256 newMinLiquidatableCollateral) external {
         _checkAccessAllowed("setMinLiquidatableCollateral(uint256)");
@@ -843,6 +917,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Add a new RewardsDistributor and initialize it with all markets
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
+     * @custom:access Only Governance
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
@@ -896,6 +971,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @return tokensToSeize Number of vTokenCollateral tokens to be seized in a liquidation
+     * @custom:error PriceError if the oracle returns an invalid price
      */
     function liquidateCalculateSeizeTokens(
         address vTokenBorrowed,
