@@ -266,11 +266,15 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         }
 
         uint256 supplyCap = supplyCaps[vToken];
-        require(supplyCap > 0, "market supply cap is 0");
-
-        uint256 totalSupply = VToken(vToken).totalSupply();
-        uint256 nextTotalSupply = add_(totalSupply, mintAmount);
-        require(nextTotalSupply <= supplyCap, "market supply cap reached");
+        // Skipping the cap check for uncapped coins to save some gas
+        if (supplyCap != type(uint256).max) {
+            uint256 vTokenSupply = VToken(vToken).totalSupply();
+            Exp memory exchangeRate = Exp({ mantissa: VToken(vToken).exchangeRateStored() });
+            uint256 nextTotalSupply = mul_ScalarTruncateAddUInt(exchangeRate, vTokenSupply, mintAmount);
+            if (nextTotalSupply > supplyCap) {
+                revert SupplyCapExceeded(vToken, supplyCap);
+            }
+        }
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
