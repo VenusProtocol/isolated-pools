@@ -5,6 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
