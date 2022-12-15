@@ -281,7 +281,8 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
-        token.transferFrom(owner(), address(this), input.initialSupply);
+        bool success = token.transferFrom(owner(), address(this), input.initialSupply);
+        require(success == true, "asset transfer to pool registry failed");
         token.approve(address(vToken), input.initialSupply);
 
         vToken.mintBehalf(owner(), input.initialSupply);
