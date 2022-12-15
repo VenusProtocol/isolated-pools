@@ -176,6 +176,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
      * @return success True if the transfer suceeded, reverts otherwise
+     * @custom:events Emits Transfer event on success
+     * @custom:error TransferNotAllowed is thrown if trying to transfer to self
+     * @custom:access Not restricted
      */
     function transfer(address dst, uint256 amount) external override nonReentrant returns (bool) {
         _transferTokens(msg.sender, msg.sender, dst, amount);
@@ -188,6 +191,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
      * @return success True if the transfer suceeded, reverts otherwise
+     * @custom:events Emits Transfer event on success
+     * @custom:error TransferNotAllowed is thrown if trying to transfer to self
+     * @custom:access Not restricted
      */
     function transferFrom(
         address src,
@@ -205,6 +211,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param spender The address of the account which may transfer tokens
      * @param amount The number of tokens that are approved (uint256.max means infinite)
      * @return success Whether or not the approval succeeded
+     * @custom:events Emits Approval event
+     * @custom:access Not restricted
      */
     function approve(address spender, uint256 amount) external override returns (bool) {
         address src = msg.sender;
@@ -398,6 +406,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Applies accrued interest to total borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
      *   up to the current block and writes new checkpoint to storage.
+     * @return Always NO_ERROR
+     * @custom:events Emits AccrueInterest event on success
+     * @custom:access Not restricted
      */
     function accrueInterest() public virtual override returns (uint256) {
         /* Remember the initial block number */
@@ -462,6 +473,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Mint and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
      */
     function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -475,6 +488,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Mint and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
      */
     function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -545,6 +560,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemTokens The number of vTokens to redeem into underlying
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Redeem and Transfer events; may emit AccrueInterest
+     * @custom:error RedeemTransferOutNotPossible is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
      */
     function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -650,6 +668,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender borrows assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Borrow event; may emit AccrueInterest
+     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
      */
     function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -713,6 +734,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
      */
     function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -726,6 +749,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
      */
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -799,6 +824,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param repayAmount The amount of the underlying borrowed asset to repay
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits LiquidateBorrow event; may emit AccrueInterest
+     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
+     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
+     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
+     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
+     * @custom:access Not restricted
      */
     function liquidateBorrow(
         address borrower,
@@ -929,6 +961,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param payer account who repays the debt
      * @param borrower account to heal
      * @param repayAmount amount to repay
+     * @custom:events Emits RepayBorrow, BadDebtIncreased events; may emit AccrueInterest
+     * @custom:error HealBorrowUnauthorized is thrown when the request does not come from Comptroller
+     * @custom:access Only Comptroller
      */
     function healBorrow(
         address payer,
@@ -979,6 +1014,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
+     * @custom:events Emits LiquidateBorrow event; may emit AccrueInterest
+     * @custom:error ForceLiquidateBorrowUnauthorized is thrown when the request does not come from Comptroller
+     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
+     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
+     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
+     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
+     * @custom:access Only Comptroller
      */
     function forceLiquidateBorrow(
         address liquidator,
@@ -1000,6 +1043,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param liquidator The account receiving seized collateral
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
+     * @custom:events Emits Transfer, ReservesAdded events
+     * @custom:error LiquidateSeizeLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:access Not restricted
      */
     function seize(
         address liquidator,
@@ -1064,6 +1110,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Sets a new comptroller for the market
      * @dev Admin function to set a new comptroller
+     * @custom:events Emits NewComptroller event
+     * @custom:error SetComptrollerOwnerCheck is thrown when the call is not from owner
+     * @custom:access Only Governance
      */
     function setComptroller(ComptrollerInterface newComptroller) public override {
         // Check caller is admin
@@ -1089,6 +1138,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
      * @dev Admin function to accrue interest and set a new reserve factor
+     * @custom:events Emits NewReserveFactor event; may emit AccrueInterest
+     * @custom:error SetReserveFactorAdminCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:error SetReserveFactorBoundsCheck is thrown when the new reserve factor is too high
+     * @custom:access Controlled by AccessControlManager
      */
     function setReserveFactor(uint256 newReserveFactorMantissa) external override nonReentrant {
         bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
@@ -1128,6 +1181,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice The sender adds to reserves.
      * @param addAmount The amount fo underlying token to add as reserves
+     * @custom:events Emits ReservesAdded event; may emit AccrueInterest
+     * @custom:access Not restricted
      */
     function addReserves(uint256 addAmount) external override nonReentrant {
         accrueInterest();
@@ -1150,26 +1205,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             revert AddReservesFactorFreshCheck(actualAddAmount);
         }
 
-        /////////////////////////
-        // EFFECTS & INTERACTIONS
-        // (No safe failures beyond this point)
-
-        /*
-         * We call _doTransferIn for the caller and the addAmount
-         *  Note: The vToken must handle variations between ERC-20 and ETH underlying.
-         *  On success, the vToken holds an additional addAmount of cash.
-         *  _doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
-         *  it returns the amount actually transferred, in case of a fee.
-         */
-
         actualAddAmount = _doTransferIn(msg.sender, addAmount);
-
         totalReservesNew = totalReserves + actualAddAmount;
-
-        // Store reserves[n+1] = reserves[n] + actualAddAmount
         totalReserves = totalReservesNew;
-
-        /* Emit NewReserves(sender, actualAddAmount, reserves[n+1]) */
         emit ReservesAdded(msg.sender, actualAddAmount, totalReservesNew);
 
         return actualAddAmount;
@@ -1178,6 +1216,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
      * @param reduceAmount Amount of reduction to reserves
+     * @custom:events Emits ReservesReduced event; may emit AccrueInterest
+     * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
+     * @custom:error ReduceReservesCashValidation is thrown when trying to withdraw more cash than the reserves have
+     * @custom:access Not restricted
      */
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
@@ -1231,6 +1273,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
      * @dev Admin function to accrue interest and update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
+     * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
      */
     function setInterestRateModel(InterestRateModel newInterestRateModel) public override {
         bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
@@ -1278,6 +1323,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sets the address of AccessControlManager
      * @dev Admin function to set address of AccessControlManager
      * @param newAccessControlManager The new address of the AccessControlManager
+     * @custom:events Emits NewAccessControlManager event
+     * @custom:access Only Governance
      */
     function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
         require(msg.sender == owner(), "only admin can set ACL address");
@@ -1330,6 +1377,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
      * @param token The address of the ERC-20 token to sweep
+     * @custom:access Only Governance
      */
     function sweepToken(IERC20Upgradeable token) external override {
         require(msg.sender == owner(), "VToken::sweepToken: only admin can sweep tokens");
