@@ -24,6 +24,8 @@ import "../VTokenInterfaces.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is Ownable2StepUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     /**
      * @dev Struct for a Venus interest rate pool.
      */
@@ -281,8 +283,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
-        bool success = token.transferFrom(owner(), address(this), input.initialSupply);
-        require(success == true, "asset transfer to pool registry failed");
+        token.safeTransferFrom(owner(), address(this), input.initialSupply);
         token.approve(address(vToken), input.initialSupply);
 
         vToken.mintBehalf(owner(), input.initialSupply);
