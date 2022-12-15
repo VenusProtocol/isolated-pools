@@ -470,16 +470,32 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function mint(uint256 mintAmount) external override nonReentrant {
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
-        _mintFresh(msg.sender, mintAmount);
+        _mintFresh(msg.sender, msg.sender, mintAmount);
+    }
+
+    /**
+     * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param mintAmount The amount of the underlying asset to supply
+     */
+    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant {
+        accrueInterest();
+        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+        _mintFresh(msg.sender, minter, mintAmount);
     }
 
     /**
      * @notice User supplies assets into the market and receives vTokens in exchange
      * @dev Assumes interest has already been accrued up to the current block
+     * @param payer The address of the account which is sending the assets for supply
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
      */
-    function _mintFresh(address minter, uint256 mintAmount) internal {
+    function _mintFresh(
+        address payer,
+        address minter,
+        uint256 mintAmount
+    ) internal {
         /* Fail if mint not allowed */
         uint256 allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
         if (allowed != 0) {
@@ -505,7 +521,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          *  in case of a fee. On success, the vToken holds an additional `actualMintAmount`
          *  of cash.
          */
-        uint256 actualMintAmount = _doTransferIn(minter, mintAmount);
+        uint256 actualMintAmount = _doTransferIn(payer, mintAmount);
 
         /*
          * We get the current exchange rate and calculate the number of vTokens to be minted:

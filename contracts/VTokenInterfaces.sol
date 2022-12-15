@@ -248,6 +248,8 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function mint(uint256 mintAmount) external virtual;
 
+    function mintBehalf(address minter, uint256 mintAllowed) external virtual;
+
     function redeem(uint256 redeemTokens) external virtual;
 
     function redeemUnderlying(uint256 redeemAmount) external virtual;

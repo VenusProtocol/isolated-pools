@@ -24,6 +24,8 @@ import "../VTokenInterfaces.sol";
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
 contract PoolRegistry is Ownable2StepUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     /**
      * @dev Struct for a Venus interest rate pool.
      */
@@ -77,6 +79,9 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
         address beaconAddress;
+        uint256 initialSupply;
+        uint256 supplyCap;
+        uint256 borrowCap;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -223,7 +228,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Add a market to an existing pool
+     * @notice Add a market to an existing pool and then mint to provide initial supply
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
         InterestRateModel rate;
@@ -263,8 +268,25 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         comptroller.supportMarket(vToken);
         comptroller.setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
+        uint256[] memory newSupplyCaps = new uint256[](1);
+        uint256[] memory newBorrowCaps = new uint256[](1);
+        VToken[] memory vTokens = new VToken[](1);
+
+        newSupplyCaps[0] = input.supplyCap;
+        newBorrowCaps[0] = input.borrowCap;
+        vTokens[0] = vToken;
+
+        comptroller.setMarketSupplyCaps(vTokens, newSupplyCaps);
+        comptroller.setMarketBorrowCaps(vTokens, newBorrowCaps);
+
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);
+
+        IERC20Upgradeable token = IERC20Upgradeable(input.asset);
+        token.safeTransferFrom(owner(), address(this), input.initialSupply);
+        token.safeApprove(address(vToken), input.initialSupply);
+
+        vToken.mintBehalf(owner(), input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }

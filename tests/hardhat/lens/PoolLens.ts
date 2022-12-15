@@ -159,6 +159,13 @@ describe("PoolLens - PoolView Tests", async function () {
     comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptOwnership();
 
+    const initialSupply = convertToUnit(1000, 18);
+    await mockWBTC.faucet(initialSupply);
+    await mockWBTC.approve(poolRegistry.address, initialSupply);
+
+    await mockDAI.faucet(initialSupply);
+    await mockDAI.approve(poolRegistry.address, initialSupply);
+
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
       asset: mockWBTC.address,
@@ -175,6 +182,9 @@ describe("PoolLens - PoolView Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply,
+      supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
 
     await poolRegistry.addMarket({
@@ -193,6 +203,9 @@ describe("PoolLens - PoolView Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply,
+      supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -403,6 +416,10 @@ describe("PoolLens - VTokens Query Tests", async function () {
     comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
     await comptroller2Proxy.acceptOwnership();
 
+    let initialSupply = convertToUnit(1, 8);
+    await mockWBTC.faucet(initialSupply);
+    await mockWBTC.approve(poolRegistry.address, initialSupply);
+
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
       asset: mockWBTC.address,
@@ -419,7 +436,14 @@ describe("PoolLens - VTokens Query Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply,
+      supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
+
+    initialSupply = convertToUnit(1, 18);
+    await mockDAI.faucet(initialSupply);
+    await mockDAI.approve(poolRegistry.address, initialSupply);
 
     await poolRegistry.addMarket({
       comptroller: comptroller1Proxy.address,
@@ -437,6 +461,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
+      initialSupply,
+      supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -470,13 +497,20 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");
-    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal("0");
-    expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal(convertToUnit(1, 18));
+    expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal(convertToUnit(1, 8));
     expect(vTokenMetadata_Actual_Parsed["isListed"]).equal("true");
     expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("700000000000000000");
     expect(vTokenMetadata_Actual_Parsed["underlyingAssetAddress"]).equal(mockWBTC.address);
     expect(vTokenMetadata_Actual_Parsed["vTokenDecimals"]).equal("8");
     expect(vTokenMetadata_Actual_Parsed["underlyingDecimals"]).equal("8");
+  });
+
+  it("is correct minted for user", async () => {
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenBalance = await poolLens.callStatic.vTokenBalances(vTokenAddress_WBTC, ownerAddress);
+    expect(vTokenBalance["balanceOfUnderlying"]).equal(convertToUnit(1, 8));
+    expect(vTokenBalance["balanceOf"]).equal(convertToUnit(1, 18));
   });
 });
 
