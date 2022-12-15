@@ -1152,7 +1152,7 @@ contract Comptroller is
      */
     function getRewardsByMarket(address vToken) external view returns (RewardSpeeds[] memory rewardSpeeds) {
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
-        RewardSpeeds[] memory rewardSpeeds = new RewardSpeeds[](rewardsDistributorsLength);
+        rewardSpeeds = new RewardSpeeds[](rewardsDistributorsLength);
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
             address rewardToken = address(rewardsDistributors[i].rewardToken());
             rewardSpeeds[i] = RewardSpeeds({

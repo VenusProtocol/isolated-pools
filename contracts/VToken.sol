@@ -343,6 +343,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
          */
         uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
+
         return principalTimesIndex / borrowSnapshot.interestIndex;
     }
 
