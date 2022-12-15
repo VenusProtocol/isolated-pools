@@ -72,6 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const initialSupply = convertToUnit(1, 18);
   const supplyCap = convertToUnit(10000, 18);
+  const borrowCap = convertToUnit(10000, 18);
   await BNX.faucet(initialSupply);
   await BNX.approve(poolRegistry.address, initialSupply);
 
@@ -93,6 +94,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap,
+    borrowCap,
   });
   await tx.wait();
 
@@ -120,6 +122,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap,
+    borrowCap,
   });
 
   const PoolLens = await ethers.getContract("PoolLens");

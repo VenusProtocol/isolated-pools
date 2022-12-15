@@ -133,6 +133,7 @@ describe("UpgradedVToken: Tests", function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
   });
 

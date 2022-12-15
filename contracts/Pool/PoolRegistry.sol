@@ -79,6 +79,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         address beaconAddress;
         uint256 initialSupply;
         uint256 supplyCap;
+        uint256 borrowCap;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -266,12 +267,15 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         comptroller.setCollateralFactor(vToken, input.collateralFactor, input.liquidationThreshold);
 
         uint256[] memory newSupplyCaps = new uint256[](1);
+        uint256[] memory newBorrowCaps = new uint256[](1);
         VToken[] memory vTokens = new VToken[](1);
 
         newSupplyCaps[0] = input.supplyCap;
+        newBorrowCaps[0] = input.borrowCap;
         vTokens[0] = vToken;
 
         comptroller.setMarketSupplyCaps(vTokens, newSupplyCaps);
+        comptroller.setMarketBorrowCaps(vTokens, newBorrowCaps);
 
         _vTokens[input.comptroller][input.asset] = address(vToken);
         _supportedPools[input.asset].push(input.comptroller);

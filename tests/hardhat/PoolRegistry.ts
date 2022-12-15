@@ -91,6 +91,7 @@ describe("PoolRegistry: Tests", function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
+      borrowCap: INITIAL_SUPPLY,
     };
     return { ...defaults, ...overwrites };
   };
@@ -223,6 +224,7 @@ describe("PoolRegistry: Tests", function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
+      borrowCap: INITIAL_SUPPLY,
     });
 
     await poolRegistry.addMarket({
@@ -243,6 +245,7 @@ describe("PoolRegistry: Tests", function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
+      borrowCap: INITIAL_SUPPLY,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);

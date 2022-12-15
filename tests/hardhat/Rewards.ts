@@ -171,6 +171,7 @@ describe("Rewards: Tests", async function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
 
     await poolRegistry.addMarket({
@@ -191,6 +192,7 @@ describe("Rewards: Tests", async function () {
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: initialSupply,
+      borrowCap: initialSupply,
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);

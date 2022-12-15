@@ -131,6 +131,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
+    "setMarketBorrowCaps(address[],uint256[])",
+    poolRegistry.address,
+  );
+  await tx.wait();
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
     "setLiquidationIncentive(uint256)",
     poolRegistry.address,
   );
