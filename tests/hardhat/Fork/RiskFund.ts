@@ -473,7 +473,7 @@ const riskFundFixture = async (): Promise<void> => {
   await riskFund.setPoolRegistry(poolRegistry.address);
 };
 
-describe.only("Risk Fund: Tests", function () {
+describe("Risk Fund: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -571,7 +571,7 @@ describe.only("Risk Fund: Tests", function () {
       it("fails if called with incorrect arguments", async function () {
         await expect(
           riskFund.swapPoolsAssets([cUSDT.address, cUSDC.address], [convertToUnit(10, 18)]),
-        ).to.be.rejectedWith("Risk fund: underlyingAssets and amountsOutMin should be the same length");
+        ).to.be.rejectedWith("Risk fund: underlyingAssets and amountsOutMin are unequal lengths");
       });
     });
 
