@@ -1312,13 +1312,19 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Updates bad debt
      * @dev Called only when bad debt is recovered from auction
-     * @param badDebt_ The amount of bad debt recovered
+     * @param recoveredAmount_ The amount of bad debt recovered
+     * @custom:events Emits BadDebtRecovered event
+     * @custom:access Only Shortfall contract
      */
-    function badDebtRecovered(uint256 badDebt_) external {
+    function badDebtRecovered(uint256 recoveredAmount_) external {
         require(msg.sender == shortfall, "only shortfall contract can update bad debt");
-        require(badDebt_ <= badDebt, "more than bad debt recovered from auction");
+        require(recoveredAmount_ <= badDebt, "more than bad debt recovered from auction");
 
-        badDebt = badDebt - badDebt_;
+        uint256 badDebtOld = badDebt;
+        uint256 badDebtNew = badDebtOld - recoveredAmount_;
+        badDebt = badDebtNew;
+
+        emit BadDebtRecovered(badDebtOld, badDebtNew);
     }
 
     /**

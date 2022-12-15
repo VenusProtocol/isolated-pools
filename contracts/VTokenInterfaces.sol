@@ -181,10 +181,18 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when bad debt is accumulated on a market
      * @param borrower borrower to "forgive"
+     * @param badDebtDelta amount of new bad debt recorded
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
     event BadDebtIncreased(address borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
+
+    /**
+     * @notice Event emitted when bad debt is recovered via an auction
+     * @param badDebtOld previous bad debt value
+     * @param badDebtNew new bad debt value
+     */
+    event BadDebtRecovered(uint256 badDebtOld, uint256 badDebtNew);
 
     /**
      * @notice Event emitted when a borrow is liquidated
