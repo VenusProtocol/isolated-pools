@@ -111,6 +111,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         shortfall = riskManagement.shortfall;
         riskFund = riskManagement.riskFund;
         protocolShareReserve = riskManagement.protocolShareReserve;
+        protocolSeizeShareMantissa = 5e16; // 5%
 
         // Set underlying and sanity check it
         underlying = underlying_;
@@ -1133,6 +1134,35 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // Emit NewComptroller(oldComptroller, newComptroller)
         emit NewComptroller(oldComptroller, newComptroller);
+    }
+
+    /**
+     * @notice sets protocol share accumulated from liquidations
+     * @dev must be less than liquidation incentive - 1
+     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
+     * @custom:events Emits NewProtocolSeizeShare event on success
+     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setProtocolSeizeShare(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetProtocolSeizeShareUnauthorized();
+        }
+
+        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
+        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
+            revert ProtocolSeizeShareTooBig();
+        }
+
+        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
+        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
+        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
     }
 
     /**

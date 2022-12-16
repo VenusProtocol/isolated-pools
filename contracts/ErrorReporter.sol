@@ -39,10 +39,10 @@ contract TokenErrorReporter {
     error LiquidateSeizeComptrollerRejection(uint256 errorCode);
     error LiquidateSeizeLiquidatorIsBorrower();
 
-    error AcceptAdminPendingAdminCheck();
-
     error SetComptrollerOwnerCheck();
-    error SetPendingAdminOwnerCheck();
+
+    error SetProtocolSeizeShareUnauthorized();
+    error ProtocolSeizeShareTooBig();
 
     error SetReserveFactorAdminCheck();
     error SetReserveFactorFreshCheck();

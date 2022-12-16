@@ -124,7 +124,7 @@ describe("VToken", function () {
   let borrowed: VTokenContracts;
   let collateral: VTokenContracts;
 
-  const protocolSeizeShareMantissa = convertToUnit("0.028", 18); // 2.8%
+  const protocolSeizeShareMantissa = convertToUnit("0.05", 18); // 5%
 
   const protocolShareTokens = new BigNumber(seizeTokens)
     .multipliedBy(protocolSeizeShareMantissa)

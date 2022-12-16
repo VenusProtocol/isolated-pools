@@ -120,7 +120,7 @@ contract VTokenStorage {
     /**
      * @notice Share of seized collateral that is added to reserves
      */
-    uint256 public constant protocolSeizeShareMantissa = 2.8e16; //2.8%
+    uint256 public protocolSeizeShareMantissa;
 
     /**
      * @notice Storage of AccessControlManager
@@ -224,6 +224,11 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when interestRateModel is changed
      */
     event NewMarketInterestRateModel(InterestRateModel oldInterestRateModel, InterestRateModel newInterestRateModel);
+
+    /**
+     * @notice Event emitted when protocol seize share is changed
+     */
+    event NewProtocolSeizeShare(uint256 oldProtocolSeizeShareMantissa, uint256 newProtocolSeizeShareMantissa);
 
     /**
      * @notice Event emitted when the reserve factor is changed
