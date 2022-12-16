@@ -8,7 +8,6 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, ERC20Harness, InterestRateModel, VTokenHarness } from "../../../typechain";
-import { Error } from "../util/Errors";
 import { VTokenTestFixture, preApprove, pretendBorrow, vTokenTestFixture } from "../util/TokenTestHelpers";
 
 const { expect } = chai;
@@ -19,9 +18,7 @@ const borrowAmount = convertToUnit("1000", 18);
 
 async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowAmount: BigNumberish) {
   const { comptroller, interestRateModel, underlying, vToken } = contracts;
-  comptroller.borrowAllowed.reset();
-  comptroller.borrowAllowed.returns(Error.NO_ERROR);
-  comptroller.borrowVerify.reset();
+  comptroller.preBorrowHook.reset();
 
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getSupplyRate.reset();
@@ -46,9 +43,7 @@ async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, bor
 async function preRepay(contracts: VTokenTestFixture, benefactor: Signer, borrower: Signer, repayAmount: BigNumberish) {
   const { comptroller, interestRateModel, underlying, vToken } = contracts;
   // setup either benefactor OR borrower for success in repaying
-  comptroller.repayBorrowAllowed.reset();
-  comptroller.repayBorrowAllowed.returns(Error.NO_ERROR);
-  comptroller.repayBorrowVerify.reset();
+  comptroller.preRepayHook.reset();
 
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getSupplyRate.reset();
@@ -110,10 +105,8 @@ describe("VToken", function () {
     beforeEach(async () => await preBorrow(contracts, borrower, borrowAmount));
 
     it("fails if comptroller tells it to", async () => {
-      comptroller.borrowAllowed.returns(11);
-      await expect(borrowFresh(vToken, borrower, borrowAmount))
-        .to.be.revertedWithCustomError(vToken, "BorrowComptrollerRejection")
-        .withArgs(11);
+      comptroller.preBorrowHook.reverts();
+      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.reverted;
     });
 
     it("proceeds if comptroller tells it to", async () => {
@@ -167,11 +160,6 @@ describe("VToken", function () {
     it("reverts if transfer out fails", async () => {
       await vToken.harnessSetFailTransferToAddress(borrowerAddress, true);
       await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWith("HARNESS_TOKEN_TRANSFER_OUT_FAILED");
-    });
-
-    xit("reverts if borrowVerify fails", async () => {
-      comptroller.borrowVerify.reverts("Oups");
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWith("borrowVerify rejected borrow");
     });
 
     it("transfers the underlying cash, tokens, and emits Transfer, Borrow events", async () => {
@@ -238,10 +226,8 @@ describe("VToken", function () {
         });
 
         it("fails if repay is not allowed", async () => {
-          comptroller.repayBorrowAllowed.returns(11);
-          await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount))
-            .to.be.revertedWithCustomError(vToken, "RepayBorrowComptrollerRejection")
-            .withArgs(11);
+          comptroller.preRepayHook.reverts();
+          await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount)).to.be.reverted;
         });
 
         it("fails if block number ≠ current block number", async () => {
@@ -284,13 +270,6 @@ describe("VToken", function () {
           await underlying.harnessSetFailTransferFromAddress(payerAddress, true);
           await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount)).to.be.revertedWith(
             "SafeERC20: ERC20 operation did not succeed",
-          );
-        });
-
-        xit("reverts if repayBorrowVerify fails", async () => {
-          comptroller.repayBorrowVerify.reverts("Oups");
-          await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount)).to.be.revertedWith(
-            "repayBorrowVerify rejected repayBorrow",
           );
         });
 

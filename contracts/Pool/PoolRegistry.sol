@@ -207,18 +207,10 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
         // Set Venus pool parameters
-        require(comptrollerProxy.setCloseFactor(closeFactor) == 0, "RegistryPool: Failed to set close factor of Pool.");
-        require(
-            comptrollerProxy.setLiquidationIncentive(liquidationIncentive) == 0,
-            "RegistryPool: Failed to set liquidation incentive of Pool."
-        );
-
+        comptrollerProxy.setCloseFactor(closeFactor);
+        comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
         comptrollerProxy.setMinLiquidatableCollateral(minLiquidatableCollateral);
-
-        require(
-            comptrollerProxy.setPriceOracle(PriceOracle(priceOracle)) == 0,
-            "RegistryPool: Failed to set price oracle of Pool."
-        );
+        comptrollerProxy.setPriceOracle(PriceOracle(priceOracle));
 
         // Start transferring ownership to msg.sender
         comptrollerProxy.transferOwnership(msg.sender);

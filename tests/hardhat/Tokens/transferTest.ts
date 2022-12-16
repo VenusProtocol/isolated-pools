@@ -46,19 +46,12 @@ describe("VToken", function () {
       await expect(vToken.transfer(rootAddress, 50)).to.be.revertedWithCustomError(vToken, "TransferNotAllowed");
     });
 
-    it("rejects transfer when not allowed and reverts if not verified", async () => {
+    it("rejects transfer when not allowed", async () => {
       await vToken.harnessSetBalance(rootAddress, 100);
       expect(await vToken.balanceOf(rootAddress)).to.equal(100);
 
-      comptroller.transferAllowed.returns(11);
-      await expect(vToken.transfer(rootAddress, 50))
-        .to.be.revertedWithCustomError(vToken, "TransferComptrollerRejection")
-        .withArgs(11);
-
-      //comptroller.transferAllowed.returns(Error.NO_ERROR);
-      //await send(vToken.comptroller, 'setTransferVerify', [false])
-      // no longer support verifyTransfer on vToken end
-      // await expect(send(vToken, 'transfer', [guyAddress, 50])).rejects.toRevert("revert transferVerify rejected transfer");
+      comptroller.preTransferHook.reverts();
+      await expect(vToken.transfer(rootAddress, 50)).to.be.reverted;
     });
   });
 });

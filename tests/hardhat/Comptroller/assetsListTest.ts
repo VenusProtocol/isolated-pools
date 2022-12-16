@@ -1,7 +1,7 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
-import { Signer } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -19,8 +19,8 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 describe("assetListTest", () => {
-  let root: Signer;
-  let customer: Signer;
+  let root: SignerWithAddress;
+  let customer: SignerWithAddress;
   let comptroller: MockContract<Comptroller>;
   let poolRegistry: FakeContract<PoolRegistry>;
   let OMG: FakeContract<VToken>;
@@ -60,7 +60,7 @@ describe("assetListTest", () => {
         if (name !== "sketch") {
           const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
           if (poolRegistryBalance.isZero()) {
-            await setBalance(await root.getAddress(), 100n ** 18n);
+            await setBalance(root.address, 100n ** 18n);
             await root.sendTransaction({
               to: poolRegistry.address,
               value: ethers.utils.parseEther("1"),
@@ -103,21 +103,21 @@ describe("assetListTest", () => {
     await comptroller.setMarketBorrowCaps(addresses, caps);
   });
 
-  async function checkMarkets(expectedTokens: FakeContract<VToken>[]) {
+  const checkMarkets = async (expectedTokens: FakeContract<VToken>[]) => {
     for (const token of allTokens) {
       const isExpected = expectedTokens.some(e => e == token);
-      expect(await comptroller.checkMembership(await customer.getAddress(), token.address)).to.equal(isExpected);
+      expect(await comptroller.checkMembership(customer.address, token.address)).to.equal(isExpected);
     }
-  }
+  };
 
-  async function enterAndCheckMarkets(
+  const enterAndCheckMarkets = async (
     enterTokens: FakeContract<VToken>[],
     expectedTokens: FakeContract<VToken>[],
     expectedErrors: Error[] | null = null,
-  ) {
+  ) => {
     const reply = await comptroller.connect(customer).callStatic.enterMarkets(enterTokens.map(t => t.address));
     const receipt = await comptroller.connect(customer).enterMarkets(enterTokens.map(t => t.address));
-    const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+    const assetsIn = await comptroller.getAssetsIn(customer.address);
 
     const expectedErrors_ = expectedErrors || enterTokens.map(_ => Error.NO_ERROR);
 
@@ -131,7 +131,7 @@ describe("assetListTest", () => {
     await checkMarkets(expectedTokens);
 
     return receipt;
-  }
+  };
 
   async function exitAndCheckMarkets(
     exitToken: FakeContract<VToken>,
@@ -140,7 +140,7 @@ describe("assetListTest", () => {
   ) {
     const reply = await comptroller.connect(customer).callStatic.exitMarket(exitToken.address);
     const receipt = await comptroller.connect(customer).exitMarket(exitToken.address);
-    const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+    const assetsIn = await comptroller.getAssetsIn(customer.address);
     expect(reply).to.equal(expectedError);
     expect(assetsIn).to.deep.equal(expectedTokens.map(t => t.address));
     await checkMarkets(expectedTokens);
@@ -169,7 +169,8 @@ describe("assetListTest", () => {
     });
 
     it("the market must be listed for add to succeed", async () => {
-      await enterAndCheckMarkets([SKT], [], [Error.MARKET_NOT_LISTED]);
+      const tx = comptroller.connect(customer).enterMarkets([SKT.address]);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "MarketNotListed").withArgs(SKT.address);
       const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
       await comptroller.connect(poolRegistrySigner).supportMarket(SKT.address);
       await enterAndCheckMarkets([SKT], [SKT]);
@@ -177,7 +178,8 @@ describe("assetListTest", () => {
 
     it("returns a list of codes mapping to user's ultimate membership in given addresses", async () => {
       await enterAndCheckMarkets([OMG, ZRX, BAT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.NO_ERROR, Error.NO_ERROR]);
-      await enterAndCheckMarkets([OMG, SKT], [OMG, ZRX, BAT], [Error.NO_ERROR, Error.MARKET_NOT_LISTED]);
+      const tx = comptroller.connect(customer).enterMarkets([OMG.address, SKT.address]);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "MarketNotListed").withArgs(SKT.address);
     });
   });
 
@@ -186,7 +188,8 @@ describe("assetListTest", () => {
       await enterAndCheckMarkets([OMG], [OMG]);
       OMG.getAccountSnapshot.returns([0, 1, 2, 1]);
 
-      await exitAndCheckMarkets(OMG, [OMG], Error.NONZERO_BORROW_BALANCE);
+      const tx = comptroller.connect(customer).exitMarket(OMG.address);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "NonzeroBorrowBalance");
     });
 
     it("rejects unless redeem allowed", async () => {
@@ -196,7 +199,8 @@ describe("assetListTest", () => {
       BAT.getAccountSnapshot.returns([0, 0, 2, 1]);
 
       // BAT has a negative balance and there's no supply, thus account should be underwater
-      await exitAndCheckMarkets(OMG, [OMG, BAT], Error.REJECTION);
+      const tx = comptroller.connect(customer).exitMarket(OMG.address);
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "InsufficientLiquidity");
     });
 
     it("accepts when you're not in the market already", async () => {
@@ -237,24 +241,24 @@ describe("assetListTest", () => {
     });
   });
 
-  describe("entering from borrowAllowed", () => {
-    it("enters when called by a ctoken", async () => {
+  describe("entering from preBorrowHook", () => {
+    it("enters when called by a vToken", async () => {
       await setBalance(await BAT.wallet.getAddress(), 10n ** 18n);
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
 
-      const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+      const assetsIn = await comptroller.getAssetsIn(customer.address);
 
       expect(assetsIn).to.deep.equal([BAT.address]);
 
       await checkMarkets([BAT]);
     });
 
-    it("reverts when called by not a ctoken", async () => {
+    it("reverts when called by not a vToken", async () => {
       await expect(
-        comptroller.connect(customer).borrowAllowed(BAT.address, await customer.getAddress(), 1),
-      ).to.be.revertedWith("sender must be vToken");
+        comptroller.connect(customer).preBorrowHook(BAT.address, await customer.getAddress(), 1),
+      ).to.be.revertedWithCustomError(comptroller, "UnexpectedSender");
 
-      const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+      const assetsIn = await comptroller.getAssetsIn(customer.address);
 
       expect(assetsIn).to.deep.equal([]);
 
@@ -263,11 +267,11 @@ describe("assetListTest", () => {
 
     it("adds to the asset list only once", async () => {
       await setBalance(await BAT.wallet.getAddress(), 10n ** 18n);
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
 
       await enterAndCheckMarkets([BAT], [BAT]);
 
-      await comptroller.connect(BAT.wallet).borrowAllowed(BAT.address, await customer.getAddress(), 1);
+      await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
       const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
       expect(assetsIn).to.deep.equal([BAT.address]);
     });

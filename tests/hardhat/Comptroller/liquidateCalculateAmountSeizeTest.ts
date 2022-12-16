@@ -96,16 +96,14 @@ describe("Comptroller", () => {
   describe("liquidateCalculateAmountSeize", () => {
     it("fails if borrowed asset price is 0", async () => {
       await setOraclePrice(vTokenBorrowed, 0);
-      const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount);
-      expect(err).to.equal(Error.PRICE_ERROR);
-      expect(result).to.equal(0);
+      const call = calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount);
+      await expect(call).to.be.revertedWithCustomError(comptroller, "PriceError").withArgs(vTokenBorrowed.address);
     });
 
     it("fails if collateral asset price is 0", async () => {
       await setOraclePrice(vTokenCollateral, 0);
-      const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount);
-      expect(err).to.equal(Error.PRICE_ERROR);
-      expect(result).to.equal(0);
+      const call = calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repayAmount);
+      await expect(call).to.be.revertedWithCustomError(comptroller, "PriceError").withArgs(vTokenCollateral.address);
     });
 
     it("fails if the repayAmount causes overflow ", async () => {
