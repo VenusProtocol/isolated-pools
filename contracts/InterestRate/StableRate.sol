@@ -196,8 +196,7 @@ contract StableRateModel {
                 ((util * multiplierPerBlock) / BASE) +
                 baseRatePerBlockForStable +
                 ((util * multiplierPerBlockForStable) / BASE) +
-                (stableRatePremium * excessLoanRate) /
-                BASE;
+                ((stableRatePremium * excessLoanRate) / BASE);
         } else {
             uint256 excessUtil = util - kink;
             return
@@ -205,8 +204,7 @@ contract StableRateModel {
                 baseRatePerBlockForStable +
                 ((kink * multiplierPerBlockForStable) / BASE) +
                 ((excessUtil * jumpMultiplierPerBlockForStable) / BASE) +
-                (stableRatePremium * excessLoanRate) /
-                BASE;
+                ((stableRatePremium * excessLoanRate) / BASE);
         }
     }
 

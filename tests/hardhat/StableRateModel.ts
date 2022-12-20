@@ -1,13 +1,16 @@
-import { MockContract, MockContractFactory, smock } from "@defi-wonderland/smock";
+import { FakeContract, MockContract, MockContractFactory, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
-import { StableRateModel, StableRateModel__factory } from "../../typechain";
+import { InterestRateModel, StableRateModel, StableRateModel__factory, VTokenHarness } from "../../typechain";
+import { vTokenTestFixture } from "./util/TokenTestHelpers";
 
 let stableRateModelFactory: MockContractFactory<StableRateModel__factory>;
 let stableRateModel: MockContract<StableRateModel>;
+let vToken: MockContract<VTokenHarness>;
+let interestRateModel: FakeContract<InterestRateModel>;
 
 const fixture = async (): Promise<void> => {
   const [owner] = await ethers.getSigners();
@@ -23,6 +26,9 @@ const fixture = async (): Promise<void> => {
     owner.address,
   );
   await stableRateModel.deployed();
+
+  const contracts = await loadFixture(vTokenTestFixture);
+  ({ vToken, interestRateModel } = contracts);
 };
 
 describe("StableRateModel: Tests", function () {
@@ -116,5 +122,21 @@ describe("StableRateModel: Tests", function () {
       convertToUnit(2, 20),
     );
     expect(rate).to.be.closeTo(Number(convertToUnit(58, 10)), Number(convertToUnit(1, 10)));
+  });
+
+  it("Return 0 as TotalBorrows for supply equal to zero", async function () {
+    const sr = await vToken.supplyRatePerBlock();
+    expect(sr).equals(0);
+  });
+
+  it("Calculate Supply rate of the market", async function () {
+    interestRateModel.utilizationRate.returns(convertToUnit(5, 17));
+    interestRateModel.getBorrowRate.returns(convertToUnit(3, 17));
+    await vToken.harnessSetTotalBorrows(convertToUnit(2, 20));
+    await vToken.harnessSetReserveFactorFresh(convertToUnit(1, 17));
+    await vToken.harnessSetAvgStableBorrowRate(convertToUnit(4, 17));
+    await vToken.harnessStableBorrows(convertToUnit(2, 18));
+
+    expect((await vToken.supplyRatePerBlock()).toString()).to.equal("135450000000000000");
   });
 });

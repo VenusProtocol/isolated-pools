@@ -179,6 +179,14 @@ contract VTokenHarness is VToken {
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
     }
+
+    function harnessSetAvgStableBorrowRate(uint256 _averageStableBorrowRate) public {
+        averageStableBorrowRate = _averageStableBorrowRate;
+    }
+
+    function harnessStableBorrows(uint256 _stableBorrows) public {
+        stableBorrows = _stableBorrows;
+    }
 }
 
 contract VTokenScenario is VToken {

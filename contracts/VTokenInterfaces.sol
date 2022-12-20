@@ -152,6 +152,8 @@ contract VTokenStorage {
      * @notice Average of all of the stable borrows
      */
     uint256 public averageStableBorrowRate;
+
+    uint256 internal constant BASE = 1e18;
 }
 
 abstract contract VTokenInterface is VTokenStorage {

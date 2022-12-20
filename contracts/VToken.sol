@@ -315,7 +315,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             (stableBorrows * averageStableBorrowRate)) / totalBorrows;
         return
             (averageMarketBorrowRate * utilizationRate * (reserveFactorMaxMantissa - reserveFactorMantissa)) /
-            reserveFactorMaxMantissa;
+            (BASE * BASE);
     }
 
     /**
