@@ -742,18 +742,24 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
      * @custom:access Not restricted
      */
-    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
+    function borrow(uint256 borrowAmount,  uint256 interestRateMode) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount);
+        _borrowFresh(payable(msg.sender), borrowAmount, interestRateMode);
         return NO_ERROR;
     }
 
     /**
      * @notice Users borrow assets from the protocol to their own address
+     * @param borrower Address of the borrower
      * @param borrowAmount The amount of the underlying asset to borrow
+     * @param interestRateMode The interest rate mode at which the user wants to borrow: 1 for Stable, 2 for Variable
      */
-    function _borrowFresh(address payable borrower, uint256 borrowAmount) internal {
+    function _borrowFresh(
+        address payable borrower,
+        uint256 borrowAmount,
+        uint256 interestRateMode
+    ) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
@@ -767,26 +773,62 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             revert BorrowCashNotAvailable();
         }
 
-        /*
-         * We calculate the new borrower and total borrow balances, failing on overflow:
-         *  accountBorrowNew = accountBorrow + borrowAmount
-         *  totalBorrowsNew = totalBorrows + borrowAmount
-         */
-        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
-        uint256 accountBorrowsNew = accountBorrowsPrev + borrowAmount;
-        uint256 totalBorrowsNew = totalBorrows + borrowAmount;
+        uint256 totalBorrowsNew;
+        uint256 accountBorrowsNew;
+        if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
+            /*
+             * We calculate the new borrower and total borrow balances, failing on overflow:
+             *  accountBorrowNew = accountStableBorrow + borrowAmount
+             *  totalBorrowsNew = totalBorrows + borrowAmount
+             */
+            BorrowSnapshot storage borrowSnapshot = accountStableBorrows[borrower];
+            uint256 accountBorrowsPrev = borrowSnapshot.principal;
+            accountBorrowsNew = accountBorrowsPrev + borrowAmount;
 
-        /////////////////////////
-        // EFFECTS & INTERACTIONS
-        // (No safe failures beyond this point)
+            /**
+             * Calculte the average stable borrow rate for the total stable borrows
+             */
+            uint256 stableBorrowsNew = stableBorrows + borrowAmount;
+            uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
+                (borrowAmount * stableBorrowIndex)) / stableBorrowsNew;
 
-        /*
-         * We write the previously calculated values into storage.
-         *  Note: Avoid token reentrancy attacks by writing increased borrow before external transfer.
-        `*/
-        accountBorrows[borrower].principal = accountBorrowsNew;
-        accountBorrows[borrower].interestIndex = borrowIndex;
-        totalBorrows = totalBorrowsNew;
+            /////////////////////////
+            // EFFECTS & INTERACTIONS
+            // (No safe failures beyond this point)
+
+            /*
+             * We write the previously calculated values into storage.
+             *  Note: Avoid token reentrancy attacks by writing increased borrow before external transfer.
+             */
+            uint256 interestIndexPrev = accountStableBorrows[borrower].interestIndex;
+            uint256 interestIndexNew = ((accountBorrowsPrev * interestIndexPrev) + (borrowAmount * stableBorrowIndex)) /
+                accountBorrowsNew;
+            accountStableBorrows[borrower].principal = accountBorrowsNew;
+            accountStableBorrows[borrower].interestIndex = interestIndexNew;
+            stableBorrows = stableBorrowsNew;
+            averageStableBorrowRate = averageStableBorrowRateNew;
+        } else {
+            /*
+             * We calculate the new borrower and total borrow balances, failing on overflow:
+             *  accountBorrowNew = accountBorrow + borrowAmount
+             *  totalBorrowsNew = totalBorrows + borrowAmount
+             */
+            uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
+            accountBorrowsNew = accountBorrowsPrev + borrowAmount;
+            totalBorrowsNew = totalBorrows + borrowAmount;
+
+            /////////////////////////
+            // EFFECTS & INTERACTIONS
+            // (No safe failures beyond this point)
+
+            /*
+             * We write the previously calculated values into storage.
+             *  Note: Avoid token reentrancy attacks by writing increased borrow before external transfer.
+             */
+            accountBorrows[borrower].principal = accountBorrowsNew;
+            accountBorrows[borrower].interestIndex = borrowIndex;
+            totalBorrows = totalBorrowsNew;
+        }
 
         /*
          * We invoke _doTransferOut for the borrower and the borrowAmount.
