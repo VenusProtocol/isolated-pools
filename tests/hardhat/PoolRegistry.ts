@@ -92,6 +92,12 @@ describe("PoolRegistry: Tests", function () {
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
+      baseRatePerBlockForStable: 0,
+      multiplierPerBlockForStable: convertToUnit(6, 10),
+      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
+      kinkForStable: convertToUnit(6, 17),
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRate: convertToUnit(5, 17),
     };
     return { ...defaults, ...overwrites };
   };
@@ -432,33 +438,37 @@ describe("PoolRegistry: Tests", function () {
         .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
     });
 
-  it("Revert on addMarket by non owner user", async () => {
-    const [, user, proxyAdmin] = await ethers.getSigners();
+    it("Revert on addMarket by non owner user", async () => {
+      const [, user, proxyAdmin] = await ethers.getSigners();
 
-    await expect(
-      poolRegistry.connect(user).addMarket({
-        comptroller: comptroller2Proxy.address,
-        asset: mockWBTC.address,
-        decimals: 8,
-        name: "Compound WBTC",
-        symbol: "vWBTC",
-        rateModel: 0,
-        baseRatePerYear: 0,
-        multiplierPerYear: "40000000000000000",
-        jumpMultiplierPerYear: 0,
-        kink_: 0,
-        collateralFactor: convertToUnit(0.7, 18),
-        liquidationThreshold: convertToUnit(0.7, 18),
-        accessControlManager: fakeAccessControlManager.address,
-        vTokenProxyAdmin: proxyAdmin.address,
-        beaconAddress: vTokenBeacon.address,
-        baseRatePerBlockForStable: 0,
-        multiplierPerBlockForStable: convertToUnit(6, 10),
-        jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-        kinkForStable: convertToUnit(6, 17),
-        stableRatePremium: convertToUnit(2, 12),
-        optimalStableLoanRate: convertToUnit(5, 17),
-      }),
-    ).to.be.rejectedWith("Ownable: caller is not the owner");
+      await expect(
+        poolRegistry.connect(user).addMarket({
+          comptroller: comptroller2Proxy.address,
+          asset: mockWBTC.address,
+          decimals: 8,
+          name: "Compound WBTC",
+          symbol: "vWBTC",
+          rateModel: 0,
+          baseRatePerYear: 0,
+          multiplierPerYear: "40000000000000000",
+          jumpMultiplierPerYear: 0,
+          kink_: 0,
+          collateralFactor: convertToUnit(0.7, 18),
+          liquidationThreshold: convertToUnit(0.7, 18),
+          accessControlManager: fakeAccessControlManager.address,
+          vTokenProxyAdmin: proxyAdmin.address,
+          beaconAddress: vTokenBeacon.address,
+          initialSupply: INITIAL_SUPPLY,
+          supplyCap: INITIAL_SUPPLY,
+          borrowCap: INITIAL_SUPPLY,
+          baseRatePerBlockForStable: 0,
+          multiplierPerBlockForStable: convertToUnit(6, 10),
+          jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
+          kinkForStable: convertToUnit(6, 17),
+          stableRatePremium: convertToUnit(2, 12),
+          optimalStableLoanRate: convertToUnit(5, 17),
+        }),
+      ).to.be.rejectedWith("Ownable: caller is not the owner");
+    });
   });
 });

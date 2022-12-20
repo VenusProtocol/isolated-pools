@@ -1374,7 +1374,16 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param newStableInterestRateModel the new interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setStableInterestRateModel(address)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetStableInterestRateModelOwnerCheck();
+        }
         accrueInterest();
         // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
         return _setStableInterestRateModelFresh(newStableInterestRateModel);
@@ -1390,19 +1399,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         // Used to store old model for use in the event that is emitted on success
         StableRateModel oldStableInterestRateModel;
 
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "_setStableInterestRateModelFresh(StableRateModel)"
-        );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
-
         // We fail gracefully unless market's block number equals current block number
         if (accrualBlockNumber != _getBlockNumber()) {
-            revert SetInterestRateModelFreshCheck();
+            revert SetStableInterestRateModelFreshCheck();
         }
 
         // Track the market's current stable interest rate model
