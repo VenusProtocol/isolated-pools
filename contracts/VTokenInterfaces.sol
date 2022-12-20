@@ -154,6 +154,21 @@ contract VTokenStorage {
     uint256 public averageStableBorrowRate;
 
     uint256 internal constant BASE = 1e18;
+
+    // Maximum stable borrow rate that can ever be applied (.0005% / block)
+    uint256 internal constant stableBorrowRateMaxMantissa = 0.0005e16;
+
+    // Mapping of account addresses to outstanding stable borrow balances
+    mapping(address => BorrowSnapshot) internal accountStableBorrows;
+
+    /**
+     * @notice Types of the Interest rate model
+     */
+    enum InterestRateMode {
+        NONE,
+        STABLE,
+        VARIABLE
+    }
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -173,7 +188,13 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interest is accrued
      */
-    event AccrueInterest(uint256 cashPrior, uint256 interestAccumulated, uint256 borrowIndex, uint256 totalBorrows);
+    event AccrueInterest(
+        uint256 cashPrior,
+        uint256 interestAccumulated,
+        uint256 borrowIndex,
+        uint256 totalBorrows,
+        uint256 stableBorrowIndex
+    );
 
     /**
      * @notice Event emitted when tokens are minted
@@ -293,7 +314,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function redeemUnderlying(uint256 redeemAmount) external virtual returns (uint256);
 
-    function borrow(uint256 borrowAmount) external virtual returns (uint256);
+    function borrow(uint256 borrowAmount,  uint256 interestRateMode) external virtual returns (uint256);
 
     function repayBorrow(uint256 repayAmount) external virtual returns (uint256);
 
