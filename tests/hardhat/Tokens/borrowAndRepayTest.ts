@@ -30,13 +30,13 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
 }
 
 async function borrowFresh(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
-  return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount);
+  return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount, 2);
 }
 
 async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
-  return vToken.connect(borrower).borrow(borrowAmount);
+  return vToken.connect(borrower).borrow(borrowAmount, 2);
 }
 
 async function preRepay(contracts: VTokenTestFixture, benefactor: Signer, borrower: Signer, repayAmount: BigNumberish) {

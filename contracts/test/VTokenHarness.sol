@@ -138,8 +138,8 @@ contract VTokenHarness is VToken {
         borrowIndex = borrowIndex_;
     }
 
-    function harnessBorrowFresh(address payable account, uint256 borrowAmount) external {
-        _borrowFresh(account, borrowAmount);
+    function harnessBorrowFresh(address payable account, uint256 borrowAmount, uint256 interestRateMode) external {
+        _borrowFresh(account, borrowAmount, interestRateMode);
     }
 
     function harnessRepayBorrowFresh(

@@ -482,7 +482,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
-        uint256 err = accrueStableInterest(
+        uint256 err = _accrueStableInterest(
             cashPrior,
             borrowsPrior,
             reservesPrior,
@@ -501,7 +501,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         return NO_ERROR;
     }
 
-    function accrueStableInterest(
+    function _accrueStableInterest(
         uint256 cashPrior,
         uint256 borrowsPrior,
         uint256 reservesPrior,

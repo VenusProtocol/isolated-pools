@@ -140,6 +140,7 @@ describe("VToken", () => {
           expectedInterestAccumulated.toFixed(),
           expectedBorrowIndex.toFixed(),
           expectedTotalBorrows.toFixed(),
+          0
         );
 
       expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
