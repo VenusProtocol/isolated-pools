@@ -482,8 +482,58 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
+        uint256 err = accrueStableInterest(
+            cashPrior,
+            borrowsPrior,
+            reservesPrior,
+            totalBorrowsNew,
+            totalReservesNew,
+            blockDelta
+        );
+
+        if (err != 0) {
+            return err;
+        }
+
         /* We emit an AccrueInterest event */
-        emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
+        emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew, stableBorrowIndex);
+
+        return NO_ERROR;
+    }
+
+    function accrueStableInterest(
+        uint256 cashPrior,
+        uint256 borrowsPrior,
+        uint256 reservesPrior,
+        uint256 totalBorrowsNew,
+        uint256 totalReservesNew,
+        uint256 blockDelta
+    ) internal returns (uint256) {
+        uint256 stableIndexPrior = stableBorrowIndex;
+
+        uint256 stableBorrowRateMantissa = stableRateModel.getBorrowRate(
+            cashPrior,
+            stableBorrows,
+            borrowsPrior,
+            reservesPrior
+        );
+        require(stableBorrowRateMantissa <= stableBorrowRateMaxMantissa, "stable borrow rate is absurdly high");
+
+        Exp memory simpleStableInterestFactor = mul_(Exp({ mantissa: stableBorrowRateMantissa }), blockDelta);
+        uint256 stableInterestAccumulated = mul_ScalarTruncate(simpleStableInterestFactor, stableBorrows);
+        totalBorrowsNew = totalBorrowsNew + stableInterestAccumulated;
+        totalReservesNew = mul_ScalarTruncateAddUInt(
+            Exp({ mantissa: reserveFactorMantissa }),
+            stableInterestAccumulated,
+            totalReservesNew
+        );
+        uint256 stableBorrowIndexNew = mul_ScalarTruncateAddUInt(
+            simpleStableInterestFactor,
+            stableIndexPrior,
+            stableIndexPrior
+        );
+
+        stableBorrowIndex = stableBorrowIndexNew;
 
         return NO_ERROR;
     }
