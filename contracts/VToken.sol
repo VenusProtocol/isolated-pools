@@ -111,8 +111,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         _setInterestRateModelFresh(interestRateModel_);
 
         // Set the interest rate model (depends on block number / borrow index)
-        uint256 err = _setStableInterestRateModelFresh(stableRateModel);
-        require(err == NO_ERROR, "setting interest rate model failed");
+        _setStableInterestRateModelFresh(stableRateModel);
 
         name = name_;
         symbol = symbol_;
@@ -1415,8 +1414,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // Emit NewMarketStableInterestRateModel(oldStableInterestRateModel, newStableInterestRateModel)
         emit NewMarketStableInterestRateModel(oldStableInterestRateModel, newStableInterestRateModel);
-
-        return NO_ERROR;
     }
 
     /**
