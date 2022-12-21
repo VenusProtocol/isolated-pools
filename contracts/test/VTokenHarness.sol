@@ -126,6 +126,11 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
+    function harnessAccountStableBorrows(address account) external view returns (uint256 principal, uint256 interestIndex) {
+        BorrowSnapshot memory snapshot = accountStableBorrows[account];
+        return (snapshot.principal, snapshot.interestIndex);
+    }
+
     function harnessSetAccountBorrows(
         address account,
         uint256 principal,
@@ -134,8 +139,20 @@ contract VTokenHarness is VToken {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
+    function harnessSetAccountStableBorrows(
+        address account,
+        uint256 principal,
+        uint256 interestIndex
+    ) external {
+        accountStableBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
+    }
+
     function harnessSetBorrowIndex(uint256 borrowIndex_) external {
         borrowIndex = borrowIndex_;
+    }
+
+    function harnessSetStableBorrowIndex(uint256 stableBorrowIndex_) external {
+        stableBorrowIndex = stableBorrowIndex_;
     }
 
     function harnessBorrowFresh(address payable account, uint256 borrowAmount, uint256 interestRateMode) external {
