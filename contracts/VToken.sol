@@ -783,6 +783,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             BorrowSnapshot storage borrowSnapshot = accountStableBorrows[borrower];
             uint256 accountBorrowsPrev = borrowSnapshot.principal;
             accountBorrowsNew = accountBorrowsPrev + borrowAmount;
+            totalBorrowsNew = totalBorrows + borrowAmount;
 
             /**
              * Calculte the average stable borrow rate for the total stable borrows
@@ -806,6 +807,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             accountStableBorrows[borrower].interestIndex = interestIndexNew;
             stableBorrows = stableBorrowsNew;
             averageStableBorrowRate = averageStableBorrowRateNew;
+            totalBorrows = totalBorrowsNew;
         } else {
             /*
              * We calculate the new borrower and total borrow balances, failing on overflow:

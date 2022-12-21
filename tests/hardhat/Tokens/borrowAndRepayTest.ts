@@ -7,8 +7,8 @@ import { BigNumberish, Signer, constants } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
-import { Comptroller, ERC20Harness, InterestRateModel, VTokenHarness } from "../../../typechain";
-import { VTokenTestFixture, preApprove, pretendBorrow, vTokenTestFixture } from "../util/TokenTestHelpers";
+import { Comptroller, ERC20Harness, InterestRateModel, VTokenHarness, StableRateModel } from "../../../typechain";
+import { VTokenTestFixture, preApprove, pretendBorrow, pretendStableBorrow, vTokenTestFixture } from "../util/TokenTestHelpers";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -17,10 +17,11 @@ const repayAmount = convertToUnit("100", 18);
 const borrowAmount = convertToUnit("1000", 18);
 
 async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowAmount: BigNumberish) {
-  const { comptroller, interestRateModel, underlying, vToken } = contracts;
+  const { comptroller, interestRateModel, underlying, vToken, stableInterestRateModel } = contracts;
   comptroller.preBorrowHook.reset();
 
   interestRateModel.getBorrowRate.reset();
+  stableInterestRateModel.getBorrowRate.reset();
 
   const borrowerAddress = await borrower.getAddress();
   await underlying.harnessSetBalance(vToken.address, borrowAmount);
@@ -29,14 +30,16 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
   await vToken.harnessSetTotalBorrows(0);
 }
 
-async function borrowFresh(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
-  return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount, 2);
+async function borrowFresh(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish, interestRateModel: BigNumberish) {
+  // interestRateModel --> 1 for stabel rate model and 2 for varaible rate model
+  return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount, interestRateModel);
 }
 
-async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
+async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish, interestRateModel: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
-  return vToken.connect(borrower).borrow(borrowAmount, 2);
+  // interestRateModel --> 1 for stabel rate model and 2 for varaible rate model
+  return vToken.connect(borrower).borrow(borrowAmount, interestRateModel);
 }
 
 async function preRepay(contracts: VTokenTestFixture, benefactor: Signer, borrower: Signer, repayAmount: BigNumberish) {
@@ -87,6 +90,7 @@ describe("VToken", function () {
   let vToken: MockContract<VTokenHarness>;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
+  let stableInterestRateModel: FakeContract<StableRateModel>;
   let _root: Signer;
   let borrower: Signer;
   let benefactor: Signer;
@@ -96,7 +100,7 @@ describe("VToken", function () {
     [_root, borrower, benefactor] = await ethers.getSigners();
     borrowerAddress = await borrower.getAddress();
     contracts = await loadFixture(vTokenTestFixture);
-    ({ comptroller, vToken, underlying, interestRateModel } = contracts);
+    ({ comptroller, vToken, underlying, interestRateModel, stableInterestRateModel } = contracts);
   });
 
   describe("borrowFresh", () => {
@@ -104,18 +108,18 @@ describe("VToken", function () {
 
     it("fails if comptroller tells it to", async () => {
       comptroller.preBorrowHook.reverts();
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.reverted;
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.reverted;
     });
 
     it("proceeds if comptroller tells it to", async () => {
       //await expect(
-      await borrowFresh(vToken, borrower, borrowAmount);
+      await borrowFresh(vToken, borrower, borrowAmount, 2);
       //).toSucceed();
     });
 
     it("fails if market not fresh", async () => {
       await vToken.harnessFastForward(5);
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWithCustomError(
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithCustomError(
         vToken,
         "BorrowFreshnessCheck",
       );
@@ -126,45 +130,45 @@ describe("VToken", function () {
       await vToken.accrueInterest();
       //).toSucceed();
       //await expect(
-      await borrowFresh(vToken, borrower, borrowAmount);
+      await borrowFresh(vToken, borrower, borrowAmount, 2);
       //).toSucceed();
     });
 
     it("fails if error if protocol has less than borrowAmount of underlying", async () => {
       await expect(
-        borrowFresh(vToken, borrower, new BigNumber(borrowAmount).plus(1).toString()),
+        borrowFresh(vToken, borrower, new BigNumber(borrowAmount).plus(1).toString(), 2),
       ).to.be.revertedWithCustomError(vToken, "BorrowCashNotAvailable");
     });
 
     it("fails if borrowBalanceStored fails (due to non-zero stored principal with zero account index)", async () => {
       await pretendBorrow(vToken, borrower, 0, 3, 5);
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
     });
 
     it("fails if calculating account new total borrow balance overflows", async () => {
       await pretendBorrow(vToken, borrower, 1e-18, 1e-18, constants.MaxUint256);
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWithPanic(
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithPanic(
         PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
       );
     });
 
     it("fails if calculation of new total borrow balance overflows", async () => {
       await vToken.harnessSetTotalBorrows(constants.MaxUint256);
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWithPanic(
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithPanic(
         PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
       );
     });
 
     it("reverts if transfer out fails", async () => {
       await vToken.harnessSetFailTransferToAddress(borrowerAddress, true);
-      await expect(borrowFresh(vToken, borrower, borrowAmount)).to.be.revertedWith("HARNESS_TOKEN_TRANSFER_OUT_FAILED");
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWith("HARNESS_TOKEN_TRANSFER_OUT_FAILED");
     });
 
     it("transfers the underlying cash, tokens, and emits Transfer, Borrow events", async () => {
       const beforeProtocolCash = await underlying.balanceOf(vToken.address);
       const beforeProtocolBorrows = await vToken.totalBorrows();
       const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
-      const result = await borrowFresh(vToken, borrower, borrowAmount);
+      const result = await borrowFresh(vToken, borrower, borrowAmount, 2);
       //expect(result).toSucceed();
       expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
       expect(await underlying.balanceOf(vToken.address)).to.equal(beforeProtocolCash.sub(borrowAmount));
@@ -179,11 +183,56 @@ describe("VToken", function () {
     it("stores new borrow principal and interest index", async () => {
       const beforeProtocolBorrows = await vToken.totalBorrows();
       await pretendBorrow(vToken, borrower, 0, 3, 0);
-      await borrowFresh(vToken, borrower, borrowAmount);
+      await borrowFresh(vToken, borrower, borrowAmount, 2);
       const borrowSnap = await vToken.harnessAccountBorrows(borrowerAddress);
       expect(borrowSnap.principal).to.equal(borrowAmount);
       expect(borrowSnap.interestIndex).to.equal(convertToUnit("3", 18));
       expect(await vToken.totalBorrows()).to.equal(beforeProtocolBorrows.add(borrowAmount));
+    });
+
+    it("borrow fresh with stable rate", async () => {
+      const beforeProtocolCash = await underlying.balanceOf(vToken.address);
+      const beforeProtocolBorrows = await vToken.totalBorrows();
+      const beforeStableBorrows = await vToken.stableBorrows();
+      const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
+      await stableInterestRateModel.getBorrowRate.returns(convertToUnit(25, 12))
+
+      const result = await borrowFresh(vToken, borrower, borrowAmount, 1);
+
+      expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
+      expect(await underlying.balanceOf(vToken.address)).to.equal(beforeProtocolCash.sub(borrowAmount));
+      expect(await vToken.totalBorrows()).to.equal(beforeProtocolBorrows.add(borrowAmount));
+      expect(await vToken.stableBorrows()).to.equal(beforeStableBorrows.add(borrowAmount));
+
+      await expect(result).to.emit(underlying, "Transfer").withArgs(vToken.address, borrowerAddress, borrowAmount);
+
+      await expect(result)
+        .to.emit(vToken, "Borrow")
+        .withArgs(borrowerAddress, borrowAmount, borrowAmount, beforeProtocolBorrows.add(borrowAmount).toString());
+    });
+
+    it("stores new borrow principal and interest index for stable rate borrowing", async () => {
+      let beforeProtocolBorrows = await vToken.totalBorrows();
+      let borrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
+      expect(borrowSnap.principal).to.equal(0);
+      expect(borrowSnap.interestIndex).to.equal(0);
+      expect(await vToken.totalBorrows()).to.equal(0);
+
+      await pretendStableBorrow(vToken, borrower, .1, .3, borrowAmount);
+      beforeProtocolBorrows = await vToken.totalBorrows();
+      borrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
+
+      expect(borrowSnap.principal).to.equal(convertToUnit("1000", 18));
+      expect(borrowSnap.interestIndex).to.equal(convertToUnit(".1", 15));
+      expect(beforeProtocolBorrows).to.equal(convertToUnit("1000", 18));
+
+      await borrowFresh(vToken, borrower, borrowAmount, 1);
+      beforeProtocolBorrows = await vToken.totalBorrows();
+      borrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
+
+      expect(borrowSnap.principal).to.equal(convertToUnit("2000", 18));
+      expect(borrowSnap.interestIndex).to.equal(convertToUnit(".2", 15));
+      expect(beforeProtocolBorrows).to.equal(convertToUnit("2000", 18));
     });
   });
 
@@ -192,12 +241,12 @@ describe("VToken", function () {
 
     it("emits a borrow failure if interest accrual fails", async () => {
       interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(borrow(vToken, borrower, borrowAmount)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(borrow(vToken, borrower, borrowAmount, 2)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from borrowFresh without emitting any extra logs", async () => {
       await expect(
-        borrow(vToken, borrower, new BigNumber(borrowAmount).plus(1).toString()),
+        borrow(vToken, borrower, new BigNumber(borrowAmount).plus(1).toString(), 2),
       ).to.be.revertedWithCustomError(vToken, "BorrowCashNotAvailable");
     });
 
@@ -205,8 +254,15 @@ describe("VToken", function () {
       const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
       await vToken.harnessFastForward(5);
       //expect(
-      await borrow(vToken, borrower, borrowAmount);
+      await borrow(vToken, borrower, borrowAmount, 2);
       //).toSucceed();
+      expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
+    });
+
+    it("returns success from borrowFresh and transfers the correct amount for stable rate borrowing", async () => {
+      const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
+      await vToken.harnessFastForward(5);
+      await borrow(vToken, borrower, borrowAmount, 1);
       expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
     });
   });
