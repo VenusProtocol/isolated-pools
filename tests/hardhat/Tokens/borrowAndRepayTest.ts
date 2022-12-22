@@ -7,8 +7,14 @@ import { BigNumberish, Signer, constants } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
-import { Comptroller, ERC20Harness, InterestRateModel, VTokenHarness, StableRateModel } from "../../../typechain";
-import { VTokenTestFixture, preApprove, pretendBorrow, pretendStableBorrow, vTokenTestFixture } from "../util/TokenTestHelpers";
+import { Comptroller, ERC20Harness, InterestRateModel, StableRateModel, VTokenHarness } from "../../../typechain";
+import {
+  VTokenTestFixture,
+  preApprove,
+  pretendBorrow,
+  pretendStableBorrow,
+  vTokenTestFixture,
+} from "../util/TokenTestHelpers";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -30,12 +36,22 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
   await vToken.harnessSetTotalBorrows(0);
 }
 
-async function borrowFresh(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish, interestRateModel: BigNumberish) {
+async function borrowFresh(
+  vToken: MockContract<VTokenHarness>,
+  borrower: Signer,
+  borrowAmount: BigNumberish,
+  interestRateModel: BigNumberish,
+) {
   // interestRateModel --> 1 for stabel rate model and 2 for varaible rate model
   return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount, interestRateModel);
 }
 
-async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish, interestRateModel: BigNumberish) {
+async function borrow(
+  vToken: MockContract<VTokenHarness>,
+  borrower: Signer,
+  borrowAmount: BigNumberish,
+  interestRateModel: BigNumberish,
+) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
   // interestRateModel --> 1 for stabel rate model and 2 for varaible rate model
@@ -142,7 +158,9 @@ describe("VToken", function () {
 
     it("fails if borrowBalanceStored fails (due to non-zero stored principal with zero account index)", async () => {
       await pretendBorrow(vToken, borrower, 0, 3, 5);
-      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithPanic(PANIC_CODES.DIVISION_BY_ZERO);
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWithPanic(
+        PANIC_CODES.DIVISION_BY_ZERO,
+      );
     });
 
     it("fails if calculating account new total borrow balance overflows", async () => {
@@ -161,7 +179,9 @@ describe("VToken", function () {
 
     it("reverts if transfer out fails", async () => {
       await vToken.harnessSetFailTransferToAddress(borrowerAddress, true);
-      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWith("HARNESS_TOKEN_TRANSFER_OUT_FAILED");
+      await expect(borrowFresh(vToken, borrower, borrowAmount, 2)).to.be.revertedWith(
+        "HARNESS_TOKEN_TRANSFER_OUT_FAILED",
+      );
     });
 
     it("transfers the underlying cash, tokens, and emits Transfer, Borrow events", async () => {
@@ -195,7 +215,7 @@ describe("VToken", function () {
       const beforeProtocolBorrows = await vToken.totalBorrows();
       const beforeStableBorrows = await vToken.stableBorrows();
       const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
-      await stableInterestRateModel.getBorrowRate.returns(convertToUnit(25, 12))
+      await stableInterestRateModel.getBorrowRate.returns(convertToUnit(25, 12));
 
       const result = await borrowFresh(vToken, borrower, borrowAmount, 1);
 
@@ -218,7 +238,7 @@ describe("VToken", function () {
       expect(borrowSnap.interestIndex).to.equal(0);
       expect(await vToken.totalBorrows()).to.equal(0);
 
-      await pretendStableBorrow(vToken, borrower, .1, .3, borrowAmount);
+      await pretendStableBorrow(vToken, borrower, 0.1, 0.3, borrowAmount);
       beforeProtocolBorrows = await vToken.totalBorrows();
       borrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
 

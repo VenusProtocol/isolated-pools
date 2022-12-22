@@ -314,7 +314,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function redeemUnderlying(uint256 redeemAmount) external virtual returns (uint256);
 
-    function borrow(uint256 borrowAmount,  uint256 interestRateMode) external virtual returns (uint256);
+    function borrow(uint256 borrowAmount, uint256 interestRateMode) external virtual returns (uint256);
 
     function repayBorrow(uint256 repayAmount) external virtual returns (uint256);
 

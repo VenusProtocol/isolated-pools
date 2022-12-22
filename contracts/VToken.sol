@@ -479,13 +479,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         accrualBlockNumber = currentBlockNumber;
         borrowIndex = borrowIndexNew;
 
-        uint256 err = _accrueStableInterest(
-            cashPrior,
-            reservesPrior,
-            totalBorrowsNew,
-            totalReservesNew,
-            blockDelta
-        );
+        uint256 err = _accrueStableInterest(cashPrior, reservesPrior, totalBorrowsNew, totalReservesNew, blockDelta);
 
         if (err != 0) {
             return err;
@@ -502,9 +496,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev This calculates interest accrued from the last checkpointed block
      *   up to the current block and writes new checkpoint to storage.
      * @param cashPrior total available cash
-     * @param reservesPrior Total reserves before calculating accrue stable interest 
-     * @param totalBorrowsNew Total borrows after calculating accrue variable interest 
-     * @param totalReservesNew Total reserves after calculating accrue variable interest 
+     * @param reservesPrior Total reserves before calculating accrue stable interest
+     * @param totalBorrowsNew Total borrows after calculating accrue variable interest
+     * @param totalReservesNew Total reserves after calculating accrue variable interest
      * @param blockDelta Number of blocks between last accrual and current block
      * @return Always NO_ERROR
      * @custom:events Emits AccrueInterest event on success
@@ -757,7 +751,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
      * @custom:access Not restricted
      */
-    function borrow(uint256 borrowAmount,  uint256 interestRateMode) external override nonReentrant returns (uint256) {
+    function borrow(uint256 borrowAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         _borrowFresh(payable(msg.sender), borrowAmount, interestRateMode);

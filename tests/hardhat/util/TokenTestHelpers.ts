@@ -209,7 +209,11 @@ export async function pretendStableBorrow(
   blockNumber: number = 2e7,
 ) {
   await vToken.harnessSetTotalBorrows(principalRaw);
-  await vToken.harnessSetAccountStableBorrows(await borrower.getAddress(), principalRaw, convertToUnit(accountIndex, 15));
+  await vToken.harnessSetAccountStableBorrows(
+    await borrower.getAddress(),
+    principalRaw,
+    convertToUnit(accountIndex, 15),
+  );
   await vToken.harnessSetStableBorrowIndex(convertToUnit(marketIndex, 15));
   await vToken.harnessSetAccrualBlockNumber(blockNumber);
   await vToken.harnessSetBlockNumber(blockNumber);

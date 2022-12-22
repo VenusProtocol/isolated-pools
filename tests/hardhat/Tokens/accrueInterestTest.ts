@@ -30,7 +30,7 @@ async function pretendBlock(
 async function preAccrue({
   vToken,
   interestRateModel,
-  stableInterestRateModel
+  stableInterestRateModel,
 }: {
   vToken: MockContract<VTokenHarness>;
   interestRateModel: FakeContract<InterestRateModel>;
@@ -165,7 +165,7 @@ describe("VToken", () => {
           expectedInterestAccumulated.toFixed(),
           expectedBorrowIndex.toFixed(),
           expectedTotalBorrows.toFixed(),
-          expectedBorrowIndex.toFixed()
+          expectedBorrowIndex.toFixed(),
         );
 
       expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
