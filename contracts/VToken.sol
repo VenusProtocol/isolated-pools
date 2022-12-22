@@ -441,7 +441,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* Read the previous values out of storage */
         uint256 cashPrior = _getCashPrior();
-        uint256 borrowsPrior = totalBorrows;
+        uint256 borrowsPrior = totalBorrows - stableBorrows;
         uint256 reservesPrior = totalReserves;
         uint256 borrowIndexPrior = borrowIndex;
 
@@ -455,15 +455,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         /*
          * Calculate the interest accumulated into borrows and reserves and the new index:
          *  simpleInterestFactor = borrowRate * blockDelta
-         *  interestAccumulated = simpleInterestFactor * totalBorrows
-         *  totalBorrowsNew = interestAccumulated + totalBorrows
+         *  interestAccumulated = simpleInterestFactor * totalBorrows(for variable borrows only)
+         *  totalBorrowsNew = interestAccumulated + totalBorrows(variable + stable)
          *  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
          *  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
          */
 
         Exp memory simpleInterestFactor = mul_(Exp({ mantissa: borrowRateMantissa }), blockDelta);
         uint256 interestAccumulated = mul_ScalarTruncate(simpleInterestFactor, borrowsPrior);
-        uint256 totalBorrowsNew = interestAccumulated + borrowsPrior;
+        uint256 totalBorrowsNew = interestAccumulated + borrowsPrior + stableBorrows;
         uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
             interestAccumulated,
@@ -478,12 +478,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         /* We write the previously calculated values into storage */
         accrualBlockNumber = currentBlockNumber;
         borrowIndex = borrowIndexNew;
-        totalBorrows = totalBorrowsNew;
-        totalReserves = totalReservesNew;
 
         uint256 err = _accrueStableInterest(
             cashPrior,
-            borrowsPrior,
             reservesPrior,
             totalBorrowsNew,
             totalReservesNew,
@@ -500,9 +497,21 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         return NO_ERROR;
     }
 
+    /**
+     * @notice Applies accrued stable interest to stable borrows and reserves
+     * @dev This calculates interest accrued from the last checkpointed block
+     *   up to the current block and writes new checkpoint to storage.
+     * @param cashPrior total available cash
+     * @param reservesPrior Total reserves before calculating accrue stable interest 
+     * @param totalBorrowsNew Total borrows after calculating accrue variable interest 
+     * @param totalReservesNew Total reserves after calculating accrue variable interest 
+     * @param blockDelta Number of blocks between last accrual and current block
+     * @return Always NO_ERROR
+     * @custom:events Emits AccrueInterest event on success
+     * @custom:access Not restricted
+     */
     function _accrueStableInterest(
         uint256 cashPrior,
-        uint256 borrowsPrior,
         uint256 reservesPrior,
         uint256 totalBorrowsNew,
         uint256 totalReservesNew,
@@ -513,15 +522,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 stableBorrowRateMantissa = stableRateModel.getBorrowRate(
             cashPrior,
             stableBorrows,
-            borrowsPrior,
+            totalBorrows,
             reservesPrior
         );
         require(stableBorrowRateMantissa <= stableBorrowRateMaxMantissa, "stable borrow rate is absurdly high");
 
         Exp memory simpleStableInterestFactor = mul_(Exp({ mantissa: stableBorrowRateMantissa }), blockDelta);
         uint256 stableInterestAccumulated = mul_ScalarTruncate(simpleStableInterestFactor, stableBorrows);
-        totalBorrowsNew = totalBorrowsNew + stableInterestAccumulated;
-        totalReservesNew = mul_ScalarTruncateAddUInt(
+        uint256 totalBorrowsUpdated = totalBorrowsNew + stableInterestAccumulated;
+        uint256 totalReservesUpdated = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
             stableInterestAccumulated,
             totalReservesNew
@@ -532,7 +541,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             stableIndexPrior
         );
 
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+        // (No safe failures beyond this point)
+
+        /* We write the previously calculated values into storage */
         stableBorrowIndex = stableBorrowIndexNew;
+        totalBorrows = totalBorrowsUpdated;
+        totalReserves = totalReservesUpdated;
 
         return NO_ERROR;
     }
