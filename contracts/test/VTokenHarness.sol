@@ -62,6 +62,10 @@ contract VTokenHarness is VToken {
         return borrowRateMaxMantissa;
     }
 
+    function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
+        return stableBorrowRateMaxMantissa;
+    }
+
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -203,6 +207,22 @@ contract VTokenHarness is VToken {
 
     function harnessStableBorrows(uint256 _stableBorrows) public {
         stableBorrows = _stableBorrows;
+    }
+
+    function accrueStableInterest(
+        uint256 cashPrior,
+        uint256 reservesPrior,
+        uint256 totalBorrowsNew,
+        uint256 totalReservesNew,
+        uint256 blockDelta
+    ) public  returns (uint256) {
+        return _accrueStableInterest(
+            cashPrior,
+            reservesPrior,
+            totalBorrowsNew,
+            totalReservesNew,
+            blockDelta
+        );
     }
 }
 
