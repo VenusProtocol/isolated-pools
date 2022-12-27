@@ -322,6 +322,7 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
+      await poolRegistry.addMarket(await withDefaultMarketParameters());
       await expect(poolRegistry.addMarket(await withDefaultMarketParameters())).to.be.revertedWith(
         "RegistryPool: Market already added for asset comptroller combination",
       );
