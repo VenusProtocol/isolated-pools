@@ -975,7 +975,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             revert HealBorrowUnauthorized();
         }
 
-        accrueInterest();
         uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
         uint256 totalBorrowsNew = totalBorrows;
 

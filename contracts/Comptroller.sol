@@ -361,9 +361,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
-
-            // it should be impossible to break the important invariant
-            assert(markets[vToken].accountMembership[borrower]);
         }
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
