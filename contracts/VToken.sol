@@ -890,7 +890,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     ) internal {
         /* Fail if liquidate not allowed */
         comptroller.preLiquidateHook(
-            liquidator,
+            address(this),
             address(vTokenCollateral),
             liquidator,
             borrower,
