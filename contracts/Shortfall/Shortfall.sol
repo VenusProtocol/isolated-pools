@@ -290,12 +290,13 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
             "auction is on-going"
         );
 
+        auction.highestBidBps = 0;
+        auction.highestBidBlock = 0;
+
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = auction.markets[i];
             auction.marketDebt[vToken] = 0;
-            auction.highestBidBps = 0;
-            auction.highestBidBlock = 0;
         }
 
         delete auction.markets;

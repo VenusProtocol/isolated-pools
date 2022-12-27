@@ -389,10 +389,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             revert InsufficientLiquidity();
         }
 
+        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
+
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
