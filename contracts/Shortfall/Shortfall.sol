@@ -61,8 +61,8 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Time to wait for first bidder. wait for 100 blocks
     uint256 public constant waitForFirstBidder = 100;
 
-    /// @notice BUSD contract address
-    IERC20Upgradeable private BUSD;
+    /// @notice base asset contract address
+    address private convertibleBaseAsset;
 
     /// @notice Auctions for each pool
     mapping(address => Auction) public auctions;
@@ -100,6 +100,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
+    /// @notice Emitted when convertible base asset address is updated
+    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -112,15 +115,26 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
     function initialize(
-        IERC20Upgradeable _BUSD,
+        address _convertibleBaseAsset,
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
     ) external initializer {
         __Ownable2Step_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
-        BUSD = _BUSD;
+        convertibleBaseAsset = _convertibleBaseAsset;
         riskFund = _riskFund;
+    }
+
+    /**
+     * @dev Convertible base asset setter
+     * @param _convertibleBaseAsset Address of the asset.
+     */
+    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
+        require(_convertibleBaseAsset != address(0), "Risk Fund: Asset address invalid");
+        address oldBaseAsset = convertibleBaseAsset;
+        convertibleBaseAsset = _convertibleBaseAsset;
+        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
     }
 
     /**
@@ -213,11 +227,11 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
 
         if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
             riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            BUSD.safeTransfer(auction.highestBidder, riskFundBidAmount);
+            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
             riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            BUSD.safeTransfer(auction.highestBidder, riskFundBidAmount);
+            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
         }
 
         emit AuctionClosed(
