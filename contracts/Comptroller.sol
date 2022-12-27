@@ -697,7 +697,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         uint256 ordersCount = orders.length;
         for (uint256 i; i < ordersCount; ++i) {
             LiquidationOrder calldata order = orders[i];
-            order.vTokenCollateral.forceLiquidateBorrow(
+            order.vTokenBorrowed.forceLiquidateBorrow(
                 msg.sender,
                 borrower,
                 order.repayAmount,
