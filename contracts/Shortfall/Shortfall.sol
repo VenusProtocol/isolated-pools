@@ -131,7 +131,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @param _convertibleBaseAsset Address of the asset.
      */
     function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
-        require(_convertibleBaseAsset != address(0), "Risk Fund: Asset address invalid");
+        require(_convertibleBaseAsset != address(0), "Shortfall: Asset address invalid");
         address oldBaseAsset = convertibleBaseAsset;
         convertibleBaseAsset = _convertibleBaseAsset;
         emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
