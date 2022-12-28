@@ -328,10 +328,10 @@ describe("Shortfall: Tests", async function () {
       expect(auction.status).equal(2);
 
       expect(vWBTC.badDebtRecovered).to.have.been.calledOnce;
-      expect(vWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("2", 8));
+      expect(vWBTC.badDebtRecovered).to.have.been.calledWith("36000000");
 
       expect(vDAI.badDebtRecovered).to.have.been.calledOnce;
-      expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
+      expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("1800", 18));
       expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(auction.seizedRiskFund));
     });
   });

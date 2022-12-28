@@ -220,7 +220,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
                 marketsDebt[i] = auction.marketDebt[auction.markets[i]];
             }
 
-            auction.markets[i].badDebtRecovered(auction.marketDebt[auction.markets[i]]);
+            auction.markets[i].badDebtRecovered(marketsDebt[i]);
         }
 
         uint256 riskFundBidAmount = auction.seizedRiskFund;
