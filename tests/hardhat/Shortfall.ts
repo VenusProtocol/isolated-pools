@@ -226,7 +226,7 @@ describe("Shortfall: Tests", async function () {
       expect(auction.auctionType).equal(0);
       expect(auction.seizedRiskFund).equal(parseUnits(riskFundBalance, 18));
 
-      const startBidBps = new BigNumber("900000").dividedBy("52000.68").toFixed(2);
+      const startBidBps = new BigNumber("10000000000").dividedBy("52000.68").dividedBy("11000").toFixed(2);
       expect(auction.startBidBps.toString()).equal(new BigNumber(startBidBps).times(100).toString());
     });
 

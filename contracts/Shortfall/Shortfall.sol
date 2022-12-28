@@ -341,7 +341,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
-            auction.startBidBps = ((MAX_BPS - incentiveBps) * remainingRiskFundBalance) / poolBadDebt;
+            auction.startBidBps =
+                (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
+                (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
