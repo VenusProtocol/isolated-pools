@@ -318,6 +318,16 @@ describe("PoolRegistry: Tests", function () {
       expect(await vToken.accessControlManager()).to.equal(fakeAccessControlManager.address);
     });
 
+    it("reverts if market is readded with same comptroller asset combination", async () => {
+      await mockToken.faucet(INITIAL_SUPPLY);
+      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry.addMarket(await withDefaultMarketParameters());
+      await expect(poolRegistry.addMarket(await withDefaultMarketParameters())).to.be.revertedWith(
+        "RegistryPool: Market already added for asset comptroller combination",
+      );
+    });
+
     it("sets rate model to a new JumpRateModel with the correct parameters", async () => {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);

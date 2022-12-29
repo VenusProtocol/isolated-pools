@@ -361,9 +361,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
-
-            // it should be impossible to break the important invariant
-            assert(markets[vToken].accountMembership[borrower]);
         }
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
@@ -392,10 +389,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             revert InsufficientLiquidity();
         }
 
+        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
+
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
@@ -697,7 +695,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         uint256 ordersCount = orders.length;
         for (uint256 i; i < ordersCount; ++i) {
             LiquidationOrder calldata order = orders[i];
-            order.vTokenCollateral.forceLiquidateBorrow(
+            order.vTokenBorrowed.forceLiquidateBorrow(
                 msg.sender,
                 borrower,
                 order.repayAmount,

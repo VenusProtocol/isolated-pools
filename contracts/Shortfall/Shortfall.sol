@@ -61,8 +61,8 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Time to wait for first bidder. wait for 100 blocks
     uint256 public constant waitForFirstBidder = 100;
 
-    /// @notice BUSD contract address
-    IERC20Upgradeable private BUSD;
+    /// @notice base asset contract address
+    address private convertibleBaseAsset;
 
     /// @notice Auctions for each pool
     mapping(address => Auction) public auctions;
@@ -100,6 +100,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
+    /// @notice Emitted when convertible base asset address is updated
+    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -112,15 +115,26 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      */
     function initialize(
-        IERC20Upgradeable _BUSD,
+        address _convertibleBaseAsset,
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
     ) external initializer {
         __Ownable2Step_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;
-        BUSD = _BUSD;
+        convertibleBaseAsset = _convertibleBaseAsset;
         riskFund = _riskFund;
+    }
+
+    /**
+     * @dev Convertible base asset setter
+     * @param _convertibleBaseAsset Address of the asset.
+     */
+    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
+        require(_convertibleBaseAsset != address(0), "Shortfall: Asset address invalid");
+        address oldBaseAsset = convertibleBaseAsset;
+        convertibleBaseAsset = _convertibleBaseAsset;
+        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
     }
 
     /**
@@ -206,18 +220,18 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
                 marketsDebt[i] = auction.marketDebt[auction.markets[i]];
             }
 
-            auction.markets[i].badDebtRecovered(auction.marketDebt[auction.markets[i]]);
+            auction.markets[i].badDebtRecovered(marketsDebt[i]);
         }
 
         uint256 riskFundBidAmount = auction.seizedRiskFund;
 
         if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
             riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            BUSD.safeTransfer(auction.highestBidder, riskFundBidAmount);
+            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
             riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            BUSD.transfer(auction.highestBidder, riskFundBidAmount);
+            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
         }
 
         emit AuctionClosed(
@@ -290,12 +304,13 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
             "auction is on-going"
         );
 
+        auction.highestBidBps = 0;
+        auction.highestBidBlock = 0;
+
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = auction.markets[i];
             auction.marketDebt[vToken] = 0;
-            auction.highestBidBps = 0;
-            auction.highestBidBlock = 0;
         }
 
         delete auction.markets;
@@ -326,7 +341,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
-            auction.startBidBps = ((MAX_BPS - incentiveBps) * remainingRiskFundBalance) / poolBadDebt;
+            auction.startBidBps =
+                (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
+                (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {

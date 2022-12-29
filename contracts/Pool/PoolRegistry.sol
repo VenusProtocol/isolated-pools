@@ -223,6 +223,11 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      * @notice Add a market to an existing pool and then mint to provide initial supply
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
+        require(
+            _vTokens[input.comptroller][input.asset] == address(0),
+            "RegistryPool: Market already added for asset comptroller combination"
+        );
+
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(

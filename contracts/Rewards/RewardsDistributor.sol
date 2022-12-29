@@ -299,12 +299,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
 
         // Calculate REWARD TOKEN accrued: vTokenAmount * accruedPerBorrowedUnit
-        uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
+        if (borrowerAmount != 0) {
+            uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
 
-        uint256 borrowerAccrued = add_(rewardTokenAccrued[borrower], borrowerDelta);
-        rewardTokenAccrued[borrower] = borrowerAccrued;
+            uint256 borrowerAccrued = add_(rewardTokenAccrued[borrower], borrowerDelta);
+            rewardTokenAccrued[borrower] = borrowerAccrued;
 
-        emit DistributedBorrowerRewardToken(VToken(vToken), borrower, borrowerDelta, borrowIndex);
+            emit DistributedBorrowerRewardToken(VToken(vToken), borrower, borrowerDelta, borrowIndex);
+        }
     }
 
     /**

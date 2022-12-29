@@ -226,7 +226,7 @@ describe("Shortfall: Tests", async function () {
       expect(auction.auctionType).equal(0);
       expect(auction.seizedRiskFund).equal(parseUnits(riskFundBalance, 18));
 
-      const startBidBps = new BigNumber("900000").dividedBy("52000.68").toFixed(2);
+      const startBidBps = new BigNumber("10000000000").dividedBy("52000.68").dividedBy("11000").toFixed(2);
       expect(auction.startBidBps.toString()).equal(new BigNumber(startBidBps).times(100).toString());
     });
 
@@ -328,10 +328,10 @@ describe("Shortfall: Tests", async function () {
       expect(auction.status).equal(2);
 
       expect(vWBTC.badDebtRecovered).to.have.been.calledOnce;
-      expect(vWBTC.badDebtRecovered).to.have.been.calledWith(parseUnits("2", 8));
+      expect(vWBTC.badDebtRecovered).to.have.been.calledWith("36000000");
 
       expect(vDAI.badDebtRecovered).to.have.been.calledOnce;
-      expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
+      expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("1800", 18));
       expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(auction.seizedRiskFund));
     });
   });
