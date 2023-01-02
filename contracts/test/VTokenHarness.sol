@@ -181,9 +181,10 @@ contract VTokenHarness is VToken {
     function harnessRepayBorrowFresh(
         address payer,
         address account,
-        uint256 repayAmount
+        uint256 repayAmount,
+        uint256 interestRateMode
     ) external {
-        _repayBorrowFresh(payer, account, repayAmount);
+        _repayBorrowFresh(payer, account, repayAmount, interestRateMode);
     }
 
     function harnessLiquidateBorrowFresh(

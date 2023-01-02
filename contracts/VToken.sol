@@ -1118,7 +1118,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
 
         /* Fail if repayBorrow fails */
-        uint256 actualRepayAmount = _repayBorrowFresh(liquidator, borrower, repayAmount);
+        // Repay for both types of interest rate: stable and variable
+        uint256 actualRepayAmount = _repayBorrowFresh(liquidator, borrower, repayAmount, 1) +
+            _repayBorrowFresh(liquidator, borrower, repayAmount, 2);
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
