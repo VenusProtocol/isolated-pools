@@ -905,10 +905,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
+    function repayBorrow(uint256 repayAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, interestRateMode);
         return NO_ERROR;
     }
 
@@ -920,10 +920,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
+    function repayBorrowBehalf(address borrower, uint256 repayAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount);
+        _repayBorrowFresh(msg.sender, borrower, repayAmount, interestRateMode);
         return NO_ERROR;
     }
 
@@ -932,12 +932,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param payer the account paying off the borrow
      * @param borrower the account with the debt being payed off
      * @param repayAmount the amount of underlying tokens being returned, or -1 for the full outstanding amount
+     * @param interestRateMode The interest rate mode at of the debt the user wants to repay: 1 for Stable, 2 for Variable
      * @return (uint) the actual repayment amount.
      */
     function _repayBorrowFresh(
         address payer,
         address borrower,
-        uint256 repayAmount
+        uint256 repayAmount,
+        uint256 interestRateMode
     ) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), payer, borrower, repayAmount);
@@ -947,8 +949,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             revert RepayBorrowFreshnessCheck();
         }
 
-        /* We fetch the amount the borrower owes, with accumulated interest */
-        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
+        uint256 accountBorrowsPrev;
+        if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
+            accountBorrowsPrev = _stableBorrowBalanceStored(borrower);
+        } else {
+            /* We fetch the amount the borrower owes, with accumulated interest */
+            accountBorrowsPrev = _borrowBalanceStored(borrower);
+        }
 
         /* If repayAmount == -1, repayAmount = accountBorrows */
         uint256 repayAmountFinal = repayAmount == type(uint256).max ? accountBorrowsPrev : repayAmount;
@@ -974,9 +981,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 accountBorrowsNew = accountBorrowsPrev - actualRepayAmount;
         uint256 totalBorrowsNew = totalBorrows - actualRepayAmount;
 
-        /* We write the previously calculated values into storage */
-        accountBorrows[borrower].principal = accountBorrowsNew;
-        accountBorrows[borrower].interestIndex = borrowIndex;
+        if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
+            accountStableBorrows[borrower].principal = accountBorrowsNew;
+            accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
+        } else {
+            /* We write the previously calculated values into storage */
+            accountBorrows[borrower].principal = accountBorrowsNew;
+            accountBorrows[borrower].interestIndex = borrowIndex;
+        }
         totalBorrows = totalBorrowsNew;
 
         /* We emit a RepayBorrow event */
