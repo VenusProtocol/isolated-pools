@@ -206,6 +206,7 @@ export async function pretendStableBorrow(
   accountIndex: number,
   marketIndex: number,
   principalRaw: BigNumberish,
+  stableRateMantissa: BigNumberish,
   blockNumber: number = 2e7,
 ) {
   await vToken.harnessSetTotalBorrows(principalRaw);
@@ -213,6 +214,8 @@ export async function pretendStableBorrow(
     await borrower.getAddress(),
     principalRaw,
     convertToUnit(accountIndex, 15),
+    stableRateMantissa,
+    blockNumber,
   );
   await vToken.harnessSetStableBorrowIndex(convertToUnit(marketIndex, 15));
   await vToken.harnessSetAccrualBlockNumber(blockNumber);

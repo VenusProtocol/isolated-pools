@@ -238,7 +238,7 @@ describe("VToken", function () {
       expect(borrowSnap.interestIndex).to.equal(0);
       expect(await vToken.totalBorrows()).to.equal(0);
 
-      await pretendStableBorrow(vToken, borrower, 0.1, 0.3, borrowAmount);
+      await pretendStableBorrow(vToken, borrower, 0.1, 0.3, borrowAmount, convertToUnit(5, 8));
       beforeProtocolBorrows = await vToken.totalBorrows();
       borrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
 

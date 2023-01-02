@@ -153,13 +153,18 @@ contract VTokenStorage {
      */
     uint256 public averageStableBorrowRate;
 
-    uint256 internal constant BASE = 1e18;
-
     // Maximum stable borrow rate that can ever be applied (.0005% / block)
     uint256 internal constant stableBorrowRateMaxMantissa = 0.0005e16;
 
+    struct StableBorrowSnapshot {
+        uint256 principal;
+        uint256 stableRateMantissa;
+        uint256 interestIndex;
+        uint256 lastBlockAccrued;
+    }
+
     // Mapping of account addresses to outstanding stable borrow balances
-    mapping(address => BorrowSnapshot) internal accountStableBorrows;
+    mapping(address => StableBorrowSnapshot) internal accountStableBorrows;
 
     /**
      * @notice Types of the Interest rate model

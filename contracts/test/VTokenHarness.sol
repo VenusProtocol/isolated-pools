@@ -135,7 +135,7 @@ contract VTokenHarness is VToken {
         view
         returns (uint256 principal, uint256 interestIndex)
     {
-        BorrowSnapshot memory snapshot = accountStableBorrows[account];
+        StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
         return (snapshot.principal, snapshot.interestIndex);
     }
 
@@ -150,9 +150,16 @@ contract VTokenHarness is VToken {
     function harnessSetAccountStableBorrows(
         address account,
         uint256 principal,
-        uint256 interestIndex
+        uint256 interestIndex,
+        uint256 stableRateMantissa,
+        uint256 lastBlock
     ) external {
-        accountStableBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
+        accountStableBorrows[account] = StableBorrowSnapshot({
+            principal: principal,
+            interestIndex: interestIndex,
+            stableRateMantissa: stableRateMantissa,
+            lastBlockAccrued: lastBlock
+        });
     }
 
     function harnessSetBorrowIndex(uint256 borrowIndex_) external {
@@ -220,11 +227,9 @@ contract VTokenHarness is VToken {
     function accrueStableInterest(
         uint256 cashPrior,
         uint256 reservesPrior,
-        uint256 totalBorrowsNew,
-        uint256 totalReservesNew,
         uint256 blockDelta
     ) public returns (uint256) {
-        return _accrueStableInterest(cashPrior, reservesPrior, totalBorrowsNew, totalReservesNew, blockDelta);
+        return _accrueStableInterest(cashPrior, reservesPrior, blockDelta);
     }
 }
 
