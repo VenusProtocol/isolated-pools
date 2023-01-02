@@ -844,8 +844,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              * Calculte the average stable borrow rate for the total stable borrows
              */
             uint256 stableBorrowsNew = stableBorrows + borrowAmount;
+            uint256 stabelBorrowRate = stableRateModel.getBorrowRate(
+                _getCashPrior(),
+                stableBorrows,
+                totalBorrows,
+                totalReserves
+            );
             uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
-                (borrowAmount * stableBorrowIndex)) / stableBorrowsNew;
+                (borrowAmount * stabelBorrowRate)) / stableBorrowsNew;
 
             /////////////////////////
             // EFFECTS & INTERACTIONS
@@ -855,11 +861,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              * We write the previously calculated values into storage.
              *  Note: Avoid token reentrancy attacks by writing increased borrow before external transfer.
              */
-            uint256 interestIndexPrev = accountStableBorrows[borrower].interestIndex;
-            uint256 interestIndexNew = ((accountBorrowsPrev * interestIndexPrev) + (borrowAmount * stableBorrowIndex)) /
-                accountBorrowsNew;
+            uint256 stableRateMantissaNew = ((accountBorrowsPrev * accountStableBorrows[borrower].stableRateMantissa) +
+                (borrowAmount * stabelBorrowRate)) / accountBorrowsNew;
             accountStableBorrows[borrower].principal = accountBorrowsNew;
-            accountStableBorrows[borrower].interestIndex = interestIndexNew;
+            accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
+            accountStableBorrows[borrower].stableRateMantissa = stableRateMantissaNew;
             stableBorrows = stableBorrowsNew;
             averageStableBorrowRate = averageStableBorrowRateNew;
             totalBorrows = totalBorrowsNew;
@@ -905,7 +911,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrow(uint256 repayAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
+    function repayBorrow(uint256 repayAmount, uint256 interestRateMode)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         _repayBorrowFresh(msg.sender, msg.sender, repayAmount, interestRateMode);
@@ -920,7 +931,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
+    function repayBorrowBehalf(
+        address borrower,
+        uint256 repayAmount,
+        uint256 interestRateMode
+    ) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         _repayBorrowFresh(msg.sender, borrower, repayAmount, interestRateMode);
