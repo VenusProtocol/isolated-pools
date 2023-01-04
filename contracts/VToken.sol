@@ -784,7 +784,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
 
         /* If repayAmount == -1, repayAmount = accountBorrows */
-        uint256 repayAmountFinal = repayAmount == type(uint256).max ? accountBorrowsPrev : repayAmount;
+        uint256 repayAmountFinal = repayAmount > accountBorrowsPrev ? accountBorrowsPrev : repayAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS

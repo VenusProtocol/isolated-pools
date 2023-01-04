@@ -252,12 +252,6 @@ describe("VToken", function () {
           );
         });
 
-        it("returns an error if calculating account new account borrow balance fails", async () => {
-          await pretendBorrow(vToken, borrower, 1, 1, 1);
-          await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount)).to.be.revertedWithPanic(
-            PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW,
-          );
-        });
 
         it("returns an error if calculation of new total borrow balance fails", async () => {
           await vToken.harnessSetTotalBorrows(1);
