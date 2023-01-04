@@ -252,7 +252,6 @@ describe("VToken", function () {
           );
         });
 
-
         it("returns an error if calculation of new total borrow balance fails", async () => {
           await vToken.harnessSetTotalBorrows(1);
           await expect(repayBorrowFresh(vToken, payer, borrower, repayAmount)).to.be.revertedWithPanic(
