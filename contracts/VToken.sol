@@ -281,7 +281,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             uint256 exchangeRate
         )
     {
-        return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
+        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        uint256 borrowAmount = _borrowBalanceStored(account) + stableBorrowAmount;
+        return (NO_ERROR, accountTokens[account], borrowAmount, _exchangeRateStored());
     }
 
     /**
@@ -334,7 +336,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
         accrueInterest();
-        return _borrowBalanceStored(account);
+        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        return _borrowBalanceStored(account) + stableBorrowAmount;
     }
 
     /**
@@ -343,7 +346,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return borrowBalance The calculated balance
      */
     function borrowBalanceStored(address account) public view override returns (uint256) {
-        return _borrowBalanceStored(account);
+        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        return _borrowBalanceStored(account) + stableBorrowAmount;
     }
 
     /**
