@@ -418,7 +418,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 totalBorrowsPrior = totalBorrows;
         uint256 totalReservesPrior = totalReserves;
 
-        Exp memory simpleStableInterestFactor = mul_(Exp({ mantissa: borrowSnapshot.stableRateMantissa }), blockDelta);
         uint256 stableInterestAccumulated = mul_ScalarTruncate(simpleStableInterestFactor, borrowSnapshot.principal);
         uint256 totalBorrowsUpdated = totalBorrowsPrior + stableInterestAccumulated;
         uint256 totalReservesUpdated = mul_ScalarTruncateAddUInt(
@@ -426,12 +425,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             stableInterestAccumulated,
             totalReservesPrior
         );
-        uint256 stableBorrowIndexNew = mul_ScalarTruncateAddUInt(
-            simpleStableInterestFactor,
-            borrowSnapshot.interestIndex,
-            borrowSnapshot.interestIndex
-        );
-        uint256 principalUpdated = (borrowSnapshot.principal * stableBorrowIndexNew) / borrowSnapshot.interestIndex;
 
         totalBorrows = totalBorrowsUpdated;
         totalReserves = totalReservesUpdated;
@@ -856,7 +849,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              *  accountBorrowNew = accountStableBorrow + borrowAmount
              *  totalBorrowsNew = totalBorrows + borrowAmount
              */
-            uint256 accountBorrowsPrev = _stableBorrowBalanceStored(borrower);
+            uint256 accountBorrowsPrev = _updateUserStableBorrowBalance(borrower);
             accountBorrowsNew = accountBorrowsPrev + borrowAmount;
             totalBorrowsNew = totalBorrows + borrowAmount;
 
@@ -986,7 +979,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         uint256 accountBorrowsPrev;
         if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
-            accountBorrowsPrev = _stableBorrowBalanceStored(borrower);
+            accountBorrowsPrev = _updateUserStableBorrowBalance(borrower);
         } else {
             /* We fetch the amount the borrower owes, with accumulated interest */
             accountBorrowsPrev = _borrowBalanceStored(borrower);
@@ -1196,7 +1189,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
 
         accrueInterest();
-        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower) + _stableBorrowBalanceStored(borrower);
+        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower) + _updateUserStableBorrowBalance(borrower);
         uint256 totalBorrowsNew = totalBorrows;
 
         uint256 actualRepayAmount;
