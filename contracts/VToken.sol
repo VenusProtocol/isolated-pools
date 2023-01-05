@@ -375,26 +375,46 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param account The address whose balance should be calculated
      * @return borrowBalance the calculated balance
      */
-    function _stableBorrowBalanceStored(address account) internal returns (uint256) {
+    function _stableBorrowBalanceStored(address account) internal view returns (uint256, uint256 , Exp memory) {
         /* Get borrowBalance and borrowIndex */
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
+        Exp memory simpleStableInterestFactor;
 
         /* If borrowBalance = 0 then borrowIndex is likely also 0.
          * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
          */
         if (borrowSnapshot.principal == 0) {
-            return 0;
+            return (0, borrowSnapshot.interestIndex, simpleStableInterestFactor);
         }
 
         uint256 currentBlockNumber = _getBlockNumber();
 
         /* Short-circuit accumulating 0 interest */
         if (borrowSnapshot.lastBlockAccrued == currentBlockNumber) {
-            return borrowSnapshot.principal;
+            return (borrowSnapshot.principal, borrowSnapshot.interestIndex, simpleStableInterestFactor);
         }
 
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - borrowSnapshot.lastBlockAccrued;
+
+        simpleStableInterestFactor = mul_(Exp({ mantissa: borrowSnapshot.stableRateMantissa }), blockDelta);
+        
+        uint256 stableBorrowIndexNew = mul_ScalarTruncateAddUInt(
+            simpleStableInterestFactor,
+            borrowSnapshot.interestIndex,
+            borrowSnapshot.interestIndex
+        );
+        uint256 principalUpdated = (borrowSnapshot.principal * stableBorrowIndexNew) / borrowSnapshot.interestIndex;
+
+        return (principalUpdated, stableBorrowIndexNew, simpleStableInterestFactor);
+    }
+
+    function _updateUserStableBorrowBalance(address account) internal returns(uint256) {
+        StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
+        Exp memory simpleStableInterestFactor;
+        uint256 principalUpdated;
+        uint256 stableBorrowIndexNew;
+        (principalUpdated, stableBorrowIndexNew, simpleStableInterestFactor) = _stableBorrowBalanceStored(account);
         uint256 totalBorrowsPrior = totalBorrows;
         uint256 totalReservesPrior = totalReserves;
 
