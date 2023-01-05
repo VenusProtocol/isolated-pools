@@ -1176,7 +1176,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
 
         accrueInterest();
-        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
+        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower) + _stableBorrowBalanceStored(borrower);
         uint256 totalBorrowsNew = totalBorrows;
 
         uint256 actualRepayAmount;
@@ -1201,9 +1201,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
         }
 
+        // states for variable rate borrowing
         accountBorrows[borrower].principal = 0;
         accountBorrows[borrower].interestIndex = borrowIndex;
         totalBorrows = totalBorrowsNew;
+
+        // states for stable rate borrowing
+        accountStableBorrows[borrower].principal = 0;
+        accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
+        accountStableBorrows[borrower].lastBlockAccrued = _getBlockNumber();
     }
 
     /**
