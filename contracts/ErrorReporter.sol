@@ -60,4 +60,6 @@ contract TokenErrorReporter {
 
     error SetStableInterestRateModelOwnerCheck();
     error SetStableInterestRateModelFreshCheck();
+
+    error SwapBorrowRateModeFreshnessCheck();
 }

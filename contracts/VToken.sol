@@ -1043,6 +1043,73 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @dev Allows a borrower to swap his debt between stable and variable mode, or viceversa
+     * @param rateMode The rate mode that the user wants to swap to
+     **/
+    function swapBorrowRateMode(uint256 rateMode) external {
+        accrueInterest();
+
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
+            revert SwapBorrowRateModeFreshnessCheck();
+        }
+
+        address account = msg.sender;
+        uint256 variableDebt = _borrowBalanceStored(account);
+        uint256 stableDebt = _updateUserStableBorrowBalance(account);
+        uint256 accountBorrowsNew = variableDebt + stableDebt;
+        uint256 stableBorrowsNew;
+
+        if (InterestRateMode(rateMode) == InterestRateMode.STABLE) {
+            require(variableDebt > 0, "vToken: swapBorrowRateMode variable debt is 0");
+
+            stableBorrowsNew = stableBorrows + variableDebt;
+            uint256 stabelBorrowRate = stableRateModel.getBorrowRate(
+                _getCashPrior(),
+                stableBorrows,
+                totalBorrows,
+                totalReserves
+            );
+
+            uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
+                (variableDebt * stabelBorrowRate)) / stableBorrowsNew;
+
+            uint256 stableRateMantissaNew = ((stableDebt * accountStableBorrows[account].stableRateMantissa) +
+                (variableDebt * stabelBorrowRate)) / accountBorrowsNew;
+
+            /////////////////////////
+            // EFFECTS & INTERACTIONS
+            // (No safe failures beyond this point)
+
+            accountStableBorrows[account].principal = stableDebt + variableDebt;
+            accountStableBorrows[account].interestIndex = stableBorrowIndex;
+            accountStableBorrows[account].stableRateMantissa = stableRateMantissaNew;
+
+            averageStableBorrowRate = averageStableBorrowRateNew;
+
+            accountBorrows[account].principal = 0;
+            accountBorrows[account].interestIndex = borrowIndex;
+        } else {
+            require(stableDebt > 0, "vToken: swapBorrowRateMode stable debt is 0");
+
+            stableBorrowsNew = stableBorrows - stableDebt;
+
+            /////////////////////////
+            // EFFECTS & INTERACTIONS
+            // (No safe failures beyond this point)
+            accountBorrows[account].principal = accountBorrowsNew;
+            accountBorrows[account].interestIndex = borrowIndex;
+
+            accountStableBorrows[account].principal = 0;
+            accountStableBorrows[account].interestIndex = stableBorrowIndex;
+        }
+
+        stableBorrows = stableBorrowsNew;
+
+        emit SwapBorrowRateMode(account, rateMode);
+    }
+
+    /**
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this vToken to be liquidated
