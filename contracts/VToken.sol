@@ -415,14 +415,18 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     function _updateUserStableBorrowBalance(address account) internal returns(uint256) {
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
+
         Exp memory simpleStableInterestFactor;
         uint256 principalUpdated;
         uint256 stableBorrowIndexNew;
+
         (principalUpdated, stableBorrowIndexNew, simpleStableInterestFactor) = _stableBorrowBalanceStored(account);
+        uint256 stableBorrowsPrior = stableBorrows;
         uint256 totalBorrowsPrior = totalBorrows;
         uint256 totalReservesPrior = totalReserves;
 
         uint256 stableInterestAccumulated = mul_ScalarTruncate(simpleStableInterestFactor, borrowSnapshot.principal);
+        uint256 stableBorrowsUpdated = stableBorrowsPrior + stableInterestAccumulated;
         uint256 totalBorrowsUpdated = totalBorrowsPrior + stableInterestAccumulated;
         uint256 totalReservesUpdated = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
@@ -430,6 +434,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             totalReservesPrior
         );
 
+        stableBorrows = stableBorrowsUpdated;
         totalBorrows = totalBorrowsUpdated;
         totalReserves = totalReservesUpdated;
         borrowSnapshot.interestIndex = stableBorrowIndexNew;
@@ -1018,8 +1023,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 totalBorrowsNew = totalBorrows - actualRepayAmount;
 
         if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
+            uint256 stableBorrowsNew = stableBorrows - actualRepayAmount;
+
             accountStableBorrows[borrower].principal = accountBorrowsNew;
             accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
+
+            stableBorrows = stableBorrowsNew;
         } else {
             /* We write the previously calculated values into storage */
             accountBorrows[borrower].principal = accountBorrowsNew;
