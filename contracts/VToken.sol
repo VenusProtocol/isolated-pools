@@ -281,7 +281,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             uint256 exchangeRate
         )
     {
-        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
         uint256 borrowAmount = _borrowBalanceStored(account) + stableBorrowAmount;
         return (NO_ERROR, accountTokens[account], borrowAmount, _exchangeRateStored());
     }
@@ -336,7 +336,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
         accrueInterest();
-        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
         return _borrowBalanceStored(account) + stableBorrowAmount;
     }
 
@@ -346,7 +346,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return borrowBalance The calculated balance
      */
     function borrowBalanceStored(address account) public view override returns (uint256) {
-        (uint256 stableBorrowAmount,,) = _stableBorrowBalanceStored(account);
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
         return _borrowBalanceStored(account) + stableBorrowAmount;
     }
 
@@ -379,7 +379,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param account The address whose balance should be calculated
      * @return borrowBalance the calculated balance
      */
-    function _stableBorrowBalanceStored(address account) internal view returns (uint256, uint256 , Exp memory) {
+    function _stableBorrowBalanceStored(address account)
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            Exp memory
+        )
+    {
         /* Get borrowBalance and borrowIndex */
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
         Exp memory simpleStableInterestFactor;
@@ -402,7 +410,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 blockDelta = currentBlockNumber - borrowSnapshot.lastBlockAccrued;
 
         simpleStableInterestFactor = mul_(Exp({ mantissa: borrowSnapshot.stableRateMantissa }), blockDelta);
-        
+
         uint256 stableBorrowIndexNew = mul_ScalarTruncateAddUInt(
             simpleStableInterestFactor,
             borrowSnapshot.interestIndex,
@@ -413,7 +421,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         return (principalUpdated, stableBorrowIndexNew, simpleStableInterestFactor);
     }
 
-    function _updateUserStableBorrowBalance(address account) internal returns(uint256) {
+    function _updateUserStableBorrowBalance(address account) internal returns (uint256) {
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
 
         Exp memory simpleStableInterestFactor;
@@ -875,6 +883,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
                 (borrowAmount * stabelBorrowRate)) / stableBorrowsNew;
 
+            uint256 stableRateMantissaNew = ((accountBorrowsPrev * accountStableBorrows[borrower].stableRateMantissa) +
+                (borrowAmount * stabelBorrowRate)) / accountBorrowsNew;
+
             /////////////////////////
             // EFFECTS & INTERACTIONS
             // (No safe failures beyond this point)
@@ -883,8 +894,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              * We write the previously calculated values into storage.
              *  Note: Avoid token reentrancy attacks by writing increased borrow before external transfer.
              */
-            uint256 stableRateMantissaNew = ((accountBorrowsPrev * accountStableBorrows[borrower].stableRateMantissa) +
-                (borrowAmount * stabelBorrowRate)) / accountBorrowsNew;
+
             accountStableBorrows[borrower].principal = accountBorrowsNew;
             accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
             accountStableBorrows[borrower].stableRateMantissa = stableRateMantissaNew;
