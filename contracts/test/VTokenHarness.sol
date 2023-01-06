@@ -90,6 +90,10 @@ contract VTokenHarness is VToken {
         totalBorrows = totalBorrows_;
     }
 
+    function harnessSetStableBorrows(uint256 stableBorrows_) external {
+        stableBorrows = stableBorrows_;
+    }
+
     function harnessSetTotalReserves(uint256 totalReserves_) external {
         totalReserves = totalReserves_;
     }
