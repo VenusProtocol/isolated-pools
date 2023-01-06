@@ -254,10 +254,10 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 seizeTokens
     );
 
-    event SwapBorrowRateMode(
-        address account,
-        uint256 swappedBorrowMode
-    )
+    /**
+     * @notice Event emitted when a borrow rate mode is swapped for account
+     */
+    event SwapBorrowRateMode(address account, uint256 swappedBorrowMode);
 
     /*** Admin Events ***/
 
