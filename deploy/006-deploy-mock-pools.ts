@@ -11,6 +11,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, proxyAdmin } = await getNamedAccounts();
   const deployerSigner = await hre.ethers.getNamedSigner("deployer");
 
+  await deployments.fixture(["MockTokens", "Oracle", "PoolsRegistry", "PoolLens"]);
   const BNX = await ethers.getContract("MockBNX");
   const BSW = await ethers.getContract("MockBSW");
 
