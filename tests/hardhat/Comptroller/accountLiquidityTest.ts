@@ -298,6 +298,53 @@ describe("Comptroller", () => {
       expect(liquidity).to.equal(0);
       expect(shortfall).to.equal(0);
     });
+    it("reverts if not 'in' any markets", async () => {
+      const amount1 = 1e6;
+      const amount2 = 1e3;
+      const user = accounts[1];
+      const userAddress = await user.getAddress();
+
+      const cf1 = 0.5;
+      const cf2 = 0.666;
+      const up1 = 3;
+      const up2 = 2.718;
+
+      const vToken1 = await makeVToken({
+        accessControl,
+        comptroller,
+        oracle,
+        supportMarket: true,
+        collateralFactor: cf1,
+        underlyingPrice: up1,
+        poolRegistry,
+      });
+      const vToken2 = await makeVToken({
+        accessControl,
+        comptroller,
+        oracle,
+        supportMarket: true,
+        collateralFactor: cf2,
+        underlyingPrice: up2,
+        poolRegistry,
+      });
+      await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address]);
+      //await quickMint(vToken1, user, amount1);
+      vToken1.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount1, 0, convertToUnit("1", 18)]);
+      //await quickMint(vToken2, user, amount2);
+      vToken2.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount2, 0, convertToUnit("1", 18)]);
+      await comptroller.setMinLiquidatableCollateral(3002719);
+      const dummyAddr1 = await accounts[1].getAddress();
+      const dummyAddr2 = await accounts[2].getAddress();
+      const param = {
+        vTokenCollateral: dummyAddr1,
+        vTokenBorrowed: dummyAddr2,
+        repayAmount: 1e3,
+      };
+      await expect(comptroller.liquidateAccount(userAddress, [param])).to.be.revertedWithCustomError(
+        comptroller,
+        "MarketNotListed",
+      );
+    });
   });
 
   describe("getHypotheticalAccountLiquidity", () => {
