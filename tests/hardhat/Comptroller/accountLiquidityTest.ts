@@ -328,22 +328,21 @@ describe("Comptroller", () => {
         poolRegistry,
       });
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address]);
-      //await quickMint(vToken1, user, amount1);
+      // pretend user mints amount1 of vToken1
       vToken1.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount1, 0, convertToUnit("1", 18)]);
-      //await quickMint(vToken2, user, amount2);
+      // pretend user mints amount2 of vToken2
       vToken2.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount2, 0, convertToUnit("1", 18)]);
       await comptroller.setMinLiquidatableCollateral(3002719);
-      const dummyAddr1 = await accounts[1].getAddress();
-      const dummyAddr2 = await accounts[2].getAddress();
+      const dummyAddr1 = accounts[1].address;
+      const dummyAddr2 = accounts[2].address;
       const param = {
         vTokenCollateral: dummyAddr1,
         vTokenBorrowed: dummyAddr2,
         repayAmount: 1e3,
       };
-      await expect(comptroller.liquidateAccount(userAddress, [param])).to.be.revertedWithCustomError(
-        comptroller,
-        "MarketNotListed",
-      );
+      await expect(comptroller.liquidateAccount(userAddress, [param]))
+        .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
+        .withArgs(dummyAddr2);
     });
   });
 
