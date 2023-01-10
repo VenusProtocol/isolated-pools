@@ -451,10 +451,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         return principalUpdated;
     }
 
-    // -> block -> stable rate/block,
-    // -> stableRateIndex
-    // -> pri * BorrowIndexUser / stableRateIndex
-
     /**
      * @notice Accrue interest then return the up-to-date exchange rate
      * @return exchangeRate Calculated exchange rate scaled by 1e18
@@ -583,7 +579,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Applies accrued stable interest to stable borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
      *   up to the current block and writes new checkpoint to storage.
-     * @param cashPrior total available cash
+     * @param cashPrior Total available cash
      * @param reservesPrior Total reserves before calculating accrue stable interest
      * @param blockDelta Number of blocks between last accrual and current block
      * @return Always NO_ERROR
@@ -979,7 +975,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param payer the account paying off the borrow
      * @param borrower the account with the debt being payed off
      * @param repayAmount the amount of underlying tokens being returned, or -1 for the full outstanding amount
-     * @param interestRateMode The interest rate mode at of the debt the user wants to repay: 1 for Stable, 2 for Variable
+     * @param interestRateMode The interest rate mode of the debt the user wants to repay: 1 for Stable, 2 for Variable
      * @return (uint) the actual repayment amount.
      */
     function _repayBorrowFresh(
@@ -1659,10 +1655,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice accrues interest and updates the stable interest rate model using _setStableInterestRateModelFresh
+     * @notice Accrues interest and updates the stable interest rate model using _setStableInterestRateModelFresh
      * @dev Admin function to accrue interest and update the stable interest rate model
-     * @param newStableInterestRateModel the new interest rate model to use
+     * @param newStableInterestRateModel The new interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:events Emits NewMarketStableInterestRateModel, after setting the new stable rate model
+     * @custom:access Controlled by AccessControlManager
      */
     function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
         bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
@@ -1680,9 +1679,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice updates the stable interest rate model (*requires fresh interest accrual)
+     * @notice Updates the stable interest rate model (requires fresh interest accrual)
      * @dev Admin function to update the stable interest rate model
-     * @param newStableInterestRateModel the new stable interest rate model to use
+     * @param newStableInterestRateModel The new stable interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal returns (uint256) {
