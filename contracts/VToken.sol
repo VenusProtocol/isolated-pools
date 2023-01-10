@@ -1106,22 +1106,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /*** Admin Functions ***/
 
-    /**
-     * @notice Sets a new comptroller for the market
-     * @dev Admin function to set a new comptroller
-     * @custom:events Emits NewComptroller event
-     * @custom:error SetComptrollerOwnerCheck is thrown when the call is not from owner
-     * @custom:access Only Governance
-     */
-    function setComptroller(ComptrollerInterface newComptroller) public override {
-        // Check caller is admin
-        if (msg.sender != owner()) {
-            revert SetComptrollerOwnerCheck();
-        }
-
-        _setComptroller(newComptroller);
-    }
-
     function _setComptroller(ComptrollerInterface newComptroller) internal {
         ComptrollerInterface oldComptroller = comptroller;
         // Ensure invoke comptroller.isComptroller() returns true
