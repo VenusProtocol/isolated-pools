@@ -183,7 +183,7 @@ const config: HardhatUserConfig = {
     ],
   },
   paths: {
-    tests: "./tests/hardhat",
+    tests: "./tests",
   },
   // Hardhat deploy
   namedAccounts: {
