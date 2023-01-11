@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { deployments } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
-import { AccessControlManager, Comptroller, MockToken, PoolRegistry, PriceOracle } from "../../typechain";
+import { AccessControlManager, Comptroller, MockToken, PoolRegistry, PriceOracle, VToken } from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
 
 const { expect } = chai;
@@ -239,6 +239,226 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal((mintAmount - redeemAmount) * collateralFactor * vBNXPrice);
       expect(shortfall).to.equal(0);
+    });
+  });
+});
+
+describe("Straight Cases For Single User", () => {
+  let fixture;
+  let Comptroller: Comptroller;
+  let vBNX: VToken;
+  let vBSW: VToken;
+  let BNX: MockToken;
+  let BSW: MockToken;
+  let acc1: string;
+  let acc2: string;
+  let PriceOracle: PriceOracle;
+  let vBSWPrice;
+  let vBNXPrice;
+
+  beforeEach(async () => {
+    ({ fixture } = await setupTest());
+    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, PriceOracle } = fixture);
+  });
+  describe("Force Liquidation of user via Comptroller", () => {
+    const mintAmount = convertToUnit("1", 8);
+    let acc1Signer: Signer;
+    let acc2Signer: Signer;
+    let acc1SignerAddress;
+    let acc2SignerAddress;
+    const bswBorrowAmount = 1e4;
+    let result;
+
+    beforeEach(async () => {
+      acc1Signer = await ethers.getSigner(acc1);
+      acc2Signer = await ethers.getSigner(acc2);
+      acc1SignerAddress = await acc1Signer.getAddress();
+      acc2SignerAddress = await acc2Signer.getAddress();
+
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      // Fund 2nd account
+      await BSW.connect(acc1Signer).faucet(mintAmount);
+      await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+      //borrow
+      //Supply WBTC to market from 2nd account
+      await expect(vBSW.connect(acc1Signer).mint(mintAmount))
+        .to.emit(vBSW, "Mint")
+        .withArgs(acc1SignerAddress, mintAmount, mintAmount);
+      //It should revert when try to borrow more than liquidity
+      await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
+        Comptroller,
+        "InsufficientLiquidity",
+      );
+      await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
+        .to.emit(vBSW, "Borrow")
+        .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
+
+      vBNXPrice = Number(await PriceOracle.getUnderlyingPrice(vBNX.address)) / 10 ** 18;
+      vBSWPrice = Number(await PriceOracle.getUnderlyingPrice(vBSW.address)) / 10 ** 18;
+
+      //Approve more assets for liquidation
+      await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
+      await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
+    });
+    it("Should revert when repay amount on liquidation is not equal to borrow amount", async function () {
+      //Repay amount does not make borrower principal to zero
+      const repayAmount = bswBorrowAmount / 2;
+      const param = {
+        vTokenCollateral: vBNX.address,
+        vTokenBorrowed: vBSW.address,
+        repayAmount: repayAmount,
+      };
+      await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2SignerAddress, [param])).to.be.revertedWith(
+        "Nonzero borrow balance after liquidation",
+      );
+    });
+    it("Should success on liquidation when repayamount is equal to borrowing", async function () {
+      const param = {
+        vTokenCollateral: vBNX.address,
+        vTokenBorrowed: vBSW.address,
+        repayAmount: bswBorrowAmount,
+      };
+      result = await Comptroller.connect(acc1Signer).liquidateAccount(acc2SignerAddress, [param]);
+      //Liquidation Mantissa is set for 1
+      const seizeTokens = (bswBorrowAmount * vBSWPrice) / vBNXPrice;
+      await expect(result)
+        .to.emit(vBSW, "LiquidateBorrow")
+        .withArgs(acc1SignerAddress, acc2SignerAddress, bswBorrowAmount, vBNX.address, seizeTokens.toFixed(0));
+
+      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1SignerAddress);
+      expect(liquidatorBalance).to.equal(seizeTokens.toFixed(0));
+    });
+  });
+  describe("Liquidation of user via Vtoken", () => {
+    let mintAmount = convertToUnit("1", 8);
+    let acc1Signer: Signer;
+    let acc2Signer: Signer;
+    let acc1SignerAddress;
+    let acc2SignerAddress;
+    let bswBorrowAmount = convertToUnit("1", 4);
+
+    beforeEach(async () => {
+      acc1Signer = await ethers.getSigner(acc1);
+      acc2Signer = await ethers.getSigner(acc2);
+      acc1SignerAddress = await acc1Signer.getAddress();
+      acc2SignerAddress = await acc2Signer.getAddress();
+
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      // Fund 2nd account
+      await BSW.connect(acc1Signer).faucet(mintAmount);
+      await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+      //borrow
+      //Supply WBTC to market from 2nd account
+      await expect(vBSW.connect(acc1Signer).mint(mintAmount))
+        .to.emit(vBSW, "Mint")
+        .withArgs(acc1SignerAddress, mintAmount, mintAmount);
+      await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
+        .to.emit(vBSW, "Borrow")
+        .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
+
+      vBNXPrice = Number(await PriceOracle.getUnderlyingPrice(vBNX.address)) / 10 ** 18;
+      vBSWPrice = Number(await PriceOracle.getUnderlyingPrice(vBSW.address)) / 10 ** 18;
+
+      //Approve more assets for liquidation
+      await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
+      await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
+    });
+    it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, bswBorrowAmount, vBSW.address))
+        .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
+        .withArgs("100000000000000000000", "15999000000");
+    });
+    it("Should revert when liquidation is called through vToken and no shortfall", async function () {
+      //Mint and Incrrease collateral of the user
+      mintAmount = convertToUnit("1", 18);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+      await expect(
+        vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, bswBorrowAmount, vBSW.address),
+      ).to.be.revertedWithCustomError(Comptroller, "InsufficientShortfall");
+    });
+    it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
+      //Mint and Incrrease collateral of the user
+      mintAmount = convertToUnit("1", 18);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+      //price manipulation and borrow to overcome insufficient shortfall
+      bswBorrowAmount = convertToUnit("1", 18);
+      await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("100", 40));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, 201, vBNX.address)).to.be.revertedWith(
+        "LIQUIDATE_SEIZE_TOO_MUCH",
+      );
+    });
+    it("Should revert when liquidation is called through vToken and trying to pay tooMuch", async function () {
+      //Mint and Incrrease collateral of the user
+      mintAmount = convertToUnit("1", 18);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+      //price manipulation and borrow to overcome insufficient shortfall
+      bswBorrowAmount = convertToUnit("1", 18);
+      await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await expect(
+        vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, convertToUnit("1", 18), vBNX.address),
+      ).to.be.revertedWithCustomError(Comptroller, "TooMuchRepay");
+    });
+    it("Should success when liquidation is called through vToken", async function () {
+      //Mint and Incrrease collateral of the user
+      mintAmount = convertToUnit("1", 18);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+        .to.emit(vBNX, "Mint")
+        .withArgs(acc2, mintAmount, mintAmount);
+
+      //price manipulation and borrow to overcome insufficient shortfall
+      bswBorrowAmount = convertToUnit("1", 18);
+      await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("100", 18));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const repayAmount = 100;
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, repayAmount, vBNX.address))
+        .to.emit(vBSW, "LiquidateBorrow")
+        .withArgs(acc1SignerAddress, acc2SignerAddress, repayAmount, vBNX.address, repayAmount);
+      const protocolShareMantissa = await vBSW.protocolSeizeShareMantissa();
+      const protocolShareTokens = ((repayAmount * protocolShareMantissa) / 1e18).toString();
+
+      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1SignerAddress);
+      expect(liquidatorBalance).to.equal((repayAmount - protocolShareTokens).toString());
     });
   });
 });
