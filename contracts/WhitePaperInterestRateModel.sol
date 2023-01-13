@@ -31,7 +31,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      */
     constructor(uint256 baseRatePerYear, uint256 multiplierPerYear) {
         baseRatePerBlock = baseRatePerYear / blocksPerYear;

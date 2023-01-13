@@ -41,7 +41,7 @@ contract StableRateModel {
     /// @notice The premium rate applicable on optimal stable loan rate
     uint256 public stableRatePremium;
 
-    /// @notice A factor will be applied to this premium before adding to the rate
+    /// @notice The factor to be applied to the stable rate premium before adding to the interest rate
     uint256 public optimalStableLoanRate;
 
     /// @notice The address of the owner, i.e. the Timelock contract, which can update parameters directly
@@ -50,7 +50,7 @@ contract StableRateModel {
     /**
      * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
      * @param _kink The utilization point where the jump multiplier is applied
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
@@ -83,7 +83,7 @@ contract StableRateModel {
      * @notice Updates the parameters of the interest rate model (only callable by owner, i.e. Timelock)
      * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
      * @param _kink The utilization point where the jump multiplier is applied
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
@@ -187,7 +187,7 @@ contract StableRateModel {
      * @notice Internal function to update the parameters of the interest rate model
      * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
      * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
      * @param _kink The utilization point where the jump multiplier is applied
      * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point

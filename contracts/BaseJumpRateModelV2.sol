@@ -51,7 +51,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      * @param owner_ The address of the owner, i.e. the Timelock contract (which has the ability to update parameters directly)
@@ -71,7 +71,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice Update the parameters of the interest rate model (only callable by owner, i.e. Timelock)
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */
@@ -135,7 +135,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice Internal function to update the parameters of the interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */
