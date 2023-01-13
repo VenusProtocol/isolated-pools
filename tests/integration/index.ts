@@ -264,16 +264,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     const mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    let acc1SignerAddress;
-    let acc2SignerAddress;
     const bswBorrowAmount = 1e4;
     let result;
 
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
-      acc1SignerAddress = await acc1Signer.getAddress();
-      acc2SignerAddress = await acc2Signer.getAddress();
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -289,7 +285,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       //Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1SignerAddress, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount);
       //It should revert when try to borrow more than liquidity
       await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
         Comptroller,
@@ -314,7 +310,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         vTokenBorrowed: vBSW.address,
         repayAmount: repayAmount,
       };
-      await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2SignerAddress, [param])).to.be.revertedWith(
+      await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param])).to.be.revertedWith(
         "Nonzero borrow balance after liquidation",
       );
     });
@@ -324,14 +320,14 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         vTokenBorrowed: vBSW.address,
         repayAmount: bswBorrowAmount,
       };
-      result = await Comptroller.connect(acc1Signer).liquidateAccount(acc2SignerAddress, [param]);
+      result = await Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param]);
       //Liquidation Mantissa is set for 1
       const seizeTokens = (bswBorrowAmount * vBSWPrice) / vBNXPrice;
       await expect(result)
         .to.emit(vBSW, "LiquidateBorrow")
-        .withArgs(acc1SignerAddress, acc2SignerAddress, bswBorrowAmount, vBNX.address, seizeTokens.toFixed(0));
+        .withArgs(acc1, acc2, bswBorrowAmount, vBNX.address, seizeTokens.toFixed(0));
 
-      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1SignerAddress);
+      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1);
       expect(liquidatorBalance).to.equal(seizeTokens.toFixed(0));
     });
   });
@@ -339,15 +335,11 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     let mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    let acc1SignerAddress;
-    let acc2SignerAddress;
     let bswBorrowAmount = convertToUnit("1", 4);
 
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
-      acc1SignerAddress = await acc1Signer.getAddress();
-      acc2SignerAddress = await acc2Signer.getAddress();
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -363,7 +355,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       //Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1SignerAddress, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount);
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
         .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
@@ -376,7 +368,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
     });
     it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
-      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, bswBorrowAmount, vBSW.address))
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2, bswBorrowAmount, vBSW.address))
         .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
         .withArgs("100000000000000000000", "15999000000");
     });
@@ -391,7 +383,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .withArgs(acc2, mintAmount, mintAmount);
       //Liquidation
       await expect(
-        vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, bswBorrowAmount, vBSW.address),
+        vBSW.connect(acc1Signer).liquidateBorrow(acc2, bswBorrowAmount, vBSW.address),
       ).to.be.revertedWithCustomError(Comptroller, "InsufficientShortfall");
     });
     it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
@@ -411,7 +403,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       //Liquidation
-      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, 201, vBNX.address)).to.be.revertedWith(
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2, 201, vBNX.address)).to.be.revertedWith(
         "LIQUIDATE_SEIZE_TOO_MUCH",
       );
     });
@@ -433,7 +425,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       //Liquidation
       await expect(
-        vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, convertToUnit("1", 18), vBNX.address),
+        vBSW.connect(acc1Signer).liquidateBorrow(acc2, convertToUnit("1", 18), vBNX.address),
       ).to.be.revertedWithCustomError(Comptroller, "TooMuchRepay");
     });
     it("Should success when liquidation is called through vToken", async function () {
@@ -455,13 +447,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       const repayAmount = convertToUnit("1", 9);
       //Liquidation
-      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2SignerAddress, repayAmount, vBNX.address))
+      await expect(vBSW.connect(acc1Signer).liquidateBorrow(acc2, repayAmount, vBNX.address))
         .to.emit(vBSW, "LiquidateBorrow")
-        .withArgs(acc1SignerAddress, acc2SignerAddress, repayAmount, vBNX.address, repayAmount);
+        .withArgs(acc1, acc2, repayAmount, vBNX.address, repayAmount);
       const protocolShareMantissa = await vBSW.protocolSeizeShareMantissa();
       const protocolShareTokens = ((repayAmount * protocolShareMantissa) / 1e18).toString();
 
-      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1SignerAddress);
+      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1);
       expect(liquidatorBalance).to.equal((repayAmount - protocolShareTokens).toString());
     });
   });
@@ -469,16 +461,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     const mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    let acc1SignerAddress;
-    let acc2SignerAddress;
     const bswBorrowAmount = 1e4;
     let result;
 
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
-      acc1SignerAddress = await acc1Signer.getAddress();
-      acc2SignerAddress = await acc2Signer.getAddress();
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -494,7 +482,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       //Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1SignerAddress, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount);
       //It should revert when try to borrow more than liquidity
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
@@ -515,12 +503,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, convertToUnit("1", 18), convertToUnit("1", 18));
       //heal
-      await expect(Comptroller.connect(acc1Signer).healAccount(acc2SignerAddress))
+      await expect(Comptroller.connect(acc1Signer).healAccount(acc2))
         .to.be.revertedWithCustomError(Comptroller, "CollateralExceedsThreshold")
         .withArgs("100000000000000000000", "159990000015999000000");
     });
     it("Should revert on healing if borrow is less then collateral amount", async function () {
-      await expect(Comptroller.connect(acc1Signer).healAccount(acc2SignerAddress))
+      await expect(Comptroller.connect(acc1Signer).healAccount(acc2))
         .to.be.revertedWithCustomError(Comptroller, "CollateralExceedsThreshold")
         .withArgs(bswBorrowAmount * vBSWPrice, vBNXPrice * mintAmount);
     });
@@ -543,12 +531,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       const percantageOfRepay = (collateralAmount / borrowAmount) * 1e18;
       const repayAmount = bswBorrowAmount * (percantageOfRepay / 1e18);
       const badDebt = bswBorrowAmount - repayAmount;
-      result = await Comptroller.connect(acc1Signer).healAccount(acc2SignerAddress);
+      result = await Comptroller.connect(acc1Signer).healAccount(acc2);
       await expect(result)
         .to.emit(vBSW, "RepayBorrow")
-        .withArgs(vBSW.address, acc2SignerAddress, bswBorrowAmount - repayAmount, repayAmount, 0)
+        .withArgs(vBSW.address, acc2, bswBorrowAmount - repayAmount, repayAmount, 0)
         .to.emit(vBSW, "BadDebtIncreased")
-        .withArgs(acc2SignerAddress, bswBorrowAmount - repayAmount, 0, badDebt);
+        .withArgs(acc2, bswBorrowAmount - repayAmount, 0, badDebt);
 
       //Forgive Account
       result = await vBSW.connect(acc2Signer).getAccountSnapshot(acc2);
