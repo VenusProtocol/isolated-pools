@@ -104,13 +104,13 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @dev Auction contract address setter
-     * @param _auctionContractAddress Address of the auction contract.
+     * @param _shortfallContractAddress Address of the auction contract.
      */
-    function setAuctionContractAddress(address _auctionContractAddress) external onlyOwner {
-        require(_auctionContractAddress != address(0), "Risk Fund: Auction contract address invalid");
+    function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
+        require(_shortfallContractAddress != address(0), "Risk Fund: Auction contract address invalid");
         address oldAuctionContractAddress = shortfall;
-        shortfall = _auctionContractAddress;
-        emit AuctionContractUpdated(oldAuctionContractAddress, _auctionContractAddress);
+        shortfall = _shortfallContractAddress;
+        emit AuctionContractUpdated(oldAuctionContractAddress, _shortfallContractAddress);
     }
 
     /**
