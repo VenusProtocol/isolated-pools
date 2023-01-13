@@ -528,7 +528,7 @@ describe("Risk Fund: Tests", function () {
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
         await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.rejectedWith(
-          "Risk Fund: Auction contract address invalid",
+          "Risk Fund: Shortfall contract address invalid",
         );
       });
 
@@ -538,9 +538,9 @@ describe("Risk Fund: Tests", function () {
         );
       });
 
-      it("emits AuctionContractUpdated event", async function () {
+      it("emits ShortfallContractUpdated event", async function () {
         const tx = riskFund.setShortfallContractAddress(someNonzeroAddress);
-        await expect(tx).to.emit(riskFund, "AuctionContractUpdated").withArgs(shortfall.address, someNonzeroAddress);
+        await expect(tx).to.emit(riskFund, "ShortfallContractUpdated").withArgs(shortfall.address, someNonzeroAddress);
       });
     });
 
