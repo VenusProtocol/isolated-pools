@@ -540,9 +540,7 @@ describe("Risk Fund: Tests", function () {
 
       it("emits AuctionContractUpdated event", async function () {
         const tx = riskFund.setAuctionContractAddress(someNonzeroAddress);
-        await expect(tx)
-          .to.emit(riskFund, "AuctionContractUpdated")
-          .withArgs(constants.AddressZero, someNonzeroAddress);
+        await expect(tx).to.emit(riskFund, "AuctionContractUpdated").withArgs(shortfall.address, someNonzeroAddress);
       });
     });
 
@@ -736,10 +734,10 @@ describe("Risk Fund: Tests", function () {
   describe("Transfer to Auction contract", async function () {
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
-        riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
-      ).to.be.rejectedWith("Risk Fund: Auction contract invalid address.");
+        riskFund.connect(busdUser).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
+      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
 
-      const auctionContract = "0x0000000000000000000000000000000000000001";
+      const auctionContract = shortfall.address;
       await riskFund.setAuctionContractAddress(auctionContract);
 
       await expect(
@@ -748,8 +746,8 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Transfer funds to auction contact", async function () {
-      const auctionContract = "0x0000000000000000000000000000000000000001";
-      await riskFund.setAuctionContractAddress(auctionContract);
+      // const auctionContract = "0x0000000000000000000000000000000000000001";
+      await riskFund.setAuctionContractAddress(shortfall.address);
 
       await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
@@ -780,11 +778,11 @@ describe("Risk Fund: Tests", function () {
         ],
       );
 
-      const beforeTransfer = await BUSD.balanceOf(auctionContract);
+      const beforeTransfer = await BUSD.balanceOf(shortfall.address);
       await riskFund
         .connect(shortfall.wallet)
         .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
-      const afterTransfer = await BUSD.balanceOf(auctionContract);
+      const afterTransfer = await BUSD.balanceOf(shortfall.address);
       const remainingBalance = await BUSD.balanceOf(riskFund.address);
       const poolReserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
 
