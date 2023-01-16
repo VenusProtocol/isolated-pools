@@ -1,35 +1,21 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { convertToUnit } from "../helpers/utils";
-import { VTokenProxyFactory } from "../typechain";
 import { getConfig, getTokenConfig } from "./config";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer, proxyAdmin } = await getNamedAccounts();
-  const deployerSigner = await hre.ethers.getNamedSigner("deployer");
-
-  // const BNX = await ethers.getContract("MockBNX");
-  // const BSW = await ethers.getContract("MockBSW");
 
   let tx;
-
   const priceOracle = await ethers.getContract("ResilientOracle");
-
-  const closeFactor = convertToUnit(0.05, 18);
-  const liquidationIncentive = convertToUnit(1, 18);
-  const minLiquidatableCollateral = convertToUnit(100, 18);
-
   const poolRegistry = await ethers.getContract("PoolRegistry");
-
   const accessControlManager = await ethers.getContract("AccessControlManager");
 
   //Comptroller Beacon
-
   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl", {
     contract: "Comptroller",
     from: deployer,
@@ -47,7 +33,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   //VToken Beacon
-
   const vTokenImpl: DeployResult = await deploy("VtokenImpl", {
     contract: "VToken",
     from: deployer,
