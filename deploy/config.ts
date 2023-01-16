@@ -83,7 +83,7 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit(100, 18),
         vtokens: [
           {
-            name: "Venux BNX",
+            name: "Venus BNX",
             asset: "BNX",
             symbol: "vBNX",
             rateModel: InterestRateModels.WhitePaper.toString(),
@@ -98,7 +98,7 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(10000, 18),
           },
           {
-            name: "Venux BSW",
+            name: "Venus BSW",
             asset: "BSW",
             symbol: "vBSW",
             rateModel: InterestRateModels.WhitePaper.toString(),
