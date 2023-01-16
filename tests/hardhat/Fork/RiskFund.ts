@@ -746,7 +746,6 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Transfer funds to auction contact", async function () {
-      // const auctionContract = "0x0000000000000000000000000000000000000001";
       await riskFund.setShortfallContractAddress(shortfall.address);
 
       await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
