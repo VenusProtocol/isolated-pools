@@ -90,7 +90,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     deployer,
   );
   await tx.wait();
-  console.log("DEFAULT_ADMIN | Deployer | swapPoolsAssets(address[],uint256[])");
+  console.log("DEFAULT_ADMIN | Deployer           | swapPoolsAssets(address[],uint256[])");
   console.log("--------------------------------------------------");
   console.log("Access Control setup ended successfully");
 };

@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { convertToUnit } from "../helpers/utils";
+import { convertToUnit } from "./utils";
 
 export type NetworkConfig = {
   hardhat: DeploymentConfig;
