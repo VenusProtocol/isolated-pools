@@ -5,7 +5,7 @@ import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { deployments } from "hardhat";
 
-import { convertToUnit } from "../../helpers/utils";
+import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import { AccessControlManager, Comptroller, MockToken, PoolRegistry, PriceOracle, VToken } from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
 
@@ -40,11 +40,11 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const vBNX = await ethers.getContractAt("VToken", vBNXAddress);
   const vBSW = await ethers.getContractAt("VToken", vBSWAddress);
 
-  //Enter Markets
+  // Enter Markets
   await Comptroller.connect(await ethers.getSigner(acc1)).enterMarkets([vBNX.address, vBSW.address]);
   await Comptroller.connect(await ethers.getSigner(acc2)).enterMarkets([vBNX.address, vBSW.address]);
 
-  //Enable access to setting supply and borrow caps
+  // Enable access to setting supply and borrow caps
   await AccessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "setMarketSupplyCaps(address[],uint256[])",
@@ -56,20 +56,20 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
-  //Set supply caps
+  // Set supply caps
   const supply = convertToUnit(10, 18);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBSW.address], [supply, supply]);
 
-  //Set borrow caps
+  // Set borrow caps
   const borrowCap = convertToUnit(10, 18);
   await Comptroller.setMarketBorrowCaps([vBNX.address, vBSW.address], [borrowCap, borrowCap]);
 
-  const vBNXPrice: BigNumber = new BigNumber((await PriceOracle.getUnderlyingPrice(vBNX.address)).toString())
-    .dividedBy(convertToUnit("1", 18))
-    .toFixed(3);
-  const vBSWPrice: BigNumber = new BigNumber((await PriceOracle.getUnderlyingPrice(vBSW.address)).toString())
-    .dividedBy(convertToUnit("1", 18))
-    .toFixed(3);
+  const vBNXPrice: BigNumber = new BigNumber(
+    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
+  ).toFixed(3);
+  const vBSWPrice: BigNumber = new BigNumber(
+    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBSW.address)).toString(), 18),
+  ).toFixed(3);
 
   return {
     fixture: {
@@ -173,9 +173,9 @@ describe("Positive Cases", () => {
       let shortfall: BigNumber;
       let balance: BigNumber;
       let borrowBalance: BigNumber;
-      ////////////
-      /// MINT ///
-      ////////////
+      // //////////
+      // // MINT //
+      // //////////
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, mintAmount, mintAmount);
@@ -187,10 +187,10 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(new BigNumber(mintAmount * collateralFactor).multipliedBy(vBNXPrice));
       expect(shortfall).to.equal(0);
-      ////////////
-      // Borrow //
-      ////////////
-      //Supply WBTC to market from 2nd account
+      // ////////////
+      // // Borrow //
+      // ////////////
+      // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
         .withArgs(await acc1Signer.getAddress(), mintAmount, mintAmount);
@@ -236,9 +236,9 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(preComputeLiquidity);
       expect(shortfall).to.equal(0);
-      ////////////
-      /// REPAY //
-      ////////////
+      // ////////////
+      // // REPAY //
+      // //////////
       await BSW.connect(acc2Signer).faucet(bswBorrowAmount);
       await BSW.connect(acc2Signer).approve(vBSW.address, bswBorrowAmount);
       await expect(vBSW.connect(acc2Signer).repayBorrow(bswBorrowAmount)).to.emit(vBSW, "RepayBorrow");
@@ -294,12 +294,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, mintAmount, mintAmount);
-      //borrow
-      //Supply WBTC to market from 2nd account
+      // borrow
+      // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
         .withArgs(acc1, mintAmount, mintAmount);
-      //It should revert when try to borrow more than liquidity
+      // It should revert when try to borrow more than liquidity
       await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
         Comptroller,
         "InsufficientLiquidity",
@@ -308,13 +308,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.emit(vBSW, "Borrow")
         .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
 
-      //Approve more assets for liquidation
+      // Approve more assets for liquidation
       await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
       await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
     });
 
     it("Should revert when repay amount on liquidation is not equal to borrow amount", async function () {
-      //Repay amount does not make borrower principal to zero
+      // Repay amount does not make borrower principal to zero
       const repayAmount = bswBorrowAmount / 2;
       const param = {
         vTokenCollateral: vBNX.address,
@@ -333,7 +333,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         repayAmount: bswBorrowAmount,
       };
       result = await Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param]);
-      //Liquidation Mantissa is set for 1
+      // Liquidation Mantissa is set for 1
       const seizeTokens = (bswBorrowAmount * vBSWPrice) / vBNXPrice;
       await expect(result)
         .to.emit(vBSW, "LiquidateBorrow")
@@ -364,8 +364,8 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, mintAmount, mintAmount);
-      //borrow
-      //Supply WBTC to market from 2nd account
+      // borrow
+      // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
         .withArgs(acc1, mintAmount, mintAmount);

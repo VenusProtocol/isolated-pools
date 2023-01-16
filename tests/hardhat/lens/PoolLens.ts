@@ -117,7 +117,7 @@ describe("PoolLens - PoolView Tests", async function () {
     closeFactor2 = convertToUnit(0.05, 18);
     liquidationIncentive2 = convertToUnit(1, 18);
 
-    //Registering the second pool
+    // Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
       comptrollerBeacon.address,
@@ -232,7 +232,7 @@ describe("PoolLens - PoolView Tests", async function () {
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
 
-    //Set Oracle
+    // Set Oracle
     await comptroller1Proxy.setPriceOracle(priceOracle.address);
 
     const PoolLens = await ethers.getContractFactory("PoolLens");
@@ -374,7 +374,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     closeFactor2 = convertToUnit(0.05, 18);
     liquidationIncentive2 = convertToUnit(1, 18);
 
-    //Registering the second pool
+    // Registering the second pool
     await poolRegistry.createRegistryPool(
       "Pool 2",
       comptrollerBeacon.address,

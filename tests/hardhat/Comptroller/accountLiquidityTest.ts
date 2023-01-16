@@ -160,7 +160,7 @@ describe("Comptroller", () => {
       expect(shortfall).to.equal(0);
 
       await comptroller.connect(user).enterMarkets([vToken.address]);
-      //await quickMint(vToken, user, amount);
+      // await quickMint(vToken, user, amount);
       vToken.getAccountSnapshot.whenCalledWith(await user.getAddress()).returns([0, amount, 0, convertToUnit("1", 18)]);
 
       // total account liquidity after supplying `amount`
@@ -237,9 +237,9 @@ describe("Comptroller", () => {
       });
 
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address, vToken3.address]);
-      //await quickMint(vToken1, user, amount1);
+      // pretend user mints amount1 of vToken1
       vToken1.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount1, 0, convertToUnit("1", 18)]);
-      //await quickMint(vToken2, user, amount2);
+      // pretend user mints amount2 of vToken2
       vToken2.getAccountSnapshot.whenCalledWith(userAddress).returns([0, amount2, 0, convertToUnit("1", 18)]);
 
       let error, liquidity, shortfall;
