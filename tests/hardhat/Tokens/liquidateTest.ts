@@ -192,7 +192,7 @@ describe("VToken", function () {
       comptroller.liquidateCalculateSeizeTokens.reverts("Oups");
 
       await expect(liquidateFresh(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be
-        .reverted; //With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
+        .reverted; // With('LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED');
       const afterBalances = await getBalances(
         [borrowed.vToken, collateral.vToken],
         [liquidatorAddress, borrowerAddress],
@@ -261,12 +261,12 @@ describe("VToken", function () {
   describe("liquidateBorrow", () => {
     it("emits a liquidation failure if borrowed asset interest accrual fails", async () => {
       borrowed.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("emits a liquidation failure if collateral asset interest accrual fails", async () => {
       collateral.interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(liquidate(borrowed.vToken, liquidator, borrower, repayAmount, collateral.vToken)).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from liquidateBorrowFresh without emitting any extra logs", async () => {
@@ -289,7 +289,7 @@ describe("VToken", function () {
         [borrowed.vToken, collateral.vToken],
         [liquidatorAddress, borrowerAddress],
       );
-      //expect(result).toSucceed();
+      // expect(result).toSucceed();
       expect(afterBalances).to.deep.equal(
         adjustBalances(beforeBalances, [
           [borrowed.vToken, "cash", repayAmount],
@@ -361,7 +361,7 @@ describe("VToken", function () {
   });
 });
 
-/*describe('Comptroller', () => {
+/* describe('Comptroller', () => {
   it('liquidateBorrowAllowed allows deprecated markets to be liquidated', async () => {
     let [root, liquidator, borrower] = saddle.accounts;
     let collatAmount = 10;
@@ -397,4 +397,4 @@ describe("VToken", function () {
     // even if deprecated, cant over repay
     await expect(send(comptroller, 'liquidateBorrowAllowed', [vTokenBorrow._address, vTokenCollat._address, liquidator, borrower, borrowAmount * 2])).rejects.toRevert('revert Can not repay more than the total borrow');
   });
-})*/
+}) */

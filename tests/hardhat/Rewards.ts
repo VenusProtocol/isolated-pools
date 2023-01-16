@@ -101,7 +101,7 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.deployed();
     await mockWBTC.faucet(convertToUnit(1000, 8));
 
-    //Deploy Mock Price Oracle
+    // Deploy Mock Price Oracle
     fakePriceOracle = await smock.fake<PriceOracle>(PriceOracle__factory.abi);
 
     const btcPrice = "21000.34";
@@ -119,7 +119,7 @@ describe("Rewards: Tests", async function () {
       return 1;
     });
 
-    //Register Pools to the protocol
+    // Register Pools to the protocol
     const _closeFactor = convertToUnit(0.05, 18);
     const _liquidationIncentive = convertToUnit(1, 18);
     const _minLiquidatableCollateral = convertToUnit(100, 18);
@@ -152,7 +152,7 @@ describe("Rewards: Tests", async function () {
     await mockDAI.faucet(initialSupply);
     await mockDAI.approve(poolRegistry.address, initialSupply);
 
-    //Deploy VTokens
+    // Deploy VTokens
     await poolRegistry.addMarket({
       comptroller: comptrollerProxy.address,
       asset: mockWBTC.address,
@@ -203,12 +203,12 @@ describe("Rewards: Tests", async function () {
 
     const [, , user] = await ethers.getSigners();
 
-    //Enter Markets
+    // Enter Markets
     await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptrollerProxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
 
-    //Configure rewards for pool
+    // Configure rewards for pool
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
 
@@ -286,7 +286,7 @@ describe("Rewards: Tests", async function () {
     );
   });
 
-  //TODO: Test reward accruals. This test used to pass before, but it
+  // TODO: Test reward accruals. This test used to pass before, but it
   //      was a false-positive. The correct test would need to mint or
   //      borrow some assets (or pretend to do so, using smock).
   it.skip("Claim XVS", async function () {
@@ -301,7 +301,7 @@ describe("Rewards: Tests", async function () {
     console.log(test);
     console.log(test1);
 
-    //expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
+    // expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
     expect((await xvs.balanceOf(user2.address)).toString()).not.equal("0");
   });
 });

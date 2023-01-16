@@ -190,7 +190,7 @@ describe("VToken", function () {
     });
 
     it("continues if fresh", async () => {
-      //await expect(
+      // await expect(
       await vToken.accrueInterest();
 
       await mintFresh(vToken, minter, mintAmount);
@@ -255,7 +255,7 @@ describe("VToken", function () {
 
     it("emits a mint failure if interest accrual fails", async () => {
       interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(quickMint(underlying, vToken, minter, mintAmount)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(quickMint(underlying, vToken, minter, mintAmount)).to.be.reverted;
     });
 
     it("returns error from mintFresh without emitting any extra logs", async () => {
@@ -297,7 +297,6 @@ describe("VToken", function () {
       });
 
       it("continues if fresh", async () => {
-        //await expect(
         await vToken.accrueInterest();
 
         await redeemFresh(vToken, redeemer, redeemTokens, redeemAmount);
@@ -379,7 +378,7 @@ describe("VToken", function () {
 
     it("emits a redeem failure if interest accrual fails", async () => {
       interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(quickRedeem(vToken, redeemer, redeemTokens)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(quickRedeem(vToken, redeemer, redeemTokens)).to.be.reverted;
     });
 
     it("returns error from redeemFresh without emitting any extra logs", async () => {

@@ -34,5 +34,20 @@ module.exports = {
         varsIgnorePattern: "_",
       },
     ],
+    "spaced-comment": [
+      "error",
+      "always",
+      {
+        line: {
+          exceptions: ["-", "+"],
+          markers: ["=", "!", "/"],
+        },
+        block: {
+          exceptions: ["-", "+"],
+          markers: ["=", "!", ":", "::"],
+          balanced: true,
+        },
+      },
+    ],
   },
 };

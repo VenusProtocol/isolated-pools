@@ -6,9 +6,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts }: any = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  //=======================
+  // =======================
   // DEPLOY MOCK TOKENS
-  //========================
+  // =======================
   await deploy("MockBNX", {
     from: deployer,
     contract: "MockToken",

@@ -64,7 +64,7 @@ async function shortfallFixture() {
   [owner, poolRegistry, someone, bidder1, bidder2] = await ethers.getSigners();
   await shortfall.setPoolRegistry(poolRegistry.address);
 
-  //Deploy Mock Tokens
+  // Deploy Mock Tokens
   const MockDAI = await ethers.getContractFactory("MockToken");
   mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
   await mockDAI.faucet(convertToUnit(1000000000, 18));
@@ -311,7 +311,7 @@ describe("Shortfall: Tests", async function () {
       const originalBalance = await mockBUSD.balanceOf(bidder2.address);
       await mine((await shortfall.nextBidderBlockLimit()).toNumber() + 2);
 
-      //simulate transferReserveForAuction
+      // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18));
       await expect(shortfall.closeAuction(poolAddress))
         .to.emit(shortfall, "AuctionClosed")
@@ -425,7 +425,7 @@ describe("Shortfall: Tests", async function () {
 
       await mine((await shortfall.nextBidderBlockLimit()).toNumber() + 2);
 
-      //simulate transferReserveForAuction
+      // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
 
       await expect(shortfall.closeAuction(poolAddress))
