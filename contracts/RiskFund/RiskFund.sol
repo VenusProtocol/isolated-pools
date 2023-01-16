@@ -21,7 +21,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     address private convertibleBaseAsset;
-    address private auctionContractAddress;
     address private accessControl;
     address private shortfall;
 
@@ -34,8 +33,8 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /// @notice Emitted when convertible base asset address is updated
     event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
-    /// @notice Emitted when auction contract address is updated
-    event AuctionContractUpdated(address indexed oldAuctionContract, address indexed newAuctionContract);
+    /// @notice Emitted when shortfall contract address is updated
+    event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
     /// @notice Emitted when PancakeSwap router contract address is updated
     event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
@@ -104,14 +103,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
-     * @dev Auction contract address setter
-     * @param _auctionContractAddress Address of the auction contract.
+     * @dev Shortfall contract address setter
+     * @param _shortfallContractAddress Address of the auction contract.
      */
-    function setAuctionContractAddress(address _auctionContractAddress) external onlyOwner {
-        require(_auctionContractAddress != address(0), "Risk Fund: Auction contract address invalid");
-        address oldAuctionContractAddress = auctionContractAddress;
-        auctionContractAddress = _auctionContractAddress;
-        emit AuctionContractUpdated(oldAuctionContractAddress, _auctionContractAddress);
+    function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
+        require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
+        address oldShortfallContractAddress = shortfall;
+        shortfall = _shortfallContractAddress;
+        emit ShortfallContractUpdated(oldShortfallContractAddress, _shortfallContractAddress);
     }
 
     /**
@@ -178,11 +177,9 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      */
     function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
         require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
-
-        require(auctionContractAddress != address(0), "Risk Fund: Auction contract invalid address.");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auctionContractAddress, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall, amount);
         return amount;
     }
 
