@@ -694,6 +694,13 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
         uint256 ordersCount = orders.length;
         for (uint256 i; i < ordersCount; ++i) {
+            if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
+                revert MarketNotListed(address(orders[i].vTokenBorrowed));
+            }
+            if (!markets[address(orders[i].vTokenCollateral)].isListed) {
+                revert MarketNotListed(address(orders[i].vTokenCollateral));
+            }
+
             LiquidationOrder calldata order = orders[i];
             order.vTokenBorrowed.forceLiquidateBorrow(
                 msg.sender,
