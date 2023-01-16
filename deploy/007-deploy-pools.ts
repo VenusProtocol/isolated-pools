@@ -36,7 +36,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenImpl: DeployResult = await deploy("VtokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [poolRegistry.address, accessControlManager.address],
+    args: [],
     log: true,
     autoMine: true,
   });
