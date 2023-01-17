@@ -132,8 +132,9 @@ const riskFundFixture = async (): Promise<void> => {
     parseUnits("10", 18),
     BUSD.address,
     fakeAccessControlManager.address,
-    shortfall.address,
   ]);
+
+  await riskFund.setShortfallContractAddress(shortfall.address);
 
   const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");

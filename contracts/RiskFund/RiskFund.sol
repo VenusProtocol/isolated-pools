@@ -58,14 +58,12 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
      * @param _convertibleBaseAsset Address of the base asset
      * @param _accessControl Address of the access control contract.
-     * @param _shortfall Address of the shortfall contract.
      */
     function initialize(
         address _pancakeSwapRouter,
         uint256 _minAmountToConvert,
         address _convertibleBaseAsset,
-        address _accessControl,
-        address _shortfall
+        address _accessControl
     ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
@@ -77,7 +75,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         minAmountToConvert = _minAmountToConvert;
         convertibleBaseAsset = _convertibleBaseAsset;
         accessControl = _accessControl;
-        shortfall = _shortfall;
     }
 
     /**
