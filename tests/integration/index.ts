@@ -579,3 +579,74 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 });
+
+describe("Risk Fund and Auction related scenarios", () => {
+  let fixture;
+  let Comptroller: Comptroller;
+  let vBNX: VToken;
+  let vBSW: VToken;
+  let BNX: MockToken;
+  let BSW: MockToken;
+  let acc1: string;
+  let acc2: string;
+  let ProtocolShareReserve: ProtocolShareReserve;
+  let deployer: string
+  beforeEach(async () => {
+  ({ fixture } = await setupTest());
+  ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve, deployer } = fixture);
+  });
+  describe("Generate risk fund swap it to base asset", () => {
+  const mintAmount = convertToUnit("1", 8);
+  let acc1Signer: Signer;
+  let acc2Signer: Signer;
+  let deployerSigner;
+  const bswBorrowAmount = 1e4;
+  beforeEach(async () => {
+  acc1Signer = await ethers.getSigner(acc1);
+  acc2Signer = await ethers.getSigner(acc2);
+  deployerSigner = await ethers.getSigner(deployer);
+  await BNX.connect(acc2Signer).faucet(mintAmount);
+  await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+  // Fund 2nd account
+  await BSW.connect(acc1Signer).faucet(mintAmount);
+  await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
+  await expect(vBNX.connect(acc2Signer).mint(mintAmount))
+  .to.emit(vBNX, "Mint")
+  .withArgs(acc2, mintAmount, mintAmount);
+  //borrow
+  //Supply WBTC to market from 2nd account
+  await expect(vBSW.connect(acc1Signer).mint(mintAmount))
+  .to.emit(vBSW, "Mint")
+  .withArgs(acc1, mintAmount, mintAmount);
+  //It should revert when try to borrow more than liquidity
+  await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
+  Comptroller,
+  "InsufficientLiquidity",
+  );
+  await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
+  .to.emit(vBSW, "Borrow")
+  .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
+  //Approve more assets for liquidation
+  await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
+  await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
+  });
+  it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
+  //Increase price of borrowed underlying tokens to surpass available collateral
+  const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+  dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
+  dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
+  await Comptroller.setPriceOracle(dummyPriceOracle.address);
+  
+  await Comptroller.connect(acc1Signer).healAccount(acc2);
+  //At this point market contain bad debt
+  const totalReserves = await vBNX.totalReserves();
+  //Reserves of the market are being transferred to protocol share reserves
+  await vBNX.reduceReserves(totalReserves);
+  //Check the balance of protocol share reserve
+  expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
+  
+  //Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
+  // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
+  });
+  });
+  });
