@@ -34,50 +34,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  await deploy("RiskFund", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-
-  const riskFund = await ethers.getContract("RiskFund");
-
-  await deploy("ProtocolShareReserve", {
-    from: deployer,
-    log: true,
-    autoMine: true,
-  });
-
-  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
-
-  const { tokenConfig } = await getConfig(hre.network.name);
-  const busdConfig = getTokenConfig("BUSD", tokenConfig);
-
-  let BUSD;
-  if (busdConfig.isMock) {
-    BUSD = await ethers.getContract("MockBUSD");
-  } else {
-    BUSD = await ethers.getContractAt(ERC20__factory.abi, busdConfig.tokenAddress);
-  }
-
-  await deploy("Shortfall", {
-    from: deployer,
-    contract: "Shortfall",
-    proxy: {
-      owner: deployer,
-      proxyContract: "OpenZeppelinTransparentProxy",
-      execute: {
-        methodName: "initialize",
-        args: [BUSD.address, riskFund.address, convertToUnit(1000, 18)],
-      },
-      upgradeIndex: 0,
-    },
-    autoMine: true,
-    log: true,
-  });
 
   const shortFall = await ethers.getContract("Shortfall");
+  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
 
   await deploy("PoolRegistry", {
     from: deployer,
@@ -101,6 +60,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
   });
+  console.log(3);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);

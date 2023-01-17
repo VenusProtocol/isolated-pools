@@ -157,7 +157,7 @@ const config: HardhatUserConfig = {
       live: false,
     },
     bsctestnet: {
-      url: "https://data-seed-prebsc-2-s1.binance.org:8545",
+      url: "https://bsc-testnet.public.blastapi.io",
       chainId: 97,
       live: false,
       gasPrice: 20000000000,
@@ -202,7 +202,7 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/oracle/artifacts",
       },
-  ],
+    ],
     deployments: {
       bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
     },
