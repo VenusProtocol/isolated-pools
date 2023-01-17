@@ -94,14 +94,14 @@ describe("StableRateModel: Tests", function () {
     expect(ut).equals(convertToUnit(25, 16));
   });
 
-  it("Return 0 as stableLoanRate for borrows equal to zero", async function () {
-    const loanRate = await stableRateModel.stableLoanRate(0, 0);
-    expect(loanRate).equals(0);
+  it("Return 0 as stableLoanRatio for borrows equal to zero", async function () {
+    const loanRatio = await stableRateModel.stableLoanRatio(0, 0);
+    expect(loanRatio).equals(0);
   });
 
   it("Stable loan Rate", async function () {
-    const loanRate = await stableRateModel.stableLoanRate(convertToUnit(8, 20), convertToUnit(80, 20));
-    expect(loanRate).equals(convertToUnit(10, 16));
+    const loanRatio = await stableRateModel.stableLoanRatio(convertToUnit(8, 20), convertToUnit(80, 20));
+    expect(loanRatio).equals(convertToUnit(10, 16));
   });
 
   it("Calculate stable borrow rate when utilization rate is below kink", async function () {

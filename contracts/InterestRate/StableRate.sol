@@ -48,68 +48,68 @@ contract StableRateModel {
     address public owner;
 
     /**
-     * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
-     * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
-     * @param _kink The utilization point where the jump multiplier is applied
-     * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
-     * @param _optimalStableLoanRate Optimal stable loan rate percentage.
+     * @param baseRatePerBlockForStable_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param multiplierPerBlock_ The rate the interest rate increases per utilization (scaled by BASE)
+     * @param multiplierPerBlockForStable_ The rate of increase in interest rate with respect to utilization (scaled by BASE)
+     * @param jumpMultiplierPerBlockForStable_ The multiplierPerBlock after hitting a specified utilization point
+     * @param kink_ The utilization point where the jump multiplier is applied
+     * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
+     * @param optimalStableLoanRate_ Optimal stable loan rate percentage.
      */
     constructor(
-        uint256 _baseRatePerBlockForStable,
-        uint256 _multiplierPerBlock,
-        uint256 _multiplierPerBlockForStable,
-        uint256 _jumpMultiplierPerBlockForStable,
-        uint256 _kink,
-        uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate,
+        uint256 baseRatePerBlockForStable_,
+        uint256 multiplierPerBlock_,
+        uint256 multiplierPerBlockForStable_,
+        uint256 jumpMultiplierPerBlockForStable_,
+        uint256 kink_,
+        uint256 stableRatePremium_,
+        uint256 optimalStableLoanRate_,
         address owner_
     ) {
         owner = owner_;
 
         updateStableRateModelInternal(
-            _baseRatePerBlockForStable,
-            _multiplierPerBlock,
-            _multiplierPerBlockForStable,
-            _jumpMultiplierPerBlockForStable,
-            _kink,
-            _stableRatePremium,
-            _optimalStableLoanRate
+            baseRatePerBlockForStable_,
+            multiplierPerBlock_,
+            multiplierPerBlockForStable_,
+            jumpMultiplierPerBlockForStable_,
+            kink_,
+            stableRatePremium_,
+            optimalStableLoanRate_
         );
     }
 
     /**
      * @notice Updates the parameters of the interest rate model (only callable by owner, i.e. Timelock)
-     * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
-     * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
-     * @param _kink The utilization point where the jump multiplier is applied
-     * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
-     * @param _optimalStableLoanRate Optimal stable loan rate percentage.
+     * @param baseRatePerBlockForStable_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param multiplierPerBlock_ The rate the interest rate increases per utilization (scaled by BASE)
+     * @param multiplierPerBlockForStable_ The rate of increase in interest rate with respect to utilization (scaled by BASE)
+     * @param jumpMultiplierPerBlockForStable_ The multiplierPerBlock after hitting a specified utilization point
+     * @param kink_ The utilization point where the jump multiplier is applied
+     * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
+     * @param optimalStableLoanRate_ Optimal stable loan rate percentage.
      * @custom:events Emits NewStableInterestParams, after updating the parameters
      * @custom:access Only governance
      */
     function updateStableRateModel(
-        uint256 _baseRatePerBlockForStable,
-        uint256 _multiplierPerBlock,
-        uint256 _multiplierPerBlockForStable,
-        uint256 _jumpMultiplierPerBlockForStable,
-        uint256 _kink,
-        uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate
+        uint256 baseRatePerBlockForStable_,
+        uint256 multiplierPerBlock_,
+        uint256 multiplierPerBlockForStable_,
+        uint256 jumpMultiplierPerBlockForStable_,
+        uint256 kink_,
+        uint256 stableRatePremium_,
+        uint256 optimalStableLoanRate_
     ) external virtual {
         require(msg.sender == owner, "StableRateModel: only owner may call this function.");
 
         updateStableRateModelInternal(
-            _baseRatePerBlockForStable,
-            _multiplierPerBlock,
-            _multiplierPerBlockForStable,
-            _jumpMultiplierPerBlockForStable,
-            _kink,
-            _stableRatePremium,
-            _optimalStableLoanRate
+            baseRatePerBlockForStable_,
+            multiplierPerBlock_,
+            multiplierPerBlockForStable_,
+            jumpMultiplierPerBlockForStable_,
+            kink_,
+            stableRatePremium_,
+            optimalStableLoanRate_
         );
     }
 
@@ -134,13 +134,13 @@ contract StableRateModel {
     }
 
     /**
-     * @notice Calculates the stable loan rate of the market: `stableBorrows / totalBorrows`
+     * @notice Calculates the ratio of the stable borrows to total borrows
      * @param stableBorrows The amount of stable borrows in the market
      * @param totalBorrows The amount of total borrows in the market
      * @return The stable loan rate as a mantissa between [0, BASE]
      */
-    function stableLoanRate(uint256 stableBorrows, uint256 totalBorrows) public pure returns (uint256) {
-        // Loan rate is 0 when there are no stable borrows
+    function stableLoanRatio(uint256 stableBorrows, uint256 totalBorrows) public pure returns (uint256) {
+        // Loan ratio is 0 when there are no stable borrows
         if (totalBorrows == 0) {
             return 0;
         }
@@ -163,15 +163,15 @@ contract StableRateModel {
         uint256 reserves
     ) external view returns (uint256) {
         uint256 util = utilizationRate(cash, totalBorrows, reserves);
-        uint256 loanRate = stableLoanRate(stableBorrows, totalBorrows);
-        uint256 excessLoanRate = calculateLoanRateDiff(loanRate);
+        uint256 loanRatio = stableLoanRatio(stableBorrows, totalBorrows);
+        uint256 excessLoanRatio = calculateLoanRatioDiff(loanRatio);
 
         if (util <= kink) {
             return
                 ((util * multiplierPerBlock) / BASE) +
                 baseRatePerBlockForStable +
                 ((util * multiplierPerBlockForStable) / BASE) +
-                ((stableRatePremium * excessLoanRate) / BASE);
+                ((stableRatePremium * excessLoanRatio) / BASE);
         } else {
             uint256 excessUtil = util - kink;
             return
@@ -179,36 +179,36 @@ contract StableRateModel {
                 baseRatePerBlockForStable +
                 ((kink * multiplierPerBlockForStable) / BASE) +
                 ((excessUtil * jumpMultiplierPerBlockForStable) / BASE) +
-                ((stableRatePremium * excessLoanRate) / BASE);
+                ((stableRatePremium * excessLoanRatio) / BASE);
         }
     }
 
     /**
      * @notice Internal function to update the parameters of the interest rate model
-     * @param _baseRatePerBlockForStable The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param _multiplierPerBlock The rate the interest rate increases per utilization (scaled by BASE)
-     * @param _multiplierPerBlockForStable The rate of increase in interest rate with respect to utilization (scaled by BASE)
-     * @param _jumpMultiplierPerBlockForStable The multiplierPerBlock after hitting a specified utilization point
-     * @param _kink The utilization point where the jump multiplier is applied
-     * @param _stableRatePremium The multiplierPerBlock after hitting a specified utilization point
-     * @param _optimalStableLoanRate Optimal stable loan rate percentage.
+     * @param baseRatePerBlockForStable_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param multiplierPerBlock_ The rate the interest rate increases per utilization (scaled by BASE)
+     * @param multiplierPerBlockForStable_ The rate of increase in interest rate with respect to utilization (scaled by BASE)
+     * @param jumpMultiplierPerBlockForStable_ The multiplierPerBlock after hitting a specified utilization point
+     * @param kink_ The utilization point where the jump multiplier is applied
+     * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
+     * @param optimalStableLoanRate_ Optimal stable loan rate percentage.
      */
     function updateStableRateModelInternal(
-        uint256 _baseRatePerBlockForStable,
-        uint256 _multiplierPerBlock,
-        uint256 _multiplierPerBlockForStable,
-        uint256 _jumpMultiplierPerBlockForStable,
-        uint256 _kink,
-        uint256 _stableRatePremium,
-        uint256 _optimalStableLoanRate
+        uint256 baseRatePerBlockForStable_,
+        uint256 multiplierPerBlock_,
+        uint256 multiplierPerBlockForStable_,
+        uint256 jumpMultiplierPerBlockForStable_,
+        uint256 kink_,
+        uint256 stableRatePremium_,
+        uint256 optimalStableLoanRate_
     ) internal {
-        baseRatePerBlockForStable = _baseRatePerBlockForStable / blocksPerYear;
-        multiplierPerBlock = (_multiplierPerBlock * BASE) / (blocksPerYear * _kink);
-        multiplierPerBlockForStable = (_multiplierPerBlockForStable * BASE) / (blocksPerYear * _kink);
-        jumpMultiplierPerBlockForStable = _jumpMultiplierPerBlockForStable / blocksPerYear;
-        kink = _kink;
-        stableRatePremium = _stableRatePremium;
-        optimalStableLoanRate = _optimalStableLoanRate;
+        baseRatePerBlockForStable = baseRatePerBlockForStable_ / blocksPerYear;
+        multiplierPerBlock = (multiplierPerBlock_ * BASE) / (blocksPerYear * kink_);
+        multiplierPerBlockForStable = (multiplierPerBlockForStable_ * BASE) / (blocksPerYear * kink_);
+        jumpMultiplierPerBlockForStable = jumpMultiplierPerBlockForStable_ / blocksPerYear;
+        kink = kink_;
+        stableRatePremium = stableRatePremium_;
+        optimalStableLoanRate = optimalStableLoanRate_;
 
         emit NewStableInterestParams(
             baseRatePerBlockForStable,
@@ -222,19 +222,19 @@ contract StableRateModel {
     }
 
     /**
-     * @notice Calculates the stable loan rate of the market: `stableBorrows / totalBorrows`
-     * @param loanRate Loan rate for stable borrows in the market
-     * @return The difference between the loan rate and optimal loan rate as a mantissa between [0, BASE]
+     * @notice Calculates the difference of stableLoanRatio and the optimalStableLoanRate
+     * @param loanRatio Stable loan ratio for stable borrows in the market
+     * @return The difference between the stableLoanRatio and optimal loan rate as a mantissa between [0, BASE]
      */
-    function calculateLoanRateDiff(uint256 loanRate) internal view returns (uint256) {
-        if (loanRate == 0) {
+    function calculateLoanRatioDiff(uint256 loanRatio) internal view returns (uint256) {
+        if (loanRatio == 0) {
             return 0;
         }
 
-        if (optimalStableLoanRate > loanRate) {
+        if (optimalStableLoanRate > loanRatio) {
             return 0;
         }
 
-        return ((loanRate - optimalStableLoanRate) * BASE) / (BASE - optimalStableLoanRate);
+        return ((loanRatio - optimalStableLoanRate) * BASE) / (BASE - optimalStableLoanRate);
     }
 }

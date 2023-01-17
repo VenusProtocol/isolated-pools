@@ -1036,7 +1036,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
             stableBorrows = stableBorrowsNew;
         } else {
-            /* We write the previously calculated values into storage */
             accountBorrows[borrower].principal = accountBorrowsNew;
             accountBorrows[borrower].interestIndex = borrowIndex;
         }
@@ -1049,7 +1048,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @dev Allows a borrower to swap his debt between stable and variable mode, or viceversa
+     * @dev Allows a borrower to swap his debt between stable and variable mode, or vice versa
      * @param rateMode The rate mode that the user wants to swap to
      **/
     function swapBorrowRateMode(uint256 rateMode) external {
