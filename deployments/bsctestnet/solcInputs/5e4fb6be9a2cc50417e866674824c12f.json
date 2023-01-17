@@ -83,11 +83,21 @@
           "userdoc",
           "evm.gasEstimates"
         ],
+<<<<<<< HEAD
         "": ["ast"]
+=======
+        "": [
+          "ast"
+        ]
+>>>>>>> 927bc73 (add newly deployed contracts on testnet)
       }
     },
     "metadata": {
       "useLiteralContent": true
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 927bc73 (add newly deployed contracts on testnet)
