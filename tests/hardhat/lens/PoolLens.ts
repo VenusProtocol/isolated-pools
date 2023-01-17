@@ -518,6 +518,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
     expect(vTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["stableBorrowRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");

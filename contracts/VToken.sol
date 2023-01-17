@@ -90,7 +90,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         address payable admin_,
         AccessControlManager accessControlManager_,
         VTokenInterface.RiskManagementInit memory riskManagement,
-        StableRateModel stableRateModel
+        StableRateModel stableRateModel_
     ) internal onlyInitializing {
         __Ownable2Step_init();
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
@@ -112,7 +112,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         _setInterestRateModelFresh(interestRateModel_);
 
         // Set the interest rate model (depends on block number / borrow index)
-        _setStableInterestRateModelFresh(stableRateModel);
+        _setStableInterestRateModelFresh(stableRateModel_);
 
         name = name_;
         symbol = symbol_;
@@ -300,6 +300,14 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function borrowRatePerBlock() external view override returns (uint256) {
         return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+    }
+
+    /**
+     * @notice Returns the current per-block borrow interest rate for this vToken
+     * @return rate The borrow interest rate per block, scaled by 1e18
+     */
+    function stableBorrowRatePerBlock() external view override returns (uint256) {
+        return stableRateModel.getBorrowRate(_getCashPrior(), stableBorrows, totalBorrows, totalReserves);
     }
 
     /**
