@@ -195,6 +195,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.bsctestnet;
     case "bscmainnet":
       return globalConfig.bscmainnet;
+    case "development":
+      return globalConfig.bsctestnet;
     default:
       throw new Error(`config for network ${networkName} is not available.`);
   }

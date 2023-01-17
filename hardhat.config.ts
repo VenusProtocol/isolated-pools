@@ -159,7 +159,7 @@ const config: HardhatUserConfig = {
     bsctestnet: {
       url: "https://bsc-testnet.public.blastapi.io",
       chainId: 97,
-      live: false,
+      live: true,
       gasPrice: 20000000000,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
