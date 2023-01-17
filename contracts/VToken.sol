@@ -11,7 +11,7 @@ import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlManager.sol";
 import "./RiskFund/IProtocolShareReserve.sol";
-import "./InterestRate/StableRate.sol";
+import "./InterestRate/StableRateModel.sol";
 
 /**
  * @title Venus VToken Contract

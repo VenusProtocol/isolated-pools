@@ -7,7 +7,7 @@ import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
 import "./Governance/AccessControlManager.sol";
-import "./InterestRate/StableRate.sol";
+import "./InterestRate/StableRateModel.sol";
 
 contract VTokenStorage {
     /**

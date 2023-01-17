@@ -14,10 +14,10 @@ import {
   ProtocolShareReserve,
   RiskFund,
   Shortfall,
+  StableRateModel,
   VTokenHarness,
   VTokenHarness__factory,
 } from "../../../typechain";
-import { StableRateModel } from "./../../../typechain/StableRateModel.d";
 
 chai.use(smock.matchers);
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
-import "../InterestRate/StableRate.sol";
+import "../InterestRate/StableRateModel.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -228,12 +228,12 @@ contract VTokenHarness is VToken {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
     }
 
-    function harnessSetAvgStableBorrowRate(uint256 _averageStableBorrowRate) public {
-        averageStableBorrowRate = _averageStableBorrowRate;
+    function harnessSetAvgStableBorrowRate(uint256 averageStableBorrowRate_) public {
+        averageStableBorrowRate = averageStableBorrowRate_;
     }
 
-    function harnessStableBorrows(uint256 _stableBorrows) public {
-        stableBorrows = _stableBorrows;
+    function harnessStableBorrows(uint256 stableBorrows_) public {
+        stableBorrows = stableBorrows_;
     }
 
     function accrueStableInterest(

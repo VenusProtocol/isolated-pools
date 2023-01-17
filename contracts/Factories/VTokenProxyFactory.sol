@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
-import "../InterestRate/StableRate.sol";
+import "../InterestRate/StableRateModel.sol";
 
 contract VTokenProxyFactory {
     struct VTokenArgs {

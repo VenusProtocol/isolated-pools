@@ -18,7 +18,7 @@ import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../ComptrollerInterface.sol";
 import "../VTokenInterfaces.sol";
-import "../InterestRate/StableRate.sol";
+import "../InterestRate/StableRateModel.sol";
 
 /**
  * @title PoolRegistry

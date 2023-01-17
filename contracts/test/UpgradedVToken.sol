@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
-import "../InterestRate/StableRate.sol";
+import "../InterestRate/StableRateModel.sol";
 
 /**
  * @title Venus's VToken Contract
