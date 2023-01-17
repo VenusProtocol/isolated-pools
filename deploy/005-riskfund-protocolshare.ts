@@ -1,31 +1,18 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { convertToUnit } from "../helpers/utils";
 import { ERC20__factory } from "../typechain/factories/ERC20__factory";
+
+const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
+const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-
-  await deploy("RiskFund", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-
-  const riskFund = await ethers.getContract("RiskFund");
-
-  await deploy("ProtocolShareReserve", {
-    from: deployer,
-    log: true,
-    autoMine: true,
-  });
-
-
   const { tokenConfig } = await getConfig(hre.network.name);
   const busdConfig = getTokenConfig("BUSD", tokenConfig);
 
@@ -35,17 +22,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } else {
     BUSD = await ethers.getContractAt(ERC20__factory.abi, busdConfig.tokenAddress);
   }
-  console.log(1);
 
-  await deploy("Shortfall", {
+  const swapRouter = await ethers.getContract("SwapRouter");
+  const accessControl = await ethers.getContract("AccessControlManager");
+
+  await deploy("RiskFund", {
     from: deployer,
-    contract: "Shortfall",
+    contract: "RiskFund",
     proxy: {
       owner: deployer,
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [BUSD.address, riskFund.address, convertToUnit(1000, 18)],
+        args: [swapRouter.address,MIN_AMOUNT_TO_CONVERT,BUSD.address,accessControl.address],
       },
       upgradeIndex: 0,
     },
@@ -53,19 +42,48 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  // Deploy Shortfall Impl
-  // Deploy Shortfall Proxy (OpenZeppelinTransparentProxy)
+  const riskFund = await ethers.getContract("RiskFund");
 
-  // Deploy RiskFund Impl
-  // Deploy Risk Fund Proxy
+  const shortfallDeployment = await deploy("Shortfall", {
+    from: deployer,
+    contract: "Shortfall",
+    proxy: {
+      owner: deployer,
+      proxyContract: "OpenZeppelinTransparentProxy",
+      execute: {
+        methodName: "initialize",
+        args: [BUSD.address, riskFund.address, MIN_POOL_BAD_DEBT],
+      },
+      upgradeIndex: 0,
+    },
+    autoMine: true,
+    log: true,
+  });
 
-  // Call Initialize of Shortfall Proxy with args
-  // Call Initialize of Shortfall Proxy with args
+  await riskFund.setShortfallContractAddress(shortfallDeployment.address);
 
+  await deploy("ProtocolShareReserve", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+  });
 
-
-  console.log(2);
+  await deploy("ProtocolShareReserve", {
+    from: deployer,
+    contract: "ProtocolShareReserve",
+    proxy: {
+      owner: deployer,
+      proxyContract: "OpenZeppelinTransparentProxy",
+      execute: {
+        methodName: "initialize",
+        args: [deployer, riskFund.address],
+      },
+      upgradeIndex: 0,
+    },
+    autoMine: true,
+    log: true,
+  });
 };
-func.tags = ["PoolLens"];
+func.tags = ["RiskFund"];
 
 export default func;

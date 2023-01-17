@@ -3,10 +3,6 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { convertToUnit } from "../helpers/utils";
-import { ERC20__factory } from "../typechain";
-import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -37,6 +33,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const shortFall = await ethers.getContract("Shortfall");
   const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
+  const riskFund = await ethers.getContract("RiskFund");
 
   await deploy("PoolRegistry", {
     from: deployer,

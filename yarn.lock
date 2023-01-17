@@ -1530,6 +1530,14 @@
   dependencies:
     dotenv "^16.0.1"
 
+"@venusprotocol/venus-protocol@^0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/venus-protocol/-/venus-protocol-0.6.0.tgz#92ca2c89542d5406deb5eed043a29d9cfeb383f7"
+  integrity sha512-UaxRuF4Vhj4BN3D4Ana5oC+uhXrMWFOG5vo8/gQwoLvo9iStFRap8s82cOGIbhu8Cu5f8GsH49C14QJ3I10JFw==
+  dependencies:
+    "@openzeppelin/contracts-upgradeable" "^4.8.0"
+    dotenv "^16.0.1"
+
 "@vue/compiler-core@3.2.45":
   version "3.2.45"
   resolved "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.2.45.tgz#d9311207d96f6ebd5f4660be129fb99f01ddb41b"

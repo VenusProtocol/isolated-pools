@@ -202,6 +202,9 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/oracle/artifacts",
       },
+      {
+        artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
+      }
     ],
     deployments: {
       bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
