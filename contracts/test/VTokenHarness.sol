@@ -174,21 +174,28 @@ contract VTokenHarness is VToken {
         stableBorrowIndex = stableBorrowIndex_;
     }
 
-    function harnessBorrowFresh(
-        address payable account,
-        uint256 borrowAmount,
-        uint256 interestRateMode
-    ) external {
-        _borrowFresh(account, borrowAmount, interestRateMode);
+    function harnessBorrowFresh(address payable account, uint256 borrowAmount) external {
+        _borrowFresh(account, borrowAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessBorrowStableFresh(address payable account, uint256 borrowAmount) external {
+        _borrowFresh(account, borrowAmount, InterestRateMode.STABLE);
     }
 
     function harnessRepayBorrowFresh(
         address payer,
         address account,
-        uint256 repayAmount,
-        uint256 interestRateMode
+        uint256 repayAmount
     ) external {
-        _repayBorrowFresh(payer, account, repayAmount, interestRateMode);
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessRepayBorrowStableFresh(
+        address payer,
+        address account,
+        uint256 repayAmount
+    ) external {
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.STABLE);
     }
 
     function harnessLiquidateBorrowFresh(

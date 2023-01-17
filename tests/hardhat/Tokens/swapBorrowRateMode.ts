@@ -27,16 +27,16 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
   await vToken.harnessSetTotalBorrows(0);
 }
 
-async function borrow(
-  vToken: MockContract<VTokenHarness>,
-  borrower: Signer,
-  borrowAmount: BigNumberish,
-  interestRateModel: BigNumberish,
-) {
+async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
-  // interestRateModel --> 1 for stabel rate model and 2 for varaible rate model
-  return vToken.connect(borrower).borrow(borrowAmount, interestRateModel);
+  return vToken.connect(borrower).borrow(borrowAmount);
+}
+
+async function borrowStable(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
+  // make sure to have a block delta so we accrue interest
+  await vToken.harnessFastForward(1);
+  return vToken.connect(borrower).borrowStable(borrowAmount);
 }
 
 describe("VToken", function () {
@@ -64,7 +64,7 @@ describe("VToken", function () {
 
     it("Swapping borrow rate mode from variable to stable", async () => {
       await preBorrow(contracts, borrower, borrowAmount);
-      await borrow(vToken, borrower, borrowAmount, 2);
+      await borrow(vToken, borrower, borrowAmount);
       let variableBorrow, stableBorrow;
       variableBorrow = await vToken.harnessAccountBorrows(borrowerAddress);
       expect(variableBorrow.principal).equal(borrowAmount);
@@ -83,7 +83,7 @@ describe("VToken", function () {
 
     it("Swapping borrow rate mode from variable to stable", async () => {
       await preBorrow(contracts, borrower, borrowAmount);
-      await borrow(vToken, borrower, borrowAmount, 1);
+      await borrowStable(vToken, borrower, borrowAmount);
       let variableBorrow, stableBorrow;
       variableBorrow = await vToken.harnessAccountBorrows(borrowerAddress);
       expect(variableBorrow.principal).equal(0);

@@ -823,10 +823,17 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
      * @custom:access Not restricted
      */
-    function borrow(uint256 borrowAmount, uint256 interestRateMode) external override nonReentrant returns (uint256) {
+    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount, interestRateMode);
+        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    function borrowStable(uint256 borrowAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // borrowFresh emits borrow-specific logs on errors, so we don't need to
+        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.STABLE);
         return NO_ERROR;
     }
 
@@ -839,7 +846,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function _borrowFresh(
         address payable borrower,
         uint256 borrowAmount,
-        uint256 interestRateMode
+        InterestRateMode interestRateMode
     ) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
@@ -939,15 +946,24 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrow(uint256 repayAmount, uint256 interestRateMode)
-        external
-        override
-        nonReentrant
-        returns (uint256)
-    {
+    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, interestRateMode);
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays their own borrow
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowStable(uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.STABLE);
         return NO_ERROR;
     }
 
@@ -959,14 +975,30 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrowBehalf(
-        address borrower,
-        uint256 repayAmount,
-        uint256 interestRateMode
-    ) external override nonReentrant returns (uint256) {
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount, interestRateMode);
+        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays a borrow belonging to borrower
+     * @param borrower the account with the debt being payed off
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowStableBehalf(address borrower, uint256 repayAmount)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.STABLE);
         return NO_ERROR;
     }
 
@@ -982,7 +1014,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         address payer,
         address borrower,
         uint256 repayAmount,
-        uint256 interestRateMode
+        InterestRateMode interestRateMode
     ) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), payer, borrower, repayAmount);
@@ -1221,8 +1253,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* Fail if repayBorrow fails */
         // Repay for both types of interest rate: stable and variable
-        uint256 actualRepayAmount = _repayBorrowFresh(liquidator, borrower, repayAmount, 1) +
-            _repayBorrowFresh(liquidator, borrower, repayAmount, 2);
+        uint256 actualRepayAmount = _repayBorrowFresh(liquidator, borrower, repayAmount, InterestRateMode.STABLE) +
+            _repayBorrowFresh(liquidator, borrower, repayAmount, InterestRateMode.VARIABLE);
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
