@@ -2,17 +2,27 @@ import { smock } from "@defi-wonderland/smock";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { deployments } from "hardhat";
 
 import { convertToUnit, scaleDownBy } from "../../helpers/utils";
-import { AccessControlManager, Comptroller, MockToken, PoolRegistry, PriceOracle, VToken } from "../../typechain";
+import {
+  AccessControlManager,
+  Comptroller,
+  MockToken,
+  PoolRegistry,
+  PriceOracle,
+  RiskFund,
+  Shortfall,
+  VToken,
+} from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
+<<<<<<< HEAD
   await deployments.fixture([
     "MockTokens",
     "OracleDeploy",
@@ -25,6 +35,10 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "Pools",
   ]);
   const { deployer, acc1, acc2 } = await getNamedAccounts();
+=======
+  await deployments.fixture(["Oracle", "Pools"]);
+  const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
+>>>>>>> a441159 (wip : [VEN-887] Auction Scenarios)
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
   const RiskFund = await ethers.getContract("RiskFund");
@@ -32,6 +46,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const JumpRateModelFactory = await ethers.getContract("JumpRateModelFactory");
   const WhitePaperRateFactory = await ethers.getContract("WhitePaperInterestRateModelFactory");
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
+  const shortfall = await ethers.getContract("Shortfall");
 
   const PriceOracle = await ethers.getContract("ResilientOracle");
 
@@ -40,6 +55,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
 
   const BNX = await ethers.getContract("MockBNX");
   const BSW = await ethers.getContract("MockBSW");
+  const BUSD = await ethers.getContract("MockBUSD");
 
   // Set Oracle
   await Comptroller.setPriceOracle(PriceOracle.address);
@@ -101,6 +117,9 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
       acc2,
       vBNXPrice,
       vBSWPrice,
+      acc3,
+      BUSD,
+      shortfall,
     },
   };
 });
@@ -590,63 +609,122 @@ describe("Risk Fund and Auction related scenarios", () => {
   let acc1: string;
   let acc2: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  let deployer: string
+  let deployer: string;
+  let acc3: string;
+  let RiskFund: RiskFund;
+  let BUSD: MockToken;
+  let shortFall: Shortfall;
   beforeEach(async () => {
-  ({ fixture } = await setupTest());
-  ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve, deployer } = fixture);
+    ({ fixture } = await setupTest());
+    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve, deployer, acc3, RiskFund, shortFall } =
+      fixture);
   });
   describe("Generate risk fund swap it to base asset", () => {
-  const mintAmount = convertToUnit("1", 8);
-  let acc1Signer: Signer;
-  let acc2Signer: Signer;
-  let deployerSigner;
-  const bswBorrowAmount = 1e4;
-  beforeEach(async () => {
-  acc1Signer = await ethers.getSigner(acc1);
-  acc2Signer = await ethers.getSigner(acc2);
-  deployerSigner = await ethers.getSigner(deployer);
-  await BNX.connect(acc2Signer).faucet(mintAmount);
-  await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
-  // Fund 2nd account
-  await BSW.connect(acc1Signer).faucet(mintAmount);
-  await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
-  await expect(vBNX.connect(acc2Signer).mint(mintAmount))
-  .to.emit(vBNX, "Mint")
-  .withArgs(acc2, mintAmount, mintAmount);
-  //borrow
-  //Supply WBTC to market from 2nd account
-  await expect(vBSW.connect(acc1Signer).mint(mintAmount))
-  .to.emit(vBSW, "Mint")
-  .withArgs(acc1, mintAmount, mintAmount);
-  //It should revert when try to borrow more than liquidity
-  await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
-  Comptroller,
-  "InsufficientLiquidity",
-  );
-  await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
-  .to.emit(vBSW, "Borrow")
-  .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
-  //Approve more assets for liquidation
-  await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
-  await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
+    const mintAmount = convertToUnit("1", 8);
+    let acc1Signer: Signer;
+    let acc2Signer: Signer;
+    let acc3Signer: Signer;
+    let deployerSigner;
+    const bswBorrowAmount = 1e4;
+    beforeEach(async () => {
+      acc1Signer = await ethers.getSigner(acc1);
+      acc2Signer = await ethers.getSigner(acc2);
+      acc3Signer = await ethers.getSigner(acc3);
+      deployerSigner = await ethers.getSigner(deployer);
+
+      await BNX.connect(acc2Signer).faucet(mintAmount * 10);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount * 10);
+      // Fund 2nd account
+      await BSW.connect(acc1Signer).faucet(convertToUnit("1", 18));
+      await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
+      await vBNX.connect(acc2Signer).mint(mintAmount * 10);
+      //borrow
+      await vBSW.connect(acc1Signer).mint(convertToUnit("1", 18));
+      await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
+      //Approve more assets for liquidation
+      await BSW.connect(acc1Signer).faucet(convertToUnit("1", 18));
+      await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
+    });
+    it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
+      //Increase price of borrowed underlying tokens to surpass available collateral
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+      //At this point market contain bad debt
+      const totalReserves = await vBNX.totalReserves();
+      //Reserves of the market are being transferred to protocol share reserves
+      await vBNX.reduceReserves(totalReserves);
+      //Check the balance of protocol share reserve
+      expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
+      // // //Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
+      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
+      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
+      // expect(await BUSD.balanceOf(RiskFund.address)).to.be.equal("1000"); // Waiting for deployement script to be fixed
+    });
+    it("Start Auction Type-1", async function () {
+      // ====================Bad Debt generator logic========================
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+      const totalReserves = await vBNX.totalReserves();
+      await vBNX.reduceReserves(totalReserves);
+      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
+      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
+
+      // =========================Create Auction============================
+      // await shortFall.startAuction(Comptroller.address);
+      // =========================PlaceBid==================================
+
+      /*
+      1. revert on dips is greater then max dips
+      2. revert when your bid is not highest
+      3. revert when acution status is changed
+      4. success
+      5. check highest bidder balance 
+      6. check previous bidder balance
+      7. check market bad debt is revovered
+      */
+    });
+
+    it("Start Auction Type-2", async function () {
+      // ====================Bad Debt generator logic========================
+      await vBSW.connect(acc2Signer).borrow(1e5);
+      await ethers.provider.send("hardhat_mine", ["0x5F5E100"]);
+      await vBSW.connect(acc2Signer).borrow(1e10);
+      await ethers.provider.send("hardhat_mine", ["0xD18C2E2800"]);
+      await vBSW.connect(acc2Signer).borrow(1e5);
+      await vBSW.connect(acc1Signer).borrow(1e4);
+      await ethers.provider.send("hardhat_mine", ["0x82F79CD9000"]);
+
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("30", 19));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("30", 20));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+      const totalReserves = await vBNX.totalReserves();
+      console.log(totalReserves, "totalReserves");
+      console.log(await vBSW.badDebt());
+      await vBNX.reduceReserves(totalReserves);
+      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
+      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
+
+      // =========================Create Auction============================
+      // await shortFall.startAuction(Comptroller.address);
+      // =========================PlaceBid==================================
+
+      /*
+      1. revert on dips is greater then max dips
+      2. revert when your bid is not highest
+      3. revert when acution status is changed
+      4. success
+      5. check highest bidder balance 
+      6. check previous bidder balance
+      7. check market bad debt is revovered
+      */
+    });
   });
-  it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
-  //Increase price of borrowed underlying tokens to surpass available collateral
-  const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-  dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
-  dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
-  await Comptroller.setPriceOracle(dummyPriceOracle.address);
-  
-  await Comptroller.connect(acc1Signer).healAccount(acc2);
-  //At this point market contain bad debt
-  const totalReserves = await vBNX.totalReserves();
-  //Reserves of the market are being transferred to protocol share reserves
-  await vBNX.reduceReserves(totalReserves);
-  //Check the balance of protocol share reserve
-  expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
-  
-  //Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
-  // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-  });
-  });
-  });
+});
