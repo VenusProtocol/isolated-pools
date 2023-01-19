@@ -13,7 +13,16 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
-  await deployments.fixture(["Oracle", "Pools"]);
+  await deployments.fixture([
+    "MockTokens",
+    "Oracle",
+    "SwapRouter",
+    "AccessControl",
+    "RiskFund",
+    "Factories",
+    "AccessControlConfig",
+    "Pools",
+  ]);
   const { deployer, acc1, acc2 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
