@@ -3,7 +3,7 @@
   "chainId": "97",
   "contracts": {
     "AccessControlManager": {
-      "address": "0xD869548b0F30ab66d379626adB9590f55871c7f1",
+      "address": "0x86951FD87308c6d767E82b3dBC9d2cBE232d0840",
       "abi": [
         {
           "inputs": [],
@@ -366,7 +366,7 @@
       ]
     },
     "ComptrollerBeacon": {
-      "address": "0x8bf46792022126aE7f3ac8F4914Ed66e7DEb7388",
+      "address": "0x884BbD520661B6316F74775EBbb866f50365c352",
       "abi": [
         {
           "inputs": [
@@ -473,7 +473,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x1b8dE8fe17735B80E30e1bAbcD78A20F573a3e9e",
+      "address": "0x44bDF3a9ede7A1f4744E9FF20a9C6ac2A0B882e1",
       "abi": [
         {
           "inputs": [
@@ -2075,7 +2075,7 @@
       ]
     },
     "DefaultProxyAdmin": {
-      "address": "0xf3220A2f22fF5Fd95383d9Af198424020717EFF7",
+      "address": "0x71b006ce7d5E9C69c14c8195684783Cb06b80c9e",
       "abi": [
         {
           "inputs": [
@@ -2240,7 +2240,7 @@
       ]
     },
     "JumpRateModelFactory": {
-      "address": "0xCfA78114147F874D65CA7DB551Ec9B7F4681471E",
+      "address": "0xF2095BeCa3030D43976ED46D5ca488D58354E8c9",
       "abi": [
         {
           "inputs": [
@@ -3211,7 +3211,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0x67c549A18AbfAd127b13F8d56738F43A21bB62A7",
+      "address": "0xbe0c84d910894D35BdE8A03bF1fFC521d4239E48",
       "abi": [
         {
           "inputs": [
@@ -4166,7 +4166,7 @@
       ]
     },
     "PoolRegistry": {
-      "address": "0x3640E6190Dc46A2e6Be5fFDBa15210712704AE81",
+      "address": "0x05e4C8f3dbb6c2eaD4eB1f28611FA7180e79f428",
       "abi": [
         {
           "anonymous": false,
@@ -5032,7 +5032,7 @@
       ]
     },
     "PoolRegistry_Implementation": {
-      "address": "0x672Ba3b2f5d9c36F36309BA913D708C4a5a25eb0",
+      "address": "0xd47c074c219E6947BB350D9aD220eE20fCCC6549",
       "abi": [
         {
           "inputs": [],
@@ -5759,7 +5759,7 @@
       ]
     },
     "PoolRegistry_Proxy": {
-      "address": "0x3640E6190Dc46A2e6Be5fFDBa15210712704AE81",
+      "address": "0x05e4C8f3dbb6c2eaD4eB1f28611FA7180e79f428",
       "abi": [
         {
           "inputs": [
@@ -5908,7 +5908,7 @@
       ]
     },
     "ProtocolShareReserve": {
-      "address": "0x675F546be734aC88AA680590153452327c881605",
+      "address": "0xc60B224591d2e011c2A1b2eA1cfE48244257764A",
       "abi": [
         {
           "inputs": [],
@@ -6136,7 +6136,7 @@
       ]
     },
     "RiskFund": {
-      "address": "0x11D4272399E6DE1bA461B8978Cf84cB77eBb4F1D",
+      "address": "0xf8985938BacfccFeeF0343A2D634d5eeb5b5d004",
       "abi": [
         {
           "anonymous": false,
@@ -6730,7 +6730,7 @@
       ]
     },
     "RiskFund_Implementation": {
-      "address": "0x11725e6Da8A0c429f31c48878c09Fc1d47E3B485",
+      "address": "0xbFF70a96B8F4F2d5BdFB71fC74eb9572F422d500",
       "abi": [
         {
           "inputs": [],
@@ -7185,7 +7185,7 @@
       ]
     },
     "RiskFund_Proxy": {
-      "address": "0x11D4272399E6DE1bA461B8978Cf84cB77eBb4F1D",
+      "address": "0xf8985938BacfccFeeF0343A2D634d5eeb5b5d004",
       "abi": [
         {
           "inputs": [
@@ -7334,7 +7334,7 @@
       ]
     },
     "Shortfall": {
-      "address": "0x41b9E16Be32FB4f17e49e3075F05618BA35898C0",
+      "address": "0xA674296091B703e38dB2f3a937f02334627dCdaD",
       "abi": [
         {
           "anonymous": false,
@@ -7999,7 +7999,7 @@
       ]
     },
     "Shortfall_Implementation": {
-      "address": "0xF7f32E2A5f72Ef8f1C3992eFE7bf1AcEd4eFc848",
+      "address": "0xE74FE49e07c8f0Cc4398a481206e2d835b88b8F4",
       "abi": [
         {
           "inputs": [],
@@ -8525,7 +8525,7 @@
       ]
     },
     "Shortfall_Proxy": {
-      "address": "0x41b9E16Be32FB4f17e49e3075F05618BA35898C0",
+      "address": "0xA674296091B703e38dB2f3a937f02334627dCdaD",
       "abi": [
         {
           "inputs": [
@@ -8674,7 +8674,7 @@
       ]
     },
     "SwapRouter": {
-      "address": "0x054Db79B68e49b479149fD4c6AFa5bB008236A41",
+      "address": "0xF4Ff8Bf521113667eF9BC3a58E576AF3A5A4f8C5",
       "abi": [
         {
           "inputs": [
@@ -9382,7 +9382,7 @@
       ]
     },
     "VTokenBeacon": {
-      "address": "0x027a815a6825eE98F3dFe57e10B7f354038DEa67",
+      "address": "0x205F6F726FcbD1E5a0396afbA47910e257E793ed",
       "abi": [
         {
           "inputs": [
@@ -9489,7 +9489,7 @@
       ]
     },
     "VTokenProxyFactory": {
-      "address": "0x47a9A04883B6427E7a8C1cb4e811b4634c87ed05",
+      "address": "0xb61a58aCA9F39dEA8C22F4c9a377C68a1Ea3723C",
       "abi": [
         {
           "inputs": [
@@ -9592,7 +9592,7 @@
       ]
     },
     "VtokenImpl": {
-      "address": "0xAD50B75ae062c9853725ed88eF1E220C0bC44753",
+      "address": "0xe7a33B06D4A803d7a26327149FFD768d23824357",
       "abi": [
         {
           "inputs": [],
@@ -11382,7 +11382,7 @@
       ]
     },
     "WhitePaperInterestRateModelFactory": {
-      "address": "0x982668740630b34365aab0ea8671ed10994832ee",
+      "address": "0x92B26cb819335DA336f59480F0ca30F9a3f18E0a",
       "abi": [
         {
           "inputs": [
