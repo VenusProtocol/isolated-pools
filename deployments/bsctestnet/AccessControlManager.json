@@ -595,7 +595,11 @@
     }
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
 }
 =======
 }
 >>>>>>> 927bc73 (add newly deployed contracts on testnet)
+=======
+}
+>>>>>>> b1a64df (lint)
