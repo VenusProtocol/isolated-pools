@@ -34,7 +34,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [swapRouter.address,MIN_AMOUNT_TO_CONVERT,BUSD.address,accessControl.address],
+        args: [swapRouter.address, MIN_AMOUNT_TO_CONVERT, BUSD.address, accessControl.address],
       },
       upgradeIndex: 0,
     },

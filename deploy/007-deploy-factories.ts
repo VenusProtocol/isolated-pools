@@ -30,7 +30,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-
   const shortFall = await ethers.getContract("Shortfall");
   const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const riskFund = await ethers.getContract("RiskFund");
@@ -57,7 +56,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
   });
-  console.log(3);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
