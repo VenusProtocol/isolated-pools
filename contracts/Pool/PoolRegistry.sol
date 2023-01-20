@@ -84,11 +84,8 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         uint256 supplyCap;
         uint256 borrowCap;
         uint256 baseRatePerBlockForStable;
-        uint256 multiplierPerBlockForStable;
-        uint256 jumpMultiplierPerBlockForStable;
-        uint256 kinkForStable;
         uint256 stableRatePremium;
-        uint256 optimalStableLoanRate;
+        uint256 optimalStableLoanRatio;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -247,12 +244,8 @@ contract PoolRegistry is Ownable2StepUpgradeable {
 
         StableRateModel stableRateModel = new StableRateModel(
             input.baseRatePerBlockForStable,
-            input.multiplierPerYear,
-            input.multiplierPerBlockForStable,
-            input.jumpMultiplierPerBlockForStable,
-            input.kinkForStable,
             input.stableRatePremium,
-            input.optimalStableLoanRate,
+            input.optimalStableLoanRatio,
             msg.sender
         );
 

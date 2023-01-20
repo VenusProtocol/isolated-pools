@@ -62,14 +62,14 @@ describe("VToken", () => {
       await pretendBlock(vToken, blockNumber, 1);
       expect(await vToken.getBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
       interestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
-      await expect(vToken.accrueInterest()).to.be.revertedWith("borrow rate is absurdly high");
+      await expect(vToken.accrueInterest()).to.be.revertedWith("vToken: borrow rate is absurdly high");
     });
 
     it("reverts if the stable interest rate is absurdly high", async () => {
       await pretendBlock(vToken, blockNumber, 1);
       expect(await vToken.getStableBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
       stableInterestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
-      await expect(vToken.accrueInterest()).to.be.revertedWith("stable borrow rate is absurdly high");
+      await expect(vToken.accrueInterest()).to.be.revertedWith("vToken: stable borrow rate is absurdly high");
     });
 
     it("fails if new borrow rate calculation fails", async () => {

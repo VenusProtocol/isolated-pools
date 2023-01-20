@@ -93,11 +93,8 @@ describe("PoolRegistry: Tests", function () {
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     };
     return { ...defaults, ...overwrites };
   };
@@ -232,11 +229,8 @@ describe("PoolRegistry: Tests", function () {
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.addMarket({
@@ -259,11 +253,8 @@ describe("PoolRegistry: Tests", function () {
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
@@ -462,11 +453,8 @@ describe("PoolRegistry: Tests", function () {
           supplyCap: INITIAL_SUPPLY,
           borrowCap: INITIAL_SUPPLY,
           baseRatePerBlockForStable: 0,
-          multiplierPerBlockForStable: convertToUnit(6, 10),
-          jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-          kinkForStable: convertToUnit(6, 17),
           stableRatePremium: convertToUnit(2, 12),
-          optimalStableLoanRate: convertToUnit(5, 17),
+          optimalStableLoanRatio: convertToUnit(5, 17),
         }),
       ).to.be.rejectedWith("Ownable: caller is not the owner");
     });

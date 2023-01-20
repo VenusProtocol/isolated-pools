@@ -135,11 +135,8 @@ describe("UpgradedVToken: Tests", function () {
       supplyCap: initialSupply,
       borrowCap: initialSupply,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
   });
 

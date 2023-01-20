@@ -306,8 +306,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Returns the current per-block borrow interest rate for this vToken
      * @return rate The borrow interest rate per block, scaled by 1e18
      */
-    function stableBorrowRatePerBlock() external view override returns (uint256) {
-        return stableRateModel.getBorrowRate(_getCashPrior(), stableBorrows, totalBorrows, totalReserves);
+    function stableBorrowRatePerBlock() public view override returns (uint256) {
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        return stableRateModel.getBorrowRate(stableBorrows, totalBorrows, variableBorrowRate);
     }
 
     /**
@@ -537,7 +538,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* Calculate the current borrow interest rate */
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
-        require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
+        require(borrowRateMantissa <= borrowRateMaxMantissa, "vToken: borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
@@ -571,7 +572,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
-        uint256 err = _accrueStableInterest(cashPrior, reservesPrior, blockDelta);
+        uint256 err = _accrueStableInterest(blockDelta);
 
         if (err != 0) {
             return err;
@@ -587,27 +588,16 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Applies accrued stable interest to stable borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
      *   up to the current block and writes new checkpoint to storage.
-     * @param cashPrior Total available cash
-     * @param reservesPrior Total reserves before calculating accrue stable interest
      * @param blockDelta Number of blocks between last accrual and current block
      * @return Always NO_ERROR
      * @custom:events Emits AccrueInterest event on success
      * @custom:access Not restricted
      */
-    function _accrueStableInterest(
-        uint256 cashPrior,
-        uint256 reservesPrior,
-        uint256 blockDelta
-    ) internal returns (uint256) {
+    function _accrueStableInterest(uint256 blockDelta) internal returns (uint256) {
         uint256 stableIndexPrior = stableBorrowIndex;
 
-        uint256 stableBorrowRateMantissa = stableRateModel.getBorrowRate(
-            cashPrior,
-            stableBorrows,
-            totalBorrows,
-            reservesPrior
-        );
-        require(stableBorrowRateMantissa <= stableBorrowRateMaxMantissa, "stable borrow rate is absurdly high");
+        uint256 stableBorrowRateMantissa = stableBorrowRatePerBlock();
+        require(stableBorrowRateMantissa <= stableBorrowRateMaxMantissa, "vToken: stable borrow rate is absurdly high");
 
         Exp memory simpleStableInterestFactor = mul_(Exp({ mantissa: stableBorrowRateMantissa }), blockDelta);
 
@@ -885,12 +875,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              * Calculte the average stable borrow rate for the total stable borrows
              */
             uint256 stableBorrowsNew = stableBorrows + borrowAmount;
-            uint256 stabelBorrowRate = stableRateModel.getBorrowRate(
-                _getCashPrior(),
-                stableBorrows,
-                totalBorrows,
-                totalReserves
-            );
+            uint256 stabelBorrowRate = stableBorrowRatePerBlock();
             uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
                 (borrowAmount * stabelBorrowRate)) / stableBorrowsNew;
 
@@ -1109,12 +1094,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             require(variableDebt > 0, "vToken: swapBorrowRateMode variable debt is 0");
 
             stableBorrowsNew = stableBorrows + variableDebt;
-            uint256 stabelBorrowRate = stableRateModel.getBorrowRate(
-                _getCashPrior(),
-                stableBorrows,
-                totalBorrows,
-                totalReserves
-            );
+            uint256 stabelBorrowRate = stableBorrowRatePerBlock();
 
             uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
                 (variableDebt * stabelBorrowRate)) / stableBorrowsNew;

@@ -320,11 +320,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await poolRegistry.addMarket({
@@ -347,11 +344,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDT.faucet(initialSupply);
@@ -377,11 +371,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDC.faucet(initialSupply);
@@ -407,11 +398,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDT.faucet(initialSupply);
@@ -437,11 +425,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await BUSD.faucet(initialSupply);
@@ -467,11 +452,8 @@ const riskFundFixture = async (): Promise<void> => {
     supplyCap: initialSupply,
     borrowCap: initialSupply,
     baseRatePerBlockForStable: 0,
-    multiplierPerBlockForStable: convertToUnit(6, 10),
-    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-    kinkForStable: convertToUnit(6, 17),
     stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRate: convertToUnit(5, 17),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);

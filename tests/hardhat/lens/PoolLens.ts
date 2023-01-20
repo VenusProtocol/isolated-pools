@@ -186,11 +186,8 @@ describe("PoolLens - PoolView Tests", async function () {
       supplyCap: initialSupply,
       borrowCap: initialSupply,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.addMarket({
@@ -213,11 +210,8 @@ describe("PoolLens - PoolView Tests", async function () {
       supplyCap: initialSupply,
       borrowCap: initialSupply,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -452,11 +446,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
       supplyCap: initialSupply,
       borrowCap: initialSupply,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     initialSupply = convertToUnit(1, 18);
@@ -483,11 +474,8 @@ describe("PoolLens - VTokens Query Tests", async function () {
       supplyCap: initialSupply,
       borrowCap: initialSupply,
       baseRatePerBlockForStable: 0,
-      multiplierPerBlockForStable: convertToUnit(6, 10),
-      jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
-      kinkForStable: convertToUnit(6, 17),
       stableRatePremium: convertToUnit(2, 12),
-      optimalStableLoanRate: convertToUnit(5, 17),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {

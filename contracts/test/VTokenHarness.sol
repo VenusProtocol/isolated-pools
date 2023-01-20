@@ -236,12 +236,8 @@ contract VTokenHarness is VToken {
         stableBorrows = stableBorrows_;
     }
 
-    function accrueStableInterest(
-        uint256 cashPrior,
-        uint256 reservesPrior,
-        uint256 blockDelta
-    ) public returns (uint256) {
-        return _accrueStableInterest(cashPrior, reservesPrior, blockDelta);
+    function accrueStableInterest(uint256 blockDelta) public returns (uint256) {
+        return _accrueStableInterest(blockDelta);
     }
 }
 
