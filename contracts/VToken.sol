@@ -430,6 +430,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         return (principalUpdated, stableBorrowIndexNew, simpleStableInterestFactor);
     }
 
+    /**
+     * @notice Return the stable borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return Stable borrowBalance the calculated balance
+     * @custom:events UpdatedUserStableBorrowBalance event emitted after updating account's borrow
+     */
     function _updateUserStableBorrowBalance(address account) internal returns (uint256) {
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
 
@@ -456,7 +462,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         totalReserves = totalReservesUpdated;
         borrowSnapshot.interestIndex = stableBorrowIndexNew;
         borrowSnapshot.principal = principalUpdated;
+        borrowSnapshot.lastBlockAccrued = _getBlockNumber();
 
+        emit UpdatedUserStableBorrowBalance(account, principalUpdated);
         return principalUpdated;
     }
 

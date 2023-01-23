@@ -30,38 +30,38 @@ contract StableRateModel {
     address public owner;
 
     /**
-     * @param baseRatePerBlock_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by BASE)
      * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
      * @param optimalStableLoanRatio_ Optimal stable loan rate percentage.
      * @param owner_ Address of the owner for this model(Governance)
      */
     constructor(
-        uint256 baseRatePerBlock_,
+        uint256 baseRatePerYear_,
         uint256 stableRatePremium_,
         uint256 optimalStableLoanRatio_,
         address owner_
     ) {
         owner = owner_;
 
-        updateStableRateModelInternal(baseRatePerBlock_, stableRatePremium_, optimalStableLoanRatio_);
+        updateStableRateModelInternal(baseRatePerYear_, stableRatePremium_, optimalStableLoanRatio_);
     }
 
     /**
      * @notice Updates the parameters of the interest rate model (only callable by owner, i.e. Timelock)
-     * @param baseRatePerBlock_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by BASE)
      * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
      * @param optimalStableLoanRatio_ Optimal stable loan rate percentage.
      * @custom:events Emits NewStableInterestParams, after updating the parameters
      * @custom:access Only governance
      */
     function updateStableRateModel(
-        uint256 baseRatePerBlock_,
+        uint256 baseRatePerYear_,
         uint256 stableRatePremium_,
         uint256 optimalStableLoanRatio_
     ) external virtual {
         require(msg.sender == owner, "StableRateModel: only owner may call this function.");
 
-        updateStableRateModelInternal(baseRatePerBlock_, stableRatePremium_, optimalStableLoanRatio_);
+        updateStableRateModelInternal(baseRatePerYear_, stableRatePremium_, optimalStableLoanRatio_);
     }
 
     /**
@@ -83,7 +83,7 @@ contract StableRateModel {
      * @notice Calculates the current borrow rate per block, with the error code expected by the market
      * @param stableBorrows The amount of stable borrows in the market
      * @param totalBorrows The amount of borrows in the market
-     * @param variableBorrowRate Current variable borrow rate of the protocol
+     * @param variableBorrowRate Current variable borrow rate per block of the protocol
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
     function getBorrowRate(
@@ -99,16 +99,16 @@ contract StableRateModel {
 
     /**
      * @notice Internal function to update the parameters of the interest rate model
-     * @param baseRatePerBlock_ The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by BASE)
      * @param stableRatePremium_ The multiplierPerBlock after hitting a specified utilization point
      * @param optimalStableLoanRatio_ Optimal stable loan rate percentage.
      */
     function updateStableRateModelInternal(
-        uint256 baseRatePerBlock_,
+        uint256 baseRatePerYear_,
         uint256 stableRatePremium_,
         uint256 optimalStableLoanRatio_
     ) internal {
-        baseRatePerBlock = baseRatePerBlock_ / blocksPerYear;
+        baseRatePerBlock = baseRatePerYear_ / blocksPerYear;
         stableRatePremium = stableRatePremium_;
         optimalStableLoanRatio = optimalStableLoanRatio_;
 

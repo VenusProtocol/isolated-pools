@@ -314,6 +314,11 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
+    /**
+     * @notice Event emitted after updating stable borrow balance for borrower
+     */
+    event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
