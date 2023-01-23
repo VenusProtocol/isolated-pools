@@ -72,14 +72,6 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct for Pending Rewards of a user.
-     */
-    struct PendingReward {
-        address vTokenAddress;
-        Reward[] reward;
-    }
-
-    /**
      * @dev Struct for Reward of a single VToken.
      */
     struct Reward {
@@ -320,32 +312,22 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-      * @notice Returns the pending awards for a user for a given pool.
+     * @notice Returns the pending awards for a user for a given pool.
      * @param account The user Account.
      * @param comptrollerAddress Pool address.
-     * @return PendingReward list
+     * @return Pending rewards list
      */
-    function getPendingRewards(address account, address comptrollerAddress)
-        external
-        view
-        returns (PendingReward[] memory)
-    {
+    function getPendingRewards(address account, address comptrollerAddress) external view returns (Reward[] memory) {
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
         .getRewardDistributors();
-        VToken[] memory vTokens = ComptrollerInterface(comptrollerAddress).getAllMarkets();
-        uint256 marketCount = vTokens.length;
         uint256 distributorsCount = rewardsDistributors.length;
-        PendingReward[] memory pendingRewards;
-        for (uint256 i; i < marketCount; ++i) {
-            PendingReward memory pendingReward;
-            pendingReward.vTokenAddress = address(vTokens[i]);
-            for (uint256 j; j < distributorsCount; ++j) {
-                Reward memory reward;
-                reward.rewardTokenAddress = address(rewardsDistributors[j].rewardToken());
-                reward.amount = rewardsDistributors[j].rewardTokenAccrued(account);
-                pendingReward.reward[j] = reward;
-            }
-            pendingRewards[i] = pendingReward;
+        Reward[] memory pendingRewards;
+        for (uint256 j; j < distributorsCount; ++j) {
+            Reward memory reward;
+            reward.rewardTokenAddress = address(rewardsDistributors[j].rewardToken());
+            reward.amount = rewardsDistributors[j].rewardTokenAccrued(account);
+            pendingRewards[j] = reward;
         }
+        return pendingRewards;
     }
 }
