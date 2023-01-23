@@ -2,10 +2,10 @@ import { smock } from "@defi-wonderland/smock";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { Signer } from "ethers";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { deployments } from "hardhat";
 
-import { convertToUnit, scaleDownBy } from "../../helpers/utils";
+import { convertToUnit, scaleDownBy} from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
@@ -21,6 +21,18 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
+const toggleMining = async (status) => {
+  if(!status){
+  await ethers.provider.send("evm_setAutomine", [false]);
+  }
+  else{
+  await ethers.provider.send("evm_setAutomine", [true]);
+  }
+}
+
+const mineBlock = async () => {
+  await ethers.provider.send("hardhat_mine");
+}
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
 <<<<<<< HEAD
   await deployments.fixture([
@@ -69,6 +81,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   // Enter Markets
   await Comptroller.connect(await ethers.getSigner(acc1)).enterMarkets([vBNX.address, vBSW.address]);
   await Comptroller.connect(await ethers.getSigner(acc2)).enterMarkets([vBNX.address, vBSW.address]);
+  await Comptroller.connect(await ethers.getSigner(acc3)).enterMarkets([vBNX.address, vBSW.address]);
 
   // Enable access to setting supply and borrow caps
   await AccessControlManager.giveCallPermission(
@@ -623,7 +636,6 @@ describe("Risk Fund and Auction related scenarios", () => {
     const mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    let acc3Signer: Signer;
     let deployerSigner;
     const bswBorrowAmount = 1e4;
     beforeEach(async () => {
@@ -726,5 +738,132 @@ describe("Risk Fund and Auction related scenarios", () => {
       7. check market bad debt is revovered
       */
     });
+  });
+});
+
+describe("Multiple Users Engagement in a Block", () => {
+  let fixture;
+  let vBNX: VToken;
+  let vBSW: VToken;
+  let BNX: MockToken;
+  let BSW: MockToken;
+  let acc1: string;
+  let acc2: string;
+  let acc3: string;
+  let deployer: string;
+  let Comptroller: Comptroller;
+  let vBNXPrice;
+  let vBSWPrice;
+  let acc1Signer: Signer;
+  let acc2Signer: Signer;
+  let acc3Signer: Signer;
+  let deployerSigner;
+  let error;
+  let liquidity;
+  let shortfall;
+  let balance;
+  let borrowBalance;
+  const mintAmount1 = convertToUnit("1", 8);
+  const mintAmount2 = convertToUnit("1", 6);
+  const mintAmount3 = convertToUnit("1", 4);
+  const bswBorrowAmount = 1e4;
+  const collateralFactor = 0.7;
+  beforeEach(async () => {
+    ({ fixture } = await setupTest());
+    ({ vBNX, vBSW, BNX, BSW, acc1, acc2, deployer, acc3, Comptroller, vBNXPrice, vBSWPrice } =
+      fixture);
+    acc1Signer = await ethers.getSigner(acc1);
+    acc2Signer = await ethers.getSigner(acc2);
+    acc3Signer = await ethers.getSigner(acc3);
+    deployerSigner = await ethers.getSigner(deployer);
+  });
+
+  it.only("Mint Redeem Borrow Repay", async function () {
+    await BSW.connect(acc1Signer).faucet(mintAmount1);
+    await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount1);
+    
+    await BNX.connect(acc2Signer).faucet(mintAmount2);
+    await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount2);
+    
+    console.log("=====================================================");
+    await BNX.connect(acc3Signer).faucet(mintAmount3);
+    await BNX.connect(acc3Signer).approve(vBNX.address, mintAmount3);
+    
+    // MINT //
+    //Minting in same block should not affect each other balance
+    await toggleMining(false);
+    await vBSW.connect(acc1Signer).mint(mintAmount1);
+    await vBNX.connect(acc2Signer).mint(mintAmount2);
+    await vBNX.connect(acc3Signer).mint(mintAmount3);
+    await mineBlock();
+    await toggleMining(true);
+    // Verify Balances of each account
+    expect(await vBSW.balanceOf(acc1)).to.equal(mintAmount1);
+    expect(await vBNX.balanceOf(acc2)).to.equal(mintAmount2);
+    expect(await vBNX.balanceOf(acc3)).to.equal(mintAmount3);
+    
+    // BORROW //
+    await toggleMining(false);
+    await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
+    await vBSW.connect(acc3Signer).borrow(bswBorrowAmount);
+    await vBNX.connect(acc1Signer).borrow(bswBorrowAmount);
+    await mineBlock();
+    await toggleMining(true);
+
+    //Verify Balance of accounts
+    expect(await BNX.balanceOf(acc1)).to.equal(bswBorrowAmount);
+    expect(await BSW.balanceOf(acc2)).to.equal(bswBorrowAmount);
+    expect(await BSW.balanceOf(acc3)).to.equal(bswBorrowAmount);
+
+    // REPAY // 
+    await BNX.connect(acc1Signer).approve(vBNX.address, bswBorrowAmount);
+    await BSW.connect(acc2Signer).approve(vBSW.address, bswBorrowAmount);
+    await BSW.connect(acc3Signer).approve(vBSW.address, bswBorrowAmount);
+
+    await toggleMining(false);
+    await vBNX.connect(acc1Signer).repayBorrow(bswBorrowAmount);
+    await vBSW.connect(acc2Signer).repayBorrow(bswBorrowAmount);
+    await vBSW.connect(acc3Signer).repayBorrow(bswBorrowAmount);
+    await mineBlock();
+    await toggleMining(true);
+
+    [error, balance, borrowBalance] = await vBNX.connect(acc1Signer).getAccountSnapshot(acc1);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(balance).to.equal(0);
+      expect(borrowBalance).to.equal(0);
+    
+    [error, balance, borrowBalance] = await vBSW.connect(acc3Signer).getAccountSnapshot(acc2);
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(balance).to.equal(0);
+    expect(borrowBalance).to.equal(0);
+
+    [error, balance, borrowBalance] = await vBSW.connect(acc3Signer).getAccountSnapshot(acc3);
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(balance).to.equal(0);
+    expect(borrowBalance).to.equal(0);
+
+    // REDEEM //
+    await toggleMining(false);
+    const redeemAmount = convertToUnit("1", 3);
+    await vBNX.connect(acc1Signer).redeem(redeemAmount);
+    await vBSW.connect(acc2Signer).redeem(redeemAmount);
+    await vBSW.connect(acc3Signer).redeem(redeemAmount);
+    await mineBlock();
+    await toggleMining(true);
+
+    [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(liquidity).to.equal(mintAmount1 * collateralFactor * vBSWPrice);
+      expect(shortfall).to.equal(0);
+    
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc2);
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(liquidity).to.equal(mintAmount2 * collateralFactor * vBNXPrice);
+    expect(shortfall).to.equal(0);
+
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc3);
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(liquidity).to.equal(mintAmount3 * collateralFactor * vBNXPrice);
+    expect(shortfall).to.equal(0);
   });
 });
