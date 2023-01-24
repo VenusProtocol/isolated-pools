@@ -178,7 +178,7 @@ describe("Positive Cases", () => {
       // //////////
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
       [error, balance, borrowBalance] = await vBNX.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(mintAmount);
@@ -193,7 +193,7 @@ describe("Positive Cases", () => {
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(await acc1Signer.getAddress(), mintAmount, mintAmount);
+        .withArgs(await acc1Signer.getAddress(), mintAmount, mintAmount, mintAmount);
 
       [error, balance, borrowBalance] = await vBSW
         .connect(acc2Signer)
@@ -223,7 +223,7 @@ describe("Positive Cases", () => {
       const redeemAmount = 10e3;
       await expect(vBNX.connect(acc2Signer).redeem(redeemAmount))
         .to.emit(vBNX, "Redeem")
-        .withArgs(acc2, redeemAmount, redeemAmount);
+        .withArgs(acc2, redeemAmount, redeemAmount, mintAmount - redeemAmount);
 
       [error, balance, borrowBalance] = await vBNX.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
@@ -293,12 +293,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
       // borrow
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount, mintAmount);
       // It should revert when try to borrow more than liquidity
       await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
         Comptroller,
@@ -363,12 +363,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
       // borrow
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount, mintAmount);
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
         .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
@@ -387,12 +387,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     it("Should revert when liquidation is called through vToken and no shortfall", async function () {
       // Mint and Increase collateral of the user
       mintAmount = convertToUnit("1", 18);
+      const expectedTotalBalance = convertToUnit("1.0000000001", 18);
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, expectedTotalBalance);
       // Liquidation
       await expect(
         vBSW.connect(acc1Signer).liquidateBorrow(acc2, bswBorrowAmount, vBSW.address),
@@ -402,12 +403,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
       // Mint and Incrrease collateral of the user
       mintAmount = convertToUnit("1", 18);
+      const expectedTotalBalance = convertToUnit("2", 18);
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, expectedTotalBalance);
       // price manipulation and borrow to overcome insufficient shortfall
       bswBorrowAmount = convertToUnit("1", 18);
       await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
@@ -424,12 +426,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     it("Should revert when liquidation is called through vToken and trying to pay too much", async function () {
       // Mint and Incrrease collateral of the user
       mintAmount = convertToUnit("1", 18);
+      const expectedTotalBalance = convertToUnit("2", 18);
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, expectedTotalBalance);
       // price manipulation and borrow to overcome insufficient shortfall
       bswBorrowAmount = convertToUnit("1", 18);
       await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
@@ -446,12 +449,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     it("Should success when liquidation is called through vToken", async function () {
       // Mint and Incrrease collateral of the user
       mintAmount = convertToUnit("1", 18);
+      const expectedTotalBalance = convertToUnit("2", 18);
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, expectedTotalBalance);
 
       // price manipulation and borrow to overcome insufficient shortfall
       bswBorrowAmount = convertToUnit("1", 18);
@@ -493,12 +497,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
       // borrow
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, mintAmount, mintAmount);
       // It should revert when try to borrow more than liquidity
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
@@ -511,11 +515,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
     it("Should revert when total collateral is greater then minLiquidation threshold", async function () {
       // Increase mint to make collateral large then min threshold liquidation
-      await BNX.connect(acc2Signer).faucet(convertToUnit("1", 18));
-      await BNX.connect(acc2Signer).approve(vBNX.address, convertToUnit("1", 18));
-      await expect(vBNX.connect(acc2Signer).mint(convertToUnit("1", 18)))
+      const mintAmount = convertToUnit("1", 18);
+      const expectedTotalBalance = convertToUnit("1.0000000001", 18);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, convertToUnit("1", 18), convertToUnit("1", 18));
+        .withArgs(acc2, mintAmount, mintAmount, expectedTotalBalance);
       // heal
       await expect(Comptroller.connect(acc1Signer).healAccount(acc2))
         .to.be.revertedWithCustomError(Comptroller, "CollateralExceedsThreshold")

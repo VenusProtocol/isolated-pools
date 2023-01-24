@@ -552,7 +552,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         accountTokens[minter] = accountTokens[minter] + mintTokens;
 
         /* We emit a Mint event, and a Transfer event */
-        emit Mint(minter, actualMintAmount, mintTokens);
+        emit Mint(minter, actualMintAmount, mintTokens, accountTokens[minter]);
         emit Transfer(address(0), minter, mintTokens);
     }
 
@@ -662,7 +662,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), redeemTokens);
-        emit Redeem(redeemer, redeemAmount, redeemTokens);
+        emit Redeem(redeemer, redeemAmount, redeemTokens, accountTokens[redeemer]);
     }
 
     /**

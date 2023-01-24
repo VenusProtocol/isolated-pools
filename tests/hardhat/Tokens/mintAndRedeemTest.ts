@@ -231,7 +231,7 @@ describe("VToken", function () {
 
       expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
         .to.emit(vToken, "Mint")
-        .withArgs(minterAddress, mintAmount, mintTokens);
+        .withArgs(minterAddress, mintAmount, mintTokens, mintAmount);
 
       expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
         .to.emit(vToken, "Transfer")
