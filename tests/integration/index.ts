@@ -621,16 +621,13 @@ describe("Risk Fund and Auction related scenarios", () => {
   let acc1: string;
   let acc2: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  let deployer: string;
-  let acc3: string;
   // let RiskFund: RiskFund;
   // let BUSD: MockToken;
   // let shortFall: Shortfall;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve, deployer, acc3, RiskFund, shortFall } =
-      fixture);
+    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve } = fixture);
   });
 
   describe("Generate risk fund swap it to base asset", () => {
@@ -642,8 +639,6 @@ describe("Risk Fund and Auction related scenarios", () => {
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
-      acc3Signer = await ethers.getSigner(acc3);
-      deployerSigner = await ethers.getSigner(deployer);
 
       await BNX.connect(acc2Signer).faucet(mintAmount * 10);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount * 10);
@@ -721,8 +716,6 @@ describe("Risk Fund and Auction related scenarios", () => {
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       await Comptroller.connect(acc1Signer).healAccount(acc2);
       const totalReserves = await vBNX.totalReserves();
-      console.log(totalReserves, "totalReserves");
-      console.log(await vBSW.badDebt());
       await vBNX.reduceReserves(totalReserves);
       // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
       // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
@@ -753,7 +746,6 @@ describe("Multiple Users Engagement in a Block", () => {
   let acc1: string;
   let acc2: string;
   let acc3: string;
-  let deployer: string;
   let Comptroller: Comptroller;
   let vBNXPrice;
   let vBSWPrice;
@@ -773,14 +765,13 @@ describe("Multiple Users Engagement in a Block", () => {
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ vBNX, vBSW, BNX, BSW, acc1, acc2, deployer, acc3, Comptroller, vBNXPrice, vBSWPrice } = fixture);
+    ({ vBNX, vBSW, BNX, BSW, acc1, acc2, acc3, Comptroller, vBNXPrice, vBSWPrice } = fixture);
     acc1Signer = await ethers.getSigner(acc1);
     acc2Signer = await ethers.getSigner(acc2);
     acc3Signer = await ethers.getSigner(acc3);
-    deployerSigner = await ethers.getSigner(deployer);
   });
 
-  it.only("Mint Redeem Borrow Repay", async function () {
+  it("Mint Redeem Borrow Repay", async function () {
     await BSW.connect(acc1Signer).faucet(mintAmount1);
     await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount1);
 
