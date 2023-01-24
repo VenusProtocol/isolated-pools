@@ -5,15 +5,14 @@ import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { deployments } from "hardhat";
 
-import { convertToUnit, scaleDownBy} from "../../helpers/utils";
+import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
   MockToken,
   PoolRegistry,
-  PriceOracle,
-  RiskFund,
-  Shortfall,
+  PriceOracle, // RiskFund,
+  // Shortfall,
   VToken,
 } from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
@@ -21,18 +20,18 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const toggleMining = async (status) => {
-  if(!status){
-  await ethers.provider.send("evm_setAutomine", [false]);
+const toggleMining = async status => {
+  if (!status) {
+    await ethers.provider.send("evm_setAutomine", [false]);
+  } else {
+    await ethers.provider.send("evm_setAutomine", [true]);
   }
-  else{
-  await ethers.provider.send("evm_setAutomine", [true]);
-  }
-}
+};
 
 const mineBlock = async () => {
   await ethers.provider.send("hardhat_mine");
-}
+};
+
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
 <<<<<<< HEAD
   await deployments.fixture([
@@ -624,20 +623,22 @@ describe("Risk Fund and Auction related scenarios", () => {
   let ProtocolShareReserve: ProtocolShareReserve;
   let deployer: string;
   let acc3: string;
-  let RiskFund: RiskFund;
-  let BUSD: MockToken;
-  let shortFall: Shortfall;
+  // let RiskFund: RiskFund;
+  // let BUSD: MockToken;
+  // let shortFall: Shortfall;
+
   beforeEach(async () => {
     ({ fixture } = await setupTest());
     ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve, deployer, acc3, RiskFund, shortFall } =
       fixture);
   });
+
   describe("Generate risk fund swap it to base asset", () => {
     const mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    let deployerSigner;
     const bswBorrowAmount = 1e4;
+
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
@@ -650,31 +651,33 @@ describe("Risk Fund and Auction related scenarios", () => {
       await BSW.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
       await vBNX.connect(acc2Signer).mint(mintAmount * 10);
-      //borrow
+      // borrow
       await vBSW.connect(acc1Signer).mint(convertToUnit("1", 18));
       await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
-      //Approve more assets for liquidation
+      // Approve more assets for liquidation
       await BSW.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
     });
+
     it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
-      //Increase price of borrowed underlying tokens to surpass available collateral
+      // Increase price of borrowed underlying tokens to surpass available collateral
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       await Comptroller.connect(acc1Signer).healAccount(acc2);
-      //At this point market contain bad debt
+      // At this point market contain bad debt
       const totalReserves = await vBNX.totalReserves();
-      //Reserves of the market are being transferred to protocol share reserves
+      // Reserves of the market are being transferred to protocol share reserves
       await vBNX.reduceReserves(totalReserves);
-      //Check the balance of protocol share reserve
+      // Check the balance of protocol share reserve
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
       // // //Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
       // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
       // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
       // expect(await BUSD.balanceOf(RiskFund.address)).to.be.equal("1000"); // Waiting for deployement script to be fixed
     });
+
     it("Start Auction Type-1", async function () {
       // ====================Bad Debt generator logic========================
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
@@ -757,7 +760,6 @@ describe("Multiple Users Engagement in a Block", () => {
   let acc1Signer: Signer;
   let acc2Signer: Signer;
   let acc3Signer: Signer;
-  let deployerSigner;
   let error;
   let liquidity;
   let shortfall;
@@ -768,10 +770,10 @@ describe("Multiple Users Engagement in a Block", () => {
   const mintAmount3 = convertToUnit("1", 4);
   const bswBorrowAmount = 1e4;
   const collateralFactor = 0.7;
+
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ vBNX, vBSW, BNX, BSW, acc1, acc2, deployer, acc3, Comptroller, vBNXPrice, vBSWPrice } =
-      fixture);
+    ({ vBNX, vBSW, BNX, BSW, acc1, acc2, deployer, acc3, Comptroller, vBNXPrice, vBSWPrice } = fixture);
     acc1Signer = await ethers.getSigner(acc1);
     acc2Signer = await ethers.getSigner(acc2);
     acc3Signer = await ethers.getSigner(acc3);
@@ -781,16 +783,15 @@ describe("Multiple Users Engagement in a Block", () => {
   it.only("Mint Redeem Borrow Repay", async function () {
     await BSW.connect(acc1Signer).faucet(mintAmount1);
     await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount1);
-    
+
     await BNX.connect(acc2Signer).faucet(mintAmount2);
     await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount2);
-    
-    console.log("=====================================================");
+
     await BNX.connect(acc3Signer).faucet(mintAmount3);
     await BNX.connect(acc3Signer).approve(vBNX.address, mintAmount3);
-    
+
     // MINT //
-    //Minting in same block should not affect each other balance
+    // Minting in same block should not affect each other balance
     await toggleMining(false);
     await vBSW.connect(acc1Signer).mint(mintAmount1);
     await vBNX.connect(acc2Signer).mint(mintAmount2);
@@ -801,7 +802,7 @@ describe("Multiple Users Engagement in a Block", () => {
     expect(await vBSW.balanceOf(acc1)).to.equal(mintAmount1);
     expect(await vBNX.balanceOf(acc2)).to.equal(mintAmount2);
     expect(await vBNX.balanceOf(acc3)).to.equal(mintAmount3);
-    
+
     // BORROW //
     await toggleMining(false);
     await vBSW.connect(acc2Signer).borrow(bswBorrowAmount);
@@ -810,12 +811,12 @@ describe("Multiple Users Engagement in a Block", () => {
     await mineBlock();
     await toggleMining(true);
 
-    //Verify Balance of accounts
+    // Verify Balance of accounts
     expect(await BNX.balanceOf(acc1)).to.equal(bswBorrowAmount);
     expect(await BSW.balanceOf(acc2)).to.equal(bswBorrowAmount);
     expect(await BSW.balanceOf(acc3)).to.equal(bswBorrowAmount);
 
-    // REPAY // 
+    // REPAY //
     await BNX.connect(acc1Signer).approve(vBNX.address, bswBorrowAmount);
     await BSW.connect(acc2Signer).approve(vBSW.address, bswBorrowAmount);
     await BSW.connect(acc3Signer).approve(vBSW.address, bswBorrowAmount);
@@ -828,10 +829,10 @@ describe("Multiple Users Engagement in a Block", () => {
     await toggleMining(true);
 
     [error, balance, borrowBalance] = await vBNX.connect(acc1Signer).getAccountSnapshot(acc1);
-      expect(error).to.equal(Error.NO_ERROR);
-      expect(balance).to.equal(0);
-      expect(borrowBalance).to.equal(0);
-    
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(balance).to.equal(0);
+    expect(borrowBalance).to.equal(0);
+
     [error, balance, borrowBalance] = await vBSW.connect(acc3Signer).getAccountSnapshot(acc2);
     expect(error).to.equal(Error.NO_ERROR);
     expect(balance).to.equal(0);
@@ -852,10 +853,10 @@ describe("Multiple Users Engagement in a Block", () => {
     await toggleMining(true);
 
     [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
-      expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal(mintAmount1 * collateralFactor * vBSWPrice);
-      expect(shortfall).to.equal(0);
-    
+    expect(error).to.equal(Error.NO_ERROR);
+    expect(liquidity).to.equal(mintAmount1 * collateralFactor * vBSWPrice);
+    expect(shortfall).to.equal(0);
+
     [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc2);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal(mintAmount2 * collateralFactor * vBNXPrice);
