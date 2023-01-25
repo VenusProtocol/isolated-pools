@@ -409,6 +409,17 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
         .withArgs("100000000000000000000", "15999000000");
     });
+    it("Should revert when try to drain market", async function () {
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("100", 18));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      await vBSW.connect(acc2Signer).borrow(convertToUnit("1", 18));
+      await expect(vBSW.connect(acc2Signer).borrow(convertToUnit("1", 18))).to.be.revertedWithCustomError(
+        vBSW,
+        "BorrowCashNotAvailable",
+      );
+    });
 
     it("Should revert when liquidation is called through vToken and no shortfall", async function () {
       // Mint and Increase collateral of the user
