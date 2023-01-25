@@ -52,6 +52,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         VToken indexed vToken,
         address indexed supplier,
         uint256 rewardTokenDelta,
+        uint256 rewardTokenTotal,
         uint256 rewardTokenSupplyIndex
     );
 
@@ -60,6 +61,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         VToken indexed vToken,
         address indexed borrower,
         uint256 rewardTokenDelta,
+        uint256 rewardTokenTotal,
         uint256 rewardTokenBorrowIndex
     );
 
@@ -249,7 +251,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         uint256 supplierAccrued = add_(rewardTokenAccrued[supplier], supplierDelta);
         rewardTokenAccrued[supplier] = supplierAccrued;
 
-        emit DistributedSupplierRewardToken(VToken(vToken), supplier, supplierDelta, supplyIndex);
+        emit DistributedSupplierRewardToken(VToken(vToken), supplier, supplierDelta, supplierAccrued, supplyIndex);
     }
 
     /**
@@ -305,7 +307,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
             uint256 borrowerAccrued = add_(rewardTokenAccrued[borrower], borrowerDelta);
             rewardTokenAccrued[borrower] = borrowerAccrued;
 
-            emit DistributedBorrowerRewardToken(VToken(vToken), borrower, borrowerDelta, borrowIndex);
+            emit DistributedBorrowerRewardToken(VToken(vToken), borrower, borrowerDelta, borrowerAccrued, borrowIndex);
         }
     }
 
