@@ -141,7 +141,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
-     * @custom:events Emits BidPlaced event on success
+     * @custom:event Emits BidPlaced event on success
      */
     function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -191,7 +191,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Close an auction
      * @param comptroller Comptroller address of the pool
-     * @custom:events Emits AuctionClosed event on successful close
+     * @custom:event Emits AuctionClosed event on successful close
      */
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -247,7 +247,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Restart an auction
      * @param comptroller Address of the pool
-     * @custom:events Emits AuctionRestarted event on successful restart
+     * @custom:event Emits AuctionRestarted event on successful restart
      */
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
@@ -267,7 +267,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Update minimum pool bad debt to start auction
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
-     * @custom:events Emits MinimumPoolBadDebtUpdated on success
+     * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted to owner
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
@@ -280,7 +280,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Sets the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
      * @param _poolRegistry Address of pool registry contract
-     * @custom:events Emits PoolRegistryUpdated on success
+     * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
      */
     function setPoolRegistry(address _poolRegistry) public onlyOwner {
@@ -293,7 +293,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /**
      * @notice Start a auction when there is not currently one active
      * @param comptroller Comptroller address of the pool
-     * @custom:events Emits AuctionStarted event on success
+     * @custom:event Emits AuctionStarted event on success
      * @custom:access Restricted to owner
      */
     function startAuction(address comptroller) public onlyOwner {

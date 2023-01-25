@@ -175,7 +175,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Add assets to be included in account liquidity calculation; enabling them to be used as collateral
      * @param vTokens The list of addresses of the vToken markets to be enabled
      * @return errors An array of NO_ERROR for compatibility with Venus core tooling
-     * @custom:events MarketEntered is emitted for each market on success
+     * @custom:event MarketEntered is emitted for each market on success
      * @custom:error ActionPaused error is thrown if entering any of the markets is paused
      * @custom:error MarketNotListed error is thrown if any of the markets is not listed
      * @custom:access Not restricted
@@ -200,7 +200,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
      * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:events MarketExited is emitted on success
+     * @custom:event MarketExited is emitted on success
      * @custom:error ActionPaused error is thrown if exiting the market is paused
      * @custom:error NonzeroBorrowBalance error is thrown if the user has an outstanding borrow in this market
      * @custom:error MarketNotListed error is thrown when the market is not listed
@@ -722,7 +722,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /**
      * @notice Sets the closeFactor to use when liquidating borrows
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
-     * @custom:events Emits NewCloseFactor on success
+     * @custom:event Emits NewCloseFactor on success
      * @custom:access Only Governance
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
@@ -737,7 +737,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param vToken The market to set the factor on
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
-     * @custom:events Emits NewCollateralFactor when collateral factor is updated
+     * @custom:event Emits NewCollateralFactor when collateral factor is updated
      *    and NewLiquidationThreshold when liquidation threshold is updated
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
@@ -790,7 +790,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Sets liquidationIncentive
      * @dev This function is restricted by the AccessControlManager
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
-     * @custom:events Emits NewLiquidationIncentive on success
+     * @custom:event Emits NewLiquidationIncentive on success
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
@@ -1033,7 +1033,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Sets a new PriceOracle for the Comptroller
      * @dev Only callable by the admin
      * @param newOracle Address of the new PriceOracle to set
-     * @custom:events Emits NewPriceOracle on success
+     * @custom:event Emits NewPriceOracle on success
      */
     function setPriceOracle(PriceOracle newOracle) public onlyOwner {
         PriceOracle oldOracle = oracle;
