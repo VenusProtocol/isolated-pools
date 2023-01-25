@@ -101,6 +101,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /// @notice Emitted when supply cap for a vToken is changed
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
+    /// @notice Emitted when a rewards distributor is added
+    event NewRewardsDistributor(address indexed rewardsDistributor);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -923,6 +926,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance
+     * @custom:event Emits NewRewardsDistributor with distributor address
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
@@ -943,6 +947,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         for (uint256 i; i < marketsCount; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
+
+        emit NewRewardsDistributor(address(_rewardsDistributor));
     }
 
     /*** Assets You Are In ***/

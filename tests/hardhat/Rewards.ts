@@ -39,6 +39,7 @@ let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
 describe("Rewards: Tests", async function () {
+  const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -275,7 +276,6 @@ describe("Rewards: Tests", async function () {
   });
 
   it("Cannot add reward distributors with duplicate reward tokens", async function () {
-    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
 
     const rewardsDistributorDuplicate = await RewardsDistributor.deploy();
@@ -284,6 +284,15 @@ describe("Rewards: Tests", async function () {
     await await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributorDuplicate.address)).to.be.revertedWith(
       "distributor already exists with this reward",
     );
+  });
+
+  it("Emits event correctly", async () => {
+    rewardsDistributor = await RewardsDistributor.deploy();
+    await rewardsDistributor.initialize(comptrollerProxy.address, mockWBTC.address);
+
+    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
+      .to.emit(comptrollerProxy, "NewRewardsDistributor")
+      .withArgs(rewardsDistributor.address);
   });
 
   // TODO: Test reward accruals. This test used to pass before, but it
