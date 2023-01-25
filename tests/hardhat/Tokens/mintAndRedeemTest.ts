@@ -228,10 +228,8 @@ describe("VToken", function () {
       const beforeBalances = await getBalances([vToken], [minterAddress]);
       const result = await mintFresh(vToken, minter, mintAmount);
       const afterBalances = await getBalances([vToken], [minterAddress]);
-    
-      await expect(result)
-        .to.emit(vToken, "Mint")
-        .withArgs(minterAddress, mintAmount, mintTokens, mintTokens);
+
+      await expect(result).to.emit(vToken, "Mint").withArgs(minterAddress, mintAmount, mintTokens, mintTokens);
 
       await expect(result)
         .to.emit(vToken, "Transfer")
@@ -355,13 +353,9 @@ describe("VToken", function () {
         const result = await redeemFresh(vToken, redeemer, redeemTokens, redeemAmount);
         const afterBalances = await getBalances([vToken], [redeemerAddress]);
 
-        await expect(result)
-          .to.emit(vToken, "Redeem")
-          .withArgs(redeemer.address, redeemAmount, redeemTokens, 0);
+        await expect(result).to.emit(vToken, "Redeem").withArgs(redeemer.address, redeemAmount, redeemTokens, 0);
 
-        await expect(result)
-          .to.emit(vToken, "Transfer")
-          .withArgs(redeemerAddress, vToken.address, redeemTokens);
+        await expect(result).to.emit(vToken, "Transfer").withArgs(redeemerAddress, vToken.address, redeemTokens);
 
         expect(afterBalances).to.deep.equal(
           adjustBalances(beforeBalances, [
