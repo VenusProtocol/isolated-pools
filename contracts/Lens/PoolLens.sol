@@ -304,7 +304,7 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct for Pending Rewards for per market
+     * @dev Struct with pending reward info for a market
      */
     struct PendingReward {
         address vTokenAddress;
@@ -312,9 +312,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct for Reward of a single reward token.
+     * @dev Struct with reward distribution totals for a single reward token and distributor.
      */
-    struct Reward {
+    struct RewardSummary {
         address distributorAddress;
         address rewardTokenAddress;
         uint256 totalRewards;
@@ -332,9 +332,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @notice Returns the pending awards for a user for a given pool.
-     * @param account The user Account.
-     * @param comptrollerAddress Pool address.
+     * @notice Returns the pending rewards for a user for a given pool.
+     * @param account The user account.
+     * @param Comptroller address
      * @return Pending rewards list
      */
     function getPendingRewards(address account, address comptrollerAddress) external view returns (Reward[] memory) {
@@ -360,7 +360,7 @@ contract PoolLens is ExponentialNoError {
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards;
         for (uint256 i; i < markets.length; ++i) {
-            //Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
+            // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
             RewardToken memory borrowState;
             (borrowState.index, borrowState.block) = rewardDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardToken memory supplyState;
