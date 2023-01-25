@@ -72,14 +72,6 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct for Reward of a single VToken.
-     */
-    struct Reward {
-        address rewardTokenAddress;
-        uint256 amount;
-    }
-
-    /**
      * @param vTokens The list of vToken Addresses.
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
@@ -312,22 +304,177 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
+     * @dev Struct for Pending Rewards for per market
+     */
+    struct PendingReward {
+        address vTokenAddress;
+        uint256 amount;
+    }
+
+    /**
+     * @dev Struct for Reward of a single reward token.
+     */
+    struct Reward {
+        address distributorAddress;
+        address rewardTokenAddress;
+        uint256 totalRewards;
+        PendingReward[] pendingRewards;
+    }
+
+    /**
+     * @dev Struct used in RewardDistributor to save last updated market state
+     */
+    struct RewardToken {
+        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
+        uint224 index;
+        // The block number the index was last updated at
+        uint32 block;
+    }
+
+    /**
      * @notice Returns the pending awards for a user for a given pool.
      * @param account The user Account.
      * @param comptrollerAddress Pool address.
      * @return Pending rewards list
      */
     function getPendingRewards(address account, address comptrollerAddress) external view returns (Reward[] memory) {
+        VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
         .getRewardDistributors();
-        uint256 distributorsCount = rewardsDistributors.length;
         Reward[] memory pendingRewards;
-        for (uint256 j; j < distributorsCount; ++j) {
+        for (uint256 i; i < rewardsDistributors.length; ++i) {
             Reward memory reward;
-            reward.rewardTokenAddress = address(rewardsDistributors[j].rewardToken());
-            reward.amount = rewardsDistributors[j].rewardTokenAccrued(account);
-            pendingRewards[j] = reward;
+            reward.distributorAddress = address(rewardsDistributors[i]);
+            reward.rewardTokenAddress = address(rewardsDistributors[i].rewardToken());
+            reward.totalRewards = rewardsDistributors[i].rewardTokenAccrued(account);
+            reward.pendingRewards = _calculateNotDistributedAwards(account, markets, rewardsDistributors[i]);
+            pendingRewards[i] = reward;
         }
         return pendingRewards;
+    }
+
+    function _calculateNotDistributedAwards(
+        address account,
+        VToken[] memory markets,
+        RewardsDistributor rewardDistributor
+    ) internal view returns (PendingReward[] memory) {
+        PendingReward[] memory pendingRewards;
+        for (uint256 i; i < markets.length; ++i) {
+            //Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
+            RewardToken memory borrowState;
+            (borrowState.index, borrowState.block) = rewardDistributor.rewardTokenBorrowState(address(markets[i]));
+            RewardToken memory supplyState;
+            (supplyState.index, supplyState.block) = rewardDistributor.rewardTokenSupplyState(address(markets[i]));
+
+            Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
+
+            //Update market supply and borrow index in-memory
+            updateMarketBorrowIndex(address(markets[i]), rewardDistributor, borrowState, marketBorrowIndex);
+            updateMarketSupplyIndex(address(markets[i]), rewardDistributor, supplyState);
+
+            //Calculate pending rewards
+            uint256 borowReward = calculateBorrowerReward(
+                address(markets[i]),
+                rewardDistributor,
+                account,
+                borrowState,
+                marketBorrowIndex
+            );
+            uint256 supplyReward = calculateSupplierReward(
+                address(markets[i]),
+                rewardDistributor,
+                account,
+                supplyState
+            );
+
+            PendingReward memory pendingReward;
+            pendingReward.vTokenAddress = address(markets[i]);
+            pendingReward.amount = borowReward + supplyReward;
+            pendingRewards[i] = pendingReward;
+        }
+        return pendingRewards;
+    }
+
+    function updateMarketBorrowIndex(
+        address vToken,
+        RewardsDistributor rewardDistributor,
+        RewardToken memory borrowState,
+        Exp memory marketBorrowIndex
+    ) internal view {
+        uint256 borrowSpeed = rewardDistributor.rewardTokenBorrowSpeeds(vToken);
+        uint256 blockNumber = block.number;
+        uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
+        if (deltaBlocks > 0 && borrowSpeed > 0) {
+            // Remove the total earned interest rate since the opening of the market from total borrows
+            uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
+            uint256 tokensAccrued = mul_(deltaBlocks, borrowSpeed);
+            Double memory ratio = borrowAmount > 0 ? fraction(tokensAccrued, borrowAmount) : Double({ mantissa: 0 });
+            Double memory index = add_(Double({ mantissa: borrowState.index }), ratio);
+            borrowState.index = safe224(index.mantissa, "new index overflows");
+            borrowState.block = safe32(blockNumber, "block number overflows");
+        } else if (deltaBlocks > 0) {
+            borrowState.block = safe32(blockNumber, "block number overflows");
+        }
+    }
+
+    function updateMarketSupplyIndex(
+        address vToken,
+        RewardsDistributor rewardDistributor,
+        RewardToken memory supplyState
+    ) internal view {
+        uint256 supplySpeed = rewardDistributor.rewardTokenSupplySpeeds(vToken);
+        uint256 blockNumber = block.number;
+        uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
+        if (deltaBlocks > 0 && supplySpeed > 0) {
+            uint256 supplyTokens = VToken(vToken).totalSupply();
+            uint256 tokensAccrued = mul_(deltaBlocks, supplySpeed);
+            Double memory ratio = supplyTokens > 0 ? fraction(tokensAccrued, supplyTokens) : Double({ mantissa: 0 });
+            Double memory index = add_(Double({ mantissa: supplyState.index }), ratio);
+            supplyState.index = safe224(index.mantissa, "new index overflows");
+            supplyState.block = safe32(blockNumber, "block number overflows");
+        } else if (deltaBlocks > 0) {
+            supplyState.block = safe32(blockNumber, "block number overflows");
+        }
+    }
+
+    function calculateBorrowerReward(
+        address vToken,
+        RewardsDistributor rewardDistributor,
+        address borrower,
+        RewardToken memory borrowState,
+        Exp memory marketBorrowIndex
+    ) internal view returns (uint256) {
+        Double memory borrowIndex = Double({ mantissa: borrowState.index });
+        Double memory borrowerIndex = Double({
+            mantissa: rewardDistributor.rewardTokenBorrowerIndex(vToken, borrower)
+        });
+        if (borrowerIndex.mantissa > 0) {
+            Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
+            uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
+            uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
+            return borrowerDelta;
+        }
+        return 0;
+    }
+
+    function calculateSupplierReward(
+        address vToken,
+        RewardsDistributor rewardDistributor,
+        address supplier,
+        RewardToken memory supplyState
+    ) internal view returns (uint256) {
+        Double memory supplyIndex = Double({ mantissa: supplyState.index });
+        Double memory supplierIndex = Double({
+            mantissa: rewardDistributor.rewardTokenSupplierIndex(vToken, supplier)
+        });
+
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+            supplierIndex.mantissa = rewardDistributor.rewardTokenInitialIndex();
+        }
+
+        Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
+        uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
+        uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
+        return supplierDelta;
     }
 }
