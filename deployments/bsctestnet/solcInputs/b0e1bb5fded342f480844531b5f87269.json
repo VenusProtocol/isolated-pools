@@ -260,29 +260,11 @@
           "userdoc",
           "evm.gasEstimates"
         ],
-<<<<<<< HEAD
-<<<<<<< HEAD
         "": ["ast"]
-=======
-        "": [
-          "ast"
-        ]
->>>>>>> c420909 (wip commit)
-=======
-        "": ["ast"]
->>>>>>> b1a64df (lint)
       }
     },
     "metadata": {
       "useLiteralContent": true
     }
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> c420909 (wip commit)
-=======
-}
->>>>>>> b1a64df (lint)
