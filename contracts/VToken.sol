@@ -549,10 +549,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          * And write them into storage
          */
         totalSupply = totalSupply + mintTokens;
-        accountTokens[minter] = accountTokens[minter] + mintTokens;
+        uint256 balanceAfter = accountTokens[minter] + mintTokens;
+        accountTokens[minter] = balanceAfter;
 
         /* We emit a Mint event, and a Transfer event */
-        emit Mint(minter, actualMintAmount, mintTokens, accountTokens[minter]);
+        emit Mint(minter, actualMintAmount, mintTokens, balanceAfter);
         emit Transfer(address(0), minter, mintTokens);
     }
 
@@ -650,7 +651,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
          *  Note: Avoid token reentrancy attacks by writing reduced supply before external transfer.
          */
         totalSupply = totalSupply - redeemTokens;
-        accountTokens[redeemer] = accountTokens[redeemer] - redeemTokens;
+        uint256 balanceAfter = accountTokens[redeemer] - redeemTokens;
+        accountTokens[redeemer] = balanceAfter;
 
         /*
          * We invoke _doTransferOut for the redeemer and the redeemAmount.
@@ -662,7 +664,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), redeemTokens);
-        emit Redeem(redeemer, redeemAmount, redeemTokens, accountTokens[redeemer]);
+        emit Redeem(redeemer, redeemAmount, redeemTokens, balanceAfter);
     }
 
     /**
