@@ -229,13 +229,11 @@ describe("VToken", function () {
       const result = await mintFresh(vToken, minter, mintAmount);
       const afterBalances = await getBalances([vToken], [minterAddress]);
 
-      expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
-        .to.emit(vToken, "Mint")
-        .withArgs(minterAddress, mintAmount, mintTokens);
+      await expect(result).to.emit(vToken, "Mint").withArgs(minterAddress, mintAmount, mintTokens, mintTokens);
 
-      expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
+      await expect(result)
         .to.emit(vToken, "Transfer")
-        .withArgs(vToken.address, minterAddress, mintTokens);
+        .withArgs(ethers.constants.AddressZero, minterAddress, mintTokens);
 
       expect(afterBalances).to.deep.equal(
         adjustBalances(beforeBalances, [
@@ -271,9 +269,13 @@ describe("VToken", function () {
     });
 
     it("emits an AccrueInterest event", async () => {
-      expect(await quickMint(underlying, vToken, minter, mintAmount)) // eslint-disable-line @typescript-eslint/no-floating-promises
+      await expect(await quickMint(underlying, vToken, minter, mintAmount))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("1000000000000000000", "0", "0", "0");
+        .withArgs("0", "0", "1000000000000000000", "0");
+
+      await expect(await quickMint(underlying, vToken, minter, mintAmount))
+        .to.emit(vToken, "AccrueInterest")
+        .withArgs("10000000000000000000000", "0", "1000000000000000000", "0");
     });
   });
 
@@ -351,13 +353,9 @@ describe("VToken", function () {
         const result = await redeemFresh(vToken, redeemer, redeemTokens, redeemAmount);
         const afterBalances = await getBalances([vToken], [redeemerAddress]);
 
-        expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
-          .to.emit(vToken, "Redeem")
-          .withArgs(redeemAmount, redeemTokens);
+        await expect(result).to.emit(vToken, "Redeem").withArgs(redeemer.address, redeemAmount, redeemTokens, 0);
 
-        expect(result) // eslint-disable-line @typescript-eslint/no-floating-promises
-          .to.emit(vToken, "Transfer")
-          .withArgs(redeemerAddress, vToken.address, redeemTokens);
+        await expect(result).to.emit(vToken, "Transfer").withArgs(redeemerAddress, vToken.address, redeemTokens);
 
         expect(afterBalances).to.deep.equal(
           adjustBalances(beforeBalances, [
@@ -404,9 +402,9 @@ describe("VToken", function () {
     });
 
     it("emits an AccrueInterest event", async () => {
-      expect(await quickMint(underlying, vToken, minter, mintAmount)) // eslint-disable-line @typescript-eslint/no-floating-promises
+      await expect(await quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate }))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("1000000000000000000", "500000000", "0", "0");
+        .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0");
     });
   });
 });

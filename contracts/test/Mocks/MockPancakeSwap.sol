@@ -357,7 +357,7 @@ interface IPancakePair {
         bytes32 s
     ) external;
 
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1, uint256 amount2);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
     event Swap(
         address indexed sender,

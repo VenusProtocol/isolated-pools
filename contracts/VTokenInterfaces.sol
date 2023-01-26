@@ -155,12 +155,12 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when tokens are minted
      */
-    event Mint(address minter, uint256 mintAmount, uint256 mintTokens);
+    event Mint(address minter, uint256 mintAmount, uint256 mintTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when tokens are redeemed
      */
-    event Redeem(address redeemer, uint256 redeemAmount, uint256 redeemTokens);
+    event Redeem(address redeemer, uint256 redeemAmount, uint256 redeemTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when underlying is borrowed
