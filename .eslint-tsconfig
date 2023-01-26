@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["jest.config.js", ".eslintrc.js", "tests", "scenario", "deploy"]
+  "include": ["jest.config.js", ".eslintrc.js", "tests", "scenario", "deploy", "docgen-templates"]
 }

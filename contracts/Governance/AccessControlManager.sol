@@ -68,7 +68,7 @@ contract AccessControlManager is AccessControl {
      *      on **any** contract managed by this ACL
      * @param functionSig signature e.g. "functionName(uint256,bool)"
      * @param accountToPermit account that will be given access to the contract function
-     * @custom:events Emits a {RoleGranted} and {PermissionGranted} events.
+     * @custom:event Emits a {RoleGranted} and {PermissionGranted} events.
      */
     function giveCallPermission(
         address contractAddress,
@@ -86,7 +86,7 @@ contract AccessControlManager is AccessControl {
      * 		May emit a {RoleRevoked} event.
      * @param contractAddress address of contract for which call permissions will be revoked
      * @param functionSig signature e.g. "functionName(uint256,bool)"
-     * @custom:events Emits {RoleRevoked} and {PermissionRevoked} events.
+     * @custom:event Emits {RoleRevoked} and {PermissionRevoked} events.
      */
     function revokeCallPermission(
         address contractAddress,
