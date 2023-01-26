@@ -88,7 +88,7 @@ describe("setters", async () => {
     });
 
     it("reverts if called by a non-owner", async () => {
-      await expect(comptroller.connect(user).setPriceOracle(newRewardsDistributor.address)).to.be.revertedWith(
+      await expect(comptroller.connect(user).addRewardsDistributor(newRewardsDistributor.address)).to.be.revertedWith(
         "Ownable: caller is not the owner",
       );
     });
