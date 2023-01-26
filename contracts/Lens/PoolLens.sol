@@ -334,23 +334,27 @@ contract PoolLens is ExponentialNoError {
     /**
      * @notice Returns the pending rewards for a user for a given pool.
      * @param account The user account.
-     * @param Comptroller address
+     * @param comptrollerAddress address
      * @return Pending rewards list
      */
-    function getPendingRewards(address account, address comptrollerAddress) external view returns (Reward[] memory) {
+    function getPendingRewards(address account, address comptrollerAddress)
+        external
+        view
+        returns (RewardSummary[] memory)
+    {
         VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
         .getRewardDistributors();
-        Reward[] memory pendingRewards;
+        RewardSummary[] memory rewardSummary;
         for (uint256 i; i < rewardsDistributors.length; ++i) {
-            Reward memory reward;
+            RewardSummary memory reward;
             reward.distributorAddress = address(rewardsDistributors[i]);
             reward.rewardTokenAddress = address(rewardsDistributors[i].rewardToken());
             reward.totalRewards = rewardsDistributors[i].rewardTokenAccrued(account);
             reward.pendingRewards = _calculateNotDistributedAwards(account, markets, rewardsDistributors[i]);
-            pendingRewards[i] = reward;
+            rewardSummary[i] = reward;
         }
-        return pendingRewards;
+        return rewardSummary;
     }
 
     function _calculateNotDistributedAwards(
