@@ -21,6 +21,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         uint256 amount
     );
 
+    /// @notice Emitted when pool registry address is updated
+    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -41,6 +44,17 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         protocolIncome = _protocolIncome;
         riskFund = _riskFund;
+    }
+
+    /**
+     * @dev Pool registry setter
+     * @param _poolRegistry Address of the pool registry.
+     */
+    function setPoolRegistry(address _poolRegistry) external onlyOwner {
+        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+        address oldPoolRegistry = poolRegistry;
+        poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**

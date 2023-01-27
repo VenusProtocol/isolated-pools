@@ -153,7 +153,7 @@ const riskFundFixture = async (): Promise<void> => {
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
   protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
     fakeProtocolIncome.address,
-    riskFund.address,
+    riskFund.address
   ]);
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
@@ -165,6 +165,8 @@ const riskFundFixture = async (): Promise<void> => {
     riskFund.address,
     protocolShareReserve.address,
   ]);
+
+  await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 
   await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
@@ -631,6 +633,7 @@ describe("Risk Fund: Tests", function () {
     });
 
     it("Below min threshold amount", async function () {
+
       await USDC.connect(usdcUser).approve(cUSDC.address, convertToUnit(1000, 18));
 
       await cUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));

@@ -17,7 +17,6 @@ import "./ReserveHelpers.sol";
 contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     address private convertibleBaseAsset;
