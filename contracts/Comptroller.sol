@@ -1010,7 +1010,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
     /**
      * @notice Return all reward distributors for this pool
-     * @return List of RewardDistributor addresses
+     * @return Array of RewardDistributor addresses
      */
     function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
         RewardsDistributor[] memory _rewardsDistributors = rewardsDistributors;
