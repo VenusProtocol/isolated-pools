@@ -14,6 +14,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     address private protocolIncome;
     address private riskFund;
 
+    /// @notice Emitted when funds are released 
+    event FundsReleased (
+        address comptroller,
+        address asset,
+        uint256 amount
+    );
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -60,6 +67,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund).updateAssetsState(comptroller, asset);
+
+        emit FundsReleased(comptroller, asset, amount);
 
         return amount;
     }

@@ -104,6 +104,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /// @notice Emitted when a rewards distributor is added
     event NewRewardsDistributor(address indexed rewardsDistributor);
 
+    /// @notice Emitted when a market is supported
+    event MarketSupported(VToken vToken);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -836,6 +839,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
+
+        emit MarketSupported(vToken);
     }
 
     /**
