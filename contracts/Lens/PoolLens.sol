@@ -345,7 +345,7 @@ contract PoolLens is ExponentialNoError {
         VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
         .getRewardDistributors();
-        RewardSummary[] memory rewardSummary;
+        RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
         for (uint256 i; i < rewardsDistributors.length; ++i) {
             RewardSummary memory reward;
             reward.distributorAddress = address(rewardsDistributors[i]);
@@ -362,14 +362,13 @@ contract PoolLens is ExponentialNoError {
         VToken[] memory markets,
         RewardsDistributor rewardDistributor
     ) internal view returns (PendingReward[] memory) {
-        PendingReward[] memory pendingRewards;
+        PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
             RewardToken memory borrowState;
             (borrowState.index, borrowState.block) = rewardDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardToken memory supplyState;
             (supplyState.index, supplyState.block) = rewardDistributor.rewardTokenSupplyState(address(markets[i]));
-
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             //Update market supply and borrow index in-memory
@@ -471,11 +470,9 @@ contract PoolLens is ExponentialNoError {
         Double memory supplierIndex = Double({
             mantissa: rewardDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
-
         if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
             supplierIndex.mantissa = rewardDistributor.rewardTokenInitialIndex();
         }
-
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
