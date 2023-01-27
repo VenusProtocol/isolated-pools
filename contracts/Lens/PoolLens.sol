@@ -324,7 +324,7 @@ contract PoolLens is ExponentialNoError {
     /**
      * @dev Struct used in RewardDistributor to save last updated market state
      */
-    struct RewardToken {
+    struct RewardTokenState {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
         uint224 index;
         // The block number the index was last updated at
@@ -335,7 +335,7 @@ contract PoolLens is ExponentialNoError {
      * @notice Returns the pending rewards for a user for a given pool.
      * @param account The user account.
      * @param comptrollerAddress address
-     * @return Pending rewards list
+     * @return Pending rewards array
      */
     function getPendingRewards(address account, address comptrollerAddress)
         external
@@ -365,9 +365,9 @@ contract PoolLens is ExponentialNoError {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
-            RewardToken memory borrowState;
+            RewardTokenState memory borrowState;
             (borrowState.index, borrowState.block) = rewardDistributor.rewardTokenBorrowState(address(markets[i]));
-            RewardToken memory supplyState;
+            RewardTokenState memory supplyState;
             (supplyState.index, supplyState.block) = rewardDistributor.rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
@@ -401,7 +401,7 @@ contract PoolLens is ExponentialNoError {
     function updateMarketBorrowIndex(
         address vToken,
         RewardsDistributor rewardDistributor,
-        RewardToken memory borrowState,
+        RewardTokenState memory borrowState,
         Exp memory marketBorrowIndex
     ) internal view {
         uint256 borrowSpeed = rewardDistributor.rewardTokenBorrowSpeeds(vToken);
@@ -423,7 +423,7 @@ contract PoolLens is ExponentialNoError {
     function updateMarketSupplyIndex(
         address vToken,
         RewardsDistributor rewardDistributor,
-        RewardToken memory supplyState
+        RewardTokenState memory supplyState
     ) internal view {
         uint256 supplySpeed = rewardDistributor.rewardTokenSupplySpeeds(vToken);
         uint256 blockNumber = block.number;
@@ -444,7 +444,7 @@ contract PoolLens is ExponentialNoError {
         address vToken,
         RewardsDistributor rewardDistributor,
         address borrower,
-        RewardToken memory borrowState,
+        RewardTokenState memory borrowState,
         Exp memory marketBorrowIndex
     ) internal view returns (uint256) {
         Double memory borrowIndex = Double({ mantissa: borrowState.index });
@@ -464,7 +464,7 @@ contract PoolLens is ExponentialNoError {
         address vToken,
         RewardsDistributor rewardDistributor,
         address supplier,
-        RewardToken memory supplyState
+        RewardTokenState memory supplyState
     ) internal view returns (uint256) {
         Double memory supplyIndex = Double({ mantissa: supplyState.index });
         Double memory supplierIndex = Double({
