@@ -15,6 +15,7 @@ chai.use(smock.matchers);
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
   await deployments.fixture([
     "MockTokens",
+    "OracleDeploy",
     "Oracle",
     "SwapRouter",
     "AccessControl",
