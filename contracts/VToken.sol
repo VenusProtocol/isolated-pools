@@ -259,7 +259,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         transferAllowances[src][spender] = currentAllowance;
 
-         emit Approval(src, spender, currentAllowance);
+        emit Approval(src, spender, currentAllowance);
         return true;
     }
 

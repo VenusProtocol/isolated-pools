@@ -20,7 +20,7 @@ const fixture = async (): Promise<void> => {
 
   // Fake contracts
   fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
-  fakeRiskFund.updateAssetsState(() => {})
+  await fakeRiskFund.updateAssetsState.returns();
 
   poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
   poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");

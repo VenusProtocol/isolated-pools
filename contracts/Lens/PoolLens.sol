@@ -76,10 +76,7 @@ contract PoolLens is ExponentialNoError {
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
      */
-    function vTokenBalancesAll(VToken[] calldata vTokens, address account)
-        external
-        returns (VTokenBalances[] memory)
-    {
+    function vTokenBalancesAll(VToken[] calldata vTokens, address account) external returns (VTokenBalances[] memory) {
         uint256 vTokenCount = vTokens.length;
         VTokenBalances[] memory res = new VTokenBalances[](vTokenCount);
         for (uint256 i; i < vTokenCount; ++i) {

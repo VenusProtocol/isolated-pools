@@ -32,7 +32,10 @@ contract ReserveHelpers {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
-        require(PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0), "ReserveHelpers: The pool doesn't support the asset");
+        require(
+            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
+            "ReserveHelpers: The pool doesn't support the asset"
+        );
 
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];

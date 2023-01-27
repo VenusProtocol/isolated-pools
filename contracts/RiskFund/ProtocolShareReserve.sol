@@ -14,12 +14,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     address private protocolIncome;
     address private riskFund;
 
-    /// @notice Emitted when funds are released 
-    event FundsReleased (
-        address comptroller,
-        address asset,
-        uint256 amount
-    );
+    /// @notice Emitted when funds are released
+    event FundsReleased(address comptroller, address asset, uint256 amount);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);

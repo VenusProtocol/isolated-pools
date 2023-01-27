@@ -8,7 +8,6 @@ import "../Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
 
 contract VTokenProxyFactory {
-
     struct VTokenArgs {
         address underlying_;
         ComptrollerInterface comptroller_;
