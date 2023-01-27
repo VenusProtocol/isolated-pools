@@ -223,6 +223,47 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice Increase approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param addedValue The number of tokens additional tokens spender can transfer
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     */
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+        address src = msg.sender;
+
+        uint256 allowance = transferAllowances[src][spender];
+        allowance += addedValue;
+        transferAllowances[src][spender] = allowance;
+
+        emit Approval(src, spender, allowance);
+        return true;
+    }
+
+    /**
+     * @notice Decreases approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param subtractedValue The number of tokens tokens to remove from total approval
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     */
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        address src = msg.sender;
+        uint256 currentAllowance = transferAllowances[src][spender];
+        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
+        unchecked {
+            currentAllowance -= subtractedValue;
+        }
+
+        transferAllowances[src][spender] = currentAllowance;
+
+         emit Approval(src, spender, currentAllowance);
+        return true;
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
