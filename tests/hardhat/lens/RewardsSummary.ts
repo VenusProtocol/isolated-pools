@@ -148,7 +148,7 @@ describe("PoolLens: Rewards Summary", () => {
   });
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
-    await mineUpTo(11);
+    await mine(11);
 
     const accountAddress = await account.getAddress();
 
