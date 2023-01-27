@@ -16,7 +16,7 @@ contract VTokenProxyFactory {
         string name_;
         string symbol_;
         uint8 decimals_;
-        address payable admin_;
+        address admin_;
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
         address vTokenProxyAdmin_;

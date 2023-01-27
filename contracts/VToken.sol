@@ -46,7 +46,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address payable admin_,
+        address admin_,
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public initializer {
@@ -83,7 +83,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address payable admin_,
+        address admin_,
         AccessControlManager accessControlManager_,
         VTokenInterface.RiskManagementInit memory riskManagement
     ) internal onlyInitializing {
@@ -569,7 +569,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(payable(msg.sender), redeemTokens, 0);
+        _redeemFresh(msg.sender, redeemTokens, 0);
         return NO_ERROR;
     }
 
@@ -582,7 +582,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(payable(msg.sender), 0, redeemAmount);
+        _redeemFresh(msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
 
@@ -594,7 +594,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
     function _redeemFresh(
-        address payable redeemer,
+        address redeemer,
         uint256 redeemTokensIn,
         uint256 redeemAmountIn
     ) internal {
@@ -678,7 +678,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount);
+        _borrowFresh(msg.sender, borrowAmount);
         return NO_ERROR;
     }
 
@@ -686,7 +686,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Users borrow assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      */
-    function _borrowFresh(address payable borrower, uint256 borrowAmount) internal {
+    function _borrowFresh(address borrower, uint256 borrowAmount) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
@@ -1429,7 +1429,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @dev Just a regular ERC-20 transfer, reverts on failure
      */
-    function _doTransferOut(address payable to, uint256 amount) internal virtual {
+    function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
         token.safeTransfer(to, amount);
     }

@@ -253,7 +253,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             input.name,
             input.symbol,
             input.decimals,
-            payable(msg.sender),
+            msg.sender,
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
             input.vTokenProxyAdmin,
