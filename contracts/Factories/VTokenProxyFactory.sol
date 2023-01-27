@@ -8,6 +8,7 @@ import "../Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
 
 contract VTokenProxyFactory {
+
     struct VTokenArgs {
         address underlying_;
         ComptrollerInterface comptroller_;
@@ -22,6 +23,8 @@ contract VTokenProxyFactory {
         address vTokenProxyAdmin_;
         address beaconAddress;
     }
+
+    event VTokenProxyDeployed(VTokenArgs args);
 
     function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
         BeaconProxy proxy = new BeaconProxy(
@@ -40,6 +43,8 @@ contract VTokenProxyFactory {
                 input.riskManagement
             )
         );
+
+        emit VTokenProxyDeployed(input);
 
         return VToken(address(proxy));
     }

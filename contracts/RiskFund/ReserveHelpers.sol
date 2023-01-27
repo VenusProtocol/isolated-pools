@@ -17,7 +17,7 @@ contract ReserveHelpers {
     mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
     // Address of pool registry contract
-    address public poolRegistry;
+    address internal poolRegistry;
 
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.

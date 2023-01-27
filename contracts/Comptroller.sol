@@ -92,9 +92,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /// @notice Emitted when borrow cap for a vToken is changed
     event NewBorrowCap(VToken indexed vToken, uint256 newBorrowCap);
 
-    /// @notice Emitted when borrow cap guardian is changed
-    event NewBorrowCapGuardian(address oldBorrowCapGuardian, address newBorrowCapGuardian);
-
     /// @notice Emitted when the collateral threshold (in USD) for non-batch liquidations is changed
     event NewMinLiquidatableCollateral(uint256 oldMinLiquidatableCollateral, uint256 newMinLiquidatableCollateral);
 
