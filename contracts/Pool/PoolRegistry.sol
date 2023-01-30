@@ -92,7 +92,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     address payable private protocolShareReserve;
 
     /**
-     * @dev Maps venus pool id to metadata
+     * @dev Maps pool's comptroller address to metadata.
      */
     mapping(address => VenusPoolMetaData) public metadata;
 
@@ -113,7 +113,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     mapping(address => VenusPool) private _poolByComptroller;
 
     /**
-     * @dev Maps pool id to asset to vToken.
+     * @dev Maps pool's comptroller address to asset to vToken.
      */
     mapping(address => mapping(address => address)) private _vTokens;
 
@@ -320,7 +320,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
     }
 
     /**
-     * @param comptroller The Comptroller implementation address.
+     * @param comptroller The comptroller proxy address associated to the pool.
      * @notice Returns Venus pool.
      */
     function getPoolByComptroller(address comptroller) external view returns (VenusPool memory) {
@@ -354,7 +354,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
 
         require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
 
-        require(bytes(name).length <= 100, "No pool name supplied.");
+        require(bytes(name).length <= 100, "Pool name is too large.");
 
         _numberOfPools++;
 

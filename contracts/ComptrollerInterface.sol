@@ -83,15 +83,9 @@ abstract contract ComptrollerViewInterface {
 
     function getAssetsIn(address) external view virtual returns (VToken[] memory);
 
-    function compSpeeds(address) external view virtual returns (uint256);
-
-    function priceOracle() external view virtual returns (address);
-
     function closeFactorMantissa() external view virtual returns (uint256);
 
     function liquidationIncentiveMantissa() external view virtual returns (uint256);
 
     function minLiquidatableCollateral() external view virtual returns (uint256);
-
-    function getXVSRewardsByMarket(address) external view virtual returns (uint256, uint256);
 }

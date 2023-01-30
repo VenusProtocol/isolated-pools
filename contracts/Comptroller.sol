@@ -391,10 +391,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
         oracle.updatePrice(vToken);
 
-        // Shh - currently unused
-        payer;
-        repayAmount;
-
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
         }
@@ -423,7 +419,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:error InsufficientShortfall is thrown when trying to liquidate a healthy account
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
-     * @custom:access Not restricted if vToken is enabled as collateral, otherwise only vToken
      */
     function preLiquidateHook(
         address vTokenBorrowed,
@@ -440,9 +435,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
         oracle.updatePrice(vTokenBorrowed);
         oracle.updatePrice(vTokenCollateral);
-
-        // Shh - currently unused
-        liquidator;
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -503,9 +495,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         // If we want to pause liquidating vTokenBorrowed, we should pause
         // Action.LIQUIDATE on it
         _checkActionPauseState(vTokenCollateral, Action.SEIZE);
-
-        // Shh - currently unused
-        seizeTokens;
 
         if (!markets[vTokenCollateral].isListed) {
             revert MarketNotListed(vTokenCollateral);
@@ -1176,7 +1165,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
-     * @dev Internal function to check that vTokens can be safelly redeemed for the underlying asset
+     * @dev Internal function to check that vTokens can be safely redeemed for the underlying asset
      * @param vToken Address of the vTokens to redeem
      * @param redeemer Account redeeming the tokens
      * @param redeemTokens The number of tokens to redeem

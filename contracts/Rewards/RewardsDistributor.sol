@@ -15,11 +15,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         uint32 block;
     }
 
-    /**
-     * @notice Calculate REWARD TOKEN accrued by a supplier and possibly transfer it to them
-     * @param vToken The market in which the supplier is interacting
-     * @param supplier The address of the supplier to distribute REWARD TOKEN to
-     */
+   
     /// @notice The REWARD TOKEN market supply state for each market
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
@@ -217,15 +213,18 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         }
     }
 
+
     function distributeSupplierRewardToken(address vToken, address supplier) public onlyComptroller {
         _distributeSupplierRewardToken(vToken, supplier);
     }
 
+    /**
+     * @notice Calculate REWARD TOKEN accrued by a supplier and possibly transfer it to them
+     * @param vToken The market in which the supplier is interacting
+     * @param supplier The address of the supplier to distribute REWARD TOKEN to
+     */
     function _distributeSupplierRewardToken(address vToken, address supplier) internal {
-        // TODO: Don't distribute supplier REWARD TOKEN if the user is not in the supplier market.
-        // This check should be as gas efficient as possible as distributeSupplierRewardToken is called in many places.
-        // - We really don't want to call an external contract as that's quite expensive.
-
+        // it should only be called when a user is in the supplier market
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplyIndex = supplyState.index;
         uint256 supplierIndex = rewardTokenSupplierIndex[vToken][supplier];
@@ -258,7 +257,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      * @notice Calculate reward token accrued by a borrower and possibly transfer it to them
      *         Borrowers will begin to accrue after the first interaction with the protocol.
      * @dev This function should only be called when the user has a borrow position in the market
-     *      (e.g. Comptroller.borrowAllowed, and Comptroller.repayBorrowAllowed)
+     *      (e.g. Comptroller.preBorrowHook, and Comptroller.preRepayHook)
      *      We avoid an external call to check if they are in the market to save gas because this function is called in many places.
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to

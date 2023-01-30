@@ -23,11 +23,11 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _protocolIncome  remaining protocol income.
+     * @param _protocolIncome The address protocol income will be sent to.
      * @param _riskFund Risk fund address.
      */
     function initialize(address _protocolIncome, address _riskFund) public initializer {
-        require(_protocolIncome != address(0), "ProtocolShareReserve: Liquidated shares address invalid");
+        require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
         require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
         __Ownable_init();

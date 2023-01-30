@@ -154,13 +154,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* Do the calculations, checking for {under,over}flow */
         uint256 allowanceNew = startingAllowance - tokens;
-        uint256 srvTokensNew = accountTokens[src] - tokens;
+        uint256 srcTokensNew = accountTokens[src] - tokens;
         uint256 dstTokensNew = accountTokens[dst] + tokens;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
 
-        accountTokens[src] = srvTokensNew;
+        accountTokens[src] = srcTokensNew;
         accountTokens[dst] = dstTokensNew;
 
         /* Eat some of the allowance (if necessary) */
@@ -256,7 +256,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Get a snapshot of the account's balances, and the cached exchange rate
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @return vTokenBalance User's balance of vTokens
      * @return borrowBalance Amount owed in terms of underlying
      * @return exchangeRate Stored exchange rate

@@ -30,7 +30,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @notice Emitted when convertible base asset address is updated
-    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
+    event ConvertibleBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
@@ -54,7 +54,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /**
      * @dev Initializes the deployer to owner.
      * @param _pancakeSwapRouter Address of the PancakeSwap router
-     * @param _minAmountToConvert Asset should be worth of min amount to convert into base asset
+     * @param _minAmountToConvert Minimum amount assets must be worth to convert into base asset
      * @param _convertibleBaseAsset Address of the base asset
      * @param _accessControl Address of the access control contract.
      */
@@ -66,7 +66,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
-        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
+        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
 
         __Ownable2Step_init();
 
@@ -91,11 +91,11 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @dev Convertible base asset setter
      * @param _convertibleBaseAsset Address of the asset.
      */
-    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
+    function setConvertibleBaseAsset(address _convertibleBaseAsset) external onlyOwner {
         require(_convertibleBaseAsset != address(0), "Risk Fund: Asset address invalid");
         address oldBaseAsset = convertibleBaseAsset;
         convertibleBaseAsset = _convertibleBaseAsset;
-        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
+        emit ConvertibleBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
     }
 
     /**
@@ -122,10 +122,10 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @dev Min amount to convert setter
-     * @param _minAmountToConvert Min amout to convert.
+     * @param _minAmountToConvert Min amount to convert.
      */
     function setMinAmountToConvert(uint256 _minAmountToConvert) external onlyOwner {
-        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amout to convert");
+        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
         uint256 oldMinAmountToConvert = minAmountToConvert;
         minAmountToConvert = _minAmountToConvert;
         emit MinAmountToConvertUpdated(oldMinAmountToConvert, _minAmountToConvert);
@@ -133,7 +133,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
-     * @param underlyingAssets Array of assets to swap for base asset
+     * @param underlyingAssets Array of vToken address to swap for base asset
      * @param amountsOutMin Minimum amount to recieve for swap
      * @return Number of swapped tokens.
      */

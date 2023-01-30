@@ -20,7 +20,8 @@ contract ReserveHelpers {
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+     * and transferring funds to the protocol share reserve
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
