@@ -257,9 +257,8 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[10]).equal(closeFactor1);
     expect(venusPool_1_Actual[11]).equal(liquidationIncentive1);
     expect(venusPool_1_Actual[12]).equal(minLiquidatableCollateral);
-    expect(venusPool_1_Actual[13]).equal(0);
 
-    const vTokens_Actual = venusPool_1_Actual[14];
+    const vTokens_Actual = venusPool_1_Actual[13];
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC
@@ -287,7 +286,6 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(venusPool_1_Actual[10]).equal(closeFactor2);
     expect(venusPool_1_Actual[11]).equal(liquidationIncentive2);
     expect(venusPool_1_Actual[12]).equal(minLiquidatableCollateral);
-    expect(venusPool_1_Actual[13]).equal(0);
   });
 
   it("getPoolData By Comptroller", async function () {
@@ -305,9 +303,8 @@ describe("PoolLens - PoolView Tests", async function () {
     expect(poolData[10]).equal(closeFactor1);
     expect(poolData[11]).equal(liquidationIncentive1);
     expect(poolData[12]).equal(minLiquidatableCollateral);
-    expect(poolData[13]).equal(0);
 
-    const vTokens_Actual = poolData[14];
+    const vTokens_Actual = poolData[13];
     expect(vTokens_Actual.length).equal(2);
 
     // get VToken for Asset-1 : WBTC

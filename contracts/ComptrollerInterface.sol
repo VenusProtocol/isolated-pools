@@ -85,13 +85,9 @@ abstract contract ComptrollerViewInterface {
 
     function compSpeeds(address) external view virtual returns (uint256);
 
-    function pauseGuardian() external view virtual returns (address);
-
     function priceOracle() external view virtual returns (address);
 
     function closeFactorMantissa() external view virtual returns (uint256);
-
-    function maxAssets() external view virtual returns (uint256);
 
     function liquidationIncentiveMantissa() external view virtual returns (uint256);
 

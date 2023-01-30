@@ -9,10 +9,6 @@ contract ComptrollerHarness is Comptroller {
 
     constructor(address _poolRegistry, address _accessControl) Comptroller(_poolRegistry, _accessControl) {}
 
-    function setPauseGuardian(address harnessedPauseGuardian) public {
-        pauseGuardian = harnessedPauseGuardian;
-    }
-
     function harnessFastForward(uint256 blocks) public returns (uint256) {
         blockNumber += blocks;
         return blockNumber;
