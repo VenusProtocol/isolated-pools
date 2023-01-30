@@ -85,7 +85,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement
     ) internal onlyInitializing {
         __Ownable2Step_init();
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
