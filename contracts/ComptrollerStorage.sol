@@ -73,7 +73,7 @@ contract ComptrollerV1Storage {
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;
 
-      struct LiquidationOrder {
+    struct LiquidationOrder {
         VToken vTokenCollateral;
         VToken vTokenBorrowed;
         uint256 repayAmount;
@@ -104,5 +104,4 @@ contract ComptrollerV1Storage {
 
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-
 }

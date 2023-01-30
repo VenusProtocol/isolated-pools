@@ -15,7 +15,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         uint32 block;
     }
 
-   
     /// @notice The REWARD TOKEN market supply state for each market
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
@@ -213,7 +212,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         }
     }
 
-
     function distributeSupplierRewardToken(address vToken, address supplier) public onlyComptroller {
         _distributeSupplierRewardToken(vToken, supplier);
     }
@@ -405,10 +403,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      * @param holders The addresses to claim REWARD TOKEN for
      * @param vTokens The list of markets to claim REWARD TOKEN in
      */
-    function _claimRewardToken(
-        address[] memory holders,
-        VToken[] memory vTokens
-    ) internal {
+    function _claimRewardToken(address[] memory holders, VToken[] memory vTokens) internal {
         uint256 vTokensCount = vTokens.length;
         uint256 holdersCount = holders.length;
         for (uint256 i; i < vTokensCount; ++i) {

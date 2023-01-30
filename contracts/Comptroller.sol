@@ -15,7 +15,6 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
-  
     // PoolRegistry, immutable to save on gas
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable poolRegistry;
