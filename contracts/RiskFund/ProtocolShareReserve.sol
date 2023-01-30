@@ -7,8 +7,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../ExponentialNoError.sol";
 import "./IRiskFund.sol";
 import "./ReserveHelpers.sol";
+import "./IProtocolShareReserve.sol";
 
-contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
+contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
@@ -81,5 +82,14 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         emit FundsReleased(comptroller, asset, amount);
 
         return amount;
+    }
+
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset) public override(IProtocolShareReserve, ReserveHelpers) {
+        super.updateAssetsState(comptroller, asset);
     }
 }

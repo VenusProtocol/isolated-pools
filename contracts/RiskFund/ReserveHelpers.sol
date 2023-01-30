@@ -28,7 +28,7 @@ contract ReserveHelpers {
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) external {
+    function updateAssetsState(address comptroller, address asset) virtual public {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");

@@ -143,7 +143,7 @@ contract PoolLens is ExponentialNoError {
     function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
         external
         view
-        returns (uint256[] memory)
+        returns (address[] memory)
     {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return poolRegistryInterface.getPoolsSupportedByAsset(asset);
