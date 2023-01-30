@@ -534,6 +534,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
+        require(minter != address(0), "invalid minter address");
+
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
         _mintFresh(msg.sender, minter, mintAmount);
