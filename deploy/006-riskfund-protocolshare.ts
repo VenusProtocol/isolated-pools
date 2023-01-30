@@ -64,12 +64,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await deploy("ProtocolShareReserve", {
     from: deployer,
-    log: true,
-    autoMine: true,
-  });
-
-  await deploy("ProtocolShareReserve", {
-    from: deployer,
     contract: "ProtocolShareReserve",
     proxy: {
       owner: deployer,
