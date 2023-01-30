@@ -72,4 +72,37 @@ contract ComptrollerV1Storage {
 
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;
+
+      struct LiquidationOrder {
+        VToken vTokenCollateral;
+        VToken vTokenBorrowed;
+        uint256 repayAmount;
+    }
+
+    struct AccountLiquiditySnapshot {
+        uint256 totalCollateral;
+        uint256 weightedCollateral;
+        uint256 borrows;
+        uint256 effects;
+        uint256 liquidity;
+        uint256 shortfall;
+    }
+
+    struct RewardSpeeds {
+        address rewardToken;
+        uint256 supplySpeed;
+        uint256 borrowSpeed;
+    }
+
+    uint256 internal constant NO_ERROR = 0;
+
+    // closeFactorMantissa must be strictly greater than this value
+    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
+
+    // closeFactorMantissa must not exceed this value
+    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
+
+    // No collateralFactorMantissa may exceed this value
+    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
+
 }
