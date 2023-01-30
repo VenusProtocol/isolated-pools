@@ -508,21 +508,21 @@ describe("Risk Fund: Tests", function () {
 
     describe("setConvertableBaseAsset", async function () {
       it("Reverts on invalid Pool registry address", async function () {
-        await expect(riskFund.setConvertableBaseAsset(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setConvertibleBaseAsset(constants.AddressZero)).to.be.rejectedWith(
           "Risk Fund: Asset address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setConvertableBaseAsset(BUSD.address)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setConvertibleBaseAsset(BUSD.address)).to.be.rejectedWith(
           "Ownable: caller is not the owner",
         );
       });
 
       it("emits ConvertableBaseAssetUpdated event", async function () {
         const newBaseAsset = await smock.fake<MockToken>("PoolRegistry");
-        const tx = riskFund.setConvertableBaseAsset(newBaseAsset.address);
-        await expect(tx).to.emit(riskFund, "ConvertableBaseAssetUpdated").withArgs(BUSD.address, newBaseAsset.address);
+        const tx = riskFund.setConvertibleBaseAsset(newBaseAsset.address);
+        await expect(tx).to.emit(riskFund, "ConvertibleBaseAssetUpdated").withArgs(BUSD.address, newBaseAsset.address);
       });
     });
 
@@ -576,7 +576,7 @@ describe("Risk Fund: Tests", function () {
 
     describe("setMinAmountToConvert", async function () {
       it("reverts on invalid min amount to convert", async function () {
-        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amout to convert");
+        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amount to convert");
       });
 
       it("fails if called by a non-owner", async function () {
