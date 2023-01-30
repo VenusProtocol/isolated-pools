@@ -419,7 +419,6 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
         .withArgs("100000000000000000000", "15999000000");
     });
-
     it("Should revert when try to drain market", async function () {
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
