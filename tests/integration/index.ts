@@ -11,8 +11,8 @@ import {
   Comptroller,
   MockToken,
   PoolRegistry,
-  PriceOracle, // RiskFund,
-  // Shortfall,
+  PriceOracle,
+  RiskFund,
   VToken,
 } from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
@@ -33,7 +33,6 @@ const mineBlock = async () => {
 };
 
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
-<<<<<<< HEAD
   await deployments.fixture([
     "MockTokens",
     "OracleDeploy",
@@ -45,11 +44,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "AccessControlConfig",
     "Pools",
   ]);
-  const { deployer, acc1, acc2 } = await getNamedAccounts();
-=======
-  await deployments.fixture(["Oracle", "Pools"]);
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
->>>>>>> a441159 (wip : [VEN-887] Auction Scenarios)
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
   const RiskFund = await ethers.getContract("RiskFund");
@@ -424,6 +419,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
         .withArgs("100000000000000000000", "15999000000");
     });
+
     it("Should revert when try to drain market", async function () {
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
@@ -631,25 +627,28 @@ describe("Risk Fund and Auction related scenarios", () => {
   let BSW: MockToken;
   let acc1: string;
   let acc2: string;
+  let deployer: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  // let RiskFund: RiskFund;
-  // let BUSD: MockToken;
-  // let shortFall: Shortfall;
+  let RiskFund: RiskFund;
+  let PoolRegistry: PoolRegistry;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, ProtocolShareReserve } = fixture);
+    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, deployer, ProtocolShareReserve, RiskFund, PoolRegistry } =
+      fixture);
   });
 
   describe("Generate risk fund swap it to base asset", () => {
     const mintAmount = convertToUnit("1", 8);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
+    let deployerSigner: Signer;
     const bswBorrowAmount = 1e4;
 
     beforeEach(async () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
+      deployerSigner = await ethers.getSigner(deployer);
 
       await BNX.connect(acc2Signer).faucet(mintAmount * 10);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount * 10);
@@ -663,6 +662,7 @@ describe("Risk Fund and Auction related scenarios", () => {
       // Approve more assets for liquidation
       await BSW.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BSW.connect(acc1Signer).approve(vBSW.address, convertToUnit("1", 18));
+      await RiskFund.setPoolRegistry(PoolRegistry.address);
     });
 
     it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
@@ -678,72 +678,11 @@ describe("Risk Fund and Auction related scenarios", () => {
       await vBNX.reduceReserves(totalReserves);
       // Check the balance of protocol share reserve
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
-      // // //Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
-      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
-      // expect(await BUSD.balanceOf(RiskFund.address)).to.be.equal("1000"); // Waiting for deployement script to be fixed
-    });
-
-    it("Start Auction Type-1", async function () {
-      // ====================Bad Debt generator logic========================
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 20));
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
-      await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      await Comptroller.connect(acc1Signer).healAccount(acc2);
-      const totalReserves = await vBNX.totalReserves();
-      await vBNX.reduceReserves(totalReserves);
-      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
-
-      // =========================Create Auction============================
-      // await shortFall.startAuction(Comptroller.address);
-      // =========================PlaceBid==================================
-
-      /*
-      1. revert on dips is greater then max dips
-      2. revert when your bid is not highest
-      3. revert when acution status is changed
-      4. success
-      5. check highest bidder balance 
-      6. check previous bidder balance
-      7. check market bad debt is revovered
-      */
-    });
-
-    it("Start Auction Type-2", async function () {
-      // ====================Bad Debt generator logic========================
-      await vBSW.connect(acc2Signer).borrow(1e5);
-      await ethers.provider.send("hardhat_mine", ["0x5F5E100"]);
-      await vBSW.connect(acc2Signer).borrow(1e10);
-      await ethers.provider.send("hardhat_mine", ["0xD18C2E2800"]);
-      await vBSW.connect(acc2Signer).borrow(1e5);
-      await vBSW.connect(acc1Signer).borrow(1e4);
-      await ethers.provider.send("hardhat_mine", ["0x82F79CD9000"]);
-
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("30", 19));
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("30", 20));
-      await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      await Comptroller.connect(acc1Signer).healAccount(acc2);
-      const totalReserves = await vBNX.totalReserves();
-      await vBNX.reduceReserves(totalReserves);
-      // await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-      // await RiskFund.connect(deployerSigner).swapPoolsAssets([vBNX.address], ["1000"]);
-
-      // =========================Create Auction============================
-      // await shortFall.startAuction(Comptroller.address);
-      // =========================PlaceBid==================================
-
-      /*
-      1. revert on dips is greater then max dips
-      2. revert when your bid is not highest
-      3. revert when acution status is changed
-      4. success
-      5. check highest bidder balance 
-      6. check previous bidder balance
-      7. check market bad debt is revovered
-      */
+      expect(await BNX.balanceOf(deployer)).to.be.equal(0);
+      // Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
+      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
+      expect(await BNX.balanceOf(deployer)).to.be.equal(totalReserves * 0.7);
+      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(totalReserves * 0.3);
     });
   });
 });
