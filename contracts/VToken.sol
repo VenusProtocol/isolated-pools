@@ -904,7 +904,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             accountStableBorrows[borrower].stableRateMantissa = stableRateMantissaNew;
             stableBorrows = stableBorrowsNew;
             averageStableBorrowRate = averageStableBorrowRateNew;
-            totalBorrows = totalBorrowsNew;
         } else {
             /*
              * We calculate the new borrower and total borrow balances, failing on overflow:
@@ -925,8 +924,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              */
             accountBorrows[borrower].principal = accountBorrowsNew;
             accountBorrows[borrower].interestIndex = borrowIndex;
-            totalBorrows = totalBorrowsNew;
         }
+
+        totalBorrows = totalBorrowsNew;
 
         /*
          * We invoke _doTransferOut for the borrower and the borrowAmount.
