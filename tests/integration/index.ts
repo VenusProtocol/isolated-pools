@@ -580,7 +580,6 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert on healing if borrow is less then collateral amount", async function () {
-      // await vBNX.connect(acc2Signer).redeem(convertToUnit("5", 7));
       await expect(Comptroller.connect(acc1Signer).healAccount(acc2))
         .to.be.revertedWithCustomError(Comptroller, "CollateralExceedsThreshold")
         .withArgs(bswBorrowAmount * vBSWPrice, (vBNXPrice * mintAmount).toString());
