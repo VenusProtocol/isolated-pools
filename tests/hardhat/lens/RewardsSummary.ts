@@ -187,7 +187,7 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
           [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
@@ -196,7 +196,7 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
           [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
@@ -205,7 +205,7 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
           [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
