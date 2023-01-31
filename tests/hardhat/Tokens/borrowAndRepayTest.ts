@@ -651,6 +651,36 @@ describe("VToken", function () {
       expect(borrowSnap1.lastBlockAccrued).to.equal(100052);
       expect(borrowSnap2.lastBlockAccrued).to.equal(100052);
     });
+
+    it("Average stable borrow rate, stable borrows after borrow and repay", async () => {
+      const [, , borrower2] = await ethers.getSigners();
+
+      await preBorrow(contracts, borrower, borrowAmount, convertToUnit(1, 6));
+      await borrowStable(vToken, borrower, borrowAmount);
+      let averageBorrowRate = await vToken.averageStableBorrowRate();
+      let stabelBorrows = await vToken.stableBorrows();
+      expect(averageBorrowRate).to.equal(1000000);
+      expect(stabelBorrows).to.equal(borrowAmount);
+
+      await preBorrow(contracts, borrower2, borrowAmount, convertToUnit(1, 8));
+      await vToken.harnessSetTotalBorrows(borrowAmount);
+      await borrowStable(vToken, borrower2, borrowAmount);
+      await vToken.harnessFastForward(10);
+
+      stabelBorrows = await vToken.stableBorrows();
+      expect(stabelBorrows).to.equal(convertToUnit(2000, 18));
+      averageBorrowRate = await vToken.averageStableBorrowRate();
+      expect(averageBorrowRate).to.equal(50500000);
+
+      await underlying.harnessSetFailTransferFromAddress(await borrower.getAddress(), false);
+      await preApprove(underlying, vToken, borrower, borrowAmount, { faucet: true });
+      await vToken.connect(borrower).repayBorrowStable(borrowAmount);
+
+      averageBorrowRate = await vToken.averageStableBorrowRate();
+      expect(averageBorrowRate).to.equal(99999999);
+      stabelBorrows = await vToken.stableBorrows();
+      expect(stabelBorrows).to.equal("1000000000011000000000");
+    });
   });
 
   describe("repayBorrowBehalf", () => {

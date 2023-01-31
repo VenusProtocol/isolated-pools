@@ -1064,10 +1064,23 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
             uint256 stableBorrowsNew = stableBorrows - actualRepayAmount;
 
+            uint256 stableRateMantissa = accountStableBorrows[borrower].stableRateMantissa;
+            uint256 averageStableBorrowRateNew;
+            if (stableBorrowsNew == 0) {
+                averageStableBorrowRateNew = 0;
+            } else {
+                unchecked {
+                    averageStableBorrowRateNew =
+                        ((stableBorrows * averageStableBorrowRate) - (actualRepayAmount * stableRateMantissa)) /
+                        stableBorrowsNew;
+                }
+            }
+
             accountStableBorrows[borrower].principal = accountBorrowsNew;
             accountStableBorrows[borrower].interestIndex = stableBorrowIndex;
 
             stableBorrows = stableBorrowsNew;
+            averageStableBorrowRate = averageStableBorrowRateNew;
         } else {
             accountBorrows[borrower].principal = accountBorrowsNew;
             accountBorrows[borrower].interestIndex = borrowIndex;
@@ -1127,6 +1140,18 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
             stableBorrowsNew = stableBorrows - stableDebt;
 
+            uint256 stableRateMantissa = accountStableBorrows[account].stableRateMantissa;
+            uint256 averageStableBorrowRateNew;
+            if (stableBorrowsNew == 0) {
+                averageStableBorrowRateNew = 0;
+            } else {
+                unchecked {
+                    averageStableBorrowRateNew =
+                        ((stableBorrows * averageStableBorrowRate) - (stableDebt * stableRateMantissa)) /
+                        stableBorrowsNew;
+                }
+            }
+
             /////////////////////////
             // EFFECTS & INTERACTIONS
             // (No safe failures beyond this point)
@@ -1135,6 +1160,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
             accountStableBorrows[account].principal = 0;
             accountStableBorrows[account].interestIndex = stableBorrowIndex;
+
+            averageStableBorrowRate = averageStableBorrowRateNew;
         }
 
         stableBorrows = stableBorrowsNew;
