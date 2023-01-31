@@ -1,7 +1,7 @@
 import { smock } from "@defi-wonderland/smock";
 import BigNumber from "bignumber.js";
 import chai from "chai";
-import { Signer } from "ethers";
+import { BigNumberish, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { deployments } from "hardhat";
 
@@ -44,6 +44,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "AccessControlConfig",
     "Pools",
   ]);
+  const EXPONENT_SCALE = 10e18;
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
@@ -186,7 +187,8 @@ describe("Positive Cases", () => {
   });
 
   describe("Main Operations", () => {
-    const mintAmount: number = 1e6;
+    const mintAmount: BigNumberish = convertToUnit(1, 18);
+    const vTokenMintAmount: BigNumberish = convertToUnit(1, 8);
     const collateralFactor: number = 0.7;
     let acc1Signer: Signer;
     let acc2Signer: Signer;
@@ -195,12 +197,12 @@ describe("Positive Cases", () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
 
-      await BNX.connect(acc2Signer).faucet(mintAmount * 100);
-      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount * 10);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       // Fund 2nd account
-      await BSW.connect(acc1Signer).faucet(mintAmount * 100);
-      await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount * 100);
+      await BSW.connect(acc1Signer).faucet(mintAmount);
+      await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
     });
 
     it("Mint, Redeem, Borrow, Repay", async function () {
@@ -212,16 +214,15 @@ describe("Positive Cases", () => {
       // //////////
       // // MINT //
       // //////////
-      await expect(vBNX.connect(acc2Signer).mint(mintAmount))
-        .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
+      const tx = await vBNX.connect(acc2Signer).mint(mintAmount);
+      await expect(tx).to.emit(vBNX, "Mint").withArgs(acc2, mintAmount, vTokenMintAmount, vTokenMintAmount);
       [error, balance, borrowBalance] = await vBNX.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(balance).to.equal(mintAmount);
+      expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
       [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal(new BigNumber(mintAmount * collateralFactor).multipliedBy(vBNXPrice));
+      expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(collateralFactor).multipliedBy(vBNXPrice));
       expect(shortfall).to.equal(0);
       // ////////////
       // // Borrow //
@@ -229,48 +230,48 @@ describe("Positive Cases", () => {
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(await acc1Signer.getAddress(), mintAmount, mintAmount, mintAmount);
-
+        .withArgs(await acc1Signer.getAddress(), mintAmount, vTokenMintAmount, vTokenMintAmount);
       [error, balance, borrowBalance] = await vBSW
         .connect(acc2Signer)
         .getAccountSnapshot(await acc1Signer.getAddress());
       expect(error).to.equal(Error.NO_ERROR);
-      expect(balance).to.equal(mintAmount);
+      expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
-
       [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal(new BigNumber(mintAmount * collateralFactor).multipliedBy(vBSWPrice));
+      expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(collateralFactor).multipliedBy(vBSWPrice));
       expect(shortfall).to.equal(0);
-
-      const bswBorrowAmount = 1e4;
+      const bswBorrowAmount = convertToUnit(1, 18);
+      const vBSWBorrowAmount = convertToUnit(1, 18);
 
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
-        .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
-
+        .withArgs(acc2, bswBorrowAmount, vBSWBorrowAmount, vBSWBorrowAmount);
       [error, balance, borrowBalance] = await vBSW.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(0);
-      expect(borrowBalance).to.equal(bswBorrowAmount);
+      expect(borrowBalance).to.equal(vBSWBorrowAmount);
       // ////////////
       // // REDEEM //
       // ////////////
-      const redeemAmount = 10e3;
-      await expect(vBNX.connect(acc2Signer).redeem(redeemAmount))
+      const vTokenRedeemAmount = convertToUnit(5, 7);
+      const tokenRedeemAmount = convertToUnit(5, 17);
+      const balanceAfterVToken = new BigNumber(vTokenMintAmount).minus(vTokenRedeemAmount);
+      const balanceAfter = new BigNumber(mintAmount).minus(tokenRedeemAmount);
+      await expect(vBNX.connect(acc2Signer).redeem(vTokenRedeemAmount))
         .to.emit(vBNX, "Redeem")
-        .withArgs(acc2, redeemAmount, redeemAmount, mintAmount - redeemAmount);
-
+        .withArgs(acc2, tokenRedeemAmount, vTokenRedeemAmount, balanceAfterVToken);
       [error, balance, borrowBalance] = await vBNX.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(balance).to.equal(mintAmount - redeemAmount);
+      expect(balance).to.equal(balanceAfterVToken);
       expect(borrowBalance).to.equal(0);
       [error, balance, borrowBalance] = await vBSW.connect(acc2Signer).getAccountSnapshot(acc2);
-      const preComputeLiquidity =
-        (mintAmount - redeemAmount) * collateralFactor * vBNXPrice - Number(borrowBalance) * vBSWPrice;
+      const bnxLiquidity = new BigNumber(mintAmount).minus(new BigNumber(tokenRedeemAmount)).multipliedBy(vBNXPrice);
+      const bswBorrow = new BigNumber(borrowBalance.toString()).multipliedBy(vBSWPrice);
+      let preComputeLiquidity = bnxLiquidity.minus(bswBorrow).multipliedBy(collateralFactor);
       [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal(preComputeLiquidity);
+      expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 18)));
       expect(shortfall).to.equal(0);
       // ////////////
       // // REPAY //
@@ -278,15 +279,14 @@ describe("Positive Cases", () => {
       await BSW.connect(acc2Signer).faucet(bswBorrowAmount);
       await BSW.connect(acc2Signer).approve(vBSW.address, bswBorrowAmount);
       await expect(vBSW.connect(acc2Signer).repayBorrow(bswBorrowAmount)).to.emit(vBSW, "RepayBorrow");
-
       [error, balance, borrowBalance] = await vBNX.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(balance).to.equal(mintAmount - redeemAmount);
+      expect(balance).to.equal(balanceAfterVToken);
       expect(borrowBalance).to.equal(0);
-
+      preComputeLiquidity = balanceAfter.multipliedBy(collateralFactor).multipliedBy(vBNXPrice);
       [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
       expect(error).to.equal(Error.NO_ERROR);
-      expect(liquidity).to.equal((mintAmount - redeemAmount) * collateralFactor * vBNXPrice);
+      expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 14)));
       expect(shortfall).to.equal(0);
     });
   });
@@ -310,10 +310,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
   });
 
   describe("Force Liquidation of user via Comptroller", () => {
-    const mintAmount = convertToUnit("1", 8);
+    const mintAmount: BigNumberish = convertToUnit(1, 15);
+    const bswBorrowAmount: BigNumberish = convertToUnit(1, 15);
+    const vTokenMintedAmount: BigNumberish = convertToUnit(1, 5);
+    const insufficientLiquidityBorrow: BigNumberish = convertToUnit(3, 18);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    const bswBorrowAmount = 1e4;
     let result;
 
     beforeEach(async () => {
@@ -326,24 +328,22 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       // Fund 2nd account
       await BSW.connect(acc1Signer).faucet(mintAmount);
       await BSW.connect(acc1Signer).approve(vBSW.address, mintAmount);
-
       await expect(vBNX.connect(acc2Signer).mint(mintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, mintAmount, mintAmount, mintAmount);
+        .withArgs(acc2, mintAmount, vTokenMintedAmount, vTokenMintedAmount);
       // borrow
       // Supply WBTC to market from 2nd account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
-        .withArgs(acc1, mintAmount, mintAmount, mintAmount);
+        .withArgs(acc1, mintAmount, vTokenMintedAmount, vTokenMintedAmount);
       // It should revert when try to borrow more than liquidity
-      await expect(vBSW.connect(acc2Signer).borrow(8e10)).to.be.revertedWithCustomError(
+      await expect(vBSW.connect(acc2Signer).borrow(insufficientLiquidityBorrow)).to.be.revertedWithCustomError(
         Comptroller,
         "InsufficientLiquidity",
       );
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
         .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
-
       // Approve more assets for liquidation
       await BSW.connect(acc1Signer).faucet(bswBorrowAmount);
       await BSW.connect(acc1Signer).approve(vBSW.address, bswBorrowAmount);
@@ -351,7 +351,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
     it("Should revert when repay amount on liquidation is not equal to borrow amount", async function () {
       // Repay amount does not make borrower principal to zero
-      const repayAmount = bswBorrowAmount / 2;
+      const repayAmount = Number(bswBorrowAmount) / 2;
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBSW.address,

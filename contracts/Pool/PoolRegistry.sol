@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "../Comptroller.sol";
 import "../Factories/VTokenProxyFactory.sol";
@@ -244,12 +245,13 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         }
 
         Comptroller comptroller = Comptroller(input.comptroller);
+        uint256 underlyingDecimals = IERC20Metadata(input.asset).decimals();
 
         VTokenProxyFactory.VTokenArgs memory initializeArgs = VTokenProxyFactory.VTokenArgs(
             input.asset,
             comptroller,
             rate,
-            10**(input.decimals - 8 + 18),
+            10**(underlyingDecimals - 8 + 18),
             input.name,
             input.symbol,
             input.decimals,

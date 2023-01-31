@@ -7,9 +7,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
-  console.log("Proxy Admin: " + proxyAdmin.address);
-
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const vBep20Factory = await ethers.getContract("VTokenProxyFactory");
   const riskFund = await ethers.getContract("RiskFund");
