@@ -9,8 +9,9 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "../VToken.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
+import "./IShortfall.sol";
 
-contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
+contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -62,7 +63,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public constant waitForFirstBidder = 100;
 
     /// @notice base asset contract address
-    address private convertibleBaseAsset;
+    address public convertibleBaseAsset;
 
     /// @notice Auctions for each pool
     mapping(address => Auction) public auctions;
@@ -100,9 +101,6 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
-    /// @notice Emitted when convertible base asset address is updated
-    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -127,17 +125,6 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
         minimumPoolBadDebt = _minimumPoolBadDebt;
         convertibleBaseAsset = _convertibleBaseAsset;
         riskFund = _riskFund;
-    }
-
-    /**
-     * @dev Convertible base asset setter
-     * @param _convertibleBaseAsset Address of the asset.
-     */
-    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
-        require(_convertibleBaseAsset != address(0), "Shortfall: Asset address invalid");
-        address oldBaseAsset = convertibleBaseAsset;
-        convertibleBaseAsset = _convertibleBaseAsset;
-        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
     }
 
     /**

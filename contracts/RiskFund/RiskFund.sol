@@ -11,6 +11,7 @@ import "../IPancakeswapV2Router.sol";
 import "../Pool/PoolRegistry.sol";
 import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
+import "../Shortfall/IShortfall.sol";
 
 /**
  * @dev This contract does not support BNB.
@@ -89,22 +90,13 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
-     * @dev Convertible base asset setter
-     * @param _convertibleBaseAsset Address of the asset.
-     */
-    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
-        require(_convertibleBaseAsset != address(0), "Risk Fund: Asset address invalid");
-        address oldBaseAsset = convertibleBaseAsset;
-        convertibleBaseAsset = _convertibleBaseAsset;
-        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
-    }
-
-    /**
      * @dev Shortfall contract address setter
      * @param _shortfallContractAddress Address of the auction contract.
      */
     function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
         require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
+        require(IShortfall(_shortfallContractAddress).convertibleBaseAsset() != address(0), "Risk Fund: Base asset doesn't match");
+
         address oldShortfallContractAddress = shortfall;
         shortfall = _shortfallContractAddress;
         emit ShortfallContractUpdated(oldShortfallContractAddress, _shortfallContractAddress);
