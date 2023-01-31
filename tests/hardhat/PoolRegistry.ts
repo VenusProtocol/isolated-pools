@@ -310,7 +310,7 @@ describe("PoolRegistry: Tests", function () {
       const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
       expect(await vToken.isVToken()).to.equal(true);
       expect(await vToken.underlying()).to.equal(mockToken.address);
-      expect(await vToken.exchangeRateStored()).to.equal(10n ** 8n);
+      expect(await vToken.exchangeRateStored()).to.equal(10n ** 28n);
       expect(await vToken.name()).to.equal("Venus SomeToken");
       expect(await vToken.symbol()).to.equal("vST");
       expect(await vToken.comptroller()).to.equal(comptroller1Proxy.address);
