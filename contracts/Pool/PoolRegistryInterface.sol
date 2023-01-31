@@ -2,7 +2,6 @@
 pragma solidity 0.8.13;
 
 abstract contract PoolRegistryInterface {
-
     /**
      * @dev Struct for a Venus interest rate pool.
      */
@@ -13,7 +12,7 @@ abstract contract PoolRegistryInterface {
         uint256 blockPosted;
         uint256 timestampPosted;
     }
-    
+
     /**
      * @dev Enum for risk rating of Venus interest rate pool.
      */
@@ -48,9 +47,5 @@ abstract contract PoolRegistryInterface {
     function getPoolsSupportedByAsset(address asset) external view virtual returns (address[] memory);
 
     /*** get metadata of a Pool by comptroller ***/
-    function getVenusPoolMetadata(address comptroller)
-        external
-        view
-        virtual
-        returns (VenusPoolMetaData memory);
+    function getVenusPoolMetadata(address comptroller) external view virtual returns (VenusPoolMetaData memory);
 }

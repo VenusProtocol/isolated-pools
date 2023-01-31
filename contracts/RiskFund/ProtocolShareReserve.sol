@@ -89,7 +89,10 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) public override(IProtocolShareReserve, ReserveHelpers) {
+    function updateAssetsState(address comptroller, address asset)
+        public
+        override(IProtocolShareReserve, ReserveHelpers)
+    {
         super.updateAssetsState(comptroller, asset);
     }
 }

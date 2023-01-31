@@ -95,7 +95,10 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      */
     function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
         require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
-        require(IShortfall(_shortfallContractAddress).convertibleBaseAsset() != address(0), "Risk Fund: Base asset doesn't match");
+        require(
+            IShortfall(_shortfallContractAddress).convertibleBaseAsset() != address(0),
+            "Risk Fund: Base asset doesn't match"
+        );
 
         address oldShortfallContractAddress = shortfall;
         shortfall = _shortfallContractAddress;
@@ -131,7 +134,8 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @return Number of swapped tokens.
      */
     function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
-        override external
+        external
+        override
         returns (uint256)
     {
         bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
@@ -164,7 +168,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount) override external returns (uint256) {
+    function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
         require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
@@ -177,7 +181,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param comptroller Comptroller address of the pool.
      * @return Number of reserved tokens.
      */
-    function getPoolReserve(address comptroller) override external view returns (uint256) {
+    function getPoolReserve(address comptroller) external view override returns (uint256) {
         return poolReserves[comptroller];
     }
 

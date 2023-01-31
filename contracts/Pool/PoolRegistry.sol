@@ -26,7 +26,7 @@ import "./PoolRegistryInterface.sol";
  */
 contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    
+
     enum InterestRateModels {
         WhitePaper,
         JumpRate
@@ -279,7 +279,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() override external view returns (VenusPool[] memory) {
+    function getAllPools() external view override returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
         for (uint256 i = 1; i <= _numberOfPools; ++i) {
             address comptroller = _poolsByID[i];
@@ -292,7 +292,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @param comptroller The Comptroller implementation address.
      * @notice Returns Venus pool.
      */
-    function getPoolByComptroller(address comptroller) override external view returns (VenusPool memory) {
+    function getPoolByComptroller(address comptroller) external view override returns (VenusPool memory) {
         return _poolByComptroller[comptroller];
     }
 
@@ -300,15 +300,15 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @param comptroller comptroller of Venus pool.
      * @notice Returns Metadata of Venus pool.
      */
-    function getVenusPoolMetadata(address comptroller) override external view returns (VenusPoolMetaData memory) {
+    function getVenusPoolMetadata(address comptroller) external view override returns (VenusPoolMetaData memory) {
         return metadata[comptroller];
     }
 
-    function getVTokenForAsset(address comptroller, address asset) override external view returns (address) {
+    function getVTokenForAsset(address comptroller, address asset) external view override returns (address) {
         return _vTokens[comptroller][asset];
     }
 
-    function getPoolsSupportedByAsset(address asset) override external view returns (address[] memory) {
+    function getPoolsSupportedByAsset(address asset) external view override returns (address[] memory) {
         return _supportedPools[asset];
     }
 
