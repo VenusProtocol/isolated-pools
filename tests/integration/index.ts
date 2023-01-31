@@ -231,9 +231,7 @@ describe("Positive Cases", () => {
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
         .withArgs(await acc1Signer.getAddress(), mintAmount, vTokenMintAmount, vTokenMintAmount);
-      [error, balance, borrowBalance] = await vBSW
-        .connect(acc2Signer)
-        .getAccountSnapshot(await acc1Signer.getAddress());
+      [error, balance, borrowBalance] = await vBSW.getAccountSnapshot(await acc1Signer.getAddress());
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
