@@ -40,7 +40,6 @@ let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
 describe("Rewards: Tests", async function () {
-
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -302,38 +301,35 @@ describe("Rewards: Tests", async function () {
   it("Claim XVS", async function () {
     const [_owner, user1, user2] = await ethers.getSigners();
 
-    await mockWBTC.connect(user1).faucet(convertToUnit(100, 8))
-    await mockDAI.connect(user2).faucet(convertToUnit(10000, 18))
+    await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
+    await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
 
-    await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8))
+    await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
     await vWBTC.connect(user1).mint(convertToUnit(10, 8));
-    
-    await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18))
+
+    await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
     await vDAI.connect(user2).mint(convertToUnit(10000, 18));
 
-    await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8))
+    await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
 
     await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
     await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
 
-    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
+    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0");
     expect((await xvs.balanceOf(user2.address)).toString()).not.equal("0");
   });
 
   it("Contributor Rewards", async function () {
     const [_owner, user1] = await ethers.getSigners();
 
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0")
+    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
 
-    await rewardsDistributor.setContributorRewardTokenSpeed(
-      user1.address,
-      convertToUnit(0.5, 18)
-    );
+    await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
 
-    await mine(1000)
-    await rewardsDistributor.updateContributorRewards(user1.address)
+    await mine(1000);
+    await rewardsDistributor.updateContributorRewards(user1.address);
 
     await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
-    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
+    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0");
   });
 });
