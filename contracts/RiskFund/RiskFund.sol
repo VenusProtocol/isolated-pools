@@ -31,9 +31,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
-    /// @notice Emitted when convertible base asset address is updated
-    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
-
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
@@ -96,7 +93,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
         require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
         require(
-            IShortfall(_shortfallContractAddress).convertibleBaseAsset() != address(0),
+            IShortfall(_shortfallContractAddress).convertibleBaseAsset() == convertibleBaseAsset,
             "Risk Fund: Base asset doesn't match"
         );
 
