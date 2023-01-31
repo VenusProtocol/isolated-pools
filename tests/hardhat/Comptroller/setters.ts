@@ -12,6 +12,7 @@ import {
   PoolRegistry,
   PriceOracle,
   RewardsDistributor,
+  VToken,
 } from "../../../typechain";
 
 const { expect } = chai;
@@ -44,12 +45,14 @@ describe("setters", async () => {
   let user: SignerWithAddress;
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
+  let OMG: FakeContract<VToken>;
 
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
     ({ accessControl, comptroller } = await loadFixture(comptrollerFixture));
     accessControl.isAllowedToCall.reset();
     accessControl.isAllowedToCall.returns(true);
+    OMG = await smock.fake<VToken>("VToken");
   });
 
   describe("setPriceOracle", async () => {
@@ -132,6 +135,22 @@ describe("setters", async () => {
       await expect(comptroller.setMinLiquidatableCollateral(newMinLiquidatableCollateral))
         .to.be.revertedWithCustomError(comptroller, "Unauthorized")
         .withArgs(owner.address, comptroller.address, "setMinLiquidatableCollateral(uint256)");
+    });
+  });
+
+  describe("SupplyAndBorrowCaps", async () => {
+    it("reverts if token data is invalid", async () => {
+      await expect(comptroller.setMarketSupplyCaps([], [1, 2])).to.be.revertedWith("invalid number of markets");
+    });
+
+    it("reverts if supply and token data is invalid", async () => {
+      await expect(comptroller.setMarketSupplyCaps([OMG.address], [1, 2])).to.be.revertedWith(
+        "invalid number of markets",
+      );
+    });
+
+    it("reverts if borrow and token data is invalid", async () => {
+      await expect(comptroller.setMarketBorrowCaps([OMG.address], [1, 2])).to.be.revertedWith("invalid input");
     });
   });
 });
