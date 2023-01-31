@@ -119,6 +119,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
         IRiskFund _riskFund,
         uint256 _minimumPoolBadDebt
     ) external initializer {
+        require(_convertibleBaseAsset != address(0), "invalid base asset address");
+        require(address(_riskFund) != address(0), "invalid risk fund address");
+
         __Ownable2Step_init();
         __ReentrancyGuard_init();
         minimumPoolBadDebt = _minimumPoolBadDebt;

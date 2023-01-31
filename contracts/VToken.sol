@@ -50,6 +50,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public initializer {
+        require(admin_ != address(0), "invalid admin address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
+        require(riskManagement.shortfall != address(0), "invalid shortfall address");
+        require(riskManagement.riskFund != address(0), "invalid riskfund address");
+        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
+
         // Initialize the market
         _initialize(
             underlying_,
@@ -216,6 +222,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function approve(address spender, uint256 amount) external override returns (bool) {
+        require(spender != address(0), "invalid spender address");
+
         address src = msg.sender;
         transferAllowances[src][spender] = amount;
         emit Approval(src, spender, amount);
@@ -231,8 +239,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        address src = msg.sender;
+        require(spender != address(0), "invalid spender address");
 
+        address src = msg.sender;
         uint256 allowance = transferAllowances[src][spender];
         allowance += addedValue;
         transferAllowances[src][spender] = allowance;
@@ -250,6 +259,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        require(spender != address(0), "invalid spender address");
+
         address src = msg.sender;
         uint256 currentAllowance = transferAllowances[src][spender];
         require(currentAllowance >= subtractedValue, "decreased allowance below zero");
@@ -1385,6 +1396,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
         require(msg.sender == owner(), "only admin can set ACL address");
+        require(address(newAccessControlManager) != address(0), "invalid acess control manager address");
+
         _setAccessControlAddress(newAccessControlManager);
     }
 

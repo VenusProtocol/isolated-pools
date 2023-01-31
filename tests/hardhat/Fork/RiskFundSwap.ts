@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../../helpers/utils";
+import { AddressOne, convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
@@ -121,8 +121,8 @@ const riskFundFixture = async (): Promise<void> => {
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
   const shortfall = await upgrades.deployProxy(Shortfall, [
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
+    AddressOne,
+    AddressOne,
     parseUnits("10000", 18),
   ]);
 

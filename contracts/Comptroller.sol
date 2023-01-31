@@ -165,6 +165,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     constructor(address poolRegistry_, address accessControl_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
         // constructor. Use initialize() or reinitializers to set the state variables.
+
+        require(poolRegistry_ != address(0), "invalid pool registry address");
+        require(accessControl_ != address(0), "invalid access control address");
+
         poolRegistry = poolRegistry_;
         accessControl = accessControl_;
         _disableInitializers();
@@ -1044,6 +1048,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:event Emits NewPriceOracle on success
      */
     function setPriceOracle(PriceOracle newOracle) public onlyOwner {
+        require(address(newOracle) != address(0), "invalid price oracle address");
+
         PriceOracle oldOracle = oracle;
         oracle = newOracle;
         emit NewPriceOracle(oldOracle, newOracle);
