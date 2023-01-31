@@ -242,15 +242,14 @@ describe("Positive Cases", () => {
       expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(collateralFactor).multipliedBy(vBSWPrice));
       expect(shortfall).to.equal(0);
       const bswBorrowAmount = convertToUnit(1, 18);
-      const vBSWBorrowAmount = convertToUnit(1, 18);
 
       await expect(vBSW.connect(acc2Signer).borrow(bswBorrowAmount))
         .to.emit(vBSW, "Borrow")
-        .withArgs(acc2, bswBorrowAmount, vBSWBorrowAmount, vBSWBorrowAmount);
+        .withArgs(acc2, bswBorrowAmount, bswBorrowAmount, bswBorrowAmount);
       [error, balance, borrowBalance] = await vBSW.connect(acc2Signer).getAccountSnapshot(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(0);
-      expect(borrowBalance).to.equal(vBSWBorrowAmount);
+      expect(borrowBalance).to.equal(bswBorrowAmount);
       // ////////////
       // // REDEEM //
       // ////////////
