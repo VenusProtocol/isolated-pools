@@ -1,4 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -39,11 +40,11 @@ let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 
 describe("Rewards: Tests", async function () {
-  const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  before(async function () {
+  beforeEach(async function () {
     const [, proxyAdmin] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
@@ -95,9 +96,6 @@ describe("Rewards: Tests", async function () {
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
 
-    const [owner] = await ethers.getSigners();
-    const daiBalance = await mockDAI.balanceOf(owner.address);
-    expect(daiBalance).equal(convertToUnit(1000, 18));
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
     await mockWBTC.deployed();
     await mockWBTC.faucet(convertToUnit(1000, 8));
@@ -146,12 +144,9 @@ describe("Rewards: Tests", async function () {
     const tokenImplementation = await VToken.deploy();
     await tokenImplementation.deployed();
 
-    const initialSupply = convertToUnit(1000, 18);
+    let initialSupply = convertToUnit(10, 8);
     await mockWBTC.faucet(initialSupply);
     await mockWBTC.approve(poolRegistry.address, initialSupply);
-
-    await mockDAI.faucet(initialSupply);
-    await mockDAI.approve(poolRegistry.address, initialSupply);
 
     // Deploy VTokens
     await poolRegistry.addMarket({
@@ -171,9 +166,13 @@ describe("Rewards: Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply,
-      borrowCap: initialSupply,
+      supplyCap: convertToUnit(1000, 8),
+      borrowCap: convertToUnit(1000, 8),
     });
+
+    initialSupply = convertToUnit(1000, 18);
+    await mockDAI.faucet(initialSupply);
+    await mockDAI.approve(poolRegistry.address, initialSupply);
 
     await poolRegistry.addMarket({
       comptroller: comptrollerProxy.address,
@@ -192,8 +191,8 @@ describe("Rewards: Tests", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply,
-      borrowCap: initialSupply,
+      supplyCap: convertToUnit(1000000, 18),
+      borrowCap: convertToUnit(1000000, 18),
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);
@@ -276,6 +275,7 @@ describe("Rewards: Tests", async function () {
   });
 
   it("Cannot add reward distributors with duplicate reward tokens", async function () {
+    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
 
     const rewardsDistributorDuplicate = await RewardsDistributor.deploy();
@@ -287,6 +287,7 @@ describe("Rewards: Tests", async function () {
   });
 
   it("Emits event correctly", async () => {
+    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await RewardsDistributor.deploy();
     await rewardsDistributor.initialize(comptrollerProxy.address, mockWBTC.address);
 
@@ -298,19 +299,41 @@ describe("Rewards: Tests", async function () {
   // TODO: Test reward accruals. This test used to pass before, but it
   //      was a false-positive. The correct test would need to mint or
   //      borrow some assets (or pretend to do so, using smock).
-  it.skip("Claim XVS", async function () {
+  it("Claim XVS", async function () {
     const [_owner, user1, user2] = await ethers.getSigners();
+
+    await mockWBTC.connect(user1).faucet(convertToUnit(100, 8))
+    await mockDAI.connect(user2).faucet(convertToUnit(10000, 18))
+
+    await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8))
+    await vWBTC.connect(user1).mint(convertToUnit(10, 8));
+    
+    await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18))
+    await vDAI.connect(user2).mint(convertToUnit(10000, 18));
+
+    await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8))
+
     await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
     await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
 
-    const test = await xvs.balanceOf(user1.address);
-    const test1 = await xvs.balanceOf(user2.address);
-
-    console.log(await xvs.balanceOf(rewardsDistributor.address));
-    console.log(test);
-    console.log(test1);
-
-    // expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
+    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
     expect((await xvs.balanceOf(user2.address)).toString()).not.equal("0");
+  });
+
+  it("Contributor Rewards", async function () {
+    const [_owner, user1] = await ethers.getSigners();
+
+    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0")
+
+    await rewardsDistributor.setContributorRewardTokenSpeed(
+      user1.address,
+      convertToUnit(0.5, 18)
+    );
+
+    await mine(1000)
+    await rewardsDistributor.updateContributorRewards(user1.address)
+
+    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0")
   });
 });
