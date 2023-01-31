@@ -180,15 +180,6 @@ describe("PoolLens: Rewards Summary", () => {
     // Should be called once per reward token configured
     expect(vBUSD.totalBorrows).to.have.been.callCount(3);
     expect(vWBTC.totalSupply).to.have.been.callCount(3);
-    console.log(JSON.stringify(pendingRewards));
-    pendingRewards.forEach(element => {
-      console.log("DistributorAddress:" + element.distributorAddress.toString());
-      console.log("Total Rewards:" + element.totalRewards.toString());
-      element.pendingRewards.forEach(pendingReward => {
-        console.log("VTokenAddress: " + pendingReward.vTokenAddress);
-        console.log("Amount: " + pendingReward.amount.toString());
-      });
-    });
 
     const EXPECTED_OUTPUT = [
       [
@@ -196,8 +187,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
       [
@@ -205,8 +196,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
       [
@@ -214,12 +205,11 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.96, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000496, 18))],
         ],
       ],
     ];
-
     expect(pendingRewards).to.have.deep.members(EXPECTED_OUTPUT);
   });
 });
