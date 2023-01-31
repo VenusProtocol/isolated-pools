@@ -295,9 +295,6 @@ describe("Rewards: Tests", async function () {
       .withArgs(rewardsDistributor.address);
   });
 
-  // TODO: Test reward accruals. This test used to pass before, but it
-  //      was a false-positive. The correct test would need to mint or
-  //      borrow some assets (or pretend to do so, using smock).
   it("Claim XVS", async function () {
     const [_owner, user1, user2] = await ethers.getSigners();
 
