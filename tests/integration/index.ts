@@ -227,7 +227,7 @@ describe("Positive Cases", () => {
       // ////////////
       // // Borrow //
       // ////////////
-      // Supply WBTC to market from 2nd account
+      // Supply BSW to market from 1st account
       await expect(vBSW.connect(acc1Signer).mint(mintAmount))
         .to.emit(vBSW, "Mint")
         .withArgs(await acc1Signer.getAddress(), mintAmount, vTokenMintAmount, vTokenMintAmount);
