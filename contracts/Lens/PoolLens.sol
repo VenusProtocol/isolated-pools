@@ -304,7 +304,7 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct with pending reward info for a market
+     * @dev Struct with pending reward info for a market.
      */
     struct PendingReward {
         address vTokenAddress;
@@ -322,7 +322,7 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @dev Struct used in RewardDistributor to save last updated market state
+     * @dev Struct used in RewardDistributor to save last updated market state.
      */
     struct RewardTokenState {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
