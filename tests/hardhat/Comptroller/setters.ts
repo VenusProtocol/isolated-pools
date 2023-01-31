@@ -92,6 +92,13 @@ describe("setters", async () => {
         "Ownable: caller is not the owner",
       );
     });
+
+    it("reverts if re-adding same rewardDistributor", async () => {
+      await comptroller.addRewardsDistributor(newRewardsDistributor.address);
+      await expect(comptroller.addRewardsDistributor(newRewardsDistributor.address)).to.be.revertedWith(
+        "already exists",
+      );
+    });
   });
 
   describe("setLiquidationIncentive", async () => {
@@ -105,6 +112,18 @@ describe("setters", async () => {
   });
 
   describe("setMinLiquidatableCollateral", async () => {
+    const newMinLiquidatableCollateral = convertToUnit("100", 18);
+    it("reverts if access control manager does not allow the call", async () => {
+      accessControl.isAllowedToCall
+        .whenCalledWith(owner.address, "setMinLiquidatableCollateral(uint256)")
+        .returns(false);
+      await expect(comptroller.setMinLiquidatableCollateral(newMinLiquidatableCollateral))
+        .to.be.revertedWithCustomError(comptroller, "Unauthorized")
+        .withArgs(owner.address, comptroller.address, "setMinLiquidatableCollateral(uint256)");
+    });
+  });
+
+  describe("rewardDistributor", async () => {
     const newMinLiquidatableCollateral = convertToUnit("100", 18);
     it("reverts if access control manager does not allow the call", async () => {
       accessControl.isAllowedToCall
