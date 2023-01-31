@@ -1,7 +1,7 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { Signer } from "ethers";
+import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -152,7 +152,7 @@ describe("PoolLens: Rewards Summary", () => {
 
     const accountAddress = await account.getAddress();
 
-    await poolLens.getPendingRewards(accountAddress, comptroller.address);
+    const pendingRewards = await poolLens.getPendingRewards(accountAddress, comptroller.address);
     expect(comptroller.getAllMarkets).to.have.been.calledOnce;
     expect(comptroller.getRewardDistributors).to.have.been.calledOnce;
 
@@ -180,5 +180,46 @@ describe("PoolLens: Rewards Summary", () => {
     // Should be called once per reward token configured
     expect(vBUSD.totalBorrows).to.have.been.callCount(3);
     expect(vWBTC.totalSupply).to.have.been.callCount(3);
+    console.log(JSON.stringify(pendingRewards));
+    pendingRewards.forEach(element => {
+      console.log("DistributorAddress:" + element.distributorAddress.toString());
+      console.log("Total Rewards:" + element.totalRewards.toString());
+      element.pendingRewards.forEach(pendingReward => {
+        console.log("VTokenAddress: " + pendingReward.vTokenAddress);
+        console.log("Amount: " + pendingReward.amount.toString());
+      });
+    });
+
+    const EXPECTED_OUTPUT = [
+      [
+        rewardDistributor1.address,
+        rewardToken1.address,
+        BigNumber.from(convertToUnit(50, 18)),
+        [
+          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+        ],
+      ],
+      [
+        rewardDistributor2.address,
+        rewardToken2.address,
+        BigNumber.from(convertToUnit(50, 18)),
+        [
+          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+        ],
+      ],
+      [
+        rewardDistributor3.address,
+        rewardToken3.address,
+        BigNumber.from(convertToUnit(50, 18)),
+        [
+          [vBUSD.address, BigNumber.from(convertToUnit(0.11, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000011, 18))],
+        ],
+      ],
+    ];
+
+    expect(pendingRewards).to.have.deep.members(EXPECTED_OUTPUT);
   });
 });
