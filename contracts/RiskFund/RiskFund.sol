@@ -126,11 +126,11 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
-     * @param underlyingAssets Array of assets to swap for base asset
+     * @param markets Array of vTokens whose assets to swap for base asset
      * @param amountsOutMin Minimum amount to recieve for swap
      * @return Number of swapped tokens.
      */
-    function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
+    function swapPoolsAssets(address[] calldata markets, uint256[] calldata amountsOutMin)
         external
         override
         returns (uint256)
@@ -141,16 +141,18 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         );
         require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
-        require(
-            underlyingAssets.length == amountsOutMin.length,
-            "Risk fund: underlyingAssets and amountsOutMin are unequal lengths"
-        );
+        require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
 
         uint256 totalAmount;
-        uint256 underlyingAssetsCount = underlyingAssets.length;
-        for (uint256 i; i < underlyingAssetsCount; ++i) {
-            VToken vToken = VToken(underlyingAssets[i]);
+        uint256 marketsCount = markets.length;
+        for (uint256 i; i < marketsCount; ++i) {
+            VToken vToken = VToken(markets[i]);
             address comptroller = address(vToken.comptroller());
+
+            PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry).getPoolByComptroller(comptroller);
+            require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
+            require(Comptroller(comptroller).isMarketListed(vToken) == true, "market is not listed");
+
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i]);
             poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
             totalAmount = totalAmount + swappedTokens;
@@ -234,7 +236,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
                 }
             }
         }
-        
+
         return totalAmount;
     }
 

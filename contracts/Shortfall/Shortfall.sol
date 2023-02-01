@@ -10,6 +10,8 @@ import "../VToken.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
 import "./IShortfall.sol";
+import "../Pool/PoolRegistry.sol";
+import "../Pool/PoolRegistryInterface.sol";
 
 contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -119,6 +121,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShor
     ) external initializer {
         require(_convertibleBaseAsset != address(0), "invalid base asset address");
         require(address(_riskFund) != address(0), "invalid risk fund address");
+        require(_minimumPoolBadDebt != 0, "invalid minimum pool bad debt");
 
         __Ownable2Step_init();
         __ReentrancyGuard_init();
@@ -287,6 +290,9 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShor
      * @custom:access Restricted to owner
      */
     function startAuction(address comptroller) public onlyOwner {
+        PoolRegistryInterface.VenusPool memory pool = PoolRegistry(poolRegistry).getPoolByComptroller(comptroller);
+        // require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
+
         Auction storage auction = auctions[comptroller];
         require(
             (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||

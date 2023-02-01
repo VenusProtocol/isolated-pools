@@ -733,6 +733,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:access Only Governance
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
+        require(closeFactorMaxMantissa >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
+        require(closeFactorMinMantissa <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
+
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
         emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
@@ -801,6 +804,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
+        require(newLiquidationIncentiveMantissa >= 1e18, "liquidation incentive should be greater than 1e18");
+
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
         // Save current value for use in log
