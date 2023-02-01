@@ -291,7 +291,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShor
      */
     function startAuction(address comptroller) public onlyOwner {
         PoolRegistryInterface.VenusPool memory pool = PoolRegistry(poolRegistry).getPoolByComptroller(comptroller);
-        // require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
+        require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
 
         Auction storage auction = auctions[comptroller];
         require(
