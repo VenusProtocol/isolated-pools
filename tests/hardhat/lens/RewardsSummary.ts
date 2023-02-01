@@ -1,8 +1,8 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture, mine, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber, Signer } from "ethers";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor, VToken } from "../../../typechain";
