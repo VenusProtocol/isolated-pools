@@ -153,7 +153,6 @@ describe("PoolLens: Rewards Summary", () => {
     const accountAddress = await account.getAddress();
 
     const pendingRewards = await poolLens.getPendingRewards(accountAddress, comptroller.address);
-
     expect(comptroller.getAllMarkets).to.have.been.calledOnce;
     expect(comptroller.getRewardDistributors).to.have.been.calledOnce;
 
@@ -188,8 +187,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
         ],
       ],
       [
@@ -197,8 +196,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
         ],
       ],
       [
@@ -206,8 +205,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
         ],
       ],
     ];
