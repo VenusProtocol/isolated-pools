@@ -195,6 +195,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         uint256 amountOutMin
     ) internal returns (uint256) {
         require(amountOutMin != 0, "RiskFund: amountOutMin must be greater than 0 to swap vToken");
+        require(amountOutMin >= minAmountToConvert, "RiskFund: amountOutMin should be greater than minAmountToConvert");
         uint256 totalAmount;
 
         address underlyingAsset = VTokenInterface(address(vToken)).underlying();
@@ -233,6 +234,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
                 }
             }
         }
+        
         return totalAmount;
     }
 
