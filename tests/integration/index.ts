@@ -144,14 +144,27 @@ describe("Positive Cases", () => {
   let BSW: MockToken;
   let acc1: string;
   let acc2: string;
+  let deployer: string;
   let vBNXPrice: BigNumber;
   let vBSWPrice: BigNumber;
   let rewardDistributor: FakeContract<RewardsDistributor>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ PoolRegistry, AccessControlManager, Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, vBNXPrice, vBSWPrice } =
-      fixture);
+    ({
+      PoolRegistry,
+      AccessControlManager,
+      Comptroller,
+      vBNX,
+      vBSW,
+      BNX,
+      BSW,
+      acc1,
+      acc2,
+      vBNXPrice,
+      vBSWPrice,
+      deployer,
+    } = fixture);
   });
   describe("Setup", () => {
     it("PoolRegistry should be initialized properly", async function () {
@@ -191,7 +204,8 @@ describe("Positive Cases", () => {
   describe("Transfer Operation", () => {
     const mintAmount: BigNumberish = convertToUnit(1, 18);
     let acc2Signer: Signer;
-    it("Approve and transfer ", async function () {
+    let acc1Signer: Signer;
+    it("Approve and transfer by owner", async function () {
       acc2Signer = await ethers.getSigner(acc2);
 
       rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
@@ -201,8 +215,35 @@ describe("Positive Cases", () => {
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
 
       await vBNX.connect(acc2Signer).mint(mintAmount);
-      await vBNX.connect(acc2Signer).approve(acc1, 1);
-      await vBNX.connect(acc2Signer).transfer(acc1, 1);
+      await vBNX.connect(acc2Signer).approve(acc1, convertToUnit(1, 6));
+      expect(await vBNX.allowance(acc2, acc1)).to.be.equal(convertToUnit(1, 6));
+      await vBNX.connect(acc2Signer).transfer(acc1, convertToUnit(1, 6));
+      expect(await vBNX.balanceOf(acc1)).to.be.equal(convertToUnit(1, 6));
+    });
+
+    it("Approve and transferFrom", async function () {
+      acc2Signer = await ethers.getSigner(acc2);
+      acc1Signer = await ethers.getSigner(acc1);
+
+      rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
+      await Comptroller.addRewardsDistributor(rewardDistributor.address);
+
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
+
+      await vBNX.connect(acc2Signer).mint(mintAmount);
+      await vBNX.connect(acc2Signer).approve(acc1, convertToUnit(1, 6));
+      await vBNX.connect(acc1Signer).transferFrom(acc2, acc1, convertToUnit(1, 6));
+      expect(await vBNX.balanceOf(acc1)).to.be.equal(convertToUnit(1, 6));
+    });
+
+    it("Success on sweep tokens ", async function () {
+      acc2Signer = await ethers.getSigner(acc2);
+      await BNX.connect(acc2Signer).faucet(mintAmount);
+      await BNX.connect(acc2Signer).transfer(vBSW.address, mintAmount);
+      expect(await BNX.balanceOf(deployer)).to.be.equal(0);
+      await vBSW.sweepToken(BNX.address);
+      expect(await BNX.balanceOf(deployer)).to.be.equal(mintAmount);
     });
   });
 
