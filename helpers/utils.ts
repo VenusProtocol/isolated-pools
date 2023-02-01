@@ -20,3 +20,5 @@ export const convertToUnit = (amount: string | number, decimals: number) => {
 export const scaleDownBy = (amount: string | number, decimals: number) => {
   return new BigNumber(amount).dividedBy(new BigNumber(10).pow(decimals)).toString();
 };
+
+export const AddressOne = "0x0000000000000000000000000000000000000001";

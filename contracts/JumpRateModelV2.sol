@@ -2,14 +2,13 @@
 pragma solidity ^0.8.10;
 
 import "./BaseJumpRateModelV2.sol";
-import "./InterestRateModel.sol";
 
 /**
  * @title Compound's JumpRateModel Contract V2 for V2 vTokens
  * @author Arr00
  * @notice Supports only for V2 vTokens
  */
-contract JumpRateModelV2 is InterestRateModel, BaseJumpRateModelV2 {
+contract JumpRateModelV2 is BaseJumpRateModelV2 {
     /**
      * @notice Calculates the current borrow rate per block
      * @param cash The amount of cash in the market

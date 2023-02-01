@@ -76,10 +76,7 @@ contract PoolLens is ExponentialNoError {
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
      */
-    function vTokenBalancesAll(VToken[] calldata vTokens, address payable account)
-        external
-        returns (VTokenBalances[] memory)
-    {
+    function vTokenBalancesAll(VToken[] calldata vTokens, address account) external returns (VTokenBalances[] memory) {
         uint256 vTokenCount = vTokens.length;
         VTokenBalances[] memory res = new VTokenBalances[](vTokenCount);
         for (uint256 i; i < vTokenCount; ++i) {
@@ -146,7 +143,7 @@ contract PoolLens is ExponentialNoError {
     function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
         external
         view
-        returns (uint256[] memory)
+        returns (address[] memory)
     {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return poolRegistryInterface.getPoolsSupportedByAsset(asset);
@@ -174,7 +171,7 @@ contract PoolLens is ExponentialNoError {
      * @param account The user Account.
      * @notice Returns the BalanceInfo of VToken.
      */
-    function vTokenBalances(VToken vToken, address payable account) public returns (VTokenBalances memory) {
+    function vTokenBalances(VToken vToken, address account) public returns (VTokenBalances memory) {
         uint256 balanceOf = vToken.balanceOf(account);
         uint256 borrowBalanceCurrent = vToken.borrowBalanceCurrent(account);
         uint256 balanceOfUnderlying = vToken.balanceOfUnderlying(account);
