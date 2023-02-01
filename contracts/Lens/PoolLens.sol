@@ -360,32 +360,32 @@ contract PoolLens is ExponentialNoError {
     function _calculateNotDistributedAwards(
         address account,
         VToken[] memory markets,
-        RewardsDistributor rewardDistributor
+        RewardsDistributor rewardsDistributor
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block) = rewardDistributor.rewardTokenBorrowState(address(markets[i]));
+            (borrowState.index, borrowState.block) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block) = rewardDistributor.rewardTokenSupplyState(address(markets[i]));
+            (supplyState.index, supplyState.block) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             //Update market supply and borrow index in-memory
-            updateMarketBorrowIndex(address(markets[i]), rewardDistributor, borrowState, marketBorrowIndex);
-            updateMarketSupplyIndex(address(markets[i]), rewardDistributor, supplyState);
+            updateMarketBorrowIndex(address(markets[i]), rewardsDistributor, borrowState, marketBorrowIndex);
+            updateMarketSupplyIndex(address(markets[i]), rewardsDistributor, supplyState);
 
             //Calculate pending rewards
             uint256 borowReward = calculateBorrowerReward(
                 address(markets[i]),
-                rewardDistributor,
+                rewardsDistributor,
                 account,
                 borrowState,
                 marketBorrowIndex
             );
             uint256 supplyReward = calculateSupplierReward(
                 address(markets[i]),
-                rewardDistributor,
+                rewardsDistributor,
                 account,
                 supplyState
             );
@@ -400,11 +400,11 @@ contract PoolLens is ExponentialNoError {
 
     function updateMarketBorrowIndex(
         address vToken,
-        RewardsDistributor rewardDistributor,
+        RewardsDistributor rewardsDistributor,
         RewardTokenState memory borrowState,
         Exp memory marketBorrowIndex
     ) internal view {
-        uint256 borrowSpeed = rewardDistributor.rewardTokenBorrowSpeeds(vToken);
+        uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
         uint256 blockNumber = block.number;
         uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
@@ -422,10 +422,10 @@ contract PoolLens is ExponentialNoError {
 
     function updateMarketSupplyIndex(
         address vToken,
-        RewardsDistributor rewardDistributor,
+        RewardsDistributor rewardsDistributor,
         RewardTokenState memory supplyState
     ) internal view {
-        uint256 supplySpeed = rewardDistributor.rewardTokenSupplySpeeds(vToken);
+        uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
         uint256 blockNumber = block.number;
         uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
@@ -442,14 +442,14 @@ contract PoolLens is ExponentialNoError {
 
     function calculateBorrowerReward(
         address vToken,
-        RewardsDistributor rewardDistributor,
+        RewardsDistributor rewardsDistributor,
         address borrower,
         RewardTokenState memory borrowState,
         Exp memory marketBorrowIndex
     ) internal view returns (uint256) {
         Double memory borrowIndex = Double({ mantissa: borrowState.index });
         Double memory borrowerIndex = Double({
-            mantissa: rewardDistributor.rewardTokenBorrowerIndex(vToken, borrower)
+            mantissa: rewardsDistributor.rewardTokenBorrowerIndex(vToken, borrower)
         });
         if (borrowerIndex.mantissa > 0) {
             Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
@@ -462,16 +462,16 @@ contract PoolLens is ExponentialNoError {
 
     function calculateSupplierReward(
         address vToken,
-        RewardsDistributor rewardDistributor,
+        RewardsDistributor rewardsDistributor,
         address supplier,
         RewardTokenState memory supplyState
     ) internal view returns (uint256) {
         Double memory supplyIndex = Double({ mantissa: supplyState.index });
         Double memory supplierIndex = Double({
-            mantissa: rewardDistributor.rewardTokenSupplierIndex(vToken, supplier)
+            mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
         if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
-            supplierIndex.mantissa = rewardDistributor.rewardTokenInitialIndex();
+            supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);

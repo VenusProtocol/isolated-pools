@@ -1013,8 +1013,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @return Array of RewardDistributor addresses
      */
     function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
-        RewardsDistributor[] memory _rewardsDistributors = rewardsDistributors;
-        return _rewardsDistributors;
+        return rewardsDistributors;
     }
 
     /**
