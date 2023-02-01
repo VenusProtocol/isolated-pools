@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { DeployFunction, Deployment, DeployResult } from "hardhat-deploy/types";
+import { DeployFunction, DeployResult, Deployment } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -10,8 +10,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const accessControlManager: Deployment = await deployments.get("AccessControlManager");
   const poolRegistry: Deployment = await deployments.get("PoolRegistry");
 
-   // Comptroller Beacon
-   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl2", {
+  // Comptroller Beacon
+  const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl2", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address, accessControlManager.address],
@@ -26,7 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await comptrollerBeacon.upgradeTo(comptrollerImpl.address);
     console.log("Implementation Upgraded");
   }
-  
 };
 
 func.tags = ["UpgradeComptroller"];
