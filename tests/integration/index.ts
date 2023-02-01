@@ -108,6 +108,10 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     scaleDownBy((await PriceOracle.getUnderlyingPrice(vBSW.address)).toString(), 18),
   );
 
+  await RiskFund.setPoolRegistry(PoolRegistry.address);
+
+  await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
+
   return {
     fixture: {
       PoolRegistry,
