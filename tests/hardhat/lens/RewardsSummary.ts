@@ -153,7 +153,7 @@ describe("PoolLens: Rewards Summary", () => {
     const accountAddress = await account.getAddress();
 
     const pendingRewards = await poolLens.getPendingRewards(accountAddress, comptroller.address);
-    console.log(pendingRewards[0][3][0][1].toString(), pendingRewards[0][3][1][1].toString())
+
     expect(comptroller.getAllMarkets).to.have.been.calledOnce;
     expect(comptroller.getRewardDistributors).to.have.been.calledOnce;
 
@@ -181,8 +181,6 @@ describe("PoolLens: Rewards Summary", () => {
     // Should be called once per reward token configured
     expect(vBUSD.totalBorrows).to.have.been.callCount(3);
     expect(vWBTC.totalSupply).to.have.been.callCount(3);
-
-    console.log(BigNumber.from(convertToUnit(4.59, 18)).toString(), BigNumber.from(convertToUnit(0.00000459, 18)).toString())
 
     const EXPECTED_OUTPUT = [
       [
