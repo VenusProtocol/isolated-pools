@@ -65,6 +65,9 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const BSW = await ethers.getContract("MockBSW");
   const BUSD = await ethers.getContract("MockBUSD");
 
+  await RiskFund.setPoolRegistry(PoolRegistry.address);
+  await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
+
   // Set Oracle
   await Comptroller.setPriceOracle(PriceOracle.address);
 

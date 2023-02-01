@@ -157,25 +157,6 @@ describe("Shortfall: Tests", async function () {
       });
     });
 
-    describe("setConvertableBaseAsset", async function () {
-      it("reverts if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).setConvertableBaseAsset(someone.address)).to.be.rejectedWith(
-          "Ownable: caller is not the owner",
-        );
-      });
-
-      it("fails if address is invalid", async function () {
-        await expect(shortfall.setConvertableBaseAsset(constants.AddressZero)).to.be.rejectedWith(
-          "Shortfall: Asset address invalid",
-        );
-      });
-
-      it("emits ConvertableBaseAssetUpdated event", async function () {
-        const tx = shortfall.setConvertableBaseAsset(someone.address);
-        await expect(tx).to.emit(shortfall, "ConvertableBaseAssetUpdated").withArgs(mockBUSD.address, someone.address);
-      });
-    });
-
     describe("updateMinimumPoolBadDebt", async function () {
       it("fails if called by a non-owner", async function () {
         await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.rejectedWith(
