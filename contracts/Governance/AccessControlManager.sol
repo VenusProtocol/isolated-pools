@@ -90,7 +90,7 @@ contract AccessControlManager is AccessControl {
      */
     function revokeCallPermission(
         address contractAddress,
-        string memory functionSig,
+        string calldata functionSig,
         address accountToRevoke
     ) public {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
