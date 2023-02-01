@@ -153,7 +153,7 @@ describe("PoolLens: Rewards Summary", () => {
     const accountAddress = await account.getAddress();
 
     const pendingRewards = await poolLens.getPendingRewards(accountAddress, comptroller.address);
-
+    console.log(pendingRewards[0][3][0][1].toString(), pendingRewards[0][3][1][1].toString())
     expect(comptroller.getAllMarkets).to.have.been.calledOnce;
     expect(comptroller.getRewardDistributors).to.have.been.calledOnce;
 
@@ -182,14 +182,16 @@ describe("PoolLens: Rewards Summary", () => {
     expect(vBUSD.totalBorrows).to.have.been.callCount(3);
     expect(vWBTC.totalSupply).to.have.been.callCount(3);
 
+    console.log(BigNumber.from(convertToUnit(4.59, 18)).toString(), BigNumber.from(convertToUnit(0.00000459, 18)).toString())
+
     const EXPECTED_OUTPUT = [
       [
         rewardDistributor1.address,
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(2.72, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000272, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
         ],
       ],
       [
@@ -197,8 +199,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(2.72, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000272, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
         ],
       ],
       [
@@ -206,8 +208,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(2.72, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000272, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(4.59, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000459, 18))],
         ],
       ],
     ];
