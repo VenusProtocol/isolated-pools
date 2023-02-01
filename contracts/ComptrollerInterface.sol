@@ -34,17 +34,11 @@ abstract contract ComptrollerInterface {
         uint256 borrowAmount
     ) external virtual;
 
-    function preRepayHook(
-        address vToken,
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
+    function preRepayHook(address vToken, address borrower) external virtual;
 
     function preLiquidateHook(
         address vTokenBorrowed,
         address vTokenCollateral,
-        address liquidator,
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
@@ -54,8 +48,7 @@ abstract contract ComptrollerInterface {
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
-        address borrower,
-        uint256 seizeTokens
+        address borrower
     ) external virtual;
 
     function preTransferHook(

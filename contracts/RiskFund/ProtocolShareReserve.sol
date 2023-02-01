@@ -23,7 +23,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _protocolIncome The address protocol income will be sent to.
+     * @param _protocolIncome The address, protocol income will be sent to.
      * @param _riskFund Risk fund address.
      */
     function initialize(address _protocolIncome, address _riskFund) public initializer {

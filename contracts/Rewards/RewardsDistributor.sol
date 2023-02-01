@@ -177,7 +177,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
     /**
      * @notice Set REWARD TOKEN speed for a single market
-     * @param vToken The market whose REWARD TOKEN speed to update
+     * @param vToken market's whose reward token rate to be updated
      * @param supplySpeed New supply-side REWARD TOKEN speed for market
      * @param borrowSpeed New borrow-side REWARD TOKEN speed for market
      */
@@ -222,7 +222,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      * @param supplier The address of the supplier to distribute REWARD TOKEN to
      */
     function _distributeSupplierRewardToken(address vToken, address supplier) internal {
-        // it should only be called when a user is in the supplier market
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplyIndex = supplyState.index;
         uint256 supplierIndex = rewardTokenSupplierIndex[vToken][supplier];

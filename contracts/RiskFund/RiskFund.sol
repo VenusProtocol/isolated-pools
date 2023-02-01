@@ -133,29 +133,23 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @notice Swap array of pool assets into base asset's tokens of at least a mininum amount.
-     * @param underlyingAssets Array of vToken address to swap for base asset
+     * @param vTokens Array of vToken address to swap for base asset
      * @param amountsOutMin Minimum amount to recieve for swap
      * @return Number of swapped tokens.
      */
-    function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
-        external
-        returns (uint256)
-    {
+    function swapPoolsAssets(address[] calldata vTokens, uint256[] calldata amountsOutMin) external returns (uint256) {
         bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
             msg.sender,
             "swapPoolsAssets(address[],uint256[])"
         );
         require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
-        require(
-            underlyingAssets.length == amountsOutMin.length,
-            "Risk fund: underlyingAssets and amountsOutMin are unequal lengths"
-        );
+        require(vTokens.length == amountsOutMin.length, "Risk fund: vTokens and amountsOutMin are unequal lengths");
 
         uint256 totalAmount;
-        uint256 underlyingAssetsCount = underlyingAssets.length;
+        uint256 underlyingAssetsCount = vTokens.length;
         for (uint256 i; i < underlyingAssetsCount; ++i) {
-            VToken vToken = VToken(underlyingAssets[i]);
+            VToken vToken = VToken(vTokens[i]);
             address comptroller = address(vToken.comptroller());
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i]);
             poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;

@@ -101,7 +101,7 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
     /// @notice Emitted when convertible base asset address is updated
-    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
+    event ConvertibleBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -130,11 +130,11 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
      * @dev Convertible base asset setter
      * @param _convertibleBaseAsset Address of the asset.
      */
-    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
+    function setConvertibleBaseAsset(address _convertibleBaseAsset) external onlyOwner {
         require(_convertibleBaseAsset != address(0), "Shortfall: Asset address invalid");
         address oldBaseAsset = convertibleBaseAsset;
         convertibleBaseAsset = _convertibleBaseAsset;
-        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
+        emit ConvertibleBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
     }
 
     /**

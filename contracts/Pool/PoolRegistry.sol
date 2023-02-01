@@ -256,7 +256,6 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             payable(msg.sender),
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
-            input.vTokenProxyAdmin,
             input.beaconAddress
         );
 
@@ -354,7 +353,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
 
         require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
 
-        require(bytes(name).length <= 100, "Pool name is too large.");
+        require(bytes(name).length <= 100, "Pool's name is too large.");
 
         _numberOfPools++;
 

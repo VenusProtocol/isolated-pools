@@ -21,7 +21,7 @@ contract ComptrollerV1Storage {
     uint256 public liquidationIncentiveMantissa;
 
     /**
-     * @notice Per-account mapping of "assets you are in", capped by maxAssets
+     * @notice Per-account mapping of "assets you are in"
      */
     mapping(address => VToken[]) public accountAssets;
 
