@@ -19,45 +19,14 @@ import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../ComptrollerInterface.sol";
 import "../VTokenInterfaces.sol";
+import "./PoolRegistryInterface.sol";
 
 /**
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is Ownable2StepUpgradeable {
+contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /**
-     * @dev Struct for a Venus interest rate pool.
-     */
-    struct VenusPool {
-        string name;
-        address creator;
-        address comptroller;
-        uint256 blockPosted;
-        uint256 timestampPosted;
-    }
-
-    /**
-     * @dev Enum for risk rating of Venus interest rate pool.
-     */
-    enum RiskRating {
-        VERY_HIGH_RISK,
-        HIGH_RISK,
-        MEDIUM_RISK,
-        LOW_RISK,
-        MINIMAL_RISK
-    }
-
-    /**
-     * @dev Struct for a Venus interest rate pool metadata.
-     */
-    struct VenusPoolMetaData {
-        RiskRating riskRating;
-        string category;
-        string logoURL;
-        string description;
-    }
 
     enum InterestRateModels {
         WhitePaper,
@@ -255,7 +224,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             input.name,
             input.symbol,
             input.decimals,
-            payable(msg.sender),
+            msg.sender,
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
             input.vTokenProxyAdmin,
@@ -312,7 +281,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      * @notice Returns arrays of all Venus pools' data.
      * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
      */
-    function getAllPools() external view returns (VenusPool[] memory) {
+    function getAllPools() external view override returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
         for (uint256 i = 1; i <= _numberOfPools; ++i) {
             address comptroller = _poolsByID[i];
@@ -325,7 +294,7 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      * @param comptroller The Comptroller implementation address.
      * @notice Returns Venus pool.
      */
-    function getPoolByComptroller(address comptroller) external view returns (VenusPool memory) {
+    function getPoolByComptroller(address comptroller) external view override returns (VenusPool memory) {
         return _poolByComptroller[comptroller];
     }
 
@@ -333,15 +302,15 @@ contract PoolRegistry is Ownable2StepUpgradeable {
      * @param comptroller comptroller of Venus pool.
      * @notice Returns Metadata of Venus pool.
      */
-    function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory) {
+    function getVenusPoolMetadata(address comptroller) external view override returns (VenusPoolMetaData memory) {
         return metadata[comptroller];
     }
 
-    function getVTokenForAsset(address comptroller, address asset) external view returns (address) {
+    function getVTokenForAsset(address comptroller, address asset) external view override returns (address) {
         return _vTokens[comptroller][asset];
     }
 
-    function getPoolsSupportedByAsset(address asset) external view returns (address[] memory) {
+    function getPoolsSupportedByAsset(address asset) external view override returns (address[] memory) {
         return _supportedPools[asset];
     }
 

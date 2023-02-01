@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
+import "./Rewards/RewardsDistributor.sol";
 
 abstract contract ComptrollerInterface {
     /// @notice Indicator that this is a Comptroller contract (for inspection)
@@ -98,4 +99,6 @@ abstract contract ComptrollerViewInterface {
     function minLiquidatableCollateral() external view virtual returns (uint256);
 
     function getXVSRewardsByMarket(address) external view virtual returns (uint256, uint256);
+
+    function getRewardDistributors() external view virtual returns (RewardsDistributor[] memory);
 }

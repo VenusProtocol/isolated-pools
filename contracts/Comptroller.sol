@@ -92,9 +92,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /// @notice Emitted when borrow cap for a vToken is changed
     event NewBorrowCap(VToken indexed vToken, uint256 newBorrowCap);
 
-    /// @notice Emitted when borrow cap guardian is changed
-    event NewBorrowCapGuardian(address oldBorrowCapGuardian, address newBorrowCapGuardian);
-
     /// @notice Emitted when the collateral threshold (in USD) for non-batch liquidations is changed
     event NewMinLiquidatableCollateral(uint256 oldMinLiquidatableCollateral, uint256 newMinLiquidatableCollateral);
 
@@ -103,6 +100,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
     /// @notice Emitted when a rewards distributor is added
     event NewRewardsDistributor(address indexed rewardsDistributor);
+
+    /// @notice Emitted when a market is supported
+    event MarketSupported(VToken vToken);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -165,6 +165,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     constructor(address poolRegistry_, address accessControl_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
         // constructor. Use initialize() or reinitializers to set the state variables.
+
+        require(poolRegistry_ != address(0), "invalid pool registry address");
+        require(accessControl_ != address(0), "invalid access control address");
+
         poolRegistry = poolRegistry_;
         accessControl = accessControl_;
         _disableInitializers();
@@ -836,6 +840,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
+
+        emit MarketSupported(vToken);
     }
 
     /**
@@ -1015,6 +1021,14 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
+     * @notice Return all reward distributors for this pool
+     * @return Array of RewardDistributor addresses
+     */
+    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
+        return rewardsDistributors;
+    }
+
+    /**
      * @notice Returns reward speed given a vToken
      * @param vToken The vToken to get the reward speeds for
      * @return rewardSpeeds Array of total supply and borrow speeds and reward token for all reward distributors
@@ -1042,6 +1056,8 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:event Emits NewPriceOracle on success
      */
     function setPriceOracle(PriceOracle newOracle) public onlyOwner {
+        require(address(newOracle) != address(0), "invalid price oracle address");
+
         PriceOracle oldOracle = oracle;
         oracle = newOracle;
         emit NewPriceOracle(oldOracle, newOracle);

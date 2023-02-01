@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../ComptrollerInterface.sol";
+import "../Pool/PoolRegistryInterface.sol";
 
 contract ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -15,6 +16,9 @@ contract ReserveHelpers {
     // Comptroller(pool) -> Asset -> amount
     mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
 
+    // Address of pool registry contract
+    address internal poolRegistry;
+
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
@@ -24,9 +28,15 @@ contract ReserveHelpers {
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) external {
+    function updateAssetsState(address comptroller, address asset) public virtual {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
+        require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
+        require(
+            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
+            "ReserveHelpers: The pool doesn't support the asset"
+        );
+
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
