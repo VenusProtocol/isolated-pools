@@ -491,13 +491,13 @@ describe("PoolLens - VTokens Query Tests", async function () {
 
     const vTokenMetadata_Actual_Parsed: any = cullTuple(vTokenMetadata_Actual);
     expect(vTokenMetadata_Actual_Parsed["vToken"]).equal(vTokenAddress_WBTC);
-    expect(vTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
+    expect(vTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal(convertToUnit(1, 18));
     expect(vTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");
-    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal(convertToUnit(1, 18));
+    expect(vTokenMetadata_Actual_Parsed["totalSupply"]).equal(convertToUnit(1, 8));
     expect(vTokenMetadata_Actual_Parsed["totalCash"]).equal(convertToUnit(1, 8));
     expect(vTokenMetadata_Actual_Parsed["isListed"]).equal("true");
     expect(vTokenMetadata_Actual_Parsed["collateralFactorMantissa"]).equal("700000000000000000");
@@ -510,7 +510,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
     const vTokenBalance = await poolLens.callStatic.vTokenBalances(vTokenAddress_WBTC, ownerAddress);
     expect(vTokenBalance["balanceOfUnderlying"]).equal(convertToUnit(1, 8));
-    expect(vTokenBalance["balanceOf"]).equal(convertToUnit(1, 18));
+    expect(vTokenBalance["balanceOf"]).equal(convertToUnit(1, 8));
   });
 });
 
