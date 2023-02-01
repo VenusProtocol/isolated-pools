@@ -1,8 +1,8 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, mine, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor, VToken } from "../../../typechain";
@@ -148,7 +148,7 @@ describe("PoolLens: Rewards Summary", () => {
   });
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
-    await mine(11);
+    await mineUpTo(11);
 
     const accountAddress = await account.getAddress();
 
@@ -187,8 +187,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
         ],
       ],
       [
@@ -196,8 +196,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
         ],
       ],
       [
@@ -205,8 +205,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(4.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000499, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
         ],
       ],
     ];
