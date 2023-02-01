@@ -148,7 +148,7 @@ describe("PoolLens: Rewards Summary", () => {
   });
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
-    await mineUpTo(11);
+    await mineUpTo(1000);
 
     const accountAddress = await account.getAddress();
 
@@ -187,8 +187,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
         ],
       ],
       [
@@ -196,8 +196,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
         ],
       ],
       [
@@ -205,8 +205,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(0.1, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.000000001, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
         ],
       ],
     ];

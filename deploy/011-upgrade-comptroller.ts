@@ -29,5 +29,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["UpgradeComptroller"];
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.name !== "bsctestnet";
 
 export default func;
