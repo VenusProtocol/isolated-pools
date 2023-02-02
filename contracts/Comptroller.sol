@@ -1169,7 +1169,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
-     * @dev Internal function to check that vTokens can be safely redeemed for the underlying asset
+     * @dev Internal function to check that vTokens can be safely redeemed for the underlying asset.
      * @param vToken Address of the vTokens to redeem
      * @param redeemer Account redeeming the tokens
      * @param redeemTokens The number of tokens to redeem

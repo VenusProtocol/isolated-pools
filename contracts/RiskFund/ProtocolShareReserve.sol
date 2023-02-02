@@ -30,8 +30,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _protocolIncome The address, protocol income will be sent to.
-     * @param _riskFund Risk fund address.
+     * @param _protocolIncome The address protocol income will be sent to
+     * @param _riskFund Risk fund address
      */
     function initialize(address _protocolIncome, address _riskFund) public initializer {
         require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
@@ -44,8 +44,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Pool registry setter
-     * @param _poolRegistry Address of the pool registry.
+     * @dev Pool registry setter.
+     * @param _poolRegistry Address of the pool registry
      */
     function setPoolRegistry(address _poolRegistry) external onlyOwner {
         require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
@@ -56,9 +56,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Release funds
-     * @param asset  Asset to be released.
-     * @param amount Amount to release.
-     * @return Number of total released tokens.
+     * @param asset  Asset to be released
+     * @param amount Amount to release
+     * @return Number of total released tokens
      */
     function releaseFunds(
         address comptroller,
@@ -86,7 +86,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
-     * @param comptroller  Comptroller address(pool).
+     * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
     function updateAssetsState(address comptroller, address asset)

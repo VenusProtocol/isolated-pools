@@ -151,7 +151,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Set REWARD TOKEN speed for a single contributor
+     * @notice Set REWARD TOKEN speed for a single contributor.
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
@@ -170,7 +170,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Calculate additional accrued REWARD TOKEN for a contributor since last accrual
+     * @notice Calculate additional accrued REWARD TOKEN for a contributor since last accrual.
      * @param contributor The address to calculate contributor rewards for
      */
     function updateContributorRewards(address contributor) public {
@@ -187,7 +187,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Set REWARD TOKEN speed for a single market
+     * @notice Set REWARD TOKEN speed for a single market.
      * @param vToken market's whose reward token rate to be updated
      * @param supplySpeed New supply-side REWARD TOKEN speed for market
      * @param borrowSpeed New borrow-side REWARD TOKEN speed for market
@@ -228,7 +228,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Calculate REWARD TOKEN accrued by a supplier and possibly transfer it to them
+     * @notice Calculate REWARD TOKEN accrued by a supplier and possibly transfer it to them.
      * @param vToken The market in which the supplier is interacting
      * @param supplier The address of the supplier to distribute REWARD TOKEN to
      */
@@ -279,7 +279,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Calculate reward token accrued by a borrower and possibly transfer it to them
+     * @notice Calculate reward token accrued by a borrower and possibly transfer it to them.
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
      */
@@ -319,7 +319,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Transfer REWARD TOKEN to the user
+     * @notice Transfer REWARD TOKEN to the user.
      * @dev Note: If there is not enough REWARD TOKEN, we do not perform the transfer all.
      * @param user The address of the user to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
@@ -339,7 +339,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Accrue REWARD TOKEN to the market by updating the supply index
+     * @notice Accrue REWARD TOKEN to the market by updating the supply index.
      * @param vToken The market whose supply index to update
      * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
      */
@@ -371,7 +371,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Accrue REWARD TOKEN to the market by updating the borrow index
+     * @notice Accrue REWARD TOKEN to the market by updating the borrow index.
      * @param vToken The market whose borrow index to update
      * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
      */
@@ -401,7 +401,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /*** Reward Token Distribution Admin ***/
 
     /**
-     * @notice Transfer REWARD TOKEN to the recipient
+     * @notice Transfer REWARD TOKEN to the recipient.
      * @dev Note: If there is not enough REWARD TOKEN, we do not perform the transfer all.
      * @param recipient The address of the recipient to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
@@ -413,7 +413,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Claim all rewardToken accrued by the holders
+     * @notice Claim all rewardToken accrued by the holders.
      * @param holders The addresses to claim REWARD TOKEN for
      * @param vTokens The list of markets to claim REWARD TOKEN in
      */
@@ -439,7 +439,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Claim all the rewardToken accrued by holder in all markets
+     * @notice Claim all the rewardToken accrued by holder in all markets.
      * @param holder The address to claim REWARD TOKEN for
      */
     function claimRewardToken(address holder) public {
@@ -447,7 +447,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Claim all the rewardToken accrued by holder in the specified markets
+     * @notice Claim all the rewardToken accrued by holder in the specified markets.
      * @param holder The address to claim REWARD TOKEN for
      * @param vTokens The list of markets to claim REWARD TOKEN in
      */

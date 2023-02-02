@@ -5,6 +5,27 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
 
 contract ComptrollerV1Storage {
+    struct LiquidationOrder {
+        VToken vTokenCollateral;
+        VToken vTokenBorrowed;
+        uint256 repayAmount;
+    }
+
+    struct AccountLiquiditySnapshot {
+        uint256 totalCollateral;
+        uint256 weightedCollateral;
+        uint256 borrows;
+        uint256 effects;
+        uint256 liquidity;
+        uint256 shortfall;
+    }
+
+    struct RewardSpeeds {
+        address rewardToken;
+        uint256 supplySpeed;
+        uint256 borrowSpeed;
+    }
+
     /**
      * @notice Oracle which gives the price of any given asset
      */
@@ -72,27 +93,6 @@ contract ComptrollerV1Storage {
 
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;
-
-    struct LiquidationOrder {
-        VToken vTokenCollateral;
-        VToken vTokenBorrowed;
-        uint256 repayAmount;
-    }
-
-    struct AccountLiquiditySnapshot {
-        uint256 totalCollateral;
-        uint256 weightedCollateral;
-        uint256 borrows;
-        uint256 effects;
-        uint256 liquidity;
-        uint256 shortfall;
-    }
-
-    struct RewardSpeeds {
-        address rewardToken;
-        uint256 supplySpeed;
-        uint256 borrowSpeed;
-    }
 
     uint256 internal constant NO_ERROR = 0;
 
