@@ -6,8 +6,7 @@ import "./VToken.sol";
 import "./Rewards/RewardsDistributor.sol";
 
 interface ComptrollerInterface {
-    
-    function isComptroller() external view virtual returns(bool);
+    function isComptroller() external view virtual returns (bool);
 
     /*** Assets You Are In ***/
 
