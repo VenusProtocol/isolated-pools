@@ -4,10 +4,11 @@ import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
-import { Comptroller, MockToken, ProtocolShareReserve, RiskFund } from "../../typechain";
+import { Comptroller, MockToken, PoolRegistry, ProtocolShareReserve, RiskFund } from "../../typechain";
 
 let mockDAI: MockToken;
 let fakeRiskFund: FakeContract<RiskFund>;
+let poolRegistry: FakeContract<PoolRegistry>;
 let fakeProtocolIncome: FakeContract<RiskFund>;
 let fakeComptroller: FakeContract<Comptroller>;
 let protocolShareReserve: ProtocolShareReserve;
@@ -19,6 +20,11 @@ const fixture = async (): Promise<void> => {
 
   // Fake contracts
   fakeRiskFund = await smock.fake<RiskFund>("RiskFund");
+  await fakeRiskFund.updateAssetsState.returns();
+
+  poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
+  poolRegistry.getVTokenForAsset.returns("0x0000000000000000000000000000000000000001");
+
   fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   fakeComptroller = await smock.fake<Comptroller>("Comptroller");
 
@@ -28,6 +34,8 @@ const fixture = async (): Promise<void> => {
     fakeProtocolIncome.address,
     fakeRiskFund.address,
   ]);
+
+  await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 };
 
 describe("ProtocolShareReserve: Tests", function () {

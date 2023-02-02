@@ -16,11 +16,13 @@ contract VTokenProxyFactory {
         string name_;
         string symbol_;
         uint8 decimals_;
-        address payable admin_;
+        address admin_;
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
         address beaconAddress;
     }
+
+    event VTokenProxyDeployed(VTokenArgs args);
 
     function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
         BeaconProxy proxy = new BeaconProxy(
@@ -39,6 +41,8 @@ contract VTokenProxyFactory {
                 input.riskManagement
             )
         );
+
+        emit VTokenProxyDeployed(input);
 
         return VToken(address(proxy));
     }

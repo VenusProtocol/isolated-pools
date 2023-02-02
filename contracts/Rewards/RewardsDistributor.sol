@@ -72,6 +72,15 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /// @notice Emitted when a new REWARD TOKEN speed is set for a contributor
     event ContributorRewardTokenSpeedUpdated(address indexed contributor, uint256 newSpeed);
 
+    /// @notice Emitted when a market is initialized
+    event MarketInitialized(address vToken);
+
+    /// @notice Emitted when a reward token supply index is updated
+    event RewardTokenSupplyIndexUpdated(address vToken);
+
+    /// @notice Emitted when a reward token borrow index is updated
+    event RewardTokenBorrowIndexUpdated(address vToken, Exp marketBorrowIndex);
+
     /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
     mapping(address => mapping(address => uint256)) public rewardTokenBorrowerIndex;
 
@@ -113,6 +122,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
          * Update market state block numbers
          */
         supplyState.block = borrowState.block = blockNumber;
+
+        emit MarketInitialized(vToken);
     }
 
     /*** Reward Token Distribution ***/
@@ -351,6 +362,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         } else if (deltaBlocks > 0) {
             supplyState.block = blockNumber;
         }
+
+        emit RewardTokenSupplyIndexUpdated(vToken);
     }
 
     function updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) external onlyComptroller {
@@ -381,6 +394,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         } else if (deltaBlocks > 0) {
             borrowState.block = blockNumber;
         }
+
+        emit RewardTokenBorrowIndexUpdated(vToken, marketBorrowIndex);
     }
 
     /*** Reward Token Distribution Admin ***/

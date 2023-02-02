@@ -88,6 +88,13 @@ describe("Access Control", () => {
         .connect(comptroller.address)
         .isAllowedToCall(await addr2.getAddress(), "changeCollFactor(uint256,uint256)");
       expect(canCall).to.be.true;
+
+      const havePermission: boolean = await accessControlManager.hasPermission(
+        await addr2.getAddress(),
+        comptroller.address,
+        "changeCollFactor(uint256,uint256)",
+      );
+      expect(havePermission).to.be.true;
     });
 
     it("should revoke role", async () => {
