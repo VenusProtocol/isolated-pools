@@ -217,6 +217,8 @@ describe("Positive Cases", () => {
 
       rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
       await Comptroller.addRewardsDistributor(rewardDistributor.address);
+      const comptrollerRewardDistributor = await Comptroller.getRewardDistributors();
+      expect(comptrollerRewardDistributor[0]).equal(rewardDistributor.address);
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);

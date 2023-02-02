@@ -47,8 +47,8 @@ describe("setters", async () => {
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
   let OMG: FakeContract<VToken>;
-  let poolRegistry;
-  let oracle;
+  let poolRegistry: FakeContract<PoolRegistry>;
+  let oracle: FakeContract<PriceOracle>;
   let poolRegistrySigner: Signer;
 
   beforeEach(async () => {
@@ -184,7 +184,7 @@ describe("setters", async () => {
     });
 
     it("reverts if token price is zero", async () => {
-      await oracle.getUnderlyingPrice.returns(0);
+      oracle.getUnderlyingPrice.returns(0);
       await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
       await expect(comptroller.setCollateralFactor(OMG.address, convertToUnit("0.7", 18), convertToUnit("0.6", 18)))
         .to.be.revertedWithCustomError(comptroller, "PriceError")
