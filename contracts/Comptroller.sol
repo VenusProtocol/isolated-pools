@@ -36,6 +36,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         uint256 borrowSpeed;
     }
 
+    /// @notice Indicator that this is a Comptroller contract (for inspection)
+    bool public constant isComptroller = true;
+
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value

@@ -20,6 +20,7 @@ import {
   MockToken__factory,
   PoolRegistry,
   ProtocolShareReserve,
+  RewardsDistributor,
   RiskFund,
   Shortfall,
   VToken,
@@ -71,6 +72,7 @@ describe("PoolRegistry: Tests", function () {
   let jumpRateFactory: JumpRateModelFactory;
   let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let rewardDistributor: FakeContract<RewardsDistributor>;
 
   const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
     const defaults = {
@@ -302,6 +304,9 @@ describe("PoolRegistry: Tests", function () {
 
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
+      await comptroller1Proxy.addRewardsDistributor(rewardDistributor.address);
 
       await poolRegistry.addMarket(await withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);

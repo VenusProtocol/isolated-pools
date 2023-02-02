@@ -208,6 +208,7 @@ describe("VToken", function () {
       await vToken.harnessFastForward(5);
       // expect(
       await borrow(vToken, borrower, borrowAmount);
+      expect(await vToken.callStatic.totalBorrowsCurrent()).to.be.equal(borrowAmount);
       // ).toSucceed();
       expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
     });
