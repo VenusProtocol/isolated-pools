@@ -46,10 +46,16 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address payable admin_,
+        address admin_,
         AccessControlManager accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public initializer {
+        require(admin_ != address(0), "invalid admin address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
+        require(riskManagement.shortfall != address(0), "invalid shortfall address");
+        require(riskManagement.riskFund != address(0), "invalid riskfund address");
+        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
+
         // Initialize the market
         _initialize(
             underlying_,
@@ -83,7 +89,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address payable admin_,
+        address admin_,
         AccessControlManager accessControlManager_,
         VTokenInterface.RiskManagementInit memory riskManagement
     ) internal onlyInitializing {
@@ -216,9 +222,55 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function approve(address spender, uint256 amount) external override returns (bool) {
+        require(spender != address(0), "invalid spender address");
+
         address src = msg.sender;
         transferAllowances[src][spender] = amount;
         emit Approval(src, spender, amount);
+        return true;
+    }
+
+    /**
+     * @notice Increase approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param addedValue The number of tokens additional tokens spender can transfer
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     */
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+        require(spender != address(0), "invalid spender address");
+
+        address src = msg.sender;
+        uint256 allowance = transferAllowances[src][spender];
+        allowance += addedValue;
+        transferAllowances[src][spender] = allowance;
+
+        emit Approval(src, spender, allowance);
+        return true;
+    }
+
+    /**
+     * @notice Decreases approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param subtractedValue The number of tokens tokens to remove from total approval
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     */
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        require(spender != address(0), "invalid spender address");
+
+        address src = msg.sender;
+        uint256 currentAllowance = transferAllowances[src][spender];
+        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
+        unchecked {
+            currentAllowance -= subtractedValue;
+        }
+
+        transferAllowances[src][spender] = currentAllowance;
+
+        emit Approval(src, spender, currentAllowance);
         return true;
     }
 
@@ -493,6 +545,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @custom:access Not restricted
      */
     function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
+        require(minter != address(0), "invalid minter address");
+
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
         _mintFresh(msg.sender, minter, mintAmount);
@@ -569,7 +623,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(payable(msg.sender), redeemTokens, 0);
+        _redeemFresh(msg.sender, redeemTokens, 0);
         return NO_ERROR;
     }
 
@@ -582,7 +636,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(payable(msg.sender), 0, redeemAmount);
+        _redeemFresh(msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
 
@@ -594,7 +648,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
     function _redeemFresh(
-        address payable redeemer,
+        address redeemer,
         uint256 redeemTokensIn,
         uint256 redeemAmountIn
     ) internal {
@@ -678,7 +732,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount);
+        _borrowFresh(msg.sender, borrowAmount);
         return NO_ERROR;
     }
 
@@ -686,7 +740,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Users borrow assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      */
-    function _borrowFresh(address payable borrower, uint256 borrowAmount) internal {
+    function _borrowFresh(address borrower, uint256 borrowAmount) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
@@ -1342,6 +1396,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
         require(msg.sender == owner(), "only admin can set ACL address");
+        require(address(newAccessControlManager) != address(0), "invalid acess control manager address");
+
         _setAccessControlAddress(newAccessControlManager);
     }
 
@@ -1429,7 +1485,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @dev Just a regular ERC-20 transfer, reverts on failure
      */
-    function _doTransferOut(address payable to, uint256 amount) internal virtual {
+    function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
         token.safeTransfer(to, amount);
     }

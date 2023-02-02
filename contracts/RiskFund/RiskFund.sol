@@ -10,14 +10,15 @@ import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
 import "../Pool/PoolRegistry.sol";
 import "./ReserveHelpers.sol";
+import "./IRiskFund.sol";
+import "../Shortfall/IShortfall.sol";
 
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
+contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private poolRegistry;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     address private convertibleBaseAsset;
@@ -29,9 +30,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
-
-    /// @notice Emitted when convertible base asset address is updated
-    event ConvertableBaseAssetUpdated(address indexed oldBaseAsset, address indexed newBaseAsset);
 
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
@@ -89,22 +87,16 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
-     * @dev Convertible base asset setter
-     * @param _convertibleBaseAsset Address of the asset.
-     */
-    function setConvertableBaseAsset(address _convertibleBaseAsset) external onlyOwner {
-        require(_convertibleBaseAsset != address(0), "Risk Fund: Asset address invalid");
-        address oldBaseAsset = convertibleBaseAsset;
-        convertibleBaseAsset = _convertibleBaseAsset;
-        emit ConvertableBaseAssetUpdated(oldBaseAsset, _convertibleBaseAsset);
-    }
-
-    /**
      * @dev Shortfall contract address setter
      * @param _shortfallContractAddress Address of the auction contract.
      */
     function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
         require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
+        require(
+            IShortfall(_shortfallContractAddress).convertibleBaseAsset() == convertibleBaseAsset,
+            "Risk Fund: Base asset doesn't match"
+        );
+
         address oldShortfallContractAddress = shortfall;
         shortfall = _shortfallContractAddress;
         emit ShortfallContractUpdated(oldShortfallContractAddress, _shortfallContractAddress);
@@ -140,6 +132,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      */
     function swapPoolsAssets(address[] calldata underlyingAssets, uint256[] calldata amountsOutMin)
         external
+        override
         returns (uint256)
     {
         bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
@@ -172,7 +165,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256) {
+    function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
         require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
@@ -185,7 +178,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
      * @param comptroller Comptroller address of the pool.
      * @return Number of reserved tokens.
      */
-    function getPoolReserve(address comptroller) external view returns (uint256) {
+    function getPoolReserve(address comptroller) external view override returns (uint256) {
         return poolReserves[comptroller];
     }
 
@@ -241,5 +234,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
             }
         }
         return totalAmount;
+    }
+
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
+        super.updateAssetsState(comptroller, asset);
     }
 }

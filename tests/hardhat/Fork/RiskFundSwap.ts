@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../../helpers/utils";
+import { AddressOne, convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
@@ -120,11 +120,7 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await upgrades.deployProxy(Shortfall, [
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    parseUnits("10000", 18),
-  ]);
+  const shortfall = await upgrades.deployProxy(Shortfall, [BUSD.address, AddressOne, parseUnits("10000", 18)]);
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [
@@ -152,6 +148,8 @@ const riskFundFixture = async (): Promise<void> => {
     riskFund.address,
     protocolShareReserve.address,
   ]);
+
+  await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 
   await shortfall.setPoolRegistry(poolRegistry.address);
 

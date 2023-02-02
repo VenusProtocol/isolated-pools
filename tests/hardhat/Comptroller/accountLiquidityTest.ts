@@ -298,6 +298,23 @@ describe("Comptroller", () => {
       expect(liquidity).to.equal(0);
       expect(shortfall).to.equal(0);
     });
+
+    it("reverts if market already listed", async () => {
+      const vToken = await makeVToken({
+        accessControl,
+        comptroller,
+        oracle,
+        supportMarket: true,
+        collateralFactor: 0.7,
+        underlyingPrice: 2.12,
+        poolRegistry,
+      });
+      const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+      await expect(comptroller.connect(poolRegistrySigner).supportMarket(vToken.address))
+        .to.be.revertedWithCustomError(comptroller, "MarketAlreadyListed")
+        .withArgs(vToken.address);
+    });
+
     it("reverts if not 'in' any markets", async () => {
       const amount1 = 1e6;
       const amount2 = 1e3;

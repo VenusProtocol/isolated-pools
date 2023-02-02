@@ -39,7 +39,7 @@ contract VTokenHarness is VToken {
         );
     }
 
-    function _doTransferOut(address payable to, uint256 amount) internal override {
+    function _doTransferOut(address to, uint256 amount) internal override {
         require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
         return super._doTransferOut(to, amount);
     }

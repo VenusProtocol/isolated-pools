@@ -20,6 +20,7 @@ import {
   MockToken__factory,
   PoolRegistry,
   ProtocolShareReserve,
+  RewardsDistributor,
   RiskFund,
   Shortfall,
   VToken,
@@ -71,6 +72,7 @@ describe("PoolRegistry: Tests", function () {
   let jumpRateFactory: JumpRateModelFactory;
   let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let rewardDistributor: FakeContract<RewardsDistributor>;
 
   const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
     const defaults = {
@@ -303,6 +305,9 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
+      rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
+      await comptroller1Proxy.addRewardsDistributor(rewardDistributor.address);
+
       await poolRegistry.addMarket(await withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(vTokenAddress).to.be.a.properAddress;
@@ -310,7 +315,7 @@ describe("PoolRegistry: Tests", function () {
       const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
       expect(await vToken.isVToken()).to.equal(true);
       expect(await vToken.underlying()).to.equal(mockToken.address);
-      expect(await vToken.exchangeRateStored()).to.equal(10n ** 8n);
+      expect(await vToken.exchangeRateStored()).to.equal(10n ** 28n);
       expect(await vToken.name()).to.equal("Venus SomeToken");
       expect(await vToken.symbol()).to.equal("vST");
       expect(await vToken.comptroller()).to.equal(comptroller1Proxy.address);

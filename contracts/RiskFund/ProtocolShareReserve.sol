@@ -7,12 +7,19 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../ExponentialNoError.sol";
 import "./IRiskFund.sol";
 import "./ReserveHelpers.sol";
+import "./IProtocolShareReserve.sol";
 
-contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers {
+contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
     address private riskFund;
+
+    /// @notice Emitted when funds are released
+    event FundsReleased(address comptroller, address asset, uint256 amount);
+
+    /// @notice Emitted when pool registry address is updated
+    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -34,6 +41,17 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         protocolIncome = _protocolIncome;
         riskFund = _riskFund;
+    }
+
+    /**
+     * @dev Pool registry setter
+     * @param _poolRegistry Address of the pool registry.
+     */
+    function setPoolRegistry(address _poolRegistry) external onlyOwner {
+        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+        address oldPoolRegistry = poolRegistry;
+        poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
@@ -61,6 +79,20 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund).updateAssetsState(comptroller, asset);
 
+        emit FundsReleased(comptroller, asset, amount);
+
         return amount;
+    }
+
+    /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset)
+        public
+        override(IProtocolShareReserve, ReserveHelpers)
+    {
+        super.updateAssetsState(comptroller, asset);
     }
 }

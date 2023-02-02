@@ -46,6 +46,26 @@ describe("VToken", function () {
       await expect(vToken.transfer(rootAddress, 50)).to.be.revertedWithCustomError(vToken, "TransferNotAllowed");
     });
 
+    it("approve and transfer", async () => {
+      await vToken.harnessSetBalance(rootAddress, 1000);
+      expect(await vToken.balanceOf(rootAddress)).to.equal(1000);
+      await vToken.approve(guyAddress, 100);
+
+      await expect(vToken.connect(guy).transferFrom(rootAddress, guyAddress, 120)).to.be.reverted;
+
+      await vToken.increaseAllowance(guy.getAddress(), 20);
+      await expect(vToken.connect(guy).transferFrom(rootAddress, guyAddress, 120)).to.be.not.reverted;
+      expect(await vToken.balanceOf(guyAddress)).to.equal(120);
+
+      await vToken.approve(guyAddress, 100);
+      await vToken.decreaseAllowance(guy.getAddress(), 20);
+
+      await expect(vToken.connect(guy).transferFrom(rootAddress, guyAddress, 100)).to.be.reverted;
+      await expect(vToken.connect(guy).transferFrom(rootAddress, guyAddress, 80)).to.be.not.reverted;
+
+      expect(await vToken.balanceOf(guyAddress)).to.equal(200);
+    });
+
     it("rejects transfer when not allowed", async () => {
       await vToken.harnessSetBalance(rootAddress, 100);
       expect(await vToken.balanceOf(rootAddress)).to.equal(100);
