@@ -151,7 +151,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
             PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry).getPoolByComptroller(comptroller);
             require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
-            require(Comptroller(comptroller).isMarketListed(vToken) == true, "market is not listed");
+            require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
 
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i]);
             poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
