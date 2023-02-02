@@ -237,7 +237,7 @@ describe("Rewards: Tests", async function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  before(async function () {
+  beforeEach(async function () {
     await rewardsFixture();
   });
 
