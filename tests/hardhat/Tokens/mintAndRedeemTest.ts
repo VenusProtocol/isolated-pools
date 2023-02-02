@@ -394,6 +394,15 @@ describe("VToken", function () {
       expect(await underlying.balanceOf(redeemerAddress)).to.equal(redeemAmount);
     });
 
+    it("revert if exchange rate is high and amount is not enough for a token", async () => {
+      const redeemAmount = convertToUnit(1, 5);
+      const exchangeRate = convertToUnit(1, 25);
+      await underlying.harnessSetBalance(vToken.address, redeemAmount);
+      await expect(quickRedeemUnderlying(vToken, redeemer, redeemAmount, { exchangeRate })).to.be.revertedWith(
+        "redeemTokens zero",
+      );
+    });
+
     it("returns success from redeemFresh and redeems the right amount of underlying", async () => {
       await underlying.harnessSetBalance(vToken.address, redeemAmount);
       await quickRedeemUnderlying(vToken, redeemer, redeemAmount, { exchangeRate });

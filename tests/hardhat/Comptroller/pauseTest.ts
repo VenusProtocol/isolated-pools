@@ -146,5 +146,18 @@ describe("Comptroller", () => {
       expect(await comptroller.actionPaused(BAT.address, 5)).to.equal(false);
       expect(await comptroller.actionPaused(BAT.address, 6)).to.equal(true);
     });
+
+    it("reverts if the market is paused", async () => {
+      await comptroller.setActionsPaused([OMG.address], [8], true);
+      await expect(comptroller.exitMarket(OMG.address))
+        .to.be.revertedWithCustomError(comptroller, "ActionPaused")
+        .withArgs(OMG.address, 8);
+    });
+
+    it("reverts if market is not listed", async () => {
+      await expect(comptroller.exitMarket(SKT.address))
+        .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
+        .withArgs(SKT.address);
+    });
   });
 });

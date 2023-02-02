@@ -484,6 +484,38 @@ describe("PoolLens - VTokens Query Tests", async function () {
     poolLens = await PoolLens.deploy();
   });
 
+  it("get all info of pools user specific", async function () {
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
+    const res = await poolLens.callStatic.vTokenBalancesAll([vTokenAddress_WBTC, vTokenAddress_DAI], ownerAddress);
+    expect(res[0][0]).equal(vTokenAddress_WBTC);
+    expect(res[1][0]).equal(vTokenAddress_DAI);
+  });
+
+  it("get underlying price", async function () {
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
+    const res = await poolLens.vTokenUnderlyingPrice(vTokenAddress_DAI);
+    expect(res[1]).equal(convertToUnit(1, 18));
+  });
+
+  it("get underlying price all", async function () {
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenAddress_DAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
+    const res = await poolLens.vTokenUnderlyingPriceAll([vTokenAddress_DAI, vTokenAddress_WBTC]);
+    expect(res[0][1]).equal(convertToUnit(1, 18));
+    expect(res[1][1]).equal(convertToUnit("21000.34", 28));
+  });
+
+  it("get underlying price all", async function () {
+    const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vTokenAddress_WBTCPool = await poolLens.getVTokenForAsset(
+      poolRegistry.address,
+      comptroller1Proxy.address,
+      mockWBTC.address,
+    );
+    expect(vTokenAddress_WBTC).equal(vTokenAddress_WBTCPool);
+  });
+
   it("is correct for WBTC as underlyingAsset", async () => {
     // get CToken for Asset-1 : WBTC
     const vTokenAddress_WBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
