@@ -557,7 +557,7 @@ describe("Risk Fund: Tests", function () {
       it("fails if called with incorrect arguments", async function () {
         await expect(
           riskFund.swapPoolsAssets([cUSDT.address, cUSDC.address], [convertToUnit(10, 18)]),
-        ).to.be.rejectedWith("Risk fund: underlyingAssets and amountsOutMin are unequal lengths");
+        ).to.be.rejectedWith("Risk fund: markets and amountsOutMin are unequal lengths");
       });
     });
 
