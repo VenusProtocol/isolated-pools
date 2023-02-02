@@ -304,16 +304,21 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
     await vWBTC.connect(user1).mint(convertToUnit(10, 8));
 
+    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+
+    /*
+      Formula: (supplyIndex * supplyTokens * blocksDelta) + (borrowIndex * borrowTokens * blocksDelta)
+      0.5 * 10 * 5 = 25
+    */
+    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.25, 18));
+
     await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
     await vDAI.connect(user2).mint(convertToUnit(10000, 18));
-
     await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
 
-    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
     await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
 
-    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0");
-    expect((await xvs.balanceOf(user2.address)).toString()).not.equal("0");
+    expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
   });
 
   it("Contributor Rewards", async function () {
@@ -327,6 +332,11 @@ describe("Rewards: Tests", async function () {
     await rewardsDistributor.updateContributorRewards(user1.address);
 
     await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
-    expect((await xvs.balanceOf(user1.address)).toString()).not.equal("0");
+
+    /*
+      Formula: speed * blocks
+      0.5 * 1001 = 500.5
+    */
+    expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(500.5, 18));
   });
 });
