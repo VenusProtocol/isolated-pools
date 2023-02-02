@@ -603,6 +603,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         }
     }
 
+    function preSwapBorrowRateModeHook(address vToken) external view override {
+        _checkActionPauseState(vToken, Action.SWAP_RATE_MODE);
+    }
+
     /*** Pool-level operations ***/
 
     /**

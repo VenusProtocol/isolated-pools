@@ -883,12 +883,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
              * Calculte the average stable borrow rate for the total stable borrows
              */
             uint256 stableBorrowsNew = stableBorrows + borrowAmount;
-            uint256 stabelBorrowRate = stableBorrowRatePerBlock();
+            uint256 stableBorrowRate = stableBorrowRatePerBlock();
             uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
-                (borrowAmount * stabelBorrowRate)) / stableBorrowsNew;
+                (borrowAmount * stableBorrowRate)) / stableBorrowsNew;
 
             uint256 stableRateMantissaNew = ((accountBorrowsPrev * accountStableBorrows[borrower].stableRateMantissa) +
-                (borrowAmount * stabelBorrowRate)) / accountBorrowsNew;
+                (borrowAmount * stableBorrowRate)) / accountBorrowsNew;
 
             /////////////////////////
             // EFFECTS & INTERACTIONS
@@ -1064,11 +1064,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         if (InterestRateMode(interestRateMode) == InterestRateMode.STABLE) {
             uint256 stableBorrowsNew = stableBorrows - actualRepayAmount;
 
-            uint256 stableRateMantissa = accountStableBorrows[borrower].stableRateMantissa;
             uint256 averageStableBorrowRateNew;
             if (stableBorrowsNew == 0) {
                 averageStableBorrowRateNew = 0;
             } else {
+                uint256 stableRateMantissa = accountStableBorrows[borrower].stableRateMantissa;
+
                 unchecked {
                     averageStableBorrowRateNew =
                         ((stableBorrows * averageStableBorrowRate) - (actualRepayAmount * stableRateMantissa)) /
@@ -1098,6 +1099,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param rateMode The rate mode that the user wants to swap to
      **/
     function swapBorrowRateMode(uint256 rateMode) external {
+        /* Fail if swapBorrowRateMode not allowed */
+        comptroller.preSwapBorrowRateModeHook(address(this));
+
         accrueInterest();
 
         /* Verify market's block number equals current block number */
@@ -1110,18 +1114,20 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 stableDebt = _updateUserStableBorrowBalance(account);
         uint256 accountBorrowsNew = variableDebt + stableDebt;
         uint256 stableBorrowsNew;
+        uint256 averageStableBorrowRateNew;
 
         if (InterestRateMode(rateMode) == InterestRateMode.STABLE) {
             require(variableDebt > 0, "vToken: swapBorrowRateMode variable debt is 0");
 
             stableBorrowsNew = stableBorrows + variableDebt;
-            uint256 stabelBorrowRate = stableBorrowRatePerBlock();
+            uint256 stableBorrowRate = stableBorrowRatePerBlock();
 
-            uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
-                (variableDebt * stabelBorrowRate)) / stableBorrowsNew;
+            averageStableBorrowRateNew =
+                ((stableBorrows * averageStableBorrowRate) + (variableDebt * stableBorrowRate)) /
+                stableBorrowsNew;
 
             uint256 stableRateMantissaNew = ((stableDebt * accountStableBorrows[account].stableRateMantissa) +
-                (variableDebt * stabelBorrowRate)) / accountBorrowsNew;
+                (variableDebt * stableBorrowRate)) / accountBorrowsNew;
 
             /////////////////////////
             // EFFECTS & INTERACTIONS
@@ -1131,8 +1137,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             accountStableBorrows[account].interestIndex = stableBorrowIndex;
             accountStableBorrows[account].stableRateMantissa = stableRateMantissaNew;
 
-            averageStableBorrowRate = averageStableBorrowRateNew;
-
             accountBorrows[account].principal = 0;
             accountBorrows[account].interestIndex = borrowIndex;
         } else {
@@ -1141,7 +1145,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             stableBorrowsNew = stableBorrows - stableDebt;
 
             uint256 stableRateMantissa = accountStableBorrows[account].stableRateMantissa;
-            uint256 averageStableBorrowRateNew;
+
             if (stableBorrowsNew == 0) {
                 averageStableBorrowRateNew = 0;
             } else {
@@ -1160,11 +1164,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
             accountStableBorrows[account].principal = 0;
             accountStableBorrows[account].interestIndex = stableBorrowIndex;
-
-            averageStableBorrowRate = averageStableBorrowRateNew;
         }
 
         stableBorrows = stableBorrowsNew;
+        averageStableBorrowRate = averageStableBorrowRateNew;
 
         emit SwapBorrowRateMode(account, rateMode);
     }
