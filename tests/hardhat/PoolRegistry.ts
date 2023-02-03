@@ -92,6 +92,9 @@ describe("PoolRegistry: Tests", function () {
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     };
     return { ...defaults, ...overwrites };
   };
@@ -225,6 +228,9 @@ describe("PoolRegistry: Tests", function () {
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.addMarket({
@@ -246,6 +252,9 @@ describe("PoolRegistry: Tests", function () {
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
@@ -418,6 +427,36 @@ describe("PoolRegistry: Tests", function () {
       await expect(tx)
         .to.emit(poolRegistry, "PoolMetadataUpdated")
         .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
+    });
+
+    it("Revert on addMarket by non owner user", async () => {
+      const [, user, proxyAdmin] = await ethers.getSigners();
+
+      await expect(
+        poolRegistry.connect(user).addMarket({
+          comptroller: comptroller2Proxy.address,
+          asset: mockWBTC.address,
+          decimals: 8,
+          name: "Compound WBTC",
+          symbol: "vWBTC",
+          rateModel: 0,
+          baseRatePerYear: 0,
+          multiplierPerYear: "40000000000000000",
+          jumpMultiplierPerYear: 0,
+          kink_: 0,
+          collateralFactor: convertToUnit(0.7, 18),
+          liquidationThreshold: convertToUnit(0.7, 18),
+          accessControlManager: fakeAccessControlManager.address,
+          vTokenProxyAdmin: proxyAdmin.address,
+          beaconAddress: vTokenBeacon.address,
+          initialSupply: INITIAL_SUPPLY,
+          supplyCap: INITIAL_SUPPLY,
+          borrowCap: INITIAL_SUPPLY,
+          baseRatePerBlockForStable: 0,
+          stableRatePremium: convertToUnit(2, 12),
+          optimalStableLoanRatio: convertToUnit(5, 17),
+        }),
+      ).to.be.rejectedWith("Ownable: caller is not the owner");
     });
   });
 });

@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
+import "../InterestRate/StableRateModel.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -22,7 +23,8 @@ contract VTokenHarness is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) external initializer {
         blockNumber = 100000;
         super._initialize(
@@ -35,7 +37,8 @@ contract VTokenHarness is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 
@@ -57,6 +60,10 @@ contract VTokenHarness is VToken {
 
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
         return borrowRateMaxMantissa;
+    }
+
+    function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
+        return stableBorrowRateMaxMantissa;
     }
 
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
@@ -81,6 +88,10 @@ contract VTokenHarness is VToken {
 
     function harnessSetTotalBorrows(uint256 totalBorrows_) external {
         totalBorrows = totalBorrows_;
+    }
+
+    function harnessSetStableBorrows(uint256 stableBorrows_) external {
+        stableBorrows = stableBorrows_;
     }
 
     function harnessSetTotalReserves(uint256 totalReserves_) external {
@@ -123,6 +134,19 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
+    function harnessAccountStableBorrows(address account)
+        external
+        view
+        returns (
+            uint256 principal,
+            uint256 interestIndex,
+            uint256 lastBlockAccrued
+        )
+    {
+        StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued);
+    }
+
     function harnessSetAccountBorrows(
         address account,
         uint256 principal,
@@ -131,12 +155,35 @@ contract VTokenHarness is VToken {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
+    function harnessSetAccountStableBorrows(
+        address account,
+        uint256 principal,
+        uint256 interestIndex,
+        uint256 stableRateMantissa,
+        uint256 lastBlock
+    ) external {
+        accountStableBorrows[account] = StableBorrowSnapshot({
+            principal: principal,
+            interestIndex: interestIndex,
+            stableRateMantissa: stableRateMantissa,
+            lastBlockAccrued: lastBlock
+        });
+    }
+
     function harnessSetBorrowIndex(uint256 borrowIndex_) external {
         borrowIndex = borrowIndex_;
     }
 
+    function harnessSetStableBorrowIndex(uint256 stableBorrowIndex_) external {
+        stableBorrowIndex = stableBorrowIndex_;
+    }
+
     function harnessBorrowFresh(address payable account, uint256 borrowAmount) external {
-        _borrowFresh(account, borrowAmount);
+        _borrowFresh(account, borrowAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessBorrowStableFresh(address payable account, uint256 borrowAmount) external {
+        _borrowFresh(account, borrowAmount, InterestRateMode.STABLE);
     }
 
     function harnessRepayBorrowFresh(
@@ -144,7 +191,15 @@ contract VTokenHarness is VToken {
         address account,
         uint256 repayAmount
     ) external {
-        _repayBorrowFresh(payer, account, repayAmount);
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessRepayBorrowStableFresh(
+        address payer,
+        address account,
+        uint256 repayAmount
+    ) external {
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.STABLE);
     }
 
     function harnessLiquidateBorrowFresh(
@@ -176,6 +231,22 @@ contract VTokenHarness is VToken {
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
     }
+
+    function harnessSetAvgStableBorrowRate(uint256 averageStableBorrowRate_) public {
+        averageStableBorrowRate = averageStableBorrowRate_;
+    }
+
+    function harnessStableBorrows(uint256 stableBorrows_) public {
+        stableBorrows = stableBorrows_;
+    }
+
+    function accrueStableInterest(uint256 blockDelta) public returns (uint256) {
+        return _accrueStableInterest(blockDelta);
+    }
+
+    function harnessUpdateUserStableBorrowBalance(address account) public returns (uint256) {
+        return _updateUserStableBorrowBalance(account);
+    }
 }
 
 contract VTokenScenario is VToken {
@@ -189,7 +260,8 @@ contract VTokenScenario is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     ) {
         initialize(
             underlying_,
@@ -201,7 +273,8 @@ contract VTokenScenario is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         );
     }
 
@@ -230,7 +303,8 @@ contract VEvil is VTokenScenario {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        VTokenInterface.RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_
     )
         VTokenScenario(
             underlying_,
@@ -242,7 +316,8 @@ contract VEvil is VTokenScenario {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            stableRateModel_
         )
     {}
 

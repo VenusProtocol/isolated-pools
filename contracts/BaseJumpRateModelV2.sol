@@ -51,7 +51,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      * @param owner_ The address of the owner, i.e. the Timelock contract (which has the ability to update parameters directly)
@@ -71,7 +71,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice Update the parameters of the interest rate model (only callable by owner, i.e. Timelock)
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */
@@ -97,7 +97,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 cash,
         uint256 borrows,
         uint256 reserves
-    ) public pure returns (uint256) {
+    ) public pure override returns (uint256) {
         // Utilization rate is 0 when there are no borrows
         if (borrows == 0) {
             return 0;
@@ -133,29 +133,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     }
 
     /**
-     * @notice Calculates the current supply rate per block
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market
-     * @param reserveFactorMantissa The current reserve factor for the market
-     * @return The supply rate percentage per block as a mantissa (scaled by BASE)
-     */
-    function getSupplyRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 reserveFactorMantissa
-    ) public view virtual override returns (uint256) {
-        uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRateInternal(cash, borrows, reserves);
-        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
-        return (utilizationRate(cash, borrows, reserves) * rateToPool) / BASE;
-    }
-
-    /**
      * @notice Internal function to update the parameters of the interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate with respect to utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */

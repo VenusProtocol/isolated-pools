@@ -65,6 +65,8 @@ abstract contract ComptrollerInterface {
         uint256 transferTokens
     ) external virtual;
 
+    function preSwapBorrowRateModeHook(address vToken) external virtual;
+
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(

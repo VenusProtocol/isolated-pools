@@ -230,6 +230,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await poolRegistry.addMarket({
@@ -251,6 +254,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   const vUSDTAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);

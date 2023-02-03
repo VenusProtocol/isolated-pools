@@ -319,6 +319,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await poolRegistry.addMarket({
@@ -340,6 +343,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDT.faucet(initialSupply);
@@ -364,6 +370,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDC.faucet(initialSupply);
@@ -388,6 +397,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await USDT.faucet(initialSupply);
@@ -412,6 +424,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await BUSD.faucet(initialSupply);
@@ -436,6 +451,9 @@ const riskFundFixture = async (): Promise<void> => {
     initialSupply,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
+    baseRatePerBlockForStable: 0,
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   const cUSDT1Address = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, USDT.address);

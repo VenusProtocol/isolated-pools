@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "../VToken.sol";
 import "../Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
+import "../InterestRate/StableRateModel.sol";
 
 contract VTokenProxyFactory {
     struct VTokenArgs {
@@ -21,6 +22,7 @@ contract VTokenProxyFactory {
         VTokenInterface.RiskManagementInit riskManagement;
         address vTokenProxyAdmin_;
         address beaconAddress;
+        StableRateModel stableRateModel_;
     }
 
     function deployVTokenProxy(VTokenArgs memory input) external returns (VToken) {
@@ -37,7 +39,8 @@ contract VTokenProxyFactory {
                 input.decimals_,
                 input.admin_,
                 input.accessControlManager_,
-                input.riskManagement
+                input.riskManagement,
+                input.stableRateModel_
             )
         );
 

@@ -18,6 +18,7 @@ import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../ComptrollerInterface.sol";
 import "../VTokenInterfaces.sol";
+import "../InterestRate/StableRateModel.sol";
 
 /**
  * @title PoolRegistry
@@ -82,6 +83,9 @@ contract PoolRegistry is Ownable2StepUpgradeable {
         uint256 initialSupply;
         uint256 supplyCap;
         uint256 borrowCap;
+        uint256 baseRatePerBlockForStable;
+        uint256 stableRatePremium;
+        uint256 optimalStableLoanRatio;
     }
 
     VTokenProxyFactory private vTokenFactory;
@@ -238,6 +242,13 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             rate = InterestRateModel(whitePaperFactory.deploy(input.baseRatePerYear, input.multiplierPerYear));
         }
 
+        StableRateModel stableRateModel = new StableRateModel(
+            input.baseRatePerBlockForStable,
+            input.stableRatePremium,
+            input.optimalStableLoanRatio,
+            msg.sender
+        );
+
         Comptroller comptroller = Comptroller(input.comptroller);
 
         VTokenProxyFactory.VTokenArgs memory initializeArgs = VTokenProxyFactory.VTokenArgs(
@@ -252,7 +263,8 @@ contract PoolRegistry is Ownable2StepUpgradeable {
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
             input.vTokenProxyAdmin,
-            input.beaconAddress
+            input.beaconAddress,
+            stableRateModel
         );
 
         VToken vToken = vTokenFactory.deployVTokenProxy(initializeArgs);

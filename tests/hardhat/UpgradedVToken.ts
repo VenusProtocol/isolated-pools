@@ -134,6 +134,9 @@ describe("UpgradedVToken: Tests", function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
   });
 

@@ -95,6 +95,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     initialSupply,
     supplyCap,
     borrowCap,
+    baseRatePerBlockForStable: 0,
+    multiplierPerBlockForStable: convertToUnit(6, 10),
+    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
+    kinkForStable: convertToUnit(6, 17),
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRate: convertToUnit(5, 17),
   });
   await tx.wait();
 
@@ -123,6 +129,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     initialSupply,
     supplyCap,
     borrowCap,
+    baseRatePerBlockForStable: 0,
+    multiplierPerBlockForStable: convertToUnit(6, 10),
+    jumpMultiplierPerBlockForStable: convertToUnit(10, 10),
+    kinkForStable: convertToUnit(6, 17),
+    stableRatePremium: convertToUnit(2, 12),
+    optimalStableLoanRate: convertToUnit(5, 17),
   });
 
   const PoolLens = await ethers.getContract("PoolLens");

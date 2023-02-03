@@ -185,6 +185,9 @@ describe("PoolLens - PoolView Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.addMarket({
@@ -206,6 +209,9 @@ describe("PoolLens - PoolView Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -439,6 +445,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     initialSupply = convertToUnit(1, 18);
@@ -464,6 +473,9 @@ describe("PoolLens - VTokens Query Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
@@ -494,6 +506,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
     expect(vTokenMetadata_Actual_Parsed["exchangeRateCurrent"]).equal("100000000");
     expect(vTokenMetadata_Actual_Parsed["supplyRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["borrowRatePerBlock"]).equal("0");
+    expect(vTokenMetadata_Actual_Parsed["stableBorrowRatePerBlock"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["reserveFactorMantissa"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalBorrows"]).equal("0");
     expect(vTokenMetadata_Actual_Parsed["totalReserves"]).equal("0");

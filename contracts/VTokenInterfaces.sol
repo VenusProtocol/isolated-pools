@@ -7,6 +7,7 @@ import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
 import "./Governance/AccessControlManager.sol";
+import "./InterestRate/StableRateModel.sol";
 
 contract VTokenStorage {
     /**
@@ -131,6 +132,48 @@ contract VTokenStorage {
      * @notice Storage of Shortfall contract address
      */
     address public shortfall;
+
+    /**
+     * @notice Model which tells what the current stable interest rate should be
+     */
+    StableRateModel public stableRateModel;
+
+    /**
+     * @notice Total amount of outstanding stable borrows of the underlying in this market
+     */
+    uint256 public stableBorrows;
+
+    /**
+     * @notice Accumulator of the total earned stable interest rate since the opening of the market
+     */
+    uint256 public stableBorrowIndex;
+
+    /**
+     * @notice Average of all of the stable borrows
+     */
+    uint256 public averageStableBorrowRate;
+
+    // Maximum stable borrow rate that can ever be applied (.0005% / block)
+    uint256 internal constant stableBorrowRateMaxMantissa = 0.0005e16;
+
+    struct StableBorrowSnapshot {
+        uint256 principal;
+        uint256 stableRateMantissa;
+        uint256 interestIndex;
+        uint256 lastBlockAccrued;
+    }
+
+    // Mapping of account addresses to outstanding stable borrow balances
+    mapping(address => StableBorrowSnapshot) internal accountStableBorrows;
+
+    /**
+     * @notice Types of the Interest rate model
+     */
+    enum InterestRateMode {
+        NONE,
+        STABLE,
+        VARIABLE
+    }
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -150,7 +193,13 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interest is accrued
      */
-    event AccrueInterest(uint256 cashPrior, uint256 interestAccumulated, uint256 borrowIndex, uint256 totalBorrows);
+    event AccrueInterest(
+        uint256 cashPrior,
+        uint256 interestAccumulated,
+        uint256 borrowIndex,
+        uint256 totalBorrows,
+        uint256 stableBorrowIndex
+    );
 
     /**
      * @notice Event emitted when tokens are minted
@@ -205,6 +254,11 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 seizeTokens
     );
 
+    /**
+     * @notice Event emitted when a borrow rate mode is swapped for account
+     */
+    event SwapBorrowRateMode(address account, uint256 swappedBorrowMode);
+
     /*** Admin Events ***/
 
     /**
@@ -231,6 +285,11 @@ abstract contract VTokenInterface is VTokenStorage {
     event NewProtocolSeizeShare(uint256 oldProtocolSeizeShareMantissa, uint256 newProtocolSeizeShareMantissa);
 
     /**
+     * @notice Event emitted when stableInterestRateModel is changed
+     */
+    event NewMarketStableInterestRateModel(StableRateModel oldInterestRateModel, StableRateModel newInterestRateModel);
+
+    /**
      * @notice Event emitted when the reserve factor is changed
      */
     event NewReserveFactor(uint256 oldReserveFactorMantissa, uint256 newReserveFactorMantissa);
@@ -255,6 +314,11 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
+    /**
+     * @notice Event emitted after updating stable borrow balance for borrower
+     */
+    event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
@@ -267,9 +331,15 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function borrow(uint256 borrowAmount) external virtual returns (uint256);
 
+    function borrowStable(uint256 borrowAmount) external virtual returns (uint256);
+
     function repayBorrow(uint256 repayAmount) external virtual returns (uint256);
 
+    function repayBorrowStable(uint256 repayAmount) external virtual returns (uint256);
+
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external virtual returns (uint256);
+
+    function repayBorrowStableBehalf(address borrower, uint256 repayAmount) external virtual returns (uint256);
 
     function liquidateBorrow(
         address borrower,
@@ -326,6 +396,8 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function borrowRatePerBlock() external view virtual returns (uint256);
 
+    function stableBorrowRatePerBlock() public view virtual returns (uint256);
+
     function supplyRatePerBlock() external view virtual returns (uint256);
 
     function totalBorrowsCurrent() external virtual returns (uint256);
@@ -353,6 +425,8 @@ abstract contract VTokenInterface is VTokenStorage {
     function reduceReserves(uint256 reduceAmount) external virtual;
 
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
+
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual returns (uint256);
 
     function addReserves(uint256 addAmount) external virtual;
 }

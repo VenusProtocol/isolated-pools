@@ -172,6 +172,9 @@ describe("Rewards: Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     await poolRegistry.addMarket({
@@ -193,6 +196,9 @@ describe("Rewards: Tests", async function () {
       initialSupply,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
+      baseRatePerBlockForStable: 0,
+      stableRatePremium: convertToUnit(2, 12),
+      optimalStableLoanRatio: convertToUnit(5, 17),
     });
 
     const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptrollerProxy.address, mockWBTC.address);
