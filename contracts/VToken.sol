@@ -320,13 +320,17 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             return 0;
         }
         uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrows = totalBorrows - stableBorrows;
-        uint256 averageMarketBorrowRate = ((variableBorrows * variableBorrowRate) +
-            (stableBorrows * averageStableBorrowRate)) / totalBorrows;
+        uint256 averageMarketBorrowRate = _averageMarketBorrowRate();
         return
             (averageMarketBorrowRate * utilizationRate * (mantissaOne - reserveFactorMantissa)) /
             (mantissaOne * mantissaOne);
+    }
+
+    /// @notice Calculate the average market borrow rate with respect to variable and stable borrows
+    function _averageMarketBorrowRate() internal view returns (uint256) {
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrows = totalBorrows - stableBorrows;
+        return ((variableBorrows * variableBorrowRate) + (stableBorrows * averageStableBorrowRate)) / totalBorrows;
     }
 
     /**
@@ -1021,7 +1025,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         comptroller.preRepayHook(address(this), payer, borrower, repayAmount);
 
         /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        if (accrualBlockNumber != _getBlockNumber()) { 
             revert RepayBorrowFreshnessCheck();
         }
 
@@ -1466,6 +1470,46 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+    }
+
+    /**
+     * @notice Rebalances the stable interest rate of a user to the current stable borrow rate.
+     * - Users can be rebalanced if the following conditions are satisfied:
+     *     1. Utilization rate is above rebalanceUtilizationRateThreshold.
+     *     2. Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+     * @param account The address of the account to be rebalanced
+     * @custom:events RebalancedStableBorrowRate - Emits after rebalancing the stable borrow rate for the user.
+     **/
+    function rebalanceStableBorrowRate(address account) external {
+        accrueInterest();
+
+        validateRebalanceStableBorrowRate();
+        _updateUserStableBorrowBalance(account);
+
+        uint256 stableBorrowRate = stableRateModel.getBorrowRate(
+            _getCashPrior(),
+            stableBorrows,
+            totalBorrows,
+            totalReserves
+        );
+
+        accountStableBorrows[account].stableRateMantissa = stableBorrowRate;
+
+        emit RebalancedStableBorrowRate(account, stableBorrowRate);
+    }
+
+    /// Validate the conditions to rebalance the stable borrow rate.
+    function validateRebalanceStableBorrowRate() public view {
+        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+
+        /// Utilization rate is above rebalanceUtilizationRateThreshold.
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+        require(utilizationRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
+        require(
+            _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
+            "vToken: average borrow rate higher than variable rate threshold."
+        );
     }
 
     /*** Admin Functions ***/

@@ -174,6 +174,12 @@ contract VTokenStorage {
         STABLE,
         VARIABLE
     }
+
+    /// @notice Utilization rate threshold where rebalancing condition get satisfied for stable rate borrowing.
+    uint256 internal rebalanceUtilizationRateThreshold;
+
+    /// @notice Rate fraction for variable rate borrwing where rebalancing condition get satisfied for stable rate borrowing.
+    uint256 internal rebalanceRateFractionThreshold;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -318,6 +324,11 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted after updating stable borrow balance for borrower
      */
     event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
+
+    /**
+     * @notice Event emitted on stable rate rebalacing       
+     */
+    event RebalancedStableBorrowRate(address account, uint256 stableRateMantissa);
 
     /*** User Interface ***/
 
