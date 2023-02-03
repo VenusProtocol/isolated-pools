@@ -5,9 +5,8 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
 import "./Rewards/RewardsDistributor.sol";
 
-abstract contract ComptrollerInterface {
-    /// @notice Indicator that this is a Comptroller contract (for inspection)
-    bool public constant isComptroller = true;
+interface ComptrollerInterface {
+    function isComptroller() external view virtual returns (bool);
 
     /*** Assets You Are In ***/
 
@@ -70,7 +69,7 @@ abstract contract ComptrollerInterface {
     function getAllMarkets() external view virtual returns (VToken[] memory);
 }
 
-abstract contract ComptrollerViewInterface {
+interface ComptrollerViewInterface {
     function markets(address) external view virtual returns (bool, uint256);
 
     function oracle() external view virtual returns (PriceOracle);

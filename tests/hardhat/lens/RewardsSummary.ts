@@ -18,6 +18,7 @@ let rewardDistributor3: FakeContract<RewardsDistributor>;
 let rewardToken3: FakeContract<MockToken>;
 let poolLens: MockContract<PoolLens>;
 let account: Signer;
+let startBlock: number;
 
 type RewardsFixtire = {
   comptroller: FakeContract<Comptroller>;
@@ -30,6 +31,7 @@ type RewardsFixtire = {
   rewardDistributor3: FakeContract<RewardsDistributor>;
   rewardToken3: FakeContract<MockToken>;
   poolLens: MockContract<PoolLens>;
+  startBlock: number;
 };
 
 const rewardsFixture = async (): Promise<RewardsFixtire> => {
@@ -44,6 +46,8 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardToken3 = await smock.fake<MockToken>("MockToken");
   const poolLensFactory = await smock.mock<PoolLens__factory>("PoolLens");
   poolLens = await poolLensFactory.deploy();
+
+  const startBlock = await ethers.provider.getBlockNumber();
 
   // Fake return values
   comptroller.getAllMarkets.returns([vBUSD.address, vWBTC.address]);
@@ -63,11 +67,11 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor1.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor1.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
   rewardDistributor1.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
 
   rewardDistributor2.rewardToken.returns(rewardToken2.address);
@@ -80,11 +84,11 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor2.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor2.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
   rewardDistributor2.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
 
   rewardDistributor3.rewardToken.returns(rewardToken3.address);
@@ -97,11 +101,11 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor3.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor3.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
   rewardDistributor3.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    block: 1,
+    block: startBlock,
   });
 
   vBUSD.borrowIndex.returns(convertToUnit(1, 18));
@@ -127,6 +131,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardDistributor3,
     rewardToken3,
     poolLens,
+    startBlock,
   };
 };
 
@@ -144,11 +149,12 @@ describe("PoolLens: Rewards Summary", () => {
       rewardDistributor3,
       rewardToken3,
       poolLens,
+      startBlock,
     } = await loadFixture(rewardsFixture));
   });
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
-    await mineUpTo(1000);
+    await mineUpTo(startBlock + 1000);
 
     const accountAddress = await account.getAddress();
 
@@ -187,8 +193,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken1.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(10, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000001, 18))],
         ],
       ],
       [
@@ -196,8 +202,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken2.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(10, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000001, 18))],
         ],
       ],
       [
@@ -205,8 +211,8 @@ describe("PoolLens: Rewards Summary", () => {
         rewardToken3.address,
         BigNumber.from(convertToUnit(50, 18)),
         [
-          [vBUSD.address, BigNumber.from(convertToUnit(9.99, 18))],
-          [vWBTC.address, BigNumber.from(convertToUnit(0.0000000999, 18))],
+          [vBUSD.address, BigNumber.from(convertToUnit(10, 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit(0.0000001, 18))],
         ],
       ],
     ];

@@ -7,13 +7,14 @@ import { constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../helpers/utils";
+import { AddressOne, convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
   MockToken,
+  PoolRegistry,
   PriceOracle,
   Shortfall,
   Shortfall__factory,
@@ -25,7 +26,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let owner: SignerWithAddress;
-let poolRegistry: SignerWithAddress;
+let poolRegistry: FakeContract<PoolRegistry>;
 let someone: SignerWithAddress;
 let bidder1: SignerWithAddress;
 let bidder2: SignerWithAddress;
@@ -61,7 +62,10 @@ async function shortfallFixture() {
     parseUnits(minimumPoolBadDebt, "18"),
   ]);
 
-  [owner, poolRegistry, someone, bidder1, bidder2] = await ethers.getSigners();
+  [owner, someone, bidder1, bidder2] = await ethers.getSigners();
+
+  poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
+
   await shortfall.setPoolRegistry(poolRegistry.address);
 
   // Deploy Mock Tokens
@@ -79,6 +83,14 @@ async function shortfallFixture() {
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
   comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
   poolAddress = comptroller.address;
+
+  poolRegistry.getPoolByComptroller.returns({
+    name: "test",
+    creator: AddressOne,
+    comptroller: comptroller.address,
+    blockPosted: 0,
+    timestampPosted: 0,
+  });
 
   const VToken = await smock.mock<VToken__factory>("VToken");
   vDAI = await VToken.deploy();
