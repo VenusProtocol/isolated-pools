@@ -22,7 +22,7 @@ abstract contract InterestRateModel {
     ) external view virtual returns (uint256);
 
     /**
-     * @notice Calculates the current supply interest rate per block
+     * @notice Calculates the utilization rate for the market
      * @param cash The total amount of cash the market has
      * @param borrows The total amount of borrows the market has outstanding
      * @param reserves The total amount of reserves the market has
@@ -30,7 +30,7 @@ abstract contract InterestRateModel {
      * @param badDebt The amount of badDebt in the market
      * @return The supply rate per block (as a percentage, and scaled by 1e18)
      */
-    function getSupplyRate(
+    function utilizationRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves,

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
+import {StableRateModel} from "../InterestRate/StableRateModel.sol";
 
 /**
  * @title Venus's VToken Contract
@@ -24,6 +23,7 @@ contract UpgradedVToken is VToken {
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
      * @param riskManagement Addresses of risk fund contracts
+     * @param stableRateModel_ The address of the stable interest rate model
      */
 
     /// @notice We added this new function to test contract upgrade
@@ -42,6 +42,7 @@ contract UpgradedVToken is VToken {
         address payable admin_,
         address accessControlManager_,
         RiskManagementInit memory riskManagement,
+        StableRateModel stableRateModel_,
         uint256 reserveFactorMantissa_
     ) public reinitializer(2) {
         super._initialize(
@@ -55,6 +56,7 @@ contract UpgradedVToken is VToken {
             admin_,
             accessControlManager_,
             riskManagement,
+            stableRateModel_,
             reserveFactorMantissa_
         );
     }

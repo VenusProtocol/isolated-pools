@@ -118,8 +118,6 @@ function configure({
   for (const model of [borrowedRateModel, collateralRateModel]) {
     model.getBorrowRate.reset();
     model.getBorrowRate.returns(0);
-    model.getSupplyRate.reset();
-    model.getSupplyRate.returns(0);
   }
 }
 

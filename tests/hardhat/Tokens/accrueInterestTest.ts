@@ -5,8 +5,9 @@ import chai from "chai";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 
-import { InterestRateModel, VTokenHarness } from "../../../typechain";
+import { InterestRateModel, StableRateModel, VTokenHarness } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
+import { convertToUnit } from "../../../helpers/utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -23,46 +24,64 @@ async function pretendBlock(
   await vToken.harnessSetAccrualBlockNumber(accrualBlock);
   await vToken.harnessSetBlockNumber(BigNumber.from(accrualBlock).add(deltaBlocks));
   await vToken.harnessSetBorrowIndex(borrowIndex);
+  await vToken.harnessSetStableBorrowIndex(borrowIndex);
 }
 
 async function preAccrue({
   vToken,
   interestRateModel,
+  stableInterestRateModel,
 }: {
   vToken: VTokenHarness;
   interestRateModel: FakeContract<InterestRateModel>;
+  stableInterestRateModel: FakeContract<StableRateModel>;
 }) {
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getBorrowRate.returns(borrowRate);
-  interestRateModel.getSupplyRate.reset();
+  stableInterestRateModel.getBorrowRate.reset();
+  stableInterestRateModel.getBorrowRate.returns(borrowRate);
   await vToken.harnessExchangeRateDetails(0, 0, 0);
 }
 
 describe("VToken", () => {
   let vToken: VTokenHarness;
   let interestRateModel: FakeContract<InterestRateModel>;
+  let stableInterestRateModel: FakeContract<StableRateModel>;
 
   beforeEach(async () => {
     const contracts = await loadFixture(vTokenTestFixture);
-    ({ vToken, interestRateModel } = contracts);
+    ({ vToken, interestRateModel, stableInterestRateModel } = contracts);
   });
 
   beforeEach(async () => {
-    await preAccrue({ vToken, interestRateModel });
+    await preAccrue({ vToken, interestRateModel, stableInterestRateModel });
   });
 
   describe("accrueInterest", () => {
     it("reverts if the interest rate is absurdly high", async () => {
       await pretendBlock(vToken, blockNumber, 1);
-      expect(await vToken.getBorrowRateMaxMantissa()).to.equal(parseUnits("0.000005", 18)); // 0.0005% per block
-      interestRateModel.getBorrowRate.returns(parseUnits("0.00001", 18)); // 0.0010% per block
-      await expect(vToken.accrueInterest()).to.be.revertedWith("borrow rate is absurdly high");
+      expect(await vToken.getBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
+      interestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
+      await expect(vToken.accrueInterest()).to.be.revertedWith("vToken: borrow rate is absurdly high");
+    });
+
+    it("reverts if the stable interest rate is absurdly high", async () => {
+      await pretendBlock(vToken, blockNumber, 1);
+      expect(await vToken.getStableBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
+      stableInterestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
+      await expect(vToken.accrueInterest()).to.be.revertedWith("vToken: stable borrow rate is absurdly high");
     });
 
     it("fails if new borrow rate calculation fails", async () => {
       await pretendBlock(vToken, blockNumber, 1);
       interestRateModel.getBorrowRate.reverts("Oups");
       await expect(vToken.accrueInterest()).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
+    });
+
+    it("fails if new borrow rate calculation fails", async () => {
+      await pretendBlock(vToken, blockNumber, 1);
+      stableInterestRateModel.getBorrowRate.reverts("Oups");
+      await expect(vToken.accrueInterest()).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("fails if simple interest factor calculation fails", async () => {
@@ -78,6 +97,12 @@ describe("VToken", () => {
     it("fails if new borrow interest index calculation fails", async () => {
       await pretendBlock(vToken);
       await vToken.harnessSetBorrowIndex(constants.MaxUint256);
+      await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
+    });
+
+    it("fails if new borrow interest index calculation fails", async () => {
+      await pretendBlock(vToken);
+      await vToken.harnessSetStableBorrowIndex(constants.MaxUint256);
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 

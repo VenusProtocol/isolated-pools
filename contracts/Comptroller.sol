@@ -580,6 +580,10 @@ contract Comptroller is
         }
     }
 
+    function preSwapBorrowRateModeHook(address vToken) external view override {
+        _checkActionPauseState(vToken, Action.SWAP_RATE_MODE);
+    }
+
     /*** Pool-level operations ***/
 
     /**

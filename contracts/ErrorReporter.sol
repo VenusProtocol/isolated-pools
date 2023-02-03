@@ -45,4 +45,9 @@ contract TokenErrorReporter {
     error ReduceReservesCashValidation();
 
     error SetInterestRateModelFreshCheck();
+
+    error SetStableInterestRateModelOwnerCheck();
+    error SetStableInterestRateModelFreshCheck();
+
+    error SwapBorrowRateModeFreshnessCheck();
 }

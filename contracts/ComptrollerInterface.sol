@@ -47,6 +47,8 @@ interface ComptrollerInterface {
 
     function isComptroller() external view returns (bool);
 
+    function preSwapBorrowRateModeHook(address vToken) external virtual;
+
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(

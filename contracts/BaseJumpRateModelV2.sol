@@ -93,8 +93,8 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         if (!isAllowedToCall) {
             revert Unauthorized(msg.sender, address(this), signature);
         }
-
-        _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
+    
+        updateJumpRateModelInternal(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
     }
 
     /**
