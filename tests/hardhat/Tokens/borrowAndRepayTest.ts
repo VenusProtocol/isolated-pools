@@ -326,6 +326,27 @@ describe("VToken", function () {
       await borrowStable(vToken, borrower, borrowAmount);
       expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
     });
+
+    it("borrow at both rates", async () => {
+      const beforeAccountCash = await underlying.balanceOf(borrowerAddress);
+      await vToken.harnessFastForward(5);
+
+      await borrowStable(vToken, borrower, convertToUnit(500, 18));
+      expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(convertToUnit(500, 18)));
+
+      const stabelBorrows = await vToken.stableBorrows();
+      expect(stabelBorrows).to.equal(convertToUnit(500, 18));
+
+      const borrowSnapStable = await vToken.harnessAccountStableBorrows(borrower.getAddress());
+      expect(borrowSnapStable.principal).to.equal(convertToUnit(500, 18));
+
+      await borrow(vToken, borrower, convertToUnit(500, 18));
+
+      const borrowSnapVariable = await vToken.harnessAccountBorrows(borrower.getAddress());
+      expect(borrowSnapVariable.principal).to.equal(convertToUnit(500, 18));
+
+      expect(await underlying.balanceOf(borrowerAddress)).to.equal(beforeAccountCash.add(borrowAmount));
+    });
   });
 
   describe("repayBorrowFresh for variable rate borrowing", () => {

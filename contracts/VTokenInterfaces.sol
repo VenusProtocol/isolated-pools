@@ -340,7 +340,7 @@ abstract contract VTokenInterface is VTokenStorage {
     event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
 
     /**
-     * @notice Event emitted on stable rate rebalacing       
+     * @notice Event emitted on stable rate rebalacing
      */
     event RebalancedStableBorrowRate(address account, uint256 stableRateMantissa);
 

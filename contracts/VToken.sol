@@ -1324,7 +1324,7 @@ contract VToken is
         comptroller.preRepayHook(address(this), borrower);
 
         /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) { 
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert RepayBorrowFreshnessCheck();
         }
 
@@ -1646,12 +1646,7 @@ contract VToken is
         validateRebalanceStableBorrowRate();
         _updateUserStableBorrowBalance(account);
 
-        uint256 stableBorrowRate = stableRateModel.getBorrowRate(
-            _getCashPrior(),
-            stableBorrows,
-            totalBorrows,
-            totalReserves
-        );
+        uint256 stableBorrowRate = stableBorrowRatePerBlock();
 
         accountStableBorrows[account].stableRateMantissa = stableBorrowRate;
 
