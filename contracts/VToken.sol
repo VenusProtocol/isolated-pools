@@ -705,14 +705,75 @@ contract VToken is
      * @return rate The supply interest rate per block, scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
+        if (totalBorrows == 0) {
+            return 0;
+        }
+        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 averageMarketBorrowRate = _averageMarketBorrowRate();
         return
-            interestRateModel.getSupplyRate(
-                _getCashPrior(),
-                totalBorrows,
-                totalReserves,
-                reserveFactorMantissa,
-                badDebt
-            );
+            (averageMarketBorrowRate * utilizationRate * (mantissaOne - reserveFactorMantissa)) /
+            (mantissaOne * mantissaOne);
+    }
+
+    /// @notice Calculate the average market borrow rate with respect to variable and stable borrows
+    function _averageMarketBorrowRate() internal view returns (uint256) {
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrows = totalBorrows - stableBorrows;
+        return ((variableBorrows * variableBorrowRate) + (stableBorrows * averageStableBorrowRate)) / totalBorrows;
+    }
+
+    /**
+     * @notice Returns the current total borrows plus accrued interest
+     * @return totalBorrows The total borrows with interest
+     */
+    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
+        accrueInterest();
+        return totalBorrows;
+    }
+
+    /**
+     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
+     * @param account The address whose balance should be calculated after updating borrowIndex
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
+        return _borrowBalanceStored(account) + stableBorrowAmount;
+    }
+
+    /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceStored(address account) public view override returns (uint256) {
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
+        return _borrowBalanceStored(account) + stableBorrowAmount;
+    }
+
+    /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return borrowBalance the calculated balance
+     */
+    function _borrowBalanceStored(address account) internal view returns (uint256) {
+        /* Get borrowBalance and borrowIndex */
+        BorrowSnapshot storage borrowSnapshot = accountBorrows[account];
+
+        /* If borrowBalance = 0 then borrowIndex is likely also 0.
+         * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+         */
+        if (borrowSnapshot.principal == 0) {
+            return 0;
+        }
+
+        /* Calculate new borrow balance using the interest index:
+         *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
+         */
+        uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
+
+        return principalTimesIndex / borrowSnapshot.interestIndex;
     }
 
     /**
@@ -1263,7 +1324,7 @@ contract VToken is
         comptroller.preRepayHook(address(this), borrower);
 
         /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        if (accrualBlockNumber != _getBlockNumber()) { 
             revert RepayBorrowFreshnessCheck();
         }
 
@@ -1569,6 +1630,105 @@ contract VToken is
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+    }
+
+    /**
+     * @notice Rebalances the stable interest rate of a user to the current stable borrow rate.
+     * - Users can be rebalanced if the following conditions are satisfied:
+     *     1. Utilization rate is above rebalanceUtilizationRateThreshold.
+     *     2. Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+     * @param account The address of the account to be rebalanced
+     * @custom:events RebalancedStableBorrowRate - Emits after rebalancing the stable borrow rate for the user.
+     **/
+    function rebalanceStableBorrowRate(address account) external {
+        accrueInterest();
+
+        validateRebalanceStableBorrowRate();
+        _updateUserStableBorrowBalance(account);
+
+        uint256 stableBorrowRate = stableRateModel.getBorrowRate(
+            _getCashPrior(),
+            stableBorrows,
+            totalBorrows,
+            totalReserves
+        );
+
+        accountStableBorrows[account].stableRateMantissa = stableBorrowRate;
+
+        emit RebalancedStableBorrowRate(account, stableBorrowRate);
+    }
+
+    /// Validate the conditions to rebalance the stable borrow rate.
+    function validateRebalanceStableBorrowRate() public view {
+        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+
+        /// Utilization rate is above rebalanceUtilizationRateThreshold.
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+        require(utilizationRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
+        require(
+            _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
+            "vToken: average borrow rate higher than variable rate threshold."
+        );
+    }
+
+    /*** Admin Functions ***/
+
+    /**
+     * @notice Sets a new comptroller for the market
+     * @dev Admin function to set a new comptroller
+     * @custom:events Emits NewComptroller event
+     * @custom:error SetComptrollerOwnerCheck is thrown when the call is not from owner
+     * @custom:access Only Governance
+     */
+    function setComptroller(ComptrollerInterface newComptroller) public override {
+        // Check caller is admin
+        if (msg.sender != owner()) {
+            revert SetComptrollerOwnerCheck();
+        }
+
+        _setComptroller(newComptroller);
+    }
+
+    function _setComptroller(ComptrollerInterface newComptroller) internal {
+        ComptrollerInterface oldComptroller = comptroller;
+        // Ensure invoke comptroller.isComptroller() returns true
+        require(newComptroller.isComptroller(), "marker method returned false");
+
+        // Set market's comptroller to newComptroller
+        comptroller = newComptroller;
+
+        // Emit NewComptroller(oldComptroller, newComptroller)
+        emit NewComptroller(oldComptroller, newComptroller);
+    }
+
+    /**
+     * @notice sets protocol share accumulated from liquidations
+     * @dev must be less than liquidation incentive - 1
+     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
+     * @custom:events Emits NewProtocolSeizeShare event on success
+     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setProtocolSeizeShare(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetProtocolSeizeShareUnauthorized();
+        }
+
+        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
+        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
+            revert ProtocolSeizeShareTooBig();
+        }
+
+        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
+        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
+        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {

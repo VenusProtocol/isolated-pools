@@ -168,12 +168,18 @@ contract VTokenStorage {
         VARIABLE
     }
 
-     /**
+    /// @notice Utilization rate threshold where rebalancing condition get satisfied for stable rate borrowing.
+    uint256 internal rebalanceUtilizationRateThreshold;
+
+    /// @notice Rate fraction for variable rate borrwing where rebalancing condition get satisfied for stable rate borrowing.
+    uint256 internal rebalanceRateFractionThreshold;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[45] private __gap;
+    uint256[43] private __gap;
 }
 
 /**
@@ -332,6 +338,11 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted after updating stable borrow balance for borrower
      */
     event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
+
+    /**
+     * @notice Event emitted on stable rate rebalacing       
+     */
+    event RebalancedStableBorrowRate(address account, uint256 stableRateMantissa);
 
     /*** User Interface ***/
 
