@@ -563,7 +563,7 @@ describe("Risk Fund: Tests", function () {
 
     describe("setMinAmountToConvert", async function () {
       it("reverts on invalid min amount to convert", async function () {
-        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amout to convert");
+        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amount to convert");
       });
 
       it("fails if called by a non-owner", async function () {

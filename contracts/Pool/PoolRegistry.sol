@@ -62,7 +62,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     address payable private protocolShareReserve;
 
     /**
-     * @dev Maps venus pool id to metadata
+     * @dev Maps pool's comptroller address to metadata.
      */
     mapping(address => VenusPoolMetaData) public metadata;
 
@@ -83,7 +83,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     mapping(address => VenusPool) private _poolByComptroller;
 
     /**
-     * @dev Maps pool id to asset to vToken.
+     * @dev Maps pool's comptroller address to asset to vToken.
      */
     mapping(address => mapping(address => address)) private _vTokens;
 
@@ -151,13 +151,13 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
 
     /**
      * @dev Deploys a new Venus pool and adds to the directory.
-     * @param name The name of the pool.
-     * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation.
-     * @param closeFactor The pool's close factor (scaled by 1e18).
-     * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18).
-     * @param priceOracle The pool's PriceOracle address.
-     * @return index The index of the registered Venus pool.
-     * @return proxyAddress The the Comptroller proxy address.
+     * @param name The name of the pool
+     * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
+     * @param closeFactor The pool's close factor (scaled by 1e18)
+     * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
+     * @param priceOracle The pool's PriceOracle address
+     * @return index The index of the registered Venus pool
+     * @return proxyAddress The the Comptroller proxy address
      */
     function createRegistryPool(
         string memory name,
@@ -190,7 +190,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     }
 
     /**
-     * @notice Add a market to an existing pool and then mint to provide initial supply
+     * @notice Add a market to an existing pool and then mint to provide initial supply.
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
         require(
@@ -227,7 +227,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
             msg.sender,
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
-            input.vTokenProxyAdmin,
             input.beaconAddress
         );
 
@@ -269,7 +268,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     }
 
     /**
-     * @notice Update metadata of an existing pool
+     * @notice Update metadata of an existing pool.
      */
     function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external onlyOwner {
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
@@ -291,16 +290,16 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     }
 
     /**
-     * @param comptroller The Comptroller implementation address.
-     * @notice Returns Venus pool.
+     * @param comptroller The comptroller proxy address associated to the pool
+     * @return  Returns Venus pool
      */
     function getPoolByComptroller(address comptroller) external view override returns (VenusPool memory) {
         return _poolByComptroller[comptroller];
     }
 
     /**
-     * @param comptroller comptroller of Venus pool.
-     * @notice Returns Metadata of Venus pool.
+     * @param comptroller comptroller of Venus pool
+     * @return Returns Metadata of Venus pool
      */
     function getVenusPoolMetadata(address comptroller) external view override returns (VenusPoolMetaData memory) {
         return metadata[comptroller];
@@ -316,16 +315,16 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
 
     /**
      * @dev Adds a new Venus pool to the directory (without checking msg.sender).
-     * @param name The name of the pool.
-     * @param comptroller The pool's Comptroller proxy contract address.
-     * @return The index of the registered Venus pool.
+     * @param name The name of the pool
+     * @param comptroller The pool's Comptroller proxy contract address
+     * @return The index of the registered Venus pool
      */
     function _registerPool(string memory name, address comptroller) internal returns (uint256) {
         VenusPool memory venusPool = _poolByComptroller[comptroller];
 
         require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
 
-        require(bytes(name).length <= 100, "No pool name supplied.");
+        require(bytes(name).length <= 100, "Pool's name is too large.");
 
         _numberOfPools++;
 

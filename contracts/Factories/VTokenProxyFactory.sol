@@ -19,7 +19,6 @@ contract VTokenProxyFactory {
         address admin_;
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
-        address vTokenProxyAdmin_;
         address beaconAddress;
     }
 

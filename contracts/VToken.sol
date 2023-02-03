@@ -91,7 +91,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint8 decimals_,
         address admin_,
         AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement
     ) internal onlyInitializing {
         __Ownable2Step_init();
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
@@ -160,13 +160,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* Do the calculations, checking for {under,over}flow */
         uint256 allowanceNew = startingAllowance - tokens;
-        uint256 srvTokensNew = accountTokens[src] - tokens;
+        uint256 srcTokensNew = accountTokens[src] - tokens;
         uint256 dstTokensNew = accountTokens[dst] + tokens;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
 
-        accountTokens[src] = srvTokensNew;
+        accountTokens[src] = srcTokensNew;
         accountTokens[dst] = dstTokensNew;
 
         /* Eat some of the allowance (if necessary) */
@@ -308,7 +308,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Get a snapshot of the account's balances, and the cached exchange rate
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @return vTokenBalance User's balance of vTokens
      * @return borrowBalance Amount owed in terms of underlying
      * @return exchangeRate Stored exchange rate
@@ -386,7 +386,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function _borrowBalanceStored(address account) internal view returns (uint256) {
         /* Get borrowBalance and borrowIndex */
-        BorrowSnapshot storage borrowSnapshot = accountBorrows[account];
+        BorrowSnapshot memory borrowSnapshot = accountBorrows[account];
 
         /* If borrowBalance = 0 then borrowIndex is likely also 0.
          * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
@@ -525,7 +525,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
      * @custom:access Not restricted
      */
@@ -540,7 +540,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
      * @custom:access Not restricted
      */
@@ -615,7 +615,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender redeems vTokens in exchange for the underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemTokens The number of vTokens to redeem into underlying
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Redeem and Transfer events; may emit AccrueInterest
      * @custom:error RedeemTransferOutNotPossible is thrown when the protocol has insufficient cash
      * @custom:access Not restricted
@@ -631,7 +631,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender redeems vTokens in exchange for a specified amount of underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemAmount The amount of underlying to receive from redeeming vTokens
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      */
     function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
@@ -724,7 +724,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Sender borrows assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Borrow event; may emit AccrueInterest
      * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
      * @custom:access Not restricted
@@ -790,7 +790,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
@@ -805,7 +805,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
@@ -829,7 +829,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 repayAmount
     ) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
-        comptroller.preRepayHook(address(this), payer, borrower, repayAmount);
+        comptroller.preRepayHook(address(this), borrower);
 
         /* Verify market's block number equals current block number */
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -879,7 +879,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @param borrower The borrower of this vToken to be liquidated
      * @param repayAmount The amount of the underlying borrowed asset to repay
      * @param vTokenCollateral The market in which to seize collateral from the borrower
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits LiquidateBorrow event; may emit AccrueInterest
      * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
      * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
@@ -947,7 +947,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         comptroller.preLiquidateHook(
             address(this),
             address(vTokenCollateral),
-            liquidator,
             borrower,
             repayAmount,
             skipLiquidityCheck
@@ -1094,7 +1093,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Will fail unless called by another vToken during the process of liquidation.
-     *  Its absolutely critical to use msg.sender as the borrowed vToken and not a parameter.
+     *  It's absolutely critical to use msg.sender as the borrowed vToken and not a parameter.
      * @param liquidator The account receiving seized collateral
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
@@ -1113,7 +1112,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Called only during an in-kind liquidation, or by liquidateBorrow during the liquidation of another VToken.
-     *  Its absolutely critical to use msg.sender as the seizer vToken and not a parameter.
+     *  It's absolutely critical to use msg.sender as the seizer vToken and not a parameter.
      * @param seizerContract The contract seizing the collateral (either borrowed vToken or Comptroller)
      * @param liquidator The account receiving seized collateral
      * @param borrower The account having collateral seized
@@ -1126,7 +1125,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 seizeTokens
     ) internal {
         /* Fail if seize not allowed */
-        comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower, seizeTokens);
+        comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower);
 
         /* Fail if borrower = liquidator */
         if (borrower == liquidator) {

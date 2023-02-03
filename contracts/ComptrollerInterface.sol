@@ -34,17 +34,11 @@ interface ComptrollerInterface {
         uint256 borrowAmount
     ) external virtual;
 
-    function preRepayHook(
-        address vToken,
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
+    function preRepayHook(address vToken, address borrower) external virtual;
 
     function preLiquidateHook(
         address vTokenBorrowed,
         address vTokenCollateral,
-        address liquidator,
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
@@ -54,8 +48,7 @@ interface ComptrollerInterface {
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
-        address borrower,
-        uint256 seizeTokens
+        address borrower
     ) external virtual;
 
     function preTransferHook(
@@ -83,21 +76,11 @@ interface ComptrollerViewInterface {
 
     function getAssetsIn(address) external view virtual returns (VToken[] memory);
 
-    function compSpeeds(address) external view virtual returns (uint256);
-
-    function pauseGuardian() external view virtual returns (address);
-
-    function priceOracle() external view virtual returns (address);
-
     function closeFactorMantissa() external view virtual returns (uint256);
-
-    function maxAssets() external view virtual returns (uint256);
 
     function liquidationIncentiveMantissa() external view virtual returns (uint256);
 
     function minLiquidatableCollateral() external view virtual returns (uint256);
-
-    function getXVSRewardsByMarket(address) external view virtual returns (uint256, uint256);
 
     function getRewardDistributors() external view virtual returns (RewardsDistributor[] memory);
 }

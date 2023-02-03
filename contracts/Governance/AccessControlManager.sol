@@ -32,7 +32,7 @@ contract AccessControlManager is AccessControl {
      * @return false if the user account cannot call the particular contract function
      *
      */
-    function isAllowedToCall(address account, string memory functionSig) public view returns (bool) {
+    function isAllowedToCall(address account, string calldata functionSig) public view returns (bool) {
         bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
 
         if (hasRole(role, account)) {
@@ -54,7 +54,7 @@ contract AccessControlManager is AccessControl {
     function hasPermission(
         address account,
         address contractAddress,
-        string memory functionSig
+        string calldata functionSig
     ) public view returns (bool) {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         return hasRole(role, account);
@@ -72,7 +72,7 @@ contract AccessControlManager is AccessControl {
      */
     function giveCallPermission(
         address contractAddress,
-        string memory functionSig,
+        string calldata functionSig,
         address accountToPermit
     ) public {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
@@ -90,7 +90,7 @@ contract AccessControlManager is AccessControl {
      */
     function revokeCallPermission(
         address contractAddress,
-        string memory functionSig,
+        string calldata functionSig,
         address accountToRevoke
     ) public {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));

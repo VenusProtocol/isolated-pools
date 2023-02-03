@@ -15,40 +15,8 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
-    struct LiquidationOrder {
-        VToken vTokenCollateral;
-        VToken vTokenBorrowed;
-        uint256 repayAmount;
-    }
-
-    struct AccountLiquiditySnapshot {
-        uint256 totalCollateral;
-        uint256 weightedCollateral;
-        uint256 borrows;
-        uint256 effects;
-        uint256 liquidity;
-        uint256 shortfall;
-    }
-
-    struct RewardSpeeds {
-        address rewardToken;
-        uint256 supplySpeed;
-        uint256 borrowSpeed;
-    }
-
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
-
-    uint256 internal constant NO_ERROR = 0;
-
-    // closeFactorMantissa must be strictly greater than this value
-    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
-
-    // closeFactorMantissa must not exceed this value
-    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
-
-    // No collateralFactorMantissa may exceed this value
-    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
 
     // PoolRegistry, immutable to save on gas
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -412,26 +380,15 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     /**
      * @notice Checks if the account should be allowed to repay a borrow in the given market
      * @param vToken The market to verify the repay against
-     * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
-     * @param repayAmount The amount of the underlying asset the account would repay
      * @custom:error ActionPaused error is thrown if repayments are paused in this market
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:access Not restricted
      */
-    function preRepayHook(
-        address vToken,
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external override {
+    function preRepayHook(address vToken, address borrower) external override {
         _checkActionPauseState(vToken, Action.REPAY);
 
         oracle.updatePrice(vToken);
-
-        // Shh - currently unused
-        payer;
-        repayAmount;
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -450,7 +407,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @notice Checks if the liquidation should be allowed to occur
      * @param vTokenBorrowed Asset which was borrowed by the borrower
      * @param vTokenCollateral Asset which was used as collateral and will be seized
-     * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param repayAmount The amount of underlying being repaid
      * @param skipLiquidityCheck Allows the borrow to be liquidated regardless of the account liquidity
@@ -461,12 +417,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:error InsufficientShortfall is thrown when trying to liquidate a healthy account
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
-     * @custom:access Not restricted if vToken is enabled as collateral, otherwise only vToken
      */
     function preLiquidateHook(
         address vTokenBorrowed,
         address vTokenCollateral,
-        address liquidator,
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
@@ -478,9 +432,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
         oracle.updatePrice(vTokenBorrowed);
         oracle.updatePrice(vTokenCollateral);
-
-        // Shh - currently unused
-        liquidator;
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -524,7 +475,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @param seizerContract Contract that tries to seize the asset (either borrowed vToken or Comptroller)
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
-     * @param seizeTokens The number of collateral tokens to seize
      * @custom:error ActionPaused error is thrown if seizing this type of collateral is paused
      * @custom:error MarketNotListed error is thrown if either collateral or borrowed token is not listed
      * @custom:error ComptrollerMismatch error is when seizer contract or seized asset belong to different pools
@@ -534,16 +484,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
         address vTokenCollateral,
         address seizerContract,
         address liquidator,
-        address borrower,
-        uint256 seizeTokens
+        address borrower
     ) external override {
         // Pause Action.SEIZE on COLLATERAL to prevent seizing it.
         // If we want to pause liquidating vTokenBorrowed, we should pause
         // Action.LIQUIDATE on it
         _checkActionPauseState(vTokenCollateral, Action.SEIZE);
-
-        // Shh - currently unused
-        seizeTokens;
 
         if (!markets[vTokenCollateral].isListed) {
             revert MarketNotListed(vTokenCollateral);
@@ -1231,7 +1177,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
-     * @dev Internal function to check that vTokens can be safelly redeemed for the underlying asset
+     * @dev Internal function to check that vTokens can be safely redeemed for the underlying asset.
      * @param vToken Address of the vTokens to redeem
      * @param redeemer Account redeeming the tokens
      * @param redeemTokens The number of tokens to redeem

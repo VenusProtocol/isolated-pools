@@ -27,7 +27,6 @@ contract PoolLens is ExponentialNoError {
         uint256 closeFactor;
         uint256 liquidationIncentive;
         uint256 minLiquidatableCollateral;
-        uint256 maxAssets;
         VTokenMetadata[] vTokens;
     }
 
@@ -231,8 +230,7 @@ contract PoolLens is ExponentialNoError {
             priceOracle: address(comptrollerViewInstance.oracle()),
             closeFactor: comptrollerViewInstance.closeFactorMantissa(),
             liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
-            minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral(),
-            maxAssets: comptrollerViewInstance.maxAssets()
+            minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral()
         });
 
         return poolData;
