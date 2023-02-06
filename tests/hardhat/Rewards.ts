@@ -203,19 +203,23 @@ async function rewardsFixture() {
   await comptrollerProxy.enterMarkets([vDAI.address, vWBTC.address]);
   await comptrollerProxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
 
+  xvs = await MockToken.deploy("Venus Token", "XVS", 18);
+
   // Configure rewards for pool
   const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-  rewardsDistributor = await RewardsDistributor.deploy();
+  rewardsDistributor = rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
+    comptrollerProxy.address,
+    xvs.address,
+  ]);
 
-  const rewardsDistributor2 = await RewardsDistributor.deploy();
+  const rewardsDistributor2 = await upgrades.deployProxy(RewardsDistributor, [
+    comptrollerProxy.address,
+    mockDAI.address,
+  ]);
 
-  xvs = await MockToken.deploy("Venus Token", "XVS", 18);
   const initialXvs = convertToUnit(1000000, 18);
   await xvs.faucet(initialXvs);
   await xvs.transfer(rewardsDistributor.address, initialXvs);
-
-  await rewardsDistributor.initialize(comptrollerProxy.address, xvs.address);
-  await rewardsDistributor2.initialize(comptrollerProxy.address, mockDAI.address);
 
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
