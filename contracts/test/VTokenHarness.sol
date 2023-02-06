@@ -128,11 +128,12 @@ contract VTokenHarness is VToken {
         returns (
             uint256 principal,
             uint256 interestIndex,
-            uint256 lastBlockAccrued
+            uint256 lastBlockAccrued,
+            uint256 stableRateMantissa
         )
     {
         StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued);
+        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued, snapshot.stableRateMantissa);
     }
 
     function harnessSetAccountBorrows(
