@@ -975,14 +975,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /**
-     * @notice Return all reward distributors for this pool
-     * @return Array of RewardDistributor addresses
-     */
-    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
-        return rewardsDistributors;
-    }
-
-    /**
      * @notice Returns reward speed given a vToken
      * @param vToken The vToken to get the reward speeds for
      * @return rewardSpeeds Array of total supply and borrow speeds and reward token for all reward distributors
@@ -1018,6 +1010,14 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     }
 
     /*** Liquidity/Liquidation Calculations ***/
+
+    /**
+     * @notice Return all reward distributors for this pool
+     * @return Array of RewardDistributor addresses
+     */
+    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
+        return rewardsDistributors;
+    }
 
     /**
      * @notice Determine the current account liquidity with respect to collateral requirements

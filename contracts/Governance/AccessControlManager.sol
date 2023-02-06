@@ -25,42 +25,6 @@ contract AccessControlManager is AccessControl {
     }
 
     /**
-     * @notice Verifies if the given account can call a contract's guarded function
-     * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
-     * @param account for which call permissions will be checked
-     * @param functionSig restricted function signature e.g. "functionName(uint256,bool)"
-     * @return false if the user account cannot call the particular contract function
-     *
-     */
-    function isAllowedToCall(address account, string calldata functionSig) public view returns (bool) {
-        bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
-
-        if (hasRole(role, account)) {
-            return true;
-        } else {
-            role = keccak256(abi.encodePacked(address(0), functionSig));
-            return hasRole(role, account);
-        }
-    }
-
-    /**
-     * @notice Verifies if the given account can call a contract's guarded function
-     * @dev This function is used as a view function to check permissions rather than contract hook for access restriction check.
-     * @param account for which call permissions will be checked against
-     * @param contractAddress address of the restricted contract
-     * @param functionSig signature of the restricted function e.g. "functionName(uint256,bool)"
-     * @return false if the user account cannot call the particular contract function
-     */
-    function hasPermission(
-        address account,
-        address contractAddress,
-        string calldata functionSig
-    ) public view returns (bool) {
-        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
-        return hasRole(role, account);
-    }
-
-    /**
      * @notice Gives a function call permission to one single account
      * @dev this function can be called only from Role Admin or DEFAULT_ADMIN_ROLE
      * @param contractAddress address of contract for which call permissions will be granted
@@ -96,5 +60,41 @@ contract AccessControlManager is AccessControl {
         bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
         revokeRole(role, accountToRevoke);
         emit PermissionRevoked(accountToRevoke, contractAddress, functionSig);
+    }
+
+    /**
+     * @notice Verifies if the given account can call a contract's guarded function
+     * @dev Since restricted contracts using this function as a permission hook, we can get contracts address with msg.sender
+     * @param account for which call permissions will be checked
+     * @param functionSig restricted function signature e.g. "functionName(uint256,bool)"
+     * @return false if the user account cannot call the particular contract function
+     *
+     */
+    function isAllowedToCall(address account, string calldata functionSig) public view returns (bool) {
+        bytes32 role = keccak256(abi.encodePacked(msg.sender, functionSig));
+
+        if (hasRole(role, account)) {
+            return true;
+        } else {
+            role = keccak256(abi.encodePacked(address(0), functionSig));
+            return hasRole(role, account);
+        }
+    }
+
+    /**
+     * @notice Verifies if the given account can call a contract's guarded function
+     * @dev This function is used as a view function to check permissions rather than contract hook for access restriction check.
+     * @param account for which call permissions will be checked against
+     * @param contractAddress address of the restricted contract
+     * @param functionSig signature of the restricted function e.g. "functionName(uint256,bool)"
+     * @return false if the user account cannot call the particular contract function
+     */
+    function hasPermission(
+        address account,
+        address contractAddress,
+        string calldata functionSig
+    ) public view returns (bool) {
+        bytes32 role = keccak256(abi.encodePacked(contractAddress, functionSig));
+        return hasRole(role, account);
     }
 }

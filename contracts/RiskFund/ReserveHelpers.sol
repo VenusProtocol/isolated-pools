@@ -24,6 +24,18 @@ contract ReserveHelpers {
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /**
+     * @dev Get the Amount of the asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     * @return Asset's reserve in risk fund.
+     */
+    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
+        require(asset != address(0), "ReserveHelpers: Asset address invalid");
+        return poolsAssetsReserves[comptroller][asset];
+    }
+
+    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
      * and transferring funds to the protocol share reserve
      * @param comptroller  Comptroller address(pool).
@@ -49,18 +61,6 @@ contract ReserveHelpers {
             poolsAssetsReserves[comptroller][asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
-    }
-
-    /**
-     * @dev Get the Amount of the asset in the risk fund for the specific pool.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     * @return Asset's reserve in risk fund.
-     */
-    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
-        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
-        return poolsAssetsReserves[comptroller][asset];
     }
 
     /**
