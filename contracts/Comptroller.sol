@@ -667,10 +667,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             );
         }
 
-        VToken[] memory markets = accountAssets[borrower];
-        uint256 marketsCount = markets.length;
+        VToken[] memory borrowMarkets = accountAssets[borrower];
+        uint256 marketsCount = borrowMarkets.length;
         for (uint256 i; i < marketsCount; ++i) {
-            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(markets[i], borrower);
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
             require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
         }
     }
