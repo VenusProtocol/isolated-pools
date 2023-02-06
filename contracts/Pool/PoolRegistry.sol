@@ -2,7 +2,6 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -12,12 +11,10 @@ import "../Factories/VTokenProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
-import "../JumpRateModelV2.sol";
 import "../VToken.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
-import "../ComptrollerInterface.sol";
 import "../VTokenInterfaces.sol";
 import "./PoolRegistryInterface.sol";
 
