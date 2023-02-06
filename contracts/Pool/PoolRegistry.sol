@@ -189,16 +189,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
-        require(
-            input.comptroller != address(0), "RegistryPool: Invalid comptroller address" 
-        );
-        require(
-            input.asset != address(0), "RegistryPool: Invalid asset address" 
-        );
+        require(input.comptroller != address(0), "RegistryPool: Invalid comptroller address");
+        require(input.asset != address(0), "RegistryPool: Invalid asset address");
 
-        require(
-            input.beaconAddress != address(0), "RegistryPool: Invalid beacon address" 
-        );
+        require(input.beaconAddress != address(0), "RegistryPool: Invalid beacon address");
 
         require(
             _vTokens[input.comptroller][input.asset] == address(0),

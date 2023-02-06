@@ -265,7 +265,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when the healing the borrow
      */
-    event HealBorrow(address payer, address borrower, uint repayAmount);
+    event HealBorrow(address payer, address borrower, uint256 repayAmount);
 
     /**
      * @notice Event emitted when tokens are swept
