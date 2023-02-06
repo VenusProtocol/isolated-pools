@@ -1495,12 +1495,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /// Validate the conditions to rebalance the stable borrow rate.
     function validateRebalanceStableBorrowRate() public view {
-        require(rebalanceUtilizationRateThreshold > 0, "rebalanceUtilizationRateThreshold is not set.");
-        require(rebalanceRateFractionThreshold > 0, "rebalanceRateFractionThreshold is not set.");
+        require(rebalanceUtilizationRateThreshold > 0, "vToken: rebalanceUtilizationRateThreshold is not set.");
+        require(rebalanceRateFractionThreshold > 0, "vToken: rebalanceRateFractionThreshold is not set.");
 
         uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-
         /// Utilization rate is above rebalanceUtilizationRateThreshold.
         /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
         require(utilizationRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
@@ -1832,17 +1831,17 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Sets the utilization threshold for stable rate rebalancing
      * @param utilizationRateThreshold The utilization rate threshold
      */
-   function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
+    function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
         require(msg.sender == owner(), "only admin can set ACL address");
         require(utilizationRateThreshold > 0, "vToken: utilization rate should be greater than zero.");
         rebalanceUtilizationRateThreshold = utilizationRateThreshold;
     }
 
-     /**
+    /**
      * @notice Sets the fraction threshold for stable rate rebalancing
      * @param fractionThreshold The fraction threshold for the validation of the stable rate rebalancing
      */
-   function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
+    function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
         require(msg.sender == owner(), "only admin can set ACL address");
         require(fractionThreshold > 0, "vToken: fraction threshold should be greater than zero.");
         rebalanceRateFractionThreshold = fractionThreshold;
