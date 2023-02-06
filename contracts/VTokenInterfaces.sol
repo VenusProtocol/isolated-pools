@@ -262,6 +262,16 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
+    /**
+     * @notice Event emitted when the healing the borrow
+     */
+    event HealBorrow(address payer, address borrower, uint repayAmount);
+
+    /**
+     * @notice Event emitted when tokens are swept
+     */
+    event SweepToken(address token);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

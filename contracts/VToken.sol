@@ -1057,6 +1057,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         accountBorrows[borrower].principal = 0;
         accountBorrows[borrower].interestIndex = borrowIndex;
         totalBorrows = totalBorrowsNew;
+
+        emit HealBorrow(payer, borrower, repayAmount);
     }
 
     /**
@@ -1453,6 +1455,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         require(address(token) != underlying, "VToken::sweepToken: can not sweep underlying token");
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(owner(), balance);
+
+        emit SweepToken(address(token));
     }
 
     /*** Safe Token ***/
