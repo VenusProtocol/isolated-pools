@@ -13,7 +13,7 @@ import "./Governance/AccessControlManager.sol";
 /**
  * @title Comptroller Contract
  */
-contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
+contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, ComptrollerInterface, ExponentialNoError {
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
 
