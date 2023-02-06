@@ -325,6 +325,8 @@ describe("Shortfall: Tests", async function () {
 
       // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, parseUnits(riskFundBalance, 18));
+      fakeRiskFund.transferReserveForAuction.returns(parseUnits("10000", 18));
+
       await expect(shortfall.closeAuction(poolAddress))
         .to.emit(shortfall, "AuctionClosed")
         .withArgs(
@@ -439,6 +441,7 @@ describe("Shortfall: Tests", async function () {
 
       // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
+      fakeRiskFund.transferReserveForAuction.returns("6138067320000000000000");
 
       await expect(shortfall.closeAuction(poolAddress))
         .to.emit(shortfall, "AuctionClosed")

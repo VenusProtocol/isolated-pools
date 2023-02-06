@@ -781,7 +781,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
             revert MarketAlreadyListed(address(vToken));
         }
 
-        vToken.isVToken(); // Sanity check to make sure its really a VToken
+        require(vToken.isVToken(), "Comptroller: Invalid vToken"); // Sanity check to make sure its really a VToken
 
         Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;

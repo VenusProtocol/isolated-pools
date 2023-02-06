@@ -57,6 +57,7 @@ describe("assetListTest", () => {
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async name => {
         const vToken = await smock.fake<VToken>("VToken");
+        vToken.isVToken.returns(true);
         if (name !== "sketch") {
           const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
           if (poolRegistryBalance.isZero()) {
