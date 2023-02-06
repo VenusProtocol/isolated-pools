@@ -67,8 +67,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     mapping(address => VenusPoolMetaData) public metadata;
 
     /**
-     * @dev Array of Venus pool comptroller addresses.
-     * Used for iterating over all pools
+     * @dev Maps pool ID to pool's comptroller address
      */
     mapping(uint256 => address) private _poolsByID;
 
