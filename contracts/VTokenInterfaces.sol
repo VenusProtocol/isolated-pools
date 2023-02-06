@@ -157,30 +157,45 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interest is accrued
      */
-    event AccrueInterest(uint256 cashPrior, uint256 interestAccumulated, uint256 borrowIndex, uint256 totalBorrows);
+    event AccrueInterest(
+        uint256 indexed cashPrior,
+        uint256 indexed interestAccumulated,
+        uint256 indexed borrowIndex,
+        uint256 totalBorrows
+    );
 
     /**
      * @notice Event emitted when tokens are minted
      */
-    event Mint(address minter, uint256 mintAmount, uint256 mintTokens, uint256 accountBalance);
+    event Mint(address indexed minter, uint256 mintAmount, uint256 indexed mintTokens, uint256 indexed accountBalance);
 
     /**
      * @notice Event emitted when tokens are redeemed
      */
-    event Redeem(address redeemer, uint256 redeemAmount, uint256 redeemTokens, uint256 accountBalance);
+    event Redeem(
+        address indexed redeemer,
+        uint256 redeemAmount,
+        uint256 indexed redeemTokens,
+        uint256 indexed accountBalance
+    );
 
     /**
      * @notice Event emitted when underlying is borrowed
      */
-    event Borrow(address borrower, uint256 borrowAmount, uint256 accountBorrows, uint256 totalBorrows);
+    event Borrow(
+        address indexed borrower,
+        uint256 indexed borrowAmount,
+        uint256 indexed accountBorrows,
+        uint256 totalBorrows
+    );
 
     /**
      * @notice Event emitted when a borrow is repaid
      */
     event RepayBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount,
+        address indexed payer,
+        address indexed borrower,
+        uint256 indexed repayAmount,
         uint256 accountBorrows,
         uint256 totalBorrows
     );
@@ -192,22 +207,27 @@ abstract contract VTokenInterface is VTokenStorage {
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtIncreased(address borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
+    event BadDebtIncreased(
+        address indexed borrower,
+        uint256 indexed badDebtDelta,
+        uint256 indexed badDebtOld,
+        uint256 badDebtNew
+    );
 
     /**
      * @notice Event emitted when bad debt is recovered via an auction
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtRecovered(uint256 badDebtOld, uint256 badDebtNew);
+    event BadDebtRecovered(uint256 indexed badDebtOld, uint256 indexed badDebtNew);
 
     /**
      * @notice Event emitted when a borrow is liquidated
      */
     event LiquidateBorrow(
-        address liquidator,
-        address borrower,
-        uint256 repayAmount,
+        address indexed liquidator,
+        address indexed borrower,
+        uint256 indexed repayAmount,
         address vTokenCollateral,
         uint256 seizeTokens
     );
@@ -217,50 +237,56 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when comptroller is changed
      */
-    event NewComptroller(ComptrollerInterface oldComptroller, ComptrollerInterface newComptroller);
+    event NewComptroller(ComptrollerInterface indexed oldComptroller, ComptrollerInterface indexed newComptroller);
 
     /**
      * @notice Event emitted when comptroller is changed
      */
     event NewAccessControlManager(
-        AccessControlManager oldAccessControlManager,
-        AccessControlManager newAccessControlManager
+        AccessControlManager indexed oldAccessControlManager,
+        AccessControlManager indexed newAccessControlManager
     );
 
     /**
      * @notice Event emitted when interestRateModel is changed
      */
-    event NewMarketInterestRateModel(InterestRateModel oldInterestRateModel, InterestRateModel newInterestRateModel);
+    event NewMarketInterestRateModel(
+        InterestRateModel indexed oldInterestRateModel,
+        InterestRateModel indexed newInterestRateModel
+    );
 
     /**
      * @notice Event emitted when protocol seize share is changed
      */
-    event NewProtocolSeizeShare(uint256 oldProtocolSeizeShareMantissa, uint256 newProtocolSeizeShareMantissa);
+    event NewProtocolSeizeShare(
+        uint256 indexed oldProtocolSeizeShareMantissa,
+        uint256 indexed newProtocolSeizeShareMantissa
+    );
 
     /**
      * @notice Event emitted when the reserve factor is changed
      */
-    event NewReserveFactor(uint256 oldReserveFactorMantissa, uint256 newReserveFactorMantissa);
+    event NewReserveFactor(uint256 indexed oldReserveFactorMantissa, uint256 indexed newReserveFactorMantissa);
 
     /**
      * @notice Event emitted when the reserves are added
      */
-    event ReservesAdded(address benefactor, uint256 addAmount, uint256 newTotalReserves);
+    event ReservesAdded(address indexed benefactor, uint256 indexed addAmount, uint256 indexed newTotalReserves);
 
     /**
      * @notice Event emitted when the reserves are reduced
      */
-    event ReservesReduced(address admin, uint256 reduceAmount, uint256 newTotalReserves);
+    event ReservesReduced(address indexed admin, uint256 indexed reduceAmount, uint256 indexed newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
      */
-    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event Transfer(address indexed from, address indexed to, uint256 indexed amount);
 
     /**
      * @notice EIP20 Approval event
      */
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
+    event Approval(address indexed owner, address indexed spender, uint256 indexed amount);
 
     /*** User Interface ***/
 
