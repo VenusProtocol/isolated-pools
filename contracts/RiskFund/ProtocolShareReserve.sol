@@ -14,6 +14,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     address private protocolIncome;
     address private riskFund;
+    uint256 private constant protocolSharePercentage = 70;
+    uint256 private constant baseUnit = 100;
 
     /// @notice Emitted when funds are released
     event FundsReleased(address comptroller, address asset, uint256 amount);
@@ -70,8 +72,10 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
-        uint256 protocolIncomeAmount = mul_(Exp({ mantissa: amount }), div_(Exp({ mantissa: 70 * expScale }), 100))
-        .mantissa;
+        uint256 protocolIncomeAmount = mul_(
+            Exp({ mantissa: amount }),
+            div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
+        ).mantissa;
 
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
         IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
