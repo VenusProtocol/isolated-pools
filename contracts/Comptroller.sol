@@ -889,7 +889,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
      * @custom:event Emits NewRewardsDistributor with distributor address
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
-        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
+        require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
