@@ -98,7 +98,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20Upgradeable _rewardToken) public initializer {
+    function initialize(Comptroller _comptroller, IERC20Upgradeable _rewardToken) external initializer {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
         __Ownable2Step_init();
@@ -180,7 +180,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         VToken[] memory vTokens,
         uint256[] memory supplySpeeds,
         uint256[] memory borrowSpeeds
-    ) public onlyOwner {
+    ) external onlyOwner {
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
@@ -197,7 +197,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
-    function setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed) public onlyOwner {
+    function setContributorRewardTokenSpeed(address contributor, uint256 rewardTokenSpeed) external onlyOwner {
         // note that REWARD TOKEN speed could be set to 0 to halt liquidity rewards for a contributor
         updateContributorRewards(contributor);
         if (rewardTokenSpeed == 0) {
@@ -209,6 +209,18 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         rewardTokenContributorSpeeds[contributor] = rewardTokenSpeed;
 
         emit ContributorRewardTokenSpeedUpdated(contributor, rewardTokenSpeed);
+    }
+
+    function distributeSupplierRewardToken(address vToken, address supplier) external onlyComptroller {
+        _distributeSupplierRewardToken(vToken, supplier);
+    }
+
+    /**
+     * @notice Claim all the rewardToken accrued by holder in all markets.
+     * @param holder The address to claim REWARD TOKEN for
+     */
+    function claimRewardToken(address holder) external {
+        return claimRewardToken(holder, comptroller.getAllMarkets());
     }
 
     /**
@@ -226,18 +238,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
             rewardTokenAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
         }
-    }
-
-    function distributeSupplierRewardToken(address vToken, address supplier) public onlyComptroller {
-        _distributeSupplierRewardToken(vToken, supplier);
-    }
-
-    /**
-     * @notice Claim all the rewardToken accrued by holder in all markets.
-     * @param holder The address to claim REWARD TOKEN for
-     */
-    function claimRewardToken(address holder) public {
-        return claimRewardToken(holder, comptroller.getAllMarkets());
     }
 
     /**

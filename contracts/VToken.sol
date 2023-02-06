@@ -642,6 +642,47 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceStored(address account) external view override returns (uint256) {
+        return _borrowBalanceStored(account);
+    }
+
+    /**
+     * @notice Calculates the exchange rate from the underlying to the VToken
+     * @dev This function does not accrue interest before calculating the exchange rate
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
+     */
+    function exchangeRateStored() external view override returns (uint256) {
+        return _exchangeRateStored();
+    }
+
+    /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setInterestRateModel(address)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetInterestRateModelOwnerCheck();
+        }
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
      * @notice Increase approval for `spender`
      * @param spender The address of the account which may transfer tokens
      * @param addedValue The number of tokens additional tokens spender can transfer
@@ -758,47 +799,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
 
         return NO_ERROR;
-    }
-
-    /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) public override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setInterestRateModel(address)"
-        );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
-    }
-
-    /**
-     * @notice Calculates the exchange rate from the underlying to the VToken
-     * @dev This function does not accrue interest before calculating the exchange rate
-     * @return exchangeRate Calculated exchange rate scaled by 1e18
-     */
-    function exchangeRateStored() public view override returns (uint256) {
-        return _exchangeRateStored();
-    }
-
-    /**
-     * @notice Return the borrow balance of account based on stored data
-     * @param account The address whose balance should be calculated
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceStored(address account) public view override returns (uint256) {
-        return _borrowBalanceStored(account);
     }
 
     /**

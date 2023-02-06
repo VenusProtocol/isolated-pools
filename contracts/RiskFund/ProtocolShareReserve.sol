@@ -33,7 +33,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param _protocolIncome The address protocol income will be sent to
      * @param _riskFund Risk fund address
      */
-    function initialize(address _protocolIncome, address _riskFund) public initializer {
+    function initialize(address _protocolIncome, address _riskFund) external initializer {
         require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
         require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
