@@ -123,8 +123,6 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
             return 0;
         }
 
-        // At this point, borrows should always be greater than zero; the condition below ensures that (cash + borrows - reserves) should never be zero.
-        require(cash >= reserves, "BaseJumpRateModelV2 : division by zero error");
         return (borrows * BASE) / (cash + borrows - reserves);
     }
 
@@ -167,7 +165,6 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_
     ) internal {
-        require(kink_ > 0, "BaseJumpRateModelV2 : division by zero error");
         baseRatePerBlock = baseRatePerYear / blocksPerYear;
         multiplierPerBlock = (multiplierPerYear * BASE) / (blocksPerYear * kink_);
         jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksPerYear;

@@ -19,6 +19,12 @@ contract ReserveHelpers {
     // Address of pool registry contract
     address internal poolRegistry;
 
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     */
+    uint256[48] private __gap;
+
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
@@ -62,10 +68,4 @@ contract ReserveHelpers {
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     */
-    uint256[48] private __gap;
 }
