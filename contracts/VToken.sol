@@ -581,7 +581,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /*
          *  We call `_doTransferIn` for the minter and the mintAmount.
-         *  Note: The vToken must handle variations of ERC-20 underlying.
          *  `_doTransferIn` reverts if anything goes wrong, since we can't be sure if
          *  side-effects occurred. The function returns the amount actually transferred,
          *  in case of a fee. On success, the vToken holds an additional `actualMintAmount`
@@ -710,7 +709,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /*
          * We invoke _doTransferOut for the redeemer and the redeemAmount.
-         *  Note: The vToken must handle variations of ERC-20 underlying.
          *  On success, the vToken has redeemAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
@@ -777,7 +775,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /*
          * We invoke _doTransferOut for the borrower and the borrowAmount.
-         *  Note: The vToken must handle variations of ERC-20 underlying.
          *  On success, the vToken borrowAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
@@ -847,7 +844,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /*
          * We call _doTransferIn for the payer and the repayAmount
-         *  Note: The vToken must handle variations of ERC-20 underlying.
          *  On success, the vToken holds an additional repayAmount of cash.
          *  _doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
          *   it returns the amount actually transferred, in case of a fee.
