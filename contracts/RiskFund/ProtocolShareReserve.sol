@@ -37,7 +37,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
         require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
-        __Ownable_init();
+        __Ownable2Step_init();
 
         protocolIncome = _protocolIncome;
         riskFund = _riskFund;

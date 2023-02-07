@@ -283,20 +283,16 @@ describe("Rewards: Tests", async function () {
 
   it("Cannot add reward distributors with duplicate reward tokens", async function () {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = await RewardsDistributor.deploy();
+    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [comptrollerProxy.address, xvs.address]);
 
-    const rewardsDistributorDuplicate = await RewardsDistributor.deploy();
-    await rewardsDistributorDuplicate.initialize(comptrollerProxy.address, xvs.address);
-
-    await await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributorDuplicate.address)).to.be.revertedWith(
+    await await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
       "distributor already exists with this reward",
     );
   });
 
   it("Emits event correctly", async () => {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = await RewardsDistributor.deploy();
-    await rewardsDistributor.initialize(comptrollerProxy.address, mockWBTC.address);
+    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [comptrollerProxy.address, mockWBTC.address]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
       .to.emit(comptrollerProxy, "NewRewardsDistributor")

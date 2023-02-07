@@ -93,6 +93,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @dev Initializes the deployer to owner.
      */
