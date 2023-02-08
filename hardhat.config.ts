@@ -165,6 +165,12 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC || "",
       },
     },
+    bscmainnet: {
+      url: "http://127.0.0.1:1248",
+      chainId: 97,
+      live: true,
+      timeout: 1200000 // 20 minutes
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
