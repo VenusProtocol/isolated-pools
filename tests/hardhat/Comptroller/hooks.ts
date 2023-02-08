@@ -58,6 +58,7 @@ describe("hooks", () => {
     async function deploy(): Promise<Contracts> {
       const contracts = await deploySimpleComptroller();
       const vToken = await smock.fake<VToken>("VToken");
+      vToken.isVToken.returns(true);
       const { comptroller, poolRegistry } = contracts;
       await setBalance(poolRegistry.address, parseEther("1"));
       await comptroller.connect(poolRegistry.wallet).supportMarket(vToken.address);

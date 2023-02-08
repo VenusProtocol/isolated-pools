@@ -59,6 +59,7 @@ describe("healAccount", () => {
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async () => {
         const vToken = await smock.fake<VToken>("VToken");
+        vToken.isVToken.returns(true);
         const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
         if (poolRegistryBalance.isZero()) {
           await setBalance(await root.getAddress(), 100n ** 18n);

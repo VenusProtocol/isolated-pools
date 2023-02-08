@@ -176,6 +176,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         proxyAddress = address(proxy);
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
+        uint256 poolId = _registerPool(name, proxyAddress);
+
         // Set Venus pool parameters
         comptrollerProxy.setCloseFactor(closeFactor);
         comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
@@ -186,7 +188,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         comptrollerProxy.transferOwnership(msg.sender);
 
         // Register the pool with this PoolRegistry
-        return (_registerPool(name, proxyAddress), proxyAddress);
+        return (poolId, proxyAddress);
     }
 
     /**
