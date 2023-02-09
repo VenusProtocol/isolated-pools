@@ -14,6 +14,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     address private protocolIncome;
     address private riskFund;
+    // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
     uint256 private constant protocolSharePercentage = 70;
     uint256 private constant baseUnit = 100;
 
