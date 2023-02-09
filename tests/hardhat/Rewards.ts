@@ -285,7 +285,7 @@ describe("Rewards: Tests", async function () {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [comptrollerProxy.address, xvs.address]);
 
-    await await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
+    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
       "distributor already exists with this reward",
     );
   });
