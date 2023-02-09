@@ -13,13 +13,13 @@ pragma solidity ^0.8.10;
  * See https://github.com/ethereum/EIPs/issues/179
  */
 abstract contract ERC20Basic {
-    function totalSupply() public view virtual returns (uint256);
-
-    function balanceOf(address _who) public view virtual returns (uint256);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     function transfer(address _to, uint256 _value) public virtual returns (bool);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    function totalSupply() public view virtual returns (uint256);
+
+    function balanceOf(address _who) public view virtual returns (uint256);
 }
 
 // File: openzeppelin-solidity/contracts/math/SafeMath.sol
@@ -87,13 +87,6 @@ contract BasicToken is ERC20Basic {
     uint256 internal totalSupply_;
 
     /**
-     * @dev Total number of tokens in existence
-     */
-    function totalSupply() public view override returns (uint256) {
-        return totalSupply_;
-    }
-
-    /**
      * @dev Transfer token for a specified address
      * @param _to The address to transfer to.
      * @param _value The amount to be transferred.
@@ -106,6 +99,13 @@ contract BasicToken is ERC20Basic {
         balances[_to] = balances[_to].add(_value);
         emit Transfer(msg.sender, _to, _value);
         return true;
+    }
+
+    /**
+     * @dev Total number of tokens in existence
+     */
+    function totalSupply() public view override returns (uint256) {
+        return totalSupply_;
     }
 
     /**
@@ -125,7 +125,7 @@ contract BasicToken is ERC20Basic {
  * @dev see https://github.com/ethereum/EIPs/issues/20
  */
 abstract contract ERC20 is ERC20Basic {
-    function allowance(address _owner, address _spender) public view virtual returns (uint256);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     function transferFrom(
         address _from,
@@ -135,7 +135,7 @@ abstract contract ERC20 is ERC20Basic {
 
     function approve(address _spender, uint256 _value) public virtual returns (bool);
 
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    function allowance(address _owner, address _spender) public view virtual returns (uint256);
 }
 
 // File: openzeppelin-solidity/contracts/token/ERC20/StandardToken.sol
@@ -190,16 +190,6 @@ contract StandardToken is ERC20, BasicToken {
     }
 
     /**
-     * @dev Function to check the amount of tokens that an owner allowed to a spender.
-     * @param _owner address The address which owns the funds.
-     * @param _spender address The address which will spend the funds.
-     * @return A uint256 specifying the amount of tokens still available for the spender.
-     */
-    function allowance(address _owner, address _spender) public view override returns (uint256) {
-        return allowed[_owner][_spender];
-    }
-
-    /**
      * @dev Increase the amount of tokens that an owner allowed to a spender.
      * approve should be called when allowed[_spender] == 0. To increment
      * allowed value is better to use this function to avoid 2 calls (and wait until
@@ -232,6 +222,16 @@ contract StandardToken is ERC20, BasicToken {
         }
         emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
+    }
+
+    /**
+     * @dev Function to check the amount of tokens that an owner allowed to a spender.
+     * @param _owner address The address which owns the funds.
+     * @param _spender address The address which will spend the funds.
+     * @return A uint256 specifying the amount of tokens still available for the spender.
+     */
+    function allowance(address _owner, address _spender) public view override returns (uint256) {
+        return allowed[_owner][_spender];
     }
 }
 
@@ -273,19 +273,19 @@ contract Ownable {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    constructor() {
-        owner = msg.sender;
-    }
-
-    /**
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
+    }
+
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor() {
+        owner = msg.sender;
     }
 
     /**
@@ -327,11 +327,10 @@ contract Ownable {
  */
 contract MintableToken is StandardToken, Ownable {
     using SafeMath for uint256;
+    bool public mintingFinished = false;
 
     event Mint(address indexed to, uint256 amount);
     event MintFinished();
-
-    bool public mintingFinished = false;
 
     modifier canMint() {
         require(!mintingFinished);
@@ -406,10 +405,10 @@ contract BurnableToken is BasicToken {
  * @dev Base contract which allows children to implement an emergency stop mechanism.
  */
 contract Pausable is Ownable {
+    bool public paused = false;
+
     event Pause();
     event Unpause();
-
-    bool public paused = false;
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.

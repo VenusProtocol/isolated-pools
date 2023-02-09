@@ -39,108 +39,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Construct a new money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ ERC-20 name of this token
-     * @param symbol_ ERC-20 symbol of this token
-     * @param decimals_ ERC-20 decimal precision of this token
-     * @param admin_ Address of the administrator of this token
-     * @param riskManagement Addresses of risk fund contracts
-     */
-    function initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) public initializer {
-        require(admin_ != address(0), "invalid admin address");
-        require(address(accessControlManager_) != address(0), "invalid access control manager address");
-        require(riskManagement.shortfall != address(0), "invalid shortfall address");
-        require(riskManagement.riskFund != address(0), "invalid riskfund address");
-        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
-
-        // Initialize the market
-        _initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        );
-    }
-
-    /**
-     * @notice Initialize the money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ EIP-20 name of this token
-     * @param symbol_ EIP-20 symbol of this token
-     * @param decimals_ EIP-20 decimal precision of this token
-     */
-    function _initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) internal onlyInitializing {
-        __Ownable2Step_init();
-        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-
-        _setAccessControlAddress(accessControlManager_);
-
-        // Set initial exchange rate
-        initialExchangeRateMantissa = initialExchangeRateMantissa_;
-        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
-
-        _setComptroller(comptroller_);
-
-        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
-        accrualBlockNumber = _getBlockNumber();
-        borrowIndex = mantissaOne;
-
-        // Set the interest rate model (depends on block number / borrow index)
-        _setInterestRateModelFresh(interestRateModel_);
-
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-        shortfall = riskManagement.shortfall;
-        riskFund = riskManagement.riskFund;
-        protocolShareReserve = riskManagement.protocolShareReserve;
-        protocolSeizeShareMantissa = 5e16; // 5%
-
-        // Set underlying and sanity check it
-        underlying = underlying_;
-        IERC20Upgradeable(underlying).totalSupply();
-
-        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
-        _notEntered = true;
-        _transferOwnership(admin_);
-    }
-
-    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
@@ -576,6 +474,29 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setInterestRateModel(address)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetInterestRateModelOwnerCheck();
+        }
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
@@ -660,26 +581,48 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
+     * @notice Construct a new money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     * @param decimals_ ERC-20 decimal precision of this token
+     * @param admin_ Address of the administrator of this token
+     * @param riskManagement Addresses of risk fund contracts
      */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setInterestRateModel(address)"
+    function initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) public initializer {
+        require(admin_ != address(0), "invalid admin address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
+        require(riskManagement.shortfall != address(0), "invalid shortfall address");
+        require(riskManagement.riskFund != address(0), "invalid riskfund address");
+        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
+
+        // Initialize the market
+        _initialize(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_,
+            riskManagement
         );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
     }
 
     /**
@@ -1415,6 +1358,63 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Transfer event */
         emit Transfer(src, dst, tokens);
+    }
+
+    /**
+     * @notice Initialize the money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ EIP-20 name of this token
+     * @param symbol_ EIP-20 symbol of this token
+     * @param decimals_ EIP-20 decimal precision of this token
+     */
+    function _initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) internal onlyInitializing {
+        __Ownable2Step_init();
+        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
+
+        _setAccessControlAddress(accessControlManager_);
+
+        // Set initial exchange rate
+        initialExchangeRateMantissa = initialExchangeRateMantissa_;
+        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
+
+        _setComptroller(comptroller_);
+
+        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
+        accrualBlockNumber = _getBlockNumber();
+        borrowIndex = mantissaOne;
+
+        // Set the interest rate model (depends on block number / borrow index)
+        _setInterestRateModelFresh(interestRateModel_);
+
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
+        shortfall = riskManagement.shortfall;
+        riskFund = riskManagement.riskFund;
+        protocolShareReserve = riskManagement.protocolShareReserve;
+        protocolSeizeShareMantissa = 5e16; // 5%
+
+        // Set underlying and sanity check it
+        underlying = underlying_;
+        IERC20Upgradeable(underlying).totalSupply();
+
+        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
+        _notEntered = true;
+        _transferOwnership(admin_);
     }
 
     /**

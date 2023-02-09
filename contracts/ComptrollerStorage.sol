@@ -26,6 +26,33 @@ contract ComptrollerV1Storage {
         uint256 borrowSpeed;
     }
 
+    struct Market {
+        // Whether or not this market is listed
+        bool isListed;
+        //  Multiplier representing the most one can borrow against their collateral in this market.
+        //  For instance, 0.9 to allow borrowing 90% of collateral value.
+        //  Must be between 0 and 1, and stored as a mantissa.
+        uint256 collateralFactorMantissa;
+        //  Multiplier representing the collateralization after which the borrow is eligible
+        //  for liquidation. For instance, 0.8 liquidate when the borrow is 80% of collateral
+        //  value. Must be between 0 and collateral factor, stored as a mantissa.
+        uint256 liquidationThresholdMantissa;
+        // Per-market mapping of "accounts in this asset"
+        mapping(address => bool) accountMembership;
+    }
+
+    enum Action {
+        MINT,
+        REDEEM,
+        BORROW,
+        REPAY,
+        SEIZE,
+        LIQUIDATE,
+        TRANSFER,
+        ENTER_MARKET,
+        EXIT_MARKET
+    }
+
     /**
      * @notice Oracle which gives the price of any given asset
      */
@@ -46,21 +73,6 @@ contract ComptrollerV1Storage {
      */
     mapping(address => VToken[]) public accountAssets;
 
-    struct Market {
-        // Whether or not this market is listed
-        bool isListed;
-        //  Multiplier representing the most one can borrow against their collateral in this market.
-        //  For instance, 0.9 to allow borrowing 90% of collateral value.
-        //  Must be between 0 and 1, and stored as a mantissa.
-        uint256 collateralFactorMantissa;
-        //  Multiplier representing the collateralization after which the borrow is eligible
-        //  for liquidation. For instance, 0.8 liquidate when the borrow is 80% of collateral
-        //  value. Must be between 0 and collateral factor, stored as a mantissa.
-        uint256 liquidationThresholdMantissa;
-        // Per-market mapping of "accounts in this asset"
-        mapping(address => bool) accountMembership;
-    }
-
     /**
      * @notice Official mapping of vTokens -> Market metadata
      * @dev Used e.g. to determine if a market is supported
@@ -78,18 +90,6 @@ contract ComptrollerV1Storage {
 
     /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
     mapping(address => uint256) public supplyCaps;
-
-    enum Action {
-        MINT,
-        REDEEM,
-        BORROW,
-        REPAY,
-        SEIZE,
-        LIQUIDATE,
-        TRANSFER,
-        ENTER_MARKET,
-        EXIT_MARKET
-    }
 
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;

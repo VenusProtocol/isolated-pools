@@ -10,6 +10,16 @@ import "./Governance/AccessControlManager.sol";
 
 contract VTokenStorage {
     /**
+     * @notice Container for borrow balance information
+     * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
+     * @member interestIndex Global borrowIndex as of the most recent balance-changing action
+     */
+    struct BorrowSnapshot {
+        uint256 principal;
+        uint256 interestIndex;
+    }
+
+    /**
      * @dev Guard variable for re-entrancy checks
      */
     bool internal _notEntered;
@@ -104,16 +114,6 @@ contract VTokenStorage {
     // Approved token transfer amounts on behalf of others
     mapping(address => mapping(address => uint256)) internal transferAllowances;
 
-    /**
-     * @notice Container for borrow balance information
-     * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
-     * @member interestIndex Global borrowIndex as of the most recent balance-changing action
-     */
-    struct BorrowSnapshot {
-        uint256 principal;
-        uint256 interestIndex;
-    }
-
     // Mapping of account addresses to outstanding borrow balances
     mapping(address => BorrowSnapshot) internal accountBorrows;
 
@@ -157,37 +157,22 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when interest is accrued
      */
-    event AccrueInterest(
-        uint256 indexed cashPrior,
-        uint256 indexed interestAccumulated,
-        uint256 indexed borrowIndex,
-        uint256 totalBorrows
-    );
+    event AccrueInterest(uint256 cashPrior, uint256 interestAccumulated, uint256 borrowIndex, uint256 totalBorrows);
 
     /**
      * @notice Event emitted when tokens are minted
      */
-    event Mint(address indexed minter, uint256 mintAmount, uint256 indexed mintTokens, uint256 indexed accountBalance);
+    event Mint(address indexed minter, uint256 mintAmount, uint256 mintTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when tokens are redeemed
      */
-    event Redeem(
-        address indexed redeemer,
-        uint256 redeemAmount,
-        uint256 indexed redeemTokens,
-        uint256 indexed accountBalance
-    );
+    event Redeem(address indexed redeemer, uint256 redeemAmount, uint256 redeemTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when underlying is borrowed
      */
-    event Borrow(
-        address indexed borrower,
-        uint256 indexed borrowAmount,
-        uint256 indexed accountBorrows,
-        uint256 totalBorrows
-    );
+    event Borrow(address indexed borrower, uint256 borrowAmount, uint256 accountBorrows, uint256 totalBorrows);
 
     /**
      * @notice Event emitted when a borrow is repaid
@@ -195,7 +180,7 @@ abstract contract VTokenInterface is VTokenStorage {
     event RepayBorrow(
         address indexed payer,
         address indexed borrower,
-        uint256 indexed repayAmount,
+        uint256 repayAmount,
         uint256 accountBorrows,
         uint256 totalBorrows
     );
@@ -207,19 +192,14 @@ abstract contract VTokenInterface is VTokenStorage {
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtIncreased(
-        address indexed borrower,
-        uint256 indexed badDebtDelta,
-        uint256 indexed badDebtOld,
-        uint256 badDebtNew
-    );
+    event BadDebtIncreased(address indexed borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
 
     /**
      * @notice Event emitted when bad debt is recovered via an auction
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtRecovered(uint256 indexed badDebtOld, uint256 indexed badDebtNew);
+    event BadDebtRecovered(uint256 badDebtOld, uint256 badDebtNew);
 
     /**
      * @notice Event emitted when a borrow is liquidated
@@ -227,8 +207,8 @@ abstract contract VTokenInterface is VTokenStorage {
     event LiquidateBorrow(
         address indexed liquidator,
         address indexed borrower,
-        uint256 indexed repayAmount,
-        address vTokenCollateral,
+        uint256 repayAmount,
+        address indexed vTokenCollateral,
         uint256 seizeTokens
     );
 
@@ -258,35 +238,32 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when protocol seize share is changed
      */
-    event NewProtocolSeizeShare(
-        uint256 indexed oldProtocolSeizeShareMantissa,
-        uint256 indexed newProtocolSeizeShareMantissa
-    );
+    event NewProtocolSeizeShare(uint256 oldProtocolSeizeShareMantissa, uint256 newProtocolSeizeShareMantissa);
 
     /**
      * @notice Event emitted when the reserve factor is changed
      */
-    event NewReserveFactor(uint256 indexed oldReserveFactorMantissa, uint256 indexed newReserveFactorMantissa);
+    event NewReserveFactor(uint256 oldReserveFactorMantissa, uint256 newReserveFactorMantissa);
 
     /**
      * @notice Event emitted when the reserves are added
      */
-    event ReservesAdded(address indexed benefactor, uint256 indexed addAmount, uint256 indexed newTotalReserves);
+    event ReservesAdded(address indexed benefactor, uint256 addAmount, uint256 newTotalReserves);
 
     /**
      * @notice Event emitted when the reserves are reduced
      */
-    event ReservesReduced(address indexed admin, uint256 indexed reduceAmount, uint256 indexed newTotalReserves);
+    event ReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
      */
-    event Transfer(address indexed from, address indexed to, uint256 indexed amount);
+    event Transfer(address indexed from, address indexed to, uint256 amount);
 
     /**
      * @notice EIP20 Approval event
      */
-    event Approval(address indexed owner, address indexed spender, uint256 indexed amount);
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /*** User Interface ***/
 
@@ -338,13 +315,33 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 amount
     ) external virtual returns (bool);
 
+    function accrueInterest() external virtual returns (uint256);
+
+    function sweepToken(IERC20Upgradeable token) external virtual;
+
+    /*** Admin Functions ***/
+
+    function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
+
+    function reduceReserves(uint256 reduceAmount) external virtual;
+
+    function exchangeRateCurrent() external virtual returns (uint256);
+
+    function borrowBalanceCurrent(address account) external virtual returns (uint256);
+
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
+
+    function addReserves(uint256 addAmount) external virtual;
+
+    function totalBorrowsCurrent() external virtual returns (uint256);
+
+    function balanceOfUnderlying(address owner) external virtual returns (uint256);
+
     function approve(address spender, uint256 amount) external virtual returns (bool);
 
     function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
-
-    function balanceOfUnderlying(address owner) external virtual returns (uint256);
 
     function getAccountSnapshot(address account)
         external
@@ -361,29 +358,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function supplyRatePerBlock() external view virtual returns (uint256);
 
-    function totalBorrowsCurrent() external virtual returns (uint256);
-
-    function borrowBalanceCurrent(address account) external virtual returns (uint256);
-
     function borrowBalanceStored(address account) external view virtual returns (uint256);
-
-    function exchangeRateCurrent() external virtual returns (uint256);
 
     function exchangeRateStored() external view virtual returns (uint256);
 
     function getCash() external view virtual returns (uint256);
-
-    function accrueInterest() external virtual returns (uint256);
-
-    function sweepToken(IERC20Upgradeable token) external virtual;
-
-    /*** Admin Functions ***/
-
-    function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
-
-    function reduceReserves(uint256 reduceAmount) external virtual;
-
-    function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
-
-    function addReserves(uint256 addAmount) external virtual;
 }

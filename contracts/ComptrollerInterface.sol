@@ -6,8 +6,6 @@ import "./VToken.sol";
 import "./Rewards/RewardsDistributor.sol";
 
 interface ComptrollerInterface {
-    function isComptroller() external view virtual returns (bool);
-
     /*** Assets You Are In ***/
 
     function enterMarkets(address[] calldata vTokens) external virtual returns (uint256[] memory);
@@ -57,6 +55,8 @@ interface ComptrollerInterface {
         address dst,
         uint256 transferTokens
     ) external virtual;
+
+    function isComptroller() external view virtual returns (bool);
 
     /*** Liquidity/Liquidation Calculations ***/
 

@@ -13,19 +13,11 @@ contract SimplePriceOracle is PriceOracle {
         uint256 newPriceMantissa
     );
 
-    function _getUnderlyingAddress(address vTokenAddress) private view returns (address) {
-        VToken vToken = VToken(vTokenAddress);
-        address asset;
-        if (compareStrings(vToken.symbol(), "vBNB")) {
-            asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-        } else {
-            asset = address(vToken.underlying());
-        }
-        return asset;
-    }
+    function updatePrice(address vToken) external override {}
 
-    function getUnderlyingPrice(address vToken) public view override returns (uint256) {
-        return prices[_getUnderlyingAddress(vToken)];
+    // v1 price oracle interface for use as backing of proxy
+    function assetPrices(address asset) external view returns (uint256) {
+        return prices[asset];
     }
 
     function setUnderlyingPrice(VToken vToken, uint256 underlyingPriceMantissa) public {
@@ -39,14 +31,22 @@ contract SimplePriceOracle is PriceOracle {
         prices[asset] = price;
     }
 
-    // v1 price oracle interface for use as backing of proxy
-    function assetPrices(address asset) external view returns (uint256) {
-        return prices[asset];
+    function getUnderlyingPrice(address vToken) public view override returns (uint256) {
+        return prices[_getUnderlyingAddress(vToken)];
     }
 
     function compareStrings(string memory a, string memory b) internal pure returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
     }
 
-    function updatePrice(address vToken) external override {}
+    function _getUnderlyingAddress(address vTokenAddress) private view returns (address) {
+        VToken vToken = VToken(vTokenAddress);
+        address asset;
+        if (compareStrings(vToken.symbol(), "vBNB")) {
+            asset = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+        } else {
+            asset = address(vToken.underlying());
+        }
+        return asset;
+    }
 }

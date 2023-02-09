@@ -67,6 +67,19 @@ contract PriceOracleProxy is PriceOracle {
         cUsdtAddress = cUsdtAddress_;
     }
 
+    function updatePrice(address vToken) external override {}
+
+    /**
+     * @notice Set the price of SAI, permanently
+     * @param price The price for SAI
+     */
+    function setSaiPrice(uint256 price) public {
+        require(msg.sender == guardian, "only guardian may set the SAI price");
+        require(saiPrice == 0, "SAI price may only be set once");
+        require(price < 0.1e18, "SAI price must be < 0.1 ETH");
+        saiPrice = price;
+    }
+
     /**
      * @notice Get the underlying price of a listed vToken asset
      * @param vTokenAddress The vToken address to get the underlying price of
@@ -95,17 +108,4 @@ contract PriceOracleProxy is PriceOracle {
         address underlying = VToken(vTokenAddress).underlying();
         return v1PriceOracle.assetPrices(underlying);
     }
-
-    /**
-     * @notice Set the price of SAI, permanently
-     * @param price The price for SAI
-     */
-    function setSaiPrice(uint256 price) public {
-        require(msg.sender == guardian, "only guardian may set the SAI price");
-        require(saiPrice == 0, "SAI price may only be set once");
-        require(price < 0.1e18, "SAI price must be < 0.1 ETH");
-        saiPrice = price;
-    }
-
-    function updatePrice(address vToken) external override {}
 }

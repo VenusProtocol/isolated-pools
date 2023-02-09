@@ -10,6 +10,8 @@ contract FixedPriceOracle is PriceOracle {
         price = _price;
     }
 
+    function updatePrice(address vToken) external override {}
+
     function getUnderlyingPrice(address vToken) public view override returns (uint256) {
         vToken;
         return price;
@@ -19,6 +21,4 @@ contract FixedPriceOracle is PriceOracle {
         asset;
         return price;
     }
-
-    function updatePrice(address vToken) external override {}
 }

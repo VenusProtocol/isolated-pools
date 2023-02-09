@@ -17,11 +17,11 @@ contract ComptrollerScenario is Comptroller {
         blockNumber = number;
     }
 
-    function membershipLength(VToken vToken) public view returns (uint256) {
-        return accountAssets[address(vToken)].length;
-    }
-
     function unlist(VToken vToken) public {
         markets[address(vToken)].isListed = false;
+    }
+
+    function membershipLength(VToken vToken) public view returns (uint256) {
+        return accountAssets[address(vToken)].length;
     }
 }
