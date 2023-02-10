@@ -2,7 +2,6 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -12,12 +11,10 @@ import "../Factories/VTokenProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
 import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
-import "../JumpRateModelV2.sol";
 import "../VToken.sol";
 import "../InterestRateModel.sol";
 import "../Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
-import "../ComptrollerInterface.sol";
 import "../VTokenInterfaces.sol";
 import "./PoolRegistryInterface.sol";
 
@@ -67,8 +64,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     mapping(address => VenusPoolMetaData) public metadata;
 
     /**
-     * @dev Array of Venus pool comptroller addresses.
-     * Used for iterating over all pools
+     * @dev Maps pool ID to pool's comptroller address
      */
     mapping(uint256 => address) private _poolsByID;
 
@@ -176,6 +172,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         proxyAddress = address(proxy);
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
 
+        uint256 poolId = _registerPool(name, proxyAddress);
+
         // Set Venus pool parameters
         comptrollerProxy.setCloseFactor(closeFactor);
         comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
@@ -186,13 +184,18 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         comptrollerProxy.transferOwnership(msg.sender);
 
         // Register the pool with this PoolRegistry
-        return (_registerPool(name, proxyAddress), proxyAddress);
+        return (poolId, proxyAddress);
     }
 
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      */
     function addMarket(AddMarketInput memory input) external onlyOwner {
+        require(input.comptroller != address(0), "RegistryPool: Invalid comptroller address");
+        require(input.asset != address(0), "RegistryPool: Invalid asset address");
+
+        require(input.beaconAddress != address(0), "RegistryPool: Invalid beacon address");
+
         require(
             _vTokens[input.comptroller][input.asset] == address(0),
             "RegistryPool: Market already added for asset comptroller combination"

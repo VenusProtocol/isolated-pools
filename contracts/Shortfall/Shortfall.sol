@@ -216,22 +216,22 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShor
             auction.markets[i].badDebtRecovered(marketsDebt[i]);
         }
 
-        uint256 riskFundBidAmount = auction.seizedRiskFund;
+        uint256 riskFundBidAmount;
 
         if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-            riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
+            riskFundBidAmount = auction.seizedRiskFund;
         } else {
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
-            riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-            IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
         }
+
+        uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
 
         emit AuctionClosed(
             comptroller,
             auction.highestBidder,
             auction.highestBidBps,
-            riskFundBidAmount,
+            transferredAmount,
             auction.markets,
             marketsDebt
         );

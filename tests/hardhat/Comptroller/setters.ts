@@ -57,6 +57,7 @@ describe("setters", async () => {
     accessControl.isAllowedToCall.reset();
     accessControl.isAllowedToCall.returns(true);
     OMG = await smock.fake<VToken>("VToken");
+    OMG.isVToken.returns(true);
     poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
 
     // Sending transaction cost

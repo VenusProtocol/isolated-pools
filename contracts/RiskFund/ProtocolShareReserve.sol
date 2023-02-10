@@ -14,6 +14,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     address private protocolIncome;
     address private riskFund;
+    // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
     uint256 private constant protocolSharePercentage = 70;
     uint256 private constant baseUnit = 100;
 
@@ -39,7 +40,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
         require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
-        __Ownable_init();
+        __Ownable2Step_init();
 
         protocolIncome = _protocolIncome;
         riskFund = _riskFund;
