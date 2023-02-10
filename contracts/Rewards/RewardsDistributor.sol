@@ -81,6 +81,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /// @notice Emitted when a reward token borrow index is updated
     event RewardTokenBorrowIndexUpdated(address vToken, Exp marketBorrowIndex);
 
+    /// @notice Emitted when a reward for contributor is updated
+    event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
+
     /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
     mapping(address => mapping(address => uint256)) public rewardTokenBorrowerIndex;
 
@@ -89,6 +92,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     IERC20Upgradeable public rewardToken;
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @dev Initializes the deployer to owner.
@@ -183,6 +191,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
             rewardTokenAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
+
+            emit ContributorRewardsUpdated(contributor, rewardTokenAccrued[contributor]);
         }
     }
 

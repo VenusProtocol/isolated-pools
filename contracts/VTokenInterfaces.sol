@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.10;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
@@ -261,6 +261,16 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice EIP20 Approval event
      */
     event Approval(address indexed owner, address indexed spender, uint256 amount);
+
+    /**
+     * @notice Event emitted when the healing the borrow
+     */
+    event HealBorrow(address payer, address borrower, uint256 repayAmount);
+
+    /**
+     * @notice Event emitted when tokens are swept
+     */
+    event SweepToken(address token);
 
     /*** User Interface ***/
 

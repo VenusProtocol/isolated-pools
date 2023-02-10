@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
 
-contract ComptrollerV1Storage {
+contract ComptrollerStorage {
     struct LiquidationOrder {
         VToken vTokenCollateral;
         VToken vTokenBorrowed;
