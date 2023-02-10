@@ -71,6 +71,34 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
+     * @dev Struct with pending reward info for a market.
+     */
+    struct PendingReward {
+        address vTokenAddress;
+        uint256 amount;
+    }
+
+    /**
+     * @dev Struct with reward distribution totals for a single reward token and distributor.
+     */
+    struct RewardSummary {
+        address distributorAddress;
+        address rewardTokenAddress;
+        uint256 totalRewards;
+        PendingReward[] pendingRewards;
+    }
+
+    /**
+     * @dev Struct used in RewardDistributor to save last updated market state.
+     */
+    struct RewardTokenState {
+        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
+        uint224 index;
+        // The block number the index was last updated at
+        uint32 block;
+    }
+
+    /**
      * @param vTokens The list of vToken Addresses.
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
@@ -163,6 +191,32 @@ contract PoolLens is ExponentialNoError {
             res[i] = vTokenUnderlyingPrice(vTokens[i]);
         }
         return res;
+    }
+
+    /**
+     * @notice Returns the pending rewards for a user for a given pool.
+     * @param account The user account.
+     * @param comptrollerAddress address
+     * @return Pending rewards array
+     */
+    function getPendingRewards(address account, address comptrollerAddress)
+        external
+        view
+        returns (RewardSummary[] memory)
+    {
+        VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
+        RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
+        .getRewardDistributors();
+        RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
+        for (uint256 i; i < rewardsDistributors.length; ++i) {
+            RewardSummary memory reward;
+            reward.distributorAddress = address(rewardsDistributors[i]);
+            reward.rewardTokenAddress = address(rewardsDistributors[i].rewardToken());
+            reward.totalRewards = rewardsDistributors[i].rewardTokenAccrued(account);
+            reward.pendingRewards = _calculateNotDistributedAwards(account, markets, rewardsDistributors[i]);
+            rewardSummary[i] = reward;
+        }
+        return rewardSummary;
     }
 
     /**
@@ -296,60 +350,6 @@ contract PoolLens is ExponentialNoError {
                 vToken: address(vToken),
                 underlyingPrice: priceOracle.getUnderlyingPrice(address(vToken))
             });
-    }
-
-    /**
-     * @dev Struct with pending reward info for a market.
-     */
-    struct PendingReward {
-        address vTokenAddress;
-        uint256 amount;
-    }
-
-    /**
-     * @dev Struct with reward distribution totals for a single reward token and distributor.
-     */
-    struct RewardSummary {
-        address distributorAddress;
-        address rewardTokenAddress;
-        uint256 totalRewards;
-        PendingReward[] pendingRewards;
-    }
-
-    /**
-     * @dev Struct used in RewardDistributor to save last updated market state.
-     */
-    struct RewardTokenState {
-        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
-        uint224 index;
-        // The block number the index was last updated at
-        uint32 block;
-    }
-
-    /**
-     * @notice Returns the pending rewards for a user for a given pool.
-     * @param account The user account.
-     * @param comptrollerAddress address
-     * @return Pending rewards array
-     */
-    function getPendingRewards(address account, address comptrollerAddress)
-        external
-        view
-        returns (RewardSummary[] memory)
-    {
-        VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
-        RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
-        .getRewardDistributors();
-        RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
-        for (uint256 i; i < rewardsDistributors.length; ++i) {
-            RewardSummary memory reward;
-            reward.distributorAddress = address(rewardsDistributors[i]);
-            reward.rewardTokenAddress = address(rewardsDistributors[i].rewardToken());
-            reward.totalRewards = rewardsDistributors[i].rewardTokenAccrued(account);
-            reward.pendingRewards = _calculateNotDistributedAwards(account, markets, rewardsDistributors[i]);
-            rewardSummary[i] = reward;
-        }
-        return rewardSummary;
     }
 
     function _calculateNotDistributedAwards(

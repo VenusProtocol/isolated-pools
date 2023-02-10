@@ -19,6 +19,18 @@ import "./RiskFund/IProtocolShareReserve.sol";
 contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError, TokenErrorReporter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /*** Reentrancy Guard ***/
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     */
+    modifier nonReentrant() {
+        require(_notEntered, "re-entered");
+        _notEntered = false;
+        _;
+        _notEntered = true; // get a gas-refund post-Istanbul
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -129,56 +141,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Transfer `tokens` tokens from `src` to `dst` by `spender`
-     * @dev Called by both `transfer` and `transferFrom` internally
-     * @param spender The address of the account performing the transfer
-     * @param src The address of the source account
-     * @param dst The address of the destination account
-     * @param tokens The number of tokens to transfer
-     */
-    function _transferTokens(
-        address spender,
-        address src,
-        address dst,
-        uint256 tokens
-    ) internal {
-        /* Fail if transfer not allowed */
-        comptroller.preTransferHook(address(this), src, dst, tokens);
-
-        /* Do not allow self-transfers */
-        if (src == dst) {
-            revert TransferNotAllowed();
-        }
-
-        /* Get the allowance, infinite for the account owner */
-        uint256 startingAllowance;
-        if (spender == src) {
-            startingAllowance = type(uint256).max;
-        } else {
-            startingAllowance = transferAllowances[src][spender];
-        }
-
-        /* Do the calculations, checking for {under,over}flow */
-        uint256 allowanceNew = startingAllowance - tokens;
-        uint256 srcTokensNew = accountTokens[src] - tokens;
-        uint256 dstTokensNew = accountTokens[dst] + tokens;
-
-        /////////////////////////
-        // EFFECTS & INTERACTIONS
-
-        accountTokens[src] = srcTokensNew;
-        accountTokens[dst] = dstTokensNew;
-
-        /* Eat some of the allowance (if necessary) */
-        if (startingAllowance != type(uint256).max) {
-            transferAllowances[src][spender] = allowanceNew;
-        }
-
-        /* We emit a Transfer event */
-        emit Transfer(src, dst, tokens);
-    }
-
-    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
@@ -231,6 +193,361 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice Get the underlying balance of the `owner`
+     * @dev This also accrues interest in a transaction
+     * @param owner The address of the account to query
+     * @return amount The amount of underlying owned by `owner`
+     */
+    function balanceOfUnderlying(address owner) external override returns (uint256) {
+        Exp memory exchangeRate = Exp({ mantissa: exchangeRateCurrent() });
+        return mul_ScalarTruncate(exchangeRate, accountTokens[owner]);
+    }
+
+    /**
+     * @notice Returns the current total borrows plus accrued interest
+     * @return totalBorrows The total borrows with interest
+     */
+    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
+        accrueInterest();
+        return totalBorrows;
+    }
+
+    /**
+     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
+     * @param account The address whose balance should be calculated after updating borrowIndex
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        return _borrowBalanceStored(account);
+    }
+
+    /**
+     * @notice Sender supplies assets into the market and receives vTokens in exchange
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param mintAmount The amount of the underlying asset to supply
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+        _mintFresh(msg.sender, msg.sender, mintAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param mintAmount The amount of the underlying asset to supply
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
+        require(minter != address(0), "invalid minter address");
+
+        accrueInterest();
+        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+        _mintFresh(msg.sender, minter, mintAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender redeems vTokens in exchange for the underlying asset
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemTokens The number of vTokens to redeem into underlying
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits Redeem and Transfer events; may emit AccrueInterest
+     * @custom:error RedeemTransferOutNotPossible is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
+     */
+    function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+        _redeemFresh(msg.sender, redeemTokens, 0);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender redeems vTokens in exchange for a specified amount of underlying asset
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemAmount The amount of underlying to receive from redeeming vTokens
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     */
+    function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+        _redeemFresh(msg.sender, 0, redeemAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender borrows assets from the protocol to their own address
+     * @param borrowAmount The amount of the underlying asset to borrow
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits Borrow event; may emit AccrueInterest
+     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
+     */
+    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // borrowFresh emits borrow-specific logs on errors, so we don't need to
+        _borrowFresh(msg.sender, borrowAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays their own borrow
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays a borrow belonging to borrower
+     * @param borrower the account with the debt being payed off
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, borrower, repayAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice The sender liquidates the borrowers collateral.
+     *  The collateral seized is transferred to the liquidator.
+     * @param borrower The borrower of this vToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event Emits LiquidateBorrow event; may emit AccrueInterest
+     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
+     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
+     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
+     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
+     * @custom:access Not restricted
+     */
+    function liquidateBorrow(
+        address borrower,
+        uint256 repayAmount,
+        VTokenInterface vTokenCollateral
+    ) external override returns (uint256) {
+        _liquidateBorrow(msg.sender, borrower, repayAmount, vTokenCollateral, false);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice sets protocol share accumulated from liquidations
+     * @dev must be less than liquidation incentive - 1
+     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
+     * @custom:event Emits NewProtocolSeizeShare event on success
+     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setProtocolSeizeShare(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetProtocolSeizeShareUnauthorized();
+        }
+
+        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
+        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
+            revert ProtocolSeizeShareTooBig();
+        }
+
+        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
+        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
+        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
+    }
+
+    /**
+     * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
+     * @dev Admin function to accrue interest and set a new reserve factor
+     * @custom:event Emits NewReserveFactor event; may emit AccrueInterest
+     * @custom:error SetReserveFactorAdminCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:error SetReserveFactorBoundsCheck is thrown when the new reserve factor is too high
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setReserveFactor(uint256 newReserveFactorMantissa) external override nonReentrant {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setReserveFactor(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetReserveFactorAdminCheck();
+        }
+
+        accrueInterest();
+        _setReserveFactorFresh(newReserveFactorMantissa);
+    }
+
+    /**
+     * @notice Sets the address of AccessControlManager
+     * @dev Admin function to set address of AccessControlManager
+     * @param newAccessControlManager The new address of the AccessControlManager
+     * @custom:event Emits NewAccessControlManager event
+     * @custom:access Only Governance
+     */
+    function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
+        require(msg.sender == owner(), "only admin can set ACL address");
+        require(address(newAccessControlManager) != address(0), "invalid acess control manager address");
+
+        _setAccessControlAddress(newAccessControlManager);
+    }
+
+    /**
+     * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
+     * @param reduceAmount Amount of reduction to reserves
+     * @custom:event Emits ReservesReduced event; may emit AccrueInterest
+     * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
+     * @custom:error ReduceReservesCashValidation is thrown when trying to withdraw more cash than the reserves have
+     * @custom:access Not restricted
+     */
+    function reduceReserves(uint256 reduceAmount) external override nonReentrant {
+        accrueInterest();
+        _reduceReservesFresh(reduceAmount);
+    }
+
+    /**
+     * @notice The sender adds to reserves.
+     * @param addAmount The amount fo underlying token to add as reserves
+     * @custom:event Emits ReservesAdded event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function addReserves(uint256 addAmount) external override nonReentrant {
+        accrueInterest();
+        _addReservesFresh(addAmount);
+    }
+
+    /**
+     * @notice Get the current allowance from `owner` for `spender`
+     * @param owner The address of the account which owns the tokens to be spent
+     * @param spender The address of the account which may transfer tokens
+     * @return amount The number of tokens allowed to be spent (-1 means infinite)
+     */
+    function allowance(address owner, address spender) external view override returns (uint256) {
+        return transferAllowances[owner][spender];
+    }
+
+    /**
+     * @notice Get the token balance of the `owner`
+     * @param owner The address of the account to query
+     * @return amount The number of tokens owned by `owner`
+     */
+    function balanceOf(address owner) external view override returns (uint256) {
+        return accountTokens[owner];
+    }
+
+    /**
+     * @notice Get a snapshot of the account's balances, and the cached exchange rate
+     * @dev This is used by comptroller to more efficiently perform liquidity checks.
+     * @param account Address of the account to snapshot
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return vTokenBalance User's balance of vTokens
+     * @return borrowBalance Amount owed in terms of underlying
+     * @return exchangeRate Stored exchange rate
+     */
+    function getAccountSnapshot(address account)
+        external
+        view
+        override
+        returns (
+            uint256 error,
+            uint256 vTokenBalance,
+            uint256 borrowBalance,
+            uint256 exchangeRate
+        )
+    {
+        return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
+    }
+
+    /**
+     * @notice Get cash balance of this vToken in the underlying asset
+     * @return cash The quantity of underlying asset owned by this contract
+     */
+    function getCash() external view override returns (uint256) {
+        return _getCashPrior();
+    }
+
+    /**
+     * @notice Returns the current per-block borrow interest rate for this vToken
+     * @return rate The borrow interest rate per block, scaled by 1e18
+     */
+    function borrowRatePerBlock() external view override returns (uint256) {
+        return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+    }
+
+    /**
+     * @notice Returns the current per-block supply interest rate for this v
+     * @return rate The supply interest rate per block, scaled by 1e18
+     */
+    function supplyRatePerBlock() external view override returns (uint256) {
+        return interestRateModel.getSupplyRate(_getCashPrior(), totalBorrows, totalReserves, reserveFactorMantissa);
+    }
+
+    /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceStored(address account) external view override returns (uint256) {
+        return _borrowBalanceStored(account);
+    }
+
+    /**
+     * @notice Calculates the exchange rate from the underlying to the VToken
+     * @dev This function does not accrue interest before calculating the exchange rate
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
+     */
+    function exchangeRateStored() external view override returns (uint256) {
+        return _exchangeRateStored();
+    }
+
+    /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setInterestRateModel(address)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetInterestRateModelOwnerCheck();
+        }
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
      * @notice Increase approval for `spender`
      * @param spender The address of the account which may transfer tokens
      * @param addedValue The number of tokens additional tokens spender can transfer
@@ -275,184 +592,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Get the current allowance from `owner` for `spender`
-     * @param owner The address of the account which owns the tokens to be spent
-     * @param spender The address of the account which may transfer tokens
-     * @return amount The number of tokens allowed to be spent (-1 means infinite)
-     */
-    function allowance(address owner, address spender) external view override returns (uint256) {
-        return transferAllowances[owner][spender];
-    }
-
-    /**
-     * @notice Get the token balance of the `owner`
-     * @param owner The address of the account to query
-     * @return amount The number of tokens owned by `owner`
-     */
-    function balanceOf(address owner) external view override returns (uint256) {
-        return accountTokens[owner];
-    }
-
-    /**
-     * @notice Get the underlying balance of the `owner`
-     * @dev This also accrues interest in a transaction
-     * @param owner The address of the account to query
-     * @return amount The amount of underlying owned by `owner`
-     */
-    function balanceOfUnderlying(address owner) external override returns (uint256) {
-        Exp memory exchangeRate = Exp({ mantissa: exchangeRateCurrent() });
-        return mul_ScalarTruncate(exchangeRate, accountTokens[owner]);
-    }
-
-    /**
-     * @notice Get a snapshot of the account's balances, and the cached exchange rate
-     * @dev This is used by comptroller to more efficiently perform liquidity checks.
-     * @param account Address of the account to snapshot
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @return vTokenBalance User's balance of vTokens
-     * @return borrowBalance Amount owed in terms of underlying
-     * @return exchangeRate Stored exchange rate
-     */
-    function getAccountSnapshot(address account)
-        external
-        view
-        override
-        returns (
-            uint256 error,
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRate
-        )
-    {
-        return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
-    }
-
-    /**
-     * @dev Function to simply retrieve block number
-     *  This exists mainly for inheriting test contracts to stub this result.
-     */
-    function _getBlockNumber() internal view virtual returns (uint256) {
-        return block.number;
-    }
-
-    /**
-     * @notice Returns the current per-block borrow interest rate for this vToken
-     * @return rate The borrow interest rate per block, scaled by 1e18
-     */
-    function borrowRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-    }
-
-    /**
-     * @notice Returns the current per-block supply interest rate for this v
-     * @return rate The supply interest rate per block, scaled by 1e18
-     */
-    function supplyRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getSupplyRate(_getCashPrior(), totalBorrows, totalReserves, reserveFactorMantissa);
-    }
-
-    /**
-     * @notice Returns the current total borrows plus accrued interest
-     * @return totalBorrows The total borrows with interest
-     */
-    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
-        accrueInterest();
-        return totalBorrows;
-    }
-
-    /**
-     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
-     * @param account The address whose balance should be calculated after updating borrowIndex
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        return _borrowBalanceStored(account);
-    }
-
-    /**
-     * @notice Return the borrow balance of account based on stored data
-     * @param account The address whose balance should be calculated
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceStored(address account) public view override returns (uint256) {
-        return _borrowBalanceStored(account);
-    }
-
-    /**
-     * @notice Return the borrow balance of account based on stored data
-     * @param account The address whose balance should be calculated
-     * @return borrowBalance the calculated balance
-     */
-    function _borrowBalanceStored(address account) internal view returns (uint256) {
-        /* Get borrowBalance and borrowIndex */
-        BorrowSnapshot memory borrowSnapshot = accountBorrows[account];
-
-        /* If borrowBalance = 0 then borrowIndex is likely also 0.
-         * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-         */
-        if (borrowSnapshot.principal == 0) {
-            return 0;
-        }
-
-        /* Calculate new borrow balance using the interest index:
-         *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
-         */
-        uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
-
-        return principalTimesIndex / borrowSnapshot.interestIndex;
-    }
-
-    /**
      * @notice Accrue interest then return the up-to-date exchange rate
      * @return exchangeRate Calculated exchange rate scaled by 1e18
      */
     function exchangeRateCurrent() public override nonReentrant returns (uint256) {
         accrueInterest();
         return _exchangeRateStored();
-    }
-
-    /**
-     * @notice Calculates the exchange rate from the underlying to the VToken
-     * @dev This function does not accrue interest before calculating the exchange rate
-     * @return exchangeRate Calculated exchange rate scaled by 1e18
-     */
-    function exchangeRateStored() public view override returns (uint256) {
-        return _exchangeRateStored();
-    }
-
-    /**
-     * @notice Calculates the exchange rate from the underlying to the VToken
-     * @dev This function does not accrue interest before calculating the exchange rate
-     * @return exchangeRate Calculated exchange rate scaled by 1e18
-     */
-    function _exchangeRateStored() internal view virtual returns (uint256) {
-        uint256 _totalSupply = totalSupply;
-        if (_totalSupply == 0) {
-            /*
-             * If there are no tokens minted:
-             *  exchangeRate = initialExchangeRate
-             */
-            return initialExchangeRateMantissa;
-        } else {
-            /*
-             * Otherwise:
-             *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
-             */
-            uint256 totalCash = _getCashPrior();
-            uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
-            uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
-
-            return exchangeRate;
-        }
-    }
-
-    /**
-     * @notice Get cash balance of this vToken in the underlying asset
-     * @return cash The quantity of underlying asset owned by this contract
-     */
-    function getCash() external view override returns (uint256) {
-        return _getCashPrior();
     }
 
     /**
@@ -522,38 +667,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Sender supplies assets into the market and receives vTokens in exchange
-     * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param mintAmount The amount of the underlying asset to supply
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
-        _mintFresh(msg.sender, msg.sender, mintAmount);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
-     * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param mintAmount The amount of the underlying asset to supply
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
-        require(minter != address(0), "invalid minter address");
-
-        accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
-        _mintFresh(msg.sender, minter, mintAmount);
-        return NO_ERROR;
-    }
-
-    /**
      * @notice User supplies assets into the market and receives vTokens in exchange
      * @dev Assumes interest has already been accrued up to the current block
      * @param payer The address of the account which is sending the assets for supply
@@ -608,35 +721,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         /* We emit a Mint event, and a Transfer event */
         emit Mint(minter, actualMintAmount, mintTokens, balanceAfter);
         emit Transfer(address(0), minter, mintTokens);
-    }
-
-    /**
-     * @notice Sender redeems vTokens in exchange for the underlying asset
-     * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param redeemTokens The number of vTokens to redeem into underlying
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits Redeem and Transfer events; may emit AccrueInterest
-     * @custom:error RedeemTransferOutNotPossible is thrown when the protocol has insufficient cash
-     * @custom:access Not restricted
-     */
-    function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(msg.sender, redeemTokens, 0);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender redeems vTokens in exchange for a specified amount of underlying asset
-     * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param redeemAmount The amount of underlying to receive from redeeming vTokens
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     */
-    function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(msg.sender, 0, redeemAmount);
-        return NO_ERROR;
     }
 
     /**
@@ -720,21 +804,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Sender borrows assets from the protocol to their own address
-     * @param borrowAmount The amount of the underlying asset to borrow
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits Borrow event; may emit AccrueInterest
-     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
-     * @custom:access Not restricted
-     */
-    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(msg.sender, borrowAmount);
-        return NO_ERROR;
-    }
-
-    /**
      * @notice Users borrow assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      */
@@ -782,35 +851,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, accountBorrowsNew, totalBorrowsNew);
-    }
-
-    /**
-     * @notice Sender repays their own borrow
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays a borrow belonging to borrower
-     * @param borrower the account with the debt being payed off
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount);
-        return NO_ERROR;
     }
 
     /**
@@ -867,30 +907,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit RepayBorrow(payer, borrower, actualRepayAmount, accountBorrowsNew, totalBorrowsNew);
 
         return actualRepayAmount;
-    }
-
-    /**
-     * @notice The sender liquidates the borrowers collateral.
-     *  The collateral seized is transferred to the liquidator.
-     * @param borrower The borrower of this vToken to be liquidated
-     * @param repayAmount The amount of the underlying borrowed asset to repay
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits LiquidateBorrow event; may emit AccrueInterest
-     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
-     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
-     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
-     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
-     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
-     * @custom:access Not restricted
-     */
-    function liquidateBorrow(
-        address borrower,
-        uint256 repayAmount,
-        VTokenInterface vTokenCollateral
-    ) external override returns (uint256) {
-        _liquidateBorrow(msg.sender, borrower, repayAmount, vTokenCollateral, false);
-        return NO_ERROR;
     }
 
     /**
@@ -1157,8 +1173,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
     }
 
-    /*** Admin Functions ***/
-
     function _setComptroller(ComptrollerInterface newComptroller) internal {
         ComptrollerInterface oldComptroller = comptroller;
         // Ensure invoke comptroller.isComptroller() returns true
@@ -1169,57 +1183,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         // Emit NewComptroller(oldComptroller, newComptroller)
         emit NewComptroller(oldComptroller, newComptroller);
-    }
-
-    /**
-     * @notice sets protocol share accumulated from liquidations
-     * @dev must be less than liquidation incentive - 1
-     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
-     * @custom:event Emits NewProtocolSeizeShare event on success
-     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
-     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setProtocolSeizeShare(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetProtocolSeizeShareUnauthorized();
-        }
-
-        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
-        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
-            revert ProtocolSeizeShareTooBig();
-        }
-
-        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
-        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
-        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
-    }
-
-    /**
-     * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
-     * @dev Admin function to accrue interest and set a new reserve factor
-     * @custom:event Emits NewReserveFactor event; may emit AccrueInterest
-     * @custom:error SetReserveFactorAdminCheck is thrown when the call is not authorized by AccessControlManager
-     * @custom:error SetReserveFactorBoundsCheck is thrown when the new reserve factor is too high
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setReserveFactor(uint256 newReserveFactorMantissa) external override nonReentrant {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setReserveFactor(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetReserveFactorAdminCheck();
-        }
-
-        accrueInterest();
-        _setReserveFactorFresh(newReserveFactorMantissa);
     }
 
     /**
@@ -1244,17 +1207,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice The sender adds to reserves.
-     * @param addAmount The amount fo underlying token to add as reserves
-     * @custom:event Emits ReservesAdded event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function addReserves(uint256 addAmount) external override nonReentrant {
-        accrueInterest();
-        _addReservesFresh(addAmount);
-    }
-
-    /**
      * @notice Add reserves by transferring from caller
      * @dev Requires fresh interest accrual
      * @param addAmount Amount of addition to reserves
@@ -1276,19 +1228,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit ReservesAdded(msg.sender, actualAddAmount, totalReservesNew);
 
         return actualAddAmount;
-    }
-
-    /**
-     * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
-     * @param reduceAmount Amount of reduction to reserves
-     * @custom:event Emits ReservesReduced event; may emit AccrueInterest
-     * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
-     * @custom:error ReduceReservesCashValidation is thrown when trying to withdraw more cash than the reserves have
-     * @custom:access Not restricted
-     */
-    function reduceReserves(uint256 reduceAmount) external override nonReentrant {
-        accrueInterest();
-        _reduceReservesFresh(reduceAmount);
     }
 
     /**
@@ -1335,29 +1274,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) public override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setInterestRateModel(address)"
-        );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
-    }
-
-    /**
      * @notice updates the interest rate model (*requires fresh interest accrual)
      * @dev Admin function to update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
@@ -1386,20 +1302,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
     /**
      * @notice Sets the address of AccessControlManager
-     * @dev Admin function to set address of AccessControlManager
-     * @param newAccessControlManager The new address of the AccessControlManager
-     * @custom:event Emits NewAccessControlManager event
-     * @custom:access Only Governance
-     */
-    function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
-        require(msg.sender == owner(), "only admin can set ACL address");
-        require(address(newAccessControlManager) != address(0), "invalid acess control manager address");
-
-        _setAccessControlAddress(newAccessControlManager);
-    }
-
-    /**
-     * @notice Sets the address of AccessControlManager
      * @dev Internal function to set address of AccessControlManager
      * @param newAccessControlManager The new address of the AccessControlManager
      */
@@ -1407,18 +1309,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         AccessControlManager oldAccessControlManager = accessControlManager;
         accessControlManager = newAccessControlManager;
         emit NewAccessControlManager(oldAccessControlManager, accessControlManager);
-    }
-
-    /*** Reentrancy Guard ***/
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     */
-    modifier nonReentrant() {
-        require(_notEntered, "re-entered");
-        _notEntered = false;
-        _;
-        _notEntered = true; // get a gas-refund post-Istanbul
     }
 
     /*** Handling Bad Debt and Shortfall ***/
@@ -1458,16 +1348,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /*** Safe Token ***/
 
     /**
-     * @notice Gets balance of this contract in terms of the underlying
-     * @dev This excludes the value of the current message, if any
-     * @return The quantity of underlying tokens owned by this contract
-     */
-    function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
-        return token.balanceOf(address(this));
-    }
-
-    /**
      * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
      *      This function returns the actual amount received,
      *      which may be less than `amount` if there is a fee attached to the transfer.
@@ -1487,5 +1367,123 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
         token.safeTransfer(to, amount);
+    }
+
+    /**
+     * @notice Transfer `tokens` tokens from `src` to `dst` by `spender`
+     * @dev Called by both `transfer` and `transferFrom` internally
+     * @param spender The address of the account performing the transfer
+     * @param src The address of the source account
+     * @param dst The address of the destination account
+     * @param tokens The number of tokens to transfer
+     */
+    function _transferTokens(
+        address spender,
+        address src,
+        address dst,
+        uint256 tokens
+    ) internal {
+        /* Fail if transfer not allowed */
+        comptroller.preTransferHook(address(this), src, dst, tokens);
+
+        /* Do not allow self-transfers */
+        if (src == dst) {
+            revert TransferNotAllowed();
+        }
+
+        /* Get the allowance, infinite for the account owner */
+        uint256 startingAllowance;
+        if (spender == src) {
+            startingAllowance = type(uint256).max;
+        } else {
+            startingAllowance = transferAllowances[src][spender];
+        }
+
+        /* Do the calculations, checking for {under,over}flow */
+        uint256 allowanceNew = startingAllowance - tokens;
+        uint256 srcTokensNew = accountTokens[src] - tokens;
+        uint256 dstTokensNew = accountTokens[dst] + tokens;
+
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+
+        accountTokens[src] = srcTokensNew;
+        accountTokens[dst] = dstTokensNew;
+
+        /* Eat some of the allowance (if necessary) */
+        if (startingAllowance != type(uint256).max) {
+            transferAllowances[src][spender] = allowanceNew;
+        }
+
+        /* We emit a Transfer event */
+        emit Transfer(src, dst, tokens);
+    }
+
+    /**
+     * @notice Gets balance of this contract in terms of the underlying
+     * @dev This excludes the value of the current message, if any
+     * @return The quantity of underlying tokens owned by this contract
+     */
+    function _getCashPrior() internal view virtual returns (uint256) {
+        IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        return token.balanceOf(address(this));
+    }
+
+    /**
+     * @dev Function to simply retrieve block number
+     *  This exists mainly for inheriting test contracts to stub this result.
+     */
+    function _getBlockNumber() internal view virtual returns (uint256) {
+        return block.number;
+    }
+
+    /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return borrowBalance the calculated balance
+     */
+    function _borrowBalanceStored(address account) internal view returns (uint256) {
+        /* Get borrowBalance and borrowIndex */
+        BorrowSnapshot memory borrowSnapshot = accountBorrows[account];
+
+        /* If borrowBalance = 0 then borrowIndex is likely also 0.
+         * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
+         */
+        if (borrowSnapshot.principal == 0) {
+            return 0;
+        }
+
+        /* Calculate new borrow balance using the interest index:
+         *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
+         */
+        uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
+
+        return principalTimesIndex / borrowSnapshot.interestIndex;
+    }
+
+    /**
+     * @notice Calculates the exchange rate from the underlying to the VToken
+     * @dev This function does not accrue interest before calculating the exchange rate
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
+     */
+    function _exchangeRateStored() internal view virtual returns (uint256) {
+        uint256 _totalSupply = totalSupply;
+        if (_totalSupply == 0) {
+            /*
+             * If there are no tokens minted:
+             *  exchangeRate = initialExchangeRate
+             */
+            return initialExchangeRateMantissa;
+        } else {
+            /*
+             * Otherwise:
+             *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
+             */
+            uint256 totalCash = _getCashPrior();
+            uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
+            uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
+
+            return exchangeRate;
+        }
     }
 }

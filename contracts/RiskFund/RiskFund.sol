@@ -196,6 +196,15 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     }
 
     /**
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     */
+    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
+        super.updateAssetsState(comptroller, asset);
+    }
+
+    /**
      * @dev Swap single asset to base asset.
      * @param vToken VToken
      * @param comptroller Comptroller address
@@ -249,14 +258,5 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         }
 
         return totalAmount;
-    }
-
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     */
-    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset);
     }
 }

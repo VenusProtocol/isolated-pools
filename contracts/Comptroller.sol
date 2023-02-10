@@ -666,10 +666,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
             );
         }
 
-        VToken[] memory markets = accountAssets[borrower];
-        uint256 marketsCount = markets.length;
+        VToken[] memory borrowMarkets = accountAssets[borrower];
+        uint256 marketsCount = borrowMarkets.length;
         for (uint256 i; i < marketsCount; ++i) {
-            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(markets[i], borrower);
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
             require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
         }
     }
@@ -888,7 +888,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
      * @custom:event Emits NewRewardsDistributor with distributor address
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
-        require(rewardsDistributorExists[address(_rewardsDistributor)] == false, "already exists");
+        require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
@@ -908,6 +908,94 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         }
 
         emit NewRewardsDistributor(address(_rewardsDistributor));
+    }
+
+    /**
+     * @notice Sets a new PriceOracle for the Comptroller
+     * @dev Only callable by the admin
+     * @param newOracle Address of the new PriceOracle to set
+     * @custom:event Emits NewPriceOracle on success
+     */
+    function setPriceOracle(PriceOracle newOracle) external onlyOwner {
+        require(address(newOracle) != address(0), "invalid price oracle address");
+
+        PriceOracle oldOracle = oracle;
+        oracle = newOracle;
+        emit NewPriceOracle(oldOracle, newOracle);
+    }
+
+    /**
+     * @notice Determine the current account liquidity with respect to collateral requirements
+     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param account The account get liquidity for
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Account liquidity in excess of collateral requirements,
+     * @return shortfall Account shortfall below collateral requirements
+     */
+    function getAccountLiquidity(address account)
+        external
+        view
+        returns (
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
+        )
+    {
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getCollateralFactor);
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
+    }
+
+    /**
+     * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
+     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param vTokenModify The market to hypothetically redeem/borrow in
+     * @param account The account to determine liquidity for
+     * @param redeemTokens The number of tokens to hypothetically redeem
+     * @param borrowAmount The amount of underlying to hypothetically borrow
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Hypothetical account liquidity in excess of collateral requirements,
+     * @return shortfall Hypothetical account shortfall below collateral requirements
+     */
+    function getHypotheticalAccountLiquidity(
+        address account,
+        address vTokenModify,
+        uint256 redeemTokens,
+        uint256 borrowAmount
+    )
+        external
+        view
+        returns (
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
+        )
+    {
+        AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
+            account,
+            VToken(vTokenModify),
+            redeemTokens,
+            borrowAmount,
+            _getCollateralFactor
+        );
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
+    }
+
+    /**
+     * @notice Return all of the markets
+     * @dev The automatic getter may be used to access an individual market.
+     * @return markets The list of market addresses
+     */
+    function getAllMarkets() external view override returns (VToken[] memory) {
+        return allMarkets;
+    }
+
+    /**
+     * @notice Check if a market is marked as listed (active)
+     * @param vToken vToken Address for the market to check
+     * @return listed True if listed otherwise false
+     */
+    function isMarketListed(VToken vToken) external view returns (bool) {
+        return markets[address(vToken)].isListed;
     }
 
     /*** Assets You Are In ***/
@@ -974,14 +1062,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     }
 
     /**
-     * @notice Return all reward distributors for this pool
-     * @return Array of RewardDistributor addresses
-     */
-    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
-        return rewardsDistributors;
-    }
-
-    /**
      * @notice Returns reward speed given a vToken
      * @param vToken The vToken to get the reward speeds for
      * @return rewardSpeeds Array of total supply and borrow speeds and reward token for all reward distributors
@@ -1000,96 +1080,12 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         return rewardSpeeds;
     }
 
-    /*** Admin Functions ***/
-
     /**
-     * @notice Sets a new PriceOracle for the Comptroller
-     * @dev Only callable by the admin
-     * @param newOracle Address of the new PriceOracle to set
-     * @custom:event Emits NewPriceOracle on success
+     * @notice Return all reward distributors for this pool
+     * @return Array of RewardDistributor addresses
      */
-    function setPriceOracle(PriceOracle newOracle) public onlyOwner {
-        require(address(newOracle) != address(0), "invalid price oracle address");
-
-        PriceOracle oldOracle = oracle;
-        oracle = newOracle;
-        emit NewPriceOracle(oldOracle, newOracle);
-    }
-
-    /*** Liquidity/Liquidation Calculations ***/
-
-    /**
-     * @notice Determine the current account liquidity with respect to collateral requirements
-     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
-     * @param account The account get liquidity for
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @return liquidity Account liquidity in excess of collateral requirements,
-     * @return shortfall Account shortfall below collateral requirements
-     */
-    function getAccountLiquidity(address account)
-        public
-        view
-        returns (
-            uint256 error,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getCollateralFactor);
-        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
-    }
-
-    /**
-     * @notice Determine what the account liquidity would be if the given amounts were redeemed/borrowed
-     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
-     * @param vTokenModify The market to hypothetically redeem/borrow in
-     * @param account The account to determine liquidity for
-     * @param redeemTokens The number of tokens to hypothetically redeem
-     * @param borrowAmount The amount of underlying to hypothetically borrow
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @return liquidity Hypothetical account liquidity in excess of collateral requirements,
-     * @return shortfall Hypothetical account shortfall below collateral requirements
-     */
-    function getHypotheticalAccountLiquidity(
-        address account,
-        address vTokenModify,
-        uint256 redeemTokens,
-        uint256 borrowAmount
-    )
-        public
-        view
-        returns (
-            uint256 error,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
-        AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
-            account,
-            VToken(vTokenModify),
-            redeemTokens,
-            borrowAmount,
-            _getCollateralFactor
-        );
-        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
-    }
-
-    /**
-     * @notice Return all of the markets
-     * @dev The automatic getter may be used to access an individual market.
-     * @return markets The list of market addresses
-     */
-    function getAllMarkets() public view override returns (VToken[] memory) {
-        return allMarkets;
-    }
-
-    /**
-     * @notice Check if a market is marked as listed (active)
-     * @param vToken vToken Address for the market to check
-     * @return listed True if listed otherwise false
-     */
-    function isMarketListed(VToken vToken) public view returns (bool) {
-        return markets[address(vToken)].isListed;
+    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
+        return rewardsDistributors;
     }
 
     /**

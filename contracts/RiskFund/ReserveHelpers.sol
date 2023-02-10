@@ -19,9 +19,27 @@ contract ReserveHelpers {
     // Address of pool registry contract
     address internal poolRegistry;
 
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     */
+    uint256[48] private __gap;
+
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+
+    /**
+     * @dev Get the Amount of the asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @param asset Asset address.
+     * @return Asset's reserve in risk fund.
+     */
+    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
+        require(asset != address(0), "ReserveHelpers: Asset address invalid");
+        return poolsAssetsReserves[comptroller][asset];
+    }
 
     /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
@@ -50,22 +68,4 @@ contract ReserveHelpers {
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
     }
-
-    /**
-     * @dev Get the Amount of the asset in the risk fund for the specific pool.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     * @return Asset's reserve in risk fund.
-     */
-    function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
-        require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
-        return poolsAssetsReserves[comptroller][asset];
-    }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     */
-    uint256[48] private __gap;
 }

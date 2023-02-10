@@ -162,24 +162,24 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when tokens are minted
      */
-    event Mint(address minter, uint256 mintAmount, uint256 mintTokens, uint256 accountBalance);
+    event Mint(address indexed minter, uint256 mintAmount, uint256 mintTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when tokens are redeemed
      */
-    event Redeem(address redeemer, uint256 redeemAmount, uint256 redeemTokens, uint256 accountBalance);
+    event Redeem(address indexed redeemer, uint256 redeemAmount, uint256 redeemTokens, uint256 accountBalance);
 
     /**
      * @notice Event emitted when underlying is borrowed
      */
-    event Borrow(address borrower, uint256 borrowAmount, uint256 accountBorrows, uint256 totalBorrows);
+    event Borrow(address indexed borrower, uint256 borrowAmount, uint256 accountBorrows, uint256 totalBorrows);
 
     /**
      * @notice Event emitted when a borrow is repaid
      */
     event RepayBorrow(
-        address payer,
-        address borrower,
+        address indexed payer,
+        address indexed borrower,
         uint256 repayAmount,
         uint256 accountBorrows,
         uint256 totalBorrows
@@ -192,7 +192,7 @@ abstract contract VTokenInterface is VTokenStorage {
      * @param badDebtOld previous bad debt value
      * @param badDebtNew new bad debt value
      */
-    event BadDebtIncreased(address borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
+    event BadDebtIncreased(address indexed borrower, uint256 badDebtDelta, uint256 badDebtOld, uint256 badDebtNew);
 
     /**
      * @notice Event emitted when bad debt is recovered via an auction
@@ -205,10 +205,10 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when a borrow is liquidated
      */
     event LiquidateBorrow(
-        address liquidator,
-        address borrower,
+        address indexed liquidator,
+        address indexed borrower,
         uint256 repayAmount,
-        address vTokenCollateral,
+        address indexed vTokenCollateral,
         uint256 seizeTokens
     );
 
@@ -217,20 +217,23 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when comptroller is changed
      */
-    event NewComptroller(ComptrollerInterface oldComptroller, ComptrollerInterface newComptroller);
+    event NewComptroller(ComptrollerInterface indexed oldComptroller, ComptrollerInterface indexed newComptroller);
 
     /**
      * @notice Event emitted when comptroller is changed
      */
     event NewAccessControlManager(
-        AccessControlManager oldAccessControlManager,
-        AccessControlManager newAccessControlManager
+        AccessControlManager indexed oldAccessControlManager,
+        AccessControlManager indexed newAccessControlManager
     );
 
     /**
      * @notice Event emitted when interestRateModel is changed
      */
-    event NewMarketInterestRateModel(InterestRateModel oldInterestRateModel, InterestRateModel newInterestRateModel);
+    event NewMarketInterestRateModel(
+        InterestRateModel indexed oldInterestRateModel,
+        InterestRateModel indexed newInterestRateModel
+    );
 
     /**
      * @notice Event emitted when protocol seize share is changed
@@ -245,12 +248,12 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when the reserves are added
      */
-    event ReservesAdded(address benefactor, uint256 addAmount, uint256 newTotalReserves);
+    event ReservesAdded(address indexed benefactor, uint256 addAmount, uint256 newTotalReserves);
 
     /**
      * @notice Event emitted when the reserves are reduced
      */
-    event ReservesReduced(address admin, uint256 reduceAmount, uint256 newTotalReserves);
+    event ReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event

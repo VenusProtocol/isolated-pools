@@ -14,6 +14,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     address private protocolIncome;
     address private riskFund;
+    // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
+    uint256 private constant protocolSharePercentage = 70;
+    uint256 private constant baseUnit = 100;
 
     /// @notice Emitted when funds are released
     event FundsReleased(address comptroller, address asset, uint256 amount);
@@ -33,7 +36,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param _protocolIncome The address protocol income will be sent to
      * @param _riskFund Risk fund address
      */
-    function initialize(address _protocolIncome, address _riskFund) public initializer {
+    function initialize(address _protocolIncome, address _riskFund) external initializer {
         require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
         require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
@@ -70,8 +73,10 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
-        uint256 protocolIncomeAmount = mul_(Exp({ mantissa: amount }), div_(Exp({ mantissa: 70 * expScale }), 100))
-        .mantissa;
+        uint256 protocolIncomeAmount = mul_(
+            Exp({ mantissa: amount }),
+            div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
+        ).mantissa;
 
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
         IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
