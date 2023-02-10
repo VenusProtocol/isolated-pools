@@ -63,6 +63,8 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 kink_,
         address owner_
     ) {
+        require(owner_ != address(0), "invalid owner address");
+
         owner = owner_;
 
         updateJumpRateModelInternal(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);

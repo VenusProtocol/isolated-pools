@@ -8,6 +8,8 @@ import "../VToken.sol";
 import "../Comptroller.sol";
 
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     struct RewardToken {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
         uint224 index;
@@ -88,11 +90,17 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /// @notice Emitted when a reward token borrow index is updated
     event RewardTokenBorrowIndexUpdated(address vToken, Exp marketBorrowIndex);
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    /// @notice Emitted when a reward for contributor is updated
+    event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
         _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
     /**
@@ -237,6 +245,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
             rewardTokenAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
+
+            emit ContributorRewardsUpdated(contributor, rewardTokenAccrued[contributor]);
         }
     }
 

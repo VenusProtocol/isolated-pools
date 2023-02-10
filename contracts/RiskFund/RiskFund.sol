@@ -42,6 +42,12 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
 
+    /// @notice Emitted when pools assets are swapped
+    event SwappedPoolsAssets(address[] markets, uint256[] amountsOutMin, uint256 totalAmount);
+
+    /// @notice Emitted when reserves are transferred for auction
+    event TransferredReserveForAuction(address comptroller, uint256 amount);
+
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -65,6 +71,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
+        require(_accessControl != address(0), "Risk Fund: Access control address invalid");
 
         __Ownable2Step_init();
 
@@ -157,6 +164,8 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
             totalAmount = totalAmount + swappedTokens;
         }
 
+        emit SwappedPoolsAssets(markets, amountsOutMin, totalAmount);
+
         return totalAmount;
     }
 
@@ -171,6 +180,9 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall, amount);
+
+        emit TransferredReserveForAuction(comptroller, amount);
+
         return amount;
     }
 
