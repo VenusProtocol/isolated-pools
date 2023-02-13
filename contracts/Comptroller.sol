@@ -14,7 +14,7 @@ import "./Governance/AccessControlManager.sol";
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract Comptroller is Ownable2StepUpgradeable, ComptrollerInterface, ComptrollerV1Storage, ExponentialNoError {
+contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
