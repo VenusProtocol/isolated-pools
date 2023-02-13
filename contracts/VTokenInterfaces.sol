@@ -449,7 +449,7 @@ abstract contract VTokenInterface is VTokenStorage {
         return true;
     }
 
-    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual returns (uint256);
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual;
 
     function addReserves(uint256 addAmount) external virtual;
 }

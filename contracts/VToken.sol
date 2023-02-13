@@ -1954,7 +1954,7 @@ contract VToken is
      * @custom:events Emits NewMarketStableInterestRateModel, after setting the new stable rate model
      * @custom:access Controlled by AccessControlManager
      */
-    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override {
         bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
             msg.sender,
             "setStableInterestRateModel(address)"
@@ -1966,7 +1966,7 @@ contract VToken is
         }
         accrueInterest();
         // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
-        return _setStableInterestRateModelFresh(newStableInterestRateModel);
+        _setStableInterestRateModelFresh(newStableInterestRateModel);
     }
 
     /**
@@ -1975,7 +1975,7 @@ contract VToken is
      * @param newStableInterestRateModel The new stable interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal returns (uint256) {
+    function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal {
         // Used to store old model for use in the event that is emitted on success
         StableRateModel oldStableInterestRateModel;
 
@@ -2027,6 +2027,7 @@ contract VToken is
     /**
      * @notice Sets the utilization threshold for stable rate rebalancing
      * @param utilizationRateThreshold The utilization rate threshold
+     * @custom:access Only Governance
      */
     function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
         require(msg.sender == owner(), "only admin can set ACL address");
@@ -2037,6 +2038,7 @@ contract VToken is
     /**
      * @notice Sets the fraction threshold for stable rate rebalancing
      * @param fractionThreshold The fraction threshold for the validation of the stable rate rebalancing
+     * @custom:access Only Governance
      */
     function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
         require(msg.sender == owner(), "only admin can set ACL address");
