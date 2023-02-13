@@ -9,8 +9,6 @@ import "./InterestRateModel.sol";
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
 contract WhitePaperInterestRateModel is InterestRateModel {
-    event NewInterestParams(uint256 baseRatePerBlock, uint256 multiplierPerBlock);
-
     uint256 private constant BASE = 1e18;
 
     /**
@@ -27,6 +25,8 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @notice The base interest rate which is the y-intercept when utilization rate is 0
      */
     uint256 public baseRatePerBlock;
+
+    event NewInterestParams(uint256 baseRatePerBlock, uint256 multiplierPerBlock);
 
     /**
      * @notice Construct an interest rate model

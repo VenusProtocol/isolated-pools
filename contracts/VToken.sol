@@ -39,108 +39,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Construct a new money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ ERC-20 name of this token
-     * @param symbol_ ERC-20 symbol of this token
-     * @param decimals_ ERC-20 decimal precision of this token
-     * @param admin_ Address of the administrator of this token
-     * @param riskManagement Addresses of risk fund contracts
-     */
-    function initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) public initializer {
-        require(admin_ != address(0), "invalid admin address");
-        require(address(accessControlManager_) != address(0), "invalid access control manager address");
-        require(riskManagement.shortfall != address(0), "invalid shortfall address");
-        require(riskManagement.riskFund != address(0), "invalid riskfund address");
-        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
-
-        // Initialize the market
-        _initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        );
-    }
-
-    /**
-     * @notice Initialize the money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ EIP-20 name of this token
-     * @param symbol_ EIP-20 symbol of this token
-     * @param decimals_ EIP-20 decimal precision of this token
-     */
-    function _initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) internal onlyInitializing {
-        __Ownable2Step_init();
-        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-
-        _setAccessControlAddress(accessControlManager_);
-
-        // Set initial exchange rate
-        initialExchangeRateMantissa = initialExchangeRateMantissa_;
-        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
-
-        _setComptroller(comptroller_);
-
-        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
-        accrualBlockNumber = _getBlockNumber();
-        borrowIndex = mantissaOne;
-
-        // Set the interest rate model (depends on block number / borrow index)
-        _setInterestRateModelFresh(interestRateModel_);
-
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-        shortfall = riskManagement.shortfall;
-        riskFund = riskManagement.riskFund;
-        protocolShareReserve = riskManagement.protocolShareReserve;
-        protocolSeizeShareMantissa = 5e16; // 5%
-
-        // Set underlying and sanity check it
-        underlying = underlying_;
-        IERC20Upgradeable(underlying).totalSupply();
-
-        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
-        _notEntered = true;
-        _transferOwnership(admin_);
-    }
-
-    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
@@ -441,6 +339,166 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setInterestRateModel(address)"
+        );
+
+        // Check if caller has call permissions
+        if (!canCallFunction) {
+            revert SetInterestRateModelOwnerCheck();
+        }
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
+     * @notice Repays a certain amount of debt, treats the rest of the borrow as bad debt, essentially
+     *   "forgiving" the borrower. Healing is a situation that should rarely happen. However, some pools
+     *   may list risky assets or be configured improperly – we want to still handle such cases gracefully.
+     *   We assume that Comptroller does the seizing, so this function is only available to Comptroller.
+     * @dev This function does not call any Comptroller hooks (like "healAllowed"), because we assume
+     *   the Comptroller does all the necessary checks before calling this function.
+     * @param payer account who repays the debt
+     * @param borrower account to heal
+     * @param repayAmount amount to repay
+     * @custom:event Emits RepayBorrow, BadDebtIncreased events; may emit AccrueInterest
+     * @custom:error HealBorrowUnauthorized is thrown when the request does not come from Comptroller
+     * @custom:access Only Comptroller
+     */
+    function healBorrow(
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) external override nonReentrant {
+        if (msg.sender != address(comptroller)) {
+            revert HealBorrowUnauthorized();
+        }
+
+        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
+        uint256 totalBorrowsNew = totalBorrows;
+
+        uint256 actualRepayAmount;
+        if (repayAmount != 0) {
+            // _doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
+            // We violate checks-effects-interactions here to account for tokens that take transfer fees
+            actualRepayAmount = _doTransferIn(payer, repayAmount);
+            totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
+            emit RepayBorrow(payer, borrower, actualRepayAmount, 0, totalBorrowsNew);
+        }
+
+        // The transaction will fail if trying to repay too much
+        uint256 badDebtDelta = accountBorrowsPrev - actualRepayAmount;
+        if (badDebtDelta != 0) {
+            uint256 badDebtOld = badDebt;
+            uint256 badDebtNew = badDebtOld + badDebtDelta;
+            totalBorrowsNew = totalBorrowsNew - badDebtDelta;
+            badDebt = badDebtNew;
+
+            // We treat healing as "repayment", where vToken is the payer
+            emit RepayBorrow(address(this), borrower, badDebtDelta, accountBorrowsPrev - badDebtDelta, totalBorrowsNew);
+            emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
+        }
+
+        accountBorrows[borrower].principal = 0;
+        accountBorrows[borrower].interestIndex = borrowIndex;
+        totalBorrows = totalBorrowsNew;
+
+        emit HealBorrow(payer, borrower, repayAmount);
+    }
+
+    /**
+     * @notice The extended version of liquidations, callable only by Comptroller. May skip
+     *  the close factor check. The collateral seized is transferred to the liquidator.
+     * @param liquidator The address repaying the borrow and seizing collateral
+     * @param borrower The borrower of this vToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
+     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
+     *   regardless of the account liquidity
+     * @custom:event Emits LiquidateBorrow event; may emit AccrueInterest
+     * @custom:error ForceLiquidateBorrowUnauthorized is thrown when the request does not come from Comptroller
+     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
+     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
+     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
+     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
+     * @custom:access Only Comptroller
+     */
+    function forceLiquidateBorrow(
+        address liquidator,
+        address borrower,
+        uint256 repayAmount,
+        VTokenInterface vTokenCollateral,
+        bool skipLiquidityCheck
+    ) external override {
+        if (msg.sender != address(comptroller)) {
+            revert ForceLiquidateBorrowUnauthorized();
+        }
+        _liquidateBorrow(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
+    }
+
+    /**
+     * @notice Transfers collateral tokens (this market) to the liquidator.
+     * @dev Will fail unless called by another vToken during the process of liquidation.
+     *  It's absolutely critical to use msg.sender as the borrowed vToken and not a parameter.
+     * @param liquidator The account receiving seized collateral
+     * @param borrower The account having collateral seized
+     * @param seizeTokens The number of vTokens to seize
+     * @custom:event Emits Transfer, ReservesAdded events
+     * @custom:error LiquidateSeizeLiquidatorIsBorrower is thrown when trying to liquidate self
+     * @custom:access Not restricted
+     */
+    function seize(
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens
+    ) external override nonReentrant {
+        _seize(msg.sender, liquidator, borrower, seizeTokens);
+    }
+
+    /**
+     * @notice Updates bad debt
+     * @dev Called only when bad debt is recovered from auction
+     * @param recoveredAmount_ The amount of bad debt recovered
+     * @custom:event Emits BadDebtRecovered event
+     * @custom:access Only Shortfall contract
+     */
+    function badDebtRecovered(uint256 recoveredAmount_) external {
+        require(msg.sender == shortfall, "only shortfall contract can update bad debt");
+        require(recoveredAmount_ <= badDebt, "more than bad debt recovered from auction");
+
+        uint256 badDebtOld = badDebt;
+        uint256 badDebtNew = badDebtOld - recoveredAmount_;
+        badDebt = badDebtNew;
+
+        emit BadDebtRecovered(badDebtOld, badDebtNew);
+    }
+
+    /**
+     * @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+     * @param token The address of the ERC-20 token to sweep
+     * @custom:access Only Governance
+     */
+    function sweepToken(IERC20Upgradeable token) external override {
+        require(msg.sender == owner(), "VToken::sweepToken: only admin can sweep tokens");
+        require(address(token) != underlying, "VToken::sweepToken: can not sweep underlying token");
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(owner(), balance);
+
+        emit SweepToken(address(token));
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
@@ -525,26 +583,48 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
+     * @notice Construct a new money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     * @param decimals_ ERC-20 decimal precision of this token
+     * @param admin_ Address of the administrator of this token
+     * @param riskManagement Addresses of risk fund contracts
      */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setInterestRateModel(address)"
+    function initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) public initializer {
+        require(admin_ != address(0), "invalid admin address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
+        require(riskManagement.shortfall != address(0), "invalid shortfall address");
+        require(riskManagement.riskFund != address(0), "invalid riskfund address");
+        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
+
+        // Initialize the market
+        _initialize(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_,
+            riskManagement
         );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
     }
 
     /**
@@ -1019,111 +1099,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @notice Repays a certain amount of debt, treats the rest of the borrow as bad debt, essentially
-     *   "forgiving" the borrower. Healing is a situation that should rarely happen. However, some pools
-     *   may list risky assets or be configured improperly – we want to still handle such cases gracefully.
-     *   We assume that Comptroller does the seizing, so this function is only available to Comptroller.
-     * @dev This function does not call any Comptroller hooks (like "healAllowed"), because we assume
-     *   the Comptroller does all the necessary checks before calling this function.
-     * @param payer account who repays the debt
-     * @param borrower account to heal
-     * @param repayAmount amount to repay
-     * @custom:event Emits RepayBorrow, BadDebtIncreased events; may emit AccrueInterest
-     * @custom:error HealBorrowUnauthorized is thrown when the request does not come from Comptroller
-     * @custom:access Only Comptroller
-     */
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external override nonReentrant {
-        if (msg.sender != address(comptroller)) {
-            revert HealBorrowUnauthorized();
-        }
-
-        uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
-        uint256 totalBorrowsNew = totalBorrows;
-
-        uint256 actualRepayAmount;
-        if (repayAmount != 0) {
-            // _doTransferIn reverts if anything goes wrong, since we can't be sure if side effects occurred.
-            // We violate checks-effects-interactions here to account for tokens that take transfer fees
-            actualRepayAmount = _doTransferIn(payer, repayAmount);
-            totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
-            emit RepayBorrow(payer, borrower, actualRepayAmount, 0, totalBorrowsNew);
-        }
-
-        // The transaction will fail if trying to repay too much
-        uint256 badDebtDelta = accountBorrowsPrev - actualRepayAmount;
-        if (badDebtDelta != 0) {
-            uint256 badDebtOld = badDebt;
-            uint256 badDebtNew = badDebtOld + badDebtDelta;
-            totalBorrowsNew = totalBorrowsNew - badDebtDelta;
-            badDebt = badDebtNew;
-
-            // We treat healing as "repayment", where vToken is the payer
-            emit RepayBorrow(address(this), borrower, badDebtDelta, accountBorrowsPrev - badDebtDelta, totalBorrowsNew);
-            emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
-        }
-
-        accountBorrows[borrower].principal = 0;
-        accountBorrows[borrower].interestIndex = borrowIndex;
-        totalBorrows = totalBorrowsNew;
-
-        emit HealBorrow(payer, borrower, repayAmount);
-    }
-
-    /**
-     * @notice The extended version of liquidations, callable only by Comptroller. May skip
-     *  the close factor check. The collateral seized is transferred to the liquidator.
-     * @param liquidator The address repaying the borrow and seizing collateral
-     * @param borrower The borrower of this vToken to be liquidated
-     * @param repayAmount The amount of the underlying borrowed asset to repay
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
-     * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
-     *   regardless of the account liquidity
-     * @custom:event Emits LiquidateBorrow event; may emit AccrueInterest
-     * @custom:error ForceLiquidateBorrowUnauthorized is thrown when the request does not come from Comptroller
-     * @custom:error LiquidateAccrueCollateralInterestFailed is thrown when it is not possible to accrue interest on the collateral vToken
-     * @custom:error LiquidateCollateralFreshnessCheck is thrown when interest has not been accrued on the collateral vToken
-     * @custom:error LiquidateLiquidatorIsBorrower is thrown when trying to liquidate self
-     * @custom:error LiquidateCloseAmountIsZero is thrown when repayment amount is zero
-     * @custom:error LiquidateCloseAmountIsUintMax is thrown when repayment amount is UINT_MAX
-     * @custom:access Only Comptroller
-     */
-    function forceLiquidateBorrow(
-        address liquidator,
-        address borrower,
-        uint256 repayAmount,
-        VTokenInterface vTokenCollateral,
-        bool skipLiquidityCheck
-    ) external override {
-        if (msg.sender != address(comptroller)) {
-            revert ForceLiquidateBorrowUnauthorized();
-        }
-        _liquidateBorrow(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
-    }
-
-    /**
-     * @notice Transfers collateral tokens (this market) to the liquidator.
-     * @dev Will fail unless called by another vToken during the process of liquidation.
-     *  It's absolutely critical to use msg.sender as the borrowed vToken and not a parameter.
-     * @param liquidator The account receiving seized collateral
-     * @param borrower The account having collateral seized
-     * @param seizeTokens The number of vTokens to seize
-     * @custom:event Emits Transfer, ReservesAdded events
-     * @custom:error LiquidateSeizeLiquidatorIsBorrower is thrown when trying to liquidate self
-     * @custom:access Not restricted
-     */
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external override nonReentrant {
-        _seize(msg.sender, liquidator, borrower, seizeTokens);
-    }
-
-    /**
      * @notice Transfers collateral tokens (this market) to the liquidator.
      * @dev Called only during an in-kind liquidation, or by liquidateBorrow during the liquidation of another VToken.
      *  It's absolutely critical to use msg.sender as the seizer vToken and not a parameter.
@@ -1311,40 +1286,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit NewAccessControlManager(oldAccessControlManager, accessControlManager);
     }
 
-    /*** Handling Bad Debt and Shortfall ***/
-
-    /**
-     * @notice Updates bad debt
-     * @dev Called only when bad debt is recovered from auction
-     * @param recoveredAmount_ The amount of bad debt recovered
-     * @custom:event Emits BadDebtRecovered event
-     * @custom:access Only Shortfall contract
-     */
-    function badDebtRecovered(uint256 recoveredAmount_) external {
-        require(msg.sender == shortfall, "only shortfall contract can update bad debt");
-        require(recoveredAmount_ <= badDebt, "more than bad debt recovered from auction");
-
-        uint256 badDebtOld = badDebt;
-        uint256 badDebtNew = badDebtOld - recoveredAmount_;
-        badDebt = badDebtNew;
-
-        emit BadDebtRecovered(badDebtOld, badDebtNew);
-    }
-
-    /**
-     * @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
-     * @param token The address of the ERC-20 token to sweep
-     * @custom:access Only Governance
-     */
-    function sweepToken(IERC20Upgradeable token) external override {
-        require(msg.sender == owner(), "VToken::sweepToken: only admin can sweep tokens");
-        require(address(token) != underlying, "VToken::sweepToken: can not sweep underlying token");
-        uint256 balance = token.balanceOf(address(this));
-        token.safeTransfer(owner(), balance);
-
-        emit SweepToken(address(token));
-    }
-
     /*** Safe Token ***/
 
     /**
@@ -1417,6 +1358,63 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         /* We emit a Transfer event */
         emit Transfer(src, dst, tokens);
+    }
+
+    /**
+     * @notice Initialize the money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ EIP-20 name of this token
+     * @param symbol_ EIP-20 symbol of this token
+     * @param decimals_ EIP-20 decimal precision of this token
+     */
+    function _initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) internal onlyInitializing {
+        __Ownable2Step_init();
+        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
+
+        _setAccessControlAddress(accessControlManager_);
+
+        // Set initial exchange rate
+        initialExchangeRateMantissa = initialExchangeRateMantissa_;
+        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
+
+        _setComptroller(comptroller_);
+
+        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
+        accrualBlockNumber = _getBlockNumber();
+        borrowIndex = mantissaOne;
+
+        // Set the interest rate model (depends on block number / borrow index)
+        _setInterestRateModelFresh(interestRateModel_);
+
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
+        shortfall = riskManagement.shortfall;
+        riskFund = riskManagement.riskFund;
+        protocolShareReserve = riskManagement.protocolShareReserve;
+        protocolSeizeShareMantissa = 5e16; // 5%
+
+        // Set underlying and sanity check it
+        underlying = underlying_;
+        IERC20Upgradeable(underlying).totalSupply();
+
+        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
+        _notEntered = true;
+        _transferOwnership(admin_);
     }
 
     /**

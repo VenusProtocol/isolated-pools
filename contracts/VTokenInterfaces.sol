@@ -10,6 +10,16 @@ import "./Governance/AccessControlManager.sol";
 
 contract VTokenStorage {
     /**
+     * @notice Container for borrow balance information
+     * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
+     * @member interestIndex Global borrowIndex as of the most recent balance-changing action
+     */
+    struct BorrowSnapshot {
+        uint256 principal;
+        uint256 interestIndex;
+    }
+
+    /**
      * @dev Guard variable for re-entrancy checks
      */
     bool internal _notEntered;
@@ -103,16 +113,6 @@ contract VTokenStorage {
 
     // Approved token transfer amounts on behalf of others
     mapping(address => mapping(address => uint256)) internal transferAllowances;
-
-    /**
-     * @notice Container for borrow balance information
-     * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
-     * @member interestIndex Global borrowIndex as of the most recent balance-changing action
-     */
-    struct BorrowSnapshot {
-        uint256 principal;
-        uint256 interestIndex;
-    }
 
     // Mapping of account addresses to outstanding borrow balances
     mapping(address => BorrowSnapshot) internal accountBorrows;
@@ -325,13 +325,33 @@ abstract contract VTokenInterface is VTokenStorage {
         uint256 amount
     ) external virtual returns (bool);
 
+    function accrueInterest() external virtual returns (uint256);
+
+    function sweepToken(IERC20Upgradeable token) external virtual;
+
+    /*** Admin Functions ***/
+
+    function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
+
+    function reduceReserves(uint256 reduceAmount) external virtual;
+
+    function exchangeRateCurrent() external virtual returns (uint256);
+
+    function borrowBalanceCurrent(address account) external virtual returns (uint256);
+
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
+
+    function addReserves(uint256 addAmount) external virtual;
+
+    function totalBorrowsCurrent() external virtual returns (uint256);
+
+    function balanceOfUnderlying(address owner) external virtual returns (uint256);
+
     function approve(address spender, uint256 amount) external virtual returns (bool);
 
     function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
-
-    function balanceOfUnderlying(address owner) external virtual returns (uint256);
 
     function getAccountSnapshot(address account)
         external
@@ -348,29 +368,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function supplyRatePerBlock() external view virtual returns (uint256);
 
-    function totalBorrowsCurrent() external virtual returns (uint256);
-
-    function borrowBalanceCurrent(address account) external virtual returns (uint256);
-
     function borrowBalanceStored(address account) external view virtual returns (uint256);
-
-    function exchangeRateCurrent() external virtual returns (uint256);
 
     function exchangeRateStored() external view virtual returns (uint256);
 
     function getCash() external view virtual returns (uint256);
-
-    function accrueInterest() external virtual returns (uint256);
-
-    function sweepToken(IERC20Upgradeable token) external virtual;
-
-    /*** Admin Functions ***/
-
-    function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
-
-    function reduceReserves(uint256 reduceAmount) external virtual;
-
-    function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
-
-    function addReserves(uint256 addAmount) external virtual;
 }

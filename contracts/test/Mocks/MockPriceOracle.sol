@@ -14,10 +14,10 @@ contract MockPriceOracle {
         assetPrices[asset] = price;
     }
 
+    function updatePrice(address vToken) external {}
+
     //https://compound.finance/docs/prices
     function getUnderlyingPrice(VToken vToken) public view returns (uint256) {
         return assetPrices[vToken.underlying()];
     }
-
-    function updatePrice(address vToken) external {}
 }

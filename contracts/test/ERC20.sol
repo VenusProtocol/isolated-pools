@@ -7,11 +7,11 @@ interface ERC20Base {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
+    function approve(address spender, uint256 value) external returns (bool);
+
     function totalSupply() external view returns (uint256);
 
     function allowance(address owner, address spender) external view returns (uint256);
-
-    function approve(address spender, uint256 value) external returns (bool);
 
     function balanceOf(address who) external view returns (uint256);
 }
@@ -157,18 +157,6 @@ contract ERC20Harness is StandardToken {
         string memory _tokenSymbol
     ) StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
 
-    function harnessSetFailTransferFromAddress(address src, bool _fail) public {
-        failTransferFromAddresses[src] = _fail;
-    }
-
-    function harnessSetFailTransferToAddress(address dst, bool _fail) public {
-        failTransferToAddresses[dst] = _fail;
-    }
-
-    function harnessSetBalance(address _account, uint256 _amount) public {
-        balanceOf[_account] = _amount;
-    }
-
     function transfer(address dst, uint256 amount) external override returns (bool success) {
         // Added for testing purposes
         if (failTransferToAddresses[dst]) {
@@ -194,5 +182,17 @@ contract ERC20Harness is StandardToken {
         balanceOf[dst] = balanceOf[dst].add(amount, "Balance overflow");
         emit Transfer(src, dst, amount);
         return true;
+    }
+
+    function harnessSetFailTransferFromAddress(address src, bool _fail) public {
+        failTransferFromAddresses[src] = _fail;
+    }
+
+    function harnessSetFailTransferToAddress(address dst, bool _fail) public {
+        failTransferToAddresses[dst] = _fail;
+    }
+
+    function harnessSetBalance(address _account, uint256 _amount) public {
+        balanceOf[_account] = _amount;
     }
 }

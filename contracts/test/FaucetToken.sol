@@ -51,9 +51,6 @@ contract FaucetNonStandardToken is NonStandardToken {
 contract FaucetTokenReEntrantHarness {
     using SafeMath for uint256;
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
     string public name;
     string public symbol;
     uint8 public decimals;
@@ -64,22 +61,8 @@ contract FaucetTokenReEntrantHarness {
     bytes public reEntryCallData;
     string public reEntryFun;
 
-    constructor(
-        uint256 _initialAmount,
-        string memory _tokenName,
-        uint8 _decimalUnits,
-        string memory _tokenSymbol,
-        bytes memory _reEntryCallData,
-        string memory _reEntryFun
-    ) {
-        totalSupply_ = _initialAmount;
-        balanceOf_[msg.sender] = _initialAmount;
-        name = _tokenName;
-        symbol = _tokenSymbol;
-        decimals = _decimalUnits;
-        reEntryCallData = _reEntryCallData;
-        reEntryFun = _reEntryFun;
-    }
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     modifier reEnter(string memory funName) {
         string memory _reEntryFun = reEntryFun;
@@ -96,8 +79,21 @@ contract FaucetTokenReEntrantHarness {
         _;
     }
 
-    function compareStrings(string memory a, string memory b) internal pure returns (bool) {
-        return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
+    constructor(
+        uint256 _initialAmount,
+        string memory _tokenName,
+        uint8 _decimalUnits,
+        string memory _tokenSymbol,
+        bytes memory _reEntryCallData,
+        string memory _reEntryFun
+    ) {
+        totalSupply_ = _initialAmount;
+        balanceOf_[msg.sender] = _initialAmount;
+        name = _tokenName;
+        symbol = _tokenSymbol;
+        decimals = _decimalUnits;
+        reEntryCallData = _reEntryCallData;
+        reEntryFun = _reEntryFun;
     }
 
     function allocateTo(address _owner, uint256 value) public {
@@ -158,5 +154,9 @@ contract FaucetTokenReEntrantHarness {
         balanceOf_[src] = balanceOf_[src].sub(amount);
         balanceOf_[dst] = balanceOf_[dst].add(amount);
         emit Transfer(src, dst, amount);
+    }
+
+    function compareStrings(string memory a, string memory b) internal pure returns (bool) {
+        return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
     }
 }

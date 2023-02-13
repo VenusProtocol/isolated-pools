@@ -16,6 +16,18 @@ contract InterestRateModelHarness is InterestRateModel {
         borrowRate = borrowRate_;
     }
 
+    function getSupplyRate(
+        uint256 _cash,
+        uint256 _borrows,
+        uint256 _reserves,
+        uint256 _reserveFactor
+    ) external view override returns (uint256) {
+        _cash; // unused
+        _borrows; // unused
+        _reserves; // unused
+        return borrowRate * (1 - _reserveFactor);
+    }
+
     function setFailBorrowRate(bool failBorrowRate_) public {
         failBorrowRate = failBorrowRate_;
     }
@@ -34,17 +46,5 @@ contract InterestRateModelHarness is InterestRateModel {
         _reserves; // unused
         require(!failBorrowRate, "INTEREST_RATE_MODEL_ERROR");
         return borrowRate;
-    }
-
-    function getSupplyRate(
-        uint256 _cash,
-        uint256 _borrows,
-        uint256 _reserves,
-        uint256 _reserveFactor
-    ) external view override returns (uint256) {
-        _cash; // unused
-        _borrows; // unused
-        _reserves; // unused
-        return borrowRate * (1 - _reserveFactor);
     }
 }

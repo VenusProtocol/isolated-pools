@@ -39,26 +39,6 @@ contract VTokenHarness is VToken {
         );
     }
 
-    function _doTransferOut(address to, uint256 amount) internal override {
-        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
-        return super._doTransferOut(to, amount);
-    }
-
-    function _exchangeRateStored() internal view override returns (uint256) {
-        if (harnessExchangeRateStored) {
-            return harnessExchangeRate;
-        }
-        return super._exchangeRateStored();
-    }
-
-    function _getBlockNumber() internal view override returns (uint256) {
-        return blockNumber;
-    }
-
-    function getBorrowRateMaxMantissa() external pure returns (uint256) {
-        return borrowRateMaxMantissa;
-    }
-
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -118,11 +98,6 @@ contract VTokenHarness is VToken {
         super._redeemFresh(account, vTokenAmount, underlyingAmount);
     }
 
-    function harnessAccountBorrows(address account) external view returns (uint256 principal, uint256 interestIndex) {
-        BorrowSnapshot memory snapshot = accountBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex);
-    }
-
     function harnessSetAccountBorrows(
         address account,
         uint256 principal,
@@ -169,12 +144,37 @@ contract VTokenHarness is VToken {
         _setInterestRateModelFresh(newInterestRateModel);
     }
 
+    function harnessAccountBorrows(address account) external view returns (uint256 principal, uint256 interestIndex) {
+        BorrowSnapshot memory snapshot = accountBorrows[account];
+        return (snapshot.principal, snapshot.interestIndex);
+    }
+
+    function getBorrowRateMaxMantissa() external pure returns (uint256) {
+        return borrowRateMaxMantissa;
+    }
+
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {
         interestRateModel = InterestRateModel(newInterestRateModelAddress);
     }
 
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
+    }
+
+    function _doTransferOut(address to, uint256 amount) internal override {
+        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
+        return super._doTransferOut(to, amount);
+    }
+
+    function _exchangeRateStored() internal view override returns (uint256) {
+        if (harnessExchangeRateStored) {
+            return harnessExchangeRate;
+        }
+        return super._exchangeRateStored();
+    }
+
+    function _getBlockNumber() internal view override returns (uint256) {
+        return blockNumber;
     }
 }
 
