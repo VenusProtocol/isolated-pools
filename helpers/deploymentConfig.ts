@@ -101,7 +101,7 @@ export const globalConfig: NetworkConfig = {
         symbol: "CAKE",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
-      }
+      },
     ],
     poolConfig: [
       {
@@ -194,7 +194,7 @@ export const globalConfig: NetworkConfig = {
         symbol: "CAKE",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
-      }
+      },
     ],
     poolConfig: [
       {
