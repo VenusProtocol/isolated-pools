@@ -14,17 +14,6 @@ import "./Governance/AccessControlManager.sol";
  * @title Comptroller Contract
  */
 contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, ComptrollerInterface, ExponentialNoError {
-    /// @notice Indicator that this is a Comptroller contract (for inspection)
-    bool public constant isComptroller = true;
-
-    // PoolRegistry, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable poolRegistry;
-
-    // AccessControlManager, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable accessControl;
-
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
@@ -132,20 +121,16 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     error BorrowCapExceeded(address market, uint256 cap);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_, address accessControl_) {
-        // Note that the contract is upgradeable. We only initialize immutables in the
-        // constructor. Use initialize() or reinitializers to set the state variables.
-
-        require(poolRegistry_ != address(0), "invalid pool registry address");
-        require(accessControl_ != address(0), "invalid access control address");
-
-        poolRegistry = poolRegistry_;
-        accessControl = accessControl_;
+    constructor(address poolRegistry_, address accessControl_) ComptrollerStorage(poolRegistry_, accessControl_) {
         _disableInitializers();
     }
 
     function initialize() external initializer {
         __Ownable2Step_init();
+    }
+
+    function isComptroller() external pure override returns (bool) {
+        return _isComptroller;
     }
 
     /**

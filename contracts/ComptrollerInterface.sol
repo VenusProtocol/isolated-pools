@@ -8,9 +8,9 @@ import "./Rewards/RewardsDistributor.sol";
 interface ComptrollerInterface {
     /*** Assets You Are In ***/
 
-    function enterMarkets(address[] calldata vTokens) external virtual returns (uint256[] memory);
+    function enterMarkets(address[] calldata vTokens) external returns (uint256[] memory);
 
-    function exitMarket(address vToken) external virtual returns (uint256);
+    function exitMarket(address vToken) external returns (uint256);
 
     /*** Policy Hooks ***/
 
@@ -18,21 +18,21 @@ interface ComptrollerInterface {
         address vToken,
         address minter,
         uint256 mintAmount
-    ) external virtual;
+    ) external;
 
     function preRedeemHook(
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) external virtual;
+    ) external;
 
     function preBorrowHook(
         address vToken,
         address borrower,
         uint256 borrowAmount
-    ) external virtual;
+    ) external;
 
-    function preRepayHook(address vToken, address borrower) external virtual;
+    function preRepayHook(address vToken, address borrower) external;
 
     function preLiquidateHook(
         address vTokenBorrowed,
@@ -40,23 +40,23 @@ interface ComptrollerInterface {
         address borrower,
         uint256 repayAmount,
         bool skipLiquidityCheck
-    ) external virtual;
+    ) external;
 
     function preSeizeHook(
         address vTokenCollateral,
         address vTokenBorrowed,
         address liquidator,
         address borrower
-    ) external virtual;
+    ) external;
 
     function preTransferHook(
         address vToken,
         address src,
         address dst,
         uint256 transferTokens
-    ) external virtual;
+    ) external;
 
-    function isComptroller() external view virtual returns (bool);
+    function isComptroller() external view returns (bool);
 
     /*** Liquidity/Liquidation Calculations ***/
 
@@ -64,23 +64,23 @@ interface ComptrollerInterface {
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 repayAmount
-    ) external view virtual returns (uint256, uint256);
+    ) external view returns (uint256, uint256);
 
-    function getAllMarkets() external view virtual returns (VToken[] memory);
+    function getAllMarkets() external view returns (VToken[] memory);
 }
 
 interface ComptrollerViewInterface {
-    function markets(address) external view virtual returns (bool, uint256);
+    function markets(address) external view returns (bool, uint256);
 
-    function oracle() external view virtual returns (PriceOracle);
+    function oracle() external view returns (PriceOracle);
 
-    function getAssetsIn(address) external view virtual returns (VToken[] memory);
+    function getAssetsIn(address) external view returns (VToken[] memory);
 
-    function closeFactorMantissa() external view virtual returns (uint256);
+    function closeFactorMantissa() external view returns (uint256);
 
-    function liquidationIncentiveMantissa() external view virtual returns (uint256);
+    function liquidationIncentiveMantissa() external view returns (uint256);
 
-    function minLiquidatableCollateral() external view virtual returns (uint256);
+    function minLiquidatableCollateral() external view returns (uint256);
 
-    function getRewardDistributors() external view virtual returns (RewardsDistributor[] memory);
+    function getRewardDistributors() external view returns (RewardsDistributor[] memory);
 }

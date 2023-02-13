@@ -104,10 +104,34 @@ contract ComptrollerStorage {
 
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
+
+    /// @notice Indicator that this is a Comptroller contract (for inspection)
+    bool internal constant _isComptroller = true;
+
+    // PoolRegistry, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable poolRegistry;
+
+    // AccessControlManager, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable accessControl;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address poolRegistry_, address accessControl_) {
+        // Note that the contract is upgradeable. We only initialize immutables in the
+        // constructor. Use initialize() or reinitializers to set the state variables.
+
+        require(poolRegistry_ != address(0), "invalid pool registry address");
+        require(accessControl_ != address(0), "invalid access control address");
+
+        poolRegistry = poolRegistry_;
+        accessControl = accessControl_;
+    }
 }
