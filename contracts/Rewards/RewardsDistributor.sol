@@ -256,7 +256,17 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      * @param vTokens The list of markets to claim REWARD TOKEN in
      */
     function claimRewardToken(address holder, VToken[] memory vTokens) public {
-        _claimRewardToken(holder, vTokens);
+        uint256 vTokensCount = vTokens.length;
+        for (uint256 i; i < vTokensCount; ++i) {
+            VToken vToken = vTokens[i];
+            require(comptroller.isMarketListed(vToken), "market must be listed");
+            Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
+            _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
+            _distributeBorrowerRewardToken(address(vToken), holder, borrowIndex);
+            _updateRewardTokenSupplyIndex(address(vToken));
+            _distributeSupplierRewardToken(address(vToken), holder);
+        }
+        rewardTokenAccrued[holder] = _grantRewardToken(holder, rewardTokenAccrued[holder]);
     }
 
     function getBlockNumber() public view virtual returns (uint256) {
@@ -444,26 +454,5 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         }
 
         emit RewardTokenBorrowIndexUpdated(vToken, marketBorrowIndex);
-    }
-
-    /*** Reward Token Distribution Admin ***/
-
-    /**
-     * @notice Claim all rewardToken accrued by the holders.
-     * @param holder The addresses to claim REWARD TOKEN for
-     * @param vTokens The list of markets to claim REWARD TOKEN in
-     */
-    function _claimRewardToken(address holder, VToken[] memory vTokens) internal {
-        uint256 vTokensCount = vTokens.length;
-        for (uint256 i; i < vTokensCount; ++i) {
-            VToken vToken = vTokens[i];
-            require(comptroller.isMarketListed(vToken), "market must be listed");
-            Exp memory borrowIndex = Exp({ mantissa: vToken.borrowIndex() });
-            _updateRewardTokenBorrowIndex(address(vToken), borrowIndex);
-            _distributeBorrowerRewardToken(address(vToken), holder, borrowIndex);
-            _updateRewardTokenSupplyIndex(address(vToken));
-            _distributeSupplierRewardToken(address(vToken), holder);
-        }
-        rewardTokenAccrued[holder] = _grantRewardToken(holder, rewardTokenAccrued[holder]);
     }
 }
