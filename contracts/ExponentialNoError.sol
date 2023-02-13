@@ -58,27 +58,6 @@ contract ExponentialNoError {
         return left.mantissa < right.mantissa;
     }
 
-    /**
-     * @dev Checks if left Exp <= right Exp.
-     */
-    function lessThanOrEqualExp(Exp memory left, Exp memory right) internal pure returns (bool) {
-        return left.mantissa <= right.mantissa;
-    }
-
-    /**
-     * @dev Checks if left Exp > right Exp.
-     */
-    function greaterThanExp(Exp memory left, Exp memory right) internal pure returns (bool) {
-        return left.mantissa > right.mantissa;
-    }
-
-    /**
-     * @dev returns true if Exp is exactly zero
-     */
-    function isZeroExp(Exp memory value) internal pure returns (bool) {
-        return value.mantissa == 0;
-    }
-
     function safe224(uint256 n, string memory errorMessage) internal pure returns (uint224) {
         require(n < 2**224, errorMessage);
         return uint224(n);
