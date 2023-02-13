@@ -38,26 +38,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
-
-    uint256 internal constant NO_ERROR = 0;
-
-    // closeFactorMantissa must be strictly greater than this value
-    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
-
-    // closeFactorMantissa must not exceed this value
-    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
-
-    // No collateralFactorMantissa may exceed this value
-    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-
-    // PoolRegistry, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable poolRegistry;
-
-    // AccessControlManager, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable accessControl;
-
+    
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
@@ -165,15 +146,7 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
     error BorrowCapExceeded(address market, uint256 cap);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_, address accessControl_) {
-        // Note that the contract is upgradeable. We only initialize immutables in the
-        // constructor. Use initialize() or reinitializers to set the state variables.
-
-        require(poolRegistry_ != address(0), "invalid pool registry address");
-        require(accessControl_ != address(0), "invalid access control address");
-
-        poolRegistry = poolRegistry_;
-        accessControl = accessControl_;
+    constructor(address poolRegistry_, address accessControl_) ComptrollerV1Storage(poolRegistry_, accessControl_) {
         _disableInitializers();
     }
 

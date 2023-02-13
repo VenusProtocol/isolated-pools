@@ -5,6 +5,35 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./VToken.sol";
 
 contract ComptrollerV1Storage {
+    struct LiquidationOrder {
+        VToken vTokenCollateral;
+        VToken vTokenBorrowed;
+        uint256 repayAmount;
+    }
+
+    struct AccountLiquiditySnapshot {
+        uint256 totalCollateral;
+        uint256 weightedCollateral;
+        uint256 borrows;
+        uint256 effects;
+        uint256 liquidity;
+        uint256 shortfall;
+    }
+
+    struct RewardSpeeds {
+        address rewardToken;
+        uint256 supplySpeed;
+        uint256 borrowSpeed;
+    }
+    
+    // PoolRegistry, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable poolRegistry;
+
+    // AccessControlManager, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable accessControl;
+
     /**
      * @notice Oracle which gives the price of any given asset
      */
@@ -94,6 +123,30 @@ contract ComptrollerV1Storage {
 
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;
+
+    uint256 internal constant NO_ERROR = 0;
+
+    // closeFactorMantissa must be strictly greater than this value
+    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
+
+    // closeFactorMantissa must not exceed this value
+    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
+
+    // No collateralFactorMantissa may exceed this value
+    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
+    
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor (address poolRegistry_, address accessControl_){
+         // Note that the contract is upgradeable. We only initialize immutables in the
+        // constructor. Use initialize() or reinitializers to set the state variables.
+
+        require(poolRegistry_ != address(0), "invalid pool registry address");
+        require(accessControl_ != address(0), "invalid access control address");
+
+        poolRegistry = poolRegistry_;
+        accessControl = accessControl_;
+    }
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
