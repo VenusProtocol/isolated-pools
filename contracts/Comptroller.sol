@@ -14,10 +14,7 @@ import "./Governance/AccessControlManager.sol";
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
-    /// @notice Indicator that this is a Comptroller contract (for inspection)
-    bool public constant isComptroller = true;
-
+contract Comptroller is Ownable2StepUpgradeable, ComptrollerInterface, ComptrollerV1Storage, ExponentialNoError {
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 
@@ -131,6 +128,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, Comptroll
 
     function initialize() external initializer {
         __Ownable2Step_init();
+    }
+
+    function isComptroller() external pure override returns (bool) {
+        return _isComptroller;
     }
 
     /**
