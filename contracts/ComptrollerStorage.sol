@@ -116,6 +116,13 @@ contract ComptrollerStorage {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable accessControl;
 
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[50] private __gap;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address poolRegistry_, address accessControl_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
@@ -127,11 +134,4 @@ contract ComptrollerStorage {
         poolRegistry = poolRegistry_;
         accessControl = accessControl_;
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }
