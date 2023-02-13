@@ -15,30 +15,9 @@ import "./Governance/AccessControlManager.sol";
  * @author Compound
  */
 contract Comptroller is Ownable2StepUpgradeable, ComptrollerV1Storage, ComptrollerInterface, ExponentialNoError {
-    struct LiquidationOrder {
-        VToken vTokenCollateral;
-        VToken vTokenBorrowed;
-        uint256 repayAmount;
-    }
-
-    struct AccountLiquiditySnapshot {
-        uint256 totalCollateral;
-        uint256 weightedCollateral;
-        uint256 borrows;
-        uint256 effects;
-        uint256 liquidity;
-        uint256 shortfall;
-    }
-
-    struct RewardSpeeds {
-        address rewardToken;
-        uint256 supplySpeed;
-        uint256 borrowSpeed;
-    }
-
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
-    
+
     // List of Reward Distributors added
     RewardsDistributor[] private rewardsDistributors;
 

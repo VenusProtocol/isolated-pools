@@ -25,7 +25,7 @@ contract ComptrollerV1Storage {
         uint256 supplySpeed;
         uint256 borrowSpeed;
     }
-    
+
     // PoolRegistry, immutable to save on gas
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable poolRegistry;
@@ -134,11 +134,10 @@ contract ComptrollerV1Storage {
 
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-    
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor (address poolRegistry_, address accessControl_){
-         // Note that the contract is upgradeable. We only initialize immutables in the
+    constructor(address poolRegistry_, address accessControl_) {
+        // Note that the contract is upgradeable. We only initialize immutables in the
         // constructor. Use initialize() or reinitializers to set the state variables.
 
         require(poolRegistry_ != address(0), "invalid pool registry address");
