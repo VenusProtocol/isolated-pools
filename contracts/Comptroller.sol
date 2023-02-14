@@ -570,6 +570,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
+        if (snapshot.shortfall == 0) {
+            revert InsufficientShortfall();
+        }
+
         // percentage = collateral / (borrows * liquidation incentive)
         Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory scaledBorrows = mul_(
@@ -630,6 +634,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
             // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
             // and record bad debt.
             revert InsufficientCollateral(collateralToSeize, snapshot.totalCollateral);
+        }
+
+        if (snapshot.shortfall == 0) {
+            revert InsufficientShortfall();
         }
 
         uint256 ordersCount = orders.length;
