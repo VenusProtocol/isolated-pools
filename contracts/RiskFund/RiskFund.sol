@@ -27,6 +27,9 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     // Store base asset's reserve for specific pool
     mapping(address => uint256) private poolReserves;
 
+    // Limit for the loops to avoid the DOS
+    uint256 public maxLoopsLimit;
+
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
@@ -48,6 +51,12 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
     /// @notice Emitted when reserves are transferred for auction
     event TransferredReserveForAuction(address comptroller, uint256 amount);
 
+    /// @notice Emitted when max loops limit is set
+    event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
+
+    /// @notice Thrown an error on maxLoopsLimit execcds for any for loop
+    error MaxLoopsLimitExceeded(uint256 loopsLimit, uint256 requiredLoops);
+
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -66,12 +75,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         address _pancakeSwapRouter,
         uint256 _minAmountToConvert,
         address _convertibleBaseAsset,
-        address _accessControl
+        address _accessControl,
+        uint256 _loopsLimit
     ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
         require(_accessControl != address(0), "Risk Fund: Access control address invalid");
+        require(_loopsLimit > 0, "Risk Fund: Loops limit can not be zero");
 
         __Ownable2Step_init();
 
@@ -79,6 +90,8 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         minAmountToConvert = _minAmountToConvert;
         convertibleBaseAsset = _convertibleBaseAsset;
         accessControl = _accessControl;
+
+        _setMaxLoopsLimit(_loopsLimit);
     }
 
     /**
@@ -151,6 +164,11 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
         uint256 totalAmount;
         uint256 marketsCount = markets.length;
+
+        if (marketsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
+        }
+
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(markets[i]);
             address comptroller = address(vToken.comptroller());
@@ -184,6 +202,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
+    }
+
+    /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
     }
 
     /**
@@ -258,5 +284,12 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         }
 
         return totalAmount;
+    }
+
+    function _setMaxLoopsLimit(uint256 limit) internal {
+        uint256 oldMaxLoopsLimit = maxLoopsLimit;
+        maxLoopsLimit = limit;
+
+        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
     }
 }

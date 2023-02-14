@@ -51,6 +51,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
     IERC20Upgradeable public rewardToken;
 
+    // Limit for the loops to avoid the DOS
+    uint256 public maxLoopsLimit;
+
     /// @notice Emitted when REWARD TOKEN is distributed to a supplier
     event DistributedSupplierRewardToken(
         VToken indexed vToken,
@@ -93,6 +96,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
 
+    /// @notice Emitted when max loops limit is set
+    event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
+
+    /// @notice Thrown an error on maxLoopsLimit execcds for any for loop
+    error MaxLoopsLimitExceeded(uint256 loopsLimit, uint256 requiredLoops);
+
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
         _;
@@ -106,10 +115,16 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20Upgradeable _rewardToken) external initializer {
+    function initialize(
+        Comptroller _comptroller,
+        IERC20Upgradeable _rewardToken,
+        uint256 _loopsLimit
+    ) external initializer {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
         __Ownable2Step_init();
+
+        _setMaxLoopsLimit(_loopsLimit);
     }
 
     function initializeMarket(address vToken) external onlyComptroller {
@@ -229,6 +244,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      */
     function claimRewardToken(address holder) external {
         return claimRewardToken(holder, comptroller.getAllMarkets());
+    }
+
+    /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
     }
 
     /**
@@ -454,5 +477,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         }
 
         emit RewardTokenBorrowIndexUpdated(vToken, marketBorrowIndex);
+    }
+
+    function _setMaxLoopsLimit(uint256 limit) internal {
+        uint256 oldMaxLoopsLimit = maxLoopsLimit;
+        maxLoopsLimit = limit;
+
+        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
     }
 }

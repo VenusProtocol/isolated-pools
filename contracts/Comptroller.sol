@@ -63,6 +63,9 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
 
+    /// @notice Emitted when max loops limit is set
+    event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -120,13 +123,21 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    /// @notice Thrown an error on maxLoopsLimit execcds for any for loop
+    error MaxLoopsLimitExceeded(uint256 loopsLimit, uint256 requiredLoops);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address poolRegistry_, address accessControl_) ComptrollerStorage(poolRegistry_, accessControl_) {
         _disableInitializers();
     }
 
-    function initialize() external initializer {
+    /**
+     * @param loopLimit Limit for the loops can iterate to avoid the DOS
+     */
+    function initialize(uint256 loopLimit) external initializer {
         __Ownable2Step_init();
+
+        _setMaxLoopsLimit(loopLimit);
     }
 
     function isComptroller() external pure override returns (bool) {
@@ -144,6 +155,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
      */
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
+
+        if (len > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, len);
+        }
 
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
@@ -199,6 +214,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         // load into memory for faster iteration
         VToken[] memory userAssetList = accountAssets[msg.sender];
         uint256 len = userAssetList.length;
+
+        if (len > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, len);
+        }
+
         uint256 assetIndex = len;
         for (uint256 i; i < len; ++i) {
             if (userAssetList[i] == vToken) {
@@ -256,6 +276,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
@@ -285,6 +310,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
@@ -355,6 +385,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
@@ -380,6 +415,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
@@ -498,6 +538,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vTokenCollateral);
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
@@ -534,6 +579,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
@@ -557,6 +607,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     function healAccount(address user) external {
         VToken[] memory userAssets = accountAssets[user];
         uint256 userAssetsCount = userAssets.length;
+
+        if (userAssetsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, userAssetsCount);
+        }
+
         address liquidator = msg.sender;
         // We need all user's markets to be fresh for the computations to be correct
         for (uint256 i; i < userAssetsCount; ++i) {
@@ -633,6 +688,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         }
 
         uint256 ordersCount = orders.length;
+
+        if (ordersCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, ordersCount);
+        }
+
         for (uint256 i; i < ordersCount; ++i) {
             if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
                 revert MarketNotListed(address(orders[i].vTokenBorrowed));
@@ -653,6 +713,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         VToken[] memory borrowMarkets = accountAssets[borrower];
         uint256 marketsCount = borrowMarkets.length;
+
+        if (marketsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
+        }
+
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
             require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
@@ -775,6 +840,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         _addMarket(address(vToken));
 
         uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        if (rewardDistributorsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardDistributorsCount);
+        }
+
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
@@ -798,6 +868,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
 
+        if (numMarkets > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, numMarkets);
+        }
+
         for (uint256 i; i < numMarkets; ++i) {
             borrowCaps[address(vTokens[i])] = newBorrowCaps[i];
             emit NewBorrowCap(vTokens[i], newBorrowCaps[i]);
@@ -818,6 +892,10 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         require(vTokensCount != 0, "invalid number of markets");
         require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
+
+        if (vTokensCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, vTokensCount);
+        }
 
         for (uint256 i; i < vTokensCount; ++i) {
             supplyCaps[address(vTokens[i])] = newSupplyCaps[i];
@@ -842,6 +920,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
 
         uint256 marketsCount = marketsList.length;
         uint256 actionsCount = actionsList.length;
+
+        if (marketsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
+        }
+
         for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
             for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
                 _setActionPaused(address(marketsList[marketIdx]), actionsList[actionIdx], paused);
@@ -876,6 +959,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
+
+        if (rewardsDistributorsLength > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, rewardsDistributorsLength);
+        }
+
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
             address rewardToken = address(rewardsDistributors[i].rewardToken());
             require(
@@ -888,6 +976,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
         uint256 marketsCount = allMarkets.length;
+
+        if (marketsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
+        }
+
         for (uint256 i; i < marketsCount; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
@@ -1097,6 +1190,21 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     }
 
     /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
+    }
+
+    function _setMaxLoopsLimit(uint256 limit) internal {
+        uint256 oldMaxLoopsLimit = maxLoopsLimit;
+        maxLoopsLimit = limit;
+
+        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
+    }
+
+    /**
      * @notice Add the market to the borrower's "assets in" for liquidity calculations
      * @param vToken The market to enter
      * @param borrower The address of the account to modify
@@ -1132,6 +1240,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
      */
     function _addMarket(address vToken) internal {
         uint256 marketsCount = allMarkets.length;
+
+        if (marketsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
+        }
+
         for (uint256 i; i < marketsCount; ++i) {
             if (allMarkets[i] == VToken(vToken)) {
                 revert MarketAlreadyListed(vToken);
@@ -1228,6 +1341,11 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
         // For each asset the account is in
         VToken[] memory assets = accountAssets[account];
         uint256 assetsCount = assets.length;
+
+        if (assetsCount > maxLoopsLimit) {
+            revert MaxLoopsLimitExceeded(maxLoopsLimit, assetsCount);
+        }
+
         for (uint256 i; i < assetsCount; ++i) {
             VToken asset = assets[i];
 
