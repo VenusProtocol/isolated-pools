@@ -1200,7 +1200,6 @@ contract Comptroller is Ownable2StepUpgradeable, ComptrollerStorage, Comptroller
     function _setMaxLoopsLimit(uint256 limit) internal {
         uint256 oldMaxLoopsLimit = maxLoopsLimit;
         maxLoopsLimit = limit;
-
         emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
     }
 

@@ -29,9 +29,10 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-  const comptroller = await upgrades.deployProxy(Comptroller, [], {
+  const maxLoopsLimit = 150;
+  const comptroller = await upgrades.deployProxy(Comptroller, [maxLoopsLimit], {
     constructorArgs: [poolRegistry.address, accessControl.address],
-    initializer: "initialize()",
+    initializer: "initialize(uint256)",
   });
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
@@ -49,6 +50,7 @@ async function makeVToken({
   collateralFactor,
   underlyingPrice,
   poolRegistry,
+  maxLoopsLimit,
 }: {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
@@ -58,10 +60,12 @@ async function makeVToken({
   collateralFactor?: string | number;
   underlyingPrice?: string | number;
   poolRegistry: FakeContract<PoolRegistry>;
+  maxLoopsLimit: string | number;
 }): Promise<FakeContract<VToken>> {
   accessControl.isAllowedToCall.returns(true);
   const vToken = await smock.fake<VToken>("VToken");
   configureVToken({ vToken, comptroller, exchangeRate });
+  await comptroller.setMaxLoopsLimit(maxLoopsLimit);
   if (supportMarket) {
     const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
     await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
@@ -121,7 +125,14 @@ describe("Comptroller", () => {
 
   describe("liquidity", () => {
     it("fails if a price has not been set", async () => {
-      const vToken = await makeVToken({ accessControl, comptroller, oracle, supportMarket: true, poolRegistry });
+      const vToken = await makeVToken({
+        accessControl,
+        comptroller,
+        oracle,
+        supportMarket: true,
+        poolRegistry,
+        maxLoopsLimit: 150,
+      });
       await comptroller.connect(accounts[1]).enterMarkets([vToken.address]);
       await expect(comptroller.getAccountLiquidity(await accounts[1].getAddress())).to.be.revertedWithCustomError(
         comptroller,
@@ -142,6 +153,7 @@ describe("Comptroller", () => {
         collateralFactor,
         underlyingPrice,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
 
       let error: BigNumber;
@@ -216,6 +228,7 @@ describe("Comptroller", () => {
         collateralFactor: cf1,
         underlyingPrice: up1,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       const vToken2 = await makeVToken({
         accessControl,
@@ -225,6 +238,7 @@ describe("Comptroller", () => {
         collateralFactor: cf2,
         underlyingPrice: up2,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       const vToken3 = await makeVToken({
         accessControl,
@@ -234,6 +248,7 @@ describe("Comptroller", () => {
         collateralFactor: cf3,
         underlyingPrice: up3,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
 
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address, vToken3.address]);
@@ -308,6 +323,7 @@ describe("Comptroller", () => {
         collateralFactor: 0.7,
         underlyingPrice: 2.12,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
       await expect(comptroller.connect(poolRegistrySigner).supportMarket(vToken.address))
@@ -334,6 +350,7 @@ describe("Comptroller", () => {
         collateralFactor: cf1,
         underlyingPrice: up1,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       const vToken2 = await makeVToken({
         accessControl,
@@ -343,6 +360,7 @@ describe("Comptroller", () => {
         collateralFactor: cf2,
         underlyingPrice: up2,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address]);
       // pretend user mints amount1 of vToken1
@@ -365,7 +383,7 @@ describe("Comptroller", () => {
 
   describe("getHypotheticalAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
-      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry });
+      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry, maxLoopsLimit: 150 });
       const [error, liquidity, shortfall] = await comptroller.getHypotheticalAccountLiquidity(
         await accounts[0].getAddress(),
         vToken.address,
@@ -389,6 +407,7 @@ describe("Comptroller", () => {
         collateralFactor,
         underlyingPrice,
         poolRegistry,
+        maxLoopsLimit: 150,
       });
       const from = accounts[0];
       const amount = 1e6;
