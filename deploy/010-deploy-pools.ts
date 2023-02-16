@@ -56,8 +56,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     let pools = await poolRegistry.callStatic.getAllPools();
     const pool = poolConfig[i];
     let comptrollerProxy;
- 
-    if(i>=pools.length){
+
+    if (i >= pools.length) {
       // Create pool
       tx = await poolRegistry.createRegistryPool(
         pool.name,

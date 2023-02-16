@@ -30,11 +30,11 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 task("transfer", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
 
-  for (let i = 9; i>0; i--){
-    await  accounts[i].sendTransaction({
+  for (let i = 9; i > 0; i--) {
+    await accounts[i].sendTransaction({
       to: await accounts[0].getAddress(),
-      value: ethers.utils.parseEther("0.49") // 1 ether
-    })
+      value: ethers.utils.parseEther("0.49"), // 1 ether
+    });
   }
 });
 

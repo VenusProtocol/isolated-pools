@@ -520,9 +520,7 @@
         "blockNumber": 27287327,
         "transactionHash": "0xa1b0c163b3dd964ccad350d3076922f5843d68736701670568a2d82db50ffdb4",
         "address": "0x50Ed4CF41718abF1B2734ecd9b81BDcD56D7969A",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 0,
         "blockHash": "0xec02db2c083919996f53ffeed35bc1b3184ec073cc40510ecd0c9da6ed7da433"

@@ -298,9 +298,7 @@
         "blockNumber": 27287355,
         "transactionHash": "0xec7aa319717095a4356124ae0b285e2e2bf9d149f7da917f4ebc36c18c70b102",
         "address": "0xC854201C452F02F0E60a7E4fd80f2cc0cf7fc5c9",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 0,
         "blockHash": "0xc7d3a85f24b15275aca289c5b75e72c7b4fc68310ce167d44abbdac2f6c56e68"
