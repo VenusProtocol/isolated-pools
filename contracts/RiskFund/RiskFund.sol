@@ -12,10 +12,12 @@ import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
 
+import "../MaxLoopsLimitHelper.sol";
+
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IRiskFund {
+contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private pancakeSwapRouter;
@@ -26,9 +28,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     // Store base asset's reserve for specific pool
     mapping(address => uint256) private poolReserves;
-
-    // Limit for the loops to avoid the DOS
-    uint256 public maxLoopsLimit;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -50,12 +49,6 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /// @notice Emitted when reserves are transferred for auction
     event TransferredReserveForAuction(address comptroller, uint256 amount);
-
-    /// @notice Emitted when max loops limit is set
-    event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
-
-    /// @notice Thrown an error on maxLoopsLimit execcds for any for loop
-    error MaxLoopsLimitExceeded(uint256 loopsLimit, uint256 requiredLoops);
 
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.
@@ -165,9 +158,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         uint256 totalAmount;
         uint256 marketsCount = markets.length;
 
-        if (marketsCount > maxLoopsLimit) {
-            revert MaxLoopsLimitExceeded(maxLoopsLimit, marketsCount);
-        }
+        _ensureMaxLoops(marketsCount);
 
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(markets[i]);
@@ -284,12 +275,5 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         }
 
         return totalAmount;
-    }
-
-    function _setMaxLoopsLimit(uint256 limit) internal {
-        uint256 oldMaxLoopsLimit = maxLoopsLimit;
-        maxLoopsLimit = limit;
-
-        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
     }
 }

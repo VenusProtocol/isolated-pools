@@ -116,9 +116,6 @@ contract ComptrollerStorage {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable accessControl;
 
-    // Limit for the loops to avoid the DOS
-    uint256 public maxLoopsLimit;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.

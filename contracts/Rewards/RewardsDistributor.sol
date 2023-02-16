@@ -6,8 +6,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
+import "../MaxLoopsLimitHelper.sol";
 
-contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
+contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct RewardToken {
@@ -51,9 +52,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
     IERC20Upgradeable public rewardToken;
 
-    // Limit for the loops to avoid the DOS
-    uint256 public maxLoopsLimit;
-
     /// @notice Emitted when REWARD TOKEN is distributed to a supplier
     event DistributedSupplierRewardToken(
         VToken indexed vToken,
@@ -95,12 +93,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
 
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
-
-    /// @notice Emitted when max loops limit is set
-    event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
-
-    /// @notice Thrown an error on maxLoopsLimit execcds for any for loop
-    error MaxLoopsLimitExceeded(uint256 loopsLimit, uint256 requiredLoops);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -280,6 +272,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      */
     function claimRewardToken(address holder, VToken[] memory vTokens) public {
         uint256 vTokensCount = vTokens.length;
+
+        _ensureMaxLoops(vTokensCount);
+
         for (uint256 i; i < vTokensCount; ++i) {
             VToken vToken = vTokens[i];
             require(comptroller.isMarketListed(vToken), "market must be listed");
@@ -477,12 +472,5 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
         }
 
         emit RewardTokenBorrowIndexUpdated(vToken, marketBorrowIndex);
-    }
-
-    function _setMaxLoopsLimit(uint256 limit) internal {
-        uint256 oldMaxLoopsLimit = maxLoopsLimit;
-        maxLoopsLimit = limit;
-
-        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
     }
 }
