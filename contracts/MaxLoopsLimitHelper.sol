@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 abstract contract MaxLoopsLimitHelper {
     // Limit for the loops to avoid the DOS
     uint256 public maxLoopsLimit;
+
     /// @notice Emitted when max loops limit is set
     event MaxLoopsLimitUpdated(uint256 oldMaxLoopsLimit, uint256 newmaxLoopsLimit);
 
