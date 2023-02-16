@@ -84,6 +84,7 @@ describe("liquidateAccount", () => {
     const [OMG, ZRX, BAT] = await Promise.all(
       names.map(async () => {
         const vToken = await smock.fake<VToken>("VToken");
+        vToken.isVToken.returns(true);
         await comptroller.connect(poolRegistry.wallet).supportMarket(vToken.address);
         oracle.getUnderlyingPrice.returns(parseUnits("1", 18));
         await comptroller
