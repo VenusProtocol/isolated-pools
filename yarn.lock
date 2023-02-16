@@ -1510,10 +1510,10 @@
     "@typescript-eslint/types" "5.44.0"
     eslint-visitor-keys "^3.3.0"
 
-"@venusprotocol/oracle@^1.5.1":
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.5.1.tgz#d1b00d8cdd3a53623a98ab2dd7cdbe92a69cb44b"
-  integrity sha512-j3vt+fYMMBTIk3Zxb7c5FQkTT7lfKvYHPR7nU/ciHK2D04B0snZSWu9tRSl/k+ITT8ibDJ5X+6T+WRjXwlJ8Kw==
+"@venusprotocol/oracle@^1.6.0":
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.0.tgz#a17e83676d846568effeb472357f0bfb66566fdc"
+  integrity sha512-abNUtiPgUAMFpb0+kAK5/l1/QhkzzXVzr31YyfoWSQ4wKsznDyrow3CojnhO18LfHFd4EMKunKtt/0hJZ09Bvw==
   dependencies:
     "@chainlink/contracts" "^0.5.1"
     "@defi-wonderland/smock" "^2.3.4"
