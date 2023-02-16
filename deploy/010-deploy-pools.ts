@@ -1,3 +1,4 @@
+import { poll } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
@@ -53,23 +54,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { tokenConfig, poolConfig } = await getConfig(hre.network.name);
 
   for (let i = 0; i < poolConfig.length; i++) {
+    let pools = await poolRegistry.callStatic.getAllPools();
     const pool = poolConfig[i];
-    // Create pool
-    tx = await poolRegistry.createRegistryPool(
-      pool.name,
-      ComptrollerBeacon.address,
-      pool.closeFactor,
-      pool.liquidationIncentive,
-      pool.minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-    );
-    await tx.wait();
-
-    const pools = await poolRegistry.callStatic.getAllPools();
-    const comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
-    tx = await comptrollerProxy.acceptOwnership();
-    await tx.wait();
+    let comptrollerProxy;
+ 
+    if(i>=pools.length){
+      // Create pool
+      tx = await poolRegistry.createRegistryPool(
+        pool.name,
+        ComptrollerBeacon.address,
+        pool.closeFactor,
+        pool.liquidationIncentive,
+        pool.minLiquidatableCollateral,
+        priceOracle.address,
+        maxLoopsLimit,
+      );
+      await tx.wait();
+      pools = await poolRegistry.callStatic.getAllPools();
+      comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
+      tx = await comptrollerProxy.acceptOwnership();
+      await tx.wait();
+    } else {
+      comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
+    }
 
     // Add Markets
     for (const vtoken of pool.vtokens) {
