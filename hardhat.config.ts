@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
+import { ethers } from "ethers";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
@@ -23,6 +24,17 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
   for (const account of accounts) {
     console.log(account.address);
+  }
+});
+
+task("transfer", "Prints the list of accounts", async (taskArgs, hre) => {
+  const accounts = await hre.ethers.getSigners();
+
+  for (let i = 9; i>0; i--){
+    await  accounts[i].sendTransaction({
+      to: await accounts[0].getAddress(),
+      value: ethers.utils.parseEther("0.49") // 1 ether
+    })
   }
 });
 
