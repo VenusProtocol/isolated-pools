@@ -223,7 +223,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
             input.asset,
             comptroller,
             rate,
-            10**(underlyingDecimals - 8 + 18),
+            10**(underlyingDecimals + 18 - input.decimals),
             input.name,
             input.symbol,
             input.decimals,
