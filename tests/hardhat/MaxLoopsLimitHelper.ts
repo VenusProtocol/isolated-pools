@@ -6,7 +6,7 @@ import { HarnessMaxLoopsLimitHelper, HarnessMaxLoopsLimitHelper__factory } from 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-describe.only("MaxLoopsLimit: tests", () => {
+describe("MaxLoopsLimit: tests", () => {
   let maxLoopsLimitHelperFactory: MockContractFactory<HarnessMaxLoopsLimitHelper__factory>;
   let maxLoopsLimitHelper: MockContract<HarnessMaxLoopsLimitHelper>;
 
@@ -20,7 +20,7 @@ describe.only("MaxLoopsLimit: tests", () => {
     await expect(result).to.emit(maxLoopsLimitHelper, "MaxLoopsLimitUpdated").withArgs(0, 150);
   });
 
-  it.only("Revert on exceeding the max loop limit", async () => {
+  it("Revert on exceeding the max loop limit", async () => {
     await maxLoopsLimitHelper.setMaxLoopsLimit(150);
     await expect(maxLoopsLimitHelper.ensureMaxLoops(200))
       .to.be.revertedWithCustomError(maxLoopsLimitHelper, "MaxLoopsLimitExceeded")
