@@ -14,6 +14,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const priceOracle = await ethers.getContract("ResilientOracle");
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const accessControlManager = await ethers.getContract("AccessControlManager");
+  const maxLoopsLimit = 150;
 
   // Comptroller Beacon
   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl", {
@@ -61,6 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       pool.liquidationIncentive,
       pool.minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
     await tx.wait();
 

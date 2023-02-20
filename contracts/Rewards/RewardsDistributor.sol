@@ -6,8 +6,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
+import "../MaxLoopsLimitHelper.sol";
 
-contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
+contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct RewardToken {
@@ -106,10 +107,16 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     /**
      * @dev Initializes the deployer to owner.
      */
-    function initialize(Comptroller _comptroller, IERC20Upgradeable _rewardToken) external initializer {
+    function initialize(
+        Comptroller _comptroller,
+        IERC20Upgradeable _rewardToken,
+        uint256 _loopsLimit
+    ) external initializer {
         comptroller = _comptroller;
         rewardToken = _rewardToken;
         __Ownable2Step_init();
+
+        _setMaxLoopsLimit(_loopsLimit);
     }
 
     function initializeMarket(address vToken) external onlyComptroller {
@@ -232,6 +239,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
     }
 
     /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
+    }
+
+    /**
      * @notice Calculate additional accrued REWARD TOKEN for a contributor since last accrual.
      * @param contributor The address to calculate contributor rewards for
      */
@@ -257,6 +272,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable {
      */
     function claimRewardToken(address holder, VToken[] memory vTokens) public {
         uint256 vTokensCount = vTokens.length;
+
+        _ensureMaxLoops(vTokensCount);
+
         for (uint256 i; i < vTokensCount; ++i) {
             VToken vToken = vTokens[i];
             require(comptroller.isMarketListed(vToken), "market must be listed");

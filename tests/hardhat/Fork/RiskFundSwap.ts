@@ -41,6 +41,7 @@ let riskFund: RiskFund;
 let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
 let busdUser: any;
 let usdtUser: any;
+const maxLoopsLimit = 150;
 
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
@@ -128,6 +129,7 @@ const riskFundFixture = async (): Promise<void> => {
     parseUnits("10", 18),
     BUSD.address,
     fakeAccessControlManager.address,
+    maxLoopsLimit,
   ]);
 
   await riskFund.setShortfallContractAddress(shortfall.address);
@@ -191,6 +193,7 @@ const riskFundFixture = async (): Promise<void> => {
     _liquidationIncentive,
     _minLiquidatableCollateral,
     priceOracle.address,
+    maxLoopsLimit,
   );
 
   // Setup Proxies
