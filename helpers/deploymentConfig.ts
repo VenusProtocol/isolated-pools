@@ -27,6 +27,20 @@ export type PoolConfig = {
   liquidationIncentive: string;
   minLiquidatableCollateral: string;
   vtokens: VTokenConfig[];
+  rewards?: RewardConfig[];
+};
+
+// NOTE: markets, supplySpeeds, borrowSpeeds array sizes should match
+export type RewardConfig = {
+  asset: string;
+  markets: string[]; // underlying asset symbol of a the e.g ["BNX","CAKE"]
+  supplySpeeds: string[];
+  borrowSpeeds: string[];
+};
+
+export type SpeedConfig = {
+  borrowSpeed: string;
+  supplySpeed: string;
 };
 
 export type VTokenConfig = {
@@ -141,6 +155,20 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(10000, 18),
           },
         ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["BNX", "WBNB"],
+            supplySpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "BNX",
+            markets: ["BNX"],
+            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+          },
+        ],
       },
       {
         name: "Pool 2",
@@ -162,6 +190,35 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
+          },
+          {
+            name: "Venus WBTC",
+            asset: "WBTC",
+            symbol: "vWBTC",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: 0,
+            multiplierPerYear: convertToUnit(0.04, 18),
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
+            collateralFactor: convertToUnit(0.7, 18),
+            liquidationThreshold: convertToUnit(0.7, 18),
+            initialSupply: convertToUnit(10, 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["CAKE", "WBTC"],
+            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "CAKE",
+            markets: ["CAKE"],
+            supplySpeeds: [convertToUnit(0.8, 18), convertToUnit(0.8, 18)],
+            borrowSpeeds: [convertToUnit(0.8, 18), convertToUnit(0.8, 18)],
           },
         ],
       },
