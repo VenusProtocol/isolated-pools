@@ -50,4 +50,7 @@ contract TokenErrorReporter {
     error SetStableInterestRateModelFreshCheck();
 
     error SwapBorrowRateModeFreshnessCheck();
+
+    error SetRebalanceUtilizationRateThresholdAdminCheck();
+    error SetRebalanceRateFractionThresholdAdminCheck();
 }

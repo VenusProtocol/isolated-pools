@@ -1395,7 +1395,12 @@ contract VToken is
         return actualRepayAmount;
     }
 
-    function swapBorrowRateModePreCalculation(address account) internal returns (uint256, uint256) {
+    /**
+     * @notice Checks before swapping borrow rate mode
+     * @param account Address of the borrow holder
+     * @return (uint256, uint256) returns the variableDebt and stableDebt for the account
+     */
+    function _swapBorrowRateModePreCalculation(address account) internal returns (uint256, uint256) {
         /* Fail if swapBorrowRateMode not allowed */
         comptroller.preSwapBorrowRateModeHook(address(this));
 
@@ -1412,6 +1417,15 @@ contract VToken is
         return (variableDebt, stableDebt);
     }
 
+    /**
+     * @notice Update states for the stable borrow while swapping
+     * @param swappedAmount Amount need to be swapped
+     * @param stableDebt Stable debt for the account
+     * @param variableDebt Variable debt for the account
+     * @param account Address of the account
+     * @param accountBorrowsNew New stable borrow for the account
+     * @return (uint256, uint256) returns updated stable borrow for the account and updated average stable borrow rate
+     */
     function _updateStatesForStableRateSwap(
         uint256 swappedAmount,
         uint256 stableDebt,
@@ -1442,6 +1456,14 @@ contract VToken is
         return (stableBorrowsNew, averageStableBorrowRateNew);
     }
 
+    /**
+     * @notice Update states for the variable borrow during the swap
+     * @param swappedAmount Amount need to be swapped
+     * @param stableDebt Stable debt for the account
+     * @param variableDebt Variable debt for the account
+     * @param account Address of the account
+     * @return (uint256, uint256) returns updated stable borrow for the account and updated average stable borrow rate
+     */
     function _updateStatesForVariableRateSwap(
         uint256 swappedAmount,
         uint256 stableDebt,
@@ -1481,7 +1503,7 @@ contract VToken is
      **/
     function swapBorrowRateMode(uint256 rateMode) external {
         address account = msg.sender;
-        (uint256 variableDebt, uint256 stableDebt) = swapBorrowRateModePreCalculation(account);
+        (uint256 variableDebt, uint256 stableDebt) = _swapBorrowRateModePreCalculation(account);
 
         uint256 accountBorrowsNew = stableDebt + variableDebt;
         uint256 stableBorrowsNew;
@@ -1525,7 +1547,7 @@ contract VToken is
      **/
     function swapBorrowRateModeWithAmount(uint256 rateMode, uint256 amount) external {
         address account = msg.sender;
-        (uint256 variableDebt, uint256 stableDebt) = swapBorrowRateModePreCalculation(account);
+        (uint256 variableDebt, uint256 stableDebt) = _swapBorrowRateModePreCalculation(account);
 
         uint256 accountBorrowsNew = stableDebt + amount;
         uint256 stableBorrowsNew;
@@ -1746,10 +1768,13 @@ contract VToken is
         require(rebalanceRateFractionThreshold > 0, "vToken: rebalanceRateFractionThreshold is not set.");
 
         uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+
         /// Utilization rate is above rebalanceUtilizationRateThreshold.
-        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
         require(utilizationRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
+
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
         require(
             _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
             "vToken: average borrow rate higher than variable rate threshold."
@@ -1949,7 +1974,6 @@ contract VToken is
      * @notice Accrues interest and updates the stable interest rate model using _setStableInterestRateModelFresh
      * @dev Admin function to accrue interest and update the stable interest rate model
      * @param newStableInterestRateModel The new interest rate model to use
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
      * @custom:events Emits NewMarketStableInterestRateModel, after setting the new stable rate model
      * @custom:access Controlled by AccessControlManager
@@ -1973,7 +1997,6 @@ contract VToken is
      * @notice Updates the stable interest rate model (requires fresh interest accrual)
      * @dev Admin function to update the stable interest rate model
      * @param newStableInterestRateModel The new stable interest rate model to use
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal {
         // Used to store old model for use in the event that is emitted on success
@@ -2027,23 +2050,43 @@ contract VToken is
     /**
      * @notice Sets the utilization threshold for stable rate rebalancing
      * @param utilizationRateThreshold The utilization rate threshold
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
     function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
-        require(msg.sender == owner(), "only admin can set ACL address");
-        require(utilizationRateThreshold > 0, "vToken: utilization rate should be greater than zero.");
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setRebalanceUtilizationRateThreshold(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetRebalanceUtilizationRateThresholdAdminCheck();
+        }
+
+        uint256 oldThreshold = rebalanceUtilizationRateThreshold;
         rebalanceUtilizationRateThreshold = utilizationRateThreshold;
+
+        emit RebalanceUtilizationRateThresholdUpdated(oldThreshold, rebalanceUtilizationRateThreshold);
     }
 
     /**
      * @notice Sets the fraction threshold for stable rate rebalancing
      * @param fractionThreshold The fraction threshold for the validation of the stable rate rebalancing
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
     function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
-        require(msg.sender == owner(), "only admin can set ACL address");
-        require(fractionThreshold > 0, "vToken: fraction threshold should be greater than zero.");
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setRebalanceRateFractionThreshold(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetRebalanceRateFractionThresholdAdminCheck();
+        }
+
+        uint256 oldThreshold = rebalanceRateFractionThreshold;
         rebalanceRateFractionThreshold = fractionThreshold;
+
+        emit RebalanceRateFractionThresholdUpdated(oldThreshold, rebalanceRateFractionThreshold);
     }
 
     /*** Reentrancy Guard ***/
