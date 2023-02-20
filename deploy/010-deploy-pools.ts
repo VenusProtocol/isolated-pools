@@ -50,7 +50,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const { tokenConfig, poolConfig } = await getConfig(hre.network.name);
+  const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
   let pools = await poolRegistry.callStatic.getAllPools();
 
   for (let i = 0; i < poolConfig.length; i++) {
@@ -79,7 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // Add Markets
     for (const vtoken of pool.vtokens) {
-      const token = getTokenConfig(vtoken.asset, tokenConfig);
+      const token = getTokenConfig(vtoken.asset, tokensConfig);
       let tokenContract;
       if (token.isMock) {
         tokenContract = await ethers.getContract(`Mock${token.symbol}`);

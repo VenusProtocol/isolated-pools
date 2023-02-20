@@ -14,8 +14,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokenConfig } = await getConfig(hre.network.name);
-  const busdConfig = getTokenConfig("BUSD", tokenConfig);
+  const { tokensConfig } = await getConfig(hre.network.name);
+  const busdConfig = getTokenConfig("BUSD", tokensConfig);
 
   let BUSD;
   if (busdConfig.isMock) {

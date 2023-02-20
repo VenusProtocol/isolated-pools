@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { DeploymentsExtension } from "hardhat-deploy/types";
 
 import { convertToUnit } from "./utils";
 
@@ -9,7 +10,7 @@ export type NetworkConfig = {
 };
 
 export type DeploymentConfig = {
-  tokenConfig: TokenConfig[];
+  tokensConfig: TokenConfig[];
   poolConfig: PoolConfig[];
 };
 
@@ -66,7 +67,7 @@ export enum InterestRateModels {
 
 export const globalConfig: NetworkConfig = {
   hardhat: {
-    tokenConfig: [
+    tokensConfig: [
       {
         isMock: true,
         name: "Biswap",
@@ -113,6 +114,13 @@ export const globalConfig: NetworkConfig = {
         isMock: true,
         name: "Pancake Swap",
         symbol: "CAKE",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Venus",
+        symbol: "XVS",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
@@ -165,8 +173,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "BNX",
             markets: ["BNX"],
-            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
-            borrowSpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            supplySpeeds: [convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.7, 18)],
           },
         ],
       },
@@ -217,15 +225,15 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "CAKE",
             markets: ["CAKE"],
-            supplySpeeds: [convertToUnit(0.8, 18), convertToUnit(0.8, 18)],
-            borrowSpeeds: [convertToUnit(0.8, 18), convertToUnit(0.8, 18)],
+            supplySpeeds: [convertToUnit(0.8, 18)],
+            borrowSpeeds: [convertToUnit(0.8, 18)],
           },
         ],
       },
     ],
   },
   bsctestnet: {
-    tokenConfig: [
+    tokensConfig: [
       {
         isMock: true,
         name: "Biswap",
@@ -272,6 +280,13 @@ export const globalConfig: NetworkConfig = {
         isMock: true,
         name: "Pancake Swap",
         symbol: "CAKE",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Venus",
+        symbol: "XVS",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
@@ -356,7 +371,7 @@ export const globalConfig: NetworkConfig = {
     ],
   },
   bscmainnet: {
-    tokenConfig: [],
+    tokensConfig: [],
     poolConfig: [],
   },
 };
@@ -383,5 +398,14 @@ export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): Toke
     return tokenCofig;
   } else {
     throw Error(`Token ${tokenSymbol} is not found in the config`);
+  }
+}
+
+export async function getTokenAddress(tokenConfig: TokenConfig, deployments: DeploymentsExtension) {
+  if (tokenConfig.isMock) {
+    const token = await deployments.get(`Mock${tokenConfig.symbol}`);
+    return token.address;
+  } else {
+    return tokenConfig.tokenAddress;
   }
 }
