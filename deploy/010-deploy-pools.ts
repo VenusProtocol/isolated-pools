@@ -51,9 +51,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const { tokenConfig, poolConfig } = await getConfig(hre.network.name);
+  let pools = await poolRegistry.callStatic.getAllPools();
 
   for (let i = 0; i < poolConfig.length; i++) {
-    let pools = await poolRegistry.callStatic.getAllPools();
     const pool = poolConfig[i];
     let comptrollerProxy;
 
