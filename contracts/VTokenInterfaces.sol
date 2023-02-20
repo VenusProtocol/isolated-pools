@@ -335,6 +335,16 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event RebalancedStableBorrowRate(address account, uint256 stableRateMantissa);
 
+    /**
+     * @notice Event emitted when rebalanceUtilizationRateThreshold is updated
+     */
+    event RebalanceUtilizationRateThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
+    /**
+     * @notice Event emitted when rebalanceRateFractionThreshold is updated
+     */
+    event RebalanceRateFractionThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

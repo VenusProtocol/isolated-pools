@@ -66,6 +66,18 @@ describe("VToken", function () {
       );
     });
 
+    it("Emit event RebalanceUtilizationRateThresholdUpdated", async () => {
+      await expect(vToken.setRebalanceUtilizationRateThreshold(convertToUnit(70, 18)))
+        .emit(vToken, "RebalanceUtilizationRateThresholdUpdated")
+        .withArgs(0, convertToUnit(70, 18));
+    });
+
+    it("Emit event RebalanceRateFractionThresholdUpdated", async () => {
+      await expect(vToken.setRebalanceUtilizationRateThreshold(convertToUnit(70, 17)))
+        .emit(vToken, "RebalanceUtilizationRateThresholdUpdated")
+        .withArgs(0, convertToUnit(70, 17));
+    });
+
     it("Revert on low utilization rate", async () => {
       await vToken.setRebalanceUtilizationRateThreshold(convertToUnit(70, 17));
       await vToken.setRebalanceRateFractionThreshold(convertToUnit(50, 17));
