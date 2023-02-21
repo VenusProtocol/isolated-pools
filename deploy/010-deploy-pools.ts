@@ -79,22 +79,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // Add Markets
     for (const vtoken of pool.vtokens) {
-      const token = getTokenConfig(vtoken.asset, tokensConfig);
-      let tokenContract;
-      if (token.isMock) {
-        tokenContract = await ethers.getContract(`Mock${token.symbol}`);
-        console.log("Minting " + vtoken.initialSupply + " mock tokens to owner");
-        await tokenContract.faucet(vtoken.initialSupply);
-      } else {
-        tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
-        // Make sure that deployer has at least `initialSupply` balance of the token
-      }
-
-      console.log("Approving Poolregistry for: " + vtoken.initialSupply);
-      await tokenContract.approve(poolRegistry.address, vtoken.initialSupply);
-
       const {
         name,
+        asset,
         symbol,
         rateModel,
         baseRatePerYear,
@@ -108,7 +95,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         borrowCap,
       } = vtoken;
 
-      console.log("Trying to add market " + name);
+      const token = getTokenConfig(asset, tokensConfig);
+      let tokenContract;
+      if (token.isMock) {
+        tokenContract = await ethers.getContract(`Mock${token.symbol}`);
+        console.log("Minting " + initialSupply + " mock tokens to owner");
+        await tokenContract.faucet(initialSupply);
+      } else {
+        tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
+        // Make sure that deployer has at least `initialSupply` balance of the token
+      }
+
+      console.log("Approving Poolregistry for: " + initialSupply);
+      await tokenContract.approve(poolRegistry.address, initialSupply);
+
+      console.log("Adding market " + name);
 
       tx = await poolRegistry.addMarket({
         comptroller: comptrollerProxy.address,
