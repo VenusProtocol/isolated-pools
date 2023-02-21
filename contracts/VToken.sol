@@ -697,7 +697,18 @@ contract VToken is
      * @return rate The borrow interest rate per block, scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves, badDebt);
+        return interestRateModel.getBorrowRate(utilizationRate(_getCashPrior(), totalBorrows, totalReserves));
+    }
+
+    /**
+     * @notice Returns the current per-block borrow interest rate for this vToken
+     * @return rate The borrow interest rate per block, scaled by 1e18
+     */
+    function stableBorrowRatePerBlock() public view override returns (uint256) {
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+        );
+        return stableRateModel.getBorrowRate(stableBorrows, totalBorrows, variableBorrowRate);
     }
 
     /**
@@ -708,16 +719,17 @@ contract VToken is
         if (totalBorrows == 0) {
             return 0;
         }
-        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
         uint256 averageMarketBorrowRate = _averageMarketBorrowRate();
         return
-            (averageMarketBorrowRate * utilizationRate * (mantissaOne - reserveFactorMantissa)) /
-            (mantissaOne * mantissaOne);
+            (averageMarketBorrowRate * utilRate * (mantissaOne - reserveFactorMantissa)) / (mantissaOne * mantissaOne);
     }
 
     /// @notice Calculate the average market borrow rate with respect to variable and stable borrows
     function _averageMarketBorrowRate() internal view returns (uint256) {
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+        );
         uint256 variableBorrows = totalBorrows - stableBorrows;
         return ((variableBorrows * variableBorrowRate) + (stableBorrows * averageStableBorrowRate)) / totalBorrows;
     }
@@ -913,8 +925,10 @@ contract VToken is
         uint256 borrowIndexPrior = borrowIndex;
 
         /* Calculate the current borrow interest rate */
-        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior, badDebt);
-        require(borrowRateMantissa <= MAX_BORROW_RATE_MANTISSA, "borrow rate is absurdly high");
+        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(
+            utilizationRate(cashPrior, borrowsPrior, reservesPrior)
+        );
+        require(borrowRateMantissa <= borrowRateMaxMantissa, "vToken: borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
@@ -1742,6 +1756,26 @@ contract VToken is
     }
 
     /**
+     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market (currently unused)
+     * @return The utilization rate as a mantissa between [0, BASE]
+     */
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves
+    ) public pure override returns (uint256) {
+        // Utilization rate is 0 when there are no borrows
+        if (borrows == 0) {
+            return 0;
+        }
+
+        return (borrows * mantissaOne) / (cash + borrows - reserves);
+    }
+
+    /**
      * @notice Rebalances the stable interest rate of a user to the current stable borrow rate.
      * - Users can be rebalanced if the following conditions are satisfied:
      *     1. Utilization rate is above rebalanceUtilizationRateThreshold.
@@ -1767,12 +1801,12 @@ contract VToken is
         require(rebalanceUtilizationRateThreshold > 0, "vToken: rebalanceUtilizationRateThreshold is not set.");
         require(rebalanceRateFractionThreshold > 0, "vToken: rebalanceRateFractionThreshold is not set.");
 
-        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
 
         /// Utilization rate is above rebalanceUtilizationRateThreshold.
-        require(utilizationRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
+        require(utilRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
 
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(rebalanceUtilizationRateThreshold);
 
         /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
         require(

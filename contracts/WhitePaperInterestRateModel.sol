@@ -36,44 +36,11 @@ contract WhitePaperInterestRateModel is InterestRateModel {
 
     /**
      * @notice Calculates the current borrow rate per block, with the error code expected by the market
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market
-     * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per block as a mantissa (scaled by EXP_SCALE)
+     * @param utRate The utilization rate as per total borrows and cash available
+     * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
-    function getBorrowRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 badDebt
-    ) public view override returns (uint256) {
-        uint256 ur = utilizationRate(cash, borrows, reserves, badDebt);
-        return ((ur * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
-    }
-
-    /**
-     * @notice Calculates the current supply rate per block
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market
-     * @param reserveFactorMantissa The current reserve factor for the market
-     * @param badDebt The amount of badDebt in the market
-     * @return The supply rate percentage per block as a mantissa (scaled by EXP_SCALE)
-     */
-    function getSupplyRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 reserveFactorMantissa,
-        uint256 badDebt
-    ) public view override returns (uint256) {
-        uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRate(cash, borrows, reserves, badDebt);
-        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
-        uint256 incomeToDistribute = borrows * rateToPool;
-        uint256 supply = cash + borrows + badDebt - reserves;
-        return incomeToDistribute / supply;
+    function getBorrowRate(uint256 utRate) public view override returns (uint256) {
+        return ((utRate * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
     }
 
     /**

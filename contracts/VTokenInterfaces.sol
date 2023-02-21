@@ -421,6 +421,14 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function addReserves(uint256 addAmount) external virtual;
 
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves
+    ) public pure virtual returns (uint256);
+
+    function borrowRatePerBlock() external view virtual returns (uint256);
+
     function stableBorrowRatePerBlock() public view virtual returns (uint256);
 
     function supplyRatePerBlock() external view virtual returns (uint256);
