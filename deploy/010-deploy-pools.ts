@@ -100,14 +100,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       if (token.isMock) {
         tokenContract = await ethers.getContract(`Mock${token.symbol}`);
         console.log("Minting " + initialSupply + " mock tokens to owner");
-        await tokenContract.faucet(initialSupply);
+        tx = await tokenContract.faucet(initialSupply);
+        await tx.wait(1);
       } else {
         tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
         // Make sure that deployer has at least `initialSupply` balance of the token
       }
 
       console.log("Approving Poolregistry for: " + initialSupply);
-      await tokenContract.approve(poolRegistry.address, initialSupply);
+      tx = await tokenContract.approve(poolRegistry.address, initialSupply);
+      await tx.wait(1);
 
       console.log("Adding market " + name);
 

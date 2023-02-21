@@ -61,7 +61,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  await riskFund.setShortfallContractAddress(shortfallDeployment.address);
+  const tx = await riskFund.setShortfallContractAddress(shortfallDeployment.address);
+  await tx.wait(1);
 
   await deploy("ProtocolShareReserve", {
     from: deployer,
