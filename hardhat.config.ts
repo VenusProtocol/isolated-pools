@@ -5,7 +5,6 @@ import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
-import { ethers } from "ethers";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
