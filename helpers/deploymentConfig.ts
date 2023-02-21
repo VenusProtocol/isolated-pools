@@ -329,6 +329,20 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(10000, 18),
           },
         ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["BNX", "WBNB"],
+            supplySpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "BNX",
+            markets: ["BNX"],
+            supplySpeeds: [convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.7, 18)],
+          },
+        ],
       },
       {
         name: "Pool 2",
@@ -365,6 +379,20 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["CAKE", "WBTC"],
+            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "CAKE",
+            markets: ["CAKE"],
+            supplySpeeds: [convertToUnit(0.8, 18)],
+            borrowSpeeds: [convertToUnit(0.8, 18)],
           },
         ],
       },
