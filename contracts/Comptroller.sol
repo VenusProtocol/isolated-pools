@@ -609,6 +609,10 @@ contract Comptroller is
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
+        if (snapshot.shortfall == 0) {
+            revert InsufficientShortfall();
+        }
+
         // percentage = collateral / (borrows * liquidation incentive)
         Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory scaledBorrows = mul_(
@@ -671,6 +675,10 @@ contract Comptroller is
             revert InsufficientCollateral(collateralToSeize, snapshot.totalCollateral);
         }
 
+        if (snapshot.shortfall == 0) {
+            revert InsufficientShortfall();
+        }
+
         uint256 ordersCount = orders.length;
 
         _ensureMaxLoops(ordersCount);
@@ -729,7 +737,7 @@ contract Comptroller is
      *    and NewLiquidationThreshold when liquidation threshold is updated
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
-     * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is higher than collateral factor
+     * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is lower than collateral factor
      * @custom:error PriceError is thrown when the oracle returns an invalid price for the asset
      * @custom:access Controlled by AccessControlManager
      */
@@ -751,8 +759,8 @@ contract Comptroller is
             revert InvalidCollateralFactor();
         }
 
-        // Ensure that liquidation threshold <= CF
-        if (newLiquidationThresholdMantissa > newCollateralFactorMantissa) {
+        // Ensure that liquidation threshold >= CF
+        if (newLiquidationThresholdMantissa < newCollateralFactorMantissa) {
             revert InvalidLiquidationThreshold();
         }
 

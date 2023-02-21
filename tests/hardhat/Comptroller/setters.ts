@@ -167,7 +167,7 @@ describe("setters", async () => {
 
   describe("setCollateralFactor", async () => {
     it("reverts if market is not listed", async () => {
-      await expect(comptroller.setCollateralFactor(OMG.address, convertToUnit("0.8", 18), convertToUnit("0.7", 18)))
+      await expect(comptroller.setCollateralFactor(OMG.address, convertToUnit("0.7", 18), convertToUnit("0.8", 18)))
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(OMG.address);
     });
@@ -175,21 +175,21 @@ describe("setters", async () => {
     it("reverts if collateral factor is greater then max collateral factor", async () => {
       await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
       await expect(
-        comptroller.setCollateralFactor(OMG.address, convertToUnit("1", 18), convertToUnit("0.7", 18)),
+        comptroller.setCollateralFactor(OMG.address, convertToUnit("1", 18), convertToUnit("1", 18)),
       ).to.be.revertedWithCustomError(comptroller, "InvalidCollateralFactor");
     });
 
-    it("reverts if liquidation threshold is greater then collateral factor", async () => {
+    it("reverts if liquidation threshold is lower than collateral factor", async () => {
       await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
       await expect(
-        comptroller.setCollateralFactor(OMG.address, convertToUnit("0.7", 18), convertToUnit("0.8", 18)),
+        comptroller.setCollateralFactor(OMG.address, convertToUnit("0.8", 18), convertToUnit("0.7", 18)),
       ).to.be.revertedWithCustomError(comptroller, "InvalidLiquidationThreshold");
     });
 
     it("reverts if token price is zero", async () => {
       oracle.getUnderlyingPrice.returns(0);
       await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
-      await expect(comptroller.setCollateralFactor(OMG.address, convertToUnit("0.7", 18), convertToUnit("0.6", 18)))
+      await expect(comptroller.setCollateralFactor(OMG.address, convertToUnit("0.6", 18), convertToUnit("0.7", 18)))
         .to.be.revertedWithCustomError(comptroller, "PriceError")
         .withArgs(OMG.address);
     });
