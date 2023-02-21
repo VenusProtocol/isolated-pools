@@ -47,7 +47,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const marketAddress = await poolRegistry.getVTokenForAsset(comptrollerAddress, tokenAddress);
         vTokens.push(marketAddress);
       }
-      await rewardsDistributor.setRewardTokenSpeeds(vTokens, reward.supplySpeeds, reward.borrowSpeeds);
+      const tx = await rewardsDistributor.setRewardTokenSpeeds(vTokens, reward.supplySpeeds, reward.borrowSpeeds);
+      await tx.wait(1);
     }
   }
 };
