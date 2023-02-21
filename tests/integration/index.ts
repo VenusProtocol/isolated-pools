@@ -458,7 +458,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const repayAmount = convertToUnit("1000000000095034", 0);
+      const repayAmount = convertToUnit("1000000000013588", 0);
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vWBNB.address,
@@ -529,7 +529,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vWBNB.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       await vWBNB.connect(acc2Signer).borrow(convertToUnit("1", 18));
-      await expect(vWBNB.connect(acc2Signer).borrow(convertToUnit("1", 18))).to.be.revertedWithCustomError(
+      await expect(vWBNB.connect(acc2Signer).borrow(convertToUnit("1", 28))).to.be.revertedWithCustomError(
         vWBNB,
         "BorrowCashNotAvailable",
       );
