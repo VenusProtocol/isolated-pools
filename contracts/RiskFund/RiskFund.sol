@@ -12,10 +12,12 @@ import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
 
+import "../MaxLoopsLimitHelper.sol";
+
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IRiskFund {
+contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private pancakeSwapRouter;
@@ -66,12 +68,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         address _pancakeSwapRouter,
         uint256 _minAmountToConvert,
         address _convertibleBaseAsset,
-        address _accessControl
+        address _accessControl,
+        uint256 _loopsLimit
     ) external initializer {
         require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
         require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
         require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
         require(_accessControl != address(0), "Risk Fund: Access control address invalid");
+        require(_loopsLimit > 0, "Risk Fund: Loops limit can not be zero");
 
         __Ownable2Step_init();
 
@@ -79,6 +83,8 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         minAmountToConvert = _minAmountToConvert;
         convertibleBaseAsset = _convertibleBaseAsset;
         accessControl = _accessControl;
+
+        _setMaxLoopsLimit(_loopsLimit);
     }
 
     /**
@@ -151,6 +157,9 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
         uint256 totalAmount;
         uint256 marketsCount = markets.length;
+
+        _ensureMaxLoops(marketsCount);
+
         for (uint256 i; i < marketsCount; ++i) {
             VToken vToken = VToken(markets[i]);
             address comptroller = address(vToken.comptroller());
@@ -184,6 +193,14 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         emit TransferredReserveForAuction(comptroller, amount);
 
         return amount;
+    }
+
+    /**
+     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
     }
 
     /**

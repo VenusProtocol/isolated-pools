@@ -41,6 +41,7 @@ describe("Comptroller", () => {
   let oracle: FakeContract<PriceOracle>;
   let vTokenBorrowed: FakeContract<VToken>;
   let vTokenCollateral: FakeContract<VToken>;
+  const maxLoopsLimit = 150;
 
   type LiquidateFixture = {
     accessControl: FakeContract<AccessControlManager>;
@@ -58,9 +59,9 @@ describe("Comptroller", () => {
     const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
     const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
     const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-    const comptroller = await upgrades.deployProxy(Comptroller, [], {
+    const comptroller = await upgrades.deployProxy(Comptroller, [maxLoopsLimit], {
       constructorArgs: [poolRegistry.address, accessControl.address],
-      initializer: "initialize()",
+      initializer: "initialize(uint256)",
     });
     const oracle = await smock.fake<PriceOracle>("PriceOracle");
 

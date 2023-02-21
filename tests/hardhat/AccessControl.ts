@@ -1,7 +1,7 @@
 import { MockContract, MockContractFactory, smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import {
   AccessControlManager,
@@ -20,6 +20,7 @@ describe("Access Control", () => {
   let comptroller: MockContract<Comptroller>;
   let comptroller2: MockContract<Comptroller>;
   let signers: Signer[];
+  const maxLoopsLimit = 150;
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
@@ -27,8 +28,14 @@ describe("Access Control", () => {
     accessControlManager = await accessControlFactory.deploy();
 
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    comptroller = await comptrollerFactory.deploy(await signers[0].getAddress(), accessControlManager.address);
-    comptroller2 = await comptrollerFactory.deploy(await signers[0].getAddress(), accessControlManager.address);
+    comptroller = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit], {
+      constructorArgs: [await signers[0].getAddress(), accessControlManager.address],
+      initializer: "initialize(uint256)",
+    });
+    comptroller2 = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit], {
+      constructorArgs: [await signers[0].getAddress(), accessControlManager.address],
+      initializer: "initialize(uint256)",
+    });
     await accessControlManager.deployed();
   });
   describe("Access Control", () => {

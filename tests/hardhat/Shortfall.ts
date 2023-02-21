@@ -37,7 +37,7 @@ let mockDAI: MockToken;
 let mockWBTC: MockToken;
 let vDAI: MockContract<VToken>;
 let vWBTC: MockContract<VToken>;
-let comptroller: MockContract<Comptroller>;
+let comptroller: FakeContract<Comptroller>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
 

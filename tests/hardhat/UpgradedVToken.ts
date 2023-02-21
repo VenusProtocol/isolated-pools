@@ -81,6 +81,7 @@ describe("UpgradedVToken: Tests", function () {
     const _closeFactor = convertToUnit(0.05, 18);
     const _liquidationIncentive = convertToUnit(1, 18);
     const _minLiquidatableCollateral = convertToUnit(100, 18);
+    const maxLoopsLimit = 150;
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -98,6 +99,7 @@ describe("UpgradedVToken: Tests", function () {
       _liquidationIncentive,
       _minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     // Setup Proxies

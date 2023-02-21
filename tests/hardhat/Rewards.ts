@@ -38,6 +38,7 @@ let rewardsDistributor: RewardsDistributor;
 let xvs: MockToken;
 let fakePriceOracle: FakeContract<PriceOracle>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
+const maxLoopsLimit = 150;
 
 async function rewardsFixture() {
   const [, proxyAdmin] = await ethers.getSigners();
@@ -126,6 +127,7 @@ async function rewardsFixture() {
     _liquidationIncentive,
     _minLiquidatableCollateral,
     fakePriceOracle.address,
+    maxLoopsLimit,
   );
 
   // Get all pools list.
@@ -210,11 +212,13 @@ async function rewardsFixture() {
   rewardsDistributor = rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     xvs.address,
+    maxLoopsLimit,
   ]);
 
   const rewardsDistributor2 = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     mockDAI.address,
+    maxLoopsLimit,
   ]);
 
   const initialXvs = convertToUnit(1000000, 18);
@@ -283,7 +287,11 @@ describe("Rewards: Tests", async function () {
 
   it("Cannot add reward distributors with duplicate reward tokens", async function () {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [comptrollerProxy.address, xvs.address]);
+    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
+      comptrollerProxy.address,
+      xvs.address,
+      maxLoopsLimit,
+    ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
       "distributor already exists with this reward",
@@ -292,7 +300,11 @@ describe("Rewards: Tests", async function () {
 
   it("Emits event correctly", async () => {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [comptrollerProxy.address, mockWBTC.address]);
+    rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
+      comptrollerProxy.address,
+      mockWBTC.address,
+      maxLoopsLimit,
+    ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
       .to.emit(comptrollerProxy, "NewRewardsDistributor")

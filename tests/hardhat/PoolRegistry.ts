@@ -73,6 +73,7 @@ describe("PoolRegistry: Tests", function () {
   let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
   let rewardDistributor: FakeContract<RewardsDistributor>;
+  const maxLoopsLimit = 150;
 
   const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
     const defaults = {
@@ -181,6 +182,7 @@ describe("PoolRegistry: Tests", function () {
       _liquidationIncentive,
       _minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     // Registering the second pool
@@ -191,6 +193,7 @@ describe("PoolRegistry: Tests", function () {
       _liquidationIncentive,
       _minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     // Setup Proxies
