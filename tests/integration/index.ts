@@ -371,14 +371,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
   let BSW: MockToken;
   let acc1: string;
   let acc2: string;
-  let vBSWPrice: BigNumber;
   let vBNXPrice: BigNumber;
   const EXPONENT_SCALE = 1e18;
   let rewardDistributor: FakeContract<RewardsDistributor>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, vBNXPrice, vBSWPrice } = fixture);
+    ({ Comptroller, vBNX, vBSW, BNX, BSW, acc1, acc2, vBNXPrice } = fixture);
     rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
     await Comptroller.addRewardsDistributor(rewardDistributor.address);
   });
@@ -424,6 +423,9 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert when repay amount on liquidation is not equal to borrow amount", async function () {
+      await BNX.connect(acc2Signer).faucet(1e10);
+      await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
+      await vBNX.connect(acc2Signer).mint(1e10);
       // Repay amount does not make borrower principal to zero
       const repayAmount = Number(bswBorrowAmount) / 2;
       const param = {
@@ -431,24 +433,46 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         vTokenBorrowed: vBSW.address,
         repayAmount: repayAmount,
       };
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("100", 12));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
       await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param])).to.be.revertedWith(
         "Nonzero borrow balance after liquidation",
       );
     });
 
     it("Should success on liquidation when repayamount is equal to borrowing", async function () {
-      const repayAmount = "1000000000019006";
+      await BNX.connect(acc2Signer).faucet(1e10);
+      await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
+      await vBNX.connect(acc2Signer).mint(1e10);
+
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("100", 12));
+
+      const vBNXPriceFake: BigNumber = new BigNumber(
+        scaleDownBy((await dummyPriceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
+      );
+      const vBSWPriceFake: BigNumber = new BigNumber(
+        scaleDownBy((await dummyPriceOracle.getUnderlyingPrice(vBSW.address)).toString(), 18),
+      );
+
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const repayAmount = convertToUnit("1000000000095034", 0);
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBSW.address,
         repayAmount: repayAmount,
       };
+
       result = await Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param]);
-      const seizeAmount = EXPONENT_SCALE * repayAmount * (vBSWPrice / vBNXPrice);
+      const seizeAmount = EXPONENT_SCALE * repayAmount * (vBSWPriceFake / vBNXPriceFake);
       const exchangeRateStored = await vBNX.exchangeRateStored();
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBSW.protocolSeizeShareMantissa();
       const seizeTokens = seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE;
+
       await expect(result)
         .to.emit(vBSW, "LiquidateBorrow")
         .withArgs(acc1, acc2, repayAmount, vBNX.address, seizeTokensOverall.toFixed(0));
@@ -608,7 +632,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     const vTokenMintedAmount = convertToUnit("1", 2);
     let acc1Signer: Signer;
     let acc2Signer: Signer;
-    const bswBorrowAmount = 1e4;
+    const bswBorrowAmount = convertToUnit(1, 4);
     let result;
 
     beforeEach(async () => {
@@ -653,9 +677,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert on healing if borrow is less then collateral amount", async function () {
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1.4", 15));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBSW.address).returns(convertToUnit("1", 23));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
       await expect(Comptroller.connect(acc1Signer).healAccount(acc2))
         .to.be.revertedWithCustomError(Comptroller, "CollateralExceedsThreshold")
-        .withArgs(bswBorrowAmount * vBSWPrice, (vBNXPrice * mintAmount).toString());
+        .withArgs("1000000000", "1400000000");
     });
 
     it("Should success on healing and forgive borrow account", async function () {
