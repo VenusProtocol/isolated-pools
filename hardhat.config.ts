@@ -27,17 +27,6 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-task("transfer", "Prints the list of accounts", async (taskArgs, hre) => {
-  const accounts = await hre.ethers.getSigners();
-
-  for (let i = 9; i > 0; i--) {
-    await accounts[i].sendTransaction({
-      to: await accounts[0].getAddress(),
-      value: ethers.utils.parseEther("0.49"), // 1 ether
-    });
-  }
-});
-
 task("addMarket", "Add a market to an existing pool")
   .addParam("proxyAdmin", "Admin of vToken proxy")
   .addParam("poolid", "ID of pool to add a market", 1, types.int)
