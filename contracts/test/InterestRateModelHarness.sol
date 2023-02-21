@@ -7,7 +7,7 @@ import "../../contracts/InterestRateModel.sol";
  * @title An Interest Rate Model for tests that can be instructed to return a failure instead of doing a calculation
  * @author Compound
  */
-contract InterestRateModelHarness is InterestRateModel {
+abstract contract InterestRateModelHarness is InterestRateModel {
     uint256 public constant opaqueBorrowFailureCode = 20;
     bool public failBorrowRate;
     uint256 public borrowRate;
@@ -24,14 +24,8 @@ contract InterestRateModelHarness is InterestRateModel {
         borrowRate = borrowRate_;
     }
 
-    function getBorrowRate(
-        uint256 _cash,
-        uint256 _borrows,
-        uint256 _reserves
-    ) public view override returns (uint256) {
-        _cash; // unused
-        _borrows; // unused
-        _reserves; // unused
+    function getBorrowRate(uint256 utilizationRate) public view override returns (uint256) {
+        utilizationRate; // unused
         require(!failBorrowRate, "INTEREST_RATE_MODEL_ERROR");
         return borrowRate;
     }
@@ -52,7 +46,7 @@ contract InterestRateModelHarness is InterestRateModel {
         uint256 cash,
         uint256 borrows,
         uint256 reserves
-    ) public pure override returns (uint256) {
+    ) public pure returns (uint256) {
         // Utilization rate is 0 when there are no borrows
         if (borrows == 0) {
             return 0;
