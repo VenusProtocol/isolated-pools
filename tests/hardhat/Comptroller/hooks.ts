@@ -24,15 +24,17 @@ type SimpleComptrollerFixture = {
   comptroller: MockContract<Comptroller>;
 };
 
+const maxLoopsLimit = 150;
+
 async function deploySimpleComptroller(): Promise<SimpleComptrollerFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
   const oracle = await smock.fake<PriceOracle>("PriceOracle");
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControl.isAllowedToCall.returns(true);
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-  const comptroller = await upgrades.deployProxy(Comptroller, [], {
+  const comptroller = await upgrades.deployProxy(Comptroller, [maxLoopsLimit], {
     constructorArgs: [poolRegistry.address, accessControl.address],
-    initializer: "initialize()",
+    initializer: "initialize(uint256)",
   });
   await comptroller.setPriceOracle(oracle.address);
   await comptroller.setLiquidationIncentive(parseUnits("1", 18));

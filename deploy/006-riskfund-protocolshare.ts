@@ -1,13 +1,14 @@
+import * as ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { convertToUnit } from "../helpers/utils";
-import { ERC20__factory } from "../typechain/factories/ERC20__factory";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
+const maxLoopsLimit = 150;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -20,7 +21,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   if (busdConfig.isMock) {
     BUSD = await ethers.getContract("MockBUSD");
   } else {
-    BUSD = await ethers.getContractAt(ERC20__factory.abi, busdConfig.tokenAddress);
+    BUSD = await ethers.getContractAt(ERC20.abi, busdConfig.tokenAddress);
   }
 
   const swapRouter = await ethers.getContract("SwapRouter");
@@ -34,7 +35,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [swapRouter.address, MIN_AMOUNT_TO_CONVERT, BUSD.address, accessControl.address],
+        args: [swapRouter.address, MIN_AMOUNT_TO_CONVERT, BUSD.address, accessControl.address, maxLoopsLimit],
       },
       upgradeIndex: 0,
     },

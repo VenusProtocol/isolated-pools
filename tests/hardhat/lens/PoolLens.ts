@@ -38,6 +38,7 @@ let closeFactor2: BigNumberish;
 let liquidationIncentive1: BigNumberish;
 let liquidationIncentive2: BigNumberish;
 const minLiquidatableCollateral = convertToUnit(100, 18);
+const maxLoopsLimit = 150;
 
 const poolRegistryFixture = async (): Promise<PoolRegistry> => {
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
@@ -112,6 +113,7 @@ describe("PoolLens - PoolView Tests", async function () {
       liquidationIncentive1,
       minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -125,6 +127,7 @@ describe("PoolLens - PoolView Tests", async function () {
       liquidationIncentive2,
       minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -366,6 +369,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       liquidationIncentive1,
       minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -379,6 +383,7 @@ describe("PoolLens - VTokens Query Tests", async function () {
       liquidationIncentive2,
       minLiquidatableCollateral,
       priceOracle.address,
+      maxLoopsLimit,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");

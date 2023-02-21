@@ -152,6 +152,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
      * @param priceOracle The pool's PriceOracle address
+     * @param maxLoopsLimit The maximum limit for the loops can iterate.
      * @return index The index of the registered Venus pool
      * @return proxyAddress The the Comptroller proxy address
      */
@@ -161,13 +162,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         uint256 closeFactor,
         uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral,
-        address priceOracle
+        address priceOracle,
+        uint256 maxLoopsLimit
     ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
         // Input validation
         require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
         require(priceOracle != address(0), "RegistryPool: Invalid PriceOracle address.");
 
-        BeaconProxy proxy = new BeaconProxy(beaconAddress, abi.encodeWithSelector(Comptroller.initialize.selector));
+        BeaconProxy proxy = new BeaconProxy(
+            beaconAddress,
+            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit)
+        );
 
         proxyAddress = address(proxy);
         Comptroller comptrollerProxy = Comptroller(proxyAddress);
@@ -223,7 +228,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
             input.asset,
             comptroller,
             rate,
-            10**(underlyingDecimals - 8 + 18),
+            10**(underlyingDecimals + 18 - input.decimals),
             input.name,
             input.symbol,
             input.decimals,
