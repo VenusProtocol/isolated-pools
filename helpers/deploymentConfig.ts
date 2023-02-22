@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { DeploymentsExtension } from "hardhat-deploy/types";
 
 import { convertToUnit } from "./utils";
 
@@ -9,7 +10,7 @@ export type NetworkConfig = {
 };
 
 export type DeploymentConfig = {
-  tokenConfig: TokenConfig[];
+  tokensConfig: TokenConfig[];
   poolConfig: PoolConfig[];
 };
 
@@ -27,6 +28,20 @@ export type PoolConfig = {
   liquidationIncentive: string;
   minLiquidatableCollateral: string;
   vtokens: VTokenConfig[];
+  rewards?: RewardConfig[];
+};
+
+// NOTE: markets, supplySpeeds, borrowSpeeds array sizes should match
+export type RewardConfig = {
+  asset: string;
+  markets: string[]; // underlying asset symbol of a the e.g ["BNX","CAKE"]
+  supplySpeeds: string[];
+  borrowSpeeds: string[];
+};
+
+export type SpeedConfig = {
+  borrowSpeed: string;
+  supplySpeed: string;
 };
 
 export type VTokenConfig = {
@@ -36,8 +51,8 @@ export type VTokenConfig = {
   rateModel: string;
   baseRatePerYear: number;
   multiplierPerYear: string;
-  jumpMultiplierPerYear: number;
-  kink_: number;
+  jumpMultiplierPerYear: string;
+  kink_: string;
   collateralFactor: string;
   liquidationThreshold: string;
   initialSupply: string;
@@ -52,7 +67,7 @@ export enum InterestRateModels {
 
 export const globalConfig: NetworkConfig = {
   hardhat: {
-    tokenConfig: [
+    tokensConfig: [
       {
         isMock: true,
         name: "Biswap",
@@ -102,6 +117,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -114,38 +136,104 @@ export const globalConfig: NetworkConfig = {
             name: "Venus BNX",
             asset: "BNX",
             symbol: "vBNX",
-            rateModel: InterestRateModels.WhitePaper.toString(),
+            rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: 0,
-            multiplierPerYear: convertToUnit(0.04, 18),
-            jumpMultiplierPerYear: 0,
-            kink_: 0,
+            multiplierPerYear: convertToUnit(0.05, 18),
+            jumpMultiplierPerYear: convertToUnit(1.09, 18),
+            kink_: convertToUnit(0.8, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
-            initialSupply: convertToUnit(1, 18),
+            initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
           },
           {
-            name: "Venus BSW",
-            asset: "BSW",
-            symbol: "vBSW",
-            rateModel: InterestRateModels.WhitePaper.toString(),
+            name: "Venus WBNB",
+            asset: "WBNB",
+            symbol: "vWBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: 0,
             multiplierPerYear: convertToUnit(0.04, 18),
-            jumpMultiplierPerYear: 0,
-            kink_: 0,
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
-            initialSupply: convertToUnit(1, 18),
+            initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["BNX", "WBNB"],
+            supplySpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "BNX",
+            markets: ["BNX"],
+            supplySpeeds: [convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.7, 18)],
+          },
+        ],
+      },
+      {
+        name: "Pool 2",
+        closeFactor: convertToUnit(0.05, 18),
+        liquidationIncentive: convertToUnit(1, 18),
+        minLiquidatableCollateral: convertToUnit(100, 18),
+        vtokens: [
+          {
+            name: "Venus CAKE",
+            asset: "CAKE",
+            symbol: "vCAKE",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: 0,
+            multiplierPerYear: convertToUnit(0.04, 18),
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
+            collateralFactor: convertToUnit(0.7, 18),
+            liquidationThreshold: convertToUnit(0.7, 18),
+            initialSupply: convertToUnit(10, 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+          },
+          {
+            name: "Venus WBTC",
+            asset: "WBTC",
+            symbol: "vWBTC",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: 0,
+            multiplierPerYear: convertToUnit(0.04, 18),
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
+            collateralFactor: convertToUnit(0.7, 18),
+            liquidationThreshold: convertToUnit(0.7, 18),
+            initialSupply: convertToUnit(10, 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["CAKE", "WBTC"],
+            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "CAKE",
+            markets: ["CAKE"],
+            supplySpeeds: [convertToUnit(0.8, 18)],
+            borrowSpeeds: [convertToUnit(0.8, 18)],
           },
         ],
       },
     ],
   },
   bsctestnet: {
-    tokenConfig: [
+    tokensConfig: [
       {
         isMock: true,
         name: "Biswap",
@@ -195,6 +283,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -207,38 +302,104 @@ export const globalConfig: NetworkConfig = {
             name: "Venus BNX",
             asset: "BNX",
             symbol: "vBNX",
-            rateModel: InterestRateModels.WhitePaper.toString(),
+            rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: 0,
-            multiplierPerYear: convertToUnit(0.04, 18),
-            jumpMultiplierPerYear: 0,
-            kink_: 0,
+            multiplierPerYear: convertToUnit(0.05, 18),
+            jumpMultiplierPerYear: convertToUnit(1.09, 18),
+            kink_: convertToUnit(0.8, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
-            initialSupply: convertToUnit(1, 18),
+            initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
           },
           {
-            name: "Venus BSW",
-            asset: "BSW",
-            symbol: "vBSW",
-            rateModel: InterestRateModels.WhitePaper.toString(),
+            name: "Venus WBNB",
+            asset: "WBNB",
+            symbol: "vWBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: 0,
             multiplierPerYear: convertToUnit(0.04, 18),
-            jumpMultiplierPerYear: 0,
-            kink_: 0,
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
-            initialSupply: convertToUnit(1, 18),
+            initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["BNX", "WBNB"],
+            supplySpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "BNX",
+            markets: ["BNX"],
+            supplySpeeds: [convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.7, 18)],
+          },
+        ],
+      },
+      {
+        name: "Pool 2",
+        closeFactor: convertToUnit(0.05, 18),
+        liquidationIncentive: convertToUnit(1, 18),
+        minLiquidatableCollateral: convertToUnit(100, 18),
+        vtokens: [
+          {
+            name: "Venus CAKE",
+            asset: "CAKE",
+            symbol: "vCAKE",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: 0,
+            multiplierPerYear: convertToUnit(0.04, 18),
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
+            collateralFactor: convertToUnit(0.7, 18),
+            liquidationThreshold: convertToUnit(0.7, 18),
+            initialSupply: convertToUnit(10, 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+          },
+          {
+            name: "Venus WBTC",
+            asset: "WBTC",
+            symbol: "vWBTC",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: 0,
+            multiplierPerYear: convertToUnit(0.04, 18),
+            jumpMultiplierPerYear: convertToUnit(1.08, 18),
+            kink_: convertToUnit(0.7, 18),
+            collateralFactor: convertToUnit(0.7, 18),
+            liquidationThreshold: convertToUnit(0.7, 18),
+            initialSupply: convertToUnit(10, 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+          },
+        ],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["CAKE", "WBTC"],
+            supplySpeeds: [convertToUnit(0.7, 18), convertToUnit(0.7, 18)],
+            borrowSpeeds: [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          },
+          {
+            asset: "CAKE",
+            markets: ["CAKE"],
+            supplySpeeds: [convertToUnit(0.8, 18)],
+            borrowSpeeds: [convertToUnit(0.8, 18)],
           },
         ],
       },
     ],
   },
   bscmainnet: {
-    tokenConfig: [],
+    tokensConfig: [],
     poolConfig: [],
   },
 };
@@ -265,5 +426,14 @@ export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): Toke
     return tokenCofig;
   } else {
     throw Error(`Token ${tokenSymbol} is not found in the config`);
+  }
+}
+
+export async function getTokenAddress(tokenConfig: TokenConfig, deployments: DeploymentsExtension) {
+  if (tokenConfig.isMock) {
+    const token = await deployments.get(`Mock${tokenConfig.symbol}`);
+    return token.address;
+  } else {
+    return tokenConfig.tokenAddress;
   }
 }

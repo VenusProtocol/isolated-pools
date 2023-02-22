@@ -8,9 +8,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const { tokenConfig } = await getConfig(hre.network.name);
+  const { tokensConfig } = await getConfig(hre.network.name);
 
-  for (const token of tokenConfig) {
+  for (const token of tokensConfig) {
     if (token.isMock) {
       const contractName = `Mock${token.symbol}`;
       await deploy(contractName, {

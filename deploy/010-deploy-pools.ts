@@ -50,45 +50,38 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const { tokenConfig, poolConfig } = await getConfig(hre.network.name);
+  const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
+  let pools = await poolRegistry.callStatic.getAllPools();
 
   for (let i = 0; i < poolConfig.length; i++) {
     const pool = poolConfig[i];
-    // Create pool
-    tx = await poolRegistry.createRegistryPool(
-      pool.name,
-      ComptrollerBeacon.address,
-      pool.closeFactor,
-      pool.liquidationIncentive,
-      pool.minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-    );
-    await tx.wait();
+    let comptrollerProxy;
 
-    const pools = await poolRegistry.callStatic.getAllPools();
-    const comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
-    tx = await comptrollerProxy.acceptOwnership();
-    await tx.wait();
+    if (i >= pools.length) {
+      // Create pool
+      tx = await poolRegistry.createRegistryPool(
+        pool.name,
+        ComptrollerBeacon.address,
+        pool.closeFactor,
+        pool.liquidationIncentive,
+        pool.minLiquidatableCollateral,
+        priceOracle.address,
+        maxLoopsLimit,
+      );
+      await tx.wait();
+      pools = await poolRegistry.callStatic.getAllPools();
+      comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
+      tx = await comptrollerProxy.acceptOwnership();
+      await tx.wait();
+    } else {
+      comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
+    }
 
     // Add Markets
     for (const vtoken of pool.vtokens) {
-      const token = getTokenConfig(vtoken.asset, tokenConfig);
-      let tokenContract;
-      if (token.isMock) {
-        tokenContract = await ethers.getContract(`Mock${token.symbol}`);
-        console.log("Minting " + vtoken.initialSupply + " mock tokens to owner");
-        await tokenContract.faucet(vtoken.initialSupply);
-      } else {
-        tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
-        // Make sure that deployer has at least `initialSupply` balance of the token
-      }
-
-      console.log("Approving Poolregistry for: " + vtoken.initialSupply);
-      await tokenContract.approve(poolRegistry.address, vtoken.initialSupply);
-
       const {
         name,
+        asset,
         symbol,
         rateModel,
         baseRatePerYear,
@@ -102,7 +95,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         borrowCap,
       } = vtoken;
 
-      console.log("Trying to add market " + name);
+      const token = getTokenConfig(asset, tokensConfig);
+      let tokenContract;
+      if (token.isMock) {
+        tokenContract = await ethers.getContract(`Mock${token.symbol}`);
+        console.log("Minting " + initialSupply + " mock tokens to owner");
+        tx = await tokenContract.faucet(initialSupply);
+        await tx.wait(1);
+      } else {
+        tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
+        // Make sure that deployer has at least `initialSupply` balance of the token
+      }
+
+      console.log("Approving Poolregistry for: " + initialSupply);
+      tx = await tokenContract.approve(poolRegistry.address, initialSupply);
+      await tx.wait(1);
+
+      console.log("Adding market " + name);
 
       tx = await poolRegistry.addMarket({
         comptroller: comptrollerProxy.address,
