@@ -47,8 +47,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const marketAddress = await poolRegistry.getVTokenForAsset(comptrollerAddress, tokenAddress);
         vTokens.push(marketAddress);
       }
-      const tx = await rewardsDistributor.setRewardTokenSpeeds(vTokens, reward.supplySpeeds, reward.borrowSpeeds);
+      let tx = await rewardsDistributor.setRewardTokenSpeeds(vTokens, reward.supplySpeeds, reward.borrowSpeeds);
       await tx.wait(1);
+      const comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
+      try {
+        console.log("Adding reward distributor to comptroller " + comptrollerAddress);
+        tx = await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
+        await tx.wait(1);
+        console.log("Added rewards distributor sucessfully");
+      } catch (e) {
+        console.log("Rewards distributor already added.");
+        continue;
+      }
     }
   }
 };
