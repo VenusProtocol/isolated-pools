@@ -1208,25 +1208,25 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     /**
      * @dev Allows a borrower to swap his debt between stable and variable mode, or vice versa with specific amount
      * @param rateMode The rate mode that the user wants to swap to
-     * @param amount The amount that the user wants to convert form stable to variable mode or vice versa.
+     * @param sentAmount The amount that the user wants to convert form stable to variable mode or vice versa.
      * @custom:access Not restricted
      **/
-    function swapBorrowRateModeWithAmount(uint256 rateMode, uint256 amount) external {
+    function swapBorrowRateModeWithAmount(uint256 rateMode, uint256 sentAmount) external {
         address account = msg.sender;
         (uint256 variableDebt, uint256 stableDebt) = _swapBorrowRateModePreCalculation(account);
 
         uint256 stableBorrowsNew;
         uint256 averageStableBorrowRateNew;
-        uint256 finalAmount;
+        uint256 swappedAmount;
 
         if (InterestRateMode(rateMode) == InterestRateMode.STABLE) {
             require(variableDebt > 0, "vToken: swapBorrowRateMode variable debt is 0");
 
-            finalAmount = amount > variableDebt ? variableDebt : amount;
-            uint256 accountBorrowsNew = stableDebt + finalAmount;
+            swappedAmount = sentAmount > variableDebt ? variableDebt : sentAmount;
+            uint256 accountBorrowsNew = stableDebt + swappedAmount;
 
             (stableBorrowsNew, averageStableBorrowRateNew) = _updateStatesForStableRateSwap(
-                finalAmount,
+                swappedAmount,
                 stableDebt,
                 variableDebt,
                 account,
@@ -1235,10 +1235,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         } else {
             require(stableDebt > 0, "vToken: swapBorrowRateMode stable debt is 0");
 
-            finalAmount = amount > stableDebt ? stableDebt : amount;
+            swappedAmount = sentAmount > stableDebt ? stableDebt : sentAmount;
 
             (stableBorrowsNew, averageStableBorrowRateNew) = _updateStatesForVariableRateSwap(
-                finalAmount,
+                swappedAmount,
                 stableDebt,
                 variableDebt,
                 account
@@ -1248,7 +1248,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         stableBorrows = stableBorrowsNew;
         averageStableBorrowRate = averageStableBorrowRateNew;
 
-        emit SwapBorrowRateMode(account, rateMode, amount);
+        emit SwapBorrowRateMode(account, rateMode, swappedAmount);
     }
 
     /**
@@ -1583,9 +1583,10 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         uint256 stableBorrowRate = stableBorrowRatePerBlock();
 
+        uint256 previousStableRateMantissa = accountStableBorrows[account].stableRateMantissa;
         accountStableBorrows[account].stableRateMantissa = stableBorrowRate;
 
-        emit RebalancedStableBorrowRate(account, stableBorrowRate);
+        emit RebalancedStableBorrowRate(account, previousStableRateMantissa, stableBorrowRate);
     }
 
     /// Validate the conditions to rebalance the stable borrow rate.
@@ -1600,7 +1601,8 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
 
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(rebalanceUtilizationRateThreshold);
 
-        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of 
+        /// variable borrow rate when utilization rate is rebalanceUtilizationRateThreshold
         require(
             _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
             "vToken: average borrow rate higher than variable rate threshold."
