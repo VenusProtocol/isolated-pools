@@ -30,7 +30,10 @@ abstract contract InterestRateModel {
     function isInterestRateModel() external pure virtual returns (bool) {
         return true;
     }
-     * @param utilizationRate The utilization rate as per total borrows and cash available
+
+    /**
+     * @notice Calculates the current borrow interest rate per block
+     * @param utilizationRate The utilization rate per total borrows and cash available
      * @return The borrow rate per block (as a percentage, and scaled by 1e18)
      */
     function getBorrowRate(uint256 utilizationRate) external view virtual returns (uint256);

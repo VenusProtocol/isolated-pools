@@ -26,7 +26,7 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
 
     /**
      * @notice Calculates the current borrow rate per block
-     * @param utilizationRate The utilization rate as per total borrows and cash available
+     * @param utilizationRate The utilization rate per total borrows and cash available
      * @return The borrow rate percentage per block as a mantissa (scaled by 1e18)
      */
     function getBorrowRate(uint256 utilizationRate) external view override returns (uint256) {
