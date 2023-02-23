@@ -42,7 +42,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
 
     /**
      * @notice Calculates the current borrow rate per block, with the error code expected by the market
-     * @param utilizationRate The utilization rate as per total borrows and cash available
+     * @param utilizationRate The utilization rate per total borrows and cash available
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
     function getBorrowRate(uint256 utilizationRate) public view override returns (uint256) {

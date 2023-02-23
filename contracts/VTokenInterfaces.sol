@@ -175,7 +175,7 @@ contract VTokenStorage {
         VARIABLE
     }
 
-    /// @notice Utilization rate threshold where rebalancing condition get satisfied for stable rate borrowing.
+    /// @notice Utilization rate threshold for rebalancing stable borrowing rate
     uint256 internal rebalanceUtilizationRateThreshold;
 
     /// @notice Rate fraction for variable rate borrwing where rebalancing condition get satisfied for stable rate borrowing.
