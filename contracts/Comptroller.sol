@@ -842,7 +842,8 @@ contract Comptroller is
      * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A borrow cap of -1 corresponds to unlimited borrowing.
-     * @dev We can not restrict the cap to the borrow limit as the borrow can be lower than the restricted cap. we want the system to operate on a lower borrow.
+     * @dev Borrow caps smaller than the current total borrows are accepted. This way, new borrows will not be allowed
+            until the total borrows amount goes below the new borrow cap
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of -1 corresponds to unlimited borrowing.
      * @custom:access Controlled by AccessControlManager
@@ -867,7 +868,8 @@ contract Comptroller is
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A supply cap of -1 corresponds to unlimited supply.
-     * @dev We can not restrict the cap to the supply limit as the supply can be lower than the restricted cap. we want the system to operate on a lower supply.
+     * @dev Supply caps smaller than the current total supplies are accepted. This way, new supplies will not be allowed
+            until the total supplies amount goes below the new supply cap
      * @param vTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of -1 corresponds to unlimited supply.
      * @custom:access Controlled by AccessControlManager
