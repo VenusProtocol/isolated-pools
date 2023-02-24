@@ -41,10 +41,8 @@ contract TokenErrorReporter {
 
     error SetComptrollerOwnerCheck();
 
-    error SetProtocolSeizeShareUnauthorized();
     error ProtocolSeizeShareTooBig();
 
-    error SetReserveFactorAdminCheck();
     error SetReserveFactorFreshCheck();
     error SetReserveFactorBoundsCheck();
 
@@ -55,14 +53,11 @@ contract TokenErrorReporter {
     error ReduceReservesCashNotAvailable();
     error ReduceReservesCashValidation();
 
-    error SetInterestRateModelOwnerCheck();
     error SetInterestRateModelFreshCheck();
-
-    error SetStableInterestRateModelOwnerCheck();
     error SetStableInterestRateModelFreshCheck();
 
     error SwapBorrowRateModeFreshnessCheck();
-
     error SetRebalanceUtilizationRateThresholdAdminCheck();
-    error SetRebalanceRateFractionThresholdAdminCheck();
+
+    error Unauthorized(address sender, address calledContract, string methodSignature);
 }

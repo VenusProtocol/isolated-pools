@@ -72,7 +72,7 @@ describe("VToken", function () {
         .returns(false);
       await expect(vToken.setProtocolSeizeShare(parseUnits("0.03", 18))).to.be.revertedWithCustomError(
         vToken,
-        "SetProtocolSeizeShareUnauthorized",
+        "Unauthorized",
       );
       expect(await vToken.protocolSeizeShareMantissa()).to.equal(parseUnits("0.05", 18));
     });
