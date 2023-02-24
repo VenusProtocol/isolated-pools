@@ -1770,7 +1770,7 @@ contract VToken is
 
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(rebalanceUtilizationRateThreshold);
 
-        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of 
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of
         /// variable borrow rate when utilization rate is rebalanceUtilizationRateThreshold
         require(
             _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
@@ -1813,19 +1813,12 @@ contract VToken is
      * @dev must be less than liquidation incentive - 1
      * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
      * @custom:events Emits NewProtocolSeizeShare event on success
-     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
      * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
      * @custom:access Controlled by AccessControlManager
      */
     function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setProtocolSeizeShare(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetProtocolSeizeShareUnauthorized();
-        }
+        _checkAccessAllowed("setProtocolSeizeShare(uint256)");
 
         uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
         if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
@@ -1939,6 +1932,21 @@ contract VToken is
     }
 
     /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) public override {
+        _checkAccessAllowed("setInterestRateModel(address)");
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
      * @notice updates the interest rate model (*requires fresh interest accrual)
      * @dev Admin function to update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
@@ -1976,15 +1984,8 @@ contract VToken is
      * @custom:access Controlled by AccessControlManager
      */
     function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setStableInterestRateModel(address)"
-        );
+        _checkAccessAllowed("setStableInterestRateModel(address)");
 
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetStableInterestRateModelOwnerCheck();
-        }
         accrueInterest();
         // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
         _setStableInterestRateModelFresh(newStableInterestRateModel);
@@ -2050,14 +2051,7 @@ contract VToken is
      * @custom:access Controlled by AccessControlManager
      */
     function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setRebalanceUtilizationRateThreshold(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetRebalanceUtilizationRateThresholdAdminCheck();
-        }
+        _checkAccessAllowed("setRebalanceUtilizationRateThreshold(uint256)");
 
         uint256 oldThreshold = rebalanceUtilizationRateThreshold;
         rebalanceUtilizationRateThreshold = utilizationRateThreshold;
@@ -2071,14 +2065,7 @@ contract VToken is
      * @custom:access Controlled by AccessControlManager
      */
     function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setRebalanceRateFractionThreshold(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetRebalanceRateFractionThresholdAdminCheck();
-        }
+        _checkAccessAllowed("setRebalanceRateFractionThreshold(uint256)");
 
         uint256 oldThreshold = rebalanceRateFractionThreshold;
         rebalanceRateFractionThreshold = fractionThreshold;
@@ -2279,5 +2266,15 @@ contract VToken is
         uint256 exchangeRate = (cashPlusBorrowsMinusReserves * EXP_SCALE) / _totalSupply;
 
         return exchangeRate;
+    }
+
+    /// @notice Reverts if the call is not allowed by AccessControlManager
+    /// @param signature Method signature
+    function _checkAccessAllowed(string memory signature) internal view {
+        bool isAllowedToCall = AccessControlManager(accessControlManager).isAllowedToCall(msg.sender, signature);
+
+        if (!isAllowedToCall) {
+            revert Unauthorized(msg.sender, address(this), signature);
+        }
     }
 }

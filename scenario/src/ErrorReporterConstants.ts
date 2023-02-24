@@ -202,7 +202,6 @@ const TokenErrorReporter = {
     "error SetComptrollerOwnerCheck()",
     "error SetPendingAdminOwnerCheck()",
 
-    "error SetReserveFactorAdminCheck()",
     "error SetReserveFactorFreshCheck()",
     "error SetReserveFactorBoundsCheck()",
 
@@ -213,7 +212,6 @@ const TokenErrorReporter = {
     "error ReduceReservesCashNotAvailable()",
     "error ReduceReservesCashValidation()",
 
-    "error SetInterestRateModelOwnerCheck()",
     "error SetInterestRateModelFreshCheck();",
   ]
 };

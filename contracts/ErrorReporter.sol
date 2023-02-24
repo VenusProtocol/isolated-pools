@@ -33,6 +33,8 @@ contract TokenErrorReporter {
 
     error LiquidateSeizeLiquidatorIsBorrower();
 
+    error SetComptrollerOwnerCheck();
+
     error ProtocolSeizeShareTooBig();
 
     error SetReserveFactorFreshCheck();
@@ -45,12 +47,10 @@ contract TokenErrorReporter {
     error ReduceReservesCashValidation();
 
     error SetInterestRateModelFreshCheck();
-
-    error SetStableInterestRateModelOwnerCheck();
     error SetStableInterestRateModelFreshCheck();
 
     error SwapBorrowRateModeFreshnessCheck();
-
     error SetRebalanceUtilizationRateThresholdAdminCheck();
-    error SetRebalanceRateFractionThresholdAdminCheck();
+
+    error Unauthorized(address sender, address calledContract, string methodSignature);
 }
