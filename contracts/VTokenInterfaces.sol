@@ -174,6 +174,12 @@ contract VTokenStorage {
         STABLE,
         VARIABLE
     }
+
+    /// @notice Utilization rate threshold for rebalancing stable borrowing rate
+    uint256 internal rebalanceUtilizationRateThreshold;
+
+    /// @notice Rate fraction for variable rate borrwing where rebalancing condition get satisfied for stable rate borrowing.
+    uint256 internal rebalanceRateFractionThreshold;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -255,9 +261,9 @@ abstract contract VTokenInterface is VTokenStorage {
     );
 
     /**
-     * @notice Event emitted when a borrow rate mode is swapped for account
+     * @notice Event emitted when a borrow rate mode is swapped for account with amount
      */
-    event SwapBorrowRateMode(address account, uint256 swappedBorrowMode);
+    event SwapBorrowRateMode(address indexed account, uint256 swappedBorrowMode, uint256 swappedAmount);
 
     /*** Admin Events ***/
 
@@ -318,6 +324,25 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted after updating stable borrow balance for borrower
      */
     event UpdatedUserStableBorrowBalance(address borrower, uint256 updatedPrincipal);
+
+    /**
+     * @notice Event emitted on stable rate rebalacing
+     */
+    event RebalancedStableBorrowRate(
+        address indexed account,
+        uint256 previousStableRateMantissa,
+        uint256 stableRateMantissa
+    );
+
+    /**
+     * @notice Event emitted when rebalanceUtilizationRateThreshold is updated
+     */
+    event RebalanceUtilizationRateThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
+    /**
+     * @notice Event emitted when rebalanceRateFractionThreshold is updated
+     */
+    event RebalanceRateFractionThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     /*** User Interface ***/
 
@@ -394,6 +419,12 @@ abstract contract VTokenInterface is VTokenStorage {
             uint256
         );
 
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves
+    ) public pure virtual returns (uint256);
+
     function borrowRatePerBlock() external view virtual returns (uint256);
 
     function stableBorrowRatePerBlock() public view virtual returns (uint256);
@@ -426,7 +457,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
 
-    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual returns (uint256);
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual;
 
     function addReserves(uint256 addAmount) external virtual;
 }

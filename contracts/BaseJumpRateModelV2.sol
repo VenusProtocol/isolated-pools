@@ -87,46 +87,18 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market (currently unused)
-     * @return The utilization rate as a mantissa between [0, BASE]
-     */
-    function utilizationRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) public pure override returns (uint256) {
-        // Utilization rate is 0 when there are no borrows
-        if (borrows == 0) {
-            return 0;
-        }
-
-        return (borrows * BASE) / (cash + borrows - reserves);
-    }
-
-    /**
      * @notice Calculates the current borrow rate per block, with the error code expected by the market
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market
+     * @param utilizationRate The utilization rate per total borrows and cash available
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
-    function getBorrowRateInternal(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves
-    ) internal view returns (uint256) {
-        uint256 util = utilizationRate(cash, borrows, reserves);
-
-        if (util <= kink) {
-            return ((util * multiplierPerBlock) / BASE) + baseRatePerBlock;
+    function getBorrowRateInternal(uint256 utilizationRate) internal view returns (uint256) {
+        if (utilizationRate <= kink) {
+            return ((utilizationRate * multiplierPerBlock) / BASE) + baseRatePerBlock;
         } else {
             uint256 normalRate = ((kink * multiplierPerBlock) / BASE) + baseRatePerBlock;
             uint256 excessUtil;
             unchecked {
-                excessUtil = util - kink;
+                excessUtil = utilizationRate - kink;
             }
             return ((excessUtil * jumpMultiplierPerBlock) / BASE) + normalRate;
         }

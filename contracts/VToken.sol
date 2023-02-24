@@ -299,7 +299,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return rate The borrow interest rate per block, scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        return interestRateModel.getBorrowRate(utilizationRate(_getCashPrior(), totalBorrows, totalReserves));
     }
 
     /**
@@ -307,7 +307,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @return rate The borrow interest rate per block, scaled by 1e18
      */
     function stableBorrowRatePerBlock() public view override returns (uint256) {
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+        );
         return stableRateModel.getBorrowRate(stableBorrows, totalBorrows, variableBorrowRate);
     }
 
@@ -319,14 +321,19 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         if (totalBorrows == 0) {
             return 0;
         }
-        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrows = totalBorrows - stableBorrows;
-        uint256 averageMarketBorrowRate = ((variableBorrows * variableBorrowRate) +
-            (stableBorrows * averageStableBorrowRate)) / totalBorrows;
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 averageMarketBorrowRate = _averageMarketBorrowRate();
         return
-            (averageMarketBorrowRate * utilizationRate * (mantissaOne - reserveFactorMantissa)) /
-            (mantissaOne * mantissaOne);
+            (averageMarketBorrowRate * utilRate * (mantissaOne - reserveFactorMantissa)) / (mantissaOne * mantissaOne);
+    }
+
+    /// @notice Calculate the average market borrow rate with respect to variable and stable borrows
+    function _averageMarketBorrowRate() internal view returns (uint256) {
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+        );
+        uint256 variableBorrows = totalBorrows - stableBorrows;
+        return ((variableBorrows * variableBorrowRate) + (stableBorrows * averageStableBorrowRate)) / totalBorrows;
     }
 
     /**
@@ -545,7 +552,9 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         uint256 borrowIndexPrior = borrowIndex;
 
         /* Calculate the current borrow interest rate */
-        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
+        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(
+            utilizationRate(cashPrior, borrowsPrior, reservesPrior)
+        );
         require(borrowRateMantissa <= borrowRateMaxMantissa, "vToken: borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
@@ -1095,10 +1104,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
-     * @dev Allows a borrower to swap his debt between stable and variable mode, or vice versa
-     * @param rateMode The rate mode that the user wants to swap to
-     **/
-    function swapBorrowRateMode(uint256 rateMode) external {
+     * @notice Checks before swapping borrow rate mode
+     * @param account Address of the borrow holder
+     * @return (uint256, uint256) returns the variableDebt and stableDebt for the account
+     */
+    function _swapBorrowRateModePreCalculation(address account) internal returns (uint256, uint256) {
         /* Fail if swapBorrowRateMode not allowed */
         comptroller.preSwapBorrowRateModeHook(address(this));
 
@@ -1109,67 +1119,136 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
             revert SwapBorrowRateModeFreshnessCheck();
         }
 
-        address account = msg.sender;
         uint256 variableDebt = _borrowBalanceStored(account);
         uint256 stableDebt = _updateUserStableBorrowBalance(account);
-        uint256 accountBorrowsNew = variableDebt + stableDebt;
+
+        return (variableDebt, stableDebt);
+    }
+
+    /**
+     * @notice Update states for the stable borrow while swapping
+     * @param swappedAmount Amount need to be swapped
+     * @param stableDebt Stable debt for the account
+     * @param variableDebt Variable debt for the account
+     * @param account Address of the account
+     * @param accountBorrowsNew New stable borrow for the account
+     * @return (uint256, uint256) returns updated stable borrow for the account and updated average stable borrow rate
+     */
+    function _updateStatesForStableRateSwap(
+        uint256 swappedAmount,
+        uint256 stableDebt,
+        uint256 variableDebt,
+        address account,
+        uint256 accountBorrowsNew
+    ) internal returns (uint256, uint256) {
+        uint256 stableBorrowsNew = stableBorrows + swappedAmount;
+        uint256 stableBorrowRate = stableBorrowRatePerBlock();
+
+        uint256 averageStableBorrowRateNew = ((stableBorrows * averageStableBorrowRate) +
+            (swappedAmount * stableBorrowRate)) / stableBorrowsNew;
+
+        uint256 stableRateMantissaNew = ((stableDebt * accountStableBorrows[account].stableRateMantissa) +
+            (swappedAmount * stableBorrowRate)) / accountBorrowsNew;
+
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+        // (No safe failures beyond this point)
+
+        accountStableBorrows[account].principal = accountBorrowsNew;
+        accountStableBorrows[account].interestIndex = stableBorrowIndex;
+        accountStableBorrows[account].stableRateMantissa = stableRateMantissaNew;
+
+        accountBorrows[account].principal = variableDebt - swappedAmount;
+        accountBorrows[account].interestIndex = borrowIndex;
+
+        return (stableBorrowsNew, averageStableBorrowRateNew);
+    }
+
+    /**
+     * @notice Update states for the variable borrow during the swap
+     * @param swappedAmount Amount need to be swapped
+     * @param stableDebt Stable debt for the account
+     * @param variableDebt Variable debt for the account
+     * @param account Address of the account
+     * @return (uint256, uint256) returns updated stable borrow for the account and updated average stable borrow rate
+     */
+    function _updateStatesForVariableRateSwap(
+        uint256 swappedAmount,
+        uint256 stableDebt,
+        uint256 variableDebt,
+        address account
+    ) internal returns (uint256, uint256) {
+        uint256 newStableDebt = stableDebt - swappedAmount;
+        uint256 stableBorrowsNew = stableBorrows - swappedAmount;
+
+        uint256 stableRateMantissa = accountStableBorrows[account].stableRateMantissa;
+        uint256 averageStableBorrowRateNew;
+        if (stableBorrowsNew == 0) {
+            averageStableBorrowRateNew = 0;
+        } else {
+            unchecked {
+                averageStableBorrowRateNew =
+                    ((stableBorrows * averageStableBorrowRate) - (swappedAmount * stableRateMantissa)) /
+                    stableBorrowsNew;
+            }
+        }
+
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+        // (No safe failures beyond this point)
+        accountBorrows[account].principal = variableDebt + swappedAmount;
+        accountBorrows[account].interestIndex = borrowIndex;
+
+        accountStableBorrows[account].principal = newStableDebt;
+        accountStableBorrows[account].interestIndex = stableBorrowIndex;
+
+        return (stableBorrowsNew, averageStableBorrowRateNew);
+    }
+
+    /**
+     * @dev Allows a borrower to swap his debt between stable and variable mode, or vice versa with specific amount
+     * @param rateMode The rate mode that the user wants to swap to
+     * @param sentAmount The amount that the user wants to convert form stable to variable mode or vice versa.
+     * @custom:access Not restricted
+     **/
+    function swapBorrowRateModeWithAmount(uint256 rateMode, uint256 sentAmount) external {
+        address account = msg.sender;
+        (uint256 variableDebt, uint256 stableDebt) = _swapBorrowRateModePreCalculation(account);
+
         uint256 stableBorrowsNew;
         uint256 averageStableBorrowRateNew;
+        uint256 swappedAmount;
 
         if (InterestRateMode(rateMode) == InterestRateMode.STABLE) {
             require(variableDebt > 0, "vToken: swapBorrowRateMode variable debt is 0");
 
-            stableBorrowsNew = stableBorrows + variableDebt;
-            uint256 stableBorrowRate = stableBorrowRatePerBlock();
+            swappedAmount = sentAmount > variableDebt ? variableDebt : sentAmount;
+            uint256 accountBorrowsNew = stableDebt + swappedAmount;
 
-            averageStableBorrowRateNew =
-                ((stableBorrows * averageStableBorrowRate) + (variableDebt * stableBorrowRate)) /
-                stableBorrowsNew;
-
-            uint256 stableRateMantissaNew = ((stableDebt * accountStableBorrows[account].stableRateMantissa) +
-                (variableDebt * stableBorrowRate)) / accountBorrowsNew;
-
-            /////////////////////////
-            // EFFECTS & INTERACTIONS
-            // (No safe failures beyond this point)
-
-            accountStableBorrows[account].principal = stableDebt + variableDebt;
-            accountStableBorrows[account].interestIndex = stableBorrowIndex;
-            accountStableBorrows[account].stableRateMantissa = stableRateMantissaNew;
-
-            accountBorrows[account].principal = 0;
-            accountBorrows[account].interestIndex = borrowIndex;
+            (stableBorrowsNew, averageStableBorrowRateNew) = _updateStatesForStableRateSwap(
+                swappedAmount,
+                stableDebt,
+                variableDebt,
+                account,
+                accountBorrowsNew
+            );
         } else {
             require(stableDebt > 0, "vToken: swapBorrowRateMode stable debt is 0");
 
-            stableBorrowsNew = stableBorrows - stableDebt;
+            swappedAmount = sentAmount > stableDebt ? stableDebt : sentAmount;
 
-            uint256 stableRateMantissa = accountStableBorrows[account].stableRateMantissa;
-
-            if (stableBorrowsNew == 0) {
-                averageStableBorrowRateNew = 0;
-            } else {
-                unchecked {
-                    averageStableBorrowRateNew =
-                        ((stableBorrows * averageStableBorrowRate) - (stableDebt * stableRateMantissa)) /
-                        stableBorrowsNew;
-                }
-            }
-
-            /////////////////////////
-            // EFFECTS & INTERACTIONS
-            // (No safe failures beyond this point)
-            accountBorrows[account].principal = accountBorrowsNew;
-            accountBorrows[account].interestIndex = borrowIndex;
-
-            accountStableBorrows[account].principal = 0;
-            accountStableBorrows[account].interestIndex = stableBorrowIndex;
+            (stableBorrowsNew, averageStableBorrowRateNew) = _updateStatesForVariableRateSwap(
+                swappedAmount,
+                stableDebt,
+                variableDebt,
+                account
+            );
         }
 
         stableBorrows = stableBorrowsNew;
         averageStableBorrowRate = averageStableBorrowRateNew;
 
-        emit SwapBorrowRateMode(account, rateMode);
+        emit SwapBorrowRateMode(account, rateMode, swappedAmount);
     }
 
     /**
@@ -1468,6 +1547,68 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
     }
 
+    /**
+     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market (currently unused)
+     * @return The utilization rate as a mantissa between [0, BASE]
+     */
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves
+    ) public pure override returns (uint256) {
+        // Utilization rate is 0 when there are no borrows
+        if (borrows == 0) {
+            return 0;
+        }
+
+        return (borrows * mantissaOne) / (cash + borrows - reserves);
+    }
+
+    /**
+     * @notice Rebalances the stable interest rate of a user to the current stable borrow rate.
+     * - Users can be rebalanced if the following conditions are satisfied:
+     *     1. Utilization rate is above rebalanceUtilizationRateThreshold.
+     *     2. Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of variable borrow rate.
+     * @param account The address of the account to be rebalanced
+     * @custom:events RebalancedStableBorrowRate - Emits after rebalancing the stable borrow rate for the user.
+     **/
+    function rebalanceStableBorrowRate(address account) external {
+        accrueInterest();
+
+        validateRebalanceStableBorrowRate();
+        _updateUserStableBorrowBalance(account);
+
+        uint256 stableBorrowRate = stableBorrowRatePerBlock();
+
+        uint256 previousStableRateMantissa = accountStableBorrows[account].stableRateMantissa;
+        accountStableBorrows[account].stableRateMantissa = stableBorrowRate;
+
+        emit RebalancedStableBorrowRate(account, previousStableRateMantissa, stableBorrowRate);
+    }
+
+    /// Validate the conditions to rebalance the stable borrow rate.
+    function validateRebalanceStableBorrowRate() public view {
+        require(rebalanceUtilizationRateThreshold > 0, "vToken: rebalanceUtilizationRateThreshold is not set.");
+        require(rebalanceRateFractionThreshold > 0, "vToken: rebalanceRateFractionThreshold is not set.");
+
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+
+        /// Utilization rate is above rebalanceUtilizationRateThreshold.
+        require(utilRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
+
+        uint256 variableBorrowRate = interestRateModel.getBorrowRate(rebalanceUtilizationRateThreshold);
+
+        /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of 
+        /// variable borrow rate when utilization rate is rebalanceUtilizationRateThreshold
+        require(
+            _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
+            "vToken: average borrow rate higher than variable rate threshold."
+        );
+    }
+
     /*** Admin Functions ***/
 
     /**
@@ -1715,12 +1856,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice Accrues interest and updates the stable interest rate model using _setStableInterestRateModelFresh
      * @dev Admin function to accrue interest and update the stable interest rate model
      * @param newStableInterestRateModel The new interest rate model to use
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
      * @custom:events Emits NewMarketStableInterestRateModel, after setting the new stable rate model
      * @custom:access Controlled by AccessControlManager
      */
-    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override returns (uint256) {
+    function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public override {
         bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
             msg.sender,
             "setStableInterestRateModel(address)"
@@ -1732,16 +1872,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
         accrueInterest();
         // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
-        return _setStableInterestRateModelFresh(newStableInterestRateModel);
+        _setStableInterestRateModelFresh(newStableInterestRateModel);
     }
 
     /**
      * @notice Updates the stable interest rate model (requires fresh interest accrual)
      * @dev Admin function to update the stable interest rate model
      * @param newStableInterestRateModel The new stable interest rate model to use
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal returns (uint256) {
+    function _setStableInterestRateModelFresh(StableRateModel newStableInterestRateModel) internal {
         // Used to store old model for use in the event that is emitted on success
         StableRateModel oldStableInterestRateModel;
 
@@ -1784,6 +1923,48 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         AccessControlManager oldAccessControlManager = accessControlManager;
         accessControlManager = newAccessControlManager;
         emit NewAccessControlManager(oldAccessControlManager, accessControlManager);
+    }
+
+    /**
+     * @notice Sets the utilization threshold for stable rate rebalancing
+     * @param utilizationRateThreshold The utilization rate threshold
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setRebalanceUtilizationRateThreshold(uint256 utilizationRateThreshold) external {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setRebalanceUtilizationRateThreshold(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetRebalanceUtilizationRateThresholdAdminCheck();
+        }
+
+        uint256 oldThreshold = rebalanceUtilizationRateThreshold;
+        rebalanceUtilizationRateThreshold = utilizationRateThreshold;
+
+        emit RebalanceUtilizationRateThresholdUpdated(oldThreshold, rebalanceUtilizationRateThreshold);
+    }
+
+    /**
+     * @notice Sets the fraction threshold for stable rate rebalancing
+     * @param fractionThreshold The fraction threshold for the validation of the stable rate rebalancing
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setRebalanceRateFractionThreshold(uint256 fractionThreshold) external {
+        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
+            msg.sender,
+            "setRebalanceRateFractionThreshold(uint256)"
+        );
+        // Check caller is allowed to call this function
+        if (!canCallFunction) {
+            revert SetRebalanceRateFractionThresholdAdminCheck();
+        }
+
+        uint256 oldThreshold = rebalanceRateFractionThreshold;
+        rebalanceRateFractionThreshold = fractionThreshold;
+
+        emit RebalanceRateFractionThresholdUpdated(oldThreshold, rebalanceRateFractionThreshold);
     }
 
     /*** Reentrancy Guard ***/
