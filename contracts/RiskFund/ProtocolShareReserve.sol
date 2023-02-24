@@ -67,7 +67,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         address comptroller,
         address asset,
         uint256 amount
-    ) external onlyOwner returns (uint256) {
+    ) external returns (uint256) {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
