@@ -8,7 +8,9 @@ import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
-  const { deployer, proxyAdmin } = await getNamedAccounts();
+  const { deployer} = await getNamedAccounts();
+
+  const proxyAdmin = (await ethers.getContract("DefaultProxyAdmin")).address;
 
   let tx;
   const priceOracle = await ethers.getContract("ResilientOracle");
