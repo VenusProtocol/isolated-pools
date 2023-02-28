@@ -12,21 +12,23 @@ const targetOwners: Config = {
   mainnet: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396", // NORMAL VIP Timelock
 };
 
-const proxyContracts = [
-  "RiskFund",
-  "Shortfall",
-  "ProtocolShareReserve",
-  "PoolRegistry",
-  "RewardsBNXPool 1",
-  "RewardsXVSPool 1",
-  "RewardsCAKEPool 2",
-  "RewardsXVSPool 2",
-];
-const beaconContracts = ["ComptrollerBeacon", "VTokenBeacon"];
+const contracts = {
+  singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon", "DefaultProxyAdmin"],
+  twoStepOwnership: [
+    "RiskFund",
+    "Shortfall",
+    "ProtocolShareReserve",
+    "PoolRegistry",
+    "RewardsBNXPool 1",
+    "RewardsXVSPool 1",
+    "RewardsCAKEPool 2",
+    "RewardsXVSPool 2",
+  ],
+};
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  await transfer2StepOwnerships(proxyContracts, hre.network.name);
-  await transferSingleStepOwnerships(beaconContracts, hre.network.name);
+  await transferSingleStepOwnerships(contracts.singleStepOwnership, hre.network.name);
+  await transfer2StepOwnerships(contracts.twoStepOwnership, hre.network.name);
 
   // Transfer ownership to the already added pools
   const poolRegistry = await ethers.getContract("PoolRegistry");
