@@ -43,7 +43,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       );
     } else {
       console.error(
-        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${targetOwners[hre.network.name]}`,
+        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${
+          targetOwners[hre.network.name]
+        }`,
       );
     }
   }
@@ -63,9 +65,7 @@ const transfer2StepOwnerships = async (contractNames: string[], networkName: str
         `${contractName} owner ${owner} sucessfully changed to ${pendingOwner}. Please accept the ownership.`,
       );
     } else {
-      console.error(
-        `${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`,
-      );
+      console.error(`${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`);
     }
   }
 };
@@ -82,9 +82,7 @@ const transferSingleStepOwnerships = async (contractNames: string[], networkName
       const newOwner = await contract.owner();
       console.log(`${contractName} owner ${owner} sucessfully changed to ${newOwner}.`);
     } else {
-      console.error(
-        `${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`,
-      );
+      console.error(`${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`);
     }
   }
 };
