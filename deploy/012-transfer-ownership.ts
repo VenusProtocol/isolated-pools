@@ -6,10 +6,10 @@ interface Config {
   [key: string]: string;
 }
 
-const targetAddresses: Config = {
+const targetOwners: Config = {
   hardhat: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // signer[1] from hardhat mnemonic
   bsctestnet: "0xFA747c4a62c4D168276329F822d004026A1c05E9", // signer[1] from testnet mnemonic
-  mainnet: "",
+  mainnet: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396", // NORMAL VIP Timelock
 };
 
 const proxyContracts = [
@@ -34,8 +34,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   for (const pool of pools) {
     const comptrollerProxy = await ethers.getContractAt("Comptroller", pool.comptroller);
     const owner = await comptrollerProxy.owner();
-    if (owner !== targetAddresses[hre.network.name]) {
-      const tx = await comptrollerProxy.transferOwnership(targetAddresses[hre.network.name]);
+    if (owner !== targetOwners[hre.network.name]) {
+      const tx = await comptrollerProxy.transferOwnership(targetOwners[hre.network.name]);
       await tx.wait(1);
       const pendingOwner = await comptrollerProxy.pendingOwner();
       console.log(
@@ -43,7 +43,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       );
     } else {
       console.error(
-        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${targetAddresses[networkName]}`,
+        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${targetOwners[hre.network.name]}`,
       );
     }
   }
@@ -55,8 +55,8 @@ const transfer2StepOwnerships = async (contractNames: string[], networkName: str
     const owner = await contract.owner();
 
     let tx;
-    if (owner !== targetAddresses[networkName]) {
-      tx = await contract.transferOwnership(targetAddresses[networkName]);
+    if (owner !== targetOwners[networkName]) {
+      tx = await contract.transferOwnership(targetOwners[networkName]);
       await tx.wait(1);
       const pendingOwner = await contract.pendingOwner();
       console.log(
@@ -64,7 +64,7 @@ const transfer2StepOwnerships = async (contractNames: string[], networkName: str
       );
     } else {
       console.error(
-        `${contractName} owner ${owner} is equal to target ownership address ${targetAddresses[networkName]}`,
+        `${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`,
       );
     }
   }
@@ -76,14 +76,14 @@ const transferSingleStepOwnerships = async (contractNames: string[], networkName
     const owner = await contract.owner();
 
     let tx;
-    if (owner !== targetAddresses[networkName]) {
-      tx = await contract.transferOwnership(targetAddresses[networkName]);
+    if (owner !== targetOwners[networkName]) {
+      tx = await contract.transferOwnership(targetOwners[networkName]);
       await tx.wait(1);
       const newOwner = await contract.owner();
       console.log(`${contractName} owner ${owner} sucessfully changed to ${newOwner}.`);
     } else {
       console.error(
-        `${contractName} owner ${owner} is equal to target ownership address ${targetAddresses[networkName]}`,
+        `${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`,
       );
     }
   }
