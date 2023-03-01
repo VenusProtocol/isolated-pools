@@ -442,6 +442,8 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool);
 
+    function setComptroller(ComptrollerInterface newComptroller) external virtual;
+
     function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
@@ -467,6 +469,4 @@ abstract contract VTokenInterface is VTokenStorage {
     }
 
     function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual;
-
-    function addReserves(uint256 addAmount) external virtual;
 }

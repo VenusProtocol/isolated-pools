@@ -81,7 +81,7 @@ describe("VToken", () => {
     it("fails if new borrow rate calculation fails", async () => {
       await pretendBlock(vToken, blockNumber, 1);
       stableInterestRateModel.getBorrowRate.reverts("Oups");
-      await expect(vToken.accrueInterest()).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(vToken.accrueInterest()).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("fails if simple interest factor calculation fails", async () => {

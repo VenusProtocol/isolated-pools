@@ -499,9 +499,7 @@ describe("VToken", function () {
         it("stores new borrow principal and interest index", async () => {
           const beforeProtocolBorrows = await vToken.totalBorrows();
           const beforeAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
-          //expect(
           await repayBorrowStableFresh(vToken, payer, borrower, repayAmount);
-          //).toSucceed();
           const afterAccountBorrows = await vToken.harnessAccountStableBorrows(borrowerAddress);
           expect(afterAccountBorrows.principal).to.equal(beforeAccountBorrowSnap.principal.sub(repayAmount));
           expect(afterAccountBorrows.interestIndex).to.equal(convertToUnit("1", 18));
@@ -559,7 +557,7 @@ describe("VToken", function () {
 
     it("emits a repay borrow failure if interest accrual fails", async () => {
       interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(repayBorrowStable(vToken, borrower, repayAmount)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(repayBorrowStable(vToken, borrower, repayAmount)).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from repayBorrowFresh without emitting any extra logs", async () => {
@@ -570,18 +568,14 @@ describe("VToken", function () {
     it("returns success from repayBorrowFresh and repays the right amount", async () => {
       await vToken.harnessFastForward(5);
       const beforeAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
-      //expect(
       await repayBorrowStable(vToken, borrower, repayAmount);
-      //).toSucceed();
       const afterAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
       expect(afterAccountBorrowSnap.principal).to.equal(beforeAccountBorrowSnap.principal.sub(repayAmount));
     });
 
     it("repays the full amount owed if payer has enough", async () => {
       await vToken.harnessFastForward(5);
-      //expect(
       await repayBorrowStable(vToken, borrower, constants.MaxUint256);
-      //).toSucceed();
       const afterAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
       expect(afterAccountBorrowSnap.principal).to.equal(0);
     });
@@ -740,7 +734,7 @@ describe("VToken", function () {
 
     it("emits a repay borrow failure if interest accrual fails", async () => {
       interestRateModel.getBorrowRate.reverts("Oups");
-      await expect(repayBorrowStableBehalf(vToken, payer, borrower, repayAmount)).to.be.reverted; //With("INTEREST_RATE_MODEL_ERROR");
+      await expect(repayBorrowStableBehalf(vToken, payer, borrower, repayAmount)).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns error from repayBorrowFresh without emitting any extra logs", async () => {
@@ -753,9 +747,7 @@ describe("VToken", function () {
     it("returns success from repayBorrowFresh and repays the right amount", async () => {
       await vToken.harnessFastForward(5);
       const beforeAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
-      //expect(
       await repayBorrowStableBehalf(vToken, payer, borrower, repayAmount);
-      //).toSucceed();
       const afterAccountBorrowSnap = await vToken.harnessAccountStableBorrows(borrowerAddress);
       expect(afterAccountBorrowSnap.principal).to.equal(beforeAccountBorrowSnap.principal.sub(repayAmount));
     });

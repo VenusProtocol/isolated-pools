@@ -7,8 +7,6 @@ import "hardhat/console.sol";
  * @title Logic for Venus stable rate.
  */
 contract StableRateModel {
-    event NewStableInterestParams(uint256 baseRatePerBlock, uint256 stableRatePremium, uint256 optimalStableLoanRatio);
-
     /// @notice Indicator that this is an InterestRateModel contract (for inspection)
     bool public constant isInterestRateModel = true;
 
@@ -28,6 +26,8 @@ contract StableRateModel {
 
     /// @notice The address of the owner, i.e. the Timelock contract, which can update parameters directly
     address public owner;
+
+    event NewStableInterestParams(uint256 baseRatePerBlock, uint256 stableRatePremium, uint256 optimalStableLoanRatio);
 
     /**
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by BASE)
@@ -65,21 +65,6 @@ contract StableRateModel {
     }
 
     /**
-     * @notice Calculates the ratio of the stable borrows to total borrows
-     * @param stableBorrows The amount of stable borrows in the market
-     * @param totalBorrows The amount of total borrows in the market
-     * @return The stable loan rate as a mantissa between [0, BASE]
-     */
-    function stableLoanRatio(uint256 stableBorrows, uint256 totalBorrows) public pure returns (uint256) {
-        // Loan ratio is 0 when there are no stable borrows
-        if (totalBorrows == 0) {
-            return 0;
-        }
-
-        return (stableBorrows * BASE) / totalBorrows;
-    }
-
-    /**
      * @notice Calculates the current borrow rate per block, with the error code expected by the market
      * @param stableBorrows The amount of stable borrows in the market
      * @param totalBorrows The amount of borrows in the market
@@ -95,6 +80,21 @@ contract StableRateModel {
         uint256 excessLoanRatio = calculateLoanRatioDiff(loanRatio);
 
         return (variableBorrowRate + baseRatePerBlock + ((stableRatePremium * excessLoanRatio) / BASE));
+    }
+
+    /**
+     * @notice Calculates the ratio of the stable borrows to total borrows
+     * @param stableBorrows The amount of stable borrows in the market
+     * @param totalBorrows The amount of total borrows in the market
+     * @return The stable loan rate as a mantissa between [0, BASE]
+     */
+    function stableLoanRatio(uint256 stableBorrows, uint256 totalBorrows) public pure returns (uint256) {
+        // Loan ratio is 0 when there are no stable borrows
+        if (totalBorrows == 0) {
+            return 0;
+        }
+
+        return (stableBorrows * BASE) / totalBorrows;
     }
 
     /**
