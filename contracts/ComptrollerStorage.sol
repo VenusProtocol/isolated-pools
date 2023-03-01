@@ -94,6 +94,12 @@ contract ComptrollerStorage {
     /// @notice True if a certain action is paused on a certain market
     mapping(address => mapping(Action => bool)) internal _actionPaused;
 
+    // List of Reward Distributors added
+    RewardsDistributor[] internal rewardsDistributors;
+
+    // Used to check if rewards distributor is added
+    mapping(address => bool) internal rewardsDistributorExists;
+
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
