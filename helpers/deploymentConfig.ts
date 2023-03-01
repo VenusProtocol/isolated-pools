@@ -65,14 +65,16 @@ export type VTokenConfig = {
   initialSupply: string;
   supplyCap: string;
   borrowCap: string;
-  vTokenReceiver: string;
+  baseRatePerBlockForStable: number;
+  stableRatePremium: string;
+  optimalStableLoanRatio: string;
 };
 
 export type AccessControlEntry = {
   caller: string;
   target: string;
   method: string;
-};
+}
 
 export enum InterestRateModels {
   WhitePaper,
@@ -300,9 +302,11 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.7, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap: convertToUnit(932019, 18),
-            borrowCap: convertToUnit(478980, 18),
-            vTokenReceiver: "account:deployer",
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+            baseRatePerBlockForStable: 0,
+            stableRatePremium: convertToUnit(2, 12),
+            optimalStableLoanRatio: convertToUnit(5, 17),
           },
           {
             name: "Venus BTCB",
@@ -317,9 +321,11 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.8, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap: convertToUnit(1000, 18),
-            borrowCap: convertToUnit(1000, 18),
-            vTokenReceiver: "account:deployer",
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+            baseRatePerBlockForStable: 0,
+            stableRatePremium: convertToUnit(2, 12),
+            optimalStableLoanRatio: convertToUnit(5, 17),
           },
         ],
         rewards: [
@@ -374,9 +380,11 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.7, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap: convertToUnit(100, 18),
-            borrowCap: convertToUnit(100, 18),
-            vTokenReceiver: "account:deployer",
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+            baseRatePerBlockForStable: 0,
+            stableRatePremium: convertToUnit(2, 12),
+            optimalStableLoanRatio: convertToUnit(5, 17),
           },
           {
             name: "Venus MBOX",
@@ -442,26 +450,11 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.7, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap: convertToUnit(1963, 18),
-            borrowCap: convertToUnit(324, 18),
-            vTokenReceiver: "account:deployer",
-          },
-          {
-            name: "Venus USDD",
-            asset: "USDD",
-            symbol: "vUSDD",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit(0.15, 18),
-            jumpMultiplierPerYear: convertToUnit(3, 18),
-            kink_: convertToUnit(0.6, 18),
-            collateralFactor: convertToUnit(0.7, 18),
-            liquidationThreshold: convertToUnit(0.8, 18),
-            reserveFactor: convertToUnit(0.1, 18),
-            initialSupply: convertToUnit(10, 18),
-            supplyCap: convertToUnit(10601805, 18),
-            borrowCap: convertToUnit(1698253, 18),
-            vTokenReceiver: "account:deployer",
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(10000, 18),
+            baseRatePerBlockForStable: 0,
+            stableRatePremium: convertToUnit(2, 12),
+            optimalStableLoanRatio: convertToUnit(5, 17),
           },
         ],
         rewards: [
