@@ -32,57 +32,6 @@ const cullTuple = (tuple: any) => {
   }, {});
 };
 
-let poolRegistry: PoolRegistry;
-let poolRegistryAddress: string;
-let comptrollerBeacon: Beacon;
-let vTokenBeacon: Beacon;
-let mockDAI: MockToken;
-let mockWBTC: MockToken;
-let vDAI: VToken;
-let vWBTC: VToken;
-let priceOracle: MockPriceOracle;
-let comptroller1Proxy: Comptroller;
-let comptroller2Proxy: Comptroller;
-let poolLens: PoolLens;
-let ownerAddress: string;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
-let closeFactor1: BigNumberish;
-let closeFactor2: BigNumberish;
-let liquidationIncentive1: BigNumberish;
-let liquidationIncentive2: BigNumberish;
-const minLiquidatableCollateral = convertToUnit(100, 18);
-const maxLoopsLimit = 150;
-
-const poolRegistryFixture = async (): Promise<PoolRegistry> => {
-  const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
-  const vTokenFactory = await VTokenProxyFactory.deploy();
-  await vTokenFactory.deployed();
-
-  const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
-  const jumpRateFactory = await JumpRateModelFactory.deploy();
-  await jumpRateFactory.deployed();
-
-  const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
-  const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
-  await whitePaperRateFactory.deployed();
-
-  const shortfall = await smock.fake<Shortfall>("Shortfall");
-  const riskFund = await smock.fake<RiskFund>("Shortfall");
-  const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
-
-  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-  poolRegistry = await upgrades.deployProxy(PoolRegistry, [
-    vTokenFactory.address,
-    jumpRateFactory.address,
-    whitePaperRateFactory.address,
-    shortfall.address,
-    riskFund.address,
-    protocolShareReserve.address,
-  ]);
-
-  return poolRegistry;
-};
-
 const assertVTokenMetadata = (vTokenMetadataActual: any, vTokenMetadataExpected: any) => {
   expect(vTokenMetadataActual[0]).equal(vTokenMetadataExpected[0]);
   expect(vTokenMetadataActual[1]).equal(vTokenMetadataExpected[1]);
@@ -102,6 +51,58 @@ const assertVTokenMetadata = (vTokenMetadataActual: any, vTokenMetadataExpected:
 };
 
 describe("PoolLens", async function () {
+  let poolRegistry: PoolRegistry;
+  let poolRegistryAddress: string;
+  let comptrollerBeacon: Beacon;
+  let vTokenBeacon: Beacon;
+  let mockDAI: MockToken;
+  let mockWBTC: MockToken;
+  let vDAI: VToken;
+  let vWBTC: VToken;
+  let priceOracle: MockPriceOracle;
+  let comptroller1Proxy: Comptroller;
+  let comptroller2Proxy: Comptroller;
+  let poolLens: PoolLens;
+  let ownerAddress: string;
+  let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let closeFactor1: BigNumberish;
+  let closeFactor2: BigNumberish;
+  let liquidationIncentive1: BigNumberish;
+  let liquidationIncentive2: BigNumberish;
+  const minLiquidatableCollateral = convertToUnit(100, 18);
+  const maxLoopsLimit = 150;
+
+
+  const poolRegistryFixture = async (): Promise<PoolRegistry> => {
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
+    const vTokenFactory = await VTokenProxyFactory.deploy();
+    await vTokenFactory.deployed();
+
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
+    const jumpRateFactory = await JumpRateModelFactory.deploy();
+    await jumpRateFactory.deployed();
+
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
+    const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+    await whitePaperRateFactory.deployed();
+
+    const shortfall = await smock.fake<Shortfall>("Shortfall");
+    const riskFund = await smock.fake<RiskFund>("Shortfall");
+    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
+
+    const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
+      vTokenFactory.address,
+      jumpRateFactory.address,
+      whitePaperRateFactory.address,
+      shortfall.address,
+      riskFund.address,
+      protocolShareReserve.address,
+    ]);
+
+    return poolRegistry;
+  };
+
   /**
    * Deploying required contracts along with the poolRegistry.
    */
