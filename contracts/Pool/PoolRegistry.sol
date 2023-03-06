@@ -218,7 +218,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
                     input.multiplierPerYear,
                     input.jumpMultiplierPerYear,
                     input.kink_,
-                    msg.sender
+                    input.accessControlManager
                 )
             );
         } else {
