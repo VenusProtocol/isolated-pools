@@ -147,6 +147,7 @@ async function shortfallFixture() {
 describe("Shortfall: Tests", async function () {
   async function setup() {
     await loadFixture(shortfallFixture);
+    fakeAccessControlManager.isAllowedToCall.returns(true);
   }
 
   describe("setters", async function () {
@@ -154,7 +155,7 @@ describe("Shortfall: Tests", async function () {
 
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.rejectedWith("invalid address");
+        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
       });
 
       it("fails if called by a non-owner", async function () {
@@ -171,7 +172,7 @@ describe("Shortfall: Tests", async function () {
 
     describe("updateMinimumPoolBadDebt", async function () {
       it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.rejectedWith(
+        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -192,6 +193,12 @@ describe("Shortfall: Tests", async function () {
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
+
+    it("startAuction fails if ACM does not allow the call", async function () {
+      fakeAccessControlManager.isAllowedToCall.returns(false);
+      await expect(shortfall.startAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
+      fakeAccessControlManager.isAllowedToCall.returns(true);
+    });
 
     it("Should have debt and reserve", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
@@ -468,6 +475,11 @@ describe("Shortfall: Tests", async function () {
 
   describe("Restart Auction", async function () {
     beforeEach(setup);
+
+    it("fails if ACM does not allow the call", async function () {
+      fakeAccessControlManager.isAllowedToCall.returns(false);
+      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
+    });
 
     it("Can't restart auction early ", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
