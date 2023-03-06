@@ -21,12 +21,6 @@ contract Comptroller is
     ExponentialNoError,
     MaxLoopsLimitHelper
 {
-    // List of Reward Distributors added
-    RewardsDistributor[] private rewardsDistributors;
-
-    // Used to check if rewards distributor is added
-    mapping(address => bool) private rewardsDistributorExists;
-
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
 
