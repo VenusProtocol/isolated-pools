@@ -10,6 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const maxLoopsLimit = 150;
   const poolRegistry = await ethers.getContract("PoolRegistry");
+  const accessControl = await ethers.getContract("AccessControlManager");
 
   const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
   const pools = await poolRegistry.callStatic.getAllPools();
@@ -31,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           proxyContract: "OpenZeppelinTransparentProxy",
           execute: {
             methodName: "initialize",
-            args: [comptrollerAddress, rewardTokenAddress, maxLoopsLimit],
+            args: [comptrollerAddress, rewardTokenAddress, maxLoopsLimit, accessControl.address],
           },
           upgradeIndex: 0,
         },

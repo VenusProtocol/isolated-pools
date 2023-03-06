@@ -211,16 +211,18 @@ async function rewardsFixture() {
 
   // Configure rewards for pool
   const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-  rewardsDistributor = rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
+  rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     xvs.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   ]);
 
   const rewardsDistributor2 = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     mockDAI.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   ]);
 
   const initialXvs = convertToUnit(1000000, 18);
@@ -293,6 +295,7 @@ describe("Rewards: Tests", async function () {
       comptrollerProxy.address,
       xvs.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
@@ -306,6 +309,7 @@ describe("Rewards: Tests", async function () {
       comptrollerProxy.address,
       mockWBTC.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
