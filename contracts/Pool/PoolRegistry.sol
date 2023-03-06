@@ -163,7 +163,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral,
         address priceOracle,
-        uint256 maxLoopsLimit
+        uint256 maxLoopsLimit,
+        address accessControlManager
     ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
         // Input validation
         require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
@@ -171,7 +172,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
-            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit)
+            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit, accessControlManager)
         );
 
         proxyAddress = address(proxy);

@@ -9,7 +9,6 @@ import { ethers, upgrades } from "hardhat";
 
 import { AddressOne, convertToUnit } from "../../helpers/utils";
 import {
-  AccessControlManager,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
@@ -38,7 +37,6 @@ let mockWBTC: MockToken;
 let vDAI: MockContract<VToken>;
 let vWBTC: MockContract<VToken>;
 let comptroller: FakeContract<Comptroller>;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
 
 let riskFundBalance = "10000";
@@ -77,11 +75,8 @@ async function shortfallFixture() {
   mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
   await mockWBTC.faucet(convertToUnit(1000000000, 8));
 
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
-
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-  comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  comptroller = await Comptroller.deploy(poolRegistry.address);
   poolAddress = comptroller.address;
 
   poolRegistry.getPoolByComptroller.returns({

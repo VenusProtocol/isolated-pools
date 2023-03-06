@@ -72,7 +72,7 @@ async function rewardsFixture() {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -128,6 +128,7 @@ async function rewardsFixture() {
     _minLiquidatableCollateral,
     fakePriceOracle.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   );
 
   // Get all pools list.

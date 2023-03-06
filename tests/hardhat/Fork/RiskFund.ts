@@ -215,7 +215,7 @@ const riskFundFixture = async (): Promise<void> => {
   await shortfall.connect(shortfall.wallet).setPoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, accessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -255,6 +255,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Registering the second pool
@@ -266,6 +267,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Registering the third pool
@@ -277,6 +279,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Setup Proxies

@@ -110,7 +110,7 @@ describe("PoolLens", async function () {
     poolRegistryAddress = poolRegistry.address;
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    const comptroller = await Comptroller.deploy(poolRegistry.address);
     await comptroller.deployed();
 
     const VTokenContract = await ethers.getContractFactory("VToken");
@@ -140,6 +140,7 @@ describe("PoolLens", async function () {
       minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
@@ -154,6 +155,7 @@ describe("PoolLens", async function () {
       minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");

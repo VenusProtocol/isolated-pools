@@ -32,9 +32,9 @@ async function deploySimpleComptroller(): Promise<SimpleComptrollerFixture> {
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControl.isAllowedToCall.returns(true);
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-  const comptroller = await upgrades.deployProxy(Comptroller, [maxLoopsLimit], {
-    constructorArgs: [poolRegistry.address, accessControl.address],
-    initializer: "initialize(uint256)",
+  const comptroller = await upgrades.deployProxy(Comptroller, [maxLoopsLimit, accessControl.address], {
+    constructorArgs: [poolRegistry.address],
+    initializer: "initialize(uint256,address)",
   });
   await comptroller.setPriceOracle(oracle.address);
   await comptroller.setLiquidationIncentive(parseUnits("1", 18));

@@ -136,7 +136,7 @@ describe("PoolRegistry: Tests", function () {
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    const comptroller = await Comptroller.deploy(poolRegistry.address);
     await comptroller.deployed();
 
     const VTokenContract = await ethers.getContractFactory("VToken");
@@ -183,6 +183,7 @@ describe("PoolRegistry: Tests", function () {
       _minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Registering the second pool
@@ -194,6 +195,7 @@ describe("PoolRegistry: Tests", function () {
       _minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Setup Proxies
