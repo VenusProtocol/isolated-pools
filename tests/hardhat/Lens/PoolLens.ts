@@ -33,21 +33,10 @@ const cullTuple = (tuple: any) => {
 };
 
 const assertVTokenMetadata = (vTokenMetadataActual: any, vTokenMetadataExpected: any) => {
-  expect(vTokenMetadataActual[0]).equal(vTokenMetadataExpected[0]);
-  expect(vTokenMetadataActual[1]).equal(vTokenMetadataExpected[1]);
-  expect(vTokenMetadataActual[2]).equal(vTokenMetadataExpected[2]);
-  expect(vTokenMetadataActual[3]).equal(vTokenMetadataExpected[3]);
-  expect(vTokenMetadataActual[4]).equal(vTokenMetadataExpected[4]);
-  expect(vTokenMetadataActual[5]).equal(vTokenMetadataExpected[5]);
-  expect(vTokenMetadataActual[6]).equal(vTokenMetadataExpected[6]);
-  expect(vTokenMetadataActual[7]).equal(vTokenMetadataExpected[7]);
-  expect(vTokenMetadataActual[8]).equal(vTokenMetadataExpected[8]);
-  expect(vTokenMetadataActual[9]).equal(vTokenMetadataExpected[9]);
-  expect(vTokenMetadataActual[10]).equal(vTokenMetadataExpected[10]);
-  expect(vTokenMetadataActual[11]).equal(vTokenMetadataExpected[11]);
-  expect(vTokenMetadataActual[12]).equal(vTokenMetadataExpected[12]);
-  expect(vTokenMetadataActual[13]).equal(vTokenMetadataExpected[13]);
-  expect(vTokenMetadataActual[14]).equal(vTokenMetadataExpected[14]);
+  expect(vTokenMetadataActual.length).equal(vTokenMetadataExpected.length);
+  vTokenMetadataActual.forEach((item, index) => {
+    expect(item).equal(vTokenMetadataExpected[index]);
+  });
 };
 
 describe("PoolLens", async function () {
