@@ -208,6 +208,14 @@ const riskFundFixture = async (): Promise<void> => {
   );
 
   await accessControlManager.giveCallPermission(
+    poolRegistry.address,
+    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    admin.address,
+  );
+
+  await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", admin.address);
+
+  await accessControlManager.giveCallPermission(
     riskFund.address,
     "swapPoolsAssets(address[],uint256[])",
     admin.address,
@@ -311,7 +319,7 @@ const riskFundFixture = async (): Promise<void> => {
   await USDC.faucet(initialSupply);
   await USDC.approve(poolRegistry.address, initialSupply);
 
-  // Deploy CTokens
+  // Deploy VTokens
   await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
     asset: USDT.address,

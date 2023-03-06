@@ -88,6 +88,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   await tx.wait();
   console.log("DEFAULT_ADMIN | Deployer           | swapPoolsAssets(address[],uint256[])");
+
+  tx = await accessControlManager.giveCallPermission(
+    poolRegistry.address,
+    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    deployer,
+  );
+  await tx.wait();
+  console.log(
+    "PoolRegistry  | Deployer           | createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+  );
+
+  tx = await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", deployer);
+  await tx.wait();
+  console.log("PoolRegistry  | Deployer           | addMarket(AddMarketInput)");
+
   console.log("--------------------------------------------------");
   console.log("Access Control setup ended successfully");
 };

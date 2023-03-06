@@ -168,7 +168,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         address priceOracle,
         uint256 maxLoopsLimit,
         address accessControlManager
-    ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
+    ) external virtual returns (uint256 index, address proxyAddress) {
+        _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
         require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
         require(priceOracle != address(0), "RegistryPool: Invalid PriceOracle address.");
@@ -199,7 +200,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      */
-    function addMarket(AddMarketInput memory input) external onlyOwner {
+    function addMarket(AddMarketInput memory input) external {
+        _checkAccessAllowed("addMarket(AddMarketInput)");
         require(input.comptroller != address(0), "RegistryPool: Invalid comptroller address");
         require(input.asset != address(0), "RegistryPool: Invalid asset address");
 
@@ -273,7 +275,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     /**
      * @notice Modify existing Venus pool name.
      */
-    function setPoolName(address comptroller, string calldata name) external onlyOwner {
+    function setPoolName(address comptroller, string calldata name) external {
+        _checkAccessAllowed("setPoolName(address,string)");
         string memory oldName = _poolByComptroller[comptroller].name;
         _poolByComptroller[comptroller].name = name;
         emit PoolNameSet(comptroller, oldName, name);
@@ -282,7 +285,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     /**
      * @notice Update metadata of an existing pool.
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external onlyOwner {
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external {
+        _checkAccessAllowed("updatePoolMetadata(address,VenusPoolMetaData)");
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
         metadata[comptroller] = _metadata;
         emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);
