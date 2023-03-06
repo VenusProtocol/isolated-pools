@@ -46,7 +46,7 @@ describe("VToken", function () {
         .returns(false);
       await expect(vToken.setProtocolSeizeShare(parseUnits("0.03", 18))).to.be.revertedWithCustomError(
         vToken,
-        "SetProtocolSeizeShareUnauthorized",
+        "Unauthorized",
       );
       expect(await vToken.protocolSeizeShareMantissa()).to.equal(parseUnits("0.05", 18));
     });
@@ -71,13 +71,13 @@ describe("VToken", function () {
 
   describe("set access control manager", () => {
     it("reverts if not an owner set access control manager", async () => {
-      await expect(vToken.connect(user).setAccessControlAddress(accessControlManager.address)).revertedWith(
-        "only admin can set ACL address",
+      await expect(vToken.connect(user).setAccessControlManager(accessControlManager.address)).revertedWith(
+        "Ownable: caller is not the owner",
       );
     });
 
     it("success by admin", async () => {
-      await vToken.connect(root).setAccessControlAddress(accessControlManager.address);
+      await vToken.connect(root).setAccessControlManager(accessControlManager.address);
     });
   });
 
@@ -86,7 +86,7 @@ describe("VToken", function () {
       accessControlManager.isAllowedToCall.returns(false);
       await expect(vToken.connect(user).setInterestRateModel(interestRateModel.address)).to.be.revertedWithCustomError(
         vToken,
-        "SetInterestRateModelOwnerCheck",
+        "Unauthorized",
       );
     });
 
@@ -100,7 +100,7 @@ describe("VToken", function () {
       accessControlManager.isAllowedToCall.returns(false);
       await expect(vToken.connect(user).setReserveFactor(convertToUnit(1, 17))).to.be.revertedWithCustomError(
         vToken,
-        "SetReserveFactorAdminCheck",
+        "Unauthorized",
       );
     });
 

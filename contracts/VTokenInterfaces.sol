@@ -6,7 +6,6 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
-import "./Governance/AccessControlManager.sol";
 
 contract VTokenStorage {
     /**
@@ -123,11 +122,6 @@ contract VTokenStorage {
     uint256 public protocolSeizeShareMantissa;
 
     /**
-     * @notice Storage of AccessControlManager
-     */
-    AccessControlManager public accessControlManager;
-
-    /**
      * @notice Storage of Shortfall contract address
      */
     address public shortfall;
@@ -218,14 +212,6 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when comptroller is changed
      */
     event NewComptroller(ComptrollerInterface indexed oldComptroller, ComptrollerInterface indexed newComptroller);
-
-    /**
-     * @notice Event emitted when comptroller is changed
-     */
-    event NewAccessControlManager(
-        AccessControlManager indexed oldAccessControlManager,
-        AccessControlManager indexed newAccessControlManager
-    );
 
     /**
      * @notice Event emitted when interestRateModel is changed

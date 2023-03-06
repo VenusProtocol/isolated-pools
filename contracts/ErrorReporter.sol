@@ -41,10 +41,8 @@ contract TokenErrorReporter {
 
     error SetComptrollerOwnerCheck();
 
-    error SetProtocolSeizeShareUnauthorized();
     error ProtocolSeizeShareTooBig();
 
-    error SetReserveFactorAdminCheck();
     error SetReserveFactorFreshCheck();
     error SetReserveFactorBoundsCheck();
 
@@ -55,6 +53,5 @@ contract TokenErrorReporter {
     error ReduceReservesCashNotAvailable();
     error ReduceReservesCashValidation();
 
-    error SetInterestRateModelOwnerCheck();
     error SetInterestRateModelFreshCheck();
 }
