@@ -759,6 +759,11 @@ contract Comptroller is
             revert InvalidCollateralFactor();
         }
 
+        // Ensure that liquidation threshold <= 1
+        if (newLiquidationThresholdMantissa > mantissaOne) {
+            revert InvalidLiquidationThreshold();
+        }
+
         // Ensure that liquidation threshold >= CF
         if (newLiquidationThresholdMantissa < newCollateralFactorMantissa) {
             revert InvalidLiquidationThreshold();
