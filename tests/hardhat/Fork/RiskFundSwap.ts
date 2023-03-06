@@ -121,7 +121,12 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await upgrades.deployProxy(Shortfall, [BUSD.address, AddressOne, parseUnits("10000", 18)]);
+  const shortfall = await upgrades.deployProxy(Shortfall, [
+    BUSD.address,
+    AddressOne,
+    parseUnits("10000", 18),
+    fakeAccessControlManager.address,
+  ]);
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [

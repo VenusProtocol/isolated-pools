@@ -9,6 +9,7 @@ import { ethers, upgrades } from "hardhat";
 
 import { AddressOne, convertToUnit } from "../../helpers/utils";
 import {
+  AccessControlManager,
   Comptroller,
   Comptroller__factory,
   IRiskFund,
@@ -30,6 +31,7 @@ let someone: SignerWithAddress;
 let bidder1: SignerWithAddress;
 let bidder2: SignerWithAddress;
 let shortfall: MockContract<Shortfall>;
+let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakeRiskFund: FakeContract<IRiskFund>;
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
@@ -51,6 +53,8 @@ async function shortfallFixture() {
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
 
+  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  fakeAccessControlManager.isAllowedToCall.returns(true);
   fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const Shortfall = await smock.mock<Shortfall__factory>("Shortfall");
@@ -58,6 +62,7 @@ async function shortfallFixture() {
     mockBUSD.address,
     fakeRiskFund.address,
     parseUnits(minimumPoolBadDebt, "18"),
+    fakeAccessControlManager.address,
   ]);
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();

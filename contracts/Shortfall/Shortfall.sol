@@ -12,8 +12,9 @@ import "../RiskFund/IRiskFund.sol";
 import "./IShortfall.sol";
 import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
+import "../Governance/AccessControlled.sol";
 
-contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShortfall {
+contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -112,22 +113,27 @@ contract Shortfall is Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, IShor
 
     /**
      * @notice Initalize the shortfall contract
-     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     * @param convertibleBaseAsset_ Asset to swap the funds to
+     * @param riskFund_ RiskFund contract address
+     * @param minimumPoolBadDebt_ Minimum bad debt in base asset for a pool to start auction
+     * @param accessControlManager_ AccessControlManager contract address
      */
     function initialize(
-        address _convertibleBaseAsset,
-        IRiskFund _riskFund,
-        uint256 _minimumPoolBadDebt
+        address convertibleBaseAsset_,
+        IRiskFund riskFund_,
+        uint256 minimumPoolBadDebt_,
+        address accessControlManager_
     ) external initializer {
-        require(_convertibleBaseAsset != address(0), "invalid base asset address");
-        require(address(_riskFund) != address(0), "invalid risk fund address");
-        require(_minimumPoolBadDebt != 0, "invalid minimum pool bad debt");
+        require(convertibleBaseAsset_ != address(0), "invalid base asset address");
+        require(address(riskFund_) != address(0), "invalid risk fund address");
+        require(minimumPoolBadDebt_ != 0, "invalid minimum pool bad debt");
 
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
-        minimumPoolBadDebt = _minimumPoolBadDebt;
-        convertibleBaseAsset = _convertibleBaseAsset;
-        riskFund = _riskFund;
+        minimumPoolBadDebt = minimumPoolBadDebt_;
+        convertibleBaseAsset = convertibleBaseAsset_;
+        riskFund = riskFund_;
     }
 
     /**
