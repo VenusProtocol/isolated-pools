@@ -65,7 +65,12 @@ describe("PoolLens", async function () {
   let borrowerWbtc: Signer;
   let borrowerDai: Signer;
 
-  const poolRegistryFixture = async (): Promise<PoolRegistry> => {
+  interface PoolRegistryFixture {
+    poolRegistry: PoolRegistry;
+    fakeAccessControlManager: FakeContract<AccessControlManager>;
+  }
+
+  const poolRegistryFixture = async (): Promise<PoolRegistryFixture> => {
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     const vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -82,6 +87,9 @@ describe("PoolLens", async function () {
     const riskFund = await smock.fake<RiskFund>("Shortfall");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
 
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
     poolRegistry = await upgrades.deployProxy(PoolRegistry, [
       vTokenFactory.address,
@@ -90,9 +98,10 @@ describe("PoolLens", async function () {
       shortfall.address,
       riskFund.address,
       protocolShareReserve.address,
+      fakeAccessControlManager.address,
     ]);
 
-    return poolRegistry;
+    return { poolRegistry, fakeAccessControlManager };
   };
 
   /**
@@ -103,9 +112,7 @@ describe("PoolLens", async function () {
     [borrowerWbtc, borrowerDai] = rest;
     ownerAddress = await owner.getAddress();
 
-    poolRegistry = await loadFixture(poolRegistryFixture);
-    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-    fakeAccessControlManager.isAllowedToCall.returns(true);
+    ({ poolRegistry, fakeAccessControlManager } = await loadFixture(poolRegistryFixture));
 
     poolRegistryAddress = poolRegistry.address;
 

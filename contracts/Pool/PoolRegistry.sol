@@ -22,7 +22,7 @@ import "./PoolRegistryInterface.sol";
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
+contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum InterestRateModels {
@@ -126,6 +126,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @param _whitePaperFactory white paper factory address.
      * @param riskFund_ risk fund address.
      * @param protocolShareReserve_ protocol's shares reserve address.
+     * @param accessControlManager_ AccessControlManager contract address.
      */
     function initialize(
         VTokenProxyFactory _vTokenFactory,
@@ -133,9 +134,11 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         Shortfall _shortfall,
         address payable riskFund_,
-        address payable protocolShareReserve_
+        address payable protocolShareReserve_,
+        address accessControlManager_
     ) external initializer {
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
 
         vTokenFactory = _vTokenFactory;
         jumpRateFactory = _jumpRateFactory;

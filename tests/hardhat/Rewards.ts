@@ -58,6 +58,9 @@ async function rewardsFixture() {
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const shortfall = await smock.fake<Shortfall>("Shortfall");
 
+  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  fakeAccessControlManager.isAllowedToCall.returns(true);
+
   const PoolRegistry = await smock.mock<PoolRegistry__factory>("PoolRegistry");
   poolRegistry = await upgrades.deployProxy(PoolRegistry, [
     vTokenFactory.address,
@@ -66,10 +69,8 @@ async function rewardsFixture() {
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
+    fakeAccessControlManager.address,
   ]);
-
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptroller = await Comptroller.deploy(poolRegistry.address);

@@ -122,6 +122,9 @@ describe("PoolRegistry: Tests", function () {
     const riskFund = await smock.fake<RiskFund>("RiskFund");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
     poolRegistry = await upgrades.deployProxy(PoolRegistry, [
       vTokenFactory.address,
@@ -130,10 +133,8 @@ describe("PoolRegistry: Tests", function () {
       shortfall.address,
       riskFund.address,
       protocolShareReserve.address,
+      fakeAccessControlManager.address,
     ]);
-
-    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-    fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
     const comptroller = await Comptroller.deploy(poolRegistry.address);

@@ -166,6 +166,7 @@ const riskFundFixture = async (): Promise<void> => {
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
+    accessControlManager.address,
   ]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
