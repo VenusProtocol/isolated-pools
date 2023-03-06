@@ -497,13 +497,13 @@ describe("Risk Fund: Tests", function () {
   describe("Test all setters", async function () {
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: Pool registry address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -519,13 +519,13 @@ describe("Risk Fund: Tests", function () {
 
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
-        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: Shortfall contract address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setShortfallContractAddress(someNonzeroAddress)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setShortfallContractAddress(someNonzeroAddress)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -542,13 +542,13 @@ describe("Risk Fund: Tests", function () {
 
     describe("setPancakeSwapRouter", async function () {
       it("Reverts on invalid PancakeSwap router contract address", async function () {
-        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: PancakeSwap address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -565,17 +565,17 @@ describe("Risk Fund: Tests", function () {
       it("fails if called with incorrect arguments", async function () {
         await expect(
           riskFund.swapPoolsAssets([cUSDT.address, cUSDC.address], [convertToUnit(10, 18)]),
-        ).to.be.rejectedWith("Risk fund: markets and amountsOutMin are unequal lengths");
+        ).to.be.revertedWith("Risk fund: markets and amountsOutMin are unequal lengths");
       });
     });
 
     describe("setMinAmountToConvert", async function () {
       it("reverts on invalid min amount to convert", async function () {
-        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amount to convert");
+        await expect(riskFund.setMinAmountToConvert(0)).to.be.revertedWith("Risk Fund: Invalid min amount to convert");
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setMinAmountToConvert(1)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setMinAmountToConvert(1)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -597,9 +597,7 @@ describe("Risk Fund: Tests", function () {
         admin.address,
       );
       // Fails
-      await expect(riskFund.swapPoolsAssets([], [])).to.be.rejectedWith(
-        "Risk fund: Not authorized to swap pool assets.",
-      );
+      await expect(riskFund.swapPoolsAssets([], [])).to.be.revertedWithCustomError(riskFund, "Unauthorized");
 
       // Reset
       await accessControlManager.giveCallPermission(
@@ -731,14 +729,14 @@ describe("Risk Fund: Tests", function () {
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
         riskFund.connect(busdUser).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
-      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
+      ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       const auctionContract = shortfall.address;
       await riskFund.setShortfallContractAddress(auctionContract);
 
       await expect(
         riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
-      ).to.be.rejectedWith("Risk Fund: Insufficient pool reserve.");
+      ).to.be.revertedWith("Risk Fund: Insufficient pool reserve.");
     });
 
     it("Transfer funds to auction contact", async function () {
@@ -822,7 +820,7 @@ describe("Risk Fund: Tests", function () {
 
       await expect(
         riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
-      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
+      ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       // reset
       await accessControlManager.giveCallPermission(
