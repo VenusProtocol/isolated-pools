@@ -132,10 +132,12 @@ describe("VToken", function () {
       // ).toSucceed();
     });
 
-    it("fails if error if protocol has less than borrowAmount of underlying", async () => {
-      await expect(
-        borrowFresh(vToken, borrower, new BigNumber(borrowAmount).plus(1).toString()),
-      ).to.be.revertedWithCustomError(vToken, "BorrowCashNotAvailable");
+    it("fails if error if protocol has less than borrowAmount of underlying = cash - reserves ", async () => {
+      await vToken.harnessSetTotalReserves(convertToUnit("1", 18));
+      await expect(borrowFresh(vToken, borrower, new BigNumber(borrowAmount).toString())).to.be.revertedWithCustomError(
+        vToken,
+        "BorrowCashNotAvailable",
+      );
     });
 
     it("fails if borrowBalanceStored fails (due to non-zero stored principal with zero account index)", async () => {
