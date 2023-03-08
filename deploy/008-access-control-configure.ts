@@ -103,6 +103,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
   console.log("PoolRegistry  | Deployer           | addMarket(AddMarketInput)");
 
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+    deployer,
+  );
+  await tx.wait();
+  console.log("DEFAULT_ADMIN | Deployer           | setRewardTokenSpeeds(address[],uint256[],uint256[])");
+
   console.log("--------------------------------------------------");
   console.log("Access Control setup ended successfully");
 };

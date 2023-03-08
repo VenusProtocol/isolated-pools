@@ -198,7 +198,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         VToken[] memory vTokens,
         uint256[] memory supplySpeeds,
         uint256[] memory borrowSpeeds
-    ) external onlyOwner {
+    ) external {
+        _checkAccessAllowed("setRewardTokenSpeeds(address[],uint256[],uint256[])");
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,

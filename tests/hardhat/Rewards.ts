@@ -1,5 +1,6 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -23,6 +24,7 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 
+let root: SignerWithAddress;
 let poolRegistry: MockContract<PoolRegistry>;
 let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
@@ -41,7 +43,8 @@ let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
 
 async function rewardsFixture() {
-  const [, proxyAdmin] = await ethers.getSigners();
+  let proxyAdmin: SignerWithAddress;
+  [root, proxyAdmin] = await ethers.getSigners();
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -232,6 +235,8 @@ async function rewardsFixture() {
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
 
+  fakeAccessControlManager.isAllowedToCall.returns(true);
+
   await rewardsDistributor.setRewardTokenSpeeds(
     [vWBTC.address, vDAI.address],
     [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
@@ -251,6 +256,21 @@ describe("Rewards: Tests", async function () {
    */
   beforeEach(async function () {
     await rewardsFixture();
+    fakeAccessControlManager.isAllowedToCall.reset();
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+  });
+
+  it("Reverts if setting the speed is prohibited by ACM", async () => {
+    fakeAccessControlManager.isAllowedToCall
+      .whenCalledWith(root.address, "setRewardTokenSpeeds(address[],uint256[],uint256[])")
+      .returns(false);
+    await expect(
+      rewardsDistributor.setRewardTokenSpeeds(
+        [vWBTC.address, vDAI.address],
+        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+      ),
+    ).to.be.revertedWithCustomError(rewardsDistributor, "Unauthorized");
   });
 
   it("Should have correct btc balance", async function () {
