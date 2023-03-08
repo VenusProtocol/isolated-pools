@@ -215,6 +215,8 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", admin.address);
 
+  await accessControlManager.giveCallPermission(riskFund.address, "setMinAmountToConvert(uint256)", admin.address);
+
   await accessControlManager.giveCallPermission(
     riskFund.address,
     "swapPoolsAssets(address[],uint256[])",
@@ -582,10 +584,14 @@ describe("Risk Fund: Tests", function () {
         await expect(riskFund.setMinAmountToConvert(0)).to.be.revertedWith("Risk Fund: Invalid min amount to convert");
       });
 
-      it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setMinAmountToConvert(1)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
+      it("fails if the call is not allowed by ACM", async function () {
+        const [admin] = await ethers.getSigners();
+        await accessControlManager.revokeCallPermission(
+          riskFund.address,
+          "setMinAmountToConvert(uint256)",
+          admin.address,
         );
+        await expect(riskFund.setMinAmountToConvert(1)).to.be.revertedWithCustomError(riskFund, "Unauthorized");
       });
 
       it("emits MinAmountToConvertUpdated event", async function () {

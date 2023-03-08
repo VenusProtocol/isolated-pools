@@ -134,7 +134,8 @@ contract RiskFund is
      * @dev Min amount to convert setter
      * @param minAmountToConvert_ Min amount to convert.
      */
-    function setMinAmountToConvert(uint256 minAmountToConvert_) external onlyOwner {
+    function setMinAmountToConvert(uint256 minAmountToConvert_) external {
+        _checkAccessAllowed("setMinAmountToConvert(uint256)");
         require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
         uint256 oldMinAmountToConvert = minAmountToConvert;
         minAmountToConvert = minAmountToConvert_;
