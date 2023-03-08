@@ -208,6 +208,12 @@ const riskFundFixture = async (): Promise<void> => {
   );
 
   await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setCloseFactor(uint256)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
     poolRegistry.address,
     "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
     admin.address,

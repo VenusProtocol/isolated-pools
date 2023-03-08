@@ -81,16 +81,12 @@ describe("setters", async () => {
   });
 
   describe("setCloseFactor", async () => {
-    let newPriceOracle: FakeContract<PriceOracle>;
-
-    before(async () => {
-      newPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-    });
-
-    it("reverts if called by a non-owner", async () => {
-      await expect(comptroller.connect(user).setPriceOracle(newPriceOracle.address)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
-      );
+    const newCloseFactor = convertToUnit("0.8", 18);
+    it("reverts if access control manager does not allow the call", async () => {
+      accessControl.isAllowedToCall.whenCalledWith(owner.address, "setCloseFactor(uint256)").returns(false);
+      await expect(comptroller.setCloseFactor(newCloseFactor))
+        .to.be.revertedWithCustomError(comptroller, "Unauthorized")
+        .withArgs(owner.address, comptroller.address, "setCloseFactor(uint256)");
     });
   });
 

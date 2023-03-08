@@ -60,6 +60,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
+    "setCloseFactor(uint256)",
+    poolRegistry.address,
+  );
+  await tx.wait();
+  console.log("DEFAULT_ADMIN | PoolRegistry       | setCloseFactor(uint256)");
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
     "setMinLiquidatableCollateral(uint256)",
     poolRegistry.address,
   );

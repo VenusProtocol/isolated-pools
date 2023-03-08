@@ -715,7 +715,8 @@ contract Comptroller is
      * @custom:event Emits NewCloseFactor on success
      * @custom:access Only Governance
      */
-    function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
+    function setCloseFactor(uint256 newCloseFactorMantissa) external {
+        _checkAccessAllowed("setCloseFactor(uint256)");
         require(closeFactorMaxMantissa >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
         require(closeFactorMinMantissa <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
