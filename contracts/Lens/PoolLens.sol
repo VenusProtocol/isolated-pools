@@ -99,6 +99,23 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
+     * @dev Struct with bad debt of a market denominated
+     */
+    struct BadDebt {
+        address vTokenAddress;
+        uint256 badDebtUsd;
+    }
+
+    /**
+     * @dev Struct with bad debt total denominated in usd for a pool and an array of BadDebt structs for each market
+     */
+    struct BadDebtSummary {
+        address comptroller;
+        uint256 totalBadDebtUsd;
+        BadDebt[] badDebts;
+    }
+
+    /**
      * @param vTokens The list of vToken Addresses.
      * @param account The user Account.
      * @notice Returns the BalanceInfo of all VTokens.
@@ -217,6 +234,44 @@ contract PoolLens is ExponentialNoError {
             rewardSummary[i] = reward;
         }
         return rewardSummary;
+    }
+
+    /**
+     * @notice Returns a summary of a pool's bad debt broken down by market
+     *
+     * @param comptrollerAddress Address of the comptroller
+     *
+     * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
+     *   a break down of bad debt by market
+     */
+    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory badDebtSummary) {
+        uint256 totalBadDebtUsd;
+
+        // Get every market in the pool
+        ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
+        VToken[] memory markets = comptroller.getAllMarkets();
+        PriceOracle priceOracle = comptroller.oracle();
+
+        BadDebt[] memory badDebts = new BadDebt[](markets.length);
+
+        BadDebtSummary memory badDebtSummary;
+        badDebtSummary.comptroller = comptrollerAddress;
+        badDebtSummary.badDebts = badDebts;
+
+        // // Calculate the bad debt is USD per market
+        for (uint256 i; i < markets.length; ++i) {
+            BadDebt memory badDebt;
+            badDebt.vTokenAddress = address(markets[i]);
+            badDebt.badDebtUsd =
+                VToken(address(markets[i])).badDebt() *
+                priceOracle.getUnderlyingPrice(address(markets[i]));
+            badDebtSummary.badDebts[i] = badDebt;
+            totalBadDebtUsd = totalBadDebtUsd + badDebt.badDebtUsd;
+        }
+
+        badDebtSummary.totalBadDebtUsd = totalBadDebtUsd;
+
+        return badDebtSummary;
     }
 
     /**
