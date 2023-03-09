@@ -49,7 +49,7 @@ export type VTokenConfig = {
   symbol: string;
   asset: string; // This should match a name property from a TokenCofig
   rateModel: string;
-  baseRatePerYear: number;
+  baseRatePerYear: string;
   multiplierPerYear: string;
   jumpMultiplierPerYear: string;
   kink_: string;
@@ -137,7 +137,7 @@ export const globalConfig: NetworkConfig = {
             asset: "BNX",
             symbol: "vBNX",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.05, 18),
             jumpMultiplierPerYear: convertToUnit(1.09, 18),
             kink_: convertToUnit(0.8, 18),
@@ -152,7 +152,7 @@ export const globalConfig: NetworkConfig = {
             asset: "WBNB",
             symbol: "vWBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
@@ -189,7 +189,7 @@ export const globalConfig: NetworkConfig = {
             asset: "CAKE",
             symbol: "vCAKE",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
@@ -204,7 +204,7 @@ export const globalConfig: NetworkConfig = {
             asset: "WBTC",
             symbol: "vWBTC",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
@@ -303,7 +303,7 @@ export const globalConfig: NetworkConfig = {
             asset: "BNX",
             symbol: "vBNX",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.05, 18),
             jumpMultiplierPerYear: convertToUnit(1.09, 18),
             kink_: convertToUnit(0.8, 18),
@@ -318,7 +318,7 @@ export const globalConfig: NetworkConfig = {
             asset: "WBNB",
             symbol: "vWBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
@@ -355,7 +355,7 @@ export const globalConfig: NetworkConfig = {
             asset: "CAKE",
             symbol: "vCAKE",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
@@ -370,7 +370,7 @@ export const globalConfig: NetworkConfig = {
             asset: "WBTC",
             symbol: "vWBTC",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: 0,
+            baseRatePerYear: convertToUnit(0.01, 18),
             multiplierPerYear: convertToUnit(0.04, 18),
             jumpMultiplierPerYear: convertToUnit(1.08, 18),
             kink_: convertToUnit(0.7, 18),
