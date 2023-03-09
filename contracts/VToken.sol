@@ -855,7 +855,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         comptroller.preRedeemHook(address(this), redeemer, redeemTokens);
 
         /* Fail gracefully if protocol has insufficient cash */
-        if (_getCashPrior() < redeemAmount) {
+        if (_getCashPrior() - totalReserves < redeemAmount) {
             revert RedeemTransferOutNotPossible();
         }
 
@@ -897,7 +897,7 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         }
 
         /* Fail gracefully if protocol has insufficient underlying cash */
-        if (_getCashPrior() < borrowAmount) {
+        if (_getCashPrior() - totalReserves < borrowAmount) {
             revert BorrowCashNotAvailable();
         }
 

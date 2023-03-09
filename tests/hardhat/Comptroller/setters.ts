@@ -186,6 +186,13 @@ describe("setters", async () => {
       ).to.be.revertedWithCustomError(comptroller, "InvalidLiquidationThreshold");
     });
 
+    it("reverts if liquidation threshold is bigger than mantissa 1", async () => {
+      await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
+      await expect(
+        comptroller.setCollateralFactor(OMG.address, convertToUnit("0.7", 18), convertToUnit("1.1", 18)),
+      ).to.be.revertedWithCustomError(comptroller, "InvalidLiquidationThreshold");
+    });
+
     it("reverts if token price is zero", async () => {
       oracle.getUnderlyingPrice.returns(0);
       await comptroller.connect(poolRegistrySigner).supportMarket(OMG.address);
