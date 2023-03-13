@@ -39,6 +39,51 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
     }
 
     /**
+     * @notice Construct a new money market
+     * @param underlying_ The address of the underlying asset
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     * @param decimals_ ERC-20 decimal precision of this token
+     * @param admin_ Address of the administrator of this token
+     * @param riskManagement Addresses of risk fund contracts
+     */
+    function initialize(
+        address underlying_,
+        ComptrollerInterface comptroller_,
+        InterestRateModel interestRateModel_,
+        uint256 initialExchangeRateMantissa_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address admin_,
+        AccessControlManager accessControlManager_,
+        RiskManagementInit memory riskManagement
+    ) external initializer {
+        require(admin_ != address(0), "invalid admin address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
+        require(riskManagement.shortfall != address(0), "invalid shortfall address");
+        require(riskManagement.riskFund != address(0), "invalid riskfund address");
+        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
+
+        // Initialize the market
+        _initialize(
+            underlying_,
+            comptroller_,
+            interestRateModel_,
+            initialExchangeRateMantissa_,
+            name_,
+            symbol_,
+            decimals_,
+            admin_,
+            accessControlManager_,
+            riskManagement
+        );
+    }
+
+    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
@@ -580,51 +625,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      */
     function exchangeRateStored() external view override returns (uint256) {
         return _exchangeRateStored();
-    }
-
-    /**
-     * @notice Construct a new money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ ERC-20 name of this token
-     * @param symbol_ ERC-20 symbol of this token
-     * @param decimals_ ERC-20 decimal precision of this token
-     * @param admin_ Address of the administrator of this token
-     * @param riskManagement Addresses of risk fund contracts
-     */
-    function initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) public initializer {
-        require(admin_ != address(0), "invalid admin address");
-        require(address(accessControlManager_) != address(0), "invalid access control manager address");
-        require(riskManagement.shortfall != address(0), "invalid shortfall address");
-        require(riskManagement.riskFund != address(0), "invalid riskfund address");
-        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
-
-        // Initialize the market
-        _initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        );
     }
 
     /**
