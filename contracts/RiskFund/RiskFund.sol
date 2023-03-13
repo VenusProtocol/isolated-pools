@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../VToken.sol";
 import "../Pool/PoolRegistry.sol";
-import "../Pool/PoolRegistryInterface.sol";
 import "../IPancakeswapV2Router.sol";
 import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
