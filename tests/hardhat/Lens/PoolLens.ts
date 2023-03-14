@@ -209,8 +209,8 @@ describe("PoolLens", async function () {
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
-      supplyCap: initialSupply,
-      borrowCap: initialSupply,
+      supplyCap: convertToUnit(4000, 18),
+      borrowCap: convertToUnit(2000, 18),
     });
 
     await poolRegistry.addMarket({
@@ -391,6 +391,8 @@ describe("PoolLens", async function () {
       expect(vTokenMetadataActualParsed["supplyRatePerBlock"]).equal("0");
       expect(vTokenMetadataActualParsed["borrowRatePerBlock"]).equal("0");
       expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal("0");
+      expect(vTokenMetadataActualParsed["supplyCaps"]).equal("4000000000000000000000");
+      expect(vTokenMetadataActualParsed["borrowCaps"]).equal("2000000000000000000000");
       expect(vTokenMetadataActualParsed["totalBorrows"]).equal("0");
       expect(vTokenMetadataActualParsed["totalReserves"]).equal("0");
       expect(vTokenMetadataActualParsed["totalSupply"]).equal(convertToUnit(10000000000000, 8));
