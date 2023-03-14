@@ -48,7 +48,7 @@ export async function makeVToken({
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const initializer =
-    "initializeHarness(address,address,address,uint256,string,string,uint8,address,address,(address,address,address))";
+    "initialize(address,address,address,uint256,string,string,uint8,address,address,(address,address,address))";
   const vToken = await upgrades.deployProxy(
     VToken,
     [

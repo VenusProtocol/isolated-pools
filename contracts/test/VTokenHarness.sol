@@ -12,33 +12,6 @@ contract VTokenHarness is VToken {
 
     mapping(address => bool) public failTransferToAddresses;
 
-    function initializeHarness(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
-    ) external initializer {
-        blockNumber = 100000;
-        super._initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        );
-    }
-
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -175,83 +148,5 @@ contract VTokenHarness is VToken {
 
     function _getBlockNumber() internal view override returns (uint256) {
         return blockNumber;
-    }
-}
-
-contract VTokenScenario is VToken {
-    constructor(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
-    ) {
-        initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        );
-    }
-
-    function setTotalBorrows(uint256 totalBorrows_) public {
-        totalBorrows = totalBorrows_;
-    }
-
-    function setTotalReserves(uint256 totalReserves_) public {
-        totalReserves = totalReserves_;
-    }
-
-    function _getBlockNumber() internal view override returns (uint256) {
-        ComptrollerScenario comptrollerScenario = ComptrollerScenario(address(comptroller));
-        return comptrollerScenario.blockNumber();
-    }
-}
-
-contract VEvil is VTokenScenario {
-    constructor(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement
-    )
-        VTokenScenario(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement
-        )
-    {}
-
-    function evilSeize(
-        VToken treasure,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) public {
-        treasure.seize(liquidator, borrower, seizeTokens);
     }
 }
