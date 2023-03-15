@@ -194,7 +194,7 @@ contract VTokenScenario is VToken {
         VTokenInterface.RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
     ) {
-        initialize(
+        _initialize(
             underlying_,
             comptroller_,
             interestRateModel_,
