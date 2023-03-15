@@ -205,6 +205,7 @@ describe("PoolLens", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
@@ -226,6 +227,7 @@ describe("PoolLens", async function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
@@ -390,7 +392,7 @@ describe("PoolLens", async function () {
       expect(vTokenMetadataActualParsed["exchangeRateCurrent"]).equal(convertToUnit(1, 18));
       expect(vTokenMetadataActualParsed["supplyRatePerBlock"]).equal("0");
       expect(vTokenMetadataActualParsed["borrowRatePerBlock"]).equal("0");
-      expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal("0");
+      expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal(convertToUnit(0.3, 18));
       expect(vTokenMetadataActualParsed["totalBorrows"]).equal("0");
       expect(vTokenMetadataActualParsed["totalReserves"]).equal("0");
       expect(vTokenMetadataActualParsed["totalSupply"]).equal(convertToUnit(10000000000000, 8));
