@@ -85,4 +85,8 @@ interface ComptrollerViewInterface {
     function getRewardDistributors() external view returns (RewardsDistributor[] memory);
 
     function getAllMarkets() external view returns (VToken[] memory);
+
+    function borrowCaps(address) external view returns (uint256);
+
+    function supplyCaps(address) external view returns (uint256);
 }

@@ -39,6 +39,8 @@ contract PoolLens is ExponentialNoError {
         uint256 supplyRatePerBlock;
         uint256 borrowRatePerBlock;
         uint256 reserveFactorMantissa;
+        uint256 supplyCaps;
+        uint256 borrowCaps;
         uint256 totalBorrows;
         uint256 totalReserves;
         uint256 totalSupply;
@@ -367,6 +369,8 @@ contract PoolLens is ExponentialNoError {
                 supplyRatePerBlock: vToken.supplyRatePerBlock(),
                 borrowRatePerBlock: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
+                supplyCaps: comptroller.supplyCaps(address(vToken)),
+                borrowCaps: comptroller.borrowCaps(address(vToken)),
                 totalBorrows: vToken.totalBorrows(),
                 totalReserves: vToken.totalReserves(),
                 totalSupply: vToken.totalSupply(),
