@@ -130,6 +130,7 @@ describe("UpgradedVToken: Tests", function () {
       kink_: 0,
       collateralFactor: convertToUnit(0.7, 18),
       liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
       vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,

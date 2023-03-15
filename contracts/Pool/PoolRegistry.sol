@@ -43,6 +43,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         uint256 kink_;
         uint256 collateralFactor;
         uint256 liquidationThreshold;
+        uint256 reserveFactor;
         AccessControlManager accessControlManager;
         address vTokenProxyAdmin;
         address beaconAddress;
@@ -235,7 +236,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
             msg.sender,
             input.accessControlManager,
             VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
-            input.beaconAddress
+            input.beaconAddress,
+            input.reserveFactor
         );
 
         VToken vToken = vTokenFactory.deployVTokenProxy(initializeArgs);

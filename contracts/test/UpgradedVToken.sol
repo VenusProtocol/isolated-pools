@@ -40,7 +40,8 @@ contract UpgradedVToken is VToken {
         uint8 decimals_,
         address payable admin_,
         AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        uint256 reserveFactorMantissa_
     ) public reinitializer(2) {
         super._initialize(
             underlying_,
@@ -52,7 +53,8 @@ contract UpgradedVToken is VToken {
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            reserveFactorMantissa_
         );
     }
 
