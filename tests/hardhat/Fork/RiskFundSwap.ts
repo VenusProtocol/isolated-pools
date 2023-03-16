@@ -121,7 +121,12 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await upgrades.deployProxy(Shortfall, [BUSD.address, AddressOne, parseUnits("10000", 18)]);
+  const shortfall = await upgrades.deployProxy(Shortfall, [
+    BUSD.address,
+    AddressOne,
+    parseUnits("10000", 18),
+    fakeAccessControlManager.address,
+  ]);
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [
@@ -149,6 +154,7 @@ const riskFundFixture = async (): Promise<void> => {
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
+    fakeAccessControlManager.address,
   ]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
@@ -156,7 +162,7 @@ const riskFundFixture = async (): Promise<void> => {
   await shortfall.setPoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -194,6 +200,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   );
 
   // Setup Proxies

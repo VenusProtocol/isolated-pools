@@ -8,6 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
 
   const { deployer } = await getNamedAccounts();
+  const accessControlManager = await ethers.getContract("AccessControlManager");
 
   const vBep20Factory: DeployResult = await deploy("VTokenProxyFactory", {
     from: deployer,
@@ -49,6 +50,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           shortFall.address,
           riskFund.address,
           protocolShareReserve.address,
+          accessControlManager.address,
         ],
       },
       upgradeIndex: 0,

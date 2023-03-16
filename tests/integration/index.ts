@@ -183,6 +183,7 @@ describe("Positive Cases", () => {
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
         ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });

@@ -22,7 +22,7 @@ import "./PoolRegistryInterface.sol";
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
+contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum InterestRateModels {
@@ -126,6 +126,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
      * @param _whitePaperFactory white paper factory address.
      * @param riskFund_ risk fund address.
      * @param protocolShareReserve_ protocol's shares reserve address.
+     * @param accessControlManager_ AccessControlManager contract address.
      */
     function initialize(
         VTokenProxyFactory _vTokenFactory,
@@ -133,9 +134,11 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         WhitePaperInterestRateModelFactory _whitePaperFactory,
         Shortfall _shortfall,
         address payable riskFund_,
-        address payable protocolShareReserve_
+        address payable protocolShareReserve_,
+        address accessControlManager_
     ) external initializer {
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
 
         vTokenFactory = _vTokenFactory;
         jumpRateFactory = _jumpRateFactory;
@@ -163,15 +166,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
         uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral,
         address priceOracle,
-        uint256 maxLoopsLimit
-    ) external virtual onlyOwner returns (uint256 index, address proxyAddress) {
+        uint256 maxLoopsLimit,
+        address accessControlManager
+    ) external virtual returns (uint256 index, address proxyAddress) {
+        _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
         require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
         require(priceOracle != address(0), "RegistryPool: Invalid PriceOracle address.");
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
-            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit)
+            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit, accessControlManager)
         );
 
         proxyAddress = address(proxy);
@@ -195,7 +200,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      */
-    function addMarket(AddMarketInput memory input) external onlyOwner {
+    function addMarket(AddMarketInput memory input) external {
+        _checkAccessAllowed("addMarket(AddMarketInput)");
         require(input.comptroller != address(0), "RegistryPool: Invalid comptroller address");
         require(input.asset != address(0), "RegistryPool: Invalid asset address");
 
@@ -214,7 +220,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
                     input.multiplierPerYear,
                     input.jumpMultiplierPerYear,
                     input.kink_,
-                    msg.sender
+                    input.accessControlManager
                 )
             );
         } else {
@@ -269,7 +275,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     /**
      * @notice Modify existing Venus pool name.
      */
-    function setPoolName(address comptroller, string calldata name) external onlyOwner {
+    function setPoolName(address comptroller, string calldata name) external {
+        _checkAccessAllowed("setPoolName(address,string)");
         string memory oldName = _poolByComptroller[comptroller].name;
         _poolByComptroller[comptroller].name = name;
         emit PoolNameSet(comptroller, oldName, name);
@@ -278,7 +285,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, PoolRegistryInterface {
     /**
      * @notice Update metadata of an existing pool.
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external onlyOwner {
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external {
+        _checkAccessAllowed("updatePoolMetadata(address,VenusPoolMetaData)");
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
         metadata[comptroller] = _metadata;
         emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);

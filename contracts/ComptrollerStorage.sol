@@ -118,10 +118,6 @@ contract ComptrollerStorage {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable poolRegistry;
 
-    // AccessControlManager, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable accessControl;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -130,14 +126,11 @@ contract ComptrollerStorage {
     uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_, address accessControl_) {
+    constructor(address poolRegistry_) {
         // Note that the contract is upgradeable. We only initialize immutables in the
         // constructor. Use initialize() or reinitializers to set the state variables.
-
         require(poolRegistry_ != address(0), "invalid pool registry address");
-        require(accessControl_ != address(0), "invalid access control address");
 
         poolRegistry = poolRegistry_;
-        accessControl = accessControl_;
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import "./Governance/IAccessControlManager.sol";
 import "./InterestRateModel.sol";
 
 /**
@@ -12,9 +13,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     uint256 private constant BASE = 1e18;
 
     /**
-     * @notice The address of the owner, i.e. the Timelock contract, which can update parameters directly
+     * @notice The address of the AccessControlManager contract
      */
-    address public owner;
+    IAccessControlManager public accessControlManager;
 
     /**
      * @notice The approximate number of blocks per year that is assumed by the interest rate model
@@ -41,6 +42,11 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      */
     uint256 public kink;
 
+    /**
+     * @notice Thrown when the action is prohibited by AccessControlManager
+     */
+    error Unauthorized(address sender, address calledContract, string methodSignature);
+
     event NewInterestParams(
         uint256 baseRatePerBlock,
         uint256 multiplierPerBlock,
@@ -54,20 +60,20 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
-     * @param owner_ The address of the owner, i.e. the Timelock contract (which has the ability to update parameters directly)
+     * @param accessControlManager_ The address of the AccessControlManager contract
      */
     constructor(
         uint256 baseRatePerYear,
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
-        address owner_
+        IAccessControlManager accessControlManager_
     ) {
-        require(owner_ != address(0), "invalid owner address");
+        require(address(accessControlManager_) != address(0), "invalid ACM address");
 
-        owner = owner_;
+        accessControlManager = accessControlManager_;
 
-        updateJumpRateModelInternal(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
+        _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
     }
 
     /**
@@ -83,9 +89,14 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_
     ) external virtual {
-        require(msg.sender == owner, "only the owner may call this function.");
+        string memory signature = "updateJumpRateModel(uint256,uint256,uint256,uint256)";
+        bool isAllowedToCall = accessControlManager.isAllowedToCall(msg.sender, signature);
 
-        updateJumpRateModelInternal(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
+        if (!isAllowedToCall) {
+            revert Unauthorized(msg.sender, address(this), signature);
+        }
+
+        _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
     }
 
     /**
@@ -103,7 +114,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 reserveFactorMantissa
     ) public view virtual override returns (uint256) {
         uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRateInternal(cash, borrows, reserves);
+        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves);
         uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
         return (utilizationRate(cash, borrows, reserves) * rateToPool) / BASE;
     }
@@ -135,7 +146,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */
-    function updateJumpRateModelInternal(
+    function _updateJumpRateModel(
         uint256 baseRatePerYear,
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
@@ -156,7 +167,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param reserves The amount of reserves in the market
      * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
-    function getBorrowRateInternal(
+    function _getBorrowRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves

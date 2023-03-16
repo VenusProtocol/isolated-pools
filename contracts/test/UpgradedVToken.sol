@@ -39,7 +39,7 @@ contract UpgradedVToken is VToken {
         string memory symbol_,
         uint8 decimals_,
         address payable admin_,
-        AccessControlManager accessControlManager_,
+        address accessControlManager_,
         RiskManagementInit memory riskManagement
     ) public reinitializer(2) {
         super._initialize(
