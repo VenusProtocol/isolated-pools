@@ -16,6 +16,7 @@ import "./MaxLoopsLimitHelper.sol";
  */
 contract Comptroller is
     Ownable2StepUpgradeable,
+    AccessControlled,
     ComptrollerStorage,
     ComptrollerInterface,
     ExponentialNoError,
@@ -70,9 +71,6 @@ contract Comptroller is
     /// @notice Thrown when liquidation threshold exceeds the collateral factor
     error InvalidLiquidationThreshold();
 
-    /// @notice Thrown when the action is prohibited by AccessControlManager
-    error Unauthorized(address sender, address calledContract, string methodSignature);
-
     /// @notice Thrown when the action is only available to specific sender, but the real sender was different
     error UnexpectedSender(address expectedSender, address actualSender);
 
@@ -122,19 +120,24 @@ contract Comptroller is
     error BorrowCapExceeded(address market, uint256 cap);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_, address accessControl_) ComptrollerStorage(poolRegistry_, accessControl_) {
+    constructor(address poolRegistry_) ComptrollerStorage(poolRegistry_) {
         _disableInitializers();
     }
 
     /**
      * @param loopLimit Limit for the loops can iterate to avoid the DOS
+     * @param accessControlManager Access control manager contract address
      */
-    function initialize(uint256 loopLimit) external initializer {
+    function initialize(uint256 loopLimit, address accessControlManager) external initializer {
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager);
 
         _setMaxLoopsLimit(loopLimit);
     }
 
+    /**
+     * @notice A marker method that returns true for a valid Comptroller contract
+     */
     function isComptroller() external pure override returns (bool) {
         return _isComptroller;
     }
@@ -712,7 +715,8 @@ contract Comptroller is
      * @custom:event Emits NewCloseFactor on success
      * @custom:access Only Governance
      */
-    function setCloseFactor(uint256 newCloseFactorMantissa) external onlyOwner {
+    function setCloseFactor(uint256 newCloseFactorMantissa) external {
+        _checkAccessAllowed("setCloseFactor(uint256)");
         require(closeFactorMaxMantissa >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
         require(closeFactorMinMantissa <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
@@ -1424,16 +1428,6 @@ contract Comptroller is
             revert SnapshotError(address(vToken), user);
         }
         return (vTokenBalance, borrowBalance, exchangeRateMantissa);
-    }
-
-    /// @notice Reverts if the call is not allowed by AccessControlManager
-    /// @param signature Method signature
-    function _checkAccessAllowed(string memory signature) internal view {
-        bool isAllowedToCall = AccessControlManager(accessControl).isAllowedToCall(msg.sender, signature);
-
-        if (!isAllowedToCall) {
-            revert Unauthorized(msg.sender, address(this), signature);
-        }
     }
 
     /// @notice Reverts if the call is not from expectedSender

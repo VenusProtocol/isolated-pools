@@ -31,6 +31,7 @@ let someone: SignerWithAddress;
 let bidder1: SignerWithAddress;
 let bidder2: SignerWithAddress;
 let shortfall: MockContract<Shortfall>;
+let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakeRiskFund: FakeContract<IRiskFund>;
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
@@ -38,7 +39,6 @@ let mockWBTC: MockToken;
 let vDAI: MockContract<VToken>;
 let vWBTC: MockContract<VToken>;
 let comptroller: FakeContract<Comptroller>;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
 let fakePriceOracle: FakeContract<PriceOracle>;
 
 let riskFundBalance = "10000";
@@ -53,6 +53,8 @@ async function shortfallFixture() {
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
 
+  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  fakeAccessControlManager.isAllowedToCall.returns(true);
   fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const Shortfall = await smock.mock<Shortfall__factory>("Shortfall");
@@ -60,6 +62,7 @@ async function shortfallFixture() {
     mockBUSD.address,
     fakeRiskFund.address,
     parseUnits(minimumPoolBadDebt, "18"),
+    fakeAccessControlManager.address,
   ]);
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
@@ -77,11 +80,8 @@ async function shortfallFixture() {
   mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
   await mockWBTC.faucet(convertToUnit(1000000000, 8));
 
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
-
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");
-  comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  comptroller = await Comptroller.deploy(poolRegistry.address);
   poolAddress = comptroller.address;
 
   poolRegistry.getPoolByComptroller.returns({
@@ -147,6 +147,7 @@ async function shortfallFixture() {
 describe("Shortfall: Tests", async function () {
   async function setup() {
     await loadFixture(shortfallFixture);
+    fakeAccessControlManager.isAllowedToCall.returns(true);
   }
 
   describe("setters", async function () {
@@ -154,7 +155,7 @@ describe("Shortfall: Tests", async function () {
 
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.rejectedWith("invalid address");
+        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
       });
 
       it("fails if called by a non-owner", async function () {
@@ -171,7 +172,7 @@ describe("Shortfall: Tests", async function () {
 
     describe("updateMinimumPoolBadDebt", async function () {
       it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.rejectedWith(
+        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -192,6 +193,12 @@ describe("Shortfall: Tests", async function () {
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
+
+    it("startAuction fails if ACM does not allow the call", async function () {
+      fakeAccessControlManager.isAllowedToCall.returns(false);
+      await expect(shortfall.startAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
+      fakeAccessControlManager.isAllowedToCall.returns(true);
+    });
 
     it("Should have debt and reserve", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
@@ -468,6 +475,11 @@ describe("Shortfall: Tests", async function () {
 
   describe("Restart Auction", async function () {
     beforeEach(setup);
+
+    it("fails if ACM does not allow the call", async function () {
+      fakeAccessControlManager.isAllowedToCall.returns(false);
+      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
+    });
 
     it("Can't restart auction early ", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));

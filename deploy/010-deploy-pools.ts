@@ -22,7 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl", {
     contract: "Comptroller",
     from: deployer,
-    args: [poolRegistry.address, accessControlManager.address],
+    args: [poolRegistry.address],
     log: true,
     autoMine: true,
   });
@@ -69,6 +69,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         pool.minLiquidatableCollateral,
         priceOracle.address,
         maxLoopsLimit,
+        accessControlManager.address,
       );
       await tx.wait();
       pools = await poolRegistry.callStatic.getAllPools();
@@ -110,7 +111,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         // Make sure that deployer has at least `initialSupply` balance of the token
       }
 
-      console.log("Approving Poolregistry for: " + initialSupply);
+      console.log("Approving PoolRegistry for: " + initialSupply);
       tx = await tokenContract.approve(poolRegistry.address, initialSupply);
       await tx.wait(1);
 

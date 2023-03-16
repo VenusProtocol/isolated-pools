@@ -60,6 +60,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
+    "setCloseFactor(uint256)",
+    poolRegistry.address,
+  );
+  await tx.wait();
+  console.log("DEFAULT_ADMIN | PoolRegistry       | setCloseFactor(uint256)");
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
     "setMinLiquidatableCollateral(uint256)",
     poolRegistry.address,
   );
@@ -88,6 +96,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   await tx.wait();
   console.log("DEFAULT_ADMIN | Deployer           | swapPoolsAssets(address[],uint256[])");
+
+  tx = await accessControlManager.giveCallPermission(
+    poolRegistry.address,
+    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    deployer,
+  );
+  await tx.wait();
+  console.log(
+    "PoolRegistry  | Deployer           | createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+  );
+
+  tx = await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", deployer);
+  await tx.wait();
+  console.log("PoolRegistry  | Deployer           | addMarket(AddMarketInput)");
+
+  tx = await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+    deployer,
+  );
+  await tx.wait();
+  console.log("DEFAULT_ADMIN | Deployer           | setRewardTokenSpeeds(address[],uint256[],uint256[])");
+
   console.log("--------------------------------------------------");
   console.log("Access Control setup ended successfully");
 };

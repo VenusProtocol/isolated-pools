@@ -28,13 +28,13 @@ describe("Access Control", () => {
     accessControlManager = await accessControlFactory.deploy();
 
     comptrollerFactory = await smock.mock<Comptroller__factory>("Comptroller");
-    comptroller = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit], {
-      constructorArgs: [await signers[0].getAddress(), accessControlManager.address],
-      initializer: "initialize(uint256)",
+    comptroller = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit, accessControlManager.address], {
+      constructorArgs: [await signers[0].getAddress()],
+      initializer: "initialize(uint256,address)",
     });
-    comptroller2 = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit], {
-      constructorArgs: [await signers[0].getAddress(), accessControlManager.address],
-      initializer: "initialize(uint256)",
+    comptroller2 = await upgrades.deployProxy(comptrollerFactory, [maxLoopsLimit, accessControlManager.address], {
+      constructorArgs: [await signers[0].getAddress()],
+      initializer: "initialize(uint256,address)",
     });
     await accessControlManager.deployed();
   });

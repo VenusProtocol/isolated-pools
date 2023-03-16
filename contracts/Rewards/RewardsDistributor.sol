@@ -7,8 +7,9 @@ import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
 import "../MaxLoopsLimitHelper.sol";
+import "../Governance/AccessControlled.sol";
 
-contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, MaxLoopsLimitHelper {
+contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlled, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct RewardToken {
@@ -108,15 +109,17 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, MaxL
      * @dev Initializes the deployer to owner.
      */
     function initialize(
-        Comptroller _comptroller,
-        IERC20Upgradeable _rewardToken,
-        uint256 _loopsLimit
+        Comptroller comptroller_,
+        IERC20Upgradeable rewardToken_,
+        uint256 loopsLimit_,
+        address accessControlManager_
     ) external initializer {
-        comptroller = _comptroller;
-        rewardToken = _rewardToken;
+        comptroller = comptroller_;
+        rewardToken = rewardToken_;
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
 
-        _setMaxLoopsLimit(_loopsLimit);
+        _setMaxLoopsLimit(loopsLimit_);
     }
 
     function initializeMarket(address vToken) external onlyComptroller {
@@ -195,7 +198,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, MaxL
         VToken[] memory vTokens,
         uint256[] memory supplySpeeds,
         uint256[] memory borrowSpeeds
-    ) external onlyOwner {
+    ) external {
+        _checkAccessAllowed("setRewardTokenSpeeds(address[],uint256[],uint256[])");
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,

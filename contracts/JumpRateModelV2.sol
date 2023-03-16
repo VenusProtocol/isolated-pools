@@ -14,8 +14,8 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
-        address owner_
-    ) BaseJumpRateModelV2(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, owner_) {}
+        IAccessControlManager accessControlManager_
+    ) BaseJumpRateModelV2(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManager_) {}
 
     /**
      * @notice Calculates the current borrow rate per block
@@ -29,6 +29,6 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
         uint256 borrows,
         uint256 reserves
     ) external view override returns (uint256) {
-        return getBorrowRateInternal(cash, borrows, reserves);
+        return _getBorrowRate(cash, borrows, reserves);
     }
 }

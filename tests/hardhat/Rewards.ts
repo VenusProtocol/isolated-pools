@@ -1,5 +1,6 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -23,6 +24,7 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 
+let root: SignerWithAddress;
 let poolRegistry: MockContract<PoolRegistry>;
 let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
@@ -41,7 +43,8 @@ let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
 
 async function rewardsFixture() {
-  const [, proxyAdmin] = await ethers.getSigners();
+  let proxyAdmin: SignerWithAddress;
+  [root, proxyAdmin] = await ethers.getSigners();
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -58,6 +61,9 @@ async function rewardsFixture() {
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const shortfall = await smock.fake<Shortfall>("Shortfall");
 
+  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+  fakeAccessControlManager.isAllowedToCall.returns(true);
+
   const PoolRegistry = await smock.mock<PoolRegistry__factory>("PoolRegistry");
   poolRegistry = await upgrades.deployProxy(PoolRegistry, [
     vTokenFactory.address,
@@ -66,13 +72,11 @@ async function rewardsFixture() {
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
+    fakeAccessControlManager.address,
   ]);
 
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
-
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -128,6 +132,7 @@ async function rewardsFixture() {
     _minLiquidatableCollateral,
     fakePriceOracle.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   );
 
   // Get all pools list.
@@ -211,16 +216,18 @@ async function rewardsFixture() {
 
   // Configure rewards for pool
   const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-  rewardsDistributor = rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
+  rewardsDistributor = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     xvs.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   ]);
 
   const rewardsDistributor2 = await upgrades.deployProxy(RewardsDistributor, [
     comptrollerProxy.address,
     mockDAI.address,
     maxLoopsLimit,
+    fakeAccessControlManager.address,
   ]);
 
   const initialXvs = convertToUnit(1000000, 18);
@@ -229,6 +236,8 @@ async function rewardsFixture() {
 
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor.address);
   await comptrollerProxy.addRewardsDistributor(rewardsDistributor2.address);
+
+  fakeAccessControlManager.isAllowedToCall.returns(true);
 
   await rewardsDistributor.setRewardTokenSpeeds(
     [vWBTC.address, vDAI.address],
@@ -249,6 +258,21 @@ describe("Rewards: Tests", async function () {
    */
   beforeEach(async function () {
     await rewardsFixture();
+    fakeAccessControlManager.isAllowedToCall.reset();
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+  });
+
+  it("Reverts if setting the speed is prohibited by ACM", async () => {
+    fakeAccessControlManager.isAllowedToCall
+      .whenCalledWith(root.address, "setRewardTokenSpeeds(address[],uint256[],uint256[])")
+      .returns(false);
+    await expect(
+      rewardsDistributor.setRewardTokenSpeeds(
+        [vWBTC.address, vDAI.address],
+        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+      ),
+    ).to.be.revertedWithCustomError(rewardsDistributor, "Unauthorized");
   });
 
   it("Should have correct btc balance", async function () {
@@ -293,6 +317,7 @@ describe("Rewards: Tests", async function () {
       comptrollerProxy.address,
       xvs.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
@@ -306,6 +331,7 @@ describe("Rewards: Tests", async function () {
       comptrollerProxy.address,
       mockWBTC.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     ]);
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))

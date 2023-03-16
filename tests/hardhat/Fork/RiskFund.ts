@@ -166,6 +166,7 @@ const riskFundFixture = async (): Promise<void> => {
     shortfall.address,
     riskFund.address,
     protocolShareReserve.address,
+    accessControlManager.address,
   ]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
@@ -207,6 +208,22 @@ const riskFundFixture = async (): Promise<void> => {
   );
 
   await accessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setCloseFactor(uint256)",
+    poolRegistry.address,
+  );
+
+  await accessControlManager.giveCallPermission(
+    poolRegistry.address,
+    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    admin.address,
+  );
+
+  await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", admin.address);
+
+  await accessControlManager.giveCallPermission(riskFund.address, "setMinAmountToConvert(uint256)", admin.address);
+
+  await accessControlManager.giveCallPermission(
     riskFund.address,
     "swapPoolsAssets(address[],uint256[])",
     admin.address,
@@ -215,7 +232,7 @@ const riskFundFixture = async (): Promise<void> => {
   await shortfall.connect(shortfall.wallet).setPoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address, accessControlManager.address);
+  const comptroller = await Comptroller.deploy(poolRegistry.address);
   await comptroller.deployed();
 
   const VTokenContract = await ethers.getContractFactory("VToken");
@@ -255,6 +272,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Registering the second pool
@@ -266,6 +284,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Registering the third pool
@@ -277,6 +296,7 @@ const riskFundFixture = async (): Promise<void> => {
     _minLiquidatableCollateral,
     priceOracle.address,
     maxLoopsLimit,
+    accessControlManager.address,
   );
 
   // Setup Proxies
@@ -307,7 +327,7 @@ const riskFundFixture = async (): Promise<void> => {
   await USDC.faucet(initialSupply);
   await USDC.approve(poolRegistry.address, initialSupply);
 
-  // Deploy CTokens
+  // Deploy VTokens
   await poolRegistry.addMarket({
     comptroller: comptroller1Proxy.address,
     asset: USDT.address,
@@ -499,13 +519,13 @@ describe("Risk Fund: Tests", function () {
   describe("Test all setters", async function () {
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: Pool registry address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -521,13 +541,13 @@ describe("Risk Fund: Tests", function () {
 
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
-        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: Shortfall contract address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setShortfallContractAddress(someNonzeroAddress)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setShortfallContractAddress(someNonzeroAddress)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -544,13 +564,13 @@ describe("Risk Fund: Tests", function () {
 
     describe("setPancakeSwapRouter", async function () {
       it("Reverts on invalid PancakeSwap router contract address", async function () {
-        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.rejectedWith(
+        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWith(
           "Risk Fund: PancakeSwap address invalid",
         );
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.rejectedWith(
+        await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.revertedWith(
           "Ownable: caller is not the owner",
         );
       });
@@ -567,19 +587,23 @@ describe("Risk Fund: Tests", function () {
       it("fails if called with incorrect arguments", async function () {
         await expect(
           riskFund.swapPoolsAssets([cUSDT.address, cUSDC.address], [convertToUnit(10, 18)]),
-        ).to.be.rejectedWith("Risk fund: markets and amountsOutMin are unequal lengths");
+        ).to.be.revertedWith("Risk fund: markets and amountsOutMin are unequal lengths");
       });
     });
 
     describe("setMinAmountToConvert", async function () {
       it("reverts on invalid min amount to convert", async function () {
-        await expect(riskFund.setMinAmountToConvert(0)).to.be.rejectedWith("Risk Fund: Invalid min amount to convert");
+        await expect(riskFund.setMinAmountToConvert(0)).to.be.revertedWith("Risk Fund: Invalid min amount to convert");
       });
 
-      it("fails if called by a non-owner", async function () {
-        await expect(riskFund.connect(usdcUser).setMinAmountToConvert(1)).to.be.rejectedWith(
-          "Ownable: caller is not the owner",
+      it("fails if the call is not allowed by ACM", async function () {
+        const [admin] = await ethers.getSigners();
+        await accessControlManager.revokeCallPermission(
+          riskFund.address,
+          "setMinAmountToConvert(uint256)",
+          admin.address,
         );
+        await expect(riskFund.setMinAmountToConvert(1)).to.be.revertedWithCustomError(riskFund, "Unauthorized");
       });
 
       it("emits MinAmountToConvertUpdated event", async function () {
@@ -599,9 +623,7 @@ describe("Risk Fund: Tests", function () {
         admin.address,
       );
       // Fails
-      await expect(riskFund.swapPoolsAssets([], [])).to.be.rejectedWith(
-        "Risk fund: Not authorized to swap pool assets.",
-      );
+      await expect(riskFund.swapPoolsAssets([], [])).to.be.revertedWithCustomError(riskFund, "Unauthorized");
 
       // Reset
       await accessControlManager.giveCallPermission(
@@ -733,14 +755,14 @@ describe("Risk Fund: Tests", function () {
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
         riskFund.connect(busdUser).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
-      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
+      ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       const auctionContract = shortfall.address;
       await riskFund.setShortfallContractAddress(auctionContract);
 
       await expect(
         riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
-      ).to.be.rejectedWith("Risk Fund: Insufficient pool reserve.");
+      ).to.be.revertedWith("Risk Fund: Insufficient pool reserve.");
     });
 
     it("Transfer funds to auction contact", async function () {
@@ -824,7 +846,7 @@ describe("Risk Fund: Tests", function () {
 
       await expect(
         riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
-      ).to.be.rejectedWith("Risk fund: Only callable by Shortfall contract");
+      ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       // reset
       await accessControlManager.giveCallPermission(

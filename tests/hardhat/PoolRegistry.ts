@@ -3,6 +3,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumberish, constants } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
@@ -123,6 +124,9 @@ describe("PoolRegistry: Tests", function () {
     const riskFund = await smock.fake<RiskFund>("RiskFund");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
+    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+    fakeAccessControlManager.isAllowedToCall.returns(true);
+
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
     poolRegistry = await upgrades.deployProxy(PoolRegistry, [
       vTokenFactory.address,
@@ -131,13 +135,11 @@ describe("PoolRegistry: Tests", function () {
       shortfall.address,
       riskFund.address,
       protocolShareReserve.address,
+      fakeAccessControlManager.address,
     ]);
 
-    fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-    fakeAccessControlManager.isAllowedToCall.returns(true);
-
     const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptroller = await Comptroller.deploy(poolRegistry.address, fakeAccessControlManager.address);
+    const comptroller = await Comptroller.deploy(poolRegistry.address);
     await comptroller.deployed();
 
     const VTokenContract = await ethers.getContractFactory("VToken");
@@ -184,6 +186,7 @@ describe("PoolRegistry: Tests", function () {
       _minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Registering the second pool
@@ -195,6 +198,7 @@ describe("PoolRegistry: Tests", function () {
       _minLiquidatableCollateral,
       priceOracle.address,
       maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Setup Proxies
@@ -272,14 +276,20 @@ describe("PoolRegistry: Tests", function () {
 
   beforeEach(async () => {
     await loadFixture(poolRegistryFixture);
+    fakeAccessControlManager.isAllowedToCall.reset();
+    fakeAccessControlManager.isAllowedToCall.returns(true);
   });
 
   describe("setPoolName", async () => {
     const newName = "My fancy pool";
 
-    it("reverts if not called by owner", async () => {
-      await expect(poolRegistry.connect(user).setPoolName(comptroller1Proxy.address, newName)).to.be.revertedWith(
-        "Ownable: caller is not the owner",
+    it("reverts if ACM denies the access", async () => {
+      fakeAccessControlManager.isAllowedToCall
+        .whenCalledWith(owner.address, "setPoolName(address,string)")
+        .returns(false);
+      await expect(poolRegistry.setPoolName(comptroller1Proxy.address, newName)).to.be.revertedWithCustomError(
+        poolRegistry,
+        "Unauthorized",
       );
     });
 
@@ -297,9 +307,13 @@ describe("PoolRegistry: Tests", function () {
   });
 
   describe("addMarket", async () => {
-    it("reverts if called by a non-owner", async () => {
-      await expect(poolRegistry.connect(user).addMarket(await withDefaultMarketParameters({}))).to.be.rejectedWith(
-        "Ownable: caller is not the owner",
+    it("reverts if ACM denies the access", async () => {
+      fakeAccessControlManager.isAllowedToCall
+        .whenCalledWith(owner.address, "addMarket(AddMarketInput)")
+        .returns(false);
+      await expect(poolRegistry.addMarket(await withDefaultMarketParameters({}))).to.be.revertedWithCustomError(
+        poolRegistry,
+        "Unauthorized",
       );
     });
 
@@ -417,11 +431,13 @@ describe("PoolRegistry: Tests", function () {
       description,
     };
 
-    it("reverts if called by a non-owner", async () => {
-      const [, user] = await ethers.getSigners();
+    it("reverts if ACM denies the access", async () => {
+      fakeAccessControlManager.isAllowedToCall
+        .whenCalledWith(owner.address, "updatePoolMetadata(address,VenusPoolMetaData)")
+        .returns(false);
       await expect(
-        poolRegistry.connect(user).updatePoolMetadata(comptroller1Proxy.address, newMetadata),
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+        poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata),
+      ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
     });
 
     it("sets new pool metadata", async () => {
@@ -439,6 +455,25 @@ describe("PoolRegistry: Tests", function () {
       await expect(tx)
         .to.emit(poolRegistry, "PoolMetadataUpdated")
         .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
+    });
+  });
+
+  describe("createRegistryPool", async () => {
+    it("reverts if ACM denies the access", async () => {
+      const createRegistryPool = "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)";
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, createRegistryPool).returns(false);
+      await expect(
+        poolRegistry.createRegistryPool(
+          "Pool 3",
+          comptrollerBeacon.address,
+          parseUnits("0.5", 18),
+          parseUnits("1.1", 18),
+          parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ),
+      ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
     });
   });
 });

@@ -10,19 +10,25 @@ import "../IPancakeswapV2Router.sol";
 import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
-
+import "../Governance/AccessControlled.sol";
 import "../MaxLoopsLimitHelper.sol";
 
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
+contract RiskFund is
+    Ownable2StepUpgradeable,
+    AccessControlled,
+    ExponentialNoError,
+    ReserveHelpers,
+    MaxLoopsLimitHelper,
+    IRiskFund
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
     address private convertibleBaseAsset;
-    address private accessControl;
     address private shortfall;
 
     // Store base asset's reserve for specific pool
@@ -58,32 +64,32 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _pancakeSwapRouter Address of the PancakeSwap router
-     * @param _minAmountToConvert Minimum amount assets must be worth to convert into base asset
-     * @param _convertibleBaseAsset Address of the base asset
-     * @param _accessControl Address of the access control contract.
+     * @param pancakeSwapRouter_ Address of the PancakeSwap router
+     * @param minAmountToConvert_ Minimum amount assets must be worth to convert into base asset
+     * @param convertibleBaseAsset_ Address of the base asset
+     * @param accessControlManager_ Address of the access control contract
+     * @param loopsLimit_ Limit for the loops in the contract to avoid DOS
      */
     function initialize(
-        address _pancakeSwapRouter,
-        uint256 _minAmountToConvert,
-        address _convertibleBaseAsset,
-        address _accessControl,
-        uint256 _loopsLimit
+        address pancakeSwapRouter_,
+        uint256 minAmountToConvert_,
+        address convertibleBaseAsset_,
+        address accessControlManager_,
+        uint256 loopsLimit_
     ) external initializer {
-        require(_pancakeSwapRouter != address(0), "Risk Fund: Pancake swap address invalid");
-        require(_convertibleBaseAsset != address(0), "Risk Fund: Base asset address invalid");
-        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
-        require(_accessControl != address(0), "Risk Fund: Access control address invalid");
-        require(_loopsLimit > 0, "Risk Fund: Loops limit can not be zero");
+        require(pancakeSwapRouter_ != address(0), "Risk Fund: Pancake swap address invalid");
+        require(convertibleBaseAsset_ != address(0), "Risk Fund: Base asset address invalid");
+        require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
+        require(loopsLimit_ > 0, "Risk Fund: Loops limit can not be zero");
 
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
 
-        pancakeSwapRouter = _pancakeSwapRouter;
-        minAmountToConvert = _minAmountToConvert;
-        convertibleBaseAsset = _convertibleBaseAsset;
-        accessControl = _accessControl;
+        pancakeSwapRouter = pancakeSwapRouter_;
+        minAmountToConvert = minAmountToConvert_;
+        convertibleBaseAsset = convertibleBaseAsset_;
 
-        _setMaxLoopsLimit(_loopsLimit);
+        _setMaxLoopsLimit(loopsLimit_);
     }
 
     /**
@@ -99,40 +105,41 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
 
     /**
      * @dev Shortfall contract address setter
-     * @param _shortfallContractAddress Address of the auction contract.
+     * @param shortfallContractAddress_ Address of the auction contract.
      */
-    function setShortfallContractAddress(address _shortfallContractAddress) external onlyOwner {
-        require(_shortfallContractAddress != address(0), "Risk Fund: Shortfall contract address invalid");
+    function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
+        require(shortfallContractAddress_ != address(0), "Risk Fund: Shortfall contract address invalid");
         require(
-            IShortfall(_shortfallContractAddress).convertibleBaseAsset() == convertibleBaseAsset,
+            IShortfall(shortfallContractAddress_).convertibleBaseAsset() == convertibleBaseAsset,
             "Risk Fund: Base asset doesn't match"
         );
 
         address oldShortfallContractAddress = shortfall;
-        shortfall = _shortfallContractAddress;
-        emit ShortfallContractUpdated(oldShortfallContractAddress, _shortfallContractAddress);
+        shortfall = shortfallContractAddress_;
+        emit ShortfallContractUpdated(oldShortfallContractAddress, shortfallContractAddress_);
     }
 
     /**
      * @dev PancakeSwap router address setter
-     * @param _pancakeSwapRouter Address of the PancakeSwap router.
+     * @param pancakeSwapRouter_ Address of the PancakeSwap router.
      */
-    function setPancakeSwapRouter(address _pancakeSwapRouter) external onlyOwner {
-        require(_pancakeSwapRouter != address(0), "Risk Fund: PancakeSwap address invalid");
+    function setPancakeSwapRouter(address pancakeSwapRouter_) external onlyOwner {
+        require(pancakeSwapRouter_ != address(0), "Risk Fund: PancakeSwap address invalid");
         address oldPancakeSwapRouter = pancakeSwapRouter;
-        pancakeSwapRouter = _pancakeSwapRouter;
-        emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, _pancakeSwapRouter);
+        pancakeSwapRouter = pancakeSwapRouter_;
+        emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, pancakeSwapRouter_);
     }
 
     /**
      * @dev Min amount to convert setter
-     * @param _minAmountToConvert Min amount to convert.
+     * @param minAmountToConvert_ Min amount to convert.
      */
-    function setMinAmountToConvert(uint256 _minAmountToConvert) external onlyOwner {
-        require(_minAmountToConvert > 0, "Risk Fund: Invalid min amount to convert");
+    function setMinAmountToConvert(uint256 minAmountToConvert_) external {
+        _checkAccessAllowed("setMinAmountToConvert(uint256)");
+        require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
         uint256 oldMinAmountToConvert = minAmountToConvert;
-        minAmountToConvert = _minAmountToConvert;
-        emit MinAmountToConvertUpdated(oldMinAmountToConvert, _minAmountToConvert);
+        minAmountToConvert = minAmountToConvert_;
+        emit MinAmountToConvertUpdated(oldMinAmountToConvert, minAmountToConvert_);
     }
 
     /**
@@ -146,11 +153,7 @@ contract RiskFund is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers
         override
         returns (uint256)
     {
-        bool canSwapPoolsAsset = AccessControlManager(accessControl).isAllowedToCall(
-            msg.sender,
-            "swapPoolsAssets(address[],uint256[])"
-        );
-        require(canSwapPoolsAsset, "Risk fund: Not authorized to swap pool assets.");
+        _checkAccessAllowed("swapPoolsAssets(address[],uint256[])");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
         require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
 

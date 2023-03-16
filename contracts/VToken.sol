@@ -9,14 +9,14 @@ import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
-import "./Governance/AccessControlManager.sol";
+import "./Governance/AccessControlled.sol";
 import "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title Venus VToken Contract
  * @author Venus Dev Team
  */
-contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError, TokenErrorReporter {
+contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, ExponentialNoError, TokenErrorReporter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /*** Reentrancy Guard ***/
@@ -59,12 +59,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory symbol_,
         uint8 decimals_,
         address admin_,
-        AccessControlManager accessControlManager_,
+        address accessControlManager_,
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
     ) external initializer {
         require(admin_ != address(0), "invalid admin address");
-        require(address(accessControlManager_) != address(0), "invalid access control manager address");
         require(riskManagement.shortfall != address(0), "invalid shortfall address");
         require(riskManagement.riskFund != address(0), "invalid riskfund address");
         require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
@@ -301,20 +300,12 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev must be less than liquidation incentive - 1
      * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
      * @custom:event Emits NewProtocolSeizeShare event on success
-     * @custom:error SetProtocolSeizeShareUnauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
      * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
      * @custom:access Controlled by AccessControlManager
      */
     function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setProtocolSeizeShare(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetProtocolSeizeShareUnauthorized();
-        }
-
+        _checkAccessAllowed("setProtocolSeizeShare(uint256)");
         uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
         if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
             revert ProtocolSeizeShareTooBig();
@@ -329,36 +320,15 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
      * @dev Admin function to accrue interest and set a new reserve factor
      * @custom:event Emits NewReserveFactor event; may emit AccrueInterest
-     * @custom:error SetReserveFactorAdminCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
      * @custom:error SetReserveFactorBoundsCheck is thrown when the new reserve factor is too high
      * @custom:access Controlled by AccessControlManager
      */
     function setReserveFactor(uint256 newReserveFactorMantissa) external override nonReentrant {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setReserveFactor(uint256)"
-        );
-        // Check caller is allowed to call this function
-        if (!canCallFunction) {
-            revert SetReserveFactorAdminCheck();
-        }
+        _checkAccessAllowed("setReserveFactor(uint256)");
 
         accrueInterest();
         _setReserveFactorFresh(newReserveFactorMantissa);
-    }
-
-    /**
-     * @notice Sets the address of AccessControlManager
-     * @dev Admin function to set address of AccessControlManager
-     * @param newAccessControlManager The new address of the AccessControlManager
-     * @custom:event Emits NewAccessControlManager event
-     * @custom:access Only Governance
-     */
-    function setAccessControlAddress(AccessControlManager newAccessControlManager) external {
-        require(msg.sender == owner(), "only admin can set ACL address");
-        require(address(newAccessControlManager) != address(0), "invalid acess control manager address");
-
-        _setAccessControlAddress(newAccessControlManager);
     }
 
     /**
@@ -390,19 +360,11 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
      * @dev Admin function to accrue interest and update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
      * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error SetInterestRateModelOwnerCheck is thrown when the call is not authorized by AccessControlManager
+     * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
      * @custom:access Controlled by AccessControlManager
      */
     function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
-        bool canCallFunction = AccessControlManager(accessControlManager).isAllowedToCall(
-            msg.sender,
-            "setInterestRateModel(address)"
-        );
-
-        // Check if caller has call permissions
-        if (!canCallFunction) {
-            revert SetInterestRateModelOwnerCheck();
-        }
+        _checkAccessAllowed("setInterestRateModel(address)");
 
         accrueInterest();
         _setInterestRateModelFresh(newInterestRateModel);
@@ -1277,17 +1239,6 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
     }
 
-    /**
-     * @notice Sets the address of AccessControlManager
-     * @dev Internal function to set address of AccessControlManager
-     * @param newAccessControlManager The new address of the AccessControlManager
-     */
-    function _setAccessControlAddress(AccessControlManager newAccessControlManager) internal {
-        AccessControlManager oldAccessControlManager = accessControlManager;
-        accessControlManager = newAccessControlManager;
-        emit NewAccessControlManager(oldAccessControlManager, accessControlManager);
-    }
-
     /*** Safe Token ***/
 
     /**
@@ -1382,14 +1333,13 @@ contract VToken is Ownable2StepUpgradeable, VTokenInterface, ExponentialNoError,
         string memory symbol_,
         uint8 decimals_,
         address admin_,
-        AccessControlManager accessControlManager_,
+        address accessControlManager_,
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
     ) internal onlyInitializing {
         __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-
-        _setAccessControlAddress(accessControlManager_);
 
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
