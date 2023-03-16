@@ -49,7 +49,7 @@ export async function makeVToken({
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const reserveFactorMantissa = convertToUnit(0.3, 18);
   const initializer =
-    "initializeHarness(address,address,address,uint256,string,string,uint8,address,address,(address,address,address),uint256)";
+    "initialize(address,address,address,uint256,string,string,uint8,address,address,(address,address,address),uint256)";
   const vToken = await upgrades.deployProxy(
     VToken,
     [
