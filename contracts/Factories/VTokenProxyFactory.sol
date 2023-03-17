@@ -20,6 +20,7 @@ contract VTokenProxyFactory {
         AccessControlManager accessControlManager_;
         VTokenInterface.RiskManagementInit riskManagement;
         address beaconAddress;
+        uint256 reserveFactor;
     }
 
     event VTokenProxyDeployed(VTokenArgs args);
@@ -38,7 +39,8 @@ contract VTokenProxyFactory {
                 input.decimals_,
                 input.admin_,
                 input.accessControlManager_,
-                input.riskManagement
+                input.riskManagement,
+                input.reserveFactor
             )
         );
 

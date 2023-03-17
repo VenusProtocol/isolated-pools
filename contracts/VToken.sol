@@ -60,7 +60,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint8 decimals_,
         address admin_,
         address accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        uint256 reserveFactorMantissa_
     ) external initializer {
         require(admin_ != address(0), "invalid admin address");
         require(riskManagement.shortfall != address(0), "invalid shortfall address");
@@ -78,7 +79,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
             decimals_,
             admin_,
             accessControlManager_,
-            riskManagement
+            riskManagement,
+            reserveFactorMantissa_
         );
     }
 
@@ -1320,6 +1322,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      * @param name_ EIP-20 name of this token
      * @param symbol_ EIP-20 symbol of this token
      * @param decimals_ EIP-20 decimal precision of this token
+     * @param reserveFactorMantissa_ Reserve factor mantissa (between 0 and 1e18)
      */
     function _initialize(
         address underlying_,
@@ -1331,7 +1334,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint8 decimals_,
         address admin_,
         address accessControlManager_,
-        RiskManagementInit memory riskManagement
+        RiskManagementInit memory riskManagement,
+        uint256 reserveFactorMantissa_
     ) internal onlyInitializing {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
@@ -1349,6 +1353,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         // Set the interest rate model (depends on block number / borrow index)
         _setInterestRateModelFresh(interestRateModel_);
+
+        _setReserveFactorFresh(reserveFactorMantissa_);
 
         name = name_;
         symbol = symbol_;

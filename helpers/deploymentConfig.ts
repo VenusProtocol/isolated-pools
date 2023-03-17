@@ -55,6 +55,7 @@ export type VTokenConfig = {
   kink_: string;
   collateralFactor: string;
   liquidationThreshold: string;
+  reserveFactor: string;
   initialSupply: string;
   supplyCap: string;
   borrowCap: string;
@@ -143,6 +144,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.8, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -158,6 +160,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -195,6 +198,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -210,6 +214,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -309,6 +314,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.8, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -324,6 +330,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -361,6 +368,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
@@ -376,6 +384,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.7, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.7, 18),
+            reserveFactor: "0",
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(10000, 18),
