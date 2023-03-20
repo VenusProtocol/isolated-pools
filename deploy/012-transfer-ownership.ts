@@ -21,8 +21,11 @@ const contracts = {
     "PoolRegistry",
     "RewardsBNXPool 1",
     "RewardsXVSPool 1",
-    "RewardsCAKEPool 2",
+    "RewardsANKRPool 2",
     "RewardsXVSPool 2",
+    "RewardsMBOXPool 2",
+    "RewardsNFTPool 2",
+    "RewardsRACAPool 2",
   ],
 };
 
