@@ -1,7 +1,6 @@
 import { ethers } from "hardhat";
 import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { json } from "hardhat/internal/core/params/argumentTypes";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
