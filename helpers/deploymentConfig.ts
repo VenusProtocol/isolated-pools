@@ -337,8 +337,8 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.7, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap:  convertToUnit(932019,18),
-            borrowCap:  convertToUnit(478980,18)
+            supplyCap: convertToUnit(932019, 18),
+            borrowCap: convertToUnit(478980, 18),
           },
           {
             name: "Venus BTCB",
@@ -351,7 +351,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit(0.6, 18),
             collateralFactor: convertToUnit(0.7, 18),
             liquidationThreshold: convertToUnit(0.8, 18),
-            reserveFactor:  convertToUnit(0.25, 18),
+            reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(1000, 18),
@@ -369,7 +369,7 @@ export const globalConfig: NetworkConfig = {
             markets: ["BNX"],
             supplySpeeds: [convertToUnit(33, 8)],
             borrowSpeeds: [convertToUnit(33, 8)],
-          }
+          },
         ],
       },
       {
@@ -391,8 +391,8 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit(0.8, 18),
             reserveFactor: convertToUnit(0.25, 18),
             initialSupply: convertToUnit(10, 18),
-            supplyCap:  convertToUnit(3000000,18),
-            borrowCap:  convertToUnit(3000000,18),
+            supplyCap: convertToUnit(3000000, 18),
+            borrowCap: convertToUnit(3000000, 18),
           },
           {
             name: "Venus ankrBNB",
@@ -441,7 +441,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(84985800573, 18),
             borrowCap: convertToUnit(24654278679, 18),
-          }, 
+          },
           {
             name: "Venus RACA",
             asset: "RACA",
@@ -495,33 +495,49 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "XVS",
             markets: ["ANKR", "ankrBNB", "MBOX", "NFT", "RACA", "stkBNB", "USDD"],
-            supplySpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-            borrowSpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-           },
-           {
+            supplySpeeds: [
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+            ],
+            borrowSpeeds: [
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+              convertToUnit(23, 8),
+            ],
+          },
+          {
             asset: "ANKR",
             markets: ["ANKR", "ankrBNB"],
             supplySpeeds: [convertToUnit(20, 8), convertToUnit(20, 8)],
             borrowSpeeds: [convertToUnit(20, 8), convertToUnit(20, 8)],
-           },
-           {
+          },
+          {
             asset: "MBOX",
             markets: ["MBOX"],
             supplySpeeds: [convertToUnit(25, 8)],
             borrowSpeeds: [convertToUnit(25, 8)],
-           },
-           {
+          },
+          {
             asset: "NFT",
             markets: ["NFT"],
             supplySpeeds: [convertToUnit(22, 8)],
             borrowSpeeds: [convertToUnit(22, 8)],
-           },
-           {
+          },
+          {
             asset: "RACA",
             markets: ["RACA"],
             supplySpeeds: [convertToUnit(27, 8)],
             borrowSpeeds: [convertToUnit(27, 8)],
-           }
+          },
         ],
       },
     ],
