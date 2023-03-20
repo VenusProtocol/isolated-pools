@@ -14,6 +14,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 };
 
-func.tags = ["PoolLens"];
+func.tags = ["PoolLens", "il"];
 
 export default func;

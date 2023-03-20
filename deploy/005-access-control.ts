@@ -14,6 +14,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 };
 
-func.tags = ["AccessControl"];
+func.tags = ["AccessControl", "il"];
 
 export default func;
