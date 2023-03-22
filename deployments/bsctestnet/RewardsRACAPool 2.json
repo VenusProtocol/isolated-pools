@@ -1,5 +1,5 @@
 {
-  "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+  "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
   "abi": [
     {
       "anonymous": false,
@@ -127,6 +127,22 @@
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "loopsLimit",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "requiredLoops",
+          "type": "uint256"
+        }
+      ],
+      "name": "MaxLoopsLimitExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "sender",
           "type": "address"
@@ -149,6 +165,118 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "contributor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newSpeed",
+          "type": "uint256"
+        }
+      ],
+      "name": "ContributorRewardTokenSpeedUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "contributor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardAccrued",
+          "type": "uint256"
+        }
+      ],
+      "name": "ContributorRewardsUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract VToken",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "borrower",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenDelta",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenTotal",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenBorrowIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "DistributedBorrowerRewardToken",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract VToken",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "supplier",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenDelta",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenTotal",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardTokenSupplyIndex",
+          "type": "uint256"
+        }
+      ],
+      "name": "DistributedSupplierRewardToken",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": false,
           "internalType": "uint8",
           "name": "version",
@@ -162,19 +290,32 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
-          "internalType": "address",
-          "name": "comptroller",
-          "type": "address"
-        },
-        {
           "indexed": false,
           "internalType": "address",
-          "name": "vTokenAddress",
+          "name": "vToken",
           "type": "address"
         }
       ],
-      "name": "MarketAdded",
+      "name": "MarketInitialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "oldMaxLoopsLimit",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newmaxLoopsLimit",
+          "type": "uint256"
+        }
+      ],
+      "name": "MaxLoopsLimitUpdated",
       "type": "event"
     },
     {
@@ -238,69 +379,26 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "address",
-          "name": "comptroller",
+          "name": "vToken",
           "type": "address"
         },
         {
           "components": [
             {
-              "internalType": "enum PoolRegistryInterface.RiskRating",
-              "name": "riskRating",
-              "type": "uint8"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "logoURL",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
+              "internalType": "uint256",
+              "name": "mantissa",
+              "type": "uint256"
             }
           ],
           "indexed": false,
-          "internalType": "struct PoolRegistryInterface.VenusPoolMetaData",
-          "name": "oldMetadata",
-          "type": "tuple"
-        },
-        {
-          "components": [
-            {
-              "internalType": "enum PoolRegistryInterface.RiskRating",
-              "name": "riskRating",
-              "type": "uint8"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "logoURL",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
-            }
-          ],
-          "indexed": false,
-          "internalType": "struct PoolRegistryInterface.VenusPoolMetaData",
-          "name": "newMetadata",
+          "internalType": "struct ExponentialNoError.Exp",
+          "name": "marketBorrowIndex",
           "type": "tuple"
         }
       ],
-      "name": "PoolMetadataUpdated",
+      "name": "RewardTokenBorrowIndexUpdated",
       "type": "event"
     },
     {
@@ -308,24 +406,50 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "comptroller",
+          "internalType": "contract VToken",
+          "name": "vToken",
           "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "oldName",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "newSpeed",
+          "type": "uint256"
+        }
+      ],
+      "name": "RewardTokenBorrowSpeedUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "newName",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
         }
       ],
-      "name": "PoolNameSet",
+      "name": "RewardTokenGranted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        }
+      ],
+      "name": "RewardTokenSupplyIndexUpdated",
       "type": "event"
     },
     {
@@ -333,45 +457,18 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "comptroller",
+          "internalType": "contract VToken",
+          "name": "vToken",
           "type": "address"
         },
         {
-          "components": [
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "comptroller",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "blockPosted",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "timestampPosted",
-              "type": "uint256"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct PoolRegistryInterface.VenusPool",
-          "name": "pool",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "newSpeed",
+          "type": "uint256"
         }
       ],
-      "name": "PoolRegistered",
+      "name": "RewardTokenSupplySpeedUpdated",
       "type": "event"
     },
     {
@@ -397,109 +494,17 @@
     {
       "inputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "comptroller",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "asset",
-              "type": "address"
-            },
-            {
-              "internalType": "uint8",
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "symbol",
-              "type": "string"
-            },
-            {
-              "internalType": "enum PoolRegistry.InterestRateModels",
-              "name": "rateModel",
-              "type": "uint8"
-            },
-            {
-              "internalType": "uint256",
-              "name": "baseRatePerYear",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "multiplierPerYear",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "jumpMultiplierPerYear",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "kink_",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "collateralFactor",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "liquidationThreshold",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "reserveFactor",
-              "type": "uint256"
-            },
-            {
-              "internalType": "contract AccessControlManager",
-              "name": "accessControlManager",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "vTokenProxyAdmin",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "beaconAddress",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "initialSupply",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "supplyCap",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "borrowCap",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct PoolRegistry.AddMarketInput",
-          "name": "input",
-          "type": "tuple"
+          "internalType": "address",
+          "name": "holder",
+          "type": "address"
+        },
+        {
+          "internalType": "contract VToken[]",
+          "name": "vTokens",
+          "type": "address[]"
         }
       ],
-      "name": "addMarket",
+      "name": "claimRewardToken",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -507,97 +512,72 @@
     {
       "inputs": [
         {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
           "internalType": "address",
-          "name": "beaconAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "closeFactor",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "liquidationIncentive",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minLiquidatableCollateral",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "priceOracle",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "maxLoopsLimit",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "accessControlManager",
+          "name": "holder",
           "type": "address"
         }
       ],
-      "name": "createRegistryPool",
-      "outputs": [
+      "name": "claimRewardToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
         {
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
         },
         {
           "internalType": "address",
-          "name": "proxyAddress",
+          "name": "borrower",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "mantissa",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ExponentialNoError.Exp",
+          "name": "marketBorrowIndex",
+          "type": "tuple"
+        }
+      ],
+      "name": "distributeBorrowerRewardToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "supplier",
           "type": "address"
         }
       ],
+      "name": "distributeSupplierRewardToken",
+      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "getAllPools",
+      "name": "getBlockNumber",
       "outputs": [
         {
-          "components": [
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "comptroller",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "blockPosted",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "timestampPosted",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct PoolRegistryInterface.VenusPool[]",
+          "internalType": "uint256",
           "name": "",
-          "type": "tuple[]"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -607,163 +587,36 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "comptroller",
+          "name": "recipient",
           "type": "address"
-        }
-      ],
-      "name": "getPoolByComptroller",
-      "outputs": [
+        },
         {
-          "components": [
-            {
-              "internalType": "string",
-              "name": "name",
-              "type": "string"
-            },
-            {
-              "internalType": "address",
-              "name": "creator",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "comptroller",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "blockPosted",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "timestampPosted",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct PoolRegistryInterface.VenusPool",
-          "name": "",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
         }
       ],
-      "stateMutability": "view",
+      "name": "grantRewardToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "asset",
-          "type": "address"
-        }
-      ],
-      "name": "getPoolsSupportedByAsset",
-      "outputs": [
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "comptroller",
+          "internalType": "contract Comptroller",
+          "name": "comptroller_",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "asset",
-          "type": "address"
-        }
-      ],
-      "name": "getVTokenForAsset",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "comptroller",
-          "type": "address"
-        }
-      ],
-      "name": "getVenusPoolMetadata",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "enum PoolRegistryInterface.RiskRating",
-              "name": "riskRating",
-              "type": "uint8"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "logoURL",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
-            }
-          ],
-          "internalType": "struct PoolRegistryInterface.VenusPoolMetaData",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "contract VTokenProxyFactory",
-          "name": "_vTokenFactory",
+          "internalType": "contract IERC20Upgradeable",
+          "name": "rewardToken_",
           "type": "address"
         },
         {
-          "internalType": "contract JumpRateModelFactory",
-          "name": "_jumpRateFactory",
-          "type": "address"
-        },
-        {
-          "internalType": "contract WhitePaperInterestRateModelFactory",
-          "name": "_whitePaperFactory",
-          "type": "address"
-        },
-        {
-          "internalType": "contract Shortfall",
-          "name": "_shortfall",
-          "type": "address"
-        },
-        {
-          "internalType": "address payable",
-          "name": "riskFund_",
-          "type": "address"
-        },
-        {
-          "internalType": "address payable",
-          "name": "protocolShareReserve_",
-          "type": "address"
+          "internalType": "uint256",
+          "name": "loopsLimit_",
+          "type": "uint256"
         },
         {
           "internalType": "address",
@@ -780,31 +633,42 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        }
+      ],
+      "name": "initializeMarket",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "",
           "type": "address"
         }
       ],
-      "name": "metadata",
+      "name": "lastContributorBlock",
       "outputs": [
         {
-          "internalType": "enum PoolRegistryInterface.RiskRating",
-          "name": "riskRating",
-          "type": "uint8"
-        },
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "maxLoopsLimit",
+      "outputs": [
         {
-          "internalType": "string",
-          "name": "category",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "logoURL",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -844,6 +708,204 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "rewardToken",
+      "outputs": [
+        {
+          "internalType": "contract IERC20Upgradeable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenAccrued",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenBorrowSpeeds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenBorrowState",
+      "outputs": [
+        {
+          "internalType": "uint224",
+          "name": "index",
+          "type": "uint224"
+        },
+        {
+          "internalType": "uint32",
+          "name": "block",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenBorrowerIndex",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenContributorSpeeds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rewardTokenInitialIndex",
+      "outputs": [
+        {
+          "internalType": "uint224",
+          "name": "",
+          "type": "uint224"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenSupplierIndex",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenSupplySpeeds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rewardTokenSupplyState",
+      "outputs": [
+        {
+          "internalType": "uint224",
+          "name": "index",
+          "type": "uint224"
+        },
+        {
+          "internalType": "uint32",
+          "name": "block",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -860,16 +922,52 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "comptroller",
+          "name": "contributor",
           "type": "address"
         },
         {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "rewardTokenSpeed",
+          "type": "uint256"
         }
       ],
-      "name": "setPoolName",
+      "name": "setContributorRewardTokenSpeed",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMaxLoopsLimit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract VToken[]",
+          "name": "vTokens",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "supplySpeeds",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "borrowSpeeds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "setRewardTokenSpeeds",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -891,38 +989,49 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "comptroller",
+          "name": "contributor",
+          "type": "address"
+        }
+      ],
+      "name": "updateContributorRewards",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "vToken",
           "type": "address"
         },
         {
           "components": [
             {
-              "internalType": "enum PoolRegistryInterface.RiskRating",
-              "name": "riskRating",
-              "type": "uint8"
-            },
-            {
-              "internalType": "string",
-              "name": "category",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "logoURL",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "description",
-              "type": "string"
+              "internalType": "uint256",
+              "name": "mantissa",
+              "type": "uint256"
             }
           ],
-          "internalType": "struct PoolRegistryInterface.VenusPoolMetaData",
-          "name": "_metadata",
+          "internalType": "struct ExponentialNoError.Exp",
+          "name": "marketBorrowIndex",
           "type": "tuple"
         }
       ],
-      "name": "updatePoolMetadata",
+      "name": "updateRewardTokenBorrowIndex",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        }
+      ],
+      "name": "updateRewardTokenSupplyIndex",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -949,35 +1058,35 @@
       "type": "constructor"
     }
   ],
-  "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
+  "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
   "receipt": {
     "to": null,
     "from": "0x8BDA9f9E1fEF0DFd404Fef338D9fE4c543d172e1",
-    "contractAddress": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
-    "transactionIndex": 1,
-    "gasUsed": "924206",
-    "logsBloom": "0x00000000000000000000000000000000400000000000000000800000000000000000000000000000000000000000000000000000001001000000000000008000000000000000000000000000000002000001040000000000000000000000000000000000020000000000000000004800000000800000000000000000000000400000000000000000000000000000000080000000000080000000000000800000000000000000000010000000000400000000000000800000000001010000000000000020000000000000000000040000000000001400000000000000000020000000000000000000000000000000000000000800000000000000000000000000",
-    "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94",
-    "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
+    "contractAddress": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
+    "transactionIndex": 0,
+    "gasUsed": "861049",
+    "logsBloom": "0x00000000000000000000000000000000400000000000000000800000000000000000000000000000000000000000000000000000020000000000000000008000000000000000000000000000000002000001040000000000000000000000000000000000020000000000000000000800000000800000000000000000000000500000000000000000000000000001000080000000000080000000000000800000000000000000000010002040000400000000000000800000000000000000000001000020000000000000000001040000000000000400000000000000000020000000000200000000000000000000000000000800000000000000000000400000",
+    "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188",
+    "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
     "logs": [
       {
-        "transactionIndex": 1,
-        "blockNumber": 28205678,
-        "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
-        "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
         "topics": [
           "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
-          "0x0000000000000000000000008f89472260f8efc6df3da8324846e76a6aabd6c4"
+          "0x00000000000000000000000077ebc6b545fb179100b5d0b4a39f8b09e744c07b"
         ],
         "data": "0x",
         "logIndex": 0,
-        "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94"
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
       },
       {
-        "transactionIndex": 1,
-        "blockNumber": 28205678,
-        "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
-        "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
         "topics": [
           "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
           "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -985,48 +1094,58 @@
         ],
         "data": "0x",
         "logIndex": 1,
-        "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94"
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
       },
       {
-        "transactionIndex": 1,
-        "blockNumber": 28205678,
-        "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
-        "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
         "topics": ["0x66fd58e82f7b31a2a5c30e0888f3093efe4e111b00cd2b0c31fe014601293aa0"],
         "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000058ca981605ffe451716036fc35f70c25b32ba564",
         "logIndex": 2,
-        "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94"
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
       },
       {
-        "transactionIndex": 1,
-        "blockNumber": 28205678,
-        "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
-        "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
+        "topics": ["0xc2d09fef144f7c8a86f71ea459f8fc17f675768eb1ae369cbd77fb31d467aafa"],
+        "data": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000096",
+        "logIndex": 3,
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
+      },
+      {
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
         "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
-        "logIndex": 3,
-        "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94"
+        "logIndex": 4,
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
       },
       {
-        "transactionIndex": 1,
-        "blockNumber": 28205678,
-        "transactionHash": "0xa3271ad047576b2ccb7461a4e2736f25e9f2707b6872d2fc23ec5953ea151680",
-        "address": "0x1aF50D1Ee859Bb972384F1f96F3cFCccfC5Ac210",
+        "transactionIndex": 0,
+        "blockNumber": 28206532,
+        "transactionHash": "0xd2a80dbed64a8908ed12c3057634908ab967880ae574d52ba0620683513f2c02",
+        "address": "0xc7b0106373724a8682F450418b7fD92e31596Bdd",
         "topics": ["0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f"],
         "data": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038b507cf36fcfb55aac365e32ba3946ad82713fe",
-        "logIndex": 4,
-        "blockHash": "0x05c8d47f986ad4d295ab4ff6b3aa2487c0497f553c33d6c8c688c1e805d68a94"
+        "logIndex": 5,
+        "blockHash": "0x80df38a422e126b69981bf452407070c66d02367413bacc2616a51a5ac137188"
       }
     ],
-    "blockNumber": 28205678,
-    "cumulativeGasUsed": "964007",
+    "blockNumber": 28206532,
+    "cumulativeGasUsed": "861049",
     "status": 1,
     "byzantium": true
   },
   "args": [
-    "0x8f89472260F8efc6dF3DA8324846E76a6aAbd6C4",
+    "0x77EBC6B545FB179100B5d0b4A39F8b09e744c07b",
     "0x38b507Cf36FCFB55aaC365e32Ba3946AD82713FE",
-    "0x35876476000000000000000000000000ad2b919ac044caa0ff59c751a7d14cf0a6f78dfe000000000000000000000000e60a1f3c5e04b3be9b177da94bc1ae5dd0c994ad000000000000000000000000c6faf53723e8fb234d9ddbb2d7c83871136d0ad00000000000000000000000003c624c32d96979b5a3c8a4cc32dfbdaca2ea66a000000000000000000000000095e31dada89b0f867a404a9d0208b3b77ff5dc4100000000000000000000000059ace5ae301d1368d19b3b9dca8c7a7502a888d000000000000000000000000058ca981605ffe451716036fc35f70c25b32ba564"
+    "0xbe20309400000000000000000000000080c88b6a34fadf3cf5e2086033be8f3d4dc1a195000000000000000000000000d60cc803d888a3e743f21d0bde4bf2cafdea1f26000000000000000000000000000000000000000000000000000000000000009600000000000000000000000058ca981605ffe451716036fc35f70c25b32ba564"
   ],
   "numDeployments": 1,
   "solcInputHash": "0e89febeebc7444140de8e67c9067d2c",
@@ -1036,16 +1155,13 @@
   "execute": {
     "methodName": "initialize",
     "args": [
-      "0xaD2b919Ac044cAa0Ff59c751a7d14Cf0a6f78dFE",
-      "0xE60a1F3c5e04B3be9b177Da94bC1ae5dd0c994aD",
-      "0xc6FAf53723E8fB234D9DDbb2d7c83871136d0aD0",
-      "0x3C624C32D96979B5a3c8A4cC32DFBdACa2Ea66A0",
-      "0x95E31dADa89B0F867a404A9d0208b3B77Ff5dc41",
-      "0x59ACE5aE301D1368d19B3b9DCa8C7A7502A888D0",
+      "0x80C88B6A34fadf3cf5e2086033be8f3d4DC1a195",
+      "0xD60cC803d888A3e743F21D0bdE4bF2cAfdEA1F26",
+      150,
       "0x58Ca981605fFE451716036FC35f70c25b32BA564"
     ]
   },
-  "implementation": "0x8f89472260F8efc6dF3DA8324846E76a6aAbd6C4",
+  "implementation": "0x77EBC6B545FB179100B5d0b4A39F8b09e744c07b",
   "devdoc": {
     "details": "This contract implements a proxy that is upgradeable by an admin. To avoid https://medium.com/nomic-labs-blog/malicious-backdoors-in-ethereum-proxies-62629adf3357[proxy selector clashing], which can potentially be used in an attack, this contract uses the https://blog.openzeppelin.com/the-transparent-proxy-pattern/[transparent proxy pattern]. This pattern implies two things that go hand in hand: 1. If any account other than the admin calls the proxy, the call will be forwarded to the implementation, even if that call matches one of the admin functions exposed by the proxy itself. 2. If the admin calls the proxy, it can access the admin functions, but its calls will never be forwarded to the implementation. If the admin tries to call a function on the implementation it will fail with an error that says \"admin cannot fallback to proxy target\". These properties mean that the admin account can only be used for admin actions like upgrading the proxy or changing the admin, so it's best if it's a dedicated account that is not used for anything else. This will avoid headaches due to sudden errors when trying to call a function from the proxy implementation. Our recommendation is for the dedicated account to be an instance of the {ProxyAdmin} contract. If set up this way, you should think of the `ProxyAdmin` instance as the real administrative interface of your proxy.",
     "kind": "dev",

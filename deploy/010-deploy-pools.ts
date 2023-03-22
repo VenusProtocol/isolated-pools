@@ -61,6 +61,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     if (i >= pools.length) {
       // Create pool
+      console.log("Registering new pool with name " + pool.name);
       tx = await poolRegistry.createRegistryPool(
         pool.name,
         ComptrollerBeacon.address,
@@ -72,6 +73,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         accessControlManager.address,
       );
       await tx.wait();
+      console.log("New Pool Registered");
       pools = await poolRegistry.callStatic.getAllPools();
       comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
       tx = await comptrollerProxy.acceptOwnership();
@@ -107,7 +109,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         tx = await tokenContract.faucet(initialSupply);
         await tx.wait(1);
       } else {
-        tokenContract = await ethers.getContractAt("ERC20", token.tokenAddress);
+        tokenContract = await ethers.getContractAt(
+          "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20",
+          token.tokenAddress,
+        );
         // Make sure that deployer has at least `initialSupply` balance of the token
       }
 
@@ -144,6 +149,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 };
 
-func.tags = ["Pools"];
+func.tags = ["Pools", "il"];
 
 export default func;

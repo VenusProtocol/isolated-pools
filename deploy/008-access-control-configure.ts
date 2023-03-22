@@ -123,6 +123,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("Access Control setup ended successfully");
 };
 
-func.tags = ["AccessControlConfig"];
+func.tags = ["AccessControlConfig", "il"];
 
 export default func;

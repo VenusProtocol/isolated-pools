@@ -66,6 +66,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait();
 };
 
-func.tags = ["Factories"];
+func.tags = ["Factories", "il"];
 
 export default func;
