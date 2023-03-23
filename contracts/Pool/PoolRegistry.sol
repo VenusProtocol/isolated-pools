@@ -13,7 +13,7 @@ import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
 import "../VToken.sol";
 import "../InterestRateModel.sol";
-import "../Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../VTokenInterfaces.sol";
 import "./PoolRegistryInterface.sol";

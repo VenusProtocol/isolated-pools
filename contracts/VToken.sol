@@ -9,7 +9,7 @@ import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
-import "./Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
 import "./RiskFund/IProtocolShareReserve.sol";
 
 /**

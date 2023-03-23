@@ -12,7 +12,7 @@ import "../RiskFund/IRiskFund.sol";
 import "./IShortfall.sol";
 import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
-import "../Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
 
 contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;

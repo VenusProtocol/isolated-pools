@@ -10,7 +10,7 @@ import "../IPancakeswapV2Router.sol";
 import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
-import "../Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
 import "../MaxLoopsLimitHelper.sol";
 
 /**

@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "../VToken.sol";
-import "../Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 import "../VTokenInterfaces.sol";
 
 contract VTokenProxyFactory {

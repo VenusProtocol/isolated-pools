@@ -7,7 +7,7 @@ import "../ExponentialNoError.sol";
 import "../VToken.sol";
 import "../Comptroller.sol";
 import "../MaxLoopsLimitHelper.sol";
-import "../Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
 
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlled, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
