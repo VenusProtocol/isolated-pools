@@ -62,8 +62,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Time to wait for next bidder. wait for 10 blocks
     uint256 public constant nextBidderBlockLimit = 10;
 
-    /// @notice Time to wait for first bidder. wait for 100 blocks
-    uint256 public constant waitForFirstBidder = 100;
+    /// @notice Time to wait for first bidder. initially waits for 100 blocks
+    uint256 public waitForFirstBidder;
 
     /// @notice base asset contract address
     address public convertibleBaseAsset;
@@ -104,6 +104,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
+    /// @notice Emitted when wait for first bidder block count is updated
+    event WaitForFirstBidderUpdated(uint256 oldWaitForFirstBidder, uint256 newWaitForFirstBidder);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -134,6 +137,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
+        waitForFirstBidder = 100;
     }
 
     /**
@@ -289,6 +293,18 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
         emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
+    }
+
+    /**
+     * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
+     * @param _waitForFirstBidder  New wait for first bidder block count
+     * @custom:event Emits WaitForFirstBidderUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) public onlyOwner {
+        uint256 oldWaitForFirstBidder = waitForFirstBidder;
+        waitForFirstBidder = _waitForFirstBidder;
+        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
     }
 
     /**

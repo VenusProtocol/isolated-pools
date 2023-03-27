@@ -189,6 +189,24 @@ describe("Shortfall: Tests", async function () {
           .withArgs(parseUnits(minimumPoolBadDebt, "18"), 1);
       });
     });
+
+    describe("waitForFirstBidder", async function () {
+      it("fails if called by a non-owner", async function () {
+        await expect(shortfall.connect(someone).updateWaitForFirstBidder(200)).to.be.revertedWith(
+          "Ownable: caller is not the owner",
+        );
+      });
+
+      it("updates updateWaitForFirstBidder in storage", async function () {
+        await shortfall.updateWaitForFirstBidder(200);
+        expect(await shortfall.waitForFirstBidder()).to.equal(200);
+      });
+
+      it("emits WaitForFirstBidderUpdated event", async function () {
+        const tx = shortfall.updateWaitForFirstBidder(200);
+        await expect(tx).to.emit(shortfall, "WaitForFirstBidderUpdated").withArgs(100, 200);
+      });
+    });
   });
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
