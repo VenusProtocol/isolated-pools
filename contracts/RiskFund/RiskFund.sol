@@ -14,7 +14,6 @@ import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
-import { IShortfall } from "../Shortfall/IShortfall.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
@@ -118,10 +117,6 @@ contract RiskFund is
      */
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
-        require(
-            IShortfall(shortfallContractAddress_).convertibleBaseAsset() == convertibleBaseAsset,
-            "Risk Fund: Base asset doesn't match"
-        );
 
         address oldShortfallContractAddress = shortfall;
         shortfall = shortfallContractAddress_;
@@ -200,14 +195,18 @@ contract RiskFund is
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
-        address shortfall_ = shortfall;
-        require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
+    function transferReserveForAuction(
+        address comptroller,
+        address highestBidder,
+        uint256 amount
+    ) external override returns (uint256) {
+        require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         unchecked {
             poolReserves[comptroller] = poolReserves[comptroller] - amount;
         }
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
+
+        IERC20Upgradeable(convertibleBaseAsset).transfer(highestBidder, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
 
