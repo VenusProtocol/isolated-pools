@@ -74,7 +74,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Emitted when a auction starts
     event AuctionStarted(
         address indexed comptroller,
-        uint256 startBlock,
+        uint256 auctionStartBlock,
         AuctionType auctionType,
         VToken[] markets,
         uint256[] marketsDebt,
@@ -83,11 +83,12 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     );
 
     /// @notice Emitted when a bid is placed
-    event BidPlaced(address indexed comptroller, uint256 bidBps, address indexed bidder);
+    event BidPlaced(address indexed comptroller, uint256 auctionStartBlock, uint256 bidBps, address indexed bidder);
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
         address indexed comptroller,
+        uint256 auctionStartBlock,
         address indexed highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
@@ -96,7 +97,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     );
 
     /// @notice Emitted when a auction is restarted
-    event AuctionRestarted(address indexed comptroller);
+    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlock);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -188,7 +189,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
         auction.highestBidBps = bidBps;
         auction.highestBidBlock = block.number;
 
-        emit BidPlaced(comptroller, bidBps, msg.sender);
+        emit BidPlaced(comptroller, auction.startBlock, bidBps, msg.sender);
     }
 
     /**
@@ -239,6 +240,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
 
         emit AuctionClosed(
             comptroller,
+            auction.startBlock,
             auction.highestBidder,
             auction.highestBidBps,
             transferredAmount,
@@ -272,7 +274,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
 
         auction.status = AuctionStatus.ENDED;
 
-        emit AuctionRestarted(comptroller);
+        emit AuctionRestarted(comptroller, auction.startBlock);
         _startAuction(comptroller);
     }
 
