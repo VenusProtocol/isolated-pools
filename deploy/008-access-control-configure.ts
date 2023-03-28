@@ -91,7 +91,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log("DEFAULT_ADMIN | VTokenProxyFactory | setInterestRateModel(address)");
   tx = await accessControlManager.giveCallPermission(
     riskFund.address,
-    "swapPoolsAssets(address[],uint256[])",
+    "swapPoolsAssets(address[],uint256[],address[][])",
     deployer,
   );
   await tx.wait();
