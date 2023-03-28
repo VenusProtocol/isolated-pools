@@ -212,12 +212,6 @@ describe("Shortfall: Tests", async function () {
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
 
-    it("startAuction fails if ACM does not allow the call", async function () {
-      fakeAccessControlManager.isAllowedToCall.returns(false);
-      await expect(shortfall.startAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
-      fakeAccessControlManager.isAllowedToCall.returns(true);
-    });
-
     it("Should have debt and reserve", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
@@ -493,11 +487,6 @@ describe("Shortfall: Tests", async function () {
 
   describe("Restart Auction", async function () {
     beforeEach(setup);
-
-    it("fails if ACM does not allow the call", async function () {
-      fakeAccessControlManager.isAllowedToCall.returns(false);
-      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
-    });
 
     it("Can't restart auction early ", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));

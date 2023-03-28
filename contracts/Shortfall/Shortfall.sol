@@ -251,11 +251,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @notice Start a auction when there is not currently one active
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionStarted event on success
-     * @custom:error Unauthorized error is thrown if ACM denies the access
-     * @custom:access Controlled by AccessControlManager
      */
     function startAuction(address comptroller) external {
-        _checkAccessAllowed("startAuction(address)");
         _startAuction(comptroller);
     }
 
@@ -263,12 +260,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @notice Restart an auction
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
-     * @custom:error Unauthorized error is thrown if ACM denies the access
-     * @custom:access Controlled by AccessControlManager
      */
     function restartAuction(address comptroller) external {
-        _checkAccessAllowed("restartAuction(address)");
-
         Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
