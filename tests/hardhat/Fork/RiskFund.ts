@@ -208,6 +208,8 @@ const riskFundFixture = async (): Promise<void> => {
     admin.address,
   );
 
+  await accessControlManager.giveCallPermission(riskFund.address, "setConvertibleBaseAsset(address)", admin.address);
+
   await shortfall.connect(shortfall.wallet).updatePoolRegistry(poolRegistry.address);
 
   const _closeFactor = convertToUnit(0.05, 18);
@@ -546,6 +548,28 @@ describe("Risk Fund: Tests", function () {
       it("emits MinAmountToConvertUpdated event", async function () {
         const tx = riskFund.setMinAmountToConvert(1);
         await expect(tx).to.emit(riskFund, "MinAmountToConvertUpdated").withArgs(convertToUnit(10, 18), 1);
+      });
+    });
+
+    describe("setConvertibleBaseAsset", async function () {
+      it("only callable by allowed accounts", async function () {
+        await expect(riskFund.connect(busdUser).setConvertibleBaseAsset(USDT.address)).to.be.revertedWithCustomError(
+          riskFund,
+          "Unauthorized",
+        );
+      });
+
+      it("reverts on invalid convertible base asset", async function () {
+        const [admin] = await ethers.getSigners();
+        await expect(
+          riskFund.connect(admin).setConvertibleBaseAsset("0x0000000000000000000000000000000000000000"),
+        ).to.be.revertedWith("Risk Fund: new convertible base asset address invalid");
+      });
+
+      it("should emit events on success", async function () {
+        const [admin] = await ethers.getSigners();
+        const tx = riskFund.connect(admin).setConvertibleBaseAsset(USDT.address);
+        await expect(tx).to.emit(riskFund, "ConvertibleBaseAssetUpdated").withArgs(BUSD.address, USDT.address);
       });
     });
   });

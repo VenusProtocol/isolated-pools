@@ -47,6 +47,9 @@ contract RiskFund is
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
+    /// @notice Emitted when convertible base asset is updated
+    event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
+
     /// @notice Emitted when PancakeSwap router contract address is updated
     event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
 
@@ -145,6 +148,20 @@ contract RiskFund is
         uint256 oldMinAmountToConvert = minAmountToConvert;
         minAmountToConvert = minAmountToConvert_;
         emit MinAmountToConvertUpdated(oldMinAmountToConvert, minAmountToConvert_);
+    }
+
+    /**
+     * @notice Sets a new convertible base asset
+     * @param _convertibleBaseAsset Address for new convertible base asset.
+     */
+    function setConvertibleBaseAsset(address _convertibleBaseAsset) external {
+        _checkAccessAllowed("setConvertibleBaseAsset(address)");
+        require(_convertibleBaseAsset != address(0), "Risk Fund: new convertible base asset address invalid");
+
+        address oldConvertibleBaseAsset = convertibleBaseAsset;
+        convertibleBaseAsset = _convertibleBaseAsset;
+
+        emit ConvertibleBaseAssetUpdated(oldConvertibleBaseAsset, _convertibleBaseAsset);
     }
 
     /**
