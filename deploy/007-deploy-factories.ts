@@ -62,7 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
 
-  const tx = await shortFall.connect(deployerSigner).setPoolRegistry(poolRegistry.address);
+  const tx = await shortFall.connect(deployerSigner).updatePoolRegistry(poolRegistry.address);
   await tx.wait();
 };
 

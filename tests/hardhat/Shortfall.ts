@@ -69,7 +69,7 @@ async function shortfallFixture() {
 
   poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
 
-  await shortfall.setPoolRegistry(poolRegistry.address);
+  await shortfall.updatePoolRegistry(poolRegistry.address);
 
   // Deploy Mock Tokens
   const MockDAI = await ethers.getContractFactory("MockToken");
@@ -153,19 +153,19 @@ describe("Shortfall: Tests", async function () {
   describe("setters", async function () {
     beforeEach(setup);
 
-    describe("setPoolRegistry", async function () {
+    describe("updatePoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
+        await expect(shortfall.updatePoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).setPoolRegistry(poolRegistry.address)).to.be.rejectedWith(
+        await expect(shortfall.connect(someone).updatePoolRegistry(poolRegistry.address)).to.be.rejectedWith(
           "Ownable: caller is not the owner",
         );
       });
 
       it("emits PoolRegistryUpdated event", async function () {
-        const tx = shortfall.setPoolRegistry(someone.address);
+        const tx = shortfall.updatePoolRegistry(someone.address);
         await expect(tx).to.emit(shortfall, "PoolRegistryUpdated").withArgs(poolRegistry.address, someone.address);
       });
     });

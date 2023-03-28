@@ -308,13 +308,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     }
 
     /**
-     * @notice Sets the pool registry this shortfall supports
+     * @notice Update the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
      * @param _poolRegistry Address of pool registry contract
      * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
      */
-    function setPoolRegistry(address _poolRegistry) external onlyOwner {
+    function updatePoolRegistry(address _poolRegistry) external onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
         address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
