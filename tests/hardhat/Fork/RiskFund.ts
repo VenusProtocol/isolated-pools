@@ -698,6 +698,9 @@ describe("Risk Fund: Tests", function () {
           convertToUnit(10, 18),
         ],
       );
+
+      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
+
       const balanceAfter = await USDC.balanceOf(riskFund.address);
       expect(balanceAfter).equal("0");
 
@@ -741,6 +744,9 @@ describe("Risk Fund: Tests", function () {
           convertToUnit(10, 18),
         ],
       );
+
+      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
+
       const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
 
@@ -836,6 +842,8 @@ describe("Risk Fund: Tests", function () {
           convertToUnit(10, 18),
         ],
       );
+
+      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal(0);
 
       // revoke
       await accessControlManager.revokeCallPermission(
@@ -958,6 +966,8 @@ describe("Risk Fund: Tests", function () {
           convertToUnit(10, 18),
         ],
       );
+
+      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("56841295980235012443");
 
       riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
       riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
