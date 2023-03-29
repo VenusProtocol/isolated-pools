@@ -159,7 +159,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 
-  await shortfall.setPoolRegistry(poolRegistry.address);
+  await shortfall.updatePoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptroller = await Comptroller.deploy(poolRegistry.address);

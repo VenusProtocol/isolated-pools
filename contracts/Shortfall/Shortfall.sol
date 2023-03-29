@@ -282,7 +282,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external onlyOwner {
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
         emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
@@ -294,20 +294,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) public onlyOwner {
+    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external onlyOwner {
         uint256 oldWaitForFirstBidder = waitForFirstBidder;
         waitForFirstBidder = _waitForFirstBidder;
         emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
     }
 
     /**
-     * @notice Sets the pool registry this shortfall supports
+     * @notice Update the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
      * @param _poolRegistry Address of pool registry contract
      * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
      */
-    function setPoolRegistry(address _poolRegistry) public onlyOwner {
+    function updatePoolRegistry(address _poolRegistry) external onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
         address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
