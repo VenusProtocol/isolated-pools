@@ -32,7 +32,7 @@ contract RiskFund is
     address private shortfall;
 
     // Store base asset's reserve for specific pool
-    mapping(address => uint256) private poolReserves;
+    mapping(address => uint256) public poolReserves;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
