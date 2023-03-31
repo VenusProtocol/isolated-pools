@@ -10,7 +10,7 @@ import "../IPancakeswapV2Router.sol";
 import "./ReserveHelpers.sol";
 import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import "../MaxLoopsLimitHelper.sol";
 
 /**
@@ -18,7 +18,7 @@ import "../MaxLoopsLimitHelper.sol";
  */
 contract RiskFund is
     Ownable2StepUpgradeable,
-    AccessControlled,
+    AccessControlledV8,
     ExponentialNoError,
     ReserveHelpers,
     MaxLoopsLimitHelper,

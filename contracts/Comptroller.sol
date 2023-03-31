@@ -16,7 +16,7 @@ import "./MaxLoopsLimitHelper.sol";
  */
 contract Comptroller is
     Ownable2StepUpgradeable,
-    AccessControlled,
+    AccessControlledV8,
     ComptrollerStorage,
     ComptrollerInterface,
     ExponentialNoError,

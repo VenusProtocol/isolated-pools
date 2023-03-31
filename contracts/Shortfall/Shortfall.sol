@@ -12,9 +12,9 @@ import "../RiskFund/IRiskFund.sol";
 import "./IShortfall.sol";
 import "../Pool/PoolRegistry.sol";
 import "../Pool/PoolRegistryInterface.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
-contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuardUpgradeable, IShortfall {
+contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction

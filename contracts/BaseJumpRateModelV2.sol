@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import "./InterestRateModel.sol";
 
 /**
@@ -15,7 +15,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice The address of the AccessControlManager contract
      */
-    IAccessControlManager public accessControlManager;
+    IAccessControlManagerV8 public accessControlManager;
 
     /**
      * @notice The approximate number of blocks per year that is assumed by the interest rate model
@@ -67,7 +67,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
-        IAccessControlManager accessControlManager_
+        IAccessControlManagerV8 accessControlManager_
     ) {
         require(address(accessControlManager_) != address(0), "invalid ACM address");
 
