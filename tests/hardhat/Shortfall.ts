@@ -134,6 +134,8 @@ async function shortfallFixture() {
   // Access Control
   await accessControlManager.giveCallPermission(shortfall.address, "updateIncentiveBps(uint256)", owner.address);
 
+  await accessControlManager.giveCallPermission(shortfall.address, "updateMinimumPoolBadDebt(uint256)", owner.address);
+
   // setup bidders
   // bidder 1
   await mockDAI.transfer(bidder1.address, parseUnits("500000", 18));
@@ -173,10 +175,8 @@ describe("Shortfall: Tests", async function () {
     });
 
     describe("updateMinimumPoolBadDebt", async function () {
-      it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
-        );
+      it("fails if called by a non permissioned account", async function () {
+        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.reverted;
       });
 
       it("updates minimumPoolBadDebt in storage", async function () {

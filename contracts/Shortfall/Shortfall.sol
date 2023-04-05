@@ -320,7 +320,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external onlyOwner {
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
+        _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
         emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
