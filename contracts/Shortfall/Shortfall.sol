@@ -71,6 +71,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
 
+    /// @notice Boolean of if auctions are paused
+    bool public auctionsPaused;
+
     /// @notice Time to wait for first bidder. initially waits for 100 blocks
     uint256 public waitForFirstBidder;
 
@@ -123,6 +126,12 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when incentiveBps is updated
     event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
 
+    /// @notice Emitted when auctions are paused
+    event AuctionsPaused(address sender);
+
+    /// @notice Emitted when auctions are unpaused
+    event AuctionsResumed(address sender);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -158,6 +167,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
         nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
         incentiveBps = DEFAULT_INCENTIVE_BPS;
+        auctionsPaused = false;
     }
 
     /**
@@ -216,6 +226,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Close an auction
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionClosed event on successful close
+     * @custom:event Errors if auctions are paused
      */
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -273,8 +284,10 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Start a auction when there is not currently one active
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionStarted event on success
+     * @custom:event Errors if auctions are paused
      */
     function startAuction(address comptroller) external {
+        require(!auctionsPaused, "Auctions are paused");
         _startAuction(comptroller);
     }
 
@@ -282,6 +295,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Restart an auction
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
+     * @custom:event Errors if auctions are paused
      */
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
@@ -362,6 +376,32 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         address oldPoolRegistry = poolRegistry;
         poolRegistry = poolRegistry_;
         emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
+    }
+
+    /**
+     * @notice Pause auctions. This disables starting new auctions but lets the current auction finishes
+     * @custom:event Emits AuctionsPaused on success
+     * @custom:error Errors is auctions are paused
+     * @custom:access Restricted by ACM
+     */
+    function pauseAuctions() external {
+        _checkAccessAllowed("pauseAuctions()");
+        require(!auctionsPaused, "Auctions are already paused");
+        auctionsPaused = true;
+        emit AuctionsPaused(msg.sender);
+    }
+
+    /**
+     * @notice Resume paused auctions.
+     * @custom:event Emits AuctionsResumed on success
+     * @custom:error Errors is auctions are active
+     * @custom:access Restricted by ACM
+     */
+    function resumeAuctions() external {
+        _checkAccessAllowed("resumeAuctions()");
+        require(auctionsPaused, "Auctions are not paused");
+        auctionsPaused = false;
+        emit AuctionsResumed(msg.sender);
     }
 
     /**
