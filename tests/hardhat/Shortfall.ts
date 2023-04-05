@@ -211,6 +211,7 @@ describe("Shortfall: Tests", async function () {
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
+    let startBlockNumber;
 
     it("Should have debt and reserve", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
@@ -250,7 +251,8 @@ describe("Shortfall: Tests", async function () {
       vWBTC.badDebt.returns(parseUnits("2", 8));
       await vWBTC.setVariable("badDebt", parseUnits("2", 8));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
+      startBlockNumber = receipt.blockNumber;
 
       const auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(1);
@@ -350,6 +352,7 @@ describe("Shortfall: Tests", async function () {
         .to.emit(shortfall, "AuctionClosed")
         .withArgs(
           comptroller.address,
+          startBlockNumber,
           bidder2.address,
           1800,
           parseUnits("10000", 18),
@@ -371,7 +374,7 @@ describe("Shortfall: Tests", async function () {
 
   describe("LARGE_RISK_FUND Scenario", async function () {
     before(setup);
-
+    let startBlockNumber;
     it("Start auction", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
       await vDAI.setVariable("badDebt", parseUnits("10000", 18));
@@ -381,7 +384,8 @@ describe("Shortfall: Tests", async function () {
       riskFundBalance = "50000";
       fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
+      startBlockNumber = receipt.blockNumber;
 
       const auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(1);
@@ -466,6 +470,7 @@ describe("Shortfall: Tests", async function () {
         .to.emit(shortfall, "AuctionClosed")
         .withArgs(
           comptroller.address,
+          startBlockNumber,
           bidder2.address,
           1800,
           "6138067320000000000000",
@@ -507,11 +512,13 @@ describe("Shortfall: Tests", async function () {
       vWBTC.badDebt.returns(parseUnits("1", 8));
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
 
       await mine(100);
 
-      await expect(shortfall.restartAuction(poolAddress)).to.emit(shortfall, "AuctionRestarted").withArgs(poolAddress);
+      await expect(shortfall.restartAuction(poolAddress))
+        .to.emit(shortfall, "AuctionRestarted")
+        .withArgs(poolAddress, receipt.blockNumber);
     });
 
     it("Cannot restart auction after a bid is placed", async function () {
