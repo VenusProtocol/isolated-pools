@@ -136,6 +136,14 @@ async function shortfallFixture() {
 
   await accessControlManager.giveCallPermission(shortfall.address, "updateMinimumPoolBadDebt(uint256)", owner.address);
 
+  await accessControlManager.giveCallPermission(shortfall.address, "updateWaitForFirstBidder(uint256)", owner.address);
+
+  await accessControlManager.giveCallPermission(
+    shortfall.address,
+    "updateNextBidderBlockLimit(uint256)",
+    owner.address,
+  );
+
   // setup bidders
   // bidder 1
   await mockDAI.transfer(bidder1.address, parseUnits("500000", 18));
@@ -193,10 +201,8 @@ describe("Shortfall: Tests", async function () {
     });
 
     describe("waitForFirstBidder", async function () {
-      it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).updateWaitForFirstBidder(200)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
-        );
+      it("fails if called by a non permissioned account", async function () {
+        await expect(shortfall.connect(someone).updateWaitForFirstBidder(200)).to.be.reverted;
       });
 
       it("updates updateWaitForFirstBidder in storage", async function () {
@@ -212,9 +218,17 @@ describe("Shortfall: Tests", async function () {
 
     describe("updateNextBidderBlockLimit", async function () {
       it("fails if called by a non permissioned account", async function () {
-        fakeAccessControlManager.isAllowedToCall.returns(false);
+        await accessControlManager.revokeCallPermission(
+          shortfall.address,
+          "updateNextBidderBlockLimit(uint256)",
+          owner.address,
+        );
         await expect(shortfall.connect(someone).updateNextBidderBlockLimit(1)).to.be.reverted;
-        fakeAccessControlManager.isAllowedToCall.returns(true);
+        await accessControlManager.giveCallPermission(
+          shortfall.address,
+          "updateNextBidderBlockLimit(uint256)",
+          owner.address,
+        );
       });
 
       it("updates nextBidderBlockLimit in storage", async function () {
@@ -222,7 +236,7 @@ describe("Shortfall: Tests", async function () {
         expect(await shortfall.nextBidderBlockLimit()).to.equal(100);
       });
 
-      it("emits MinimumPoolBadDebtUpdated event", async function () {
+      it("emits NextBidderBlockLimitUpdated event", async function () {
         const tx = shortfall.updateNextBidderBlockLimit(100);
         await expect(tx).to.emit(shortfall, "NextBidderBlockLimitUpdated").withArgs(10, 100);
       });

@@ -333,7 +333,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external onlyOwner {
+    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
+        _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
         uint256 oldWaitForFirstBidder = waitForFirstBidder;
         waitForFirstBidder = _waitForFirstBidder;
         emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
