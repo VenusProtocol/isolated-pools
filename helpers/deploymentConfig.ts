@@ -194,6 +194,13 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
+        name: "Tether",
+        symbol: "USDT",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
         name: "Bitcoin BEP2",
         symbol: "BTCB",
         decimals: 18,
@@ -512,7 +519,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "USDT",
+        name: "Tether",
         symbol: "USDT",
         decimals: 6,
         tokenAddress: "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c",
@@ -622,7 +629,7 @@ export const globalConfig: NetworkConfig = {
       {
         isMock: false,
         name: "Binance-Peg BSC-USD",
-        symbol: "USDT",
+        symbol: "BUSD",
         decimals: 18,
         tokenAddress: "0x55d398326f99059fF775485246999027B3197955",
       },
