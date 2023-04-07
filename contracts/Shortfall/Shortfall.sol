@@ -53,8 +53,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
-    /// @notice Incentive to auction participants.
-    uint256 private constant incentiveBps = 1000; /// @notice 10%
+    /// @notice Incentive to auction participants, initial value set to 1000 or 10%
+    uint256 private incentiveBps;
 
     /// @notice Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
@@ -111,6 +111,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Emitted when next bidder block limit is updated
     event NextBidderBlockLimitUpdated(uint256 oldNextBidderBlockLimit, uint256 newNextBidderBlockLimit);
 
+    /// @notice Emitted when incentiveBps is updated
+    event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -143,6 +146,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
         riskFund = riskFund_;
         waitForFirstBidder = 100;
         nextBidderBlockLimit = 10;
+        incentiveBps = 1000;
     }
 
     /**
@@ -297,12 +301,27 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     }
 
     /**
+     * @notice Updates the inventive BPS
+     * @param _incentiveBps New incentive BPS
+     * @custom:event Emits IncentiveBpsUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateIncentiveBps(uint256 _incentiveBps) external {
+        _checkAccessAllowed("updateIncentiveBps(uint256)");
+        require(_incentiveBps != 0, "incentiveBps must not be 0");
+        uint256 oldIncentiveBps = incentiveBps;
+        incentiveBps = _incentiveBps;
+        emit IncentiveBpsUpdated(oldIncentiveBps, _incentiveBps);
+    }
+
+    /**
      * @notice Update minimum pool bad debt to start auction
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external onlyOwner {
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
+        _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
         emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
@@ -314,7 +333,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external onlyOwner {
+    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
+        _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
         uint256 oldWaitForFirstBidder = waitForFirstBidder;
         waitForFirstBidder = _waitForFirstBidder;
         emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
