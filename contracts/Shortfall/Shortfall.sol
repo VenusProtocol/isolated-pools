@@ -59,8 +59,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    /// @notice Time to wait for next bidder. wait for 10 blocks
-    uint256 public constant nextBidderBlockLimit = 10;
+    /// @notice Time to wait for next bidder. initially waits for 10 blocks
+    uint256 public nextBidderBlockLimit;
 
     /// @notice Time to wait for first bidder. initially waits for 100 blocks
     uint256 public waitForFirstBidder;
@@ -108,6 +108,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     /// @notice Emitted when wait for first bidder block count is updated
     event WaitForFirstBidderUpdated(uint256 oldWaitForFirstBidder, uint256 newWaitForFirstBidder);
 
+    /// @notice Emitted when next bidder block limit is updated
+    event NextBidderBlockLimitUpdated(uint256 oldNextBidderBlockLimit, uint256 newNextBidderBlockLimit);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -139,6 +142,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
         waitForFirstBidder = 100;
+        nextBidderBlockLimit = 10;
     }
 
     /**
@@ -276,6 +280,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
 
         emit AuctionRestarted(comptroller, auction.startBlock);
         _startAuction(comptroller);
+    }
+
+    /**
+     * @notice Update next bidder block limit which is used determine when an auction can be closed
+     * @param _nextBidderBlockLimit  New next bidder block limit
+     * @custom:event Emits NextBidderBlockLimitUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
+        _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
+        require(_nextBidderBlockLimit != 0, "_nextBidderBlockLimit must not be 0");
+        uint256 oldNextBidderBlockLimit = nextBidderBlockLimit;
+        nextBidderBlockLimit = _nextBidderBlockLimit;
+        emit NextBidderBlockLimitUpdated(oldNextBidderBlockLimit, _nextBidderBlockLimit);
     }
 
     /**

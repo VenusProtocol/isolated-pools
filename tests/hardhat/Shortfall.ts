@@ -207,6 +207,24 @@ describe("Shortfall: Tests", async function () {
         await expect(tx).to.emit(shortfall, "WaitForFirstBidderUpdated").withArgs(100, 200);
       });
     });
+
+    describe("updateNextBidderBlockLimit", async function () {
+      it("fails if called by a non permissioned account", async function () {
+        fakeAccessControlManager.isAllowedToCall.returns(false);
+        await expect(shortfall.connect(someone).updateNextBidderBlockLimit(1)).to.be.reverted;
+        fakeAccessControlManager.isAllowedToCall.returns(true);
+      });
+
+      it("updates nextBidderBlockLimit in storage", async function () {
+        await shortfall.updateNextBidderBlockLimit(100);
+        expect(await shortfall.nextBidderBlockLimit()).to.equal(100);
+      });
+
+      it("emits MinimumPoolBadDebtUpdated event", async function () {
+        const tx = shortfall.updateNextBidderBlockLimit(100);
+        await expect(tx).to.emit(shortfall, "NextBidderBlockLimitUpdated").withArgs(10, 100);
+      });
+    });
   });
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
