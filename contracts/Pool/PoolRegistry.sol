@@ -52,15 +52,38 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         uint256 borrowCap;
     }
 
-    VTokenProxyFactory private vTokenFactory;
-    JumpRateModelFactory private jumpRateFactory;
-    WhitePaperInterestRateModelFactory private whitePaperFactory;
-    Shortfall private shortfall;
-    address payable private riskFund;
-    address payable private protocolShareReserve;
+    /**
+     * @notice VTokenProxyFactory contract address
+     */
+    VTokenProxyFactory public vTokenFactory;
 
     /**
-     * @dev Maps pool's comptroller address to metadata.
+     * @notice JumpRateModelFactory contract address
+     */
+    JumpRateModelFactory public jumpRateFactory;
+
+    /**
+     * @notice WhitePaperInterestRateModelFactory contract address
+     */
+    WhitePaperInterestRateModelFactory public whitePaperFactory;
+
+    /**
+     * @notice Shortfall contract address
+     */
+    Shortfall public shortfall;
+
+    /**
+     * @notice RiskFund contract address
+     */
+    address payable public riskFund;
+
+    /**
+     * @notice Shortfall contract address
+     */
+    address payable public protocolShareReserve;
+
+    /**
+     * @notice Maps pool's comptroller address to metadata.
      */
     mapping(address => VenusPoolMetaData) public metadata;
 
