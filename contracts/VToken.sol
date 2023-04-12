@@ -64,9 +64,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint256 reserveFactorMantissa_
     ) external initializer {
         require(admin_ != address(0), "invalid admin address");
-        require(riskManagement.shortfall != address(0), "invalid shortfall address");
-        require(riskManagement.riskFund != address(0), "invalid riskfund address");
-        require(riskManagement.protocolShareReserve != address(0), "invalid protocol share reserve address");
 
         // Initialize the market
         _initialize(
@@ -491,6 +488,26 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         badDebt = badDebtNew;
 
         emit BadDebtRecovered(badDebtOld, badDebtNew);
+    }
+
+    /**
+     * @notice Sets protocol share reserve contract address
+     * @param protocolShareReserve_ The address of the protocol share reserve contract
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
+     * @custom:access Only Governance
+     */
+    function setProtocolShareReserve(address payable protocolShareReserve_) external onlyOwner {
+        _setProtocolShareReserve(protocolShareReserve_);
+    }
+
+    /**
+     * @notice Sets shortfall contract address
+     * @param shortfall_ The address of the shortfall contract
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+     * @custom:access Only Governance
+     */
+    function setShortfallContract(address shortfall_) external onlyOwner {
+        _setShortfallContract(shortfall_);
     }
 
     /**
@@ -1359,9 +1376,9 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        shortfall = riskManagement.shortfall;
         riskFund = riskManagement.riskFund;
-        protocolShareReserve = riskManagement.protocolShareReserve;
+        _setShortfallContract(riskManagement.shortfall);
+        _setProtocolShareReserve(riskManagement.protocolShareReserve);
         protocolSeizeShareMantissa = 5e16; // 5%
 
         // Set underlying and sanity check it
@@ -1371,6 +1388,24 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
         _transferOwnership(admin_);
+    }
+
+    function _setShortfallContract(address shortfall_) internal {
+        if (shortfall_ == address(0)) {
+            revert ZeroAddressNotAllowed();
+        }
+        address oldShortfall = shortfall;
+        shortfall = shortfall_;
+        emit NewShortfallContract(oldShortfall, shortfall_);
+    }
+
+    function _setProtocolShareReserve(address payable protocolShareReserve_) internal {
+        if (protocolShareReserve_ == address(0)) {
+            revert ZeroAddressNotAllowed();
+        }
+        address oldProtocolShareReserve = address(protocolShareReserve);
+        protocolShareReserve = protocolShareReserve_;
+        emit NewProtocolShareReserve(oldProtocolShareReserve, address(protocolShareReserve_));
     }
 
     /**
