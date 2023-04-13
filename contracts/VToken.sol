@@ -1376,7 +1376,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        riskFund = riskManagement.riskFund;
         _setShortfallContract(riskManagement.shortfall);
         _setProtocolShareReserve(riskManagement.protocolShareReserve);
         protocolSeizeShareMantissa = 5e16; // 5%

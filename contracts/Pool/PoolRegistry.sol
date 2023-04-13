@@ -300,7 +300,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
             input.decimals,
             msg.sender,
             input.accessControlManager,
-            VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
+            VTokenInterface.RiskManagementInit(address(shortfall), protocolShareReserve),
             input.beaconAddress,
             input.reserveFactor
         );

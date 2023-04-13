@@ -12,7 +12,6 @@ import {
   ERC20Harness__factory,
   InterestRateModel,
   ProtocolShareReserve,
-  RiskFund,
   Shortfall,
   VTokenHarness,
   VTokenHarness__factory,
@@ -44,12 +43,11 @@ export async function makeVToken({
   const underlyingFactory = await smock.mock<ERC20Harness__factory>("ERC20Harness");
   const underlying = await underlyingFactory.deploy(0, name, 18, name);
   const VToken = await smock.mock<VTokenHarness__factory>("VTokenHarness");
-  const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const initialExchangeRateMantissa = convertToUnit("1", 18);
   const reserveFactorMantissa = convertToUnit(0.3, 18);
   const initializer =
-    "initialize(address,address,address,uint256,string,string,uint8,address,address,(address,address,address),uint256)";
+    "initialize(address,address,address,uint256,string,string,uint8,address,address,(address,address),uint256)";
   const vToken = await upgrades.deployProxy(
     VToken,
     [
@@ -64,7 +62,6 @@ export async function makeVToken({
       accessControlManager.address,
       {
         shortfall: shortfall.address,
-        riskFund: riskFund.address,
         protocolShareReserve: protocolShareReserve.address,
       },
       reserveFactorMantissa,

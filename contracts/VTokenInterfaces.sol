@@ -44,11 +44,6 @@ contract VTokenStorage {
     uint8 public decimals;
 
     /**
-     * @notice Risk fund contract address
-     */
-    address payable public riskFund;
-
-    /**
      * @notice Protocol share Reserve contract address
      */
     address payable public protocolShareReserve;
@@ -137,7 +132,6 @@ contract VTokenStorage {
 abstract contract VTokenInterface is VTokenStorage {
     struct RiskManagementInit {
         address shortfall;
-        address payable riskFund;
         address payable protocolShareReserve;
     }
 
