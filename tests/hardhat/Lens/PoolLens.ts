@@ -14,7 +14,6 @@ import {
   PoolLens,
   PoolRegistry,
   ProtocolShareReserve,
-  RiskFund,
   Shortfall,
   VToken,
 } from "../../../typechain";
@@ -84,7 +83,6 @@ describe("PoolLens", async function () {
     await whitePaperRateFactory.deployed();
 
     const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const riskFund = await smock.fake<RiskFund>("Shortfall");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -96,7 +94,6 @@ describe("PoolLens", async function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
-      riskFund.address,
       protocolShareReserve.address,
       fakeAccessControlManager.address,
     ]);

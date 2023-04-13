@@ -73,11 +73,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     Shortfall public shortfall;
 
     /**
-     * @notice RiskFund contract address
-     */
-    address payable public riskFund;
-
-    /**
      * @notice Shortfall contract address
      */
     address payable public protocolShareReserve;
@@ -163,7 +158,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      * @param vTokenFactory_ vToken factory address.
      * @param jumpRateFactory_ jump rate factory address.
      * @param whitePaperFactory_ white paper factory address.
-     * @param riskFund_ risk fund address.
      * @param protocolShareReserve_ protocol's shares reserve address.
      * @param accessControlManager_ AccessControlManager contract address.
      */
@@ -172,7 +166,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         JumpRateModelFactory jumpRateFactory_,
         WhitePaperInterestRateModelFactory whitePaperFactory_,
         Shortfall shortfall_,
-        address payable riskFund_,
         address payable protocolShareReserve_,
         address accessControlManager_
     ) external initializer {
@@ -182,7 +175,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         vTokenFactory = vTokenFactory_;
         jumpRateFactory = jumpRateFactory_;
         whitePaperFactory = whitePaperFactory_;
-        riskFund = riskFund_;
         _setShortfallContract(shortfall_);
         _setProtocolShareReserve(protocolShareReserve_);
     }

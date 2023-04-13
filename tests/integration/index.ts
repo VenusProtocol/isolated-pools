@@ -182,7 +182,6 @@ describe("Positive Cases", () => {
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
         ),
       ).to.be.revertedWith("Initializable: contract is already initialized");
     });
@@ -481,7 +480,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 
-  describe("Liquidation of user via Vtoken", () => {
+  describe("Liquidation of user via VToken", () => {
     let mintAmount = convertToUnit("1", 17);
     let vTokenMintAmount = convertToUnit("1", 7);
     let acc1Signer: Signer;

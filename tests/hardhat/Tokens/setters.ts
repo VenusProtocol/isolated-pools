@@ -102,7 +102,7 @@ describe("VToken", function () {
     });
   });
 
-  describe("set setReserveFactor", () => {
+  describe("set reserve factor", () => {
     it("reverts if rejected by access control manager", async () => {
       accessControlManager.isAllowedToCall.returns(false);
       await expect(vToken.connect(user).setReserveFactor(convertToUnit(1, 17))).to.be.revertedWithCustomError(

@@ -22,7 +22,6 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RewardsDistributor,
-  RiskFund,
   Shortfall,
   VToken,
   VTokenProxyFactory,
@@ -121,7 +120,6 @@ describe("PoolRegistry: Tests", function () {
     await whitePaperRateFactory.deployed();
 
     const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const riskFund = await smock.fake<RiskFund>("RiskFund");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -133,7 +131,6 @@ describe("PoolRegistry: Tests", function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
-      riskFund.address,
       protocolShareReserve.address,
       fakeAccessControlManager.address,
     ]);

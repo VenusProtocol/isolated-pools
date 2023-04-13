@@ -51,7 +51,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           jumpRateModelFactory.address,
           whitePaperRateFactory.address,
           ADDRESS_ONE,
-          ADDRESS_ONE,
           treasuryAddresses[hre.network.name],
           accessControlManager.address,
         ],
