@@ -40,12 +40,11 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "Oracle",
     "SwapRouter",
     "AccessControl",
-    "RiskFund",
     "Factories",
     "AccessControlConfig",
     "Pools",
+    "RiskFund",
   ]);
-  const EXPONENT_SCALE = 10e18;
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");

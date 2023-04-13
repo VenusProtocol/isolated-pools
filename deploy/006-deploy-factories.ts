@@ -3,6 +3,13 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
+const treasuryAddresses: { [network: string]: string } = {
+  hardhat: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // signer[1] from hardhat mnemonic
+  bsctestnet: "0xFEA1c651A47FE29dB9b1bf3cC1f224d8D9CFF68C", // one of testnet admin accounts
+  bscmainnet: "0xF322942f644A996A617BD29c16bd7d231d9F35E9", // Venus Treasury
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -31,10 +38,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const shortFall = await ethers.getContract("Shortfall");
-  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
-  const riskFund = await ethers.getContract("RiskFund");
-
   await deploy("PoolRegistry", {
     from: deployer,
     contract: "PoolRegistry",
@@ -47,9 +50,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           vBep20Factory.address,
           jumpRateModelFactory.address,
           whitePaperRateFactory.address,
-          shortFall.address,
-          riskFund.address,
-          protocolShareReserve.address,
+          ADDRESS_ONE,
+          ADDRESS_ONE,
+          treasuryAddresses[hre.network.name],
           accessControlManager.address,
         ],
       },
@@ -58,12 +61,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
   });
-
-  const poolRegistry = await ethers.getContract("PoolRegistry");
-  const deployerSigner = ethers.provider.getSigner(deployer);
-
-  const tx = await shortFall.connect(deployerSigner).updatePoolRegistry(poolRegistry.address);
-  await tx.wait();
 };
 
 func.tags = ["Factories", "il"];
