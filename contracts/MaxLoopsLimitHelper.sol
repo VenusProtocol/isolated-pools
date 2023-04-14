@@ -23,6 +23,8 @@ abstract contract MaxLoopsLimitHelper {
      * @param limit Limit for the max loops can execute at a time
      */
     function _setMaxLoopsLimit(uint256 limit) internal {
+        require(limit > maxLoopsLimit,"New limit should not be the lesser then maxLoopsLimts");
+        
         uint256 oldMaxLoopsLimit = maxLoopsLimit;
         maxLoopsLimit = limit;
 
