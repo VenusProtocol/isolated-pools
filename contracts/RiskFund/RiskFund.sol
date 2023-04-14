@@ -273,7 +273,7 @@ contract RiskFund is
                         address(this),
                         block.timestamp
                     );
-                    totalAmount = amounts[1];
+                    totalAmount = amounts[path.length - 1];
                 } else {
                     totalAmount = balanceOfUnderlyingAsset;
                 }
