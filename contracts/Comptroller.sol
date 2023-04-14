@@ -156,6 +156,10 @@ contract Comptroller is
 
         _ensureMaxLoops(len);
 
+        uint256 accountAssetsLen = accountAssets[msg.sender].length;
+
+        _ensureMaxLoops(accountAssetsLen);
+
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
             VToken vToken = VToken(vTokens[i]);
@@ -210,8 +214,6 @@ contract Comptroller is
         // load into memory for faster iteration
         VToken[] memory userAssetList = accountAssets[msg.sender];
         uint256 len = userAssetList.length;
-
-        _ensureMaxLoops(len);
 
         uint256 assetIndex = len;
         for (uint256 i; i < len; ++i) {
@@ -271,8 +273,6 @@ contract Comptroller is
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
-        _ensureMaxLoops(rewardDistributorsCount);
-
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
@@ -302,8 +302,6 @@ contract Comptroller is
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        _ensureMaxLoops(rewardDistributorsCount);
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
@@ -377,8 +375,6 @@ contract Comptroller is
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
-        _ensureMaxLoops(rewardDistributorsCount);
-
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
@@ -404,8 +400,6 @@ contract Comptroller is
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        _ensureMaxLoops(rewardDistributorsCount);
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
@@ -526,8 +520,6 @@ contract Comptroller is
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
-        _ensureMaxLoops(rewardDistributorsCount);
-
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vTokenCollateral);
             rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
@@ -565,8 +557,6 @@ contract Comptroller is
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
-        _ensureMaxLoops(rewardDistributorsCount);
-
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
             rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
@@ -590,8 +580,6 @@ contract Comptroller is
     function healAccount(address user) external {
         VToken[] memory userAssets = accountAssets[user];
         uint256 userAssetsCount = userAssets.length;
-
-        _ensureMaxLoops(userAssetsCount);
 
         address liquidator = msg.sender;
         // We need all user's markets to be fresh for the computations to be correct
@@ -700,8 +688,6 @@ contract Comptroller is
 
         VToken[] memory borrowMarkets = accountAssets[borrower];
         uint256 marketsCount = borrowMarkets.length;
-
-        _ensureMaxLoops(marketsCount);
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
@@ -832,8 +818,6 @@ contract Comptroller is
 
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
-        _ensureMaxLoops(rewardDistributorsCount);
-
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             rewardsDistributors[i].initializeMarket(address(vToken));
         }
@@ -946,8 +930,6 @@ contract Comptroller is
         require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
-
-        _ensureMaxLoops(rewardsDistributorsLength);
 
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
             address rewardToken = address(rewardsDistributors[i].rewardToken());
@@ -1217,14 +1199,14 @@ contract Comptroller is
     function _addMarket(address vToken) internal {
         uint256 marketsCount = allMarkets.length;
 
-        _ensureMaxLoops(marketsCount);
-
         for (uint256 i; i < marketsCount; ++i) {
             if (allMarkets[i] == VToken(vToken)) {
                 revert MarketAlreadyListed(vToken);
             }
         }
         allMarkets.push(VToken(vToken));
+        marketsCount = allMarkets.length;
+        _ensureMaxLoops(marketsCount);
     }
 
     /**
@@ -1315,8 +1297,6 @@ contract Comptroller is
         // For each asset the account is in
         VToken[] memory assets = accountAssets[account];
         uint256 assetsCount = assets.length;
-
-        _ensureMaxLoops(assetsCount);
 
         for (uint256 i; i < assetsCount; ++i) {
             VToken asset = assets[i];
