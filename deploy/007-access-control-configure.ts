@@ -9,7 +9,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const vBep20Factory = await ethers.getContract("VTokenProxyFactory");
-  const riskFund = await ethers.getContract("RiskFund");
 
   await deploy("AccessControlManager", {
     from: deployer,
@@ -89,8 +88,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   await tx.wait();
   console.log("DEFAULT_ADMIN | VTokenProxyFactory | setInterestRateModel(address)");
+
   tx = await accessControlManager.giveCallPermission(
-    riskFund.address,
+    ethers.constants.AddressZero,
     "swapPoolsAssets(address[],uint256[],address[][])",
     deployer,
   );

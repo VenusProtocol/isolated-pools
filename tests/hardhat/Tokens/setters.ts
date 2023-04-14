@@ -6,7 +6,14 @@ import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
-import { AccessControlManager, Comptroller, InterestRateModel, VTokenHarness } from "../../../typechain";
+import {
+  AccessControlManager,
+  Comptroller,
+  InterestRateModel,
+  ProtocolShareReserve,
+  Shortfall,
+  VTokenHarness,
+} from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
 const { expect } = chai;
@@ -95,7 +102,7 @@ describe("VToken", function () {
     });
   });
 
-  describe("set setReserveFactor", () => {
+  describe("set reserve factor", () => {
     it("reverts if rejected by access control manager", async () => {
       accessControlManager.isAllowedToCall.returns(false);
       await expect(vToken.connect(user).setReserveFactor(convertToUnit(1, 17))).to.be.revertedWithCustomError(
@@ -106,6 +113,56 @@ describe("VToken", function () {
 
     it("success if allowed to set setReserveFactor", async () => {
       await vToken.connect(root).setReserveFactor(convertToUnit(1, 17));
+    });
+  });
+
+  describe("setProtocolShareReserve", () => {
+    let protocolShareReserve: FakeContract<ProtocolShareReserve>;
+
+    beforeEach(async () => {
+      protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
+    });
+
+    it("reverts if called by a non-owner", async () => {
+      await expect(vToken.connect(user).setProtocolShareReserve(protocolShareReserve.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
+      await expect(vToken.connect(root).setProtocolShareReserve(ethers.constants.AddressZero)).revertedWithCustomError(
+        vToken,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("sets protocol share reserve if called by admin", async () => {
+      await vToken.connect(root).setProtocolShareReserve(protocolShareReserve.address);
+    });
+  });
+
+  describe("setShortfallContract", () => {
+    let shortfall: FakeContract<Shortfall>;
+
+    beforeEach(async () => {
+      shortfall = await smock.fake<Shortfall>("Shortfall");
+    });
+
+    it("reverts if called by a non-owner", async () => {
+      await expect(vToken.connect(user).setShortfallContract(shortfall.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
+      await expect(vToken.connect(root).setShortfallContract(ethers.constants.AddressZero)).revertedWithCustomError(
+        vToken,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("sets shortfall contract if called by admin", async () => {
+      await vToken.connect(root).setShortfallContract(shortfall.address);
     });
   });
 });

@@ -12,26 +12,10 @@ const targetOwners: Config = {
   mainnet: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396", // NORMAL VIP Timelock
 };
 
-const contracts = {
-  singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon", "DefaultProxyAdmin"],
-  twoStepOwnership: [
-    "RiskFund",
-    "Shortfall",
-    "ProtocolShareReserve",
-    "PoolRegistry",
-    "RewardsBNXPool 1",
-    "RewardsXVSPool 1",
-    "RewardsANKRPool 2",
-    "RewardsXVSPool 2",
-    "RewardsMBOXPool 2",
-    "RewardsNFTPool 2",
-    "RewardsRACAPool 2",
-  ],
-};
+const contracts = ["RiskFund", "Shortfall", "ProtocolShareReserve"];
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  await transferSingleStepOwnerships(contracts.singleStepOwnership, hre.network.name);
-  await transfer2StepOwnerships(contracts.twoStepOwnership, hre.network.name);
+  await transfer2StepOwnerships(contracts, hre.network.name);
 
   // Transfer ownership to the already added pools
   const poolRegistry = await ethers.getContract("PoolRegistry");
@@ -75,22 +59,5 @@ const transfer2StepOwnerships = async (contractNames: string[], networkName: str
   }
 };
 
-const transferSingleStepOwnerships = async (contractNames: string[], networkName: string) => {
-  for (const contractName of contractNames) {
-    const contract = await ethers.getContract(contractName);
-    const owner = await contract.owner();
-
-    let tx;
-    if (owner !== targetOwners[networkName]) {
-      tx = await contract.transferOwnership(targetOwners[networkName]);
-      await tx.wait(1);
-      const newOwner = await contract.owner();
-      console.log(`${contractName} owner ${owner} sucessfully changed to ${newOwner}.`);
-    } else {
-      console.error(`${contractName} owner ${owner} is equal to target ownership address ${targetOwners[networkName]}`);
-    }
-  }
-};
-
-func.tags = ["TransferOwnership"];
+func.tags = ["TransferFundsOwnership"];
 export default func;

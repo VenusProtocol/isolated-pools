@@ -44,14 +44,9 @@ contract VTokenStorage {
     uint8 public decimals;
 
     /**
-     * @notice Risk fund contract address
-     */
-    address payable internal riskFund;
-
-    /**
      * @notice Protocol share Reserve contract address
      */
-    address payable internal protocolShareReserve;
+    address payable public protocolShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
     uint256 internal constant borrowRateMaxMantissa = 0.0005e16;
@@ -137,7 +132,6 @@ contract VTokenStorage {
 abstract contract VTokenInterface is VTokenStorage {
     struct RiskManagementInit {
         address shortfall;
-        address payable riskFund;
         address payable protocolShareReserve;
     }
 
@@ -212,6 +206,16 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when comptroller is changed
      */
     event NewComptroller(ComptrollerInterface indexed oldComptroller, ComptrollerInterface indexed newComptroller);
+
+    /**
+     * @notice Event emitted when shortfall contract address is changed
+     */
+    event NewShortfallContract(address indexed oldShortfall, address indexed newShortfall);
+
+    /**
+     * @notice Event emitted when protocol share reserve contract address is changed
+     */
+    event NewProtocolShareReserve(address indexed oldProtocolShareReserve, address indexed newProtocolShareReserve);
 
     /**
      * @notice Event emitted when interestRateModel is changed

@@ -22,7 +22,6 @@ import {
   PoolRegistry,
   ProtocolShareReserve,
   RewardsDistributor,
-  RiskFund,
   Shortfall,
   VToken,
   VTokenProxyFactory,
@@ -121,7 +120,6 @@ describe("PoolRegistry: Tests", function () {
     await whitePaperRateFactory.deployed();
 
     const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const riskFund = await smock.fake<RiskFund>("RiskFund");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -133,7 +131,6 @@ describe("PoolRegistry: Tests", function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
-      riskFund.address,
       protocolShareReserve.address,
       fakeAccessControlManager.address,
     ]);
@@ -474,6 +471,54 @@ describe("PoolRegistry: Tests", function () {
           fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
+    });
+  });
+
+  describe("setProtocolShareReserve", () => {
+    let protocolShareReserve: FakeContract<ProtocolShareReserve>;
+
+    beforeEach(async () => {
+      protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
+    });
+
+    it("reverts if called by a non-owner", async () => {
+      await expect(poolRegistry.connect(user).setProtocolShareReserve(protocolShareReserve.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
+      await expect(
+        poolRegistry.connect(owner).setProtocolShareReserve(ethers.constants.AddressZero),
+      ).revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+    });
+
+    it("sets protocol share reserve if called by admin", async () => {
+      await poolRegistry.connect(owner).setProtocolShareReserve(protocolShareReserve.address);
+    });
+  });
+
+  describe("setShortfallContract", () => {
+    let shortfall: FakeContract<Shortfall>;
+
+    beforeEach(async () => {
+      shortfall = await smock.fake<Shortfall>("Shortfall");
+    });
+
+    it("reverts if called by a non-owner", async () => {
+      await expect(poolRegistry.connect(user).setShortfallContract(shortfall.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
+      await expect(
+        poolRegistry.connect(owner).setShortfallContract(ethers.constants.AddressZero),
+      ).revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+    });
+
+    it("sets shortfall contract if called by admin", async () => {
+      await poolRegistry.connect(owner).setShortfallContract(shortfall.address);
     });
   });
 });

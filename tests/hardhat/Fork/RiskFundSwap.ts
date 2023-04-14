@@ -152,7 +152,6 @@ const riskFundFixture = async (): Promise<void> => {
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
-    riskFund.address,
     protocolShareReserve.address,
     fakeAccessControlManager.address,
   ]);

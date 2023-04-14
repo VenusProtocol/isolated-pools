@@ -40,12 +40,11 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "Oracle",
     "SwapRouter",
     "AccessControl",
-    "RiskFund",
     "Factories",
     "AccessControlConfig",
     "Pools",
+    "RiskFund",
   ]);
-  const EXPONENT_SCALE = 10e18;
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
@@ -177,7 +176,6 @@ describe("Positive Cases", () => {
     it("PoolRegistry should be initialized properly", async function () {
       await expect(
         PoolRegistry.initialize(
-          ethers.constants.AddressZero,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
@@ -482,7 +480,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 
-  describe("Liquidation of user via Vtoken", () => {
+  describe("Liquidation of user via VToken", () => {
     let mintAmount = convertToUnit("1", 17);
     let vTokenMintAmount = convertToUnit("1", 7);
     let acc1Signer: Signer;

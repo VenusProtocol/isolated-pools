@@ -52,15 +52,33 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         uint256 borrowCap;
     }
 
-    VTokenProxyFactory private vTokenFactory;
-    JumpRateModelFactory private jumpRateFactory;
-    WhitePaperInterestRateModelFactory private whitePaperFactory;
-    Shortfall private shortfall;
-    address payable private riskFund;
-    address payable private protocolShareReserve;
+    /**
+     * @notice VTokenProxyFactory contract address
+     */
+    VTokenProxyFactory public vTokenFactory;
 
     /**
-     * @dev Maps pool's comptroller address to metadata.
+     * @notice JumpRateModelFactory contract address
+     */
+    JumpRateModelFactory public jumpRateFactory;
+
+    /**
+     * @notice WhitePaperInterestRateModelFactory contract address
+     */
+    WhitePaperInterestRateModelFactory public whitePaperFactory;
+
+    /**
+     * @notice Shortfall contract address
+     */
+    Shortfall public shortfall;
+
+    /**
+     * @notice Shortfall contract address
+     */
+    address payable public protocolShareReserve;
+
+    /**
+     * @notice Maps pool's comptroller address to metadata.
      */
     mapping(address => VenusPoolMetaData) public metadata;
 
@@ -113,6 +131,21 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      */
     event MarketAdded(address indexed comptroller, address vTokenAddress);
 
+    /**
+     * @notice Event emitted when shortfall contract address is changed
+     */
+    event NewShortfallContract(address indexed oldShortfall, address indexed newShortfall);
+
+    /**
+     * @notice Event emitted when protocol share reserve contract address is changed
+     */
+    event NewProtocolShareReserve(address indexed oldProtocolShareReserve, address indexed newProtocolShareReserve);
+
+    /**
+     * @notice Thrown if trying to set a zero address where it's not allowed
+     */
+    error ZeroAddressNotAllowed();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -122,31 +155,48 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _vTokenFactory vToken factory address.
-     * @param _jumpRateFactory jump rate factory address.
-     * @param _whitePaperFactory white paper factory address.
-     * @param riskFund_ risk fund address.
+     * @param vTokenFactory_ vToken factory address.
+     * @param jumpRateFactory_ jump rate factory address.
+     * @param whitePaperFactory_ white paper factory address.
      * @param protocolShareReserve_ protocol's shares reserve address.
      * @param accessControlManager_ AccessControlManager contract address.
      */
     function initialize(
-        VTokenProxyFactory _vTokenFactory,
-        JumpRateModelFactory _jumpRateFactory,
-        WhitePaperInterestRateModelFactory _whitePaperFactory,
-        Shortfall _shortfall,
-        address payable riskFund_,
+        VTokenProxyFactory vTokenFactory_,
+        JumpRateModelFactory jumpRateFactory_,
+        WhitePaperInterestRateModelFactory whitePaperFactory_,
+        Shortfall shortfall_,
         address payable protocolShareReserve_,
         address accessControlManager_
     ) external initializer {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
 
-        vTokenFactory = _vTokenFactory;
-        jumpRateFactory = _jumpRateFactory;
-        whitePaperFactory = _whitePaperFactory;
-        shortfall = _shortfall;
-        riskFund = riskFund_;
-        protocolShareReserve = protocolShareReserve_;
+        vTokenFactory = vTokenFactory_;
+        jumpRateFactory = jumpRateFactory_;
+        whitePaperFactory = whitePaperFactory_;
+        _setShortfallContract(shortfall_);
+        _setProtocolShareReserve(protocolShareReserve_);
+    }
+
+    /**
+     * @notice Sets protocol share reserve contract address
+     * @param protocolShareReserve_ The address of the protocol share reserve contract
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
+     * @custom:access Only Governance
+     */
+    function setProtocolShareReserve(address payable protocolShareReserve_) external onlyOwner {
+        _setProtocolShareReserve(protocolShareReserve_);
+    }
+
+    /**
+     * @notice Sets shortfall contract address
+     * @param shortfall_ The address of the shortfall contract
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+     * @custom:access Only Governance
+     */
+    function setShortfallContract(Shortfall shortfall_) external onlyOwner {
+        _setShortfallContract(shortfall_);
     }
 
     /**
@@ -200,6 +250,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
 
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
+     * @param input The structure describing the parameters for adding a market to a pool.
      */
     function addMarket(AddMarketInput memory input) external {
         _checkAccessAllowed("addMarket(AddMarketInput)");
@@ -241,7 +292,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
             input.decimals,
             msg.sender,
             input.accessControlManager,
-            VTokenInterface.RiskManagementInit(address(shortfall), riskFund, protocolShareReserve),
+            VTokenInterface.RiskManagementInit(address(shortfall), protocolShareReserve),
             input.beaconAddress,
             input.reserveFactor
         );
@@ -353,5 +404,23 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
 
         emit PoolRegistered(comptroller, pool);
         return _numberOfPools;
+    }
+
+    function _setShortfallContract(Shortfall shortfall_) internal {
+        if (address(shortfall_) == address(0)) {
+            revert ZeroAddressNotAllowed();
+        }
+        address oldShortfall = address(shortfall);
+        shortfall = shortfall_;
+        emit NewShortfallContract(oldShortfall, address(shortfall_));
+    }
+
+    function _setProtocolShareReserve(address payable protocolShareReserve_) internal {
+        if (protocolShareReserve_ == address(0)) {
+            revert ZeroAddressNotAllowed();
+        }
+        address oldProtocolShareReserve = protocolShareReserve;
+        protocolShareReserve = protocolShareReserve_;
+        emit NewProtocolShareReserve(oldProtocolShareReserve, protocolShareReserve_);
     }
 }

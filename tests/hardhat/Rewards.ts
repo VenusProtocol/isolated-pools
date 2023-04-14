@@ -17,7 +17,6 @@ import {
   PriceOracle__factory,
   ProtocolShareReserve,
   RewardsDistributor,
-  RiskFund,
   Shortfall,
   VToken,
   VTokenProxyFactory,
@@ -57,7 +56,6 @@ async function rewardsFixture() {
   whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
   await whitePaperRateFactory.deployed();
 
-  const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const shortfall = await smock.fake<Shortfall>("Shortfall");
 
@@ -70,7 +68,6 @@ async function rewardsFixture() {
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
-    riskFund.address,
     protocolShareReserve.address,
     fakeAccessControlManager.address,
   ]);
