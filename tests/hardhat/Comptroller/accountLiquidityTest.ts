@@ -124,6 +124,10 @@ describe("Comptroller", () => {
   });
 
   describe("liquidity", () => {
+    it("Fails if set the lesser then or equal value to previous maxLoopLimit", async () => {
+      await expect(comptroller.setMaxLoopsLimit(150)).to.be.revertedWith("Comptroller:: Invalid maxLoopsLimts");
+    });
+
     it("fails if a price has not been set", async () => {
       const vToken = await makeVToken({
         accessControl,
@@ -131,7 +135,7 @@ describe("Comptroller", () => {
         oracle,
         supportMarket: true,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 151,
       });
       await comptroller.connect(accounts[1]).enterMarkets([vToken.address]);
       await expect(comptroller.getAccountLiquidity(await accounts[1].getAddress())).to.be.revertedWithCustomError(
@@ -153,7 +157,7 @@ describe("Comptroller", () => {
         collateralFactor,
         underlyingPrice,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 151,
       });
 
       let error: BigNumber;
@@ -228,7 +232,7 @@ describe("Comptroller", () => {
         collateralFactor: cf1,
         underlyingPrice: up1,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 151,
       });
       const vToken2 = await makeVToken({
         accessControl,
@@ -238,7 +242,7 @@ describe("Comptroller", () => {
         collateralFactor: cf2,
         underlyingPrice: up2,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 152,
       });
       const vToken3 = await makeVToken({
         accessControl,
@@ -248,7 +252,7 @@ describe("Comptroller", () => {
         collateralFactor: cf3,
         underlyingPrice: up3,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 153,
       });
 
       await comptroller.connect(user).enterMarkets([vToken1.address, vToken2.address, vToken3.address]);
@@ -323,7 +327,7 @@ describe("Comptroller", () => {
         collateralFactor: 0.7,
         underlyingPrice: 2.12,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 151,
       });
       const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
       await expect(comptroller.connect(poolRegistrySigner).supportMarket(vToken.address))
@@ -334,7 +338,7 @@ describe("Comptroller", () => {
 
   describe("getHypotheticalAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
-      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry, maxLoopsLimit: 150 });
+      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry, maxLoopsLimit: 151 });
       const [error, liquidity, shortfall] = await comptroller.getHypotheticalAccountLiquidity(
         await accounts[0].getAddress(),
         vToken.address,
@@ -358,7 +362,7 @@ describe("Comptroller", () => {
         collateralFactor,
         underlyingPrice,
         poolRegistry,
-        maxLoopsLimit: 150,
+        maxLoopsLimit: 151,
       });
       const from = accounts[0];
       const amount = 1e6;
