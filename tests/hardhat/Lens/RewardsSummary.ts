@@ -1,11 +1,14 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
-import { expect } from "chai";
+import chai from "chai";
 import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor, VToken } from "../../../typechain";
+
+const { expect } = chai;
+chai.use(smock.matchers);
 
 let comptroller: FakeContract<Comptroller>;
 let vBUSD: FakeContract<VToken>;
