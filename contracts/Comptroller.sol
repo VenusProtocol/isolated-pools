@@ -119,8 +119,15 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    // PoolRegistry, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable poolRegistry;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_) ComptrollerStorage(poolRegistry_) {
+    constructor(address poolRegistry_) {
+        require(poolRegistry_ != address(0), "invalid pool registry address");
+
+        poolRegistry = poolRegistry_;
         _disableInitializers();
     }
 
