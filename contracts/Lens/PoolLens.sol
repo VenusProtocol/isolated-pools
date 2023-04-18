@@ -430,7 +430,7 @@ contract PoolLens is ExponentialNoError {
             updateMarketSupplyIndex(address(markets[i]), rewardsDistributor, supplyState);
 
             //Calculate pending rewards
-            uint256 borowReward = calculateBorrowerReward(
+            uint256 borrowReward = calculateBorrowerReward(
                 address(markets[i]),
                 rewardsDistributor,
                 account,
@@ -446,7 +446,7 @@ contract PoolLens is ExponentialNoError {
 
             PendingReward memory pendingReward;
             pendingReward.vTokenAddress = address(markets[i]);
-            pendingReward.amount = borowReward + supplyReward;
+            pendingReward.amount = borrowReward + supplyReward;
             pendingRewards[i] = pendingReward;
         }
         return pendingRewards;
