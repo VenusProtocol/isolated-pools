@@ -285,6 +285,13 @@ describe("PoolRegistry: Tests", function () {
       );
     });
 
+    it("reverts if the name is too long", async () => {
+      const longName = Array(101).fill("a").join("");
+      await expect(poolRegistry.setPoolName(comptroller1Proxy.address, longName)).to.be.revertedWith(
+        "Pool's name is too large",
+      );
+    });
+
     it("sets new pool name", async () => {
       await poolRegistry.setPoolName(comptroller1Proxy.address, newName);
       const poolInfo = await poolRegistry.getPoolByComptroller(comptroller1Proxy.address);
@@ -466,6 +473,22 @@ describe("PoolRegistry: Tests", function () {
           fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
+    });
+
+    it("reverts if pool name is too long", async () => {
+      const longName = Array(101).fill("a").join("");
+      await expect(
+        poolRegistry.createRegistryPool(
+          longName,
+          comptrollerBeacon.address,
+          parseUnits("0.5", 18),
+          parseUnits("1.1", 18),
+          parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ),
+      ).to.be.revertedWith("Pool's name is too large");
     });
   });
 
