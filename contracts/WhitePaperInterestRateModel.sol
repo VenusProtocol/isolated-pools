@@ -19,12 +19,12 @@ contract WhitePaperInterestRateModel is InterestRateModel {
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
      */
-    uint256 public multiplierPerBlock;
+    uint256 public immutable multiplierPerBlock;
 
     /**
      * @notice The base interest rate which is the y-intercept when utilization rate is 0
      */
-    uint256 public baseRatePerBlock;
+    uint256 public immutable baseRatePerBlock;
 
     event NewInterestParams(uint256 baseRatePerBlock, uint256 multiplierPerBlock);
 
