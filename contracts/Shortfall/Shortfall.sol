@@ -402,7 +402,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolReserve(comptroller);
+        uint256 riskFundBalance = riskFund.poolReserves(comptroller);
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
