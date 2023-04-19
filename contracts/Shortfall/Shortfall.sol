@@ -158,7 +158,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(_isStarted(auction), "no on-going auction");
+        require(!_isStale(auction), "auction is stale, restart it");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
@@ -208,7 +209,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(_isStarted(auction), "no on-going auction");
         require(
             block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0),
             "waiting for next bidder. cannot close auction"
@@ -274,11 +275,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
-        require(
-            block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0),
-            "you need to wait for more time for first bidder"
-        );
+        require(_isStarted(auction), "no on-going auction");
+        require(_isStale(auction), "you need to wait for more time for first bidder");
 
         auction.status = AuctionStatus.ENDED;
 
@@ -451,5 +449,23 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuard
      */
     function _getAllMarkets(address comptroller) internal view returns (VToken[] memory) {
         return ComptrollerInterface(comptroller).getAllMarkets();
+    }
+
+    /**
+     * @dev Checks if the auction has started
+     * @param auction The auction to query the status for
+     */
+    function _isStarted(Auction storage auction) internal view returns (bool) {
+        return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
+    }
+
+    /**
+     * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
+     *   was started more than waitForFirstBidder blocks ago.
+     * @param auction The auction to query the status for
+     */
+    function _isStale(Auction storage auction) internal view returns (bool) {
+        bool noBidder = auction.highestBidder == address(0);
+        return noBidder && (block.number > auction.startBlock + waitForFirstBidder);
     }
 }

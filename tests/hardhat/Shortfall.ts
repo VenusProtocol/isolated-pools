@@ -258,6 +258,28 @@ describe("Shortfall: Tests", async function () {
     });
   });
 
+  describe("placeBid", async function () {
+    beforeEach(setup);
+
+    async function startAuction() {
+      vDAI.badDebt.returns(parseUnits("10000", 18));
+      await vDAI.setVariable("badDebt", parseUnits("10000", 18));
+      vWBTC.badDebt.returns(parseUnits("2", 8));
+      await vWBTC.setVariable("badDebt", parseUnits("2", 8));
+      await shortfall.startAuction(poolAddress);
+    }
+
+    it("fails if auction is not active", async function () {
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("no on-going auction");
+    });
+
+    it("fails if auction is stale", async function () {
+      await startAuction();
+      await mine(100);
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("auction is stale, restart it");
+    });
+  });
+
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
     let startBlockNumber;
