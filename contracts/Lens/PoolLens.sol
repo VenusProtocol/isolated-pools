@@ -418,7 +418,7 @@ contract PoolLens is ExponentialNoError {
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
-            // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
+            // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
             (borrowState.index, borrowState.block) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;

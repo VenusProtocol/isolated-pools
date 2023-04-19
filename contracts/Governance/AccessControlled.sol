@@ -55,7 +55,7 @@ abstract contract AccessControlled is Initializable, Ownable2StepUpgradeable {
      * @param accessControlManager_ The new address of the AccessControlManager
      */
     function _setAccessControlManager(address accessControlManager_) internal {
-        require(address(accessControlManager_) != address(0), "invalid acess control manager address");
+        require(address(accessControlManager_) != address(0), "invalid access control manager address");
         address oldAccessControlManager = address(_accessControlManager);
         _accessControlManager = IAccessControlManager(accessControlManager_);
         emit NewAccessControlManager(oldAccessControlManager, accessControlManager_);
