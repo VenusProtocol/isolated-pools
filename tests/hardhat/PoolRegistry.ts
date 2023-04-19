@@ -342,6 +342,20 @@ describe("PoolRegistry: Tests", function () {
       expect(await vToken.accessControlManager()).to.equal(fakeAccessControlManager.address);
     });
 
+    it("transfers initial supply fron the sender's address", async () => {
+      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
+        constants.AddressZero,
+      );
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+
+      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
+      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
+
+      expect(await mockToken.balanceOf(user.address)).to.equal(0);
+    });
+
     it("reverts if market is readded with same comptroller asset combination", async () => {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);

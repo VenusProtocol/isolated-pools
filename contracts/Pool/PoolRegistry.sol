@@ -316,10 +316,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
-        token.safeTransferFrom(owner(), address(this), input.initialSupply);
+        token.safeTransferFrom(msg.sender, address(this), input.initialSupply);
         token.safeApprove(address(vToken), input.initialSupply);
 
-        vToken.mintBehalf(owner(), input.initialSupply);
+        vToken.mintBehalf(msg.sender, input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }
