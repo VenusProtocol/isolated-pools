@@ -99,7 +99,7 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 };
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
+  const [admin, user, ...signers] = await ethers.getSigners();
   if (FORK_MAINNET) {
     busdUser = await initMainnetUser("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
     usdcUser = await initMainnetUser("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
@@ -342,7 +342,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -364,7 +363,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -389,7 +387,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -414,7 +411,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -439,7 +435,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -464,7 +459,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,

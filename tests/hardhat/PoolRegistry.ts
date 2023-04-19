@@ -48,7 +48,6 @@ interface NewMarketParameters {
   collateralFactor: BigNumberish;
   liquidationThreshold: BigNumberish;
   accessControlManager: string;
-  vTokenProxyAdmin: string;
   beaconAddress: string;
   initialSupply: BigNumberish;
 }
@@ -56,7 +55,6 @@ interface NewMarketParameters {
 describe("PoolRegistry: Tests", function () {
   let owner: SignerWithAddress;
   let user: SignerWithAddress;
-  let proxyAdmin: SignerWithAddress;
   let poolRegistry: PoolRegistry;
   let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
@@ -91,7 +89,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
@@ -104,7 +101,7 @@ describe("PoolRegistry: Tests", function () {
    * Deploying required contracts along with the poolRegistry.
    */
   const poolRegistryFixture = async () => {
-    [owner, user, proxyAdmin] = await ethers.getSigners();
+    [owner, user] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory<VTokenProxyFactory__factory>("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -228,7 +225,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
@@ -250,7 +246,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,

@@ -45,7 +45,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         uint256 liquidationThreshold;
         uint256 reserveFactor;
         AccessControlManager accessControlManager;
-        address vTokenProxyAdmin;
         address beaconAddress;
         uint256 initialSupply;
         uint256 supplyCap;

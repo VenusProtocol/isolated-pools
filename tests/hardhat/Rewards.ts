@@ -42,8 +42,7 @@ let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
 
 async function rewardsFixture() {
-  let proxyAdmin: SignerWithAddress;
-  [root, proxyAdmin] = await ethers.getSigners();
+  [root] = await ethers.getSigners();
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -163,7 +162,6 @@ async function rewardsFixture() {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: convertToUnit(1000, 8),
@@ -189,7 +187,6 @@ async function rewardsFixture() {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: convertToUnit(1000000, 18),

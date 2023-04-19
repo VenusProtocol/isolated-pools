@@ -88,7 +88,7 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 };
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
+  const [admin, user, ...signers] = await ethers.getSigners();
   if (FORK_MAINNET) {
     // MAINNET USER WITH BALANCE
     busdUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
@@ -234,7 +234,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: parseUnits("0.7", 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -256,7 +255,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: parseUnits("0.7", 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
