@@ -23,7 +23,7 @@ abstract contract MaxLoopsLimitHelper {
      * @param limit Limit for the max loops can execute at a time
      */
     function _setMaxLoopsLimit(uint256 limit) internal {
-        require(limit > maxLoopsLimit, "Comptroller:: Invalid maxLoopsLimts");
+        require(limit > maxLoopsLimit, "Comptroller: Invalid maxLoopsLimit");
 
         uint256 oldMaxLoopsLimit = maxLoopsLimit;
         maxLoopsLimit = limit;

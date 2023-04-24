@@ -125,7 +125,7 @@ describe("Comptroller", () => {
 
   describe("liquidity", () => {
     it("Fails if set the lesser then or equal value to previous maxLoopLimit", async () => {
-      await expect(comptroller.setMaxLoopsLimit(150)).to.be.revertedWith("Comptroller:: Invalid maxLoopsLimts");
+      await expect(comptroller.setMaxLoopsLimit(150)).to.be.revertedWith("Comptroller: Invalid maxLoopsLimit");
     });
 
     it("fails if a price has not been set", async () => {
