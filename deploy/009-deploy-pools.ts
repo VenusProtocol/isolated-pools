@@ -10,8 +10,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const proxyAdmin = (await ethers.getContract("DefaultProxyAdmin")).address;
-
   let tx;
   const priceOracle = await ethers.getContract("ResilientOracle");
   const poolRegistry = await ethers.getContract("PoolRegistry");
@@ -137,7 +135,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         liquidationThreshold: liquidationThreshold,
         reserveFactor: reserveFactor,
         accessControlManager: accessControlManager.address,
-        vTokenProxyAdmin: proxyAdmin,
         beaconAddress: vTokenBeacon.address,
         initialSupply: initialSupply,
         supplyCap: supplyCap,

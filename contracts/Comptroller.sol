@@ -179,7 +179,7 @@ contract Comptroller is
     }
 
     /**
-     * @notice Removes asset from sender's account liquidity calculation; disabeling them as collateral
+     * @notice Removes asset from sender's account liquidity calculation; disabling them as collateral
      * @dev Sender must not have an outstanding borrow balance in the asset,
      *  or be providing necessary collateral for an outstanding borrow.
      * @param vTokenAddress The address of the asset to be removed
@@ -1162,7 +1162,7 @@ contract Comptroller is
     }
 
     /**
-     * @notice Set the limit for the loops can iterate to avoid the DOS
+     * @notice Set the for loop iteration limit to avoid DOS
      * @param limit Limit for the max loops can execute at a time
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {

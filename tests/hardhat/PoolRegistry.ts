@@ -48,7 +48,6 @@ interface NewMarketParameters {
   collateralFactor: BigNumberish;
   liquidationThreshold: BigNumberish;
   accessControlManager: string;
-  vTokenProxyAdmin: string;
   beaconAddress: string;
   initialSupply: BigNumberish;
 }
@@ -56,7 +55,6 @@ interface NewMarketParameters {
 describe("PoolRegistry: Tests", function () {
   let owner: SignerWithAddress;
   let user: SignerWithAddress;
-  let proxyAdmin: SignerWithAddress;
   let poolRegistry: PoolRegistry;
   let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
@@ -91,7 +89,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
@@ -104,7 +101,7 @@ describe("PoolRegistry: Tests", function () {
    * Deploying required contracts along with the poolRegistry.
    */
   const poolRegistryFixture = async () => {
-    [owner, user, proxyAdmin] = await ethers.getSigners();
+    [owner, user] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory<VTokenProxyFactory__factory>("VTokenProxyFactory");
     vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -228,7 +225,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
@@ -250,7 +246,6 @@ describe("PoolRegistry: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
       supplyCap: INITIAL_SUPPLY,
@@ -287,6 +282,13 @@ describe("PoolRegistry: Tests", function () {
       await expect(poolRegistry.setPoolName(comptroller1Proxy.address, newName)).to.be.revertedWithCustomError(
         poolRegistry,
         "Unauthorized",
+      );
+    });
+
+    it("reverts if the name is too long", async () => {
+      const longName = Array(101).fill("a").join("");
+      await expect(poolRegistry.setPoolName(comptroller1Proxy.address, longName)).to.be.revertedWith(
+        "Pool's name is too large",
       );
     });
 
@@ -338,6 +340,20 @@ describe("PoolRegistry: Tests", function () {
       expect(await vToken.comptroller()).to.equal(comptroller1Proxy.address);
       expect(await vToken.owner()).to.equal(owner.address);
       expect(await vToken.accessControlManager()).to.equal(fakeAccessControlManager.address);
+    });
+
+    it("transfers initial supply fron the sender's address", async () => {
+      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
+        constants.AddressZero,
+      );
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+
+      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
+      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
+
+      expect(await mockToken.balanceOf(user.address)).to.equal(0);
     });
 
     it("reverts if market is readded with same comptroller asset combination", async () => {
@@ -471,6 +487,22 @@ describe("PoolRegistry: Tests", function () {
           fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
+    });
+
+    it("reverts if pool name is too long", async () => {
+      const longName = Array(101).fill("a").join("");
+      await expect(
+        poolRegistry.createRegistryPool(
+          longName,
+          comptrollerBeacon.address,
+          parseUnits("0.5", 18),
+          parseUnits("1.1", 18),
+          parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ),
+      ).to.be.revertedWith("Pool's name is too large");
     });
   });
 

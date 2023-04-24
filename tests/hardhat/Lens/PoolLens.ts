@@ -105,7 +105,7 @@ describe("PoolLens", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    const [owner, proxyAdmin, ...rest] = await ethers.getSigners();
+    const [owner, ...rest] = await ethers.getSigners();
     [borrowerWbtc, borrowerDai] = rest;
     ownerAddress = await owner.getAddress();
 
@@ -213,7 +213,6 @@ describe("PoolLens", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: convertToUnit(4000, 18),
@@ -235,7 +234,6 @@ describe("PoolLens", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: initialSupply,

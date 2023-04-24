@@ -45,7 +45,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         uint256 liquidationThreshold;
         uint256 reserveFactor;
         AccessControlManager accessControlManager;
-        address vTokenProxyAdmin;
         address beaconAddress;
         uint256 initialSupply;
         uint256 supplyCap;
@@ -211,7 +210,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      * @return proxyAddress The the Comptroller proxy address
      */
     function createRegistryPool(
-        string memory name,
+        string calldata name,
         address beaconAddress,
         uint256 closeFactor,
         uint256 liquidationIncentive,
@@ -317,10 +316,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
-        token.safeTransferFrom(owner(), address(this), input.initialSupply);
+        token.safeTransferFrom(msg.sender, address(this), input.initialSupply);
         token.safeApprove(address(vToken), input.initialSupply);
 
-        vToken.mintBehalf(owner(), input.initialSupply);
+        vToken.mintBehalf(msg.sender, input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }
@@ -330,6 +329,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      */
     function setPoolName(address comptroller, string calldata name) external {
         _checkAccessAllowed("setPoolName(address,string)");
+        _ensureValidName(name);
         string memory oldName = _poolByComptroller[comptroller].name;
         _poolByComptroller[comptroller].name = name;
         emit PoolNameSet(comptroller, oldName, name);
@@ -388,12 +388,11 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      * @param comptroller The pool's Comptroller proxy contract address
      * @return The index of the registered Venus pool
      */
-    function _registerPool(string memory name, address comptroller) internal returns (uint256) {
+    function _registerPool(string calldata name, address comptroller) internal returns (uint256) {
         VenusPool memory venusPool = _poolByComptroller[comptroller];
 
         require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
-
-        require(bytes(name).length <= 100, "Pool's name is too large.");
+        _ensureValidName(name);
 
         _numberOfPools++;
 
@@ -404,6 +403,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
 
         emit PoolRegistered(comptroller, pool);
         return _numberOfPools;
+    }
+
+    function _ensureValidName(string calldata name) internal {
+        require(bytes(name).length <= 100, "Pool's name is too large");
     }
 
     function _setShortfallContract(Shortfall shortfall_) internal {

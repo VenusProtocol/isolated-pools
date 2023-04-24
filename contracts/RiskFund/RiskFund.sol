@@ -207,15 +207,6 @@ contract RiskFund is
     }
 
     /**
-     * @dev Get pool reserve by pool id.
-     * @param comptroller Comptroller address of the pool.
-     * @return Number of reserved tokens.
-     */
-    function getPoolReserve(address comptroller) external view override returns (uint256) {
-        return poolReserves[comptroller];
-    }
-
-    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.

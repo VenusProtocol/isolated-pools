@@ -12,5 +12,5 @@ interface IRiskFund {
 
     function updateAssetsState(address comptroller, address asset) external;
 
-    function getPoolReserve(address comptroller) external view returns (uint256);
+    function poolReserves(address comptroller) external view returns (uint256);
 }

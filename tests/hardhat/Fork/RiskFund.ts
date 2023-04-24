@@ -99,7 +99,7 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 };
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
+  const [admin, user, ...signers] = await ethers.getSigners();
   if (FORK_MAINNET) {
     busdUser = await initMainnetUser("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
     usdcUser = await initMainnetUser("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
@@ -342,7 +342,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -364,7 +363,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -389,7 +387,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -414,7 +411,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -439,7 +435,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -464,7 +459,6 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: accessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
     supplyCap: initialSupply,
@@ -806,8 +800,8 @@ describe("Risk Fund: Tests", function () {
       const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
 
-      const pool1Reserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
-      const pool2Reserve = await riskFund.getPoolReserve("0x0000000000000000000000000000000000000000");
+      const pool1Reserve = await riskFund.poolReserves(comptroller1Proxy.address);
+      const pool2Reserve = await riskFund.poolReserves("0x0000000000000000000000000000000000000000");
       expect(Number(pool1Reserve)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
       expect(pool2Reserve).equal(0);
     });
@@ -872,7 +866,7 @@ describe("Risk Fund: Tests", function () {
         .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
       const afterTransfer = await BUSD.balanceOf(shortfall.address);
       const remainingBalance = await BUSD.balanceOf(riskFund.address);
-      const poolReserve = await riskFund.getPoolReserve(comptroller1Proxy.address);
+      const poolReserve = await riskFund.poolReserves(comptroller1Proxy.address);
 
       const amount = Number(afterTransfer) - Number(beforeTransfer);
       expect(amount).to.be.closeTo(Number(convertToUnit(20, 18)), Number(convertToUnit(3, 17)));
@@ -1061,11 +1055,11 @@ describe("Risk Fund: Tests", function () {
       expect(riskUSDTFor3).equal(0);
       expect(riskBUSDTFor3).equal(0);
 
-      const poolReserve1 = await riskFund.getPoolReserve(comptroller1Proxy.address);
+      const poolReserve1 = await riskFund.poolReserves(comptroller1Proxy.address);
 
-      const poolReserve2 = await riskFund.getPoolReserve(comptroller2Proxy.address);
+      const poolReserve2 = await riskFund.poolReserves(comptroller2Proxy.address);
 
-      const poolReserve3 = await riskFund.getPoolReserve(comptroller3Proxy.address);
+      const poolReserve3 = await riskFund.poolReserves(comptroller3Proxy.address);
 
       expect(poolReserve1).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));
       expect(poolReserve2).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));

@@ -1,5 +1,4 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -25,9 +24,7 @@ describe("UpgradedVToken: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  let proxyAdmin: SignerWithAddress;
   before(async function () {
-    [, proxyAdmin] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     const vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -131,7 +128,6 @@ describe("UpgradedVToken: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
       supplyCap: initialSupply,

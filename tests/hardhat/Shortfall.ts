@@ -128,7 +128,7 @@ async function shortfallFixture() {
 
   comptroller.oracle.returns(fakePriceOracle.address);
 
-  fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18));
+  fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
   fakeRiskFund.transferReserveForAuction.returns(0);
 
   // Access Control
@@ -258,6 +258,28 @@ describe("Shortfall: Tests", async function () {
     });
   });
 
+  describe("placeBid", async function () {
+    beforeEach(setup);
+
+    async function startAuction() {
+      vDAI.badDebt.returns(parseUnits("10000", 18));
+      await vDAI.setVariable("badDebt", parseUnits("10000", 18));
+      vWBTC.badDebt.returns(parseUnits("2", 8));
+      await vWBTC.setVariable("badDebt", parseUnits("2", 8));
+      await shortfall.startAuction(poolAddress);
+    }
+
+    it("fails if auction is not active", async function () {
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("no on-going auction");
+    });
+
+    it("fails if auction is stale", async function () {
+      await startAuction();
+      await mine(100);
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("auction is stale, restart it");
+    });
+  });
+
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
     let startBlockNumber;
@@ -266,7 +288,7 @@ describe("Shortfall: Tests", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
 
-      expect(await fakeRiskFund.getPoolReserve(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
+      expect(await fakeRiskFund.poolReserves(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
 
       expect(await vDAI.badDebt()).equal(parseUnits("1000", 18));
       expect(await vWBTC.badDebt()).equal(parseUnits("1", 8));
@@ -431,7 +453,7 @@ describe("Shortfall: Tests", async function () {
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
       riskFundBalance = "50000";
-      fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18));
+      fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
 
       const receipt = await shortfall.startAuction(poolAddress);
       startBlockNumber = receipt.blockNumber;
