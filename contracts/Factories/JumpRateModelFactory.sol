@@ -9,7 +9,7 @@ contract JumpRateModelFactory {
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
-        IAccessControlManager accessControlManager_
+        IAccessControlManagerV8 accessControlManager_
     ) external returns (JumpRateModelV2) {
         JumpRateModelV2 rate = new JumpRateModelV2(
             baseRatePerYear,

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "../VToken.sol";
-import "../Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 import "./ComptrollerScenario.sol";
 
 contract VTokenHarness is VToken {

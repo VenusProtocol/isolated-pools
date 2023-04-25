@@ -9,14 +9,20 @@ import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
-import "./Governance/AccessControlled.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title Venus VToken Contract
  * @author Venus Dev Team
  */
-contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, ExponentialNoError, TokenErrorReporter {
+contract VToken is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    VTokenInterface,
+    ExponentialNoError,
+    TokenErrorReporter
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /*** Reentrancy Guard ***/

@@ -8,7 +8,7 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Rewards/RewardsDistributor.sol";
-import "./Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 import "./MaxLoopsLimitHelper.sol";
 
 /**
@@ -16,7 +16,7 @@ import "./MaxLoopsLimitHelper.sol";
  */
 contract Comptroller is
     Ownable2StepUpgradeable,
-    AccessControlled,
+    AccessControlledV8,
     ComptrollerStorage,
     ComptrollerInterface,
     ExponentialNoError,

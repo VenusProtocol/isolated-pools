@@ -13,7 +13,7 @@ import "../Factories/WhitePaperInterestRateModelFactory.sol";
 import "../WhitePaperInterestRateModel.sol";
 import "../VToken.sol";
 import "../InterestRateModel.sol";
-import "../Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 import "../Shortfall/Shortfall.sol";
 import "../VTokenInterfaces.sol";
 import "./PoolRegistryInterface.sol";
@@ -22,7 +22,7 @@ import "./PoolRegistryInterface.sol";
  * @title PoolRegistry
  * @notice PoolRegistry is a registry for Venus interest rate pools.
  */
-contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistryInterface {
+contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum InterestRateModels {
