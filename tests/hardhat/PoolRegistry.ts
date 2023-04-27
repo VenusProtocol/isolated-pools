@@ -433,12 +433,10 @@ describe("PoolRegistry: Tests", function () {
   });
 
   describe("updatePoolMetadata", async () => {
-    const riskRating = 2;
     const category = "High market cap";
     const logoURL = "http://venus.io/pool1";
     const description = "An sample description";
     const newMetadata = {
-      riskRating,
       category,
       logoURL,
       description,
@@ -456,7 +454,6 @@ describe("PoolRegistry: Tests", function () {
     it("sets new pool metadata", async () => {
       await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata);
       const metadata = await poolRegistry.metadata(comptroller1Proxy.address);
-      expect(metadata.riskRating).equal(riskRating);
       expect(metadata.category).equal(category);
       expect(metadata.logoURL).equal(logoURL);
       expect(metadata.description).equal(description);
@@ -467,7 +464,7 @@ describe("PoolRegistry: Tests", function () {
       const tx = await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata);
       await expect(tx)
         .to.emit(poolRegistry, "PoolMetadataUpdated")
-        .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
+        .withArgs(comptroller1Proxy.address, oldMetadata, [category, logoURL, description]);
     });
   });
 

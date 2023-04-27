@@ -14,21 +14,9 @@ interface PoolRegistryInterface {
     }
 
     /**
-     * @dev Enum for risk rating of Venus interest rate pool.
-     */
-    enum RiskRating {
-        VERY_HIGH_RISK,
-        HIGH_RISK,
-        MEDIUM_RISK,
-        LOW_RISK,
-        MINIMAL_RISK
-    }
-
-    /**
      * @dev Struct for a Venus interest rate pool metadata.
      */
     struct VenusPoolMetaData {
-        RiskRating riskRating;
         string category;
         string logoURL;
         string description;
