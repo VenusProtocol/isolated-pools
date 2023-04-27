@@ -19,7 +19,6 @@ contract PoolLens is ExponentialNoError {
         address comptroller;
         uint256 blockPosted;
         uint256 timestampPosted;
-        PoolRegistry.RiskRating riskRating;
         string category;
         string logoURL;
         string description;
@@ -246,7 +245,7 @@ contract PoolLens is ExponentialNoError {
      * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
      *   a break down of bad debt by market
      */
-    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory badDebtSummary) {
+    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
         // Get every market in the pool
@@ -333,7 +332,6 @@ contract PoolLens is ExponentialNoError {
             comptroller: venusPool.comptroller,
             blockPosted: venusPool.blockPosted,
             timestampPosted: venusPool.timestampPosted,
-            riskRating: venusPoolMetaData.riskRating,
             category: venusPoolMetaData.category,
             logoURL: venusPoolMetaData.logoURL,
             description: venusPoolMetaData.description,
