@@ -215,6 +215,7 @@ describe("PoolLens", async function () {
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: owner.address,
       supplyCap: convertToUnit(4000, 18),
       borrowCap: convertToUnit(2000, 18),
     });
@@ -236,6 +237,7 @@ describe("PoolLens", async function () {
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: owner.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
     });

@@ -236,6 +236,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: fakeAccessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -257,6 +258,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: fakeAccessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });

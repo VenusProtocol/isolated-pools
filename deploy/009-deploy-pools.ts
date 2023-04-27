@@ -5,6 +5,11 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 
+const treasuryAddresses: { [network: string]: string } = {
+  bsctestnet: "0xFEA1c651A47FE29dB9b1bf3cC1f224d8D9CFF68C", // one of testnet admin accounts
+  bscmainnet: "0xF322942f644A996A617BD29c16bd7d231d9F35E9", // Venus Treasury
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -137,6 +142,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         accessControlManager: accessControlManager.address,
         beaconAddress: vTokenBeacon.address,
         initialSupply: initialSupply,
+        vTokenReceiver: hre.network.name === "hardhat" ? deployer : treasuryAddresses[hre.network.name],
         supplyCap: supplyCap,
         borrowCap: borrowCap,
       });

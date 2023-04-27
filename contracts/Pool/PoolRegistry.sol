@@ -47,6 +47,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         AccessControlManager accessControlManager;
         address beaconAddress;
         uint256 initialSupply;
+        address vTokenReceiver;
         uint256 supplyCap;
         uint256 borrowCap;
     }
@@ -253,14 +254,14 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
      */
     function addMarket(AddMarketInput memory input) external {
         _checkAccessAllowed("addMarket(AddMarketInput)");
-        require(input.comptroller != address(0), "RegistryPool: Invalid comptroller address");
-        require(input.asset != address(0), "RegistryPool: Invalid asset address");
-
-        require(input.beaconAddress != address(0), "RegistryPool: Invalid beacon address");
+        require(input.comptroller != address(0), "PoolRegistry: Invalid comptroller address");
+        require(input.asset != address(0), "PoolRegistry: Invalid asset address");
+        require(input.beaconAddress != address(0), "PoolRegistry: Invalid beacon address");
+        require(input.vTokenReceiver != address(0), "PoolRegistry: Invalid vTokenReceiver address");
 
         require(
             _vTokens[input.comptroller][input.asset] == address(0),
-            "RegistryPool: Market already added for asset comptroller combination"
+            "PoolRegistry: Market already added for asset comptroller combination"
         );
 
         InterestRateModel rate;
@@ -320,7 +321,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         token.safeApprove(address(vToken), 0);
         token.safeApprove(address(vToken), input.initialSupply);
 
-        vToken.mintBehalf(msg.sender, input.initialSupply);
+        vToken.mintBehalf(input.vTokenReceiver, input.initialSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }
