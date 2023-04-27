@@ -25,6 +25,7 @@ describe("UpgradedVToken: Tests", function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
+    const [root] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     const vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -130,6 +131,7 @@ describe("UpgradedVToken: Tests", function () {
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: root.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
     });

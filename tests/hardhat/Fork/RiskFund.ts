@@ -344,6 +344,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -365,6 +366,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -389,6 +391,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -413,6 +416,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -437,6 +441,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -461,6 +466,7 @@ const riskFundFixture = async (): Promise<void> => {
     accessControlManager: accessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });

@@ -1,12 +1,11 @@
-import { FakeContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expect } from "chai";
+import chai from "chai";
 import { BigNumberish, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
@@ -30,9 +29,12 @@ import {
   WhitePaperInterestRateModelFactory__factory,
 } from "../../typechain";
 
+const { expect } = chai;
+chai.use(smock.matchers);
+
 const WP_RATE_MODEL = 0;
 const JUMP_RATE_MODEL = 1;
-const INITIAL_SUPPLY = convertToUnit(1000, 18);
+const INITIAL_SUPPLY = parseUnits("1000", 18);
 
 interface NewMarketParameters {
   comptroller: string;
@@ -47,9 +49,13 @@ interface NewMarketParameters {
   kink_: BigNumberish;
   collateralFactor: BigNumberish;
   liquidationThreshold: BigNumberish;
+  reserveFactor: BigNumberish;
   accessControlManager: string;
   beaconAddress: string;
   initialSupply: BigNumberish;
+  vTokenReceiver: string;
+  supplyCap: BigNumberish;
+  borrowCap: BigNumberish;
 }
 
 describe("PoolRegistry: Tests", function () {
@@ -58,9 +64,9 @@ describe("PoolRegistry: Tests", function () {
   let poolRegistry: PoolRegistry;
   let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
-  let mockDAI: MockToken;
-  let mockWBTC: MockToken;
-  let mockToken: MockToken;
+  let mockDAI: MockContract<MockToken>;
+  let mockWBTC: MockContract<MockToken>;
+  let mockToken: MockContract<MockToken>;
   let vDAI: VToken;
   let vWBTC: VToken;
   let priceOracle: MockPriceOracle;
@@ -73,7 +79,7 @@ describe("PoolRegistry: Tests", function () {
   let rewardDistributor: FakeContract<RewardsDistributor>;
   const maxLoopsLimit = 150;
 
-  const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
+  const withDefaultMarketParameters = (overwrites: Partial<NewMarketParameters> = {}): NewMarketParameters => {
     const defaults = {
       comptroller: comptroller1Proxy.address,
       asset: mockToken.address,
@@ -85,12 +91,13 @@ describe("PoolRegistry: Tests", function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      reserveFactor: convertToUnit(0.3, 18),
+      collateralFactor: parseUnits("0.7", 18),
+      liquidationThreshold: parseUnits("0.7", 18),
+      reserveFactor: parseUnits("0.3", 18),
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
+      vTokenReceiver: owner.address,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
     };
@@ -149,15 +156,15 @@ describe("PoolRegistry: Tests", function () {
     await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
-    const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
+    const MockToken = await smock.mock<MockToken__factory>("MockToken");
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(convertToUnit(1000, 18));
+    await mockDAI.faucet(parseUnits("1000", 18));
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
     mockToken = await MockToken.deploy("SomeToken", "ST", 18);
 
-    const _closeFactor = convertToUnit(0.05, 18);
-    const _liquidationIncentive = convertToUnit(1, 18);
-    const _minLiquidatableCollateral = convertToUnit(100, 18);
+    const _closeFactor = parseUnits("0.05", 18);
+    const _liquidationIncentive = parseUnits("1", 18);
+    const _minLiquidatableCollateral = parseUnits("100", 18);
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
@@ -167,9 +174,9 @@ describe("PoolRegistry: Tests", function () {
     const daiPrice = "1";
     const someTokenPrice = "1234";
 
-    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
-    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
-    await priceOracle.setPrice(mockToken.address, convertToUnit(someTokenPrice, 18));
+    await priceOracle.setPrice(mockDAI.address, parseUnits(daiPrice, 18));
+    await priceOracle.setPrice(mockWBTC.address, parseUnits(btcPrice, 28));
+    await priceOracle.setPrice(mockToken.address, parseUnits(someTokenPrice, 18));
 
     // Registering the first pool
     await poolRegistry.createRegistryPool(
@@ -221,12 +228,13 @@ describe("PoolRegistry: Tests", function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      reserveFactor: convertToUnit(0.3, 18),
+      collateralFactor: parseUnits("0.7", 18),
+      liquidationThreshold: parseUnits("0.7", 18),
+      reserveFactor: parseUnits("0.3", 18),
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
+      vTokenReceiver: owner.address,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
     });
@@ -242,12 +250,13 @@ describe("PoolRegistry: Tests", function () {
       multiplierPerYear: "40000000000000000",
       jumpMultiplierPerYear: 0,
       kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      reserveFactor: convertToUnit(0.3, 18),
+      collateralFactor: parseUnits("0.7", 18),
+      liquidationThreshold: parseUnits("0.7", 18),
+      reserveFactor: parseUnits("0.3", 18),
       accessControlManager: fakeAccessControlManager.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
+      vTokenReceiver: owner.address,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
     });
@@ -310,10 +319,34 @@ describe("PoolRegistry: Tests", function () {
       fakeAccessControlManager.isAllowedToCall
         .whenCalledWith(owner.address, "addMarket(AddMarketInput)")
         .returns(false);
-      await expect(poolRegistry.addMarket(await withDefaultMarketParameters({}))).to.be.revertedWithCustomError(
+      await expect(poolRegistry.addMarket(withDefaultMarketParameters({}))).to.be.revertedWithCustomError(
         poolRegistry,
         "Unauthorized",
       );
+    });
+
+    it("reverts if Comptroller address is zero", async () => {
+      await expect(
+        poolRegistry.addMarket(withDefaultMarketParameters({ comptroller: constants.AddressZero })),
+      ).to.be.revertedWith("PoolRegistry: Invalid comptroller address");
+    });
+
+    it("reverts if the asset address is zero", async () => {
+      await expect(
+        poolRegistry.addMarket(withDefaultMarketParameters({ asset: constants.AddressZero })),
+      ).to.be.revertedWith("PoolRegistry: Invalid asset address");
+    });
+
+    it("reverts if the beacon address is zero", async () => {
+      await expect(
+        poolRegistry.addMarket(withDefaultMarketParameters({ beaconAddress: constants.AddressZero })),
+      ).to.be.revertedWith("PoolRegistry: Invalid beacon address");
+    });
+
+    it("reverts if vTokenReceiver address is zero", async () => {
+      await expect(
+        poolRegistry.addMarket(withDefaultMarketParameters({ vTokenReceiver: constants.AddressZero })),
+      ).to.be.revertedWith("PoolRegistry: Invalid vTokenReceiver address");
     });
 
     it("adds a new vToken to the pool", async () => {
@@ -327,7 +360,7 @@ describe("PoolRegistry: Tests", function () {
       rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
       await comptroller1Proxy.addRewardsDistributor(rewardDistributor.address);
 
-      await poolRegistry.addMarket(await withDefaultMarketParameters());
+      await poolRegistry.addMarket(withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(vTokenAddress).to.be.a.properAddress;
       expect(vTokenAddress).to.not.equal(constants.AddressZero);
@@ -342,7 +375,7 @@ describe("PoolRegistry: Tests", function () {
       expect(await vToken.accessControlManager()).to.equal(fakeAccessControlManager.address);
     });
 
-    it("transfers initial supply fron the sender's address", async () => {
+    it("transfers initial supply from the sender's address", async () => {
       expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
         constants.AddressZero,
       );
@@ -351,18 +384,54 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.connect(user).faucet(INITIAL_SUPPLY);
       await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
 
-      await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
+      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters());
 
       expect(await mockToken.balanceOf(user.address)).to.equal(0);
+    });
+
+    it("transfers vTokens to vTokenReceiver address", async () => {
+      const vTokenReceiver = await ethers.getSigner(5);
+      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
+        constants.AddressZero,
+      );
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+
+      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
+      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry
+        .connect(user)
+        .addMarket(withDefaultMarketParameters({ vTokenReceiver: vTokenReceiver.address }));
+
+      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
+      const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
+      expect(await vToken.balanceOf(vTokenReceiver.address)).to.equal(parseUnits("1000", 8));
+    });
+
+    it("uses two-step approval", async () => {
+      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
+        constants.AddressZero,
+      );
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+
+      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
+      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      mockToken.approve.reset();
+      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters());
+      expect(mockToken.approve).to.have.been.calledTwice;
+      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
+      expect(mockToken.approve.atCall(0)).to.have.been.calledWith(vTokenAddress, 0);
+      expect(mockToken.approve.atCall(1)).to.have.been.calledWith(vTokenAddress, INITIAL_SUPPLY);
     });
 
     it("reverts if market is readded with same comptroller asset combination", async () => {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
-      await poolRegistry.addMarket(await withDefaultMarketParameters());
-      await expect(poolRegistry.addMarket(await withDefaultMarketParameters())).to.be.revertedWith(
-        "RegistryPool: Market already added for asset comptroller combination",
+      await poolRegistry.addMarket(withDefaultMarketParameters());
+      await expect(poolRegistry.addMarket(withDefaultMarketParameters())).to.be.revertedWith(
+        "PoolRegistry: Market already added for asset comptroller combination",
       );
     });
 
@@ -371,11 +440,11 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
       await poolRegistry.addMarket(
-        await withDefaultMarketParameters({
+        withDefaultMarketParameters({
           comptroller: comptroller1Proxy.address,
           rateModel: JUMP_RATE_MODEL,
-          jumpMultiplierPerYear: convertToUnit("1.1", 18),
-          kink_: convertToUnit("0.8", 18),
+          jumpMultiplierPerYear: parseUnits("1.1", 18),
+          kink_: parseUnits("0.8", 18),
         }),
       );
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
@@ -384,7 +453,7 @@ describe("PoolRegistry: Tests", function () {
       expect(rateModelAddress).to.be.a.properAddress;
       expect(rateModelAddress).to.not.equal(constants.AddressZero);
       const rateModel = await ethers.getContractAt<JumpRateModelV2>("JumpRateModelV2", rateModelAddress);
-      expect(await rateModel.kink()).to.equal(convertToUnit("0.8", 18));
+      expect(await rateModel.kink()).to.equal(parseUnits("0.8", 18));
     });
   });
 
@@ -410,13 +479,13 @@ describe("PoolRegistry: Tests", function () {
 
   it("Should be correct balances in tokens", async () => {
     const [owner] = await ethers.getSigners();
-    await mockWBTC.faucet(convertToUnit(1000, 8));
+    await mockWBTC.faucet(parseUnits("1000", 8));
 
     const daiBalance = await mockDAI.balanceOf(owner.address);
-    expect(daiBalance).equal(convertToUnit(1000, 18));
+    expect(daiBalance).equal(parseUnits("1000", 18));
 
     const btcBalance = await mockWBTC.balanceOf(owner.address);
-    expect(btcBalance).equal(convertToUnit(1000, 8));
+    expect(btcBalance).equal(parseUnits("1000", 8));
   });
 
   // Get all pools that support a given asset

@@ -164,6 +164,7 @@ async function rewardsFixture() {
     accessControlManager: fakeAccessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: root.address,
     supplyCap: convertToUnit(1000, 8),
     borrowCap: convertToUnit(1000, 8),
   });
@@ -189,6 +190,7 @@ async function rewardsFixture() {
     accessControlManager: fakeAccessControlManager.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: root.address,
     supplyCap: convertToUnit(1000000, 18),
     borrowCap: convertToUnit(1000000, 18),
   });
