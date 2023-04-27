@@ -407,10 +407,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         return _numberOfPools;
     }
 
-    function _ensureValidName(string calldata name) internal pure {
-        require(bytes(name).length <= 100, "Pool's name is too large");
-    }
-
     function _setShortfallContract(Shortfall shortfall_) internal {
         if (address(shortfall_) == address(0)) {
             revert ZeroAddressNotAllowed();
@@ -427,5 +423,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         address oldProtocolShareReserve = protocolShareReserve;
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, protocolShareReserve_);
+    }
+
+    function _ensureValidName(string calldata name) internal pure {
+        require(bytes(name).length <= 100, "Pool's name is too large");
     }
 }

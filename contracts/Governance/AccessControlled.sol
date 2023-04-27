@@ -23,15 +23,6 @@ abstract contract AccessControlled is Initializable, Ownable2StepUpgradeable {
     /// @notice Thrown when the action is prohibited by AccessControlManager
     error Unauthorized(address sender, address calledContract, string methodSignature);
 
-    function __AccessControlled_init(address accessControlManager_) internal onlyInitializing {
-        __Ownable2Step_init();
-        __AccessControlled_init_unchained(accessControlManager_);
-    }
-
-    function __AccessControlled_init_unchained(address accessControlManager_) internal onlyInitializing {
-        _setAccessControlManager(accessControlManager_);
-    }
-
     /**
      * @notice Sets the address of AccessControlManager
      * @dev Admin function to set address of AccessControlManager
@@ -48,6 +39,15 @@ abstract contract AccessControlled is Initializable, Ownable2StepUpgradeable {
      */
     function accessControlManager() external view returns (IAccessControlManager) {
         return _accessControlManager;
+    }
+
+    function __AccessControlled_init(address accessControlManager_) internal onlyInitializing {
+        __Ownable2Step_init();
+        __AccessControlled_init_unchained(accessControlManager_);
+    }
+
+    function __AccessControlled_init_unchained(address accessControlManager_) internal onlyInitializing {
+        _setAccessControlManager(accessControlManager_);
     }
 
     /**
