@@ -122,11 +122,31 @@ contract VTokenStorage {
     address public shortfall;
 
     /**
+     * @notice Total amount of spread reserves of the underlying held in this market
+     */
+    uint256 public spreadReserves;
+
+    /**
+     * @notice Total amount of liquidation reserves of the underlying held in this market
+     */
+    uint256 public liquidationReserves;
+
+    /**
+     * @notice Total amount of liquidation reserve of the underlying can be held in this market
+     */
+    uint256 liquidationReservesThreshold;
+
+    /**
+     * @notice Total amount of spread reserve of the underlying can be held in this market
+     */
+    uint256 spreadReservesThreshold;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -265,6 +285,13 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event SweepToken(address token);
 
+    event NewLiquidationReservesThreshold(
+        uint256 oldLiquidationReservesThreshold,
+        uint256 newLiquidationReservesThreshold
+    );
+
+    event NewSpreadReservesThreshold(uint256 oldSpreadReservesThreshold, uint256 newSpreadReservesThreshold);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
@@ -323,7 +350,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
 
-    function reduceReserves(uint256 reduceAmount) external virtual;
+    function reduceReserves(uint256 reduceAmount, bool isLiquidationReserve) external virtual;
 
     function exchangeRateCurrent() external virtual returns (uint256);
 

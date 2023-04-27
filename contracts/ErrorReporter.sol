@@ -56,4 +56,5 @@ contract TokenErrorReporter {
     error SetInterestRateModelFreshCheck();
 
     error ZeroAddressNotAllowed();
+    error ReduceLiquidationReservesCashValidation();
 }
