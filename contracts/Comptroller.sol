@@ -161,11 +161,9 @@ contract Comptroller is
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
 
-        _ensureMaxLoops(len);
-
         uint256 accountAssetsLen = accountAssets[msg.sender].length;
 
-        _ensureMaxLoops(accountAssetsLen);
+        _ensureMaxLoops(accountAssetsLen + len);
 
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
@@ -946,12 +944,13 @@ contract Comptroller is
             );
         }
 
+        uint256 rewardsDistributorsLen = rewardsDistributors.length;
+        _ensureMaxLoops(rewardsDistributorsLen + 1);
+
         rewardsDistributors.push(_rewardsDistributor);
         rewardsDistributorExists[address(_rewardsDistributor)] = true;
 
         uint256 marketsCount = allMarkets.length;
-
-        _ensureMaxLoops(marketsCount);
 
         for (uint256 i; i < marketsCount; ++i) {
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
