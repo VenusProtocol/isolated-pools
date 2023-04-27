@@ -405,7 +405,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         return _numberOfPools;
     }
 
-    function _ensureValidName(string calldata name) internal {
+    function _ensureValidName(string calldata name) internal pure {
         require(bytes(name).length <= 100, "Pool's name is too large");
     }
 

@@ -245,7 +245,7 @@ contract PoolLens is ExponentialNoError {
      * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
      *   a break down of bad debt by market
      */
-    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory badDebtSummary) {
+    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
         // Get every market in the pool
