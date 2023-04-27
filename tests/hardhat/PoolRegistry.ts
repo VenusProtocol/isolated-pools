@@ -1,7 +1,7 @@
-import { FakeContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expect } from "chai";
+import chai from "chai";
 import { BigNumberish, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
@@ -29,6 +29,9 @@ import {
   WhitePaperInterestRateModelFactory,
   WhitePaperInterestRateModelFactory__factory,
 } from "../../typechain";
+
+const { expect } = chai;
+chai.use(smock.matchers);
 
 const WP_RATE_MODEL = 0;
 const JUMP_RATE_MODEL = 1;
@@ -58,9 +61,9 @@ describe("PoolRegistry: Tests", function () {
   let poolRegistry: PoolRegistry;
   let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
-  let mockDAI: MockToken;
-  let mockWBTC: MockToken;
-  let mockToken: MockToken;
+  let mockDAI: MockContract<MockToken>;
+  let mockWBTC: MockContract<MockToken>;
+  let mockToken: MockContract<MockToken>;
   let vDAI: VToken;
   let vWBTC: VToken;
   let priceOracle: MockPriceOracle;
@@ -149,7 +152,7 @@ describe("PoolRegistry: Tests", function () {
     await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
-    const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
+    const MockToken = await smock.mock<MockToken__factory>("MockToken");
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(convertToUnit(1000, 18));
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
@@ -354,6 +357,22 @@ describe("PoolRegistry: Tests", function () {
       await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
 
       expect(await mockToken.balanceOf(user.address)).to.equal(0);
+    });
+
+    it("uses two-step approval", async () => {
+      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
+        constants.AddressZero,
+      );
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+
+      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
+      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      mockToken.approve.reset();
+      await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
+      expect(mockToken.approve).to.have.been.calledTwice;
+      expect(mockToken.approve.atCall(0)).to.have.been.calledWith(poolRegistry.address, 0);
+      expect(mockToken.approve.atCall(1)).to.have.been.calledWith(poolRegistry.address, INITIAL_SUPPLY);
     });
 
     it("reverts if market is readded with same comptroller asset combination", async () => {
