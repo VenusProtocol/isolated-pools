@@ -66,27 +66,10 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     function releaseFunds(
         address comptroller,
         address asset,
-        uint256 amount,
-        bool isLiquidationIncome
+        uint256 amount
     ) external returns (uint256) {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
-
-        if (isLiquidationIncome) {
-            require(
-                amount <= poolsLiquidationReserves[comptroller][asset],
-                "ProtocolShareReserve: Insufficient liquidation pool balance"
-            );
-            assetsLiquidationReserves[asset] -= amount;
-            poolsLiquidationReserves[comptroller][asset] -= amount;
-        } else {
-            require(
-                amount <= poolsSpreadReserves[comptroller][asset],
-                "ProtocolShareReserve: Insufficient spread pool balance"
-            );
-            assetsSpreadReserves[asset] -= amount;
-            poolsSpreadReserves[comptroller][asset] -= amount;
-        }
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;

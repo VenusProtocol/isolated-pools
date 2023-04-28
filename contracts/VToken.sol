@@ -1244,6 +1244,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint256 actualTotalAddAmount = actualSpreadAddAmount + actualLiquidationAddAmount;
         totalReservesNew = totalReserves + actualTotalAddAmount;
         totalReserves = totalReservesNew;
+        liquidationReserves = actualLiquidationAddAmount;
+        spreadReserves = actualSpreadAddAmount;
         emit ReservesAdded(msg.sender, actualTotalAddAmount, totalReservesNew);
 
         return actualTotalAddAmount;
