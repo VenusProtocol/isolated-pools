@@ -155,7 +155,12 @@ contract ERC20Harness is StandardToken {
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
-    ) StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
+    )
+        StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol)
+    /* solhint-disable-next-line no-empty-blocks */
+    {
+
+    }
 
     function transfer(address dst, uint256 amount) external override returns (bool success) {
         // Added for testing purposes

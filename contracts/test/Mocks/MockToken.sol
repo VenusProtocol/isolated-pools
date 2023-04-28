@@ -6,14 +6,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockToken is ERC20 {
-    uint8 private immutable DECIMALS;
+    uint8 private immutable _decimals;
 
     constructor(
         string memory name_,
         string memory symbol_,
         uint8 decimals_
     ) ERC20(name_, symbol_) {
-        DECIMALS = decimals_;
+        _decimals = decimals_;
     }
 
     function faucet(uint256 amount) external {
@@ -21,6 +21,6 @@ contract MockToken is ERC20 {
     }
 
     function decimals() public view virtual override returns (uint8) {
-        return DECIMALS;
+        return _decimals;
     }
 }

@@ -259,6 +259,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         require(input.beaconAddress != address(0), "PoolRegistry: Invalid beacon address");
         require(input.vTokenReceiver != address(0), "PoolRegistry: Invalid vTokenReceiver address");
 
+        // solhint-disable-next-line reason-string
         require(
             _vTokens[input.comptroller][input.asset] == address(0),
             "PoolRegistry: Market already added for asset comptroller combination"
