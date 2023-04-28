@@ -620,11 +620,11 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         require(spender != address(0), "invalid spender address");
 
         address src = msg.sender;
-        uint256 allowance = transferAllowances[src][spender];
-        allowance += addedValue;
-        transferAllowances[src][spender] = allowance;
+        uint256 newAllowance = transferAllowances[src][spender];
+        newAllowance += addedValue;
+        transferAllowances[src][spender] = newAllowance;
 
-        emit Approval(src, spender, allowance);
+        emit Approval(src, spender, newAllowance);
         return true;
     }
 
