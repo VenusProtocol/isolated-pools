@@ -42,17 +42,17 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      */
     uint256 public kink;
 
-    /**
-     * @notice Thrown when the action is prohibited by AccessControlManager
-     */
-    error Unauthorized(address sender, address calledContract, string methodSignature);
-
     event NewInterestParams(
         uint256 baseRatePerBlock,
         uint256 multiplierPerBlock,
         uint256 jumpMultiplierPerBlock,
         uint256 kink
     );
+
+    /**
+     * @notice Thrown when the action is prohibited by AccessControlManager
+     */
+    error Unauthorized(address sender, address calledContract, string methodSignature);
 
     /**
      * @notice Construct an interest rate model

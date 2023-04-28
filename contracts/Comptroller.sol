@@ -22,6 +22,10 @@ contract Comptroller is
     ExponentialNoError,
     MaxLoopsLimitHelper
 {
+    // PoolRegistry, immutable to save on gas
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable poolRegistry;
+
     /// @notice Emitted when an account enters a market
     event MarketEntered(VToken vToken, address account);
 
@@ -119,10 +123,6 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
-    // PoolRegistry, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable poolRegistry;
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address poolRegistry_) {
         require(poolRegistry_ != address(0), "invalid pool registry address");
@@ -140,13 +140,6 @@ contract Comptroller is
         __AccessControlled_init_unchained(accessControlManager);
 
         _setMaxLoopsLimit(loopLimit);
-    }
-
-    /**
-     * @notice A marker method that returns true for a valid Comptroller contract
-     */
-    function isComptroller() external pure override returns (bool) {
-        return _isComptroller;
     }
 
     /**
@@ -974,6 +967,14 @@ contract Comptroller is
     }
 
     /**
+     * @notice Set the for loop iteration limit to avoid DOS
+     * @param limit Limit for the max loops can execute at a time
+     */
+    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
+        _setMaxLoopsLimit(limit);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -1130,6 +1131,13 @@ contract Comptroller is
     }
 
     /**
+     * @notice A marker method that returns true for a valid Comptroller contract
+     */
+    function isComptroller() external pure override returns (bool) {
+        return _isComptroller;
+    }
+
+    /**
      * @notice Return all reward distributors for this pool
      * @return Array of RewardDistributor addresses
      */
@@ -1158,14 +1166,6 @@ contract Comptroller is
             markets[address(vToken)].collateralFactorMantissa == 0 &&
             actionPaused(address(vToken), Action.BORROW) &&
             vToken.reserveFactorMantissa() == 1e18;
-    }
-
-    /**
-     * @notice Set the for loop iteration limit to avoid DOS
-     * @param limit Limit for the max loops can execute at a time
-     */
-    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
-        _setMaxLoopsLimit(limit);
     }
 
     /**
