@@ -344,6 +344,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         override
         nonReentrant
     {
+        // TODO : accrueInterest will reduce the reserves if the totalReserves > threshold
         accrueInterest();
         _reduceReservesFresh(spreadReduceAmount, liquidationReduceAmount);
     }
@@ -537,7 +538,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      * @param _newReduceReservesThreshold threshold value
      * @custom:access Only Governance
      */
-    function setreduceReserveThreshold(uint256 _newReduceReservesThreshold) external {
+    function setReduceReserveThreshold(uint256 _newReduceReservesThreshold) external {
         _checkAccessAllowed("setReduceReservesThreshold(uint256)");
         uint256 oldReduceReservesThreshold_ = reduceReservesThreshold;
         reduceReservesThreshold = _newReduceReservesThreshold;
@@ -549,8 +550,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      * @param _newReduceReserveBlockDelta block difference value
      * @custom:access Only Governance
      */
-    function setreduceReserveBlockDelta(uint256 _newReduceReserveBlockDelta) external {
-        _checkAccessAllowed("setreduceReserveBlockDelta(uint256)");
+    function setReduceReserveBlockDelta(uint256 _newReduceReserveBlockDelta) external {
+        _checkAccessAllowed("setReduceReserveBlockDelta(uint256)");
         uint256 oldReduceReserveBlockDelta_ = reduceReserveBlockDelta;
         reduceReserveBlockDelta = _newReduceReserveBlockDelta;
         emit NewReduceReserveBlockDelta(oldReduceReserveBlockDelta_, _newReduceReserveBlockDelta);
@@ -1295,6 +1296,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
+        // TODO : will it be equal to the actual balance transer ?
         _doTransferOut(protocolShareReserve, _spreadAmount);
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 0);
 
