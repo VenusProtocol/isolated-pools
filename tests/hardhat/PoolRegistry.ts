@@ -11,6 +11,7 @@ import {
   Beacon,
   Beacon__factory,
   Comptroller,
+  FeeToken__factory,
   JumpRateModelFactory,
   JumpRateModelFactory__factory,
   JumpRateModelV2,
@@ -423,6 +424,22 @@ describe("PoolRegistry: Tests", function () {
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(mockToken.approve.atCall(0)).to.have.been.calledWith(vTokenAddress, 0);
       expect(mockToken.approve.atCall(1)).to.have.been.calledWith(vTokenAddress, INITIAL_SUPPLY);
+    });
+
+    it("supports fee-on-transfer tokens", async () => {
+      const FeeToken = await smock.mock<FeeToken__factory>("FeeToken");
+      const feeToken = await FeeToken.deploy(INITIAL_SUPPLY, "FeeToken", 18, "FT", parseUnits("0.1", 4), owner.address);
+      await priceOracle.setPrice(feeToken.address, parseUnits("1", 18));
+
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
+      await feeToken.allocateTo(user.address, INITIAL_SUPPLY);
+      await feeToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters({ asset: feeToken.address }));
+
+      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, feeToken.address);
+      const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
+      expect(await vToken.balanceOf(owner.address)).to.equal(parseUnits("810", 8));
     });
 
     it("reverts if market is readded with same comptroller asset combination", async () => {

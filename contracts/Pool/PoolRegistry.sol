@@ -318,11 +318,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         _supportedPools[input.asset].push(input.comptroller);
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
-        token.safeTransferFrom(msg.sender, address(this), input.initialSupply);
+        uint256 amountToSupply = _transferIn(token, msg.sender, input.initialSupply);
         token.safeApprove(address(vToken), 0);
-        token.safeApprove(address(vToken), input.initialSupply);
-
-        vToken.mintBehalf(input.vTokenReceiver, input.initialSupply);
+        token.safeApprove(address(vToken), amountToSupply);
+        vToken.mintBehalf(input.vTokenReceiver, amountToSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }
@@ -406,6 +405,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
 
         emit PoolRegistered(comptroller, pool);
         return _numberOfPools;
+    }
+
+    function _transferIn(
+        IERC20Upgradeable token,
+        address from,
+        uint256 amount
+    ) internal returns (uint256) {
+        uint256 balanceBefore = token.balanceOf(address(this));
+        token.safeTransferFrom(from, address(this), amount);
+        uint256 balanceAfter = token.balanceOf(address(this));
+        return balanceAfter - balanceBefore;
     }
 
     function _setShortfallContract(Shortfall shortfall_) internal {
