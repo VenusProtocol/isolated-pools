@@ -139,7 +139,7 @@ contract VTokenStorage {
     /**
      * @notice delta block after which reserves will be reduced
      */
-    uint256 public reduceReserveBlockDelta;
+    uint256 public reduceReservesBlockDelta;
 
     /**
      * @notice last block number at which reserves were reduced
@@ -292,7 +292,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     event NewReduceReservesThreshold(uint256 oldReduceReservesThreshold, uint256 NewReduceReservesThreshold);
 
-    event NewReduceReserveBlockDelta(uint256 oldReduceReserveBlockDelta, uint256 newReduceReserveBlockDelta);
+    event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
 
     /*** User Interface ***/
 

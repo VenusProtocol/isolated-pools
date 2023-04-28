@@ -538,7 +538,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      * @param _newReduceReservesThreshold threshold value
      * @custom:access Only Governance
      */
-    function setReduceReserveThreshold(uint256 _newReduceReservesThreshold) external {
+    function setReduceReservesThreshold(uint256 _newReduceReservesThreshold) external {
         _checkAccessAllowed("setReduceReservesThreshold(uint256)");
         uint256 oldReduceReservesThreshold_ = reduceReservesThreshold;
         reduceReservesThreshold = _newReduceReservesThreshold;
@@ -547,14 +547,14 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
     /**
      * @notice A public function to set new threshold of block difference after which funds will be sent to the protocol share reserve
-     * @param _newReduceReserveBlockDelta block difference value
+     * @param _newReduceReservesBlockDelta block difference value
      * @custom:access Only Governance
      */
-    function setReduceReserveBlockDelta(uint256 _newReduceReserveBlockDelta) external {
-        _checkAccessAllowed("setReduceReserveBlockDelta(uint256)");
-        uint256 oldReduceReserveBlockDelta_ = reduceReserveBlockDelta;
-        reduceReserveBlockDelta = _newReduceReserveBlockDelta;
-        emit NewReduceReserveBlockDelta(oldReduceReserveBlockDelta_, _newReduceReserveBlockDelta);
+    function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
+        _checkAccessAllowed("setReduceReservesBlockDelta(uint256)");
+        uint256 oldReduceReservesBlockDelta_ = reduceReservesBlockDelta;
+        reduceReservesBlockDelta = _newReduceReservesBlockDelta;
+        emit NewReduceReservesBlockDelta(oldReduceReservesBlockDelta_, _newReduceReservesBlockDelta);
     }
 
     /**
@@ -762,7 +762,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         if (
             totalReserves > reduceReservesThreshold ||
-            currentBlockNumber - reduceReservesBlockNumber > reduceReserveBlockDelta
+            currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta
         ) {
             reduceReservesBlockNumber = currentBlockNumber;
             _reduceReservesFresh(spreadReservesNew, liquidationReserves);
@@ -1175,7 +1175,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         if (
             totalReserves > reduceReservesThreshold ||
-            currentBlockNumber - reduceReservesBlockNumber > reduceReserveBlockDelta
+            currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta
         ) {
             reduceReservesBlockNumber = currentBlockNumber;
             _reduceReservesFresh(spreadReserves, liquidationReservesNew);
@@ -1310,7 +1310,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
 
-        emit ReservesReduced(protocolShareReserve, totalReduceAmount_, totalReservesNew);
+        emit ReservesReduced(protocolShareReserve, totalReduceAmount_, totalReservesNew_);
     }
 
     /**
