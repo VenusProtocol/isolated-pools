@@ -570,6 +570,36 @@ describe("PoolRegistry: Tests", function () {
         ),
       ).to.be.revertedWith("Pool's name is too large");
     });
+
+    it("reverts if beacon address is zero", async () => {
+      await expect(
+        poolRegistry.createRegistryPool(
+          "Pool 3",
+          constants.AddressZero,
+          parseUnits("0.5", 18),
+          parseUnits("1.1", 18),
+          parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ),
+      ).to.be.revertedWith("PoolRegistry: Invalid Comptroller beacon address.");
+    });
+
+    it("reverts if price oracle address is zero", async () => {
+      await expect(
+        poolRegistry.createRegistryPool(
+          "Pool 3",
+          comptrollerBeacon.address,
+          parseUnits("0.5", 18),
+          parseUnits("1.1", 18),
+          parseUnits("100", 18),
+          constants.AddressZero,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ),
+      ).to.be.revertedWith("PoolRegistry: Invalid PriceOracle address.");
+    });
   });
 
   describe("setProtocolShareReserve", () => {
