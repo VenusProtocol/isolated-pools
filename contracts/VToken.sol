@@ -1296,20 +1296,10 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         _doTransferOut(protocolShareReserve, _spreadAmount);
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
-            address(comptroller),
-            underlying,
-            0,
-            _spreadAmount
-        );
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 0);
 
         _doTransferOut(protocolShareReserve, _liquidationAmount);
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
-            address(comptroller),
-            underlying,
-            1,
-            _liquidationAmount
-        );
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 1);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
 

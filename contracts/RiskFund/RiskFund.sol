@@ -214,10 +214,9 @@ contract RiskFund is
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind,
-        uint256 amount
+        uint256 kind
     ) public override(IRiskFund, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset, 0, 0);
+        super.updateAssetsState(comptroller, asset, kind);
     }
 
     /**

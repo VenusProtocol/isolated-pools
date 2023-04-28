@@ -5,7 +5,6 @@ interface IProtocolShareReserve {
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind,
-        uint256 amount
+        uint256 kind
     ) external;
 }

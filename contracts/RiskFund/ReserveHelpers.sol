@@ -58,8 +58,7 @@ contract ReserveHelpers {
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind,
-        uint256 amount
+        uint256 kind
     ) public virtual {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");

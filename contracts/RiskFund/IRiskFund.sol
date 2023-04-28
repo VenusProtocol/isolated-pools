@@ -13,8 +13,7 @@ interface IRiskFund {
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind,
-        uint256 amount
+        uint256 kind
     ) external;
 
     function poolReserves(address comptroller) external view returns (uint256);
