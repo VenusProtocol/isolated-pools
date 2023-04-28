@@ -26,7 +26,7 @@ contract UpgradedVToken is VToken {
      */
 
     /// @notice We added this new function to test contract upgrade
-    function version() external view returns (uint256) {
+    function version() external pure returns (uint256) {
         return 2;
     }
 

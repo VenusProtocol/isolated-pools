@@ -616,14 +616,6 @@ contract WBTVToken is
         super.burn(value);
     }
 
-    function finishMinting() public override onlyOwner returns (bool) {
-        return false;
-    }
-
-    function renounceOwnership() public override onlyOwner {
-        revert("renouncing ownership is blocked");
-    }
-
     function transferOwnership(address _newOwner) public override(Ownable, OwnableContract) onlyOwner {
         super.transferOwnership(_newOwner);
     }
@@ -667,5 +659,13 @@ contract WBTVToken is
         balances[_owner] += value;
         totalSupply_ += value;
         emit Transfer(address(this), _owner, value);
+    }
+
+    function finishMinting() public view override onlyOwner returns (bool) {
+        return false;
+    }
+
+    function renounceOwnership() public view override onlyOwner {
+        revert("renouncing ownership is blocked");
     }
 }
