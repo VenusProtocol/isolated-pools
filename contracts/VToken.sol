@@ -344,8 +344,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         override
         nonReentrant
     {
-        // TODO : accrueInterest will reduce the reserves if the totalReserves > threshold
         accrueInterest();
+        if (_getBlockNumber() == reduceReservesBlockNumber) return;
         _reduceReservesFresh(spreadReduceAmount, liquidationReduceAmount);
     }
 
@@ -1258,7 +1258,9 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      */
     function _reduceReservesFresh(uint256 _spreadAmount, uint256 _liquidationAmount) internal {
         // totalReserves - reduceAmount
-        uint256 totalReservesNew;
+        uint256 totalReservesNew_;
+        uint256 spreadReservesNew_;
+        uint256 liquidationReservesNew_;
         uint256 totalReduceAmount_ = _spreadAmount + _liquidationAmount;
 
         // We fail gracefully unless market's block number equals current block number
@@ -1277,7 +1279,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         }
 
         // check if isLiquidation == true and reduceAmount <= liquidationReserves
-        if (_spreadAmount > liquidationReserves) {
+        if (_liquidationAmount > liquidationReserves) {
             revert ReduceLiquidationReservesCashValidation();
         }
 
@@ -1289,14 +1291,17 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
-        totalReservesNew = totalReserves - totalReduceAmount_;
+        totalReservesNew_ = totalReserves - totalReduceAmount_;
+        spreadReservesNew_ = spreadReserves - _spreadAmount;
+        liquidationReservesNew_ = liquidationReserves - _liquidationAmount;
 
         // Store reserves[n+1] = reserves[n] - reduceAmount
-        totalReserves = totalReservesNew;
+        totalReserves = totalReservesNew_;
+        spreadReserves = spreadReservesNew_;
+        liquidationReserves = liquidationReservesNew_;
 
         // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
-        // TODO : will it be equal to the actual balance transer ?
         _doTransferOut(protocolShareReserve, _spreadAmount);
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 0);
 
