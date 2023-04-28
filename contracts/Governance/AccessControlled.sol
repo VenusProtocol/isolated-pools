@@ -41,11 +41,13 @@ abstract contract AccessControlled is Initializable, Ownable2StepUpgradeable {
         return _accessControlManager;
     }
 
+    // solhint-disable-next-line func-name-mixedcase
     function __AccessControlled_init(address accessControlManager_) internal onlyInitializing {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
     }
 
+    // solhint-disable-next-line func-name-mixedcase
     function __AccessControlled_init_unchained(address accessControlManager_) internal onlyInitializing {
         _setAccessControlManager(accessControlManager_);
     }

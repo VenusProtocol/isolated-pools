@@ -17,10 +17,10 @@ contract ExponentialNoError {
         uint256 mantissa;
     }
 
-    uint256 constant expScale = 1e18;
-    uint256 constant doubleScale = 1e36;
-    uint256 constant halfExpScale = expScale / 2;
-    uint256 constant mantissaOne = expScale;
+    uint256 internal constant expScale = 1e18;
+    uint256 internal constant doubleScale = 1e36;
+    uint256 internal constant halfExpScale = expScale / 2;
+    uint256 internal constant mantissaOne = expScale;
 
     /**
      * @dev Truncates the given exp to a whole number value.
@@ -34,6 +34,7 @@ contract ExponentialNoError {
     /**
      * @dev Multiply an Exp by a scalar, then truncate to return an unsigned integer.
      */
+    // solhint-disable-next-line func-name-mixedcase
     function mul_ScalarTruncate(Exp memory a, uint256 scalar) internal pure returns (uint256) {
         Exp memory product = mul_(a, scalar);
         return truncate(product);
@@ -42,6 +43,7 @@ contract ExponentialNoError {
     /**
      * @dev Multiply an Exp by a scalar, truncate, then add an to an unsigned integer, returning an unsigned integer.
      */
+    // solhint-disable-next-line func-name-mixedcase
     function mul_ScalarTruncateAddUInt(
         Exp memory a,
         uint256 scalar,

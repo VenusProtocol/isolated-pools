@@ -7,6 +7,7 @@ import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
 
+// solhint-disable-next-line max-states-count
 contract VTokenStorage {
     /**
      * @notice Container for borrow balance information

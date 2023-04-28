@@ -8,12 +8,14 @@ contract MockPriceOracle {
     mapping(address => uint256) public assetPrices;
 
     //set price in 6 decimal precision
+    // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
     function setPrice(address asset, uint256 price) external {
         assetPrices[asset] = price;
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function updatePrice(address vToken) external {}
 
     //https://compound.finance/docs/prices

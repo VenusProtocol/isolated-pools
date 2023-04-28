@@ -222,8 +222,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     ) external virtual returns (uint256 index, address proxyAddress) {
         _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
-        require(beaconAddress != address(0), "RegistryPool: Invalid Comptroller beacon address.");
-        require(priceOracle != address(0), "RegistryPool: Invalid PriceOracle address.");
+        require(beaconAddress != address(0), "PoolRegistry: Invalid Comptroller beacon address.");
+        require(priceOracle != address(0), "PoolRegistry: Invalid PriceOracle address.");
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
@@ -259,6 +259,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
         require(input.beaconAddress != address(0), "PoolRegistry: Invalid beacon address");
         require(input.vTokenReceiver != address(0), "PoolRegistry: Invalid vTokenReceiver address");
 
+        // solhint-disable-next-line reason-string
         require(
             _vTokens[input.comptroller][input.asset] == address(0),
             "PoolRegistry: Market already added for asset comptroller combination"
@@ -393,7 +394,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlled, PoolRegistry
     function _registerPool(string calldata name, address comptroller) internal returns (uint256) {
         VenusPool memory venusPool = _poolByComptroller[comptroller];
 
-        require(venusPool.creator == address(0), "RegistryPool: Pool already exists in the directory.");
+        require(venusPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
         _ensureValidName(name);
 
         _numberOfPools++;

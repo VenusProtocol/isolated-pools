@@ -7,6 +7,7 @@ import "../../contracts/Comptroller.sol";
 contract ComptrollerHarness is Comptroller {
     uint256 public blockNumber;
 
+    // solhint-disable-next-line no-empty-blocks
     constructor(address _poolRegistry) Comptroller(_poolRegistry) {}
 
     function harnessFastForward(uint256 blocks) public returns (uint256) {
