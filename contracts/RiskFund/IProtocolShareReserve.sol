@@ -5,6 +5,7 @@ interface IProtocolShareReserve {
     function updateAssetsState(
         address comptroller,
         address asset,
-        bool isLiquidationIncome
+        uint256 kind,
+        uint256 amount
     ) external;
 }

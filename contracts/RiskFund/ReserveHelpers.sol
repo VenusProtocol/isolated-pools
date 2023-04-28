@@ -58,7 +58,8 @@ contract ReserveHelpers {
     function updateAssetsState(
         address comptroller,
         address asset,
-        bool isLiquidationIncome
+        uint256 kind,
+        uint256 amount
     ) public virtual {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
@@ -74,13 +75,6 @@ contract ReserveHelpers {
             uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
-            }
-            if (isLiquidationIncome) {
-                assetsLiquidationReserves[asset] += balanceDifference;
-                poolsLiquidationReserves[comptroller][asset] += balanceDifference;
-            } else {
-                assetsSpreadReserves[asset] += balanceDifference;
-                poolsSpreadReserves[comptroller][asset] += balanceDifference;
             }
             assetsReserves[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;

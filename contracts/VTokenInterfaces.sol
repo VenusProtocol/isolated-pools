@@ -132,21 +132,26 @@ contract VTokenStorage {
     uint256 public liquidationReserves;
 
     /**
-     * @notice Total amount of liquidation reserve of the underlying can be held in this market
+     * @notice Total amount of reserve of the underlying can be held in this market
      */
-    uint256 liquidationReservesThreshold;
+    uint256 reduceReservesThreshold;
 
     /**
-     * @notice Total amount of spread reserve of the underlying can be held in this market
+     * @notice delta block after which reserves will be reduced
      */
-    uint256 spreadReservesThreshold;
+    uint256 reduceReserveBlockDelta;
+
+    /**
+     * @notice last block number at which reserves were reduced
+     */
+    uint256 reduceReservesBlockNumber;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 }
 
 abstract contract VTokenInterface is VTokenStorage {
@@ -285,12 +290,9 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event SweepToken(address token);
 
-    event NewLiquidationReservesThreshold(
-        uint256 oldLiquidationReservesThreshold,
-        uint256 newLiquidationReservesThreshold
-    );
+    event NewReduceReservesThreshold(uint256 oldReduceReservesThreshold, uint256 NewReduceReservesThreshold);
 
-    event NewSpreadReservesThreshold(uint256 oldSpreadReservesThreshold, uint256 newSpreadReservesThreshold);
+    event NewReduceReserveBlockDelta(uint256 oldReduceReserveBlockDelta, uint256 newReduceReserveBlockDelta);
 
     /*** User Interface ***/
 
@@ -350,7 +352,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
 
-    function reduceReserves(uint256 reduceAmount, bool isLiquidationReserve) external virtual;
+    function reduceReserves(uint256 spreadReduceAmount, uint256 liquidationReduceAmount) external virtual;
 
     function exchangeRateCurrent() external virtual returns (uint256);
 
@@ -358,7 +360,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
 
-    function addReserves(uint256 addAmount) external virtual;
+    function addReserves(uint256 spreadAddAmount, uint256 liquidationAddAmount) external virtual;
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 

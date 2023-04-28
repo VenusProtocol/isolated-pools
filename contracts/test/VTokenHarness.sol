@@ -105,8 +105,8 @@ contract VTokenHarness is VToken {
         _liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
     }
 
-    function harnessReduceReservesFresh(uint256 amount, bool isLiquidationReserve) external {
-        return _reduceReservesFresh(amount, isLiquidationReserve);
+    function harnessReduceReservesFresh(uint256 spreadAmount, uint256 liquidationAmount) external {
+        return _reduceReservesFresh(spreadAmount, liquidationAmount);
     }
 
     function harnessSetReserveFactorFresh(uint256 newReserveFactorMantissa) external {

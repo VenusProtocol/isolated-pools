@@ -99,7 +99,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund).updateAssetsState(comptroller, asset, false);
+        IRiskFund(riskFund).updateAssetsState(comptroller, asset, 0, 0);
 
         emit FundsReleased(comptroller, asset, amount);
 
@@ -114,8 +114,9 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     function updateAssetsState(
         address comptroller,
         address asset,
-        bool isLiquidationIncome
+        uint256 kind,
+        uint256 amount
     ) public override(IProtocolShareReserve, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset, isLiquidationIncome);
+        super.updateAssetsState(comptroller, asset, kind, amount);
     }
 }
