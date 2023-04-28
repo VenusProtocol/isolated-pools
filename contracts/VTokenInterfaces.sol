@@ -134,17 +134,17 @@ contract VTokenStorage {
     /**
      * @notice Total amount of reserve of the underlying can be held in this market
      */
-    uint256 reduceReservesThreshold;
+    uint256 public reduceReservesThreshold;
 
     /**
      * @notice delta block after which reserves will be reduced
      */
-    uint256 reduceReserveBlockDelta;
+    uint256 public reduceReserveBlockDelta;
 
     /**
      * @notice last block number at which reserves were reduced
      */
-    uint256 reduceReservesBlockNumber;
+    uint256 public reduceReservesBlockNumber;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
