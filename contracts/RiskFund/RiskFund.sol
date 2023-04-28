@@ -211,8 +211,12 @@ contract RiskFund is
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset);
+    function updateAssetsState(
+        address comptroller,
+        address asset,
+        bool isLiquidationIncome
+    ) public override(IRiskFund, ReserveHelpers) {
+        super.updateAssetsState(comptroller, asset, isLiquidationIncome);
     }
 
     /**

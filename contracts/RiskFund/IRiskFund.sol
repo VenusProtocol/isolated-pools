@@ -10,7 +10,11 @@ interface IRiskFund {
 
     function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256);
 
-    function updateAssetsState(address comptroller, address asset) external;
+    function updateAssetsState(
+        address comptroller,
+        address asset,
+        bool isLiquidationIncome
+    ) external;
 
     function poolReserves(address comptroller) external view returns (uint256);
 }

@@ -19,11 +19,19 @@ contract ReserveHelpers {
     // Address of pool registry contract
     address internal poolRegistry;
 
+    mapping(address => uint256) internal assetsLiquidationReserves;
+
+    mapping(address => uint256) internal assetsSpreadReserves;
+
+    mapping(address => mapping(address => uint256)) internal poolsLiquidationReserves;
+
+    mapping(address => mapping(address => uint256)) internal poolsSpreadReserves;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[48] private __gap;
+    uint256[44] private __gap;
 
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
@@ -47,7 +55,11 @@ contract ReserveHelpers {
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) public virtual {
+    function updateAssetsState(
+        address comptroller,
+        address asset,
+        bool isLiquidationIncome
+    ) public virtual {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");
         require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
@@ -62,6 +74,13 @@ contract ReserveHelpers {
             uint256 balanceDifference;
             unchecked {
                 balanceDifference = currentBalance - assetReserve;
+            }
+            if (isLiquidationIncome) {
+                assetsLiquidationReserves[asset] += balanceDifference;
+                poolsLiquidationReserves[comptroller][asset] += balanceDifference;
+            } else {
+                assetsSpreadReserves[asset] += balanceDifference;
+                poolsSpreadReserves[comptroller][asset] += balanceDifference;
             }
             assetsReserves[asset] += balanceDifference;
             poolsAssetsReserves[comptroller][asset] += balanceDifference;

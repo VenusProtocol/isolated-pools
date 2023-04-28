@@ -57,4 +57,5 @@ contract TokenErrorReporter {
 
     error ZeroAddressNotAllowed();
     error ReduceLiquidationReservesCashValidation();
+    error ReduceSpreadReservesCashValidation();
 }

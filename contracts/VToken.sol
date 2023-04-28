@@ -19,7 +19,9 @@ import "./RiskFund/IProtocolShareReserve.sol";
 contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, ExponentialNoError, TokenErrorReporter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /*** Reentrancy Guard ***/
+    /**
+     * Reentrancy Guard **
+     */
 
     /**
      * @dev Prevents a contract from calling itself, directly or indirectly.
@@ -706,12 +708,9 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         /* Read the previous values out of storage */
         uint256 cashPrior = _getCashPrior();
         uint256 borrowsPrior = totalBorrows;
-        uint256 reservesPrior = totalReserves;
-        uint256 liquidationReservesPrior = liquidationReserves;
-        uint256 borrowIndexPrior = borrowIndex;
 
         /* Calculate the current borrow interest rate */
-        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
+        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, totalReserves);
         require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
@@ -732,15 +731,16 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
             interestAccumulated,
-            reservesPrior
+            totalReserves
         );
 
-        uint256 liquidationReservesNew = mul_ScalarTruncateAddUInt(
+        uint256 spreadReservesNew = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
             interestAccumulated,
-            liquidationReservesPrior
+            spreadReserves
         );
-        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(simpleInterestFactor, borrowIndexPrior, borrowIndexPrior);
+
+        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(simpleInterestFactor, borrowIndex, borrowIndex);
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -751,10 +751,12 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
+        spreadReserves = spreadReservesNew;
 
-        if (totalReserves - liquidationReservesNew > spreadReservesThreshold) {
-            _reduceReservesFresh(totalReserves - liquidationReservesNew, false);
+        if (spreadReservesNew > spreadReservesThreshold) {
+            _reduceReservesFresh(spreadReservesNew, false);
         }
+
         /* We emit an AccrueInterest event */
         emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
 
@@ -1256,6 +1258,11 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         if (isLiquidationReserve && reduceAmount > liquidationReserves) {
             revert ReduceLiquidationReservesCashValidation();
         }
+
+        // check if isLiquidation == false and reduceAmount <= spreadReserves
+        if (isLiquidationReserve && reduceAmount > spreadReserves) {
+            revert ReduceSpreadReservesCashValidation();
+        }
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
@@ -1267,15 +1274,18 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
         if (isLiquidationReserve) {
             liquidationReserves = liquidationReserves - reduceAmount;
+        } else {
+            spreadReserves = spreadReserves - reduceAmount;
         }
         // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
         _doTransferOut(protocolShareReserve, reduceAmount);
         if (isLiquidationReserve) {
-            // logic to invoke updateAssetsState function with type
+            IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, true);
+        } else {
+            IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, false);
         }
         // Update the pool asset's state in the protocol share reserve for the above transfer.
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying);
 
         emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
@@ -1307,7 +1317,9 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
     }
 
-    /*** Safe Token ***/
+    /**
+     * Safe Token **
+     */
 
     /**
      * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
