@@ -53,17 +53,17 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
-    /// @notice Incentive to auction participants.
-    uint256 private constant incentiveBps = 1000; /// @notice 10%
+    /// @notice Incentive to auction participants, initial value set to 1000 or 10%
+    uint256 private incentiveBps;
 
     /// @notice Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    /// @notice Time to wait for next bidder. wait for 10 blocks
-    uint256 public constant nextBidderBlockLimit = 10;
+    /// @notice Time to wait for next bidder. initially waits for 10 blocks
+    uint256 public nextBidderBlockLimit;
 
-    /// @notice Time to wait for first bidder. wait for 100 blocks
-    uint256 public constant waitForFirstBidder = 100;
+    /// @notice Time to wait for first bidder. initially waits for 100 blocks
+    uint256 public waitForFirstBidder;
 
     /// @notice base asset contract address
     address public convertibleBaseAsset;
@@ -74,7 +74,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when a auction starts
     event AuctionStarted(
         address indexed comptroller,
-        uint256 startBlock,
+        uint256 auctionStartBlock,
         AuctionType auctionType,
         VToken[] markets,
         uint256[] marketsDebt,
@@ -83,11 +83,12 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a bid is placed
-    event BidPlaced(address indexed comptroller, uint256 bidBps, address indexed bidder);
+    event BidPlaced(address indexed comptroller, uint256 auctionStartBlock, uint256 bidBps, address indexed bidder);
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
         address indexed comptroller,
+        uint256 auctionStartBlock,
         address indexed highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
@@ -96,13 +97,22 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a auction is restarted
-    event AuctionRestarted(address indexed comptroller);
+    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlock);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
+
+    /// @notice Emitted when wait for first bidder block count is updated
+    event WaitForFirstBidderUpdated(uint256 oldWaitForFirstBidder, uint256 newWaitForFirstBidder);
+
+    /// @notice Emitted when next bidder block limit is updated
+    event NextBidderBlockLimitUpdated(uint256 oldNextBidderBlockLimit, uint256 newNextBidderBlockLimit);
+
+    /// @notice Emitted when incentiveBps is updated
+    event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -134,6 +144,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
+        waitForFirstBidder = 100;
+        nextBidderBlockLimit = 10;
+        incentiveBps = 1000;
     }
 
     /**
@@ -145,7 +158,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(_isStarted(auction), "no on-going auction");
+        require(!_isStale(auction), "auction is stale, restart it");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
@@ -184,7 +198,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         auction.highestBidBps = bidBps;
         auction.highestBidBlock = block.number;
 
-        emit BidPlaced(comptroller, bidBps, msg.sender);
+        emit BidPlaced(comptroller, auction.startBlock, bidBps, msg.sender);
     }
 
     /**
@@ -195,7 +209,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
+        require(_isStarted(auction), "no on-going auction");
         require(
             block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0),
             "waiting for next bidder. cannot close auction"
@@ -235,6 +249,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         emit AuctionClosed(
             comptroller,
+            auction.startBlock,
             auction.highestBidder,
             auction.highestBidBps,
             transferredAmount,
@@ -247,11 +262,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Start a auction when there is not currently one active
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionStarted event on success
-     * @custom:error Unauthorized error is thrown if ACM denies the access
-     * @custom:access Controlled by AccessControlManager
      */
     function startAuction(address comptroller) external {
-        _checkAccessAllowed("startAuction(address)");
         _startAuction(comptroller);
     }
 
@@ -259,24 +271,45 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Restart an auction
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
-     * @custom:error Unauthorized error is thrown if ACM denies the access
-     * @custom:access Controlled by AccessControlManager
      */
     function restartAuction(address comptroller) external {
-        _checkAccessAllowed("restartAuction(address)");
-
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock != 0 && auction.status == AuctionStatus.STARTED, "no on-going auction");
-        require(
-            block.number > auction.startBlock + waitForFirstBidder && auction.highestBidder == address(0),
-            "you need to wait for more time for first bidder"
-        );
+        require(_isStarted(auction), "no on-going auction");
+        require(_isStale(auction), "you need to wait for more time for first bidder");
 
         auction.status = AuctionStatus.ENDED;
 
-        emit AuctionRestarted(comptroller);
+        emit AuctionRestarted(comptroller, auction.startBlock);
         _startAuction(comptroller);
+    }
+
+    /**
+     * @notice Update next bidder block limit which is used determine when an auction can be closed
+     * @param _nextBidderBlockLimit  New next bidder block limit
+     * @custom:event Emits NextBidderBlockLimitUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
+        _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
+        require(_nextBidderBlockLimit != 0, "_nextBidderBlockLimit must not be 0");
+        uint256 oldNextBidderBlockLimit = nextBidderBlockLimit;
+        nextBidderBlockLimit = _nextBidderBlockLimit;
+        emit NextBidderBlockLimitUpdated(oldNextBidderBlockLimit, _nextBidderBlockLimit);
+    }
+
+    /**
+     * @notice Updates the inventive BPS
+     * @param _incentiveBps New incentive BPS
+     * @custom:event Emits IncentiveBpsUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateIncentiveBps(uint256 _incentiveBps) external {
+        _checkAccessAllowed("updateIncentiveBps(uint256)");
+        require(_incentiveBps != 0, "incentiveBps must not be 0");
+        uint256 oldIncentiveBps = incentiveBps;
+        incentiveBps = _incentiveBps;
+        emit IncentiveBpsUpdated(oldIncentiveBps, _incentiveBps);
     }
 
     /**
@@ -285,20 +318,34 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted to owner
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) public onlyOwner {
+    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
+        _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
         minimumPoolBadDebt = _minimumPoolBadDebt;
         emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
     }
 
     /**
-     * @notice Sets the pool registry this shortfall supports
+     * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
+     * @param _waitForFirstBidder  New wait for first bidder block count
+     * @custom:event Emits WaitForFirstBidderUpdated on success
+     * @custom:access Restricted to owner
+     */
+    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
+        _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
+        uint256 oldWaitForFirstBidder = waitForFirstBidder;
+        waitForFirstBidder = _waitForFirstBidder;
+        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
+    }
+
+    /**
+     * @notice Update the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
      * @param _poolRegistry Address of pool registry contract
      * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
      */
-    function setPoolRegistry(address _poolRegistry) public onlyOwner {
+    function updatePoolRegistry(address _poolRegistry) external onlyOwner {
         require(_poolRegistry != address(0), "invalid address");
         address oldPoolRegistry = poolRegistry;
         poolRegistry = _poolRegistry;
@@ -353,7 +400,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolReserve(comptroller);
+        uint256 riskFundBalance = riskFund.poolReserves(comptroller);
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
@@ -402,5 +449,23 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      */
     function _getAllMarkets(address comptroller) internal view returns (VToken[] memory) {
         return ComptrollerInterface(comptroller).getAllMarkets();
+    }
+
+    /**
+     * @dev Checks if the auction has started
+     * @param auction The auction to query the status for
+     */
+    function _isStarted(Auction storage auction) internal view returns (bool) {
+        return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
+    }
+
+    /**
+     * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
+     *   was started more than waitForFirstBidder blocks ago.
+     * @param auction The auction to query the status for
+     */
+    function _isStale(Auction storage auction) internal view returns (bool) {
+        bool noBidder = auction.highestBidder == address(0);
+        return noBidder && (block.number > auction.startBlock + waitForFirstBidder);
     }
 }

@@ -42,17 +42,17 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      */
     uint256 public kink;
 
-    /**
-     * @notice Thrown when the action is prohibited by AccessControlManager
-     */
-    error Unauthorized(address sender, address calledContract, string methodSignature);
-
     event NewInterestParams(
         uint256 baseRatePerBlock,
         uint256 multiplierPerBlock,
         uint256 jumpMultiplierPerBlock,
         uint256 kink
     );
+
+    /**
+     * @notice Thrown when the action is prohibited by AccessControlManager
+     */
+    error Unauthorized(address sender, address calledContract, string methodSignature);
 
     /**
      * @notice Construct an interest rate model
@@ -77,11 +77,13 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     }
 
     /**
-     * @notice Update the parameters of the interest rate model (only callable by owner, i.e. Timelock)
+     * @notice Update the parameters of the interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
+     * @custom:error Unauthorized if the sender is not allowed to call this function
+     * @custom:access Controlled by AccessControlManager
      */
     function updateJumpRateModel(
         uint256 baseRatePerYear,

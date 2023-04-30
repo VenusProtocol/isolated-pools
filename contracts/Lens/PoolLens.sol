@@ -19,7 +19,6 @@ contract PoolLens is ExponentialNoError {
         address comptroller;
         uint256 blockPosted;
         uint256 timestampPosted;
-        PoolRegistry.RiskRating riskRating;
         string category;
         string logoURL;
         string description;
@@ -246,7 +245,7 @@ contract PoolLens is ExponentialNoError {
      * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
      *   a break down of bad debt by market
      */
-    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory badDebtSummary) {
+    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
         // Get every market in the pool
@@ -333,7 +332,6 @@ contract PoolLens is ExponentialNoError {
             comptroller: venusPool.comptroller,
             blockPosted: venusPool.blockPosted,
             timestampPosted: venusPool.timestampPosted,
-            riskRating: venusPoolMetaData.riskRating,
             category: venusPoolMetaData.category,
             logoURL: venusPoolMetaData.logoURL,
             description: venusPoolMetaData.description,
@@ -418,7 +416,7 @@ contract PoolLens is ExponentialNoError {
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
         for (uint256 i; i < markets.length; ++i) {
-            // Market borrow and supply state we will modify update in-memory, in oreder to not modify storage
+            // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
             (borrowState.index, borrowState.block) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
@@ -430,7 +428,7 @@ contract PoolLens is ExponentialNoError {
             updateMarketSupplyIndex(address(markets[i]), rewardsDistributor, supplyState);
 
             //Calculate pending rewards
-            uint256 borowReward = calculateBorrowerReward(
+            uint256 borrowReward = calculateBorrowerReward(
                 address(markets[i]),
                 rewardsDistributor,
                 account,
@@ -446,7 +444,7 @@ contract PoolLens is ExponentialNoError {
 
             PendingReward memory pendingReward;
             pendingReward.vTokenAddress = address(markets[i]);
-            pendingReward.amount = borowReward + supplyReward;
+            pendingReward.amount = borrowReward + supplyReward;
             pendingRewards[i] = pendingReward;
         }
         return pendingRewards;
@@ -505,13 +503,14 @@ contract PoolLens is ExponentialNoError {
         Double memory borrowerIndex = Double({
             mantissa: rewardsDistributor.rewardTokenBorrowerIndex(vToken, borrower)
         });
-        if (borrowerIndex.mantissa > 0) {
-            Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
-            uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
-            uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
-            return borrowerDelta;
+        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa > 0) {
+            // Covers the case where users borrowed tokens before the market's borrow state index was set
+            borrowerIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
-        return 0;
+        Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
+        uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
+        uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
+        return borrowerDelta;
     }
 
     function calculateSupplierReward(
@@ -525,6 +524,7 @@ contract PoolLens is ExponentialNoError {
             mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
         if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+            // Covers the case where users supplied tokens before the market's supply state index was set
             supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);

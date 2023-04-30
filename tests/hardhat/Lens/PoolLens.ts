@@ -14,7 +14,6 @@ import {
   PoolLens,
   PoolRegistry,
   ProtocolShareReserve,
-  RiskFund,
   Shortfall,
   VToken,
 } from "../../../typechain";
@@ -84,7 +83,6 @@ describe("PoolLens", async function () {
     await whitePaperRateFactory.deployed();
 
     const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const riskFund = await smock.fake<RiskFund>("Shortfall");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -96,7 +94,6 @@ describe("PoolLens", async function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
-      riskFund.address,
       protocolShareReserve.address,
       fakeAccessControlManager.address,
     ]);
@@ -108,7 +105,7 @@ describe("PoolLens", async function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    const [owner, proxyAdmin, ...rest] = await ethers.getSigners();
+    const [owner, ...rest] = await ethers.getSigners();
     [borrowerWbtc, borrowerDai] = rest;
     ownerAddress = await owner.getAddress();
 
@@ -216,9 +213,9 @@ describe("PoolLens", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: owner.address,
       supplyCap: convertToUnit(4000, 18),
       borrowCap: convertToUnit(2000, 18),
     });
@@ -238,22 +235,20 @@ describe("PoolLens", async function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: owner.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
     });
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
-      riskRating: 2,
-      category: "Hign market cap",
+      category: "High market cap",
       logoURL: "http://venis.io/pool1",
       description: "Pool1 description",
     });
 
     await poolRegistry.updatePoolMetadata(comptroller2Proxy.address, {
-      riskRating: 0,
       category: "Low market cap",
       logoURL: "http://highrisk.io/pool2",
       description: "Pool2 description",
@@ -284,19 +279,18 @@ describe("PoolLens", async function () {
 
       const venusPool1Actual = poolData[0];
 
-      expect(venusPool1Actual[0]).equal("Pool 1");
-      expect(venusPool1Actual[1]).equal(ownerAddress);
-      expect(venusPool1Actual[2]).equal(comptroller1Proxy.address);
-      expect(venusPool1Actual[5]).equal(2);
-      expect(venusPool1Actual[6]).equal("Hign market cap");
-      expect(venusPool1Actual[7]).equal("http://venis.io/pool1");
-      expect(venusPool1Actual[8]).equal("Pool1 description");
-      expect(venusPool1Actual[9]).equal(priceOracle.address);
-      expect(venusPool1Actual[10]).equal(closeFactor1);
-      expect(venusPool1Actual[11]).equal(liquidationIncentive1);
-      expect(venusPool1Actual[12]).equal(minLiquidatableCollateral);
+      expect(venusPool1Actual.name).equal("Pool 1");
+      expect(venusPool1Actual.creator).equal(ownerAddress);
+      expect(venusPool1Actual.comptroller).equal(comptroller1Proxy.address);
+      expect(venusPool1Actual.category).equal("High market cap");
+      expect(venusPool1Actual.logoURL).equal("http://venis.io/pool1");
+      expect(venusPool1Actual.description).equal("Pool1 description");
+      expect(venusPool1Actual.priceOracle).equal(priceOracle.address);
+      expect(venusPool1Actual.closeFactor).equal(closeFactor1);
+      expect(venusPool1Actual.liquidationIncentive).equal(liquidationIncentive1);
+      expect(venusPool1Actual.minLiquidatableCollateral).equal(minLiquidatableCollateral);
 
-      const vTokensActual = venusPool1Actual[13];
+      const vTokensActual = venusPool1Actual.vTokens;
       expect(vTokensActual.length).equal(2);
 
       // get VToken for Asset-1 : WBTC
@@ -313,35 +307,33 @@ describe("PoolLens", async function () {
 
       const venusPool2Actual = poolData[1];
 
-      expect(venusPool2Actual[0]).equal("Pool 2");
-      expect(venusPool2Actual[1]).equal(ownerAddress);
-      expect(venusPool2Actual[2]).equal(comptroller2Proxy.address);
-      expect(venusPool2Actual[5]).equal(0);
-      expect(venusPool2Actual[6]).equal("Low market cap");
-      expect(venusPool2Actual[7]).equal("http://highrisk.io/pool2");
-      expect(venusPool2Actual[8]).equal("Pool2 description");
-      expect(venusPool1Actual[9]).equal(priceOracle.address);
-      expect(venusPool1Actual[10]).equal(closeFactor2);
-      expect(venusPool1Actual[11]).equal(liquidationIncentive2);
-      expect(venusPool1Actual[12]).equal(minLiquidatableCollateral);
+      expect(venusPool2Actual.name).equal("Pool 2");
+      expect(venusPool2Actual.creator).equal(ownerAddress);
+      expect(venusPool2Actual.comptroller).equal(comptroller2Proxy.address);
+      expect(venusPool2Actual.category).equal("Low market cap");
+      expect(venusPool2Actual.logoURL).equal("http://highrisk.io/pool2");
+      expect(venusPool2Actual.description).equal("Pool2 description");
+      expect(venusPool1Actual.priceOracle).equal(priceOracle.address);
+      expect(venusPool1Actual.closeFactor).equal(closeFactor2);
+      expect(venusPool1Actual.liquidationIncentive).equal(liquidationIncentive2);
+      expect(venusPool1Actual.minLiquidatableCollateral).equal(minLiquidatableCollateral);
     });
 
     it("getPoolData By Comptroller", async function () {
       const poolData = await poolLens.getPoolByComptroller(poolRegistryAddress, comptroller1Proxy.address);
 
-      expect(poolData[0]).equal("Pool 1");
-      expect(poolData[1]).equal(ownerAddress);
-      expect(poolData[2]).equal(comptroller1Proxy.address);
-      expect(poolData[5]).equal(2);
-      expect(poolData[6]).equal("Hign market cap");
-      expect(poolData[7]).equal("http://venis.io/pool1");
-      expect(poolData[8]).equal("Pool1 description");
-      expect(poolData[9]).equal(priceOracle.address);
-      expect(poolData[10]).equal(closeFactor1);
-      expect(poolData[11]).equal(liquidationIncentive1);
-      expect(poolData[12]).equal(minLiquidatableCollateral);
+      expect(poolData.name).equal("Pool 1");
+      expect(poolData.creator).equal(ownerAddress);
+      expect(poolData.comptroller).equal(comptroller1Proxy.address);
+      expect(poolData.category).equal("High market cap");
+      expect(poolData.logoURL).equal("http://venis.io/pool1");
+      expect(poolData.description).equal("Pool1 description");
+      expect(poolData.priceOracle).equal(priceOracle.address);
+      expect(poolData.closeFactor).equal(closeFactor1);
+      expect(poolData.liquidationIncentive).equal(liquidationIncentive1);
+      expect(poolData.minLiquidatableCollateral).equal(minLiquidatableCollateral);
 
-      const vTokensActual = poolData[13];
+      const vTokensActual = poolData.vTokens;
       expect(vTokensActual.length).equal(2);
 
       // get VToken for Asset-1 : WBTC

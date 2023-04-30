@@ -32,7 +32,7 @@ contract RiskFund is
     address private shortfall;
 
     // Store base asset's reserve for specific pool
-    mapping(address => uint256) private poolReserves;
+    mapping(address => uint256) public poolReserves;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -148,14 +148,15 @@ contract RiskFund is
      * @param amountsOutMin Minimum amount to recieve for swap
      * @return Number of swapped tokens.
      */
-    function swapPoolsAssets(address[] calldata markets, uint256[] calldata amountsOutMin)
-        external
-        override
-        returns (uint256)
-    {
-        _checkAccessAllowed("swapPoolsAssets(address[],uint256[])");
+    function swapPoolsAssets(
+        address[] calldata markets,
+        uint256[] calldata amountsOutMin,
+        address[][] calldata paths
+    ) external override returns (uint256) {
+        _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
         require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
         require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
+        require(markets.length == paths.length, "Risk fund: markets and paths are unequal lengths");
 
         uint256 totalAmount;
         uint256 marketsCount = markets.length;
@@ -170,7 +171,7 @@ contract RiskFund is
             require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
             require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
 
-            uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i]);
+            uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
             poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
@@ -206,15 +207,6 @@ contract RiskFund is
     }
 
     /**
-     * @dev Get pool reserve by pool id.
-     * @param comptroller Comptroller address of the pool.
-     * @return Number of reserved tokens.
-     */
-    function getPoolReserve(address comptroller) external view override returns (uint256) {
-        return poolReserves[comptroller];
-    }
-
-    /**
      * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
@@ -233,7 +225,8 @@ contract RiskFund is
     function _swapAsset(
         VToken vToken,
         address comptroller,
-        uint256 amountOutMin
+        uint256 amountOutMin,
+        address[] calldata path
     ) internal returns (uint256) {
         require(amountOutMin != 0, "RiskFund: amountOutMin must be greater than 0 to swap vToken");
         require(amountOutMin >= minAmountToConvert, "RiskFund: amountOutMin should be greater than minAmountToConvert");
@@ -257,9 +250,11 @@ contract RiskFund is
                 poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
 
                 if (underlyingAsset != convertibleBaseAsset) {
-                    address[] memory path = new address[](2);
-                    path[0] = underlyingAsset;
-                    path[1] = convertibleBaseAsset;
+                    require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");
+                    require(
+                        path[path.length - 1] == convertibleBaseAsset,
+                        "RiskFund: finally path must be convertible base asset"
+                    );
                     IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, 0);
                     IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
                     uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
@@ -269,7 +264,7 @@ contract RiskFund is
                         address(this),
                         block.timestamp
                     );
-                    totalAmount = amounts[1];
+                    totalAmount = amounts[path.length - 1];
                 } else {
                     totalAmount = balanceOfUnderlyingAsset;
                 }

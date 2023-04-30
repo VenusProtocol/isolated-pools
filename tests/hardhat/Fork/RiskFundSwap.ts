@@ -88,7 +88,7 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 };
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, proxyAdmin, ...signers] = await ethers.getSigners();
+  const [admin, user, ...signers] = await ethers.getSigners();
   if (FORK_MAINNET) {
     // MAINNET USER WITH BALANCE
     busdUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
@@ -152,14 +152,13 @@ const riskFundFixture = async (): Promise<void> => {
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
-    riskFund.address,
     protocolShareReserve.address,
     fakeAccessControlManager.address,
   ]);
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 
-  await shortfall.setPoolRegistry(poolRegistry.address);
+  await shortfall.updatePoolRegistry(poolRegistry.address);
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptroller = await Comptroller.deploy(poolRegistry.address);
@@ -235,9 +234,9 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: parseUnits("0.7", 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -257,9 +256,9 @@ const riskFundFixture = async (): Promise<void> => {
     liquidationThreshold: parseUnits("0.7", 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
   });
@@ -282,7 +281,9 @@ describe("Risk Fund: Swap Tests", () => {
 
     await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
 
-    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)]);
+    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]]);
+    expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");
+
     const balance = await BUSD.balanceOf(riskFund.address);
     expect(Number(balance)).to.be.closeTo(Number(parseUnits("15", 18)), Number(parseUnits("1", 17)));
   });

@@ -17,7 +17,6 @@ import {
   PriceOracle__factory,
   ProtocolShareReserve,
   RewardsDistributor,
-  RiskFund,
   Shortfall,
   VToken,
   VTokenProxyFactory,
@@ -43,8 +42,7 @@ let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
 
 async function rewardsFixture() {
-  let proxyAdmin: SignerWithAddress;
-  [root, proxyAdmin] = await ethers.getSigners();
+  [root] = await ethers.getSigners();
   const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
   vTokenFactory = await VTokenProxyFactory.deploy();
   await vTokenFactory.deployed();
@@ -57,7 +55,6 @@ async function rewardsFixture() {
   whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
   await whitePaperRateFactory.deployed();
 
-  const riskFund = await smock.fake<RiskFund>("RiskFund");
   const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
   const shortfall = await smock.fake<Shortfall>("Shortfall");
 
@@ -70,7 +67,6 @@ async function rewardsFixture() {
     jumpRateFactory.address,
     whitePaperRateFactory.address,
     shortfall.address,
-    riskFund.address,
     protocolShareReserve.address,
     fakeAccessControlManager.address,
   ]);
@@ -166,9 +162,9 @@ async function rewardsFixture() {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: root.address,
     supplyCap: convertToUnit(1000, 8),
     borrowCap: convertToUnit(1000, 8),
   });
@@ -192,9 +188,9 @@ async function rewardsFixture() {
     liquidationThreshold: convertToUnit(0.7, 18),
     reserveFactor: convertToUnit(0.3, 18),
     accessControlManager: fakeAccessControlManager.address,
-    vTokenProxyAdmin: proxyAdmin.address,
     beaconAddress: vTokenBeacon.address,
     initialSupply,
+    vTokenReceiver: root.address,
     supplyCap: convertToUnit(1000000, 18),
     borrowCap: convertToUnit(1000000, 18),
   });

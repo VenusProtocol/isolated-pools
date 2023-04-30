@@ -31,7 +31,7 @@ let someone: SignerWithAddress;
 let bidder1: SignerWithAddress;
 let bidder2: SignerWithAddress;
 let shortfall: MockContract<Shortfall>;
-let fakeAccessControlManager: FakeContract<AccessControlManager>;
+let accessControlManager: AccessControlManager;
 let fakeRiskFund: FakeContract<IRiskFund>;
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
@@ -53,8 +53,8 @@ async function shortfallFixture() {
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
 
-  fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
-  fakeAccessControlManager.isAllowedToCall.returns(true);
+  const AccessControlManagerFactor = await ethers.getContractFactory("AccessControlManager");
+  accessControlManager = await AccessControlManagerFactor.deploy();
   fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const Shortfall = await smock.mock<Shortfall__factory>("Shortfall");
@@ -62,14 +62,14 @@ async function shortfallFixture() {
     mockBUSD.address,
     fakeRiskFund.address,
     parseUnits(minimumPoolBadDebt, "18"),
-    fakeAccessControlManager.address,
+    accessControlManager.address,
   ]);
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
 
   poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
 
-  await shortfall.setPoolRegistry(poolRegistry.address);
+  await shortfall.updatePoolRegistry(poolRegistry.address);
 
   // Deploy Mock Tokens
   const MockDAI = await ethers.getContractFactory("MockToken");
@@ -128,8 +128,21 @@ async function shortfallFixture() {
 
   comptroller.oracle.returns(fakePriceOracle.address);
 
-  fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18));
+  fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
   fakeRiskFund.transferReserveForAuction.returns(0);
+
+  // Access Control
+  await accessControlManager.giveCallPermission(shortfall.address, "updateIncentiveBps(uint256)", owner.address);
+
+  await accessControlManager.giveCallPermission(shortfall.address, "updateMinimumPoolBadDebt(uint256)", owner.address);
+
+  await accessControlManager.giveCallPermission(shortfall.address, "updateWaitForFirstBidder(uint256)", owner.address);
+
+  await accessControlManager.giveCallPermission(
+    shortfall.address,
+    "updateNextBidderBlockLimit(uint256)",
+    owner.address,
+  );
 
   // setup bidders
   // bidder 1
@@ -147,34 +160,31 @@ async function shortfallFixture() {
 describe("Shortfall: Tests", async function () {
   async function setup() {
     await loadFixture(shortfallFixture);
-    fakeAccessControlManager.isAllowedToCall.returns(true);
   }
 
   describe("setters", async function () {
     beforeEach(setup);
 
-    describe("setPoolRegistry", async function () {
+    describe("updatePoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(shortfall.setPoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
+        await expect(shortfall.updatePoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
       });
 
       it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).setPoolRegistry(poolRegistry.address)).to.be.rejectedWith(
+        await expect(shortfall.connect(someone).updatePoolRegistry(poolRegistry.address)).to.be.rejectedWith(
           "Ownable: caller is not the owner",
         );
       });
 
       it("emits PoolRegistryUpdated event", async function () {
-        const tx = shortfall.setPoolRegistry(someone.address);
+        const tx = shortfall.updatePoolRegistry(someone.address);
         await expect(tx).to.emit(shortfall, "PoolRegistryUpdated").withArgs(poolRegistry.address, someone.address);
       });
     });
 
     describe("updateMinimumPoolBadDebt", async function () {
-      it("fails if called by a non-owner", async function () {
-        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.revertedWith(
-          "Ownable: caller is not the owner",
-        );
+      it("fails if called by a non permissioned account", async function () {
+        await expect(shortfall.connect(someone).updateMinimumPoolBadDebt(1)).to.be.reverted;
       });
 
       it("updates minimumPoolBadDebt in storage", async function () {
@@ -189,22 +199,96 @@ describe("Shortfall: Tests", async function () {
           .withArgs(parseUnits(minimumPoolBadDebt, "18"), 1);
       });
     });
+
+    describe("waitForFirstBidder", async function () {
+      it("fails if called by a non permissioned account", async function () {
+        await expect(shortfall.connect(someone).updateWaitForFirstBidder(200)).to.be.reverted;
+      });
+
+      it("updates updateWaitForFirstBidder in storage", async function () {
+        await shortfall.updateWaitForFirstBidder(200);
+        expect(await shortfall.waitForFirstBidder()).to.equal(200);
+      });
+
+      it("emits WaitForFirstBidderUpdated event", async function () {
+        const tx = shortfall.updateWaitForFirstBidder(200);
+        await expect(tx).to.emit(shortfall, "WaitForFirstBidderUpdated").withArgs(100, 200);
+      });
+    });
+
+    describe("updateNextBidderBlockLimit", async function () {
+      it("fails if called by a non permissioned account", async function () {
+        await accessControlManager.revokeCallPermission(
+          shortfall.address,
+          "updateNextBidderBlockLimit(uint256)",
+          owner.address,
+        );
+        await expect(shortfall.connect(someone).updateNextBidderBlockLimit(1)).to.be.reverted;
+        await accessControlManager.giveCallPermission(
+          shortfall.address,
+          "updateNextBidderBlockLimit(uint256)",
+          owner.address,
+        );
+      });
+
+      it("updates nextBidderBlockLimit in storage", async function () {
+        await shortfall.updateNextBidderBlockLimit(100);
+        expect(await shortfall.nextBidderBlockLimit()).to.equal(100);
+      });
+
+      it("emits NextBidderBlockLimitUpdated event", async function () {
+        const tx = shortfall.updateNextBidderBlockLimit(100);
+        await expect(tx).to.emit(shortfall, "NextBidderBlockLimitUpdated").withArgs(10, 100);
+      });
+    });
+  });
+
+  describe("updateIncentiveBps", async function () {
+    it("fails if caller is not allowed", async function () {
+      await expect(shortfall.connect(someone).updateIncentiveBps(1)).to.be.reverted;
+    });
+
+    it("fails if new incentive BPS is set to 0", async function () {
+      await expect(shortfall.updateIncentiveBps(0)).to.be.revertedWith("incentiveBps must not be 0");
+    });
+
+    it("emits IncentiveBpsUpdated event", async function () {
+      const tx = shortfall.updateIncentiveBps(2000);
+      await expect(tx).to.emit(shortfall, "IncentiveBpsUpdated").withArgs(1000, 2000);
+    });
+  });
+
+  describe("placeBid", async function () {
+    beforeEach(setup);
+
+    async function startAuction() {
+      vDAI.badDebt.returns(parseUnits("10000", 18));
+      await vDAI.setVariable("badDebt", parseUnits("10000", 18));
+      vWBTC.badDebt.returns(parseUnits("2", 8));
+      await vWBTC.setVariable("badDebt", parseUnits("2", 8));
+      await shortfall.startAuction(poolAddress);
+    }
+
+    it("fails if auction is not active", async function () {
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("no on-going auction");
+    });
+
+    it("fails if auction is stale", async function () {
+      await startAuction();
+      await mine(100);
+      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("auction is stale, restart it");
+    });
   });
 
   describe("LARGE_POOL_DEBT Scenario", async function () {
     before(setup);
-
-    it("startAuction fails if ACM does not allow the call", async function () {
-      fakeAccessControlManager.isAllowedToCall.returns(false);
-      await expect(shortfall.startAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
-      fakeAccessControlManager.isAllowedToCall.returns(true);
-    });
+    let startBlockNumber;
 
     it("Should have debt and reserve", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
 
-      expect(await fakeRiskFund.getPoolReserve(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
+      expect(await fakeRiskFund.poolReserves(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
 
       expect(await vDAI.badDebt()).equal(parseUnits("1000", 18));
       expect(await vWBTC.badDebt()).equal(parseUnits("1", 8));
@@ -238,7 +322,8 @@ describe("Shortfall: Tests", async function () {
       vWBTC.badDebt.returns(parseUnits("2", 8));
       await vWBTC.setVariable("badDebt", parseUnits("2", 8));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
+      startBlockNumber = receipt.blockNumber;
 
       const auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(1);
@@ -338,6 +423,7 @@ describe("Shortfall: Tests", async function () {
         .to.emit(shortfall, "AuctionClosed")
         .withArgs(
           comptroller.address,
+          startBlockNumber,
           bidder2.address,
           1800,
           parseUnits("10000", 18),
@@ -359,7 +445,7 @@ describe("Shortfall: Tests", async function () {
 
   describe("LARGE_RISK_FUND Scenario", async function () {
     before(setup);
-
+    let startBlockNumber;
     it("Start auction", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
       await vDAI.setVariable("badDebt", parseUnits("10000", 18));
@@ -367,9 +453,10 @@ describe("Shortfall: Tests", async function () {
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
       riskFundBalance = "50000";
-      fakeRiskFund.getPoolReserve.returns(parseUnits(riskFundBalance, 18));
+      fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
+      startBlockNumber = receipt.blockNumber;
 
       const auction = await shortfall.auctions(poolAddress);
       expect(auction.status).equal(1);
@@ -454,6 +541,7 @@ describe("Shortfall: Tests", async function () {
         .to.emit(shortfall, "AuctionClosed")
         .withArgs(
           comptroller.address,
+          startBlockNumber,
           bidder2.address,
           1800,
           "6138067320000000000000",
@@ -476,11 +564,6 @@ describe("Shortfall: Tests", async function () {
   describe("Restart Auction", async function () {
     beforeEach(setup);
 
-    it("fails if ACM does not allow the call", async function () {
-      fakeAccessControlManager.isAllowedToCall.returns(false);
-      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWithCustomError(shortfall, "Unauthorized");
-    });
-
     it("Can't restart auction early ", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
       await vDAI.setVariable("badDebt", parseUnits("10000", 18));
@@ -500,11 +583,13 @@ describe("Shortfall: Tests", async function () {
       vWBTC.badDebt.returns(parseUnits("1", 8));
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
-      await shortfall.startAuction(poolAddress);
+      const receipt = await shortfall.startAuction(poolAddress);
 
       await mine(100);
 
-      await expect(shortfall.restartAuction(poolAddress)).to.emit(shortfall, "AuctionRestarted").withArgs(poolAddress);
+      await expect(shortfall.restartAuction(poolAddress))
+        .to.emit(shortfall, "AuctionRestarted")
+        .withArgs(poolAddress, receipt.blockNumber);
     });
 
     it("Cannot restart auction after a bid is placed", async function () {

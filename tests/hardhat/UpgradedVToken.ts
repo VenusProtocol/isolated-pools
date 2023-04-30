@@ -1,5 +1,4 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
@@ -11,7 +10,6 @@ import {
   MockToken,
   PoolRegistry,
   ProtocolShareReserve,
-  RiskFund,
   Shortfall,
 } from "../../typechain";
 
@@ -26,9 +24,8 @@ describe("UpgradedVToken: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-  let proxyAdmin: SignerWithAddress;
   before(async function () {
-    [, proxyAdmin] = await ethers.getSigners();
+    const [root] = await ethers.getSigners();
     const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
     const vTokenFactory = await VTokenProxyFactory.deploy();
     await vTokenFactory.deployed();
@@ -42,7 +39,6 @@ describe("UpgradedVToken: Tests", function () {
     await whitePaperRateFactory.deployed();
 
     const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const riskFund = await smock.fake<RiskFund>("RiskFund");
     const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -54,7 +50,6 @@ describe("UpgradedVToken: Tests", function () {
       jumpRateFactory.address,
       whitePaperRateFactory.address,
       shortfall.address,
-      riskFund.address,
       protocolShareReserve.address,
       fakeAccessControlManager.address,
     ]);
@@ -134,9 +129,9 @@ describe("UpgradedVToken: Tests", function () {
       liquidationThreshold: convertToUnit(0.7, 18),
       reserveFactor: convertToUnit(0.3, 18),
       accessControlManager: fakeAccessControlManager.address,
-      vTokenProxyAdmin: proxyAdmin.address,
       beaconAddress: vTokenBeacon.address,
       initialSupply,
+      vTokenReceiver: root.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
     });

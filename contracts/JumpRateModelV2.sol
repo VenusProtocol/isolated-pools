@@ -15,7 +15,12 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
         IAccessControlManagerV8 accessControlManager_
-    ) BaseJumpRateModelV2(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManager_) {}
+    )
+        BaseJumpRateModelV2(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManager_)
+    /* solhint-disable-next-line no-empty-blocks */
+    {
+
+    }
 
     /**
      * @notice Calculates the current borrow rate per block

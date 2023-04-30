@@ -90,7 +90,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
