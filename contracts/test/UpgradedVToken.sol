@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../VToken.sol";
-import "../Governance/AccessControlManager.sol";
+import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 
 /**
  * @title Venus's VToken Contract
