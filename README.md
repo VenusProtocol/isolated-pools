@@ -1,3 +1,7 @@
+# This repository is temporarily read-only
+
+This repository is being audited. It has been temporarily frozen to avoid any unexpected change in the reviewed code. It will be unarchived in 10 days.
+
 # Venus Isolated Pools
 
 ### Compound Fork Commit
