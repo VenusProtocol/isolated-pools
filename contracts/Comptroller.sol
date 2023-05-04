@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import "./VToken.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "./ComptrollerInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Rewards/RewardsDistributor.sol";
@@ -49,7 +49,7 @@ contract Comptroller is
     event NewLiquidationIncentive(uint256 oldLiquidationIncentiveMantissa, uint256 newLiquidationIncentiveMantissa);
 
     /// @notice Emitted when price oracle is changed
-    event NewPriceOracle(PriceOracle oldPriceOracle, PriceOracle newPriceOracle);
+    event NewPriceOracle(ResilientOracleInterface oldPriceOracle, ResilientOracleInterface newPriceOracle);
 
     /// @notice Emitted when an action is paused on a market
     event ActionPausedMarket(VToken vToken, Action action, bool pauseState);
@@ -953,15 +953,15 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets a new PriceOracle for the Comptroller
+     * @notice Sets a new ResilientOracle for the Comptroller
      * @dev Only callable by the admin
-     * @param newOracle Address of the new PriceOracle to set
+     * @param newOracle Address of the new ResilientOracle to set
      * @custom:event Emits NewPriceOracle on success
      */
-    function setPriceOracle(PriceOracle newOracle) external onlyOwner {
+    function setPriceOracle(ResilientOracleInterface newOracle) external onlyOwner {
         require(address(newOracle) != address(0), "invalid price oracle address");
 
-        PriceOracle oldOracle = oracle;
+        ResilientOracleInterface oldOracle = oracle;
         oracle = newOracle;
         emit NewPriceOracle(oldOracle, newOracle);
     }

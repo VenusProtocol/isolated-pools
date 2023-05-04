@@ -2323,9 +2323,9 @@
   resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-0.0.2.tgz#0e85616a95b482e7c2060d4d9a2876b3cea38891"
   integrity sha512-vXZDXxGGQdw9rWWGGAeCHH8iiHa4s5JP6MQomvt8XaPvOFGBFD4paz473/VI0wGeh+wg0LWYAgQsZjGyn51Bkw==
 
-"@venusprotocol/oracle@^1.6.10":
+"@venusprotocol/oracle@^1.0.0-dev.1":
   version "1.6.10"
-  resolved "https://registry.npmjs.org/@venusprotocol/oracle/-/oracle-1.6.10.tgz#f32df925c2b400ff87ca8be1c44ba1a46d5b3c8f"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.10.tgz#f32df925c2b400ff87ca8be1c44ba1a46d5b3c8f"
   integrity sha512-6QV5kOqPktcMkCApc4iWz3Ki7WOls9hD52icjtqZGl56j5fQ+D8qp7jNF8z862bdLpBe8fQZ/VW0mREoeIRDTQ==
   dependencies:
     "@chainlink/contracts" "^0.5.1"

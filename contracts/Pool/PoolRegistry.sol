@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -239,7 +239,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         comptrollerProxy.setCloseFactor(closeFactor);
         comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
         comptrollerProxy.setMinLiquidatableCollateral(minLiquidatableCollateral);
-        comptrollerProxy.setPriceOracle(PriceOracle(priceOracle));
+        comptrollerProxy.setPriceOracle(ResilientOracleInterface(priceOracle));
 
         // Start transferring ownership to msg.sender
         comptrollerProxy.transferOwnership(msg.sender);

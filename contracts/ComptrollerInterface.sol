@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "./VToken.sol";
 import "./Rewards/RewardsDistributor.sol";
 
@@ -72,7 +72,7 @@ interface ComptrollerInterface {
 interface ComptrollerViewInterface {
     function markets(address) external view returns (bool, uint256);
 
-    function oracle() external view returns (PriceOracle);
+    function oracle() external view returns (ResilientOracleInterface);
 
     function getAssetsIn(address) external view returns (VToken[] memory);
 
