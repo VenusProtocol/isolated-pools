@@ -24,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const priceOracle = await ethers.getContract("ResilientOracle");
   const poolRegistry = await ethers.getContract("PoolRegistry");
   let accessControlManager;
-  if(networkName === "hardhat") {
+  if (networkName === "hardhat") {
     accessControlManager = await ethers.getContract("AccessControlManager");
   } else {
     accessControlManager = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);

@@ -876,7 +876,9 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
 }
 
 export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): TokenConfig {
-  const tokenCofig = tokens.find(({ symbol }) => symbol.toLocaleLowerCase().trim() === tokenSymbol.toLocaleLowerCase().trim());
+  const tokenCofig = tokens.find(
+    ({ symbol }) => symbol.toLocaleLowerCase().trim() === tokenSymbol.toLocaleLowerCase().trim(),
+  );
 
   if (tokenCofig) {
     return tokenCofig;
