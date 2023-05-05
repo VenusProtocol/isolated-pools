@@ -2318,10 +2318,10 @@
     "@typescript-eslint/types" "5.59.1"
     eslint-visitor-keys "^3.3.0"
 
-"@venusprotocol/governance-contracts@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-0.0.2.tgz#0e85616a95b482e7c2060d4d9a2876b3cea38891"
-  integrity sha512-vXZDXxGGQdw9rWWGGAeCHH8iiHa4s5JP6MQomvt8XaPvOFGBFD4paz473/VI0wGeh+wg0LWYAgQsZjGyn51Bkw==
+"@venusprotocol/governance-contracts@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-1.0.0.tgz#264966365b75bb05219ce42de21c0af022d462a8"
+  integrity sha512-SHF8In2HPM3zbWWvPSQrD7omKRfwInecFrDldMir9yqPdKrJBXDlmjAOZLyGLK9wiH+GQPBHpVEZoxiBLmwKVw==
 
 "@venusprotocol/oracle@^1.6.10":
   version "1.6.10"
