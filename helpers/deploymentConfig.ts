@@ -432,6 +432,13 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "Wrapped BNB",
+        symbol: "WBNB",
+        decimals: 18,
+        tokenAddress: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+      },
+      {
+        isMock: false,
         name: "TRON",
         symbol: "TRX",
         decimals: 18,
@@ -690,6 +697,7 @@ export const globalConfig: NetworkConfig = {
             asset: "WBNB",
             symbol: "vWBNB",
             ...volatileTokenTemplate,
+            initialSupply: convertToUnit("0.5", 18),
           },
           {
             name: "Venus ANKR",
@@ -716,7 +724,7 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["ankrBNB ", "BNBx", "stkBNB"],
+            markets: ["ankrBNB", "BNBx", "stkBNB"],
             supplySpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
             borrowSpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
           },
@@ -868,7 +876,7 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
 }
 
 export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): TokenConfig {
-  const tokenCofig = tokens.find(({ symbol }) => symbol === tokenSymbol);
+  const tokenCofig = tokens.find(({ symbol }) => symbol.toLocaleLowerCase().trim() === tokenSymbol.toLocaleLowerCase().trim());
 
   if (tokenCofig) {
     return tokenCofig;
