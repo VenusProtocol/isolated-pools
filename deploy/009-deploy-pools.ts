@@ -10,15 +10,25 @@ const treasuryAddresses: { [network: string]: string } = {
   bscmainnet: "0xF322942f644A996A617BD29c16bd7d231d9F35E9", // Venus Treasury
 };
 
+const acmAddresses: { [key: string]: string } = {
+  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
+  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-
+  const networkName = hre.network.name;
   let tx;
   const priceOracle = await ethers.getContract("ResilientOracle");
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const accessControlManager = await ethers.getContract("AccessControlManager");
+  let accessControlManager;
+  if(networkName === "hardhat") {
+    accessControlManager = await ethers.getContract("AccessControlManager");
+  } else {
+    accessControlManager = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
+  }
   const maxLoopsLimit = 150;
 
   // Comptroller Beacon
@@ -122,9 +132,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       console.log("Approving PoolRegistry for: " + initialSupply);
       tx = await tokenContract.approve(poolRegistry.address, initialSupply);
       await tx.wait(1);
-
-      console.log("Adding market " + name);
-
+      console.log("Adding market " + name + " to pool " + pool.name);
       tx = await poolRegistry.addMarket({
         comptroller: comptrollerProxy.address,
         asset: tokenContract.address,
@@ -148,6 +156,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       });
       await tx.wait();
       console.log(`Market ${name} added to pool ${pool.name}`);
+      console.log(`-----------------------------------------`);
     }
   }
 };

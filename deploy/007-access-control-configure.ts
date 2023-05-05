@@ -2,22 +2,33 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+const ADDRESSES: { [key: string]: string } = {
+  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
+  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-
+  const networkName: string = hre.network.name;
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const vBep20Factory = await ethers.getContract("VTokenProxyFactory");
+  let accessControlManager;
+  if (networkName == "hardhat") {
+    await deploy("AccessControlManager", {
+      from: deployer,
+      args: [],
+      log: true,
+      autoMine: true,
+    });
+    accessControlManager = await ethers.getContract("AccessControlManager");
+  } else {
+    accessControlManager = await ethers.getContractAt("AccessControlManager", ADDRESSES[networkName]);
+  }
+  console.log("Address: " + accessControlManager.address);
+  console.log("Deployer: " + deployer);
 
-  await deploy("AccessControlManager", {
-    from: deployer,
-    args: [],
-    log: true,
-    autoMine: true,
-  });
-
-  const accessControlManager = await ethers.getContract("AccessControlManager");
   console.log("==================================================");
   console.log("Access Control Initial Configuration: ");
   console.log("==================================================");
