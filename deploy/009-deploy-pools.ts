@@ -24,15 +24,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const networkName = hre.network.name;
   let tx;
   const priceOracle = await ethers.getContract("ResilientOracle");
   const poolRegistry = await ethers.getContract("PoolRegistry");
   let accessControlManager;
-  if (networkName === "hardhat") {
-    accessControlManager = await ethers.getContract("AccessControlManager");
-  } else {
+  if (hre.network.live) {
+    const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
     accessControlManager = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
+  } else {
+    accessControlManager = await ethers.getContract("AccessControlManager");
   }
   const maxLoopsLimit = 150;
 
