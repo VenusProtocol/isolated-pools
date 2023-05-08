@@ -6,16 +6,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  if (hre.network.name === "hardhat") {
-    await deploy("AccessControlManager", {
-      from: deployer,
-      args: [],
-      log: true,
-      autoMine: true,
-    });
-  }
+  await deploy("AccessControlManager", {
+    from: deployer,
+    args: [],
+    log: true,
+    autoMine: true,
+  });
 };
 
 func.tags = ["AccessControl", "il"];
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.live;
 
 export default func;

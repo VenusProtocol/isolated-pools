@@ -10,7 +10,12 @@ const treasuryAddresses: { [network: string]: string } = {
   bscmainnet: "0xF322942f644A996A617BD29c16bd7d231d9F35E9", // Venus Treasury
 };
 
-const acmAddresses: { [key: string]: string } = {
+type AcmAddresses = {
+  bsctestnet: string;
+  bscmainnet: string;
+};
+
+const acmAddresses: AcmAddresses = {
   bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
   bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
 };
