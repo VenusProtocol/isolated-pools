@@ -15,5 +15,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = ["AccessControl", "il"];
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.live;
 
 export default func;

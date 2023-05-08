@@ -36,6 +36,16 @@ const configureVToken = async (vToken: VToken, shortfallAddress: string, protoco
   console.log("Finished configuring vToken: ", vToken.address);
 };
 
+type AcmAddresses = {
+  bsctestnet: string;
+  bscmainnet: string;
+};
+
+const acmAddresses: AcmAddresses = {
+  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
+  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -53,7 +63,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
   const swapRouter = await ethers.getContract("SwapRouter");
-  const accessControl = await ethers.getContract("AccessControlManager");
+  let accessControl;
+  if (hre.network.live) {
+    const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
+    accessControl = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
+  } else {
+    accessControl = await ethers.getContract("AccessControlManager");
+  }
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 

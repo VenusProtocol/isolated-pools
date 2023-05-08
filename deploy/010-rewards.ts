@@ -4,13 +4,29 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenAddress, getTokenConfig } from "../helpers/deploymentConfig";
 
+type AcmAddresses = {
+  bsctestnet: string;
+  bscmainnet: string;
+};
+
+const acmAddresses: AcmAddresses = {
+  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
+  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
+};
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const maxLoopsLimit = 150;
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const accessControl = await ethers.getContract("AccessControlManager");
+  let accessControl;
+  if (hre.network.live) {
+    const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
+    accessControl = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
+  } else {
+    accessControl = await ethers.getContract("AccessControlManager");
+  }
 
   const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
   const pools = await poolRegistry.callStatic.getAllPools();
