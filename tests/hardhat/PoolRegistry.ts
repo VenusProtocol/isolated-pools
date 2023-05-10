@@ -615,7 +615,7 @@ describe("PoolRegistry: Tests", function () {
           maxLoopsLimit,
           fakeAccessControlManager.address,
         ),
-      ).to.be.revertedWith("PoolRegistry: Invalid PriceOracle address.");
+      ).to.be.revertedWith("PoolRegistry: Invalid ResilientOracleInterface address.");
     });
   });
 

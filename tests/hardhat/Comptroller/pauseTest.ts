@@ -10,7 +10,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  PriceOracle,
+  ResilientOracleInterface,
   VToken,
 } from "../../../typechain";
 
@@ -21,7 +21,7 @@ type PauseFixture = {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
   poolRegistry: FakeContract<PoolRegistry>;
-  oracle: FakeContract<PriceOracle>;
+  oracle: FakeContract<ResilientOracleInterface>;
   OMG: FakeContract<VToken>;
   ZRX: FakeContract<VToken>;
   BAT: FakeContract<VToken>;
@@ -40,7 +40,7 @@ async function pauseFixture(): Promise<PauseFixture> {
     constructorArgs: [poolRegistry.address],
     initializer: "initialize(uint256,address)",
   });
-  const oracle = await smock.fake<PriceOracle>("PriceOracle");
+  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
 
   accessControl.isAllowedToCall.returns(true);
   await comptroller.setPriceOracle(oracle.address);

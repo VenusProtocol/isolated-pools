@@ -10,7 +10,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  PriceOracle,
+  ResilientOracleInterface,
   VToken,
 } from "../../../typechain";
 import { Error } from "../util/Errors";
@@ -21,7 +21,7 @@ chai.use(smock.matchers);
 interface AccountLiquidityTestFixture {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
-  oracle: FakeContract<PriceOracle>;
+  oracle: FakeContract<ResilientOracleInterface>;
   poolRegistry: FakeContract<PoolRegistry>;
 }
 
@@ -34,7 +34,7 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
     constructorArgs: [poolRegistry.address],
     initializer: "initialize(uint256,address)",
   });
-  const oracle = await smock.fake<PriceOracle>("PriceOracle");
+  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
 
   accessControl.isAllowedToCall.returns(true);
   await comptroller.setPriceOracle(oracle.address);
@@ -54,7 +54,7 @@ async function makeVToken({
 }: {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
-  oracle: FakeContract<PriceOracle>;
+  oracle: FakeContract<ResilientOracleInterface>;
   supportMarket?: boolean;
   exchangeRate?: BigNumberish;
   collateralFactor?: string | number;
@@ -107,7 +107,7 @@ describe("Comptroller", () => {
   let accounts: Signer[];
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
-  let oracle: FakeContract<PriceOracle>;
+  let oracle: FakeContract<ResilientOracleInterface>;
   let poolRegistry: FakeContract<PoolRegistry>;
 
   beforeEach(async () => {
