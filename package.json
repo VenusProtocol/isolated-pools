@@ -75,7 +75,7 @@
     "@types/node": "^12.20.50",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
-    "@venusprotocol/oracle": "^1.6.10",
+    "@venusprotocol/oracle": "^1.6.11-dev.6",
     "@venusprotocol/venus-protocol": "^0.6.0",
     "@venusprotocol/governance-contracts": "1.0.0",
     "bignumber.js": "9.0.0",

@@ -2323,25 +2323,35 @@
   resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-1.0.0.tgz#264966365b75bb05219ce42de21c0af022d462a8"
   integrity sha512-SHF8In2HPM3zbWWvPSQrD7omKRfwInecFrDldMir9yqPdKrJBXDlmjAOZLyGLK9wiH+GQPBHpVEZoxiBLmwKVw==
 
-"@venusprotocol/oracle@^1.6.10":
-  version "1.6.10"
-  resolved "https://registry.npmjs.org/@venusprotocol/oracle/-/oracle-1.6.10.tgz#f32df925c2b400ff87ca8be1c44ba1a46d5b3c8f"
-  integrity sha512-6QV5kOqPktcMkCApc4iWz3Ki7WOls9hD52icjtqZGl56j5fQ+D8qp7jNF8z862bdLpBe8fQZ/VW0mREoeIRDTQ==
+"@venusprotocol/governance-contracts@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-0.0.2.tgz#0e85616a95b482e7c2060d4d9a2876b3cea38891"
+  integrity sha512-vXZDXxGGQdw9rWWGGAeCHH8iiHa4s5JP6MQomvt8XaPvOFGBFD4paz473/VI0wGeh+wg0LWYAgQsZjGyn51Bkw==
+
+"@venusprotocol/oracle@^1.6.11-dev.6":
+  version "1.6.11-dev.6"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.11-dev.6.tgz#380526f946a238f5b3131ed00f5dbbd951f81936"
+  integrity sha512-mdB4d/uWwRTsovxybvStMlNWggKbqDYXW/fMob0Wm1dQSzDSKKxYYQOKese9yl9mMKxocVZy9b3NvPN/UEiQ6Q==
   dependencies:
     "@chainlink/contracts" "^0.5.1"
     "@defi-wonderland/smock" "^2.3.4"
     "@nomicfoundation/hardhat-network-helpers" "^1.0.8"
     "@openzeppelin/contracts" "^4.6.0"
     "@openzeppelin/contracts-upgradeable" "^4.7.3"
-    "@venusprotocol/venus-protocol" "0.4.1"
+    "@venusprotocol/governance-contracts" "^0.0.2"
+    "@venusprotocol/venus-protocol" "0.7.0"
+    ethers "^5.6.8"
+    hardhat "^2.9.9"
+    hardhat-deploy "^0.11.14"
     module-alias "^2.2.2"
     solidity-docgen "^0.6.0-beta.29"
 
-"@venusprotocol/venus-protocol@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.npmjs.org/@venusprotocol/venus-protocol/-/venus-protocol-0.4.1.tgz#b98546a9b3bee6a1356b3435b5a67dabf0933366"
-  integrity sha512-Fk1zcc9s8S4phX5cnZtJI3Z3EWwcZuBktE8G6prAfcXYlSegNjRxvgyX9p8gJrH3uZh36MI3Cbm4LSvENL4ezA==
+"@venusprotocol/venus-protocol@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/venus-protocol/-/venus-protocol-0.7.0.tgz#4cc1df0483348545d73cb95bac95acba48885846"
+  integrity sha512-01AOU0kxwMmY29vLUEnDi4cq29SSq5IZMLHsPTJ3qmGtKxWNeWT0fmZQKNsvlMC/SjLPxrIZKAtrP0RY+d8Pdg==
   dependencies:
+    "@openzeppelin/contracts-upgradeable" "^4.8.0"
     dotenv "^16.0.1"
 
 "@venusprotocol/venus-protocol@^0.6.0":
@@ -6352,7 +6362,7 @@ ethers@^4.0.32, ethers@^4.0.40:
     uuid "2.0.1"
     xmlhttprequest "1.8.0"
 
-ethers@^5.5.3, ethers@^5.7.0, ethers@^5.7.1:
+ethers@^5.5.3, ethers@^5.6.8, ethers@^5.7.0, ethers@^5.7.1:
   version "5.7.2"
   resolved "https://registry.npmjs.org/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
@@ -7700,9 +7710,9 @@ hardhat-gas-reporter@^1.0.8:
     eth-gas-reporter "^0.2.25"
     sha1 "^1.1.1"
 
-hardhat@^2.9.3:
+hardhat@^2.9.3, hardhat@^2.9.9:
   version "2.14.0"
-  resolved "https://registry.npmjs.org/hardhat/-/hardhat-2.14.0.tgz#b60c74861494aeb1b50803cf04cc47865a42b87a"
+  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.14.0.tgz#b60c74861494aeb1b50803cf04cc47865a42b87a"
   integrity sha512-73jsInY4zZahMSVFurSK+5TNCJTXMv+vemvGia0Ac34Mm19fYp6vEPVGF3sucbumszsYxiTT2TbS8Ii2dsDSoQ==
   dependencies:
     "@ethersproject/abi" "^5.1.2"

@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import "../VToken.sol";
 import "../ComptrollerInterface.sol";
@@ -251,7 +251,7 @@ contract PoolLens is ExponentialNoError {
         // Get every market in the pool
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
         VToken[] memory markets = comptroller.getAllMarkets();
-        PriceOracle priceOracle = comptroller.oracle();
+        ResilientOracleInterface priceOracle = comptroller.oracle();
 
         BadDebt[] memory badDebts = new BadDebt[](markets.length);
 
@@ -400,7 +400,7 @@ contract PoolLens is ExponentialNoError {
      */
     function vTokenUnderlyingPrice(VToken vToken) public view returns (VTokenUnderlyingPrice memory) {
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(address(vToken.comptroller()));
-        PriceOracle priceOracle = comptroller.oracle();
+        ResilientOracleInterface priceOracle = comptroller.oracle();
 
         return
             VTokenUnderlyingPrice({

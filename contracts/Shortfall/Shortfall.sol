@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import "../VToken.sol";
 import "../ComptrollerInterface.sol";
@@ -380,7 +380,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         VToken[] memory vTokens = _getAllMarkets(comptroller);
         marketsCount = vTokens.length;
-        PriceOracle priceOracle = _getPriceOracle(comptroller);
+        ResilientOracleInterface priceOracle = _getPriceOracle(comptroller);
         uint256 poolBadDebt;
 
         uint256[] memory marketsDebt = new uint256[](marketsCount);
@@ -438,8 +438,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param comptroller Address of the pool's comptroller
      * @return oracle The pool's price oracle
      */
-    function _getPriceOracle(address comptroller) internal view returns (PriceOracle) {
-        return PriceOracle(ComptrollerViewInterface(comptroller).oracle());
+    function _getPriceOracle(address comptroller) internal view returns (ResilientOracleInterface) {
+        return ResilientOracleInterface(ComptrollerViewInterface(comptroller).oracle());
     }
 
     /**

@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -205,7 +205,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
-     * @param priceOracle The pool's PriceOracle address
+     * @param priceOracle The pool's ResilientOracleInterface address
      * @param maxLoopsLimit The maximum limit for the loops can iterate.
      * @return index The index of the registered Venus pool
      * @return proxyAddress The the Comptroller proxy address
@@ -223,7 +223,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
         require(beaconAddress != address(0), "PoolRegistry: Invalid Comptroller beacon address.");
-        require(priceOracle != address(0), "PoolRegistry: Invalid PriceOracle address.");
+        require(priceOracle != address(0), "PoolRegistry: Invalid ResilientOracleInterface address.");
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
@@ -239,7 +239,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         comptrollerProxy.setCloseFactor(closeFactor);
         comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
         comptrollerProxy.setMinLiquidatableCollateral(minLiquidatableCollateral);
-        comptrollerProxy.setPriceOracle(PriceOracle(priceOracle));
+        comptrollerProxy.setPriceOracle(ResilientOracleInterface(priceOracle));
 
         // Start transferring ownership to msg.sender
         comptrollerProxy.transferOwnership(msg.sender);
