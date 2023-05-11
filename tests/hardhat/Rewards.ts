@@ -10,17 +10,17 @@ import {
   Beacon,
   Comptroller,
   JumpRateModelFactory,
+  MockPriceOracle__factory,
   MockToken,
   PoolRegistry,
   PoolRegistry__factory,
-  ResilientOracleInterface,
   ProtocolShareReserve,
+  ResilientOracleInterface,
   RewardsDistributor,
   Shortfall,
   VToken,
   VTokenProxyFactory,
   WhitePaperInterestRateModelFactory,
-  MockPriceOracle__factory,
 } from "../../typechain";
 
 let root: SignerWithAddress;

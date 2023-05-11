@@ -9,9 +9,9 @@ import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
+  MockPriceOracle,
   MockToken,
   PoolRegistry,
-  MockPriceOracle,
   RewardsDistributor,
   RiskFund,
   VToken,
