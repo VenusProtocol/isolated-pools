@@ -2328,10 +2328,10 @@
   resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-0.0.2.tgz#0e85616a95b482e7c2060d4d9a2876b3cea38891"
   integrity sha512-vXZDXxGGQdw9rWWGGAeCHH8iiHa4s5JP6MQomvt8XaPvOFGBFD4paz473/VI0wGeh+wg0LWYAgQsZjGyn51Bkw==
 
-"@venusprotocol/oracle@^1.6.11-dev.6":
-  version "1.6.11-dev.6"
-  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.11-dev.6.tgz#380526f946a238f5b3131ed00f5dbbd951f81936"
-  integrity sha512-mdB4d/uWwRTsovxybvStMlNWggKbqDYXW/fMob0Wm1dQSzDSKKxYYQOKese9yl9mMKxocVZy9b3NvPN/UEiQ6Q==
+"@venusprotocol/oracle@^1.6.11-dev.7":
+  version "1.6.11-dev.7"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.11-dev.7.tgz#f9984f9d2f6c3d14d602ded83772d8819fdaf7fa"
+  integrity sha512-1MQ8JWJoHaMYta43V8xW6R0ipYhWaTeH+jVvYuHdrGg7pLr0eKUdsLOCWRfhOQcrjUJcYW3SACqOn/r3WIwYLg==
   dependencies:
     "@chainlink/contracts" "^0.5.1"
     "@defi-wonderland/smock" "^2.3.4"
