@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
+import { ensureNonzeroAddress } from "./lib/validators.sol";
 import "./VToken.sol";
 import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "./ComptrollerInterface.sol";
@@ -124,8 +125,9 @@ contract Comptroller is
     error BorrowCapExceeded(address market, uint256 cap);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     constructor(address poolRegistry_) {
-        require(poolRegistry_ != address(0), "invalid pool registry address");
+        ensureNonzeroAddress(poolRegistry_);
 
         poolRegistry = poolRegistry_;
         _disableInitializers();
@@ -953,13 +955,14 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets a new ResilientOracleInterface for the Comptroller
+     * @notice Sets a new price oracle for the Comptroller
      * @dev Only callable by the admin
-     * @param newOracle Address of the new ResilientOracleInterface to set
+     * @param newOracle Address of the new price oracle to set
      * @custom:event Emits NewPriceOracle on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the new oracle address is zero
      */
     function setPriceOracle(ResilientOracleInterface newOracle) external onlyOwner {
-        require(address(newOracle) != address(0), "invalid price oracle address");
+        ensureNonzeroAddress(address(newOracle));
 
         ResilientOracleInterface oldOracle = oracle;
         oracle = newOracle;

@@ -6,6 +6,7 @@ import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 import "../Comptroller.sol";
 import "../Factories/VTokenProxyFactory.sol";
 import "../Factories/JumpRateModelFactory.sol";
@@ -141,11 +142,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      */
     event NewProtocolShareReserve(address indexed oldProtocolShareReserve, address indexed newProtocolShareReserve);
 
-    /**
-     * @notice Thrown if trying to set a zero address where it's not allowed
-     */
-    error ZeroAddressNotAllowed();
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -160,6 +156,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param whitePaperFactory_ white paper factory address.
      * @param protocolShareReserve_ protocol's shares reserve address.
      * @param accessControlManager_ AccessControlManager contract address.
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
      */
     function initialize(
         VTokenProxyFactory vTokenFactory_,
@@ -205,10 +203,12 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
-     * @param priceOracle The pool's ResilientOracleInterface address
+     * @param priceOracle The pool's price oracle address
      * @param maxLoopsLimit The maximum limit for the loops can iterate.
      * @return index The index of the registered Venus pool
      * @return proxyAddress The the Comptroller proxy address
+     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller beacon address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
      */
     function createRegistryPool(
         string calldata name,
@@ -222,8 +222,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     ) external virtual returns (uint256 index, address proxyAddress) {
         _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
-        require(beaconAddress != address(0), "PoolRegistry: Invalid Comptroller beacon address.");
-        require(priceOracle != address(0), "PoolRegistry: Invalid ResilientOracleInterface address.");
+        ensureNonzeroAddress(beaconAddress);
+        ensureNonzeroAddress(priceOracle);
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
@@ -251,13 +251,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      * @param input The structure describing the parameters for adding a market to a pool.
+     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when VToken beacon address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when vTokenReceiver address is zero
      */
     function addMarket(AddMarketInput memory input) external {
         _checkAccessAllowed("addMarket(AddMarketInput)");
-        require(input.comptroller != address(0), "PoolRegistry: Invalid comptroller address");
-        require(input.asset != address(0), "PoolRegistry: Invalid asset address");
-        require(input.beaconAddress != address(0), "PoolRegistry: Invalid beacon address");
-        require(input.vTokenReceiver != address(0), "PoolRegistry: Invalid vTokenReceiver address");
+        ensureNonzeroAddress(input.comptroller);
+        ensureNonzeroAddress(input.asset);
+        ensureNonzeroAddress(input.beaconAddress);
+        ensureNonzeroAddress(input.vTokenReceiver);
 
         // solhint-disable-next-line reason-string
         require(
@@ -419,18 +423,14 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     function _setShortfallContract(Shortfall shortfall_) internal {
-        if (address(shortfall_) == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(address(shortfall_));
         address oldShortfall = address(shortfall);
         shortfall = shortfall_;
         emit NewShortfallContract(oldShortfall, address(shortfall_));
     }
 
     function _setProtocolShareReserve(address payable protocolShareReserve_) internal {
-        if (protocolShareReserve_ == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(protocolShareReserve_);
         address oldProtocolShareReserve = protocolShareReserve;
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, protocolShareReserve_);

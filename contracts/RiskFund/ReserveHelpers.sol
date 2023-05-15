@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 import "../ComptrollerInterface.sol";
 import "../Pool/PoolRegistryInterface.sol";
 
@@ -34,10 +35,11 @@ contract ReserveHelpers {
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      * @return Asset's reserve in risk fund.
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
+        ensureNonzeroAddress(asset);
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
         return poolsAssetsReserves[comptroller][asset];
     }
 
@@ -46,10 +48,11 @@ contract ReserveHelpers {
      * and transferring funds to the protocol share reserve
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
     function updateAssetsState(address comptroller, address asset) public virtual {
+        ensureNonzeroAddress(asset);
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(asset != address(0), "ReserveHelpers: Asset address invalid");
         require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
         require(
             PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),

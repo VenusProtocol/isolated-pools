@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 import "../ExponentialNoError.sol";
 import "./IRiskFund.sol";
 import "./ReserveHelpers.sol";
@@ -33,28 +34,31 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param _protocolIncome The address protocol income will be sent to
-     * @param _riskFund Risk fund address
+     * @param protocolIncome_ The address protocol income will be sent to
+     * @param riskFund_ Risk fund address
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when risk fund address is zero
      */
-    function initialize(address _protocolIncome, address _riskFund) external initializer {
-        require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
-        require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
+    function initialize(address protocolIncome_, address riskFund_) external initializer {
+        ensureNonzeroAddress(protocolIncome_);
+        ensureNonzeroAddress(riskFund_);
 
         __Ownable2Step_init();
 
-        protocolIncome = _protocolIncome;
-        riskFund = _riskFund;
+        protocolIncome = protocolIncome_;
+        riskFund = riskFund_;
     }
 
     /**
      * @dev Pool registry setter.
-     * @param _poolRegistry Address of the pool registry
+     * @param poolRegistry_ Address of the pool registry
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
+    function setPoolRegistry(address poolRegistry_) external onlyOwner {
+        ensureNonzeroAddress(poolRegistry_);
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+        poolRegistry = poolRegistry_;
+        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
     /**
@@ -62,13 +66,14 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
      * @param asset  Asset to be released
      * @param amount Amount to release
      * @return Number of total released tokens
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
     function releaseFunds(
         address comptroller,
         address asset,
         uint256 amount
     ) external returns (uint256) {
-        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
+        ensureNonzeroAddress(asset);
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
