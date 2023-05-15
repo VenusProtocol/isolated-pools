@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { BLOCKS_PER_YEAR, BASE } from "./lib/constants.sol";
 import "./InterestRateModel.sol";
 
 /**
@@ -9,13 +10,6 @@ import "./InterestRateModel.sol";
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
 contract WhitePaperInterestRateModel is InterestRateModel {
-    uint256 private constant BASE = 1e18;
-
-    /**
-     * @notice The approximate number of blocks per year that is assumed by the interest rate model
-     */
-    uint256 public constant blocksPerYear = 2102400;
-
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
      */
@@ -34,8 +28,8 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
      */
     constructor(uint256 baseRatePerYear, uint256 multiplierPerYear) {
-        baseRatePerBlock = baseRatePerYear / blocksPerYear;
-        multiplierPerBlock = multiplierPerYear / blocksPerYear;
+        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
+        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
     }

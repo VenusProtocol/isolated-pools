@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { BLOCKS_PER_YEAR, BASE } from "./lib/constants.sol";
 import "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import "./InterestRateModel.sol";
 
@@ -10,17 +11,10 @@ import "./InterestRateModel.sol";
  * @notice Version 2 modifies Version 1 by enabling updateable parameters.
  */
 abstract contract BaseJumpRateModelV2 is InterestRateModel {
-    uint256 private constant BASE = 1e18;
-
     /**
      * @notice The address of the AccessControlManager contract
      */
     IAccessControlManagerV8 public accessControlManager;
-
-    /**
-     * @notice The approximate number of blocks per year that is assumed by the interest rate model
-     */
-    uint256 public constant blocksPerYear = 10512000;
 
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
@@ -154,9 +148,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_
     ) internal {
-        baseRatePerBlock = baseRatePerYear / blocksPerYear;
-        multiplierPerBlock = (multiplierPerYear * BASE) / (blocksPerYear * kink_);
-        jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksPerYear;
+        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
+        multiplierPerBlock = (multiplierPerYear * BASE) / (BLOCKS_PER_YEAR * kink_);
+        jumpMultiplierPerBlock = jumpMultiplierPerYear / BLOCKS_PER_YEAR;
         kink = kink_;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);
