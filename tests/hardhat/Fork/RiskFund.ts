@@ -631,7 +631,7 @@ describe("Risk Fund: Tests", function () {
           accessControlManager.address,
           150,
         ]);
-        accessControlManager.giveCallPermission(
+        await accessControlManager.giveCallPermission(
           misconfiguredRiskFund.address,
           "swapPoolsAssets(address[],uint256[],address[][])",
           admin.address,
