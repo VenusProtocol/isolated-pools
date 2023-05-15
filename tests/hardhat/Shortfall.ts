@@ -167,7 +167,10 @@ describe("Shortfall: Tests", async function () {
 
     describe("updatePoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(shortfall.updatePoolRegistry(constants.AddressZero)).to.be.revertedWith("invalid address");
+        await expect(shortfall.updatePoolRegistry(constants.AddressZero)).to.be.revertedWithCustomError(
+          shortfall,
+          "ZeroAddressNotAllowed",
+        );
       });
 
       it("fails if called by a non-owner", async function () {

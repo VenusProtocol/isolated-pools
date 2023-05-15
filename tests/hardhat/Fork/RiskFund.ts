@@ -518,8 +518,9 @@ describe("Risk Fund: Tests", function () {
   describe("Test all setters", async function () {
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: Pool registry address invalid",
+        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 
@@ -540,8 +541,9 @@ describe("Risk Fund: Tests", function () {
 
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
-        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: Shortfall contract address invalid",
+        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 
@@ -563,8 +565,9 @@ describe("Risk Fund: Tests", function () {
 
     describe("setPancakeSwapRouter", async function () {
       it("Reverts on invalid PancakeSwap router contract address", async function () {
-        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: PancakeSwap address invalid",
+        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 

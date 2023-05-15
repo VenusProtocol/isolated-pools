@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import { ensureNonzeroAddress } from "./lib/validators.sol";
 import "./ComptrollerInterface.sol";
 import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
@@ -55,6 +56,9 @@ contract VToken is
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
      * @param riskManagement Addresses of risk fund contracts
+     * @custom:error ZeroAddressNotAllowed is thrown when admin address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
      */
     function initialize(
         address underlying_,
@@ -69,7 +73,7 @@ contract VToken is
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
     ) external initializer {
-        require(admin_ != address(0), "invalid admin address");
+        ensureNonzeroAddress(admin_);
 
         // Initialize the market
         _initialize(
@@ -129,9 +133,10 @@ contract VToken is
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
      */
     function approve(address spender, uint256 amount) external override returns (bool) {
-        require(spender != address(0), "invalid spender address");
+        ensureNonzeroAddress(spender);
 
         address src = msg.sender;
         transferAllowances[src][spender] = amount;
@@ -191,9 +196,10 @@ contract VToken is
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
      * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when minter address is zero
      */
     function mintBehalf(address minter, uint256 mintAmount) external override nonReentrant returns (uint256) {
-        require(minter != address(0), "invalid minter address");
+        ensureNonzeroAddress(minter);
 
         accrueInterest();
         // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
@@ -621,9 +627,10 @@ contract VToken is
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
      */
     function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        require(spender != address(0), "invalid spender address");
+        ensureNonzeroAddress(spender);
 
         address src = msg.sender;
         uint256 newAllowance = transferAllowances[src][spender];
@@ -641,9 +648,10 @@ contract VToken is
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        require(spender != address(0), "invalid spender address");
+        ensureNonzeroAddress(spender);
 
         address src = msg.sender;
         uint256 currentAllowance = transferAllowances[src][spender];
@@ -1396,18 +1404,14 @@ contract VToken is
     }
 
     function _setShortfallContract(address shortfall_) internal {
-        if (shortfall_ == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(shortfall_);
         address oldShortfall = shortfall;
         shortfall = shortfall_;
         emit NewShortfallContract(oldShortfall, shortfall_);
     }
 
     function _setProtocolShareReserve(address payable protocolShareReserve_) internal {
-        if (protocolShareReserve_ == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(protocolShareReserve_);
         address oldProtocolShareReserve = address(protocolShareReserve);
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, address(protocolShareReserve_));

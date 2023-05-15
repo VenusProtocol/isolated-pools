@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 import "../VToken.sol";
 import "../ComptrollerInterface.sol";
 import "../RiskFund/IRiskFund.sol";
@@ -127,6 +128,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param riskFund_ RiskFund contract address
      * @param minimumPoolBadDebt_ Minimum bad debt in base asset for a pool to start auction
      * @param accessControlManager_ AccessControlManager contract address
+     * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when risk fund address is zero
      */
     function initialize(
         address convertibleBaseAsset_,
@@ -134,8 +137,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         uint256 minimumPoolBadDebt_,
         address accessControlManager_
     ) external initializer {
-        require(convertibleBaseAsset_ != address(0), "invalid base asset address");
-        require(address(riskFund_) != address(0), "invalid risk fund address");
+        ensureNonzeroAddress(convertibleBaseAsset_);
+        ensureNonzeroAddress(address(riskFund_));
         require(minimumPoolBadDebt_ != 0, "invalid minimum pool bad debt");
 
         __Ownable2Step_init();
@@ -341,15 +344,16 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /**
      * @notice Update the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
-     * @param _poolRegistry Address of pool registry contract
+     * @param poolRegistry_ Address of pool registry contract
      * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function updatePoolRegistry(address _poolRegistry) external onlyOwner {
-        require(_poolRegistry != address(0), "invalid address");
+    function updatePoolRegistry(address poolRegistry_) external onlyOwner {
+        ensureNonzeroAddress(poolRegistry_);
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+        poolRegistry = poolRegistry_;
+        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
     /**

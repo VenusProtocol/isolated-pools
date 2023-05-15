@@ -329,25 +329,25 @@ describe("PoolRegistry: Tests", function () {
     it("reverts if Comptroller address is zero", async () => {
       await expect(
         poolRegistry.addMarket(withDefaultMarketParameters({ comptroller: constants.AddressZero })),
-      ).to.be.revertedWith("PoolRegistry: Invalid comptroller address");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("reverts if the asset address is zero", async () => {
       await expect(
         poolRegistry.addMarket(withDefaultMarketParameters({ asset: constants.AddressZero })),
-      ).to.be.revertedWith("PoolRegistry: Invalid asset address");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("reverts if the beacon address is zero", async () => {
       await expect(
         poolRegistry.addMarket(withDefaultMarketParameters({ beaconAddress: constants.AddressZero })),
-      ).to.be.revertedWith("PoolRegistry: Invalid beacon address");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("reverts if vTokenReceiver address is zero", async () => {
       await expect(
         poolRegistry.addMarket(withDefaultMarketParameters({ vTokenReceiver: constants.AddressZero })),
-      ).to.be.revertedWith("PoolRegistry: Invalid vTokenReceiver address");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("adds a new vToken to the pool", async () => {
@@ -600,7 +600,7 @@ describe("PoolRegistry: Tests", function () {
           maxLoopsLimit,
           fakeAccessControlManager.address,
         ),
-      ).to.be.revertedWith("PoolRegistry: Invalid Comptroller beacon address.");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("reverts if price oracle address is zero", async () => {
@@ -615,7 +615,7 @@ describe("PoolRegistry: Tests", function () {
           maxLoopsLimit,
           fakeAccessControlManager.address,
         ),
-      ).to.be.revertedWith("PoolRegistry: Invalid ResilientOracleInterface address.");
+      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
   });
 

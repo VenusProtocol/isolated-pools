@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 import "../VToken.sol";
 import "../Pool/PoolRegistry.sol";
 import "../IPancakeswapV2Router.sol";
@@ -69,6 +70,8 @@ contract RiskFund is
      * @param convertibleBaseAsset_ Address of the base asset
      * @param accessControlManager_ Address of the access control contract
      * @param loopsLimit_ Limit for the loops in the contract to avoid DOS
+     * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
      */
     function initialize(
         address pancakeSwapRouter_,
@@ -77,8 +80,8 @@ contract RiskFund is
         address accessControlManager_,
         uint256 loopsLimit_
     ) external initializer {
-        require(pancakeSwapRouter_ != address(0), "Risk Fund: Pancake swap address invalid");
-        require(convertibleBaseAsset_ != address(0), "Risk Fund: Base asset address invalid");
+        ensureNonzeroAddress(pancakeSwapRouter_);
+        ensureNonzeroAddress(convertibleBaseAsset_);
         require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
         require(loopsLimit_ > 0, "Risk Fund: Loops limit can not be zero");
 
@@ -94,21 +97,23 @@ contract RiskFund is
 
     /**
      * @dev Pool registry setter
-     * @param _poolRegistry Address of the pool registry.
+     * @param poolRegistry_ Address of the pool registry
+     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function setPoolRegistry(address _poolRegistry) external onlyOwner {
-        require(_poolRegistry != address(0), "Risk Fund: Pool registry address invalid");
+    function setPoolRegistry(address poolRegistry_) external onlyOwner {
+        ensureNonzeroAddress(poolRegistry_);
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = _poolRegistry;
-        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
+        poolRegistry = poolRegistry_;
+        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
     }
 
     /**
      * @dev Shortfall contract address setter
-     * @param shortfallContractAddress_ Address of the auction contract.
+     * @param shortfallContractAddress_ Address of the auction contract
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      */
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
-        require(shortfallContractAddress_ != address(0), "Risk Fund: Shortfall contract address invalid");
+        ensureNonzeroAddress(shortfallContractAddress_);
         require(
             IShortfall(shortfallContractAddress_).convertibleBaseAsset() == convertibleBaseAsset,
             "Risk Fund: Base asset doesn't match"
@@ -121,10 +126,11 @@ contract RiskFund is
 
     /**
      * @dev PancakeSwap router address setter
-     * @param pancakeSwapRouter_ Address of the PancakeSwap router.
+     * @param pancakeSwapRouter_ Address of the PancakeSwap router
+     * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
      */
     function setPancakeSwapRouter(address pancakeSwapRouter_) external onlyOwner {
-        require(pancakeSwapRouter_ != address(0), "Risk Fund: PancakeSwap address invalid");
+        ensureNonzeroAddress(pancakeSwapRouter_);
         address oldPancakeSwapRouter = pancakeSwapRouter;
         pancakeSwapRouter = pancakeSwapRouter_;
         emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, pancakeSwapRouter_);
@@ -154,7 +160,7 @@ contract RiskFund is
         address[][] calldata paths
     ) external override returns (uint256) {
         _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
-        require(poolRegistry != address(0), "Risk fund: Invalid pool registry.");
+        require(poolRegistry != address(0), "Risk fund: Invalid pool registry");
         require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
         require(markets.length == paths.length, "Risk fund: markets and paths are unequal lengths");
 
