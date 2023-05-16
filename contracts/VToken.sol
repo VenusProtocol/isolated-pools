@@ -10,7 +10,6 @@ import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
 import "./Governance/AccessControlled.sol";
-import "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title Venus VToken Contract
@@ -332,33 +331,32 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
     /**
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
-     * @param spreadReduceAmount Amount of reduction to spread reserves
-     * @param liquidationReduceAmount Amount of reduction to liquidaton reserves
+     * @param reduceAmount Amount of reduction to reserves
+     * @param kind kind of reserve
      * @custom:event Emits ReservesReduced event; may emit AccrueInterest
      * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
      * @custom:error ReduceReservesCashValidation is thrown when trying to withdraw more cash than the reserves have
      * @custom:access Not restricted
      */
-    function reduceReserves(uint256 spreadReduceAmount, uint256 liquidationReduceAmount)
+    function reduceReserves(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind)
         external
         override
         nonReentrant
     {
         accrueInterest();
-        if (_getBlockNumber() == reduceReservesBlockNumber) return;
-        _reduceReservesFresh(spreadReduceAmount, liquidationReduceAmount);
+        if (reduceReservesBlockNumber == _getBlockNumber()) return;
+        _reduceReservesFresh(reduceAmount, kind);
     }
 
     /**
      * @notice The sender adds to reserves.
-     * @param spreadAmount The amount fo underlying token to add as spread reserves
-     * @param liquidationAmount The amount fo underlying token to add as liquidation reserves
+     * @param addAmount The amount fo underlying token to add as reserves
      * @custom:event Emits ReservesAdded event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function addReserves(uint256 spreadAmount, uint256 liquidationAmount) external override nonReentrant {
+    function addReserves(uint256 addAmount) external override nonReentrant {
         accrueInterest();
-        _addReservesFresh(spreadAmount, liquidationAmount);
+        _addReservesFresh(addAmount);
     }
 
     /**
@@ -534,18 +532,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
     }
 
     /**
-     * @notice A public function to set new threshold of totalReserves after which funds will be sent to the protocol share reserve
-     * @param _newReduceReservesThreshold threshold value
-     * @custom:access Only Governance
-     */
-    function setReduceReservesThreshold(uint256 _newReduceReservesThreshold) external {
-        _checkAccessAllowed("setReduceReservesThreshold(uint256)");
-        uint256 oldReduceReservesThreshold_ = reduceReservesThreshold;
-        reduceReservesThreshold = _newReduceReservesThreshold;
-        emit NewReduceReservesThreshold(oldReduceReservesThreshold_, _newReduceReservesThreshold);
-    }
-
-    /**
      * @notice A public function to set new threshold of block difference after which funds will be sent to the protocol share reserve
      * @param _newReduceReservesBlockDelta block difference value
      * @custom:access Only Governance
@@ -715,9 +701,11 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         /* Read the previous values out of storage */
         uint256 cashPrior = _getCashPrior();
         uint256 borrowsPrior = totalBorrows;
+        uint256 reservesPrior = totalReserves;
+        uint256 borrowIndexPrior = borrowIndex;
 
         /* Calculate the current borrow interest rate */
-        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, totalReserves);
+        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
         require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
@@ -738,16 +726,9 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
             Exp({ mantissa: reserveFactorMantissa }),
             interestAccumulated,
-            totalReserves
+            reservesPrior
         );
-
-        uint256 spreadReservesNew = mul_ScalarTruncateAddUInt(
-            Exp({ mantissa: reserveFactorMantissa }),
-            interestAccumulated,
-            spreadReserves
-        );
-
-        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(simpleInterestFactor, borrowIndex, borrowIndex);
+        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(simpleInterestFactor, borrowIndexPrior, borrowIndexPrior);
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -758,14 +739,10 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
-        spreadReserves = spreadReservesNew;
 
-        if (
-            totalReserves > reduceReservesThreshold ||
-            currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta
-        ) {
+        if (currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta) {
             reduceReservesBlockNumber = currentBlockNumber;
-            _reduceReservesFresh(spreadReservesNew, liquidationReserves);
+            _reduceReservesFresh(totalReservesNew, IProtocolShareReserve.IncomeType.SPREAD);
         }
 
         /* We emit an AccrueInterest event */
@@ -1143,7 +1120,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
     ) internal {
         /* Fail if seize not allowed */
         comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower);
-        uint256 currentBlockNumber = _getBlockNumber();
 
         /* Fail if borrower = liquidator */
         if (borrower == liquidator) {
@@ -1160,7 +1136,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
         uint256 protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
         uint256 totalReservesNew = totalReserves + protocolSeizeAmount;
-        uint256 liquidationReservesNew = liquidationReserves + protocolSeizeAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -1171,15 +1146,8 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
-        liquidationReserves = liquidationReservesNew;
 
-        if (
-            totalReserves > reduceReservesThreshold ||
-            currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta
-        ) {
-            reduceReservesBlockNumber = currentBlockNumber;
-            _reduceReservesFresh(spreadReserves, liquidationReservesNew);
-        }
+        _reduceReservesFresh(totalReservesNew, IProtocolShareReserve.IncomeType.LIQUIDATION);
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
@@ -1223,47 +1191,35 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
     /**
      * @notice Add reserves by transferring from caller
      * @dev Requires fresh interest accrual
-     * @param _spreadAmount Amount of addition to spread reserves
-     * @param _liquidationAmount Amount of addition to liquidation reserves
+     * @param addAmount Amount of addition to reserves
      * @return actualAddAmount The actual amount added, excluding the potential token fees
      */
-    function _addReservesFresh(uint256 _spreadAmount, uint256 _liquidationAmount) internal returns (uint256) {
+    function _addReservesFresh(uint256 addAmount) internal returns (uint256) {
         // totalReserves + actualAddAmount
         uint256 totalReservesNew;
-        uint256 actualSpreadAddAmount;
-        uint256 actualLiquidationAddAmount;
+        uint256 actualAddAmount;
 
         // We fail gracefully unless market's block number equals current block number
         if (accrualBlockNumber != _getBlockNumber()) {
-            revert AddReservesFactorFreshCheck(actualSpreadAddAmount);
+            revert AddReservesFactorFreshCheck(actualAddAmount);
         }
 
-        actualSpreadAddAmount = _doTransferIn(msg.sender, _spreadAmount);
-        actualLiquidationAddAmount = _doTransferIn(msg.sender, _liquidationAmount);
-
-        uint256 actualTotalAddAmount = actualSpreadAddAmount + actualLiquidationAddAmount;
-        totalReservesNew = totalReserves + actualTotalAddAmount;
+        actualAddAmount = _doTransferIn(msg.sender, addAmount);
+        totalReservesNew = totalReserves + actualAddAmount;
         totalReserves = totalReservesNew;
-        liquidationReserves = actualLiquidationAddAmount;
-        spreadReserves = actualSpreadAddAmount;
-        emit ReservesAdded(msg.sender, actualTotalAddAmount, totalReservesNew);
+        emit ReservesAdded(msg.sender, actualAddAmount, totalReservesNew);
 
-        return actualTotalAddAmount;
+        return actualAddAmount;
     }
 
     /**
      * @notice Reduces reserves by transferring to the protocol reserve contract
      * @dev Requires fresh interest accrual
-     * @param _spreadAmount Amount of reduction to spread reserves
-     * @param _liquidationAmount Amount of reduction to liquidation reserves
-     *
+     * @param reduceAmount Amount of reduction to reserves
      */
-    function _reduceReservesFresh(uint256 _spreadAmount, uint256 _liquidationAmount) internal {
+    function _reduceReservesFresh(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) internal {
         // totalReserves - reduceAmount
-        uint256 totalReservesNew_;
-        uint256 spreadReservesNew_;
-        uint256 liquidationReservesNew_;
-        uint256 totalReduceAmount_ = _spreadAmount + _liquidationAmount;
+        uint256 totalReservesNew;
 
         // We fail gracefully unless market's block number equals current block number
         if (accrualBlockNumber != _getBlockNumber()) {
@@ -1271,48 +1227,33 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         }
 
         // Fail gracefully if protocol has insufficient underlying cash
-        if (_getCashPrior() < totalReduceAmount_) {
+        if (_getCashPrior() < reduceAmount) {
             revert ReduceReservesCashNotAvailable();
         }
 
         // Check reduceAmount ≤ reserves[n] (totalReserves)
-        if (totalReduceAmount_ > totalReserves) {
+        if (reduceAmount > totalReserves) {
             revert ReduceReservesCashValidation();
         }
 
-        // check if isLiquidation == true and reduceAmount <= liquidationReserves
-        if (_liquidationAmount > liquidationReserves) {
-            revert ReduceLiquidationReservesCashValidation();
-        }
-
-        // check if isLiquidation == false and reduceAmount <= spreadReserves
-        if (_spreadAmount > spreadReserves) {
-            revert ReduceSpreadReservesCashValidation();
-        }
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
-        totalReservesNew_ = totalReserves - totalReduceAmount_;
-        spreadReservesNew_ = spreadReserves - _spreadAmount;
-        liquidationReservesNew_ = liquidationReserves - _liquidationAmount;
+        totalReservesNew = totalReserves - reduceAmount;
 
         // Store reserves[n+1] = reserves[n] - reduceAmount
-        totalReserves = totalReservesNew_;
-        spreadReserves = spreadReservesNew_;
-        liquidationReserves = liquidationReservesNew_;
+        totalReserves = totalReservesNew;
 
         // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
-        _doTransferOut(protocolShareReserve, _spreadAmount);
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 0);
-
-        _doTransferOut(protocolShareReserve, _liquidationAmount);
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, 1);
+        _doTransferOut(protocolShareReserve, reduceAmount);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
+        console.log(1224);
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, kind);
 
-        emit ReservesReduced(protocolShareReserve, totalReduceAmount_, totalReservesNew_);
+        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**
