@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+
+import { InterestRateModel } from "./InterestRateModel.sol";
 import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
-import "./InterestRateModel.sol";
 
 /**
  * @title Logic for Compound's JumpRateModel Contract V2.

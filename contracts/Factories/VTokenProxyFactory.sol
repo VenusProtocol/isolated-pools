@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 
-import "../VToken.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-import "../VTokenInterfaces.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
+import { ComptrollerInterface } from "../ComptrollerInterface.sol";
+import { VToken } from "../VToken.sol";
+import { VTokenInterface } from "../VTokenInterfaces.sol";
 
 contract VTokenProxyFactory {
     struct VTokenArgs {

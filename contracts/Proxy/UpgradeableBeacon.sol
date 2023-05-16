@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 contract Beacon is UpgradeableBeacon {
     constructor(address implementation_) UpgradeableBeacon(implementation_) {

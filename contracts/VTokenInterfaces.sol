@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "./ComptrollerInterface.sol";
-import "./InterestRateModel.sol";
-import "./ErrorReporter.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+
+import { ComptrollerInterface } from "./ComptrollerInterface.sol";
+import { InterestRateModel } from "./InterestRateModel.sol";
 
 // solhint-disable-next-line max-states-count
 contract VTokenStorage {

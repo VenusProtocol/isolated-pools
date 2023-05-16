@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
+import { IRiskFund } from "./IRiskFund.sol";
+import { ReserveHelpers } from "./ReserveHelpers.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { VToken } from "../VToken.sol";
+import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { Comptroller } from "../Comptroller.sol";
+import { PoolRegistry } from "../Pool/PoolRegistry.sol";
+import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
+import { IShortfall } from "../Shortfall/IShortfall.sol";
+import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import "../VToken.sol";
-import "../Pool/PoolRegistry.sol";
-import "../IPancakeswapV2Router.sol";
-import "./ReserveHelpers.sol";
-import "./IRiskFund.sol";
-import "../Shortfall/IShortfall.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import "../MaxLoopsLimitHelper.sol";
 
 /**
  * @dev This contract does not support BNB.
@@ -239,7 +243,7 @@ contract RiskFund is
         require(amountOutMin >= minAmountToConvert, "RiskFund: amountOutMin should be greater than minAmountToConvert");
         uint256 totalAmount;
 
-        address underlyingAsset = VTokenInterface(address(vToken)).underlying();
+        address underlyingAsset = vToken.underlying();
         uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));

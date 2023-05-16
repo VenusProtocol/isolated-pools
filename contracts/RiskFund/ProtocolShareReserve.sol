@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { ReserveHelpers } from "./ReserveHelpers.sol";
+import { IRiskFund } from "./IRiskFund.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import "../ExponentialNoError.sol";
-import "./IRiskFund.sol";
-import "./ReserveHelpers.sol";
-import "./IProtocolShareReserve.sol";
 
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;

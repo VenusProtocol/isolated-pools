@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
-import "../VToken.sol";
-import "../ComptrollerInterface.sol";
-import "../Pool/PoolRegistryInterface.sol";
-import "../Pool/PoolRegistry.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { VToken } from "../VToken.sol";
+import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { PoolRegistry } from "../Pool/PoolRegistry.sol";
+import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 
 contract PoolLens is ExponentialNoError {
     /**

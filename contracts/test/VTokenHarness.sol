@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../VToken.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-import "./ComptrollerScenario.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+
+import { VToken } from "../VToken.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
