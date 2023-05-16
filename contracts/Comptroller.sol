@@ -1135,18 +1135,18 @@ contract Comptroller is
     }
 
     /**
+     * @notice Return all reward distributors for this pool
+     * @return Array of RewardDistributor addresses
+     */
+    function getRewardDistributors() external view returns (RewardsDistributor[] memory) {
+        return rewardsDistributors;
+    }
+
+    /**
      * @notice A marker method that returns true for a valid Comptroller contract
      */
     function isComptroller() external pure override returns (bool) {
         return _isComptroller;
-    }
-
-    /**
-     * @notice Return all reward distributors for this pool
-     * @return Array of RewardDistributor addresses
-     */
-    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
-        return rewardsDistributors;
     }
 
     /**

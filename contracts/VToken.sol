@@ -146,6 +146,52 @@ contract VToken is
     }
 
     /**
+     * @notice Increase approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param addedValue The number of tokens additional tokens spender can transfer
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
+     */
+    function increaseAllowance(address spender, uint256 addedValue) external override returns (bool) {
+        ensureNonzeroAddress(spender);
+
+        address src = msg.sender;
+        uint256 newAllowance = transferAllowances[src][spender];
+        newAllowance += addedValue;
+        transferAllowances[src][spender] = newAllowance;
+
+        emit Approval(src, spender, newAllowance);
+        return true;
+    }
+
+    /**
+     * @notice Decreases approval for `spender`
+     * @param spender The address of the account which may transfer tokens
+     * @param subtractedValue The number of tokens tokens to remove from total approval
+     * @return success Whether or not the approval succeeded
+     * @custom:event Emits Approval event
+     * @custom:access Not restricted
+     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
+     */
+    function decreaseAllowance(address spender, uint256 subtractedValue) external override returns (bool) {
+        ensureNonzeroAddress(spender);
+
+        address src = msg.sender;
+        uint256 currentAllowance = transferAllowances[src][spender];
+        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
+        unchecked {
+            currentAllowance -= subtractedValue;
+        }
+
+        transferAllowances[src][spender] = currentAllowance;
+
+        emit Approval(src, spender, currentAllowance);
+        return true;
+    }
+
+    /**
      * @notice Get the underlying balance of the `owner`
      * @dev This also accrues interest in a transaction
      * @param owner The address of the account to query
@@ -619,52 +665,6 @@ contract VToken is
      */
     function exchangeRateStored() external view override returns (uint256) {
         return _exchangeRateStored();
-    }
-
-    /**
-     * @notice Increase approval for `spender`
-     * @param spender The address of the account which may transfer tokens
-     * @param addedValue The number of tokens additional tokens spender can transfer
-     * @return success Whether or not the approval succeeded
-     * @custom:event Emits Approval event
-     * @custom:access Not restricted
-     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
-     */
-    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        ensureNonzeroAddress(spender);
-
-        address src = msg.sender;
-        uint256 newAllowance = transferAllowances[src][spender];
-        newAllowance += addedValue;
-        transferAllowances[src][spender] = newAllowance;
-
-        emit Approval(src, spender, newAllowance);
-        return true;
-    }
-
-    /**
-     * @notice Decreases approval for `spender`
-     * @param spender The address of the account which may transfer tokens
-     * @param subtractedValue The number of tokens tokens to remove from total approval
-     * @return success Whether or not the approval succeeded
-     * @custom:event Emits Approval event
-     * @custom:access Not restricted
-     * @custom:error ZeroAddressNotAllowed is thrown when spender address is zero
-     */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        ensureNonzeroAddress(spender);
-
-        address src = msg.sender;
-        uint256 currentAllowance = transferAllowances[src][spender];
-        require(currentAllowance >= subtractedValue, "decreased allowance below zero");
-        unchecked {
-            currentAllowance -= subtractedValue;
-        }
-
-        transferAllowances[src][spender] = currentAllowance;
-
-        emit Approval(src, spender, currentAllowance);
-        return true;
     }
 
     /**

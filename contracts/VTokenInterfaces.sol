@@ -340,6 +340,10 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function approve(address spender, uint256 amount) external virtual returns (bool);
 
+    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool);
+
+    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool);
+
     function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
