@@ -172,13 +172,12 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
 
         if (util <= kink) {
             return ((util * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
-        } else {
-            uint256 normalRate = ((kink * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
-            uint256 excessUtil;
-            unchecked {
-                excessUtil = util - kink;
-            }
-            return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;
         }
+        uint256 normalRate = ((kink * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
+        uint256 excessUtil;
+        unchecked {
+            excessUtil = util - kink;
+        }
+        return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;
     }
 }

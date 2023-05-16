@@ -1472,16 +1472,15 @@ contract VToken is
              *  exchangeRate = initialExchangeRate
              */
             return initialExchangeRateMantissa;
-        } else {
-            /*
-             * Otherwise:
-             *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
-             */
-            uint256 totalCash = _getCashPrior();
-            uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
-            uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
-
-            return exchangeRate;
         }
+        /*
+         * Otherwise:
+         *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
+         */
+        uint256 totalCash = _getCashPrior();
+        uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
+        uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
+
+        return exchangeRate;
     }
 }
