@@ -262,8 +262,8 @@ contract RiskFund is
                         path[path.length - 1] == convertibleBaseAsset,
                         "RiskFund: finally path must be convertible base asset"
                     );
-                    IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, 0);
-                    IERC20Upgradeable(underlyingAsset).safeApprove(pancakeSwapRouter, balanceOfUnderlyingAsset);
+                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter, 0);
+                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter, balanceOfUnderlyingAsset);
                     uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
                         balanceOfUnderlyingAsset,
                         amountOutMin,
