@@ -300,7 +300,7 @@ contract VToken is
 
     /**
      * @notice Sender repays their own borrow
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @param repayAmount The amount to repay, or type(uint256).max for the full outstanding amount
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
@@ -315,7 +315,7 @@ contract VToken is
     /**
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @param repayAmount The amount to repay, or type(uint256).max for the full outstanding amount
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
@@ -587,7 +587,7 @@ contract VToken is
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
-     * @return amount The number of tokens allowed to be spent (-1 means infinite)
+     * @return amount The number of tokens allowed to be spent (type(uint256).max means infinite)
      */
     function allowance(address owner, address spender) external view override returns (uint256) {
         return transferAllowances[owner][spender];
@@ -933,7 +933,7 @@ contract VToken is
      * @notice Borrows are repaid by another user (possibly the borrower).
      * @param payer the account paying off the borrow
      * @param borrower the account with the debt being payed off
-     * @param repayAmount the amount of underlying tokens being returned, or -1 for the full outstanding amount
+     * @param repayAmount the amount of underlying tokens being returned, or type(uint256).max for the full outstanding amount
      * @return (uint) the actual repayment amount.
      */
     function _repayBorrowFresh(
@@ -1060,7 +1060,7 @@ contract VToken is
             revert LiquidateCloseAmountIsZero();
         }
 
-        /* Fail if repayAmount = -1 */
+        /* Fail if repayAmount = type(uint256).max */
         if (repayAmount == type(uint256).max) {
             revert LiquidateCloseAmountIsUintMax();
         }
