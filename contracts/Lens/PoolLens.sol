@@ -508,7 +508,7 @@ contract PoolLens is ExponentialNoError {
         });
         if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa > 0) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set
-            borrowerIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            borrowerIndex.mantissa = rewardsDistributor.INITIAL_INDEX();
         }
         Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
         uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
@@ -528,7 +528,7 @@ contract PoolLens is ExponentialNoError {
         });
         if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
             // Covers the case where users supplied tokens before the market's supply state index was set
-            supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            supplierIndex.mantissa = rewardsDistributor.INITIAL_INDEX();
         }
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);

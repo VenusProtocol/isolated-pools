@@ -6,9 +6,6 @@ pragma solidity 0.8.13;
  * @author Compound
  */
 abstract contract InterestRateModel {
-    /// @notice Indicator that this is an InterestRateModel contract (for inspection)
-    bool public constant isInterestRateModel = true;
-
     /**
      * @notice Calculates the current borrow interest rate per block
      * @param cash The total amount of cash the market has
@@ -36,4 +33,9 @@ abstract contract InterestRateModel {
         uint256 reserves,
         uint256 reserveFactorMantissa
     ) external view virtual returns (uint256);
+
+    /// @notice Indicator that this is an InterestRateModel contract (for inspection)
+    function isInterestRateModel() external pure virtual returns (bool) {
+        return true;
+    }
 }

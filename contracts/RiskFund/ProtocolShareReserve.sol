@@ -17,8 +17,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     address private protocolIncome;
     address private riskFund;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant protocolSharePercentage = 70;
-    uint256 private constant baseUnit = 100;
+    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
+    uint256 private constant BASE_UNIT = 100;
 
     /// @notice Emitted when funds are released
     event FundsReleased(address comptroller, address asset, uint256 amount);
@@ -81,7 +81,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
-            div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
+            div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
         ).mantissa;
 
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);

@@ -105,16 +105,13 @@ contract ComptrollerStorage {
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
-    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
+    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18; // 0.05
 
     // closeFactorMantissa must not exceed this value
-    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
+    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18; // 0.9
 
     // No collateralFactorMantissa may exceed this value
-    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-
-    /// @notice Indicator that this is a Comptroller contract (for inspection)
-    bool internal constant _isComptroller = true;
+    uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.9e18; // 0.9
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

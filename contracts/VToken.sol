@@ -702,7 +702,7 @@ contract VToken is
 
         /* Calculate the current borrow interest rate */
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
-        require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
+        require(borrowRateMantissa <= MAX_BORROW_RATE_MANTISSA, "borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
@@ -1167,7 +1167,7 @@ contract VToken is
         }
 
         // Check newReserveFactor ≤ maxReserveFactor
-        if (newReserveFactorMantissa > reserveFactorMaxMantissa) {
+        if (newReserveFactorMantissa > MAX_RESERVE_FACTOR_MANTISSA) {
             revert SetReserveFactorBoundsCheck();
         }
 
@@ -1381,7 +1381,7 @@ contract VToken is
 
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
         accrualBlockNumber = _getBlockNumber();
-        borrowIndex = mantissaOne;
+        borrowIndex = MANTISSA_ONE;
 
         // Set the interest rate model (depends on block number / borrow index)
         _setInterestRateModelFresh(interestRateModel_);
@@ -1480,7 +1480,7 @@ contract VToken is
          */
         uint256 totalCash = _getCashPrior();
         uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
-        uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) / _totalSupply;
+        uint256 exchangeRate = (cashPlusBorrowsMinusReserves * EXP_SCALE) / _totalSupply;
 
         return exchangeRate;
     }

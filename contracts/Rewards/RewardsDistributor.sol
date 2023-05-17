@@ -21,14 +21,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint32 block;
     }
 
+    /// @notice The initial REWARD TOKEN index for a market
+    uint224 public constant INITIAL_INDEX = 1e36;
+
     /// @notice The REWARD TOKEN market supply state for each market
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
     /// @notice The REWARD TOKEN borrow index for each market for each supplier as of the last time they accrued REWARD TOKEN
     mapping(address => mapping(address => uint256)) public rewardTokenSupplierIndex;
-
-    /// @notice The initial REWARD TOKEN index for a market
-    uint224 public constant rewardTokenInitialIndex = 1e36;
 
     /// @notice The REWARD TOKEN accrued but not yet transferred to each user
     mapping(address => uint256) public rewardTokenAccrued;
@@ -135,12 +135,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
          */
         if (supplyState.index == 0) {
             // Initialize supply state index with default value
-            supplyState.index = rewardTokenInitialIndex;
+            supplyState.index = INITIAL_INDEX;
         }
 
         if (borrowState.index == 0) {
             // Initialize borrow state index with default value
-            borrowState.index = rewardTokenInitialIndex;
+            borrowState.index = INITIAL_INDEX;
         }
 
         /*
@@ -347,11 +347,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         // Update supplier's index to the current index since we are distributing accrued REWARD TOKEN
         rewardTokenSupplierIndex[vToken][supplier] = supplyIndex;
 
-        if (supplierIndex == 0 && supplyIndex >= rewardTokenInitialIndex) {
+        if (supplierIndex == 0 && supplyIndex >= INITIAL_INDEX) {
             // Covers the case where users supplied tokens before the market's supply state index was set.
             // Rewards the user with REWARD TOKEN accrued from the start of when supplier rewards were first
             // set for the market.
-            supplierIndex = rewardTokenInitialIndex;
+            supplierIndex = INITIAL_INDEX;
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per vToken accrued
@@ -385,11 +385,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         // Update borrowers's index to the current index since we are distributing accrued REWARD TOKEN
         rewardTokenBorrowerIndex[vToken][borrower] = borrowIndex;
 
-        if (borrowerIndex == 0 && borrowIndex >= rewardTokenInitialIndex) {
+        if (borrowerIndex == 0 && borrowIndex >= INITIAL_INDEX) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set.
             // Rewards the user with REWARD TOKEN accrued from the start of when borrower rewards were first
             // set for the market.
-            borrowerIndex = rewardTokenInitialIndex;
+            borrowerIndex = INITIAL_INDEX;
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per borrowed unit accrued

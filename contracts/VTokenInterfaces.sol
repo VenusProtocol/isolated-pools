@@ -50,10 +50,10 @@ contract VTokenStorage {
     address payable public protocolShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
-    uint256 internal constant borrowRateMaxMantissa = 0.0005e16;
+    uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
 
     // Maximum fraction of interest that can be set aside for reserves
-    uint256 internal constant reserveFactorMaxMantissa = 1e18;
+    uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
 
     /**
      * @notice Contract which oversees inter-vToken operations
@@ -135,11 +135,6 @@ abstract contract VTokenInterface is VTokenStorage {
         address shortfall;
         address payable protocolShareReserve;
     }
-
-    /**
-     * @notice Indicator that this is a VToken contract (for inspection)
-     */
-    bool public constant isVToken = true;
 
     /*** Market Events ***/
 
@@ -368,4 +363,11 @@ abstract contract VTokenInterface is VTokenStorage {
     function exchangeRateStored() external view virtual returns (uint256);
 
     function getCash() external view virtual returns (uint256);
+
+    /**
+     * @notice Indicator that this is a VToken contract (for inspection)
+     */
+    function isVToken() external pure virtual returns (bool) {
+        return true;
+    }
 }

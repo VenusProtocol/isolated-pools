@@ -607,7 +607,7 @@ contract Comptroller is
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanExp(Exp({ mantissa: mantissaOne }), percentage)) {
+        if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
             revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
         }
 
@@ -704,8 +704,8 @@ contract Comptroller is
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
-        require(closeFactorMaxMantissa >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
-        require(closeFactorMinMantissa <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
+        require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
+        require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
@@ -740,12 +740,12 @@ contract Comptroller is
         }
 
         // Check collateral factor <= 0.9
-        if (newCollateralFactorMantissa > collateralFactorMaxMantissa) {
+        if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
             revert InvalidCollateralFactor();
         }
 
         // Ensure that liquidation threshold <= 1
-        if (newLiquidationThresholdMantissa > mantissaOne) {
+        if (newLiquidationThresholdMantissa > MANTISSA_ONE) {
             revert InvalidLiquidationThreshold();
         }
 
@@ -1146,7 +1146,7 @@ contract Comptroller is
      * @notice A marker method that returns true for a valid Comptroller contract
      */
     function isComptroller() external pure override returns (bool) {
-        return _isComptroller;
+        return true;
     }
 
     /**

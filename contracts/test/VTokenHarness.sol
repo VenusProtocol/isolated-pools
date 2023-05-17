@@ -124,7 +124,7 @@ contract VTokenHarness is VToken {
     }
 
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
-        return borrowRateMaxMantissa;
+        return MAX_BORROW_RATE_MANTISSA;
     }
 
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {

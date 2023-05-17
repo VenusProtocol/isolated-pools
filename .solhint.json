@@ -3,7 +3,7 @@
   "rules": {
     "code-complexity": ["error", 9],
     "compiler-version": ["error", ">=0.5.0"],
-    "const-name-snakecase": "off",
+    "const-name-snakecase": "error",
     "constructor-syntax": "error",
     "func-visibility": ["error", { "ignoreConstructors": true }],
     "max-line-length": ["error", 175],
