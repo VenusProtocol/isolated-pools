@@ -314,7 +314,7 @@ contract PoolLens is ExponentialNoError {
         view
         returns (PoolData memory)
     {
-        //get tokens in the Pool
+        // Get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
         VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
@@ -426,11 +426,11 @@ contract PoolLens is ExponentialNoError {
             (supplyState.index, supplyState.block) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
-            //Update market supply and borrow index in-memory
+            // Update market supply and borrow index in-memory
             updateMarketBorrowIndex(address(markets[i]), rewardsDistributor, borrowState, marketBorrowIndex);
             updateMarketSupplyIndex(address(markets[i]), rewardsDistributor, supplyState);
 
-            //Calculate pending rewards
+            // Calculate pending rewards
             uint256 borrowReward = calculateBorrowerReward(
                 address(markets[i]),
                 rewardsDistributor,
