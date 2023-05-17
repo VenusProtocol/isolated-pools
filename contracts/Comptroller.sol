@@ -93,7 +93,7 @@ contract Comptroller is
     error ComptrollerMismatch();
 
     /**
-     * @notice Throwed during the liquidation if user's total collateral amount is lower than
+     * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
      *   or healAccount) are available.
      */
@@ -1389,7 +1389,7 @@ contract Comptroller is
     /**
      * @dev Retrieves liquidation threshold for a market as an exponential
      * @param asset Address for asset to liquidation threshold
-     * @return Liquidaton threshold as exponential
+     * @return Liquidation threshold as exponential
      */
     function _getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
         return Exp({ mantissa: markets[address(asset)].liquidationThresholdMantissa });

@@ -124,7 +124,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     }
 
     /**
-     * @notice Initalize the shortfall contract
+     * @notice Initialize the shortfall contract
      * @param convertibleBaseAsset_ Asset to swap the funds to
      * @param riskFund_ RiskFund contract address
      * @param minimumPoolBadDebt_ Minimum bad debt in base asset for a pool to start auction

@@ -27,8 +27,10 @@ contract ReserveHelpers {
      */
     uint256[48] private __gap;
 
-    // Event emitted after the updation of the assets reserves.
-    // amount -> reserve increased by amount.
+    /// @notice Event emitted after the update of the assets reserves.
+    /// @param comptroller Pool's Comptroller address
+    /// @param asset Token address
+    /// @param amount An amount by which the reserves have increased
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /**

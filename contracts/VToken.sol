@@ -96,7 +96,7 @@ contract VToken is
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
-     * @return success True if the transfer suceeded, reverts otherwise
+     * @return success True if the transfer succeeded, reverts otherwise
      * @custom:event Emits Transfer event on success
      * @custom:error TransferNotAllowed is thrown if trying to transfer to self
      * @custom:access Not restricted
@@ -111,7 +111,7 @@ contract VToken is
      * @param src The address of the source account
      * @param dst The address of the destination account
      * @param amount The number of tokens to transfer
-     * @return success True if the transfer suceeded, reverts otherwise
+     * @return success True if the transfer succeeded, reverts otherwise
      * @custom:event Emits Transfer event on success
      * @custom:error TransferNotAllowed is thrown if trying to transfer to self
      * @custom:access Not restricted
@@ -402,7 +402,7 @@ contract VToken is
 
     /**
      * @notice The sender adds to reserves.
-     * @param addAmount The amount fo underlying token to add as reserves
+     * @param addAmount The amount of underlying token to add as reserves
      * @custom:event Emits ReservesAdded event; may emit AccrueInterest
      * @custom:access Not restricted
      */
