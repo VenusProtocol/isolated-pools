@@ -410,9 +410,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @return The index of the registered Venus pool
      */
     function _registerPool(string calldata name, address comptroller) internal returns (uint256) {
-        VenusPool memory venusPool = _poolByComptroller[comptroller];
+        VenusPool storage storedPool = _poolByComptroller[comptroller];
 
-        require(venusPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
+        require(storedPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
         _ensureValidName(name);
 
         _numberOfPools++;
