@@ -28,7 +28,7 @@ abstract contract MaxLoopsLimitHelper {
         uint256 oldMaxLoopsLimit = maxLoopsLimit;
         maxLoopsLimit = limit;
 
-        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
+        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, limit);
     }
 
     /**

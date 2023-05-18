@@ -332,7 +332,8 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        oracle.updatePrice(vToken);
+        ResilientOracleInterface oracle_ = oracle;
+        oracle_.updatePrice(vToken);
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -346,7 +347,7 @@ contract Comptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        if (oracle.getUnderlyingPrice(vToken) == 0) {
+        if (oracle_.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
         }
 
@@ -437,8 +438,9 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        oracle.updatePrice(vTokenBorrowed);
-        oracle.updatePrice(vTokenCollateral);
+        ResilientOracleInterface oracle_ = oracle;
+        oracle_.updatePrice(vTokenBorrowed);
+        oracle_.updatePrice(vTokenCollateral);
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -584,10 +586,13 @@ contract Comptroller is
         uint256 userAssetsCount = userAssets.length;
 
         address liquidator = msg.sender;
-        // We need all user's markets to be fresh for the computations to be correct
-        for (uint256 i; i < userAssetsCount; ++i) {
-            userAssets[i].accrueInterest();
-            oracle.updatePrice(address(userAssets[i]));
+        {
+            ResilientOracleInterface oracle_ = oracle;
+            // We need all user's markets to be fresh for the computations to be correct
+            for (uint256 i; i < userAssetsCount; ++i) {
+                userAssets[i].accrueInterest();
+                oracle_.updatePrice(address(userAssets[i]));
+            }
         }
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(user, _getLiquidationThreshold);
@@ -710,7 +715,7 @@ contract Comptroller is
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
-        emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
+        emit NewCloseFactor(oldCloseFactorMantissa, newCloseFactorMantissa);
     }
 
     /**

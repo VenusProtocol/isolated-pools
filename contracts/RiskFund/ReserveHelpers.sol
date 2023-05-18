@@ -56,9 +56,10 @@ contract ReserveHelpers {
     function updateAssetsState(address comptroller, address asset) public virtual {
         ensureNonzeroAddress(asset);
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        require(poolRegistry != address(0), "ReserveHelpers: Pool Registry address is not set");
+        address poolRegistry_ = poolRegistry;
+        require(poolRegistry_ != address(0), "ReserveHelpers: Pool Registry address is not set");
         require(
-            PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0),
+            PoolRegistryInterface(poolRegistry_).getVTokenForAsset(comptroller, asset) != address(0),
             "ReserveHelpers: The pool doesn't support the asset"
         );
 

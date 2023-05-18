@@ -85,11 +85,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
             div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
         ).mantissa;
 
+        address riskFund_ = riskFund;
+
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-        IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
+        IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund).updateAssetsState(comptroller, asset);
+        IRiskFund(riskFund_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 

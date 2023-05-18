@@ -166,7 +166,8 @@ contract RiskFund is
         address[][] calldata paths
     ) external override returns (uint256) {
         _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
-        ensureNonzeroAddress(poolRegistry);
+        address poolRegistry_ = poolRegistry;
+        ensureNonzeroAddress(poolRegistry_);
         require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
         require(markets.length == paths.length, "Risk fund: markets and paths are unequal lengths");
 
@@ -179,7 +180,7 @@ contract RiskFund is
             VToken vToken = VToken(markets[i]);
             address comptroller = address(vToken.comptroller());
 
-            PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry).getPoolByComptroller(comptroller);
+            PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry_).getPoolByComptroller(comptroller);
             require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
             require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
 
@@ -200,10 +201,11 @@ contract RiskFund is
      * @return Number reserved tokens.
      */
     function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
-        require(msg.sender == shortfall, "Risk fund: Only callable by Shortfall contract");
+        address shortfall_ = shortfall;
+        require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
         poolReserves[comptroller] = poolReserves[comptroller] - amount;
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
 
@@ -246,6 +248,7 @@ contract RiskFund is
         uint256 totalAmount;
 
         address underlyingAsset = vToken.underlying();
+        address convertibleBaseAsset_ = convertibleBaseAsset;
         uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
@@ -262,15 +265,16 @@ contract RiskFund is
                 assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
                 poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
 
-                if (underlyingAsset != convertibleBaseAsset) {
+                if (underlyingAsset != convertibleBaseAsset_) {
                     require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");
                     require(
-                        path[path.length - 1] == convertibleBaseAsset,
+                        path[path.length - 1] == convertibleBaseAsset_,
                         "RiskFund: finally path must be convertible base asset"
                     );
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter, 0);
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter, balanceOfUnderlyingAsset);
-                    uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter).swapExactTokensForTokens(
+                    address pancakeSwapRouter_ = pancakeSwapRouter;
+                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, 0);
+                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, balanceOfUnderlyingAsset);
+                    uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
                         balanceOfUnderlyingAsset,
                         amountOutMin,
                         path,

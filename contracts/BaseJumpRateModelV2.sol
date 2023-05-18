@@ -170,14 +170,15 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 reserves
     ) internal view returns (uint256) {
         uint256 util = utilizationRate(cash, borrows, reserves);
+        uint256 kink_ = kink;
 
-        if (util <= kink) {
+        if (util <= kink_) {
             return ((util * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
         }
-        uint256 normalRate = ((kink * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
+        uint256 normalRate = ((kink_ * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
         uint256 excessUtil;
         unchecked {
-            excessUtil = util - kink;
+            excessUtil = util - kink_;
         }
         return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;
     }

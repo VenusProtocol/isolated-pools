@@ -369,8 +369,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @return A list of all pools within PoolRegistry, with details for each pool
      */
     function getAllPools() external view override returns (VenusPool[] memory) {
-        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; ++i) {
+        uint256 numberOfPools_ = _numberOfPools; // storage load to save gas
+        VenusPool[] memory _pools = new VenusPool[](numberOfPools_);
+        for (uint256 i = 1; i <= numberOfPools_; ++i) {
             address comptroller = _poolsByID[i];
             _pools[i - 1] = (_poolByComptroller[comptroller]);
         }
@@ -414,14 +415,15 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         _ensureValidName(name);
 
         _numberOfPools++;
+        uint256 numberOfPools_ = _numberOfPools; // cache on stack to save storage read gas
 
         VenusPool memory pool = VenusPool(name, msg.sender, comptroller, block.number, block.timestamp);
 
-        _poolsByID[_numberOfPools] = comptroller;
+        _poolsByID[numberOfPools_] = comptroller;
         _poolByComptroller[comptroller] = pool;
 
         emit PoolRegistered(comptroller, pool);
-        return _numberOfPools;
+        return numberOfPools_;
     }
 
     function _transferIn(
