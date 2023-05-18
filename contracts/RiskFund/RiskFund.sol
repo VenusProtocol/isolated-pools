@@ -204,7 +204,9 @@ contract RiskFund is
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
-        poolReserves[comptroller] = poolReserves[comptroller] - amount;
+        unchecked {
+            poolReserves[comptroller] = poolReserves[comptroller] - amount;
+        }
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
