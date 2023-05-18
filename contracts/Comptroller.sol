@@ -276,8 +276,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
         }
     }
 
@@ -306,8 +307,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
         }
     }
 
@@ -379,8 +381,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
     }
 
@@ -406,8 +409,9 @@ contract Comptroller is
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
     }
 
@@ -525,9 +529,10 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vTokenCollateral);
-            rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
-            rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, liquidator);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vTokenCollateral);
+            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
+            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
     }
 
@@ -562,9 +567,10 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, src);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
         }
     }
 
@@ -1130,11 +1136,12 @@ contract Comptroller is
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
         rewardSpeeds = new RewardSpeeds[](rewardsDistributorsLength);
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
-            address rewardToken = address(rewardsDistributors[i].rewardToken());
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            address rewardToken = address(rewardsDistributor.rewardToken());
             rewardSpeeds[i] = RewardSpeeds({
                 rewardToken: rewardToken,
-                supplySpeed: rewardsDistributors[i].rewardTokenSupplySpeeds(vToken),
-                borrowSpeed: rewardsDistributors[i].rewardTokenBorrowSpeeds(vToken)
+                supplySpeed: rewardsDistributor.rewardTokenSupplySpeeds(vToken),
+                borrowSpeed: rewardsDistributor.rewardTokenBorrowSpeeds(vToken)
             });
         }
         return rewardSpeeds;
@@ -1253,12 +1260,14 @@ contract Comptroller is
         address redeemer,
         uint256 redeemTokens
     ) internal view {
-        if (!markets[vToken].isListed) {
+        Market storage market = markets[vToken];
+
+        if (!market.isListed) {
             revert MarketNotListed(address(vToken));
         }
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!markets[vToken].accountMembership[redeemer]) {
+        if (!market.accountMembership[redeemer]) {
             return;
         }
 

@@ -346,8 +346,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     function setPoolName(address comptroller, string calldata name) external {
         _checkAccessAllowed("setPoolName(address,string)");
         _ensureValidName(name);
-        string memory oldName = _poolByComptroller[comptroller].name;
-        _poolByComptroller[comptroller].name = name;
+        VenusPool storage pool = _poolByComptroller[comptroller];
+        string memory oldName = pool.name;
+        pool.name = name;
         emit PoolNameSet(comptroller, oldName, name);
     }
 
