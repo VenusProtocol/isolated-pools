@@ -367,11 +367,9 @@ contract PoolLens is ExponentialNoError {
         address comptrollerAddress = address(vToken.comptroller());
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
         (bool isListed, uint256 collateralFactorMantissa) = comptroller.markets(address(vToken));
-        address underlyingAssetAddress;
-        uint256 underlyingDecimals;
 
-        underlyingAssetAddress = vToken.underlying();
-        underlyingDecimals = IERC20Metadata(vToken.underlying()).decimals();
+        address underlyingAssetAddress = vToken.underlying();
+        uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
 
         return
             VTokenMetadata({
