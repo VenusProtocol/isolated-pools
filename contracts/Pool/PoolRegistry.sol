@@ -415,7 +415,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         require(storedPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
         _ensureValidName(name);
 
-        _numberOfPools++;
+        ++_numberOfPools;
         uint256 numberOfPools_ = _numberOfPools; // cache on stack to save storage read gas
 
         VenusPool memory pool = VenusPool(name, msg.sender, comptroller, block.number, block.timestamp);
