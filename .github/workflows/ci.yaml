@@ -42,9 +42,6 @@ jobs:
       - name: Install deps
         run: yarn
 
-      - name: Install solidity
-        run: yarn global add solc@0.8.13
-
       - name: Run hardhat compile and tests coverage
         run: |
           source .env.example
