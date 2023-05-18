@@ -11,7 +11,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  PriceOracle,
+  ResilientOracleInterface,
   RewardsDistributor,
   VToken,
 } from "../../../typechain";
@@ -23,7 +23,7 @@ type ComptrollerFixture = {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
   poolRegistry: FakeContract<PoolRegistry>;
-  oracle: FakeContract<PriceOracle>;
+  oracle: FakeContract<ResilientOracleInterface>;
 };
 
 const maxLoopsLimit = 150;
@@ -36,7 +36,7 @@ const comptrollerFixture = async (): Promise<ComptrollerFixture> => {
     constructorArgs: [poolRegistry.address],
     initializer: "initialize(uint256,address)",
   });
-  const oracle = await smock.fake<PriceOracle>("PriceOracle");
+  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
 
   accessControl.isAllowedToCall.returns(true);
   await comptroller.setPriceOracle(oracle.address);
@@ -50,7 +50,7 @@ describe("setters", async () => {
   let comptroller: MockContract<Comptroller>;
   let OMG: FakeContract<VToken>;
   let poolRegistry: FakeContract<PoolRegistry>;
-  let oracle: FakeContract<PriceOracle>;
+  let oracle: FakeContract<ResilientOracleInterface>;
   let poolRegistrySigner: Signer;
 
   beforeEach(async () => {
@@ -67,10 +67,10 @@ describe("setters", async () => {
   });
 
   describe("setPriceOracle", async () => {
-    let newPriceOracle: FakeContract<PriceOracle>;
+    let newPriceOracle: FakeContract<ResilientOracleInterface>;
 
     before(async () => {
-      newPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      newPriceOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
     });
 
     it("reverts if called by a non-owner", async () => {

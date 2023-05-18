@@ -10,12 +10,12 @@ import {
   Beacon,
   Comptroller,
   JumpRateModelFactory,
+  MockPriceOracle__factory,
   MockToken,
   PoolRegistry,
   PoolRegistry__factory,
-  PriceOracle,
-  PriceOracle__factory,
   ProtocolShareReserve,
+  ResilientOracleInterface,
   RewardsDistributor,
   Shortfall,
   VToken,
@@ -37,7 +37,7 @@ let jumpRateFactory: JumpRateModelFactory;
 let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
 let rewardsDistributor: RewardsDistributor;
 let xvs: MockToken;
-let fakePriceOracle: FakeContract<PriceOracle>;
+let fakePriceOracle: FakeContract<ResilientOracleInterface>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
 
@@ -97,7 +97,7 @@ async function rewardsFixture() {
   await mockWBTC.faucet(convertToUnit(1000, 8));
 
   // Deploy Mock Price Oracle
-  fakePriceOracle = await smock.fake<PriceOracle>(PriceOracle__factory.abi);
+  fakePriceOracle = await smock.fake<ResilientOracleInterface>(MockPriceOracle__factory.abi);
 
   const btcPrice = "21000.34";
   const daiPrice = "1";

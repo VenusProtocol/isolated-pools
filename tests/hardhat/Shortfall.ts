@@ -15,7 +15,7 @@ import {
   IRiskFund,
   MockToken,
   PoolRegistry,
-  PriceOracle,
+  ResilientOracleInterface,
   Shortfall,
   Shortfall__factory,
   VToken,
@@ -39,7 +39,7 @@ let mockWBTC: MockToken;
 let vDAI: MockContract<VToken>;
 let vWBTC: MockContract<VToken>;
 let comptroller: FakeContract<Comptroller>;
-let fakePriceOracle: FakeContract<PriceOracle>;
+let fakePriceOracle: FakeContract<ResilientOracleInterface>;
 
 let riskFundBalance = "10000";
 const minimumPoolBadDebt = "10000";
@@ -109,7 +109,7 @@ async function shortfallFixture() {
     return [vDAI.address, vWBTC.address];
   });
 
-  fakePriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+  fakePriceOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
 
   const btcPrice = "21000.34";
   const daiPrice = "1";

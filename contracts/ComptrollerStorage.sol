@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "./VToken.sol";
 
 contract ComptrollerStorage {
@@ -56,7 +56,7 @@ contract ComptrollerStorage {
     /**
      * @notice Oracle which gives the price of any given asset
      */
-    PriceOracle public oracle;
+    ResilientOracleInterface public oracle;
 
     /**
      * @notice Multiplier used to calculate the maximum repayAmount when liquidating a borrow

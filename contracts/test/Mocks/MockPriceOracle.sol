@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import "../../VToken.sol";
 
-contract MockPriceOracle {
+contract MockPriceOracle is ResilientOracleInterface {
     mapping(address => uint256) public assetPrices;
 
     //set price in 6 decimal precision
@@ -16,10 +16,10 @@ contract MockPriceOracle {
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function updatePrice(address vToken) external {}
+    function updatePrice(address vToken) external override {}
 
     //https://compound.finance/docs/prices
-    function getUnderlyingPrice(VToken vToken) public view returns (uint256) {
-        return assetPrices[vToken.underlying()];
+    function getUnderlyingPrice(address vToken) public view override returns (uint256) {
+        return assetPrices[VToken(vToken).underlying()];
     }
 }

@@ -9,9 +9,9 @@ import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
+  MockPriceOracle,
   MockToken,
   PoolRegistry,
-  PriceOracle,
   RewardsDistributor,
   RiskFund,
   VToken,
@@ -55,7 +55,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
 
-  const PriceOracle = await ethers.getContract("ResilientOracle");
+  const priceOracle = await ethers.getContract("ResilientOracle");
 
   const pools = await PoolRegistry.callStatic.getAllPools();
   const Comptroller = await ethers.getContractAt("Comptroller", pools[0].comptroller);
@@ -68,7 +68,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
   // Set Oracle
-  await Comptroller.setPriceOracle(PriceOracle.address);
+  await Comptroller.setPriceOracle(priceOracle.address);
 
   const vBNXAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, BNX.address);
   const vBTCBAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, BTCB.address);
@@ -102,10 +102,10 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await Comptroller.setMarketBorrowCaps([vBNX.address, vBTCB.address], [borrowCap, borrowCap]);
 
   const vBNXPrice: BigNumber = new BigNumber(
-    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
+    scaleDownBy((await priceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
   );
   const vBTCBPrice: BigNumber = new BigNumber(
-    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
+    scaleDownBy((await priceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
   );
 
   await RiskFund.setPoolRegistry(PoolRegistry.address);
@@ -121,7 +121,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
       JumpRateModelFactory,
       WhitePaperRateFactory,
       ProtocolShareReserve,
-      PriceOracle,
+      priceOracle,
       Comptroller,
       vBNX,
       vBTCB,
@@ -432,7 +432,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         vTokenBorrowed: vBTCB.address,
         repayAmount: repayAmount,
       };
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 12));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -446,7 +446,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
       await vBNX.connect(acc2Signer).mint(1e10);
 
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 12));
 
@@ -524,7 +524,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert when try to drain market", async function () {
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -561,7 +561,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       // price manipulation and borrow to overcome insufficient shortfall
       BTCBBorrowAmount = convertToUnit("1", 18);
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 40));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -583,7 +583,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, udnerlyingMintAmount, VTokenMintAmount, expectedTotalBalance);
       // price manipulation and borrow to overcome insufficient shortfall
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 20));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -606,7 +606,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .withArgs(acc2, mintAmount, vTokenMintAmount, expectedTotalBalance);
 
       // price manipulation and borrow to overcome insufficient shortfall
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -676,7 +676,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert on healing if borrow is less then collateral amount", async function () {
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1.4", 15));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 23));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -687,7 +687,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
     it("Should success on healing and forgive borrow account", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -770,7 +770,7 @@ describe("Risk Fund and Auction related scenarios", () => {
 
     it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
