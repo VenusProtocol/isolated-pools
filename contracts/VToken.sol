@@ -959,7 +959,7 @@ contract VToken is
         /* We fetch the amount the borrower owes, with accumulated interest */
         uint256 accountBorrowsPrev = _borrowBalanceStored(borrower);
 
-        uint256 repayAmountFinal = repayAmount > accountBorrowsPrev ? accountBorrowsPrev : repayAmount;
+        uint256 repayAmountFinal = repayAmount >= accountBorrowsPrev ? accountBorrowsPrev : repayAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
