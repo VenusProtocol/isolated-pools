@@ -459,6 +459,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /**
      * @dev Checks if the auction has started
      * @param auction The auction to query the status for
+     * @return True if the auction has started
      */
     function _isStarted(Auction storage auction) internal view returns (bool) {
         return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
@@ -468,6 +469,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
      *   was started more than waitForFirstBidder blocks ago.
      * @param auction The auction to query the status for
+     * @return True if the auction is stale
      */
     function _isStale(Auction storage auction) internal view returns (bool) {
         bool noBidder = auction.highestBidder == address(0);

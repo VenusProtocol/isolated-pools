@@ -1285,6 +1285,7 @@ contract VToken is
      *      which may be less than `amount` if there is a fee attached to the transfer.
      * @param from Sender of the underlying tokens
      * @param amount Amount of underlying to transfer
+     * @return Actual amount received
      */
     function _doTransferIn(address from, uint256 amount) internal virtual returns (uint256) {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
@@ -1444,6 +1445,7 @@ contract VToken is
     /**
      * @dev Function to simply retrieve block number
      *  This exists mainly for inheriting test contracts to stub this result.
+     * @return Current block number
      */
     function _getBlockNumber() internal view virtual returns (uint256) {
         return block.number;

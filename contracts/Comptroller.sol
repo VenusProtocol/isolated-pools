@@ -1145,6 +1145,7 @@ contract Comptroller is
 
     /**
      * @notice A marker method that returns true for a valid Comptroller contract
+     * @return Always true
      */
     function isComptroller() external pure override returns (bool) {
         return true;

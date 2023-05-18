@@ -362,8 +362,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @notice Returns arrays of all Venus pools' data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     * @notice Returns arrays of all Venus pools' data
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive
+     * @return A list of all pools within PoolRegistry, with details for each pool
      */
     function getAllPools() external view override returns (VenusPool[] memory) {
         VenusPool[] memory _pools = new VenusPool[](_numberOfPools);

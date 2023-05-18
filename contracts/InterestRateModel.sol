@@ -34,7 +34,10 @@ abstract contract InterestRateModel {
         uint256 reserveFactorMantissa
     ) external view virtual returns (uint256);
 
-    /// @notice Indicator that this is an InterestRateModel contract (for inspection)
+    /**
+     * @notice Indicator that this is an InterestRateModel contract (for inspection)
+     * @return Always true
+     */
     function isInterestRateModel() external pure virtual returns (bool) {
         return true;
     }

@@ -366,6 +366,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     /**
      * @notice Indicator that this is a VToken contract (for inspection)
+     * @return Always true
      */
     function isVToken() external pure virtual returns (bool) {
         return true;

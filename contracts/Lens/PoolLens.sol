@@ -120,9 +120,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @param account The user Account.
-     * @notice Returns the BalanceInfo of all VTokens.
+     * @notice Queries the user's supply/borrow balances in vTokens
+     * @param vTokens The list of vToken addresses
+     * @param account The user Account
+     * @return A list of structs containing balances data
      */
     function vTokenBalancesAll(VToken[] calldata vTokens, address account) external returns (VTokenBalances[] memory) {
         uint256 vTokenCount = vTokens.length;
@@ -134,9 +135,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @notice Returns arrays of all Venus pools' data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     * @notice Queries all pools with addtional details for each of them
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @return Arrays of all Venus pools' data
      */
     function getAllPools(address poolRegistryAddress) external view returns (PoolData[] memory) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
@@ -155,9 +157,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param comptroller The Comptroller implementation address.
-     * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
+     * @notice Queries the details of a pool identified by Comptroller address
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param comptroller The Comptroller implementation address
+     * @return PoolData structure containing the details of the pool
      */
     function getPoolByComptroller(address poolRegistryAddress, address comptroller)
         external
@@ -169,10 +172,11 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param comptroller The pool comptroller.
-     * @param asset The underlyingAsset of VToken.
-     * @notice Returns VToken in a Pool for an Asset.
+     * @notice Returns vToken holding the specified underlying asset in the specified pool
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param comptroller The pool comptroller
+     * @param asset The underlyingAsset of VToken
+     * @return Address of the vToken
      */
     function getVTokenForAsset(
         address poolRegistryAddress,
@@ -184,9 +188,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param asset The underlyingAsset of VToken.
-     * @notice Returns all Pools supported by an Asset.
+     * @notice Returns all pools that support the specified underlying asset
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param asset The underlying asset of vToken
+     * @return A list of Comptroller contracts
      */
     function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
         external
@@ -198,8 +203,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @notice Returns the underlyingPrice Info of all VTokens.
+     * @notice Returns the price data for the underlying assets of the specified vTokens
+     * @param vTokens The list of vToken addresses
+     * @return An array containing the price data for each asset
      */
     function vTokenUnderlyingPriceAll(VToken[] calldata vTokens)
         external
@@ -279,9 +285,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The vTokenAddress.
-     * @param account The user Account.
-     * @notice Returns the BalanceInfo of VToken.
+     * @notice Queries the user's supply/borrow balances in the specified vToken
+     * @param vToken vToken address
+     * @param account The user Account
+     * @return A struct containing the balances data
      */
     function vTokenBalances(VToken vToken, address account) public returns (VTokenBalances memory) {
         uint256 balanceOf = vToken.balanceOf(account);
@@ -306,9 +313,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @notice Returns enriched PoolData
+     * @notice Queries additional information for the pool
      * @param poolRegistryAddress Address of the PoolRegistry
      * @param venusPool The VenusPool Object from PoolRegistry
+     * @return Enriched PoolData
      */
     function getPoolDataFromVenusPool(address poolRegistryAddress, PoolRegistry.VenusPool memory venusPool)
         public
@@ -350,8 +358,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The address of vToken.
-     * @notice Returns the metadata of VToken.
+     * @notice Returns the metadata of VToken
+     * @param vToken The address of vToken
+     * @return VTokenMetadata struct
      */
     function vTokenMetadata(VToken vToken) public view returns (VTokenMetadata memory) {
         uint256 exchangeRateCurrent = vToken.exchangeRateStored();
@@ -386,8 +395,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @notice Returns the metadata of all VTokens.
+     * @notice Returns the metadata of all VTokens
+     * @param vTokens The list of vToken addresses
+     * @return An array of VTokenMetadata structs
      */
     function vTokenMetadataAll(VToken[] memory vTokens) public view returns (VTokenMetadata[] memory) {
         uint256 vTokenCount = vTokens.length;
@@ -399,8 +409,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The vToken Addresses.
-     * @notice Returns the underlyingPrice of VToken.
+     * @notice Returns the price data for the underlying asset of the specified vToken
+     * @param vToken vToken address
+     * @return The price data for each asset
      */
     function vTokenUnderlyingPrice(VToken vToken) public view returns (VTokenUnderlyingPrice memory) {
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(address(vToken.comptroller()));
