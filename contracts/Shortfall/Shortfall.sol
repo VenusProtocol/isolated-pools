@@ -15,6 +15,7 @@ import { IShortfall } from "./IShortfall.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { EXP_SCALE } from "../lib/constants.sol";
 
 contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -46,6 +47,15 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         mapping(VToken => uint256) marketDebt;
     }
 
+    /// @dev Max basis points i.e., 100%
+    uint256 private constant MAX_BPS = 10000;
+
+    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 10;
+
+    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
+
+    uint256 private constant DEFAULT_INCENTIVE_BPS = 1000; // 10%
+
     /// @notice Pool registry address
     address public poolRegistry;
 
@@ -57,9 +67,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
     uint256 private incentiveBps;
-
-    /// @notice Max basis points i.e., 100%
-    uint256 private constant MAX_BPS = 10000;
 
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
@@ -148,9 +155,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
-        waitForFirstBidder = 100;
-        nextBidderBlockLimit = 10;
-        incentiveBps = 1000;
+        waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
+        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
+        incentiveBps = DEFAULT_INCENTIVE_BPS;
     }
 
     /**
@@ -395,7 +402,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             uint256 marketBadDebt = vTokens[i].badDebt();
 
             priceOracle.updatePrice(address(vTokens[i]));
-            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / 1e18;
+            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / EXP_SCALE;
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = vTokens[i];

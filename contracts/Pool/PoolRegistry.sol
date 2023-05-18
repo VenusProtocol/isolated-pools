@@ -56,6 +56,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         uint256 borrowCap;
     }
 
+    uint256 internal constant MAX_POOL_NAME_LENGTH = 100;
+
     /**
      * @notice VTokenProxyFactory contract address
      */
@@ -448,6 +450,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     function _ensureValidName(string calldata name) internal pure {
-        require(bytes(name).length <= 100, "Pool's name is too large");
+        require(bytes(name).length <= MAX_POOL_NAME_LENGTH, "Pool's name is too large");
     }
 }

@@ -781,7 +781,7 @@ contract Comptroller is
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
-        require(newLiquidationIncentiveMantissa >= 1e18, "liquidation incentive should be greater than 1e18");
+        require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
@@ -1171,7 +1171,7 @@ contract Comptroller is
         return
             markets[address(vToken)].collateralFactorMantissa == 0 &&
             actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == 1e18;
+            vToken.reserveFactorMantissa() == MANTISSA_ONE;
     }
 
     /**

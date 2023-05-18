@@ -27,6 +27,8 @@ contract VToken is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 internal constant DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA = 5e16; // 5%
+
     /*** Reentrancy Guard ***/
 
     /**
@@ -366,7 +368,7 @@ contract VToken is
     function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
         _checkAccessAllowed("setProtocolSeizeShare(uint256)");
         uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
-        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
+        if (newProtocolSeizeShareMantissa_ + MANTISSA_ONE > liquidationIncentive) {
             revert ProtocolSeizeShareTooBig();
         }
 
@@ -1407,7 +1409,7 @@ contract VToken is
         decimals = decimals_;
         _setShortfallContract(riskManagement.shortfall);
         _setProtocolShareReserve(riskManagement.protocolShareReserve);
-        protocolSeizeShareMantissa = 5e16; // 5%
+        protocolSeizeShareMantissa = DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA;
 
         // Set underlying and sanity check it
         underlying = underlying_;
