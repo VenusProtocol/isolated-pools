@@ -21,7 +21,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     uint256 private constant BASE_UNIT = 100;
 
     /// @notice Emitted when funds are released
-    event FundsReleased(address comptroller, address asset, uint256 amount);
+    event FundsReleased(address indexed comptroller, address indexed asset, uint256 amount);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);

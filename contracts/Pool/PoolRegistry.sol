@@ -133,7 +133,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     /**
      * @dev Emitted when a Market is added to the pool.
      */
-    event MarketAdded(address indexed comptroller, address vTokenAddress);
+    event MarketAdded(address indexed comptroller, address indexed vTokenAddress);
 
     /**
      * @notice Event emitted when shortfall contract address is changed

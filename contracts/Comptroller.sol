@@ -29,10 +29,10 @@ contract Comptroller is
     address public immutable poolRegistry;
 
     /// @notice Emitted when an account enters a market
-    event MarketEntered(VToken vToken, address account);
+    event MarketEntered(VToken indexed vToken, address indexed account);
 
     /// @notice Emitted when an account exits a market
-    event MarketExited(VToken vToken, address account);
+    event MarketExited(VToken indexed vToken, address indexed account);
 
     /// @notice Emitted when close factor is changed by admin
     event NewCloseFactor(uint256 oldCloseFactorMantissa, uint256 newCloseFactorMantissa);

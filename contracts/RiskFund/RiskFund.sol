@@ -58,7 +58,7 @@ contract RiskFund is
     event SwappedPoolsAssets(address[] markets, uint256[] amountsOutMin, uint256 totalAmount);
 
     /// @notice Emitted when reserves are transferred for auction
-    event TransferredReserveForAuction(address comptroller, uint256 amount);
+    event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.

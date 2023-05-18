@@ -80,22 +80,22 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     event RewardTokenBorrowSpeedUpdated(VToken indexed vToken, uint256 newSpeed);
 
     /// @notice Emitted when REWARD TOKEN is granted by admin
-    event RewardTokenGranted(address recipient, uint256 amount);
+    event RewardTokenGranted(address indexed recipient, uint256 amount);
 
     /// @notice Emitted when a new REWARD TOKEN speed is set for a contributor
     event ContributorRewardTokenSpeedUpdated(address indexed contributor, uint256 newSpeed);
 
     /// @notice Emitted when a market is initialized
-    event MarketInitialized(address vToken);
+    event MarketInitialized(address indexed vToken);
 
     /// @notice Emitted when a reward token supply index is updated
-    event RewardTokenSupplyIndexUpdated(address vToken);
+    event RewardTokenSupplyIndexUpdated(address indexed vToken);
 
     /// @notice Emitted when a reward token borrow index is updated
-    event RewardTokenBorrowIndexUpdated(address vToken, Exp marketBorrowIndex);
+    event RewardTokenBorrowIndexUpdated(address indexed vToken, Exp marketBorrowIndex);
 
     /// @notice Emitted when a reward for contributor is updated
-    event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
+    event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
