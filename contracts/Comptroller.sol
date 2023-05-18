@@ -125,6 +125,7 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     constructor(address poolRegistry_) {

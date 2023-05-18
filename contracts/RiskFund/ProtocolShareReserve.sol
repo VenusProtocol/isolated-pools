@@ -64,6 +64,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
     /**
      * @dev Release funds
+     * @param comptroller Pool's Comptroller
      * @param asset  Asset to be released
      * @param amount Amount to release
      * @return Number of total released tokens

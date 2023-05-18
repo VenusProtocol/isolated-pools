@@ -306,8 +306,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param venusPool The VenusPool Object from PoolRegistry.
-     * @notice Returns enriched PoolData.
+     * @notice Returns enriched PoolData
+     * @param poolRegistryAddress Address of the PoolRegistry
+     * @param venusPool The VenusPool Object from PoolRegistry
      */
     function getPoolDataFromVenusPool(address poolRegistryAddress, PoolRegistry.VenusPool memory venusPool)
         public

@@ -153,12 +153,13 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @dev Initializes the deployer to owner.
-     * @param vTokenFactory_ vToken factory address.
-     * @param jumpRateFactory_ jump rate factory address.
-     * @param whitePaperFactory_ white paper factory address.
-     * @param protocolShareReserve_ protocol's shares reserve address.
-     * @param accessControlManager_ AccessControlManager contract address.
+     * @dev Initializes the deployer to owner
+     * @param vTokenFactory_ vToken factory address
+     * @param jumpRateFactory_ jump rate factory address
+     * @param whitePaperFactory_ white paper factory address
+     * @param protocolShareReserve_ protocol's shares reserve address
+     * @param shortfall_ Shortfall contract address
+     * @param accessControlManager_ AccessControlManager contract address
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
      */
@@ -206,8 +207,10 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
+     * @param minLiquidatableCollateral Minimal collateral for regular (non-batch) liquidations flow
      * @param priceOracle The pool's price oracle address
-     * @param maxLoopsLimit The maximum limit for the loops can iterate.
+     * @param maxLoopsLimit The maximum number of iterations the loops can perform
+     * @param accessControlManager AccessControlManager contract address
      * @return index The index of the registered Venus pool
      * @return proxyAddress The the Comptroller proxy address
      * @custom:error ZeroAddressNotAllowed is thrown when Comptroller beacon address is zero
@@ -334,7 +337,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @notice Modify existing Venus pool name.
+     * @notice Modify existing Venus pool name
+     * @param comptroller Pool's Comptroller
+     * @param name New pool name
      */
     function setPoolName(address comptroller, string calldata name) external {
         _checkAccessAllowed("setPoolName(address,string)");
@@ -345,13 +350,15 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @notice Update metadata of an existing pool.
+     * @notice Update metadata of an existing pool
+     * @param comptroller Pool's Comptroller
+     * @param metadata_ New pool metadata
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external {
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory metadata_) external {
         _checkAccessAllowed("updatePoolMetadata(address,VenusPoolMetaData)");
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
-        metadata[comptroller] = _metadata;
-        emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);
+        metadata[comptroller] = metadata_;
+        emit PoolMetadataUpdated(comptroller, oldMetadata, metadata_);
     }
 
     /**

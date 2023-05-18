@@ -56,7 +56,9 @@ contract VToken is
      * @param symbol_ ERC-20 symbol of this token
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
-     * @param riskManagement Addresses of risk fund contracts
+     * @param accessControlManager_ AccessControlManager contract address
+     * @param riskManagement Addresses of risk & income related contracts
+     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
      * @custom:error ZeroAddressNotAllowed is thrown when admin address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
@@ -239,6 +241,7 @@ contract VToken is
     /**
      * @notice Sender calls on-behalf of minter. minter supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param minter User whom the supply will be attributed to
      * @param mintAmount The amount of the underlying asset to supply
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event Emits Mint and Transfer events; may emit AccrueInterest
@@ -375,6 +378,7 @@ contract VToken is
     /**
      * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
      * @dev Admin function to accrue interest and set a new reserve factor
+     * @param newReserveFactorMantissa New reserve factor (from 0 to 1e18)
      * @custom:event Emits NewReserveFactor event; may emit AccrueInterest
      * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
      * @custom:error SetReserveFactorBoundsCheck is thrown when the new reserve factor is too high
@@ -881,6 +885,7 @@ contract VToken is
 
     /**
      * @notice Users borrow assets from the protocol to their own address
+     * @param borrower User who borrows the assets
      * @param borrowAmount The amount of the underlying asset to borrow
      */
     function _borrowFresh(address borrower, uint256 borrowAmount) internal {
@@ -1159,6 +1164,7 @@ contract VToken is
     /**
      * @notice Sets a new reserve factor for the protocol (*requires fresh interest accrual)
      * @dev Admin function to set a new reserve factor
+     * @param newReserveFactorMantissa New reserve factor (from 0 to 1e18)
      */
     function _setReserveFactorFresh(uint256 newReserveFactorMantissa) internal {
         // Verify market's block number equals current block number
@@ -1277,6 +1283,8 @@ contract VToken is
      * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
      *      This function returns the actual amount received,
      *      which may be less than `amount` if there is a fee attached to the transfer.
+     * @param from Sender of the underlying tokens
+     * @param amount Amount of underlying to transfer
      */
     function _doTransferIn(address from, uint256 amount) internal virtual returns (uint256) {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
@@ -1289,6 +1297,8 @@ contract VToken is
 
     /**
      * @dev Just a regular ERC-20 transfer, reverts on failure
+     * @param to Receiver of the underlying tokens
+     * @param amount Amount of underlying to transfer
      */
     function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
@@ -1351,10 +1361,13 @@ contract VToken is
      * @param comptroller_ The address of the Comptroller
      * @param interestRateModel_ The address of the interest rate model
      * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ EIP-20 name of this token
-     * @param symbol_ EIP-20 symbol of this token
-     * @param decimals_ EIP-20 decimal precision of this token
-     * @param reserveFactorMantissa_ Reserve factor mantissa (between 0 and 1e18)
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     * @param decimals_ ERC-20 decimal precision of this token
+     * @param admin_ Address of the administrator of this token
+     * @param accessControlManager_ AccessControlManager contract address
+     * @param riskManagement Addresses of risk & income related contracts
+     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
      */
     function _initialize(
         address underlying_,
