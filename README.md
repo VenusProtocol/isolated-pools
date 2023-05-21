@@ -20,9 +20,9 @@ The Isolated Pools architecture centers around the `PoolRegistry` contract. The 
 
 There are three factory contracts:
 
-* JumpRateModelFactory
-* VTokenProxyFactory
-* WhiteRateInterestModelFactory
+- JumpRateModelFactory
+- VTokenProxyFactory
+- WhiteRateInterestModelFactory
 
 These contracts are designed to deploy contracts when adding markets to a pool. In particular, the `JumpRateModelFactory` and `WhiteRateInterestModelFactory` deploy contracts for the rate model based on which was chosen for the market. The `VtokenProxyFactory` is used to generate a new `vToken` proxy for each market when it is added to a pool.
 
@@ -30,9 +30,9 @@ These contracts are designed to deploy contracts when adding markets to a pool. 
 
 The risk fund concerns three main contracts:
 
-* ProtocolShareReserve
-* RiskFund
-* ReserveHelpers
+- ProtocolShareReserve
+- RiskFund
+- ReserveHelpers
 
 The three contracts are designed to hold fees that have been accumulated from liquidations and spread, send a portion to the protocol treasury, and send the remainder to the RiskFund. When `reduceReserves()` is called in a `vToken` contract, all accumulated liquidation fees and spread are sent to the `ProtocolShareReserve` contract. Once funds are transferred to the `ProtocolShareReserve`, anyone can call `releaseFunds()` to transfer 70% to the `protocolIncome` address and the other 30% to the `riskFund` contract. Once in the `riskFund` contract, the tokens can be swapped via `PancakeSwap` pairs to the convertible base asset, which can be updated by the owner of the contract. When tokens are converted to the `convertibleBaseAsset`, they can be used in the `Shortfall` contract to auction off the pool's bad debt. Note that just as each pool is isolated, the risk funds for each pool are also isolated: only the risk fund for the same pool can be used when auctioning off the bad debt of the pool.
 
@@ -50,12 +50,12 @@ The owner has the ability to transfer any amount of reward tokens held by the co
 
 The `PoolLens` contract is designed to retrieve important information for each registered pool. A list of essential information for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be looked up for specific pools and markets:
 
-* the vToken balance of a given user;
-* the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
-* the vToken address in a pool for a given asset;
-* a list of all pools that support an asset;
-* the underlying asset price of a vToken;
-* the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
+- the vToken balance of a given user;
+- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
+- the vToken address in a pool for a given asset;
+- a list of all pools that support an asset;
+- the underlying asset price of a vToken;
+- the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
 
 ### Rate Models
 
@@ -65,10 +65,10 @@ These contracts help algorithmically determine the interest rate based on supply
 
 Each asset that is supported by a pool is integrated through an instance of the `VToken` contract. As outlined in the protocol overview, each isolated pool creates its own `vToken` corresponding to an asset. Within a given pool, each included `vToken` is referred to as a market of the pool. The main actions a user regularly interacts with in a market are:
 
-* mint/redeem of vTokens;
-* transfer of vTokens;
-* borrow/repay a loan on an underlying asset;
-* liquidate a borrow or liquidate/heal an account.
+- mint/redeem of vTokens;
+- transfer of vTokens;
+- borrow/repay a loan on an underlying asset;
+- liquidate a borrow or liquidate/heal an account.
 
 A user supplies the underlying asset to a pool by minting `vTokens`, where the corresponding `vToken` amount is determined by the `exchangeRate`. The `exchangeRate` will change over time, dependent on a number of factors, some of which accrue interest. Additionally, once users have minted `vToken` in a pool, they can borrow any asset in the isolated pool by using their `vToken` as collateral. In order to borrow an asset or use a `vToken` as collateral, the user must be entered into each corresponding market (else, the `vToken` will not be considered collateral for a borrow). Note that a user may borrow up to a portion of their collateral determined by the market’s collateral factor. However, if their borrowed amount exceeds an amount calculated using the market’s corresponding liquidation threshold, the borrow is eligible for liquidation. When a user repays a borrow, they must also pay off interest accrued on the borrow.
 
@@ -80,9 +80,9 @@ The `Comptroller` is designed to provide checks for all minting, redeeming, tran
 
 The `Comptroller` also includes two functions `liquidateAccount()` and `healAccount()`, which are meant to handle accounts that do not exceed the `minLiquidatableCollateral` for the `Comptroller`:
 
-* `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage of the debt calculated by `collateral/(borrows*liquidationIncentive)`. The function can only be called if the calculated percentage does not exceed 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the associated pool.
+- `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage of the debt calculated by `collateral/(borrows*liquidationIncentive)`. The function can only be called if the calculated percentage does not exceed 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the associated pool.
 
-* `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic verifying that the repay amount does not exceed the close factor.
+- `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic verifying that the repay amount does not exceed the close factor.
 
 # Development
 
@@ -185,12 +185,11 @@ They can be generated by running `yarn docgen`
 
 https://github.com/compound-finance/compound-protocol/tree/a3214f67b73310d547e00fc578e8355911c9d376
 
-
 # Links
 
-* Website : https://venus.io
-* Twitter : https://twitter.com/venusprotocol
-* Telegram : https://t.me/venusprotocol
-* Discord : https://discord.com/invite/pTQ9EBHYtF
-* Github: https://github.com/VenusProtocol
-* Youtube: https://www.youtube.com/@venusprotocolofficial
+- Website : https://venus.io
+- Twitter : https://twitter.com/venusprotocol
+- Telegram : https://t.me/venusprotocol
+- Discord : https://discord.com/invite/pTQ9EBHYtF
+- Github: https://github.com/VenusProtocol
+- Youtube: https://www.youtube.com/@venusprotocolofficial
