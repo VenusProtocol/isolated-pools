@@ -300,7 +300,7 @@ contract VToken is
 
     /**
      * @notice sets protocol share accumulated from liquidations
-     * @dev must be less than liquidation incentive - 1
+     * @dev must be equal or less than liquidation incentive - 1
      * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
      * @custom:event Emits NewProtocolSeizeShare event on success
      * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
