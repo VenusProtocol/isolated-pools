@@ -707,7 +707,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       result = await Comptroller.connect(acc1Signer).healAccount(acc2);
       await expect(result)
         .to.emit(vBTCB, "RepayBorrow")
-        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, repayAmount, 0)
+        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, 0, 0)
         .to.emit(vBTCB, "BadDebtIncreased")
         .withArgs(acc2, BTCBBorrowAmount - repayAmount, 0, badDebt);
 
