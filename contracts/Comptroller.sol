@@ -907,7 +907,7 @@ contract Comptroller is
         uint256 marketsCount = marketsList.length;
         uint256 actionsCount = actionsList.length;
 
-        _ensureMaxLoops(marketsCount);
+        _ensureMaxLoops(marketsCount * actionsCount);
 
         for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
             for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {

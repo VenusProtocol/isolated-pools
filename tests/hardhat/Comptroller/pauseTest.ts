@@ -30,7 +30,7 @@ type PauseFixture = {
   names: string[];
 };
 
-const maxLoopsLimit = 150;
+const maxLoopsLimit = 15;
 
 async function pauseFixture(): Promise<PauseFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
@@ -161,6 +161,12 @@ describe("Comptroller", () => {
       await expect(comptroller.exitMarket(SKT.address))
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(SKT.address);
+    });
+
+    it("reverts if maxloops limit is crossed", async () => {
+      await expect(comptroller.setActionsPaused([OMG.address, BAT.address, ZRX.address], [1, 2, 3, 4, 5, 6], true))
+        .to.be.revertedWithCustomError(comptroller, "MaxLoopsLimitExceeded")
+        .withArgs(maxLoopsLimit, 18);
     });
   });
 });
