@@ -409,7 +409,13 @@ contract VToken is
             // We violate checks-effects-interactions here to account for tokens that take transfer fees
             actualRepayAmount = _doTransferIn(payer, repayAmount);
             totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
-            emit RepayBorrow(payer, borrower, actualRepayAmount, accountBorrowsPrev - actualRepayAmount, totalBorrowsNew);
+            emit RepayBorrow(
+                payer,
+                borrower,
+                actualRepayAmount,
+                accountBorrowsPrev - actualRepayAmount,
+                totalBorrowsNew
+            );
         }
 
         // The transaction will fail if trying to repay too much
