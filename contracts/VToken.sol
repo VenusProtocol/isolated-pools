@@ -409,7 +409,7 @@ contract VToken is
             // We violate checks-effects-interactions here to account for tokens that take transfer fees
             actualRepayAmount = _doTransferIn(payer, repayAmount);
             totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
-            emit RepayBorrow(payer, borrower, actualRepayAmount, 0, totalBorrowsNew);
+            emit RepayBorrow(payer, borrower, actualRepayAmount, accountBorrowsPrev - actualRepayAmount, totalBorrowsNew);
         }
 
         // The transaction will fail if trying to repay too much
@@ -421,7 +421,7 @@ contract VToken is
             badDebt = badDebtNew;
 
             // We treat healing as "repayment", where vToken is the payer
-            emit RepayBorrow(address(this), borrower, badDebtDelta, accountBorrowsPrev - badDebtDelta, totalBorrowsNew);
+            emit RepayBorrow(address(this), borrower, badDebtDelta, 0, totalBorrowsNew);
             emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
         }
 
