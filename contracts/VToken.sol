@@ -393,7 +393,7 @@ contract VToken is
         uint256 repayAmount
     ) external override nonReentrant {
         if (repayAmount != 0) {
-            comptroller.preRepayHook(payer, borrower);
+            comptroller.preRepayHook(address(this), borrower);
         }
 
         if (msg.sender != address(comptroller)) {
