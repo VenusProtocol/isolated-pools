@@ -344,7 +344,7 @@ contract Comptroller is
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
             _checkSenderIs(vToken);
-
+            _ensureMaxLoops(accountAssets[msg.sender].length + 1);
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
         }
