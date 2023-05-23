@@ -60,6 +60,13 @@ contract ExponentialNoError {
         return left.mantissa < right.mantissa;
     }
 
+    /**
+     * @dev Checks if first Exp is less than or equal second Exp.
+     */
+    function lessThanOrEqualExp(Exp memory left, Exp memory right) internal pure returns (bool) {
+        return left.mantissa <= right.mantissa;
+    }
+
     function safe224(uint256 n, string memory errorMessage) internal pure returns (uint224) {
         require(n < 2**224, errorMessage);
         return uint224(n);
