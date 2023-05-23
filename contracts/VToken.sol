@@ -392,6 +392,10 @@ contract VToken is
         address borrower,
         uint256 repayAmount
     ) external override nonReentrant {
+        if (repayAmount != 0) {
+            comptroller.preRepayHook(payer, borrower);
+        }
+
         if (msg.sender != address(comptroller)) {
             revert HealBorrowUnauthorized();
         }
