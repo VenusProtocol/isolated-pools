@@ -399,7 +399,7 @@ describe("VToken", function () {
       const exchangeRate = convertToUnit(1, 25);
       await underlying.harnessSetBalance(vToken.address, redeemAmount);
       await expect(quickRedeemUnderlying(vToken, redeemer, redeemAmount, { exchangeRate })).to.be.revertedWith(
-        "redeemTokens zero",
+        "redeemTokens or redeemAmount is zero",
       );
     });
 
