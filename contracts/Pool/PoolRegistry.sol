@@ -357,7 +357,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param comptroller Pool's Comptroller
      * @param metadata_ New pool metadata
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory metadata_) external {
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData calldata metadata_) external {
         _checkAccessAllowed("updatePoolMetadata(address,VenusPoolMetaData)");
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
         metadata[comptroller] = metadata_;
