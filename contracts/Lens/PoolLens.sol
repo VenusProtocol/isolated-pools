@@ -503,9 +503,10 @@ contract PoolLens is ExponentialNoError {
         Double memory borrowerIndex = Double({
             mantissa: rewardsDistributor.rewardTokenBorrowerIndex(vToken, borrower)
         });
-        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa > 0) {
+        uint224 rewardTokenInitialIndex = rewardsDistributor.rewardTokenInitialIndex();
+        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa >= rewardTokenInitialIndex) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set
-            borrowerIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            borrowerIndex.mantissa = rewardTokenInitialIndex;
         }
         Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
         uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
@@ -523,9 +524,10 @@ contract PoolLens is ExponentialNoError {
         Double memory supplierIndex = Double({
             mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
-        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+        uint224 rewardTokenInitialIndex = rewardsDistributor.rewardTokenInitialIndex();
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa >= rewardTokenInitialIndex) {
             // Covers the case where users supplied tokens before the market's supply state index was set
-            supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            supplierIndex.mantissa = rewardTokenInitialIndex;
         }
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
