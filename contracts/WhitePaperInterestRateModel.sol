@@ -87,10 +87,10 @@ contract WhitePaperInterestRateModel is InterestRateModel {
             return 0;
         }
 
-        uint256 rate = (borrows * BASE) / (cash + borrows - reserves);
+        uint256 rate = (borrows * EXP_SCALE) / (cash + borrows - reserves);
 
-        if (rate > BASE) {
-            rate = BASE;
+        if (rate > EXP_SCALE) {
+            rate = EXP_SCALE;
         }
 
         return rate;
