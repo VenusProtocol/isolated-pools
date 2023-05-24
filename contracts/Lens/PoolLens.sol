@@ -264,8 +264,8 @@ contract PoolLens is ExponentialNoError {
             BadDebt memory badDebt;
             badDebt.vTokenAddress = address(markets[i]);
             badDebt.badDebtUsd =
-                VToken(address(markets[i])).badDebt() *
-                priceOracle.getUnderlyingPrice(address(markets[i]));
+                (VToken(address(markets[i])).badDebt() *
+                priceOracle.getUnderlyingPrice(address(markets[i]))) / expScale;
             badDebtSummary.badDebts[i] = badDebt;
             totalBadDebtUsd = totalBadDebtUsd + badDebt.badDebtUsd;
         }
