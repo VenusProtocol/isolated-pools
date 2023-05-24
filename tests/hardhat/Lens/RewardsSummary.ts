@@ -230,7 +230,7 @@ describe("PoolLens: Rewards Summary", () => {
       index: convertToUnit(1, 36), // Current index is 1.0, double scale
       block: await ethers.provider.getBlockNumber(),
     });
-    rewardDistributor3.rewardTokenInitialIndex.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
+    rewardDistributor3.INITIAL_INDEX.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
 
     const pendingRewards = await poolLens.getPendingRewards(await account.getAddress(), comptroller.address);
 

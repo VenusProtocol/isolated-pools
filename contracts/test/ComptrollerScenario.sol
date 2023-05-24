@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../../contracts/Comptroller.sol";
+import { Comptroller } from "../Comptroller.sol";
+import { VToken } from "../VToken.sol";
 
 contract ComptrollerScenario is Comptroller {
     uint256 public blockNumber;

@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
-import "../Comptroller.sol";
-import "../Factories/VTokenProxyFactory.sol";
-import "../Factories/JumpRateModelFactory.sol";
-import "../Factories/WhitePaperInterestRateModelFactory.sol";
-import "../WhitePaperInterestRateModel.sol";
-import "../VToken.sol";
-import "../InterestRateModel.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-import "../Shortfall/Shortfall.sol";
-import "../VTokenInterfaces.sol";
-import "./PoolRegistryInterface.sol";
+import { PoolRegistryInterface } from "./PoolRegistryInterface.sol";
+import { Comptroller } from "../Comptroller.sol";
+import { VTokenProxyFactory } from "../Factories/VTokenProxyFactory.sol";
+import { JumpRateModelFactory } from "../Factories/JumpRateModelFactory.sol";
+import { WhitePaperInterestRateModelFactory } from "../Factories/WhitePaperInterestRateModelFactory.sol";
+import { WhitePaperInterestRateModel } from "../WhitePaperInterestRateModel.sol";
+import { VToken } from "../VToken.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
+import { Shortfall } from "../Shortfall/Shortfall.sol";
+import { VTokenInterface } from "../VTokenInterfaces.sol";
+import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
  * @title PoolRegistry
@@ -51,6 +55,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         uint256 supplyCap;
         uint256 borrowCap;
     }
+
+    uint256 internal constant MAX_POOL_NAME_LENGTH = 100;
 
     /**
      * @notice VTokenProxyFactory contract address
@@ -129,7 +135,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     /**
      * @dev Emitted when a Market is added to the pool.
      */
-    event MarketAdded(address indexed comptroller, address vTokenAddress);
+    event MarketAdded(address indexed comptroller, address indexed vTokenAddress);
 
     /**
      * @notice Event emitted when shortfall contract address is changed
@@ -141,11 +147,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      */
     event NewProtocolShareReserve(address indexed oldProtocolShareReserve, address indexed newProtocolShareReserve);
 
-    /**
-     * @notice Thrown if trying to set a zero address where it's not allowed
-     */
-    error ZeroAddressNotAllowed();
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -154,12 +155,15 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @dev Initializes the deployer to owner.
-     * @param vTokenFactory_ vToken factory address.
-     * @param jumpRateFactory_ jump rate factory address.
-     * @param whitePaperFactory_ white paper factory address.
-     * @param protocolShareReserve_ protocol's shares reserve address.
-     * @param accessControlManager_ AccessControlManager contract address.
+     * @dev Initializes the deployer to owner
+     * @param vTokenFactory_ vToken factory address
+     * @param jumpRateFactory_ jump rate factory address
+     * @param whitePaperFactory_ white paper factory address
+     * @param protocolShareReserve_ protocol's shares reserve address
+     * @param shortfall_ Shortfall contract address
+     * @param accessControlManager_ AccessControlManager contract address
+     * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
      */
     function initialize(
         VTokenProxyFactory vTokenFactory_,
@@ -205,10 +209,14 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
-     * @param priceOracle The pool's ResilientOracleInterface address
-     * @param maxLoopsLimit The maximum limit for the loops can iterate.
+     * @param minLiquidatableCollateral Minimal collateral for regular (non-batch) liquidations flow
+     * @param priceOracle The pool's price oracle address
+     * @param maxLoopsLimit The maximum number of iterations the loops can perform
+     * @param accessControlManager AccessControlManager contract address
      * @return index The index of the registered Venus pool
      * @return proxyAddress The the Comptroller proxy address
+     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller beacon address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
      */
     function createRegistryPool(
         string calldata name,
@@ -222,8 +230,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     ) external virtual returns (uint256 index, address proxyAddress) {
         _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
         // Input validation
-        require(beaconAddress != address(0), "PoolRegistry: Invalid Comptroller beacon address.");
-        require(priceOracle != address(0), "PoolRegistry: Invalid ResilientOracleInterface address.");
+        ensureNonzeroAddress(beaconAddress);
+        ensureNonzeroAddress(priceOracle);
 
         BeaconProxy proxy = new BeaconProxy(
             beaconAddress,
@@ -250,13 +258,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     /**
      * @notice Add a market to an existing pool and then mint to provide initial supply.
      * @param input The structure describing the parameters for adding a market to a pool.
+     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when VToken beacon address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when vTokenReceiver address is zero
      */
     function addMarket(AddMarketInput memory input) external {
         _checkAccessAllowed("addMarket(AddMarketInput)");
-        require(input.comptroller != address(0), "PoolRegistry: Invalid comptroller address");
-        require(input.asset != address(0), "PoolRegistry: Invalid asset address");
-        require(input.beaconAddress != address(0), "PoolRegistry: Invalid beacon address");
-        require(input.vTokenReceiver != address(0), "PoolRegistry: Invalid vTokenReceiver address");
+        ensureNonzeroAddress(input.comptroller);
+        ensureNonzeroAddress(input.asset);
+        ensureNonzeroAddress(input.beaconAddress);
+        ensureNonzeroAddress(input.vTokenReceiver);
 
         // solhint-disable-next-line reason-string
         require(
@@ -318,41 +330,48 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
 
         IERC20Upgradeable token = IERC20Upgradeable(input.asset);
         uint256 amountToSupply = _transferIn(token, msg.sender, input.initialSupply);
-        token.safeApprove(address(vToken), 0);
-        token.safeApprove(address(vToken), amountToSupply);
+        token.approve(address(vToken), 0);
+        token.approve(address(vToken), amountToSupply);
         vToken.mintBehalf(input.vTokenReceiver, amountToSupply);
 
         emit MarketAdded(address(comptroller), address(vToken));
     }
 
     /**
-     * @notice Modify existing Venus pool name.
+     * @notice Modify existing Venus pool name
+     * @param comptroller Pool's Comptroller
+     * @param name New pool name
      */
     function setPoolName(address comptroller, string calldata name) external {
         _checkAccessAllowed("setPoolName(address,string)");
         _ensureValidName(name);
-        string memory oldName = _poolByComptroller[comptroller].name;
-        _poolByComptroller[comptroller].name = name;
+        VenusPool storage pool = _poolByComptroller[comptroller];
+        string memory oldName = pool.name;
+        pool.name = name;
         emit PoolNameSet(comptroller, oldName, name);
     }
 
     /**
-     * @notice Update metadata of an existing pool.
+     * @notice Update metadata of an existing pool
+     * @param comptroller Pool's Comptroller
+     * @param metadata_ New pool metadata
      */
-    function updatePoolMetadata(address comptroller, VenusPoolMetaData memory _metadata) external {
+    function updatePoolMetadata(address comptroller, VenusPoolMetaData calldata metadata_) external {
         _checkAccessAllowed("updatePoolMetadata(address,VenusPoolMetaData)");
         VenusPoolMetaData memory oldMetadata = metadata[comptroller];
-        metadata[comptroller] = _metadata;
-        emit PoolMetadataUpdated(comptroller, oldMetadata, _metadata);
+        metadata[comptroller] = metadata_;
+        emit PoolMetadataUpdated(comptroller, oldMetadata, metadata_);
     }
 
     /**
-     * @notice Returns arrays of all Venus pools' data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     * @notice Returns arrays of all Venus pools' data
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive
+     * @return A list of all pools within PoolRegistry, with details for each pool
      */
     function getAllPools() external view override returns (VenusPool[] memory) {
-        VenusPool[] memory _pools = new VenusPool[](_numberOfPools);
-        for (uint256 i = 1; i <= _numberOfPools; ++i) {
+        uint256 numberOfPools_ = _numberOfPools; // storage load to save gas
+        VenusPool[] memory _pools = new VenusPool[](numberOfPools_);
+        for (uint256 i = 1; i <= numberOfPools_; ++i) {
             address comptroller = _poolsByID[i];
             _pools[i - 1] = (_poolByComptroller[comptroller]);
         }
@@ -390,20 +409,21 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @return The index of the registered Venus pool
      */
     function _registerPool(string calldata name, address comptroller) internal returns (uint256) {
-        VenusPool memory venusPool = _poolByComptroller[comptroller];
+        VenusPool storage storedPool = _poolByComptroller[comptroller];
 
-        require(venusPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
+        require(storedPool.creator == address(0), "PoolRegistry: Pool already exists in the directory.");
         _ensureValidName(name);
 
-        _numberOfPools++;
+        ++_numberOfPools;
+        uint256 numberOfPools_ = _numberOfPools; // cache on stack to save storage read gas
 
         VenusPool memory pool = VenusPool(name, msg.sender, comptroller, block.number, block.timestamp);
 
-        _poolsByID[_numberOfPools] = comptroller;
+        _poolsByID[numberOfPools_] = comptroller;
         _poolByComptroller[comptroller] = pool;
 
         emit PoolRegistered(comptroller, pool);
-        return _numberOfPools;
+        return numberOfPools_;
     }
 
     function _transferIn(
@@ -418,24 +438,20 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     function _setShortfallContract(Shortfall shortfall_) internal {
-        if (address(shortfall_) == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(address(shortfall_));
         address oldShortfall = address(shortfall);
         shortfall = shortfall_;
         emit NewShortfallContract(oldShortfall, address(shortfall_));
     }
 
     function _setProtocolShareReserve(address payable protocolShareReserve_) internal {
-        if (protocolShareReserve_ == address(0)) {
-            revert ZeroAddressNotAllowed();
-        }
+        ensureNonzeroAddress(protocolShareReserve_);
         address oldProtocolShareReserve = protocolShareReserve;
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, protocolShareReserve_);
     }
 
     function _ensureValidName(string calldata name) internal pure {
-        require(bytes(name).length <= 100, "Pool's name is too large");
+        require(bytes(name).length <= MAX_POOL_NAME_LENGTH, "Pool's name is too large");
     }
 }
