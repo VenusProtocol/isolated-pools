@@ -28,7 +28,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     uint256 public baseRatePerBlock;
 
     /**
-     * @notice The multiplierPerBlock after hitting a specified utilization point
+     * @notice The multiplier per block after hitting a specified utilization point
      */
     uint256 public jumpMultiplierPerBlock;
 

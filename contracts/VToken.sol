@@ -152,7 +152,7 @@ contract VToken is
     /**
      * @notice Increase approval for `spender`
      * @param spender The address of the account which may transfer tokens
-     * @param addedValue The number of tokens additional tokens spender can transfer
+     * @param addedValue The number of additional tokens spender can transfer
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
@@ -173,7 +173,7 @@ contract VToken is
     /**
      * @notice Decreases approval for `spender`
      * @param spender The address of the account which may transfer tokens
-     * @param subtractedValue The number of tokens tokens to remove from total approval
+     * @param subtractedValue The number of tokens to remove from total approval
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted

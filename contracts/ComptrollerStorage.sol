@@ -90,7 +90,7 @@ contract ComptrollerStorage {
     /// @notice Minimal collateral required for regular (non-batch) liquidations
     uint256 public minLiquidatableCollateral;
 
-    /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
+    /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting not allowed
     mapping(address => uint256) public supplyCaps;
 
     /// @notice True if a certain action is paused on a certain market
