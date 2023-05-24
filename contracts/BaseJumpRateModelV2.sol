@@ -138,7 +138,13 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
             return 0;
         }
 
-        return (borrows * BASE) / (cash + borrows - reserves);
+        uint256 rate = (borrows * BASE) / (cash + borrows - reserves);
+
+        if (rate > BASE) {
+            rate = BASE;
+        }
+
+        return rate;
     }
 
     /**

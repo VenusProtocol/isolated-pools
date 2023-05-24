@@ -843,7 +843,7 @@ contract VToken is
             redeemAmount = redeemAmountIn;
         }
 
-        // Require tokens is zero or amount is also zero
+        // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
         if ((redeemTokens == 0 && redeemAmount > 0) || (redeemTokens != 0 && redeemAmount == 0)) {
             revert("redeemTokens or redeemAmount is zero");
         }
