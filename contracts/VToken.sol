@@ -840,6 +840,7 @@ contract VToken is
              *  redeemAmount = redeemAmountIn
              */
             redeemTokens = div_(redeemAmountIn, exchangeRate);
+            if(redeemTokens * exchangeRate.mantissa !=  redeemAmountIn) redeemTokens++; // round up      
             redeemAmount = redeemAmountIn;
         }
 
