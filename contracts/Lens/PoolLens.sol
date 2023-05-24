@@ -264,8 +264,8 @@ contract PoolLens is ExponentialNoError {
             BadDebt memory badDebt;
             badDebt.vTokenAddress = address(markets[i]);
             badDebt.badDebtUsd =
-                (VToken(address(markets[i])).badDebt() *
-                priceOracle.getUnderlyingPrice(address(markets[i]))) / expScale;
+                (VToken(address(markets[i])).badDebt() * priceOracle.getUnderlyingPrice(address(markets[i]))) /
+                expScale;
             badDebtSummary.badDebts[i] = badDebt;
             totalBadDebtUsd = totalBadDebtUsd + badDebt.badDebtUsd;
         }
@@ -523,7 +523,7 @@ contract PoolLens is ExponentialNoError {
         Double memory supplierIndex = Double({
             mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
-        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa  >= rewardsDistributor.rewardTokenInitialIndex()) {
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa >= rewardsDistributor.rewardTokenInitialIndex()) {
             // Covers the case where users supplied tokens before the market's supply state index was set
             supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
