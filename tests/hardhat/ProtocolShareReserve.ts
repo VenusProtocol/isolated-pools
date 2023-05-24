@@ -1,6 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { constants } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
@@ -49,8 +50,8 @@ describe("ProtocolShareReserve: Tests", function () {
 
   it("Revert on invalid asset address.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(fakeComptroller.address, "0x0000000000000000000000000000000000000000", 10),
-    ).to.be.rejectedWith("ProtocolShareReserve: Asset address invalid");
+      protocolShareReserve.releaseFunds(fakeComptroller.address, constants.AddressZero, 10),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "ZeroAddressNotAllowed");
   });
 
   it("Revert on Insufficient balance.", async function () {
@@ -60,7 +61,7 @@ describe("ProtocolShareReserve: Tests", function () {
         mockDAI.address,
         10,
       ),
-    ).to.be.rejectedWith("ProtocolShareReserve: Insufficient pool balance");
+    ).to.be.revertedWith("ProtocolShareReserve: Insufficient pool balance");
   });
 
   it("Release liquidated share reserve", async function () {

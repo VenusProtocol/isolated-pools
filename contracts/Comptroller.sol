@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
-import "./VToken.sol";
-import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import "./ComptrollerInterface.sol";
-import "./ComptrollerStorage.sol";
-import "./Rewards/RewardsDistributor.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-import "./MaxLoopsLimitHelper.sol";
+import { ComptrollerInterface } from "./ComptrollerInterface.sol";
+import { ComptrollerStorage } from "./ComptrollerStorage.sol";
+import { ExponentialNoError } from "./ExponentialNoError.sol";
+import { VToken } from "./VToken.sol";
+import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
+import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
+import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
  * @title Comptroller Contract
@@ -27,10 +29,10 @@ contract Comptroller is
     address public immutable poolRegistry;
 
     /// @notice Emitted when an account enters a market
-    event MarketEntered(VToken vToken, address account);
+    event MarketEntered(VToken indexed vToken, address indexed account);
 
     /// @notice Emitted when an account exits a market
-    event MarketExited(VToken vToken, address account);
+    event MarketExited(VToken indexed vToken, address indexed account);
 
     /// @notice Emitted when close factor is changed by admin
     event NewCloseFactor(uint256 oldCloseFactorMantissa, uint256 newCloseFactorMantissa);
@@ -91,7 +93,7 @@ contract Comptroller is
     error ComptrollerMismatch();
 
     /**
-     * @notice Throwed during the liquidation if user's total collateral amount is lower than
+     * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
      *   or healAccount) are available.
      */
@@ -123,9 +125,11 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     constructor(address poolRegistry_) {
-        require(poolRegistry_ != address(0), "invalid pool registry address");
+        ensureNonzeroAddress(poolRegistry_);
 
         poolRegistry = poolRegistry_;
         _disableInitializers();
@@ -272,8 +276,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, minter);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
         }
     }
 
@@ -302,8 +307,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, redeemer);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
         }
     }
 
@@ -328,7 +334,8 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        oracle.updatePrice(vToken);
+        ResilientOracleInterface oracle_ = oracle;
+        oracle_.updatePrice(vToken);
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -342,7 +349,7 @@ contract Comptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        if (oracle.getUnderlyingPrice(vToken) == 0) {
+        if (oracle_.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
         }
 
@@ -374,8 +381,9 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
     }
 
@@ -401,8 +409,9 @@ contract Comptroller is
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
             Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-            rewardsDistributors[i].updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributors[i].distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
     }
 
@@ -433,8 +442,9 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        oracle.updatePrice(vTokenBorrowed);
-        oracle.updatePrice(vTokenCollateral);
+        ResilientOracleInterface oracle_ = oracle;
+        oracle_.updatePrice(vTokenBorrowed);
+        oracle_.updatePrice(vTokenCollateral);
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -519,9 +529,10 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vTokenCollateral);
-            rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, borrower);
-            rewardsDistributors[i].distributeSupplierRewardToken(vTokenCollateral, liquidator);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vTokenCollateral);
+            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
+            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
     }
 
@@ -556,9 +567,10 @@ contract Comptroller is
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
         for (uint256 i; i < rewardDistributorsCount; ++i) {
-            rewardsDistributors[i].updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, src);
-            rewardsDistributors[i].distributeSupplierRewardToken(vToken, dst);
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, src);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
         }
     }
 
@@ -580,10 +592,13 @@ contract Comptroller is
         uint256 userAssetsCount = userAssets.length;
 
         address liquidator = msg.sender;
-        // We need all user's markets to be fresh for the computations to be correct
-        for (uint256 i; i < userAssetsCount; ++i) {
-            userAssets[i].accrueInterest();
-            oracle.updatePrice(address(userAssets[i]));
+        {
+            ResilientOracleInterface oracle_ = oracle;
+            // We need all user's markets to be fresh for the computations to be correct
+            for (uint256 i; i < userAssetsCount; ++i) {
+                userAssets[i].accrueInterest();
+                oracle_.updatePrice(address(userAssets[i]));
+            }
         }
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(user, _getLiquidationThreshold);
@@ -604,7 +619,7 @@ contract Comptroller is
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanExp(Exp({ mantissa: mantissaOne }), percentage)) {
+        if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
             revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
         }
 
@@ -701,12 +716,12 @@ contract Comptroller is
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
-        require(closeFactorMaxMantissa >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
-        require(closeFactorMinMantissa <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
+        require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
+        require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
-        emit NewCloseFactor(oldCloseFactorMantissa, closeFactorMantissa);
+        emit NewCloseFactor(oldCloseFactorMantissa, newCloseFactorMantissa);
     }
 
     /**
@@ -737,12 +752,12 @@ contract Comptroller is
         }
 
         // Check collateral factor <= 0.9
-        if (newCollateralFactorMantissa > collateralFactorMaxMantissa) {
+        if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
             revert InvalidCollateralFactor();
         }
 
         // Ensure that liquidation threshold <= 1
-        if (newLiquidationThresholdMantissa > mantissaOne) {
+        if (newLiquidationThresholdMantissa > MANTISSA_ONE) {
             revert InvalidLiquidationThreshold();
         }
 
@@ -777,7 +792,7 @@ contract Comptroller is
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
-        require(newLiquidationIncentiveMantissa >= 1e18, "liquidation incentive should be greater than 1e18");
+        require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
@@ -826,11 +841,11 @@ contract Comptroller is
     /**
      * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
      * @dev This function is restricted by the AccessControlManager
-     * @dev A borrow cap of -1 corresponds to unlimited borrowing.
+     * @dev A borrow cap of type(uint256).max corresponds to unlimited borrowing.
      * @dev Borrow caps smaller than the current total borrows are accepted. This way, new borrows will not be allowed
             until the total borrows amount goes below the new borrow cap
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
-     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of -1 corresponds to unlimited borrowing.
+     * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of type(uint256).max corresponds to unlimited borrowing.
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
@@ -852,11 +867,11 @@ contract Comptroller is
     /**
      * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
      * @dev This function is restricted by the AccessControlManager
-     * @dev A supply cap of -1 corresponds to unlimited supply.
+     * @dev A supply cap of type(uint256).max corresponds to unlimited supply.
      * @dev Supply caps smaller than the current total supplies are accepted. This way, new supplies will not be allowed
             until the total supplies amount goes below the new supply cap
      * @param vTokens The addresses of the markets (tokens) to change the supply caps for
-     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of -1 corresponds to unlimited supply.
+     * @param newSupplyCaps The new supply cap values in underlying to be set. A value of type(uint256).max corresponds to unlimited supply.
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
@@ -953,13 +968,14 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets a new ResilientOracleInterface for the Comptroller
+     * @notice Sets a new price oracle for the Comptroller
      * @dev Only callable by the admin
-     * @param newOracle Address of the new ResilientOracleInterface to set
+     * @param newOracle Address of the new price oracle to set
      * @custom:event Emits NewPriceOracle on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the new oracle address is zero
      */
     function setPriceOracle(ResilientOracleInterface newOracle) external onlyOwner {
-        require(address(newOracle) != address(0), "invalid price oracle address");
+        ensureNonzeroAddress(address(newOracle));
 
         ResilientOracleInterface oldOracle = oracle;
         oracle = newOracle;
@@ -1120,29 +1136,31 @@ contract Comptroller is
         uint256 rewardsDistributorsLength = rewardsDistributors.length;
         rewardSpeeds = new RewardSpeeds[](rewardsDistributorsLength);
         for (uint256 i; i < rewardsDistributorsLength; ++i) {
-            address rewardToken = address(rewardsDistributors[i].rewardToken());
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            address rewardToken = address(rewardsDistributor.rewardToken());
             rewardSpeeds[i] = RewardSpeeds({
                 rewardToken: rewardToken,
-                supplySpeed: rewardsDistributors[i].rewardTokenSupplySpeeds(vToken),
-                borrowSpeed: rewardsDistributors[i].rewardTokenBorrowSpeeds(vToken)
+                supplySpeed: rewardsDistributor.rewardTokenSupplySpeeds(vToken),
+                borrowSpeed: rewardsDistributor.rewardTokenBorrowSpeeds(vToken)
             });
         }
         return rewardSpeeds;
     }
 
     /**
-     * @notice A marker method that returns true for a valid Comptroller contract
-     */
-    function isComptroller() external pure override returns (bool) {
-        return _isComptroller;
-    }
-
-    /**
      * @notice Return all reward distributors for this pool
      * @return Array of RewardDistributor addresses
      */
-    function getRewardDistributors() public view returns (RewardsDistributor[] memory) {
+    function getRewardDistributors() external view returns (RewardsDistributor[] memory) {
         return rewardsDistributors;
+    }
+
+    /**
+     * @notice A marker method that returns true for a valid Comptroller contract
+     * @return Always true
+     */
+    function isComptroller() external pure override returns (bool) {
+        return true;
     }
 
     /**
@@ -1165,7 +1183,7 @@ contract Comptroller is
         return
             markets[address(vToken)].collateralFactorMantissa == 0 &&
             actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == 1e18;
+            vToken.reserveFactorMantissa() == MANTISSA_ONE;
     }
 
     /**
@@ -1242,12 +1260,14 @@ contract Comptroller is
         address redeemer,
         uint256 redeemTokens
     ) internal view {
-        if (!markets[vToken].isListed) {
+        Market storage market = markets[vToken];
+
+        if (!market.isListed) {
             revert MarketNotListed(address(vToken));
         }
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!markets[vToken].accountMembership[redeemer]) {
+        if (!market.accountMembership[redeemer]) {
             return;
         }
 
@@ -1385,7 +1405,7 @@ contract Comptroller is
     /**
      * @dev Retrieves liquidation threshold for a market as an exponential
      * @param asset Address for asset to liquidation threshold
-     * @return Liquidaton threshold as exponential
+     * @return Liquidation threshold as exponential
      */
     function _getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
         return Exp({ mantissa: markets[address(asset)].liquidationThresholdMantissa });

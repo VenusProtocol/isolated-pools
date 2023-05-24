@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 
-import "../VToken.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+import { VToken } from "../VToken.sol";
+import { ComptrollerInterface } from "../ComptrollerInterface.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
 
 /**
  * @title Venus's VToken Contract

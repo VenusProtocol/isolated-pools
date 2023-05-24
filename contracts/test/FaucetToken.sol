@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./ERC20.sol";
+import { StandardToken, NonStandardToken } from "./ERC20.sol";
+import { SafeMath } from "./SafeMath.sol";
 
 /**
  * @title The Compound Faucet Test Token

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "./SafeMath.sol";
+import { SafeMath } from "./SafeMath.sol";
 
 interface ERC20Base {
     event Approval(address indexed owner, address indexed spender, uint256 value);

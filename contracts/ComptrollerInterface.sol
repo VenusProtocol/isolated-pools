@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import "./VToken.sol";
-import "./Rewards/RewardsDistributor.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+
+import { VToken } from "./VToken.sol";
+import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 
 interface ComptrollerInterface {
     /*** Assets You Are In ***/

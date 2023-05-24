@@ -518,8 +518,9 @@ describe("Risk Fund: Tests", function () {
   describe("Test all setters", async function () {
     describe("setPoolRegistry", async function () {
       it("reverts on invalid PoolRegistry address", async function () {
-        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: Pool registry address invalid",
+        await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 
@@ -540,8 +541,9 @@ describe("Risk Fund: Tests", function () {
 
     describe("setShortfallContractAddress", async function () {
       it("Reverts on invalid Auction contract address", async function () {
-        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: Shortfall contract address invalid",
+        await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 
@@ -563,8 +565,9 @@ describe("Risk Fund: Tests", function () {
 
     describe("setPancakeSwapRouter", async function () {
       it("Reverts on invalid PancakeSwap router contract address", async function () {
-        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWith(
-          "Risk Fund: PancakeSwap address invalid",
+        await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWithCustomError(
+          riskFund,
+          "ZeroAddressNotAllowed",
         );
       });
 
@@ -616,6 +619,33 @@ describe("Risk Fund: Tests", function () {
         await expect(
           riskFund.swapPoolsAssets([cUSDC.address], [convertToUnit(10, 18)], [[USDC.address, USDT.address]]),
         ).to.be.revertedWith("RiskFund: finally path must be convertible base asset");
+      });
+
+      it("fails if pool registry is not configured", async function () {
+        const [admin] = await ethers.getSigners();
+        const RiskFund = await ethers.getContractFactory("RiskFund");
+        const misconfiguredRiskFund = await upgrades.deployProxy(RiskFund, [
+          pancakeSwapRouter.address,
+          convertToUnit(10, 18),
+          BUSD.address,
+          accessControlManager.address,
+          150,
+        ]);
+        await accessControlManager.giveCallPermission(
+          misconfiguredRiskFund.address,
+          "swapPoolsAssets(address[],uint256[],address[][])",
+          admin.address,
+        );
+        await expect(
+          misconfiguredRiskFund.swapPoolsAssets(
+            [cUSDT.address, cUSDC.address],
+            [convertToUnit(10, 18), convertToUnit(10, 18)],
+            [
+              [USDT.address, BUSD.address],
+              [USDC.address, BUSD.address],
+            ],
+          ),
+        ).to.be.revertedWithCustomError(misconfiguredRiskFund, "ZeroAddressNotAllowed");
       });
     });
 

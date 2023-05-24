@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "../JumpRateModelV2.sol";
+import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+
+import { JumpRateModelV2 } from "../JumpRateModelV2.sol";
 
 contract JumpRateModelFactory {
     function deploy(
