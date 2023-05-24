@@ -503,7 +503,7 @@ contract PoolLens is ExponentialNoError {
         Double memory borrowerIndex = Double({
             mantissa: rewardsDistributor.rewardTokenBorrowerIndex(vToken, borrower)
         });
-        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa > 0) {
+        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa >= rewardsDistributor.rewardTokenInitialIndex()) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set
             borrowerIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
@@ -523,7 +523,7 @@ contract PoolLens is ExponentialNoError {
         Double memory supplierIndex = Double({
             mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
-        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa  >= rewardsDistributor.rewardTokenInitialIndex()) {
             // Covers the case where users supplied tokens before the market's supply state index was set
             supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
         }
