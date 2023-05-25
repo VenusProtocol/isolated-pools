@@ -102,38 +102,42 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param reserveFactorMantissa The current reserve factor for the market
+     * @param badDebt The amount of badDebt in the market
      * @return The supply rate percentage per block as a mantissa (scaled by EXP_SCALE)
      */
     function getSupplyRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves,
-        uint256 reserveFactorMantissa
+        uint256 reserveFactorMantissa,
+        uint256 badDebt
     ) public view virtual override returns (uint256) {
         uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
-        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves);
+        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);
         uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
-        return (utilizationRate(cash, borrows, reserves) * rateToPool) / EXP_SCALE;
+        return (utilizationRate(cash, borrows, reserves, badDebt) * rateToPool) / EXP_SCALE;
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
+     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market (currently unused)
+     * @param badDebt The amount of badDebt in the market
      * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
      */
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves
+        uint256 reserves,
+        uint256 badDebt
     ) public pure returns (uint256) {
         // Utilization rate is 0 when there are no borrows
-        if (borrows == 0) {
+        if ((borrows + badDebt) == 0) {
             return 0;
         }
 
-        uint256 rate = (borrows * EXP_SCALE) / (cash + borrows - reserves);
+        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
 
         if (rate > EXP_SCALE) {
             rate = EXP_SCALE;
@@ -168,14 +172,16 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
+     * @param badDebt The amount of badDebt in the market
      * @return The borrow rate percentage per block as a mantissa (scaled by EXP_SCALE)
      */
     function _getBorrowRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves
+        uint256 reserves,
+        uint256 badDebt
     ) internal view returns (uint256) {
-        uint256 util = utilizationRate(cash, borrows, reserves);
+        uint256 util = utilizationRate(cash, borrows, reserves, badDebt);
         uint256 kink_ = kink;
 
         if (util <= kink_) {
