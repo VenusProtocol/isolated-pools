@@ -152,7 +152,7 @@ contract VToken is
     /**
      * @notice Increase approval for `spender`
      * @param spender The address of the account which may transfer tokens
-     * @param addedValue The number of tokens additional tokens spender can transfer
+     * @param addedValue The number of additional tokens spender can transfer
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
@@ -173,7 +173,7 @@ contract VToken is
     /**
      * @notice Decreases approval for `spender`
      * @param spender The address of the account which may transfer tokens
-     * @param subtractedValue The number of tokens tokens to remove from total approval
+     * @param subtractedValue The number of tokens to remove from total approval
      * @return success Whether or not the approval succeeded
      * @custom:event Emits Approval event
      * @custom:access Not restricted
@@ -358,7 +358,7 @@ contract VToken is
 
     /**
      * @notice sets protocol share accumulated from liquidations
-     * @dev must be less than liquidation incentive - 1
+     * @dev must be equal or less than liquidation incentive - 1
      * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
      * @custom:event Emits NewProtocolSeizeShare event on success
      * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
@@ -451,6 +451,10 @@ contract VToken is
         address borrower,
         uint256 repayAmount
     ) external override nonReentrant {
+        if (repayAmount != 0) {
+            comptroller.preRepayHook(address(this), borrower);
+        }
+
         if (msg.sender != address(comptroller)) {
             revert HealBorrowUnauthorized();
         }
@@ -464,7 +468,13 @@ contract VToken is
             // We violate checks-effects-interactions here to account for tokens that take transfer fees
             actualRepayAmount = _doTransferIn(payer, repayAmount);
             totalBorrowsNew = totalBorrowsNew - actualRepayAmount;
-            emit RepayBorrow(payer, borrower, actualRepayAmount, 0, totalBorrowsNew);
+            emit RepayBorrow(
+                payer,
+                borrower,
+                actualRepayAmount,
+                accountBorrowsPrev - actualRepayAmount,
+                totalBorrowsNew
+            );
         }
 
         // The transaction will fail if trying to repay too much
@@ -476,7 +486,7 @@ contract VToken is
             badDebt = badDebtNew;
 
             // We treat healing as "repayment", where vToken is the payer
-            emit RepayBorrow(address(this), borrower, badDebtDelta, accountBorrowsPrev - badDebtDelta, totalBorrowsNew);
+            emit RepayBorrow(address(this), borrower, badDebtDelta, 0, totalBorrowsNew);
             emit BadDebtIncreased(borrower, badDebtDelta, badDebtOld, badDebtNew);
         }
 
@@ -845,12 +855,15 @@ contract VToken is
              *  redeemAmount = redeemAmountIn
              */
             redeemTokens = div_(redeemAmountIn, exchangeRate);
+
+            uint256 _redeemAmount = mul_(redeemTokens, exchangeRate);
+            if (_redeemAmount != 0 && _redeemAmount != redeemAmountIn) redeemTokens++; // round up
             redeemAmount = redeemAmountIn;
         }
 
-        // Require tokens is zero or amount is also zero
-        if (redeemTokens == 0 && redeemAmount > 0) {
-            revert("redeemTokens zero");
+        // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
+        if ((redeemTokens == 0 && redeemAmount > 0) || (redeemTokens != 0 && redeemAmount == 0)) {
+            revert("redeemTokens or redeemAmount is zero");
         }
 
         /* Fail if redeem not allowed */

@@ -252,7 +252,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         // Start transferring ownership to msg.sender
         comptrollerProxy.transferOwnership(msg.sender);
 
-        // Register the pool with this PoolRegistry
         return (poolId, proxyAddress);
     }
 
