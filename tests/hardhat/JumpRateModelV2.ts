@@ -1,5 +1,6 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
@@ -14,6 +15,15 @@ describe("Jump rate model tests", () => {
   let accessControlManager: FakeContract<AccessControlManager>;
 
   const kink = convertToUnit(8, 17);
+  const cash = convertToUnit(10, 19);
+  const borrows = convertToUnit(4, 19);
+  const reserves = convertToUnit(2, 19);
+  const badDebt = convertToUnit(1, 19);
+  const expScale = convertToUnit(1, 18);
+  const blocksPerYear = 10512000;
+  const baseRatePerYear = convertToUnit(2, 12);
+  const multiplierPerYear = convertToUnit(4, 14);
+  const jumpMultiplierPerYear = convertToUnit(2, 18);
 
   const fixture = async () => {
     accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -21,9 +31,9 @@ describe("Jump rate model tests", () => {
 
     const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelV2");
     jumpRateModel = await JumpRateModelFactory.deploy(
-      convertToUnit(2, 12),
-      convertToUnit(4, 14),
-      convertToUnit(2, 18),
+      baseRatePerYear,
+      multiplierPerYear,
+      jumpMultiplierPerYear,
       kink,
       accessControlManager.address,
     );
@@ -35,72 +45,88 @@ describe("Jump rate model tests", () => {
   });
 
   it("Update jump rate model", async () => {
-    expect(await jumpRateModel.baseRatePerBlock()).equal("190258");
-    expect(await jumpRateModel.multiplierPerBlock()).equal("47564687");
-    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal("190258751902");
+    let baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(blocksPerYear).toFixed(0);
+    let multiplierPerBlock = new BigNumber(multiplierPerYear)
+      .multipliedBy(expScale)
+      .dividedBy(new BigNumber(blocksPerYear).multipliedBy(kink))
+      .toFixed(0);
+    let jumpMultiplierPerBlock = new BigNumber(jumpMultiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
+
+    expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
+    expect(await jumpRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
+    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal(jumpMultiplierPerBlock);
     expect(await jumpRateModel.kink()).equal(kink);
 
     await jumpRateModel.updateJumpRateModel(convertToUnit(3, 12), convertToUnit(5, 14), convertToUnit(2.2, 18), kink);
 
-    expect(await jumpRateModel.baseRatePerBlock()).equal("285388");
-    expect(await jumpRateModel.multiplierPerBlock()).equal("59455859");
-    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal("209284627092");
+    baseRatePerBlock = new BigNumber(convertToUnit(3, 12)).dividedBy(blocksPerYear).toFixed(0);
+    multiplierPerBlock = new BigNumber(convertToUnit(5, 14))
+      .multipliedBy(expScale)
+      .dividedBy(new BigNumber(blocksPerYear).multipliedBy(kink))
+      .toFixed(0);
+    jumpMultiplierPerBlock = new BigNumber(convertToUnit(2.2, 18)).dividedBy(blocksPerYear).toFixed(0);
+
+    expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
+    expect(await jumpRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
+    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal(jumpMultiplierPerBlock);
     expect(await jumpRateModel.kink()).equal(kink);
   });
 
   it("Utilization rate: borrows and badDebt is zero", async () => {
-    expect(
-      await jumpRateModel.utilizationRate(
-        convertToUnit(10, 19),
-        convertToUnit(0, 17),
-        convertToUnit(1, 19),
-        convertToUnit(0, 19),
-      ),
-    ).equal(0);
+    expect(await jumpRateModel.utilizationRate(cash, 0, reserves, 0)).equal(0);
   });
 
   it("Utilization rate", async () => {
-    expect(
-      await jumpRateModel.utilizationRate(
-        convertToUnit(10, 19),
-        convertToUnit(4, 19),
-        convertToUnit(2, 19),
-        convertToUnit(1, 19),
-      ),
-    ).equal("384615384615384615");
+    const utilizationRate = new BigNumber(Number(borrows) + Number(badDebt))
+      .multipliedBy(expScale)
+      .dividedBy(Number(cash) + Number(borrows) + Number(badDebt) - Number(reserves))
+      .toFixed(0);
+
+    expect(await jumpRateModel.utilizationRate(cash, borrows, reserves, badDebt)).equal(utilizationRate);
   });
 
   it("Borrow Rate: below kink utilization", async () => {
-    expect(
-      await jumpRateModel.getBorrowRate(
-        convertToUnit(10, 19),
-        convertToUnit(4, 19),
-        convertToUnit(2, 19),
-        convertToUnit(1, 19),
-      ),
-    ).equal("23153026");
+    const multiplierPerBlock = (await jumpRateModel.multiplierPerBlock()).toString();
+    const baseRatePerBlock = (await jumpRateModel.baseRatePerBlock()).toString();
+    const utilizationRate = (await jumpRateModel.utilizationRate(cash, borrows, reserves, badDebt)).toString();
+
+    const value = new BigNumber(utilizationRate).multipliedBy(multiplierPerBlock).dividedBy(expScale).toFixed(0);
+
+    expect(await jumpRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).equal(
+      Number(value) + Number(baseRatePerBlock),
+    );
   });
 
   it("Borrow Rate: above kink utilization", async () => {
-    expect(
-      await jumpRateModel.getBorrowRate(
-        convertToUnit(6, 19),
-        convertToUnit(16, 19),
-        convertToUnit(2, 19),
-        convertToUnit(1, 19),
-      ),
-    ).equal("2041036999");
+    const multiplierPerBlock = (await jumpRateModel.multiplierPerBlock()).toString();
+    const jumpMultiplierPerBlock = (await jumpRateModel.jumpMultiplierPerBlock()).toString();
+    const baseRatePerBlock = (await jumpRateModel.baseRatePerBlock()).toString();
+    const utilizationRate = (
+      await jumpRateModel.utilizationRate(convertToUnit(6, 19), convertToUnit(16, 19), reserves, badDebt)
+    ).toString();
+
+    const value = new BigNumber(kink).multipliedBy(multiplierPerBlock).dividedBy(expScale).toFixed(0);
+
+    const normalRate = Number(value) + Number(baseRatePerBlock);
+    const excessUtil = Number(utilizationRate) - Number(kink);
+
+    const jumpValue = new BigNumber(excessUtil).multipliedBy(jumpMultiplierPerBlock).dividedBy(expScale).toFixed(0);
+
+    expect(await jumpRateModel.getBorrowRate(convertToUnit(6, 19), convertToUnit(16, 19), reserves, badDebt)).equal(
+      Number(jumpValue) + Number(normalRate),
+    );
   });
 
   it("Supply Rate", async () => {
-    expect(
-      await jumpRateModel.getSupplyRate(
-        convertToUnit(10, 19),
-        convertToUnit(4, 19),
-        convertToUnit(2, 19),
-        convertToUnit(1, 17),
-        convertToUnit(1, 19),
-      ),
-    ).equal("8014508");
+    const reserveMantissa = convertToUnit(1, 17);
+    const oneMinusReserveFactor = Number(expScale) - Number(reserveMantissa);
+    const borrowRate = (await jumpRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).toString();
+    const rateToPool = new BigNumber(borrowRate).multipliedBy(oneMinusReserveFactor).dividedBy(expScale).toFixed(0);
+    const rate = new BigNumber(borrows)
+      .multipliedBy(expScale)
+      .dividedBy(Number(cash) + Number(borrows) + Number(badDebt) - Number(reserves));
+    const supplyRate = new BigNumber(rateToPool).multipliedBy(rate).dividedBy(expScale).toFixed(0);
+
+    expect(await jumpRateModel.getSupplyRate(cash, borrows, reserves, reserveMantissa, badDebt)).equal(supplyRate);
   });
 });
