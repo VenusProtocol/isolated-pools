@@ -480,7 +480,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 
-  describe.only("Liquidation of user via VToken", () => {
+  describe("Liquidation of user via VToken", () => {
     let mintAmount = convertToUnit("1", 17);
     let vTokenMintAmount = convertToUnit("1", 7);
     let acc1Signer: Signer;
@@ -511,30 +511,19 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.emit(vBTCB, "Borrow")
         .withArgs(acc2, BTCBBorrowAmount, BTCBBorrowAmount, BTCBBorrowAmount);
 
-      // const add = await Comptroller.oracle();
-      // const oracle1 = await ethers.getContractAt("ResilientOracleInterface", add);
-      // console.log(await oracle1.getUnderlyingPrice(vBNX.address));
-      // console.log(await oracle1.getUnderlyingPrice(vBTCB.address));
-
       // Approve more assets for liquidation
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
     });
 
-    it.only("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
-      console.log(await Comptroller.getAccountLiquidity(acc2));
+    it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
       const collateral: BigNumberish = vBNXPrice * mintAmount;
       await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, BTCBBorrowAmount, vBTCB.address))
         .to.be.revertedWithCustomError(Comptroller, "MinimalCollateralViolated")
         .withArgs("100000000000000000000", collateral.toString());
     });
 
-    it.only("Should revert when try to drain market", async function () {
-      console.log(await Comptroller.getAccountLiquidity(acc2));
-      const add = await Comptroller.oracle();
-      const oracle1 = await ethers.getContractAt("ResilientOracleInterface", add);
-      console.log(await oracle1.getUnderlyingPrice(vBNX.address));
-      console.log(await oracle1.getUnderlyingPrice(vBTCB.address));
+    it("Should revert when try to drain market", async function () {
       const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
@@ -617,9 +606,6 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .withArgs(acc2, mintAmount, vTokenMintAmount, expectedTotalBalance);
 
       // price manipulation and borrow to overcome insufficient shortfall
-      console.log(await Comptroller.getAccountLiquidity(acc2));
-      console.log(await vBNX.getAccountSnapshot(acc2));
-      console.log(await vBTCB.getAccountSnapshot(acc2));
       const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
@@ -632,7 +618,6 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
       const seizeTokens = (seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE).toFixed(0);
-
       await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, maxClose.toString(), vBNX.address))
         .to.emit(vBTCB, "LiquidateBorrow")
         .withArgs(acc1, acc2, maxClose.toString(), vBNX.address, seizeTokensOverall.toFixed(0));
@@ -722,7 +707,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       result = await Comptroller.connect(acc1Signer).healAccount(acc2);
       await expect(result)
         .to.emit(vBTCB, "RepayBorrow")
-        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, repayAmount, 0)
+        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, 0, 0)
         .to.emit(vBTCB, "BadDebtIncreased")
         .withArgs(acc2, BTCBBorrowAmount - repayAmount, 0, badDebt);
 
