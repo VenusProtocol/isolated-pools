@@ -1,6 +1,7 @@
 import { smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -13,6 +14,7 @@ import {
   Comptroller__factory,
   FaucetToken,
   FaucetToken__factory,
+  IProtocolShareReserve__factory,
   MockToken,
   MockToken__factory,
   VToken,
@@ -185,10 +187,49 @@ if (FORK_TESTNET) {
         await comptroller.setMinLiquidatableCollateral(0);
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("100", 15));
         const borrowBalance = await vUSDT.borrowBalanceStored(acc2);
+
+        const [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc2);
+        expect(err).equals(0);
+        expect(liquidity).equals(0);
+        expect(shortfall).greaterThan(0);
+
+        const totalRerservesUsddPrev = await vUSDD.totalReserves();
+        const vUSDDBalAcc1Prev = await vUSDD.balanceOf(acc1);
+        const vUSDDBalAcc2Prev = await vUSDD.balanceOf(acc2);
+
+        const borrowBalancePrev = await vUSDT.borrowBalanceStored(acc2);
         const closeFactor = await comptroller.closeFactorMantissa();
         const maxClose = (borrowBalance * closeFactor) / 1e18;
+
+        const priceBorrowed = await priceOracle.getUnderlyingPrice(vUSDT.address);
+        const priceCollateral = await priceOracle.getUnderlyingPrice(vUSDD.address);
+        const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
+        const exchangeRateCollateralPrev = await vUSDD.callStatic.exchangeRateCurrent();
+        const num = (liquidationIncentive * priceBorrowed) / 1e18;
+        const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
+        const ratio = num / den;
+        const seizeTokens = ratio * maxClose;
+
         const result = vUSDT.connect(acc1Signer).liquidateBorrow(acc2, maxClose.toString(), vUSDD.address);
+
         await expect(result).to.emit(vUSDT, "LiquidateBorrow");
+        const vUSDDBalAcc2New = await vUSDD.balanceOf(acc2);
+        const vUSDDBalAcc1New = await vUSDD.balanceOf(acc1);
+        const totalRerservesUsddNew = await vUSDD.totalReserves();
+        const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
+
+        const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
+        const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
+        const reservIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
+        const borrowBalanceNew = await vUSDT.borrowBalanceStored(acc2);
+
+        expect(borrowBalancePrev - maxClose).equals(borrowBalanceNew);
+        expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
+        expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
+        expect(totalRerservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+          Math.round(reservIncrease),
+          parseUnits("0.00003", 18),
+        );
       });
     });
 
