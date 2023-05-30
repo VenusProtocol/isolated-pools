@@ -33,6 +33,11 @@ const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
 const ORACLE = "0xfc4e26B7fD56610E84d33372435F0275A359E8eF";
 const acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
 const acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
+const USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
+const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
+const COMPTROLLER = "0x605AA769d14F6Af2E405295FEC2A4d8Baa623d80";
+const VUSDD = "0xeD7401294EBF0A1b0721562a69031565F4a4Bacd";
+const VUSDT = "0x296da137120562c79b26808c1aa142a59ebf31f4";
 
 let impersonatedTimelock: Signer;
 let impersonatedOracleOwner: Signer;
@@ -92,11 +97,11 @@ if (FORK_TESTNET) {
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
 
-      usdt = FaucetToken__factory.connect("0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c", impersonatedTimelock);
-      usdd = MockToken__factory.connect("0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382", impersonatedTimelock);
-      vUSDT = await configureVToken("0x296da137120562c79b26808c1aa142a59ebf31f4");
-      vUSDD = await configureVToken("0xeD7401294EBF0A1b0721562a69031565F4a4Bacd");
-      comptroller = Comptroller__factory.connect("0x605AA769d14F6Af2E405295FEC2A4d8Baa623d80", impersonatedTimelock);
+      usdt = FaucetToken__factory.connect(USDT, impersonatedTimelock);
+      usdd = MockToken__factory.connect(USDD, impersonatedTimelock);
+      vUSDT = await configureVToken(VUSDT);
+      vUSDD = await configureVToken(VUSDD);
+      comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       priceOracle = ChainlinkOracle__factory.connect(ORACLE, impersonatedOracleOwner);
 
       await grantPermissions();
