@@ -115,8 +115,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
         uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);
         uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
-        uint256 rate = ((borrows * EXP_SCALE) / (cash + borrows + badDebt - reserves));
-        return (rate * rateToPool) / EXP_SCALE;
+        uint256 incomeToDistribute = borrows * rateToPool;
+        uint256 supply = cash + borrows + badDebt - reserves;
+        return incomeToDistribute / supply;
     }
 
     /**
