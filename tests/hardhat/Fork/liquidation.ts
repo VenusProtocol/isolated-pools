@@ -283,8 +283,25 @@ if (FORK_TESTNET) {
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 14)); // 100000000000000
         await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 2)); // 100000000000000
 
-        const repayAmount = 1000001022346902; // After interest accrual
+        const [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc2);
+        expect(err).equals(0);
+        expect(liquidity).equals(0);
+        expect(shortfall).greaterThan(0);
 
+        const totalRerservesUsddPrev = await vUSDD.totalReserves();
+        const vUSDDBalAcc1Prev = await vUSDD.balanceOf(acc1);
+        const vUSDDBalAcc2Prev = await vUSDD.balanceOf(acc2);
+
+        const priceBorrowed = await priceOracle.getUnderlyingPrice(vUSDT.address);
+        const priceCollateral = await priceOracle.getUnderlyingPrice(vUSDD.address);
+        const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
+        const exchangeRateCollateralPrev = await vUSDD.callStatic.exchangeRateCurrent();
+        const num = (liquidationIncentive * priceBorrowed) / 1e18;
+        const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
+        const ratio = num / den;
+
+        const repayAmount = 1000001022346902; // After interest accrual
+        const seizeTokens = ratio * repayAmount;
         const param = {
           vTokenCollateral: vUSDD.address,
           vTokenBorrowed: vUSDT.address,
@@ -293,6 +310,22 @@ if (FORK_TESTNET) {
         const result = comptroller.connect(acc1Signer).liquidateAccount(acc2, [param]);
         await expect(result).to.emit(vUSDT, "LiquidateBorrow");
         expect(await vUSDT.borrowBalanceStored(acc2)).equals(0);
+
+        const vUSDDBalAcc1New = await vUSDD.balanceOf(acc1);
+        const vUSDDBalAcc2New = await vUSDD.balanceOf(acc2);
+        const totalRerservesUsddNew = await vUSDD.totalReserves();
+        const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
+
+        const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
+        const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
+        const reservIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
+
+        expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
+        expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
+        expect(totalRerservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+          Math.round(reservIncrease),
+          parseUnits("0.00003", 18),
+        );
       });
     });
 
