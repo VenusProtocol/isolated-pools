@@ -300,7 +300,7 @@ contract Comptroller is
         uint256 redeemTokens
     ) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
-        oracle.updatePrice(vToken);
+
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
@@ -334,8 +334,8 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vToken);
+        //Update the prices of tokens
+        updatePrices(borrower);
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -349,7 +349,7 @@ contract Comptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        if (oracle_.getUnderlyingPrice(vToken) == 0) {
+        if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
         }
 
@@ -442,9 +442,8 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vTokenBorrowed);
-        oracle_.updatePrice(vTokenCollateral);
+        //Update the prices of tokens
+        updatePrices(borrower);
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -556,8 +555,6 @@ contract Comptroller is
         uint256 transferTokens
     ) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
-
-        oracle.updatePrice(vToken);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
@@ -1185,6 +1182,21 @@ contract Comptroller is
     }
 
     /**
+     * @notice Update the prices of all the tokens associated with the provided account
+     * @param account Address of the account to get associated tokens with
+     */
+    function updatePrices(address account) public {
+        VToken[] memory vTokens = accountAssets[account];
+        uint256 vTokensCount = vTokens.length;
+
+        ResilientOracleInterface oracle_ = oracle;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            oracle_.updatePrice(address(vTokens[i]));
+        }
+    }
+
+    /**
      * @notice Checks if a certain action is paused on a market
      * @param market vToken address
      * @param action Action to check
@@ -1280,7 +1292,7 @@ contract Comptroller is
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) internal view {
+    ) internal {
         Market storage market = markets[vToken];
 
         if (!market.isListed) {
@@ -1291,6 +1303,9 @@ contract Comptroller is
         if (!market.accountMembership[redeemer]) {
             return;
         }
+
+        //Update the prices of tokens
+        updatePrices(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
