@@ -142,6 +142,10 @@ describe("Comptroller", () => {
         comptroller,
         "PriceError",
       );
+      await expect(comptroller.getBorrowingPower(await accounts[1].getAddress())).to.be.revertedWithCustomError(
+        comptroller,
+        "PriceError",
+      );
     });
 
     it("allows a borrow up to collateralFactor, but not more", async () => {
@@ -181,6 +185,12 @@ describe("Comptroller", () => {
 
       // total account liquidity after supplying `amount`
       [error, liquidity, shortfall] = await comptroller.getAccountLiquidity(await user.getAddress());
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(liquidity).to.equal(amount * collateralFactor);
+      expect(shortfall).to.equal(0);
+
+      // shortfall should be again 0
+      [error, liquidity, shortfall] = await comptroller.getBorrowingPower(await user.getAddress());
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(amount * collateralFactor);
       expect(shortfall).to.equal(0);
@@ -313,6 +323,32 @@ describe("Comptroller", () => {
   describe("getAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
       const [error, liquidity, shortfall] = await comptroller.getAccountLiquidity(await accounts[0].getAddress());
+      expect(error).to.equal(Error.NO_ERROR);
+      expect(liquidity).to.equal(0);
+      expect(shortfall).to.equal(0);
+    });
+
+    it("reverts if market already listed", async () => {
+      const vToken = await makeVToken({
+        accessControl,
+        comptroller,
+        oracle,
+        supportMarket: true,
+        collateralFactor: 0.7,
+        underlyingPrice: 2.12,
+        poolRegistry,
+        maxLoopsLimit: 151,
+      });
+      const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+      await expect(comptroller.connect(poolRegistrySigner).supportMarket(vToken.address))
+        .to.be.revertedWithCustomError(comptroller, "MarketAlreadyListed")
+        .withArgs(vToken.address);
+    });
+  });
+
+  describe("getBorrowingPower", () => {
+    it("returns 0 if not 'in' any markets", async () => {
+      const [error, liquidity, shortfall] = await comptroller.getBorrowingPower(await accounts[0].getAddress());
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(0);
       expect(shortfall).to.equal(0);

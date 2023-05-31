@@ -90,7 +90,7 @@ describe("liquidateAccount", () => {
         oracle.getUnderlyingPrice.returns(parseUnits("1", 18));
         await comptroller
           .connect(poolRegistry.wallet)
-          .setCollateralFactor(vToken.address, parseUnits("0.9", 18), parseUnits("0.9", 18));
+          .setCollateralFactor(vToken.address, parseUnits("0.8", 18), parseUnits("0.9", 18));
         return vToken;
       }),
     );

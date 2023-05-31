@@ -293,7 +293,7 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(bnxCollateralFactor).multipliedBy(vBNXPrice));
       expect(shortfall).to.equal(0);
@@ -308,7 +308,7 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getBorrowingPower(acc1);
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(btcbCollateralFactor).multipliedBy(vBTCBPrice));
       expect(shortfall).to.equal(0);
@@ -338,7 +338,7 @@ describe("Positive Cases", () => {
       const bnxLiquidity = new BigNumber(mintAmount).minus(new BigNumber(tokenRedeemAmount)).multipliedBy(vBNXPrice);
       const BTCBBorrow = new BigNumber(borrowBalance.toString()).multipliedBy(vBTCBPrice);
       let preComputeLiquidity = bnxLiquidity.minus(BTCBBorrow).multipliedBy(bnxCollateralFactor);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 18)));
       expect(shortfall).to.equal(0);
@@ -353,7 +353,7 @@ describe("Positive Cases", () => {
       expect(balance).to.equal(balanceAfterVToken);
       expect(borrowBalance).to.equal(0);
       preComputeLiquidity = balanceAfter.multipliedBy(bnxCollateralFactor).multipliedBy(vBNXPrice);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 14)));
       expect(shortfall).to.equal(0);
@@ -899,17 +899,17 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBTCB.connect(acc3Signer).redeem(redeemAmount);
     await mineBlock();
     await toggleMining(true);
-    [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getBorrowingPower(acc1);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount1 * btcbCollateralFactor * vBTCBPrice).toString());
     expect(shortfall).to.equal(0);
 
-    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc2);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getBorrowingPower(acc2);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount2 * bnxCollateralFactor * vBNXPrice).toString());
     expect(shortfall).to.equal(0);
 
-    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc3);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getBorrowingPower(acc3);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount3 * bnxCollateralFactor * vBNXPrice).toString());
     expect(shortfall).to.equal(0);

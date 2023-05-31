@@ -991,6 +991,27 @@ contract Comptroller is
     }
 
     /**
+     * @notice Determine the current account liquidity with respect to liquidation threshold requirements
+     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param account The account get liquidity for
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Account liquidity in excess of liquidation threshold requirements,
+     * @return shortfall Account shortfall below liquidation threshold requirements
+     */
+    function getAccountLiquidity(address account)
+        external
+        view
+        returns (
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
+        )
+    {
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getLiquidationThreshold);
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -998,7 +1019,7 @@ contract Comptroller is
      * @return liquidity Account liquidity in excess of collateral requirements,
      * @return shortfall Account shortfall below collateral requirements
      */
-    function getAccountLiquidity(address account)
+    function getBorrowingPower(address account)
         external
         view
         returns (
