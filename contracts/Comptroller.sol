@@ -344,7 +344,7 @@ contract Comptroller is
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
             _checkSenderIs(vToken);
-
+            _ensureMaxLoops(accountAssets[msg.sender].length + 1);
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
         }
@@ -619,7 +619,7 @@ contract Comptroller is
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
+        if (lessThanOrEqualExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
             revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
         }
 
@@ -907,7 +907,7 @@ contract Comptroller is
         uint256 marketsCount = marketsList.length;
         uint256 actionsCount = actionsList.length;
 
-        _ensureMaxLoops(marketsCount);
+        _ensureMaxLoops(marketsCount * actionsCount);
 
         for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
             for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
