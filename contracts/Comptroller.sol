@@ -199,6 +199,8 @@ contract Comptroller is
             revert NonzeroBorrowBalance();
         }
 
+        /*Update the prices of tokens*/
+        updatePrices(msg.sender);
         /* Fail if the sender is not permitted to redeem all of their tokens */
         _checkRedeemAllowed(vTokenAddress, msg.sender, tokensHeld);
 
@@ -300,7 +302,9 @@ contract Comptroller is
         uint256 redeemTokens
     ) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
-        oracle.updatePrice(vToken);
+
+        //Update the prices of tokens
+        updatePrices(redeemer);
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
@@ -334,8 +338,8 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vToken);
+        //Update the prices of tokens
+        updatePrices(borrower);
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
@@ -349,7 +353,7 @@ contract Comptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        if (oracle_.getUnderlyingPrice(vToken) == 0) {
+        if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
         }
 
@@ -442,9 +446,8 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vTokenBorrowed);
-        oracle_.updatePrice(vTokenCollateral);
+        //Update the prices of tokens
+        updatePrices(borrower);
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -557,7 +560,8 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
 
-        oracle.updatePrice(vToken);
+        //Update the prices of tokens
+        updatePrices(src);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
@@ -1161,6 +1165,21 @@ contract Comptroller is
      */
     function isComptroller() external pure override returns (bool) {
         return true;
+    }
+
+    /**
+     * @notice Update the prices of all the tokens associated with the provided account
+     * @param account Address of the account to get associated tokens with
+     */
+    function updatePrices(address account) public {
+        VToken[] memory vTokens = accountAssets[account];
+        uint256 vTokensCount = vTokens.length;
+
+        ResilientOracleInterface oracle_ = oracle;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            oracle_.updatePrice(address(vTokens[i]));
+        }
     }
 
     /**
