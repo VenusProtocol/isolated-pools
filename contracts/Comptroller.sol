@@ -199,8 +199,6 @@ contract Comptroller is
             revert NonzeroBorrowBalance();
         }
 
-        /*Update the prices of tokens*/
-        updatePrices(msg.sender);
         /* Fail if the sender is not permitted to redeem all of their tokens */
         _checkRedeemAllowed(vTokenAddress, msg.sender, tokensHeld);
 
@@ -303,8 +301,6 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
 
-        //Update the prices of tokens
-        updatePrices(redeemer);
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
@@ -559,9 +555,6 @@ contract Comptroller is
         uint256 transferTokens
     ) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
-
-        //Update the prices of tokens
-        updatePrices(src);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
@@ -1278,7 +1271,7 @@ contract Comptroller is
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) internal view {
+    ) internal {
         Market storage market = markets[vToken];
 
         if (!market.isListed) {
@@ -1289,6 +1282,9 @@ contract Comptroller is
         if (!market.accountMembership[redeemer]) {
             return;
         }
+
+        //Update the prices of tokens
+        updatePrices(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
