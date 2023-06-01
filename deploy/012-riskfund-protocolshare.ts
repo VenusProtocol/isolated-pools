@@ -1,24 +1,24 @@
 import * as ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
+import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { convertToUnit } from "../helpers/utils";
-import { PoolRegistry, VToken } from "../typechain";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
 const maxLoopsLimit = 150;
 
-const getAllMarkets = async (poolRegistry: PoolRegistry): Promise<VToken[]> => {
+const getAllMarkets = async (poolRegistry: Contract): Promise<Contract[]> => {
   const pools = await poolRegistry.getAllPools();
   const markets = await Promise.all(
-    pools.map(async ({ comptroller }: { comptroller: string }): Promise<VToken[]> => {
+    pools.map(async ({ comptroller }: { comptroller: string }): Promise<Contract[]> => {
       const poolComptroller = await ethers.getContractAt("Comptroller", comptroller);
       const vTokenAddresses = await poolComptroller.getAllMarkets();
       const vTokens = await Promise.all(
-        vTokenAddresses.map((vTokenAddress: string) => ethers.getContractAt<VToken>("VToken", vTokenAddress)),
+        vTokenAddresses.map((vTokenAddress: string) => ethers.getContractAt("VToken", vTokenAddress)),
       );
       return vTokens;
     }),
@@ -26,7 +26,7 @@ const getAllMarkets = async (poolRegistry: PoolRegistry): Promise<VToken[]> => {
   return markets.flat();
 };
 
-const configureVToken = async (vToken: VToken, shortfallAddress: string, protocolShareReserveAddress: string) => {
+const configureVToken = async (vToken: Contract, shortfallAddress: string, protocolShareReserveAddress: string) => {
   console.log("Setting shortfall contract for vToken: ", vToken.address);
   const tx1 = await vToken.setShortfallContract(shortfallAddress);
   await tx1.wait();
@@ -60,7 +60,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     BUSD = await ethers.getContractAt(ERC20.abi, busdConfig.tokenAddress);
   }
 
-  const poolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
+  const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
   const swapRouter = await ethers.getContract("SwapRouter");
   let accessControl;
