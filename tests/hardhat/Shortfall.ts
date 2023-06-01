@@ -657,43 +657,20 @@ describe("Shortfall: Deflationary token Scenario", async function () {
 
   it("Place bid", async function () {
     const auction = await shortfall.auctions(poolAddress);
-
     await mockFloki.approve(shortfall.address, parseUnits("100", 18));
 
-    const previousFlokiBalance = await mockFloki.balanceOf(shortfall.address);
-    const previousBidderBalance = await mockFloki.balanceOf(bidder1.address);
+    const tx = await shortfall.connect(bidder1).placeBid(poolAddress, auction.startBidBps);
 
-    await shortfall.connect(bidder1).placeBid(poolAddress, auction.startBidBps);
-
-    const afterFlokiBalance = await mockFloki.balanceOf(shortfall.address);
-    const afterBidderBalance = await mockFloki.balanceOf(bidder1.address);
-
-    expect(previousFlokiBalance).equal(convertToUnit("0", 18));
-    expect(previousBidderBalance).equal(convertToUnit("198", 18));
-
-    expect(afterFlokiBalance).equal(convertToUnit("99", 18));
-    expect(afterBidderBalance).equal(convertToUnit("98", 18));
+    await expect(tx).to.changeTokenBalance(mockFloki, bidder1.address, "-100000000000000000000");
+    await expect(tx).to.changeTokenBalance(mockFloki, shortfall.address, convertToUnit("99", 18));
   });
 
   it("Transfer back previous balance after second bid", async function () {
-    const previousFlokiBalance = await mockFloki.balanceOf(shortfall.address);
-    const previousBidderBalance = await mockFloki.balanceOf(bidder1.address);
-    const previousBidder2Balance = await mockFloki.balanceOf(bidder2.address);
+    const tx = await shortfall.connect(bidder2).placeBid(poolAddress, "120");
 
-    await shortfall.connect(bidder2).placeBid(poolAddress, "120");
-
-    const afterFlokiBalance = await mockFloki.balanceOf(shortfall.address);
-
-    const afterBidderBalance = await mockFloki.balanceOf(bidder1.address);
-    const afterBidder2Balance = await mockFloki.balanceOf(bidder2.address);
-
-    expect(previousFlokiBalance).equal(convertToUnit("99", 18));
-    expect(previousBidderBalance).equal(convertToUnit("98", 18));
-    expect(previousBidder2Balance).equal(convertToUnit("198", 18));
-
-    expect(afterFlokiBalance).equal(convertToUnit("99", 18));
-    expect(afterBidderBalance).equal("196010000000000000000");
-    expect(afterBidder2Balance).equal(convertToUnit("98", 18));
+    await expect(tx).to.changeTokenBalance(mockFloki, bidder1.address, "98010000000000000000");
+    await expect(tx).to.changeTokenBalance(mockFloki, bidder2.address, "-100000000000000000000");
+    await expect(tx).to.changeTokenBalance(mockFloki, shortfall.address, "0");
   });
 
   it("Close Auction", async function () {
@@ -706,9 +683,8 @@ describe("Shortfall: Deflationary token Scenario", async function () {
     await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
     fakeRiskFund.transferReserveForAuction.returns(convertToUnit("100", 18));
 
-    const beforeCloseBid = await mockFloki.balanceOf(vFloki.address);
-
-    await expect(shortfall.closeAuction(poolAddress))
+    const tx = await shortfall.closeAuction(poolAddress);
+    await expect(tx)
       .to.emit(shortfall, "AuctionClosed")
       .withArgs(
         comptroller.address,
@@ -720,15 +696,12 @@ describe("Shortfall: Deflationary token Scenario", async function () {
         ["0", "0", "98010000000000000000"],
       );
 
-    const afterCloseBid = await mockFloki.balanceOf(vFloki.address);
+    await expect(tx).to.changeTokenBalance(mockFloki, vFloki.address, "98010000000000000000");
 
     auction = await shortfall.auctions(poolAddress);
     expect(auction.status).equal(2);
 
     expect(vFloki.badDebtRecovered).to.have.been.calledWith("98010000000000000000");
-
-    expect(beforeCloseBid).equal("0");
-    expect(afterCloseBid).equal("98010000000000000000");
 
     const riskFundBidAmount = auction.seizedRiskFund.mul(auction.highestBidBps).div(10000);
     expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(riskFundBidAmount));

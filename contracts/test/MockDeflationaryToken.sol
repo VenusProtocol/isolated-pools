@@ -1,9 +1,9 @@
 pragma solidity 0.8.13;
 
 contract MockDeflatingToken {
-    string public constant name = "Deflating Test Token";
-    string public constant symbol = "DTT";
-    uint8 public constant decimals = 18;
+    string public constant NAME = "Deflating Test Token";
+    string public constant SYMBOL = "DTT";
+    uint8 public constant DECIMALS = 18;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -23,8 +23,8 @@ contract MockDeflatingToken {
         }
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name)),
+                keccak256("EIP712Domain(string NAME,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(NAME)),
                 keccak256(bytes("1")),
                 chainId,
                 address(this)
