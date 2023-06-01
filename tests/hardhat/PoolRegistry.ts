@@ -350,7 +350,7 @@ describe("PoolRegistry: Tests", function () {
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
-    it("reverts if vTokenReceiver address is zero", async () => {
+    it("reverts if initial supply is zero", async () => {
       await expect(poolRegistry.addMarket(withDefaultMarketParameters({ initialSupply: 0 }))).to.be.revertedWith(
         "PoolRegistry: initialSupply is zero",
       );

@@ -205,6 +205,16 @@ describe("liquidateAccount", () => {
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(unknownVToken.address);
     });
+
+    it("fails if user is not listed in market", async () => {
+      const [, , unknownUser] = await ethers.getSigners();
+
+      await expect(
+        comptroller.connect(liquidator).preSeizeHook(ZRX.address, OMG.address, liquidator.address, unknownUser.address),
+      )
+        .to.be.revertedWithCustomError(comptroller, "MarketNotCollateral")
+        .withArgs(ZRX.address, unknownUser.address);
+    });
   });
 
   describe("liquidating in full", async () => {
