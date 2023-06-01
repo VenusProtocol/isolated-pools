@@ -1,3 +1,11 @@
+## [1.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2023-06-01)
+
+
+### Features
+
+* ven-1559 ([52fd123](https://github.com/VenusProtocol/isolated-pools/commit/52fd123081999942f76bcc46c99a93a479b7fe18))
+* ven-1560 ([3546f67](https://github.com/VenusProtocol/isolated-pools/commit/3546f672a00b9904da74ae9fc7644b138d7b3a03))
+
 ## 1.0.0-dev.1 (2023-06-01)
 
 
