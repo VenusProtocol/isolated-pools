@@ -276,6 +276,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
             "PoolRegistry: Market already added for asset comptroller combination"
         );
 
+        require(input.initialSupply > 0, "PoolRegistry: initialSupply is zero");
+
         InterestRateModel rate;
         if (input.rateModel == InterestRateModels.JumpRate) {
             rate = InterestRateModel(
