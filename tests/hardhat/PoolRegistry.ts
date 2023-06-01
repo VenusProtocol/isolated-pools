@@ -350,6 +350,12 @@ describe("PoolRegistry: Tests", function () {
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
+    it("reverts if initial supply is zero", async () => {
+      await expect(poolRegistry.addMarket(withDefaultMarketParameters({ initialSupply: 0 }))).to.be.revertedWith(
+        "PoolRegistry: initialSupply is zero",
+      );
+    });
+
     it("adds a new vToken to the pool", async () => {
       expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
         constants.AddressZero,

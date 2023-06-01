@@ -92,6 +92,9 @@ contract Comptroller is
     /// @notice Thrown when a market has an unexpected comptroller
     error ComptrollerMismatch();
 
+    /// @notice Thrown when user is not member of market
+    error MarketNotCollateral(address vToken, address user);
+
     /**
      * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
@@ -503,7 +506,9 @@ contract Comptroller is
         // Action.LIQUIDATE on it
         _checkActionPauseState(vTokenCollateral, Action.SEIZE);
 
-        if (!markets[vTokenCollateral].isListed) {
+        Market storage market = markets[vTokenCollateral];
+
+        if (!market.isListed) {
             revert MarketNotListed(vTokenCollateral);
         }
 
@@ -522,6 +527,10 @@ contract Comptroller is
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
                 revert ComptrollerMismatch();
             }
+        }
+
+        if (!market.accountMembership[borrower]) {
+            revert MarketNotCollateral(vTokenCollateral, borrower);
         }
 
         // Keep the flywheel moving
