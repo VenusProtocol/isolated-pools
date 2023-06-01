@@ -177,26 +177,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
-            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-                if (auction.highestBidder != address(0)) {
-                    erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
-                }
-
-                uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps) / MAX_BPS);
-                uint256 balanceBefore = erc20.balanceOf(address(this));
-                erc20.safeTransferFrom(msg.sender, address(this), currentBidAmount);
-                uint256 balanceAfter = erc20.balanceOf(address(this));
-                auction.bidAmount[auction.markets[i]] = balanceAfter - balanceBefore;
-            } else {
-                if (auction.highestBidder != address(0)) {
-                    erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
-                }
-
-                uint256 balanceBefore = erc20.balanceOf(address(this));
-                erc20.safeTransferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
-                uint256 balanceAfter = erc20.balanceOf(address(this));
-                auction.bidAmount[auction.markets[i]] = balanceAfter - balanceBefore;
+            if (auction.highestBidder != address(0)) {
+                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
             }
+            uint256 balanceBefore = erc20.balanceOf(address(this));
+
+            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps) / MAX_BPS);
+                erc20.safeTransferFrom(msg.sender, address(this), currentBidAmount);
+            } else {
+                erc20.safeTransferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
+            }
+
+            uint256 balanceAfter = erc20.balanceOf(address(this));
+            auction.bidAmount[auction.markets[i]] = balanceAfter - balanceBefore;
         }
 
         auction.highestBidder = msg.sender;
