@@ -4,18 +4,10 @@
   "description": "",
   "files": [
     "artifacts",
-    "deploy",
-    "helpers",
+    "dist",
     "contracts",
     "deployments"
   ],
-  "exports": {
-    "deploy": "./dist/deploy",
-    "artifacts": "./artifacts",
-    "helpers": "./helpers",
-    "contracts": "./contracts",
-    "deployments": "./deployments"
-  },
   "scripts": {
     "test": "hardhat test",
     "test:integration": "hardhat test tests/integration/index.ts",
