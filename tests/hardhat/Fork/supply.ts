@@ -33,6 +33,7 @@ const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
 const ORACLE = "0xfc4e26B7fD56610E84d33372435F0275A359E8eF";
 const acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
 const acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
+const acc3 = "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3";
 const USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
 const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
 const COMPTROLLER = "0x605AA769d14F6Af2E405295FEC2A4d8Baa623d80";
@@ -50,7 +51,10 @@ let usdd: MockToken;
 let usdt: FaucetToken;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
+let acc3Signer: Signer;
+
 const blocksToMint: number = 300000;
+const usdtBorrowAmount = convertToUnit("1", 4);
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -91,15 +95,14 @@ async function grantPermissions() {
 }
 
 if (FORK_TESTNET) {
-  describe("Exchange Rate", async () => {
-    const mintAmount = convertToUnit("1", 17);
-    const usdtBorrowAmount = convertToUnit("1", 4);
+  describe("Supply fork tests", async () => {
     async function setup() {
       await setForkBlock(30080357);
       await configureTimelock();
 
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
+      acc3Signer = await initMainnetUser(acc3, ethers.utils.parseUnits("2"));
 
       usdt = FaucetToken__factory.connect(USDT, impersonatedTimelock);
       usdd = MockToken__factory.connect(USDD, impersonatedTimelock);
@@ -119,15 +122,13 @@ if (FORK_TESTNET) {
         [convertToUnit(1, 50), convertToUnit(1, 50)],
       );
       await comptroller.connect(acc1Signer).enterMarkets([vUSDT.address]);
-      await comptroller.connect(acc2Signer).enterMarkets([vUSDD.address]);
+      await comptroller.connect(acc2Signer).enterMarkets([vUSDT.address, vUSDD.address]);
+      await comptroller.connect(acc3Signer).enterMarkets([vUSDD.address]);
     }
 
     beforeEach(async () => {
       await setup();
-
-      await usdd.connect(acc2Signer).faucet(mintAmount);
-      await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
-      await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
+      await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 15));
     });
 
     const calculateExchangeRate = async () => {
@@ -144,6 +145,7 @@ if (FORK_TESTNET) {
     };
 
     it("Evolution of exchange rate", async () => {
+      const mintAmount = convertToUnit("1", 17);
       // Accural all the interest till latest block
       await vUSDT.accrueInterest();
 
@@ -167,6 +169,11 @@ if (FORK_TESTNET) {
 
       // Set oracle price for usdt
       await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 15));
+
+      // Mint vUSDD with second account(acc2)
+      await usdd.connect(acc2Signer).faucet(mintAmount);
+      await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
+      await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
 
       // Borrow usdt with second account(acc2)
       await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
@@ -259,6 +266,60 @@ if (FORK_TESTNET) {
       expect(exchangeRate).closeTo(calculatedRate, 1);
     });
 
-    it("liquidate user", async () => {});
+    it("Two users Mint, one redeems", async () => {
+      const mintAmount = convertToUnit("1", 18);
+      // Mint vUSDT with first account(acc1)
+      await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(2, 18));
+      await usdt.connect(acc1Signer).approve(vUSDT.address, convertToUnit(2, 18));
+      await expect(vUSDT.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vUSDT, "Mint");
+
+      // Mint vUSDT with second account(acc2)
+      await usdt.connect(acc2Signer).allocateTo(acc2, convertToUnit(2, 18));
+      await usdt.connect(acc2Signer).approve(vUSDT.address, convertToUnit(2, 18));
+      await expect(vUSDT.connect(acc2Signer).mint(convertToUnit(1, 18))).to.emit(vUSDT, "Mint");
+
+      // Mint vUSDD with second account(acc2)
+      await usdd.connect(acc3Signer).faucet(mintAmount);
+      await usdd.connect(acc3Signer).approve(vUSDD.address, mintAmount);
+      await expect(vUSDD.connect(acc3Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
+
+      // Borrow usdt with second account(acc2)
+      await expect(vUSDT.connect(acc3Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
+
+      // Mine 300,000 blocks
+      await mine(blocksToMint);
+
+      // Partial redeem for first account(acc1)
+      let balanceBefore = await usdt.balanceOf(acc1);
+      await vUSDT.connect(acc1Signer).redeem(convertToUnit(5, 17));
+      let balanceAfter = await usdt.balanceOf(acc1);
+
+      // Expected undelying after partial redeem
+      let exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
+      let expectedRedeemAmount = new BigNumber(convertToUnit(5, 17))
+        .multipliedBy(Number(exchangeRate))
+        .dividedBy(Number(convertToUnit(1, 18)))
+        .plus(Number(balanceBefore))
+        .toFixed(0);
+      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+
+      // Mine 300,000 blocks
+      await mine(blocksToMint);
+
+      // Complete redeem for first account(acc1)
+      const accountBalance = await vUSDT.balanceOf(acc1);
+      balanceBefore = await usdt.balanceOf(acc1);
+      await vUSDT.connect(acc1Signer).redeem(accountBalance);
+      balanceAfter = await usdt.balanceOf(acc1);
+
+      // Expected undelying after complete redeem
+      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
+      expectedRedeemAmount = new BigNumber(Number(accountBalance))
+        .multipliedBy(Number(exchangeRate))
+        .dividedBy(Number(convertToUnit(1, 18)))
+        .plus(Number(balanceBefore))
+        .toFixed(0);
+      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+    });
   });
 }
