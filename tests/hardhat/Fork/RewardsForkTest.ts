@@ -28,7 +28,6 @@ const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const MANTISSA_ONE = convertToUnit(1, 18);
 
 let ADMIN: string;
-let ORACLE_ADMIN: string;
 let ACM: string;
 let acc1: string;
 let acc2: string;
@@ -40,7 +39,6 @@ let REWARD_DISTRIBUTOR2: string;
 
 if (FORK_TESTNET) {
   ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
-  ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
@@ -73,8 +71,7 @@ async function configureTimelock() {
 }
 
 async function configureVToken(vTokenAddress: string) {
-  const VToken = VToken__factory.connect(vTokenAddress, impersonatedTimelock);
-  return VToken;
+  return VToken__factory.connect(vTokenAddress, impersonatedTimelock);
 }
 
 async function grantPermissions() {
@@ -92,7 +89,7 @@ async function grantPermissions() {
 }
 
 if (FORK_TESTNET || FORK_MAINNET) {
-  describe("Reduce Reserves", async () => {
+  describe("Rewards distributions", async () => {
     mintAmount = convertToUnit("100000000", 18);
     bswBorrowAmount = convertToUnit("100", 18);
 
@@ -198,7 +195,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       let supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
-      //   Reward2 calculations for user 1
+      // Reward2 calculations for user 1
       supplierAccruedExpected = await computeSupplyRewards(rewardDistributor2, VBSW, vBSW, acc1);
       supplierAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
