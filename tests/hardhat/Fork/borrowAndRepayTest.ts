@@ -8,12 +8,12 @@ import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   AccessControlManager__factory,
-  ChainlinkOracle,
-  ChainlinkOracle__factory,
   Comptroller,
   Comptroller__factory,
   MockToken,
   MockToken__factory,
+  ResilientOracleInterface,
+  ResilientOracleInterface__factory,
   VToken,
   VToken__factory,
 } from "../../../typechain";
@@ -26,9 +26,7 @@ const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 
 let ADMIN: string;
-let ORACLE_ADMIN: string;
 let ACM: string;
-let ORACLE: string;
 let acc1: string;
 let acc2: string;
 let acc3: string;
@@ -40,9 +38,7 @@ let VBSW: string;
 
 if (FORK_TESTNET) {
   ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
-  ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
-  ORACLE = "0xfc4e26B7fD56610E84d33372435F0275A359E8eF";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
   acc3 = "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3";
@@ -58,14 +54,13 @@ if (FORK_MAINNET) {
 }
 
 let impersonatedTimelock: Signer;
-let impersonatedOracleOwner: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vUSDD: VToken;
 let vBSW: VToken;
 let usdd: MockToken;
 let bsw: MockToken;
-let priceOracle: ChainlinkOracle;
+let priceOracle: ResilientOracleInterface;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let acc3Signer: Signer;
@@ -74,12 +69,10 @@ let bswBorrowAmount: BigNumberish;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
-  impersonatedOracleOwner = await initMainnetUser(ORACLE_ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
-  const VToken = VToken__factory.connect(vTokenAddress, impersonatedTimelock);
-  return VToken;
+  return VToken__factory.connect(vTokenAddress, impersonatedTimelock);
 }
 
 async function grantPermissions() {
@@ -93,11 +86,6 @@ async function grantPermissions() {
   tx = await accessControlManager
     .connect(impersonatedTimelock)
     .giveCallPermission(comptroller.address, "setMarketBorrowCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(ORACLE, "setDirectPrice(address,uint256)", ADMIN);
   await tx.wait();
 }
 
@@ -119,7 +107,8 @@ if (FORK_TESTNET || FORK_MAINNET) {
       vBSW = await configureVToken(VBSW);
       vUSDD = await configureVToken(VUSDD);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      priceOracle = ChainlinkOracle__factory.connect(ORACLE, impersonatedOracleOwner);
+      const oracle = await comptroller.oracle();
+      priceOracle = ResilientOracleInterface__factory.connect(oracle, impersonatedTimelock);
 
       await grantPermissions();
 
@@ -159,9 +148,9 @@ if (FORK_TESTNET || FORK_MAINNET) {
       // common factors
       const vUSDDCollateralFactor = await comptroller.markets(VUSDD);
       const exchangeRateCollateral = await vUSDD.exchangeRateStored();
-      const vUSDDPrice = await priceOracle.getUnderlyingPrice(VUSDD);
-      const vBSWPrice = await priceOracle.getUnderlyingPrice(VBSW);
-      const vTokenPrice = exchangeRateCollateral.mul(vUSDDPrice).div(convertToUnit(1, 18));
+      const USDDPrice = await priceOracle.getUnderlyingPrice(VUSDD);
+      const BSWPrice = await priceOracle.getUnderlyingPrice(VBSW);
+      const vTokenPrice = exchangeRateCollateral.mul(USDDPrice).div(convertToUnit(1, 18));
       const weighhtedPriceUsdd = vTokenPrice
         .mul(vUSDDCollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
@@ -191,7 +180,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
 
       // Acc1 post borrow checks
       expect(bswBorrowAmount).equals(await vBSW.borrowBalanceStored(acc1));
-      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(vBSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
+      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(BSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
       [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc1);
       expect(err).equals(0);
       expect(liquidity).equals(expectedLiquidityAcc1);
@@ -212,7 +201,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
 
       // Acc2 post borrow checks
       expect(bswBorrowAmount).equals(await vBSW.borrowBalanceStored(acc2));
-      expectedLiquidityAcc2 = expectedLiquidityAcc2.sub(vBSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
+      expectedLiquidityAcc2 = expectedLiquidityAcc2.sub(BSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
       [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc2);
       expect(err).equals(0);
       expect(liquidity).equals(expectedLiquidityAcc2);
@@ -254,9 +243,9 @@ if (FORK_TESTNET || FORK_MAINNET) {
     it("Attempt to borrow over set cap", async function () {
       const vUSDDCollateralFactor = await comptroller.markets(VUSDD);
       const exchangeRateCollateral = await vUSDD.exchangeRateStored();
-      const vUSDDPrice = await priceOracle.getUnderlyingPrice(VUSDD);
-      const vBSWPrice = await priceOracle.getUnderlyingPrice(VBSW);
-      const vTokenPrice = exchangeRateCollateral.mul(vUSDDPrice).div(convertToUnit(1, 18));
+      const USDDPrice = await priceOracle.getUnderlyingPrice(VUSDD);
+      const BSWPrice = await priceOracle.getUnderlyingPrice(VBSW);
+      const vTokenPrice = exchangeRateCollateral.mul(USDDPrice).div(convertToUnit(1, 18));
       const weighhtedPriceUsdd = vTokenPrice
         .mul(vUSDDCollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
@@ -275,7 +264,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await expect(vBSW.connect(acc1Signer).borrow(bswBorrowAmount)).to.be.emit(vBSW, "Borrow");
       expect(bswBorrowAmount).equals(await vBSW.borrowBalanceStored(acc1));
 
-      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(vBSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
+      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(BSWPrice.mul(bswBorrowAmount).div(convertToUnit(1, 18)));
       [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc1);
       expect(err).equals(0);
       expect(liquidity).equals(expectedLiquidityAcc1);
