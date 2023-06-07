@@ -62,8 +62,7 @@ async function configureTimelock() {
 }
 
 async function configureVToken(vTokenAddress: string) {
-  const VToken = VToken__factory.connect(vTokenAddress, impersonatedTimelock);
-  return VToken;
+  return VToken__factory.connect(vTokenAddress, impersonatedTimelock);
 }
 
 async function grantPermissions() {
@@ -144,15 +143,30 @@ if (FORK_TESTNET) {
       return new BigNumber(exchangeRatecal).dividedBy(Number(supply)).toFixed(0);
     };
 
+    const assertExchangeRate = async () => {
+      const exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
+      const calculatedRate = await calculateExchangeRate();
+      expect(exchangeRate).closeTo(calculatedRate, 1);
+    };
+
+    const assertRedeemAmount = async (accountBalance, balanceBefore) => {
+      const balanceAfter = await usdt.balanceOf(acc1);
+      const exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
+      const expectedRedeemAmount = new BigNumber(Number(accountBalance))
+        .multipliedBy(Number(exchangeRate))
+        .dividedBy(Number(convertToUnit(1, 18)))
+        .plus(Number(balanceBefore))
+        .toFixed(0);
+      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+    };
+
     it("Evolution of exchange rate", async () => {
       const mintAmount = convertToUnit("1", 17);
       // Accural all the interest till latest block
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      let exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      let calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       // Mint vUSDT with first account(acc1)
       await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(2, 18));
@@ -163,9 +177,7 @@ if (FORK_TESTNET) {
       await mine(blocksToMint);
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       // Set oracle price for usdt
       await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 15));
@@ -185,9 +197,7 @@ if (FORK_TESTNET) {
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       await usdt.connect(acc2Signer).approve(vUSDT.address, convertToUnit(1, 5));
       await vUSDT.connect(acc2Signer).repayBorrow(usdtBorrowAmount);
@@ -199,9 +209,7 @@ if (FORK_TESTNET) {
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       // setup to liquidate the second account(acc2) with first account(acc1)
       await comptroller.setMinLiquidatableCollateral(0);
@@ -226,9 +234,7 @@ if (FORK_TESTNET) {
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       // Setup for healAccount(acc2)
       await priceOracle.setDirectPrice(usdd.address, convertToUnit(1, 10));
@@ -247,9 +253,7 @@ if (FORK_TESTNET) {
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
 
       const totalBal = await vUSDT.balanceOf(acc1);
       await expect(vUSDT.connect(acc1Signer).redeem(totalBal)).to.emit(vUSDT, "Redeem");
@@ -261,12 +265,10 @@ if (FORK_TESTNET) {
       await vUSDT.accrueInterest();
 
       // Assert current exchange rate
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      await assertExchangeRate();
     });
 
-    it("Two users Mint, one redeems", async () => {
+    it("Three users Mint, one redeems", async () => {
       const mintAmount = convertToUnit("1", 18);
       // Mint vUSDT with first account(acc1)
       await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(2, 18));
@@ -283,7 +285,7 @@ if (FORK_TESTNET) {
       await usdd.connect(acc3Signer).approve(vUSDD.address, mintAmount);
       await expect(vUSDD.connect(acc3Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
 
-      // Borrow usdt with second account(acc2)
+      // Borrow usdt with third account(acc3)
       await expect(vUSDT.connect(acc3Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
 
       // Mine 300,000 blocks
@@ -292,16 +294,9 @@ if (FORK_TESTNET) {
       // Partial redeem for first account(acc1)
       let balanceBefore = await usdt.balanceOf(acc1);
       await vUSDT.connect(acc1Signer).redeem(convertToUnit(5, 17));
-      let balanceAfter = await usdt.balanceOf(acc1);
 
-      // Expected undelying after partial redeem
-      let exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      let expectedRedeemAmount = new BigNumber(convertToUnit(5, 17))
-        .multipliedBy(Number(exchangeRate))
-        .dividedBy(Number(convertToUnit(1, 18)))
-        .plus(Number(balanceBefore))
-        .toFixed(0);
-      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+      // Assert undelying after partial redeem
+      await assertRedeemAmount(convertToUnit(5, 17), balanceBefore);
 
       // Mine 300,000 blocks
       await mine(blocksToMint);
@@ -310,16 +305,9 @@ if (FORK_TESTNET) {
       const accountBalance = await vUSDT.balanceOf(acc1);
       balanceBefore = await usdt.balanceOf(acc1);
       await vUSDT.connect(acc1Signer).redeem(accountBalance);
-      balanceAfter = await usdt.balanceOf(acc1);
 
-      // Expected undelying after complete redeem
-      exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      expectedRedeemAmount = new BigNumber(Number(accountBalance))
-        .multipliedBy(Number(exchangeRate))
-        .dividedBy(Number(convertToUnit(1, 18)))
-        .plus(Number(balanceBefore))
-        .toFixed(0);
-      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+      // Assert undelying after complete redeem
+      await assertRedeemAmount(accountBalance, balanceBefore);
     });
   });
 }
