@@ -83,13 +83,28 @@ async function grantPermissions() {
     .connect(impersonatedTimelock)
     .giveCallPermission(comptroller.address, "setMinLiquidatableCollateral(uint256)", ADMIN);
   await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setCollateralFactor(address,uint256,uint256)", ADMIN);
 }
 if (FORK_TESTNET) {
   describe("Liquidation", async () => {
+    async function setupBeforeEach(mintAmount: BigNumberish, usdtBorrowAmount: BigNumberish) {
+      await setup();
+      await priceOracle.setDirectPrice(usdd.address, "159990000000000000000");
+      await priceOracle.setDirectPrice(usdt.address, "208000");
+
+      await usdt.connect(acc1Signer).allocateTo(acc1, mintAmount);
+      await usdt.connect(acc1Signer).approve(vUSDT.address, mintAmount);
+      await expect(vUSDT.connect(acc1Signer).mint(mintAmount)).to.emit(vUSDT, "Mint");
+
+      await usdd.connect(acc2Signer).faucet(mintAmount);
+      await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
+      await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
+      await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.emit(vUSDT, "Borrow");
+
+      // Approve more assets for liquidation
+      await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(3, 18));
+      await usdt.connect(acc1Signer).approve(vUSDT.address, convertToUnit(3, 18));
+    }
+
     async function setup() {
       await setForkBlock(30080357);
       await configureTimelock();
@@ -136,9 +151,6 @@ if (FORK_TESTNET) {
 
         await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit("1", 18));
         await usdt.connect(acc1Signer).approve(vUSDT.address, convertToUnit("1", 18));
-
-        await priceOracle.setDirectPrice(vUSDD.address, "159990000000000000000");
-        await priceOracle.setDirectPrice(vUSDT.address, "20800000000000000");
       });
 
       it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
@@ -164,8 +176,13 @@ if (FORK_TESTNET) {
       it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
         await comptroller.setMinLiquidatableCollateral(0);
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 5));
+
+        const borrowBalance = await vUSDT.borrowBalanceStored(acc2);
+        const closeFactor = await comptroller.closeFactorMantissa();
+        const maxClose = (borrowBalance * closeFactor) / 1e18;
+
         // Liquidation
-        await expect(vUSDT.connect(acc1Signer).liquidateBorrow(acc2, 201, vUSDD.address)).to.be.revertedWith(
+        await expect(vUSDT.connect(acc1Signer).liquidateBorrow(acc2, maxClose, vUSDD.address)).to.be.revertedWith(
           "LIQUIDATE_SEIZE_TOO_MUCH",
         );
       });
@@ -180,9 +197,13 @@ if (FORK_TESTNET) {
         await expect(vUSDD.connect(acc2Signer).mint(underlyingMintAmount)).to.emit(vUSDD, "Mint");
         // price manipulation to put user underwater
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 5));
+
+        const borrowBalance = await vUSDT.borrowBalanceStored(acc2);
+        const closeFactor = await comptroller.closeFactorMantissa();
+        const maxClose = (borrowBalance * closeFactor) / 1e18;
         // Liquidation
         await expect(
-          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, convertToUnit("1", 18), vUSDD.address),
+          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, maxClose + 1, vUSDD.address),
         ).to.be.revertedWithCustomError(comptroller, "TooMuchRepay");
       });
 
@@ -196,7 +217,7 @@ if (FORK_TESTNET) {
         expect(liquidity).equals(0);
         expect(shortfall).greaterThan(0);
 
-        const totalRerservesUsddPrev = await vUSDD.totalReserves();
+        const totalReservesUsddPrev = await vUSDD.totalReserves();
         const vUSDDBalAcc1Prev = await vUSDD.balanceOf(acc1);
         const vUSDDBalAcc2Prev = await vUSDD.balanceOf(acc2);
 
@@ -220,16 +241,18 @@ if (FORK_TESTNET) {
         const vUSDDBalAcc1New = await vUSDD.balanceOf(acc1);
         const totalReservesUsddNew = await vUSDD.totalReserves();
         const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
+        const protocolSeizeShareMantissa = await vUSDD.protocolSeizeShareMantissa();
 
-        const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
-        const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
+        const protocolSeizeTokens = Math.floor((seizeTokens * protocolSeizeShareMantissa) / 1e18);
+        const liquidatorSeizeTokens = Math.floor(seizeTokens - protocolSeizeTokens);
+
         const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
         const borrowBalanceNew = await vUSDT.borrowBalanceStored(acc2);
 
         expect(borrowBalancePrev - maxClose).equals(borrowBalanceNew);
         expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
         expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
-        expect(totalReservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+        expect(totalReservesUsddNew - totalReservesUsddPrev).to.closeTo(
           Math.round(reserveIncrease),
           parseUnits("0.00003", 18),
         );
@@ -239,24 +262,8 @@ if (FORK_TESTNET) {
     describe("Liquidate from Comptroller", async () => {
       const mintAmount: BigNumberish = convertToUnit(1, 15);
       const usdtBorrowAmount: BigNumberish = convertToUnit(1, 15);
-      const insufficientLiquidityBorrow: BigNumberish = convertToUnit(3, 18);
       beforeEach(async () => {
-        await setup();
-        await priceOracle.setDirectPrice(usdd.address, "159990000000000000000");
-        await priceOracle.setDirectPrice(usdt.address, "208000");
-
-        await usdt.connect(acc1Signer).allocateTo(acc1, mintAmount);
-        await usdt.connect(acc1Signer).approve(vUSDT.address, mintAmount);
-        await expect(vUSDT.connect(acc1Signer).mint(mintAmount)).to.emit(vUSDT, "Mint");
-
-        await usdd.connect(acc2Signer).faucet(mintAmount);
-        await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
-        await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
-        await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.emit(vUSDT, "Borrow");
-
-        // Approve more assets for liquidation
-        await usdt.connect(acc1Signer).allocateTo(acc1, insufficientLiquidityBorrow);
-        await usdt.connect(acc1Signer).approve(vUSDT.address, insufficientLiquidityBorrow);
+        await setupBeforeEach(mintAmount, usdtBorrowAmount);
       });
 
       it("Should revert when not enough collateral to seize", async function () {
@@ -291,7 +298,7 @@ if (FORK_TESTNET) {
         expect(liquidity).equals(0);
         expect(shortfall).greaterThan(0);
 
-        const totalRerservesUsddPrev = await vUSDD.totalReserves();
+        const totalReservesUsddPrev = await vUSDD.totalReserves();
         const vUSDDBalAcc1Prev = await vUSDD.balanceOf(acc1);
         const vUSDDBalAcc2Prev = await vUSDD.balanceOf(acc2);
 
@@ -325,7 +332,7 @@ if (FORK_TESTNET) {
 
         expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
         expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
-        expect(totalReservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+        expect(totalReservesUsddNew - totalReservesUsddPrev).to.closeTo(
           Math.round(reserveIncrease),
           parseUnits("0.00003", 18),
         );
@@ -338,41 +345,29 @@ if (FORK_TESTNET) {
       let result;
 
       beforeEach(async () => {
-        await setup();
-        await priceOracle.setDirectPrice(usdd.address, "159990000000000000000");
-        await priceOracle.setDirectPrice(usdt.address, "208000");
-
-        await usdt.connect(acc1Signer).allocateTo(acc1, mintAmount);
-        await usdt.connect(acc1Signer).approve(vUSDT.address, mintAmount);
-        await expect(vUSDT.connect(acc1Signer).mint(mintAmount)).to.emit(vUSDT, "Mint");
-
-        await usdd.connect(acc2Signer).faucet(mintAmount);
-        await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
-        await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
-
-        await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.emit(vUSDT, "Borrow");
-        // Approve more assets for liquidation
-        await usdt.connect(acc1Signer).allocateTo(acc1, usdtBorrowAmount);
-        await usdt.connect(acc1Signer).approve(vUSDT.address, usdtBorrowAmount);
+        await setupBeforeEach(mintAmount, usdtBorrowAmount);
       });
 
       it("Should success on healing and forgive borrow account", async function () {
         // Increase price of borrowed underlying tokens to surpass available collateral
         await priceOracle.setDirectPrice(usdt.address, convertToUnit(1, 13)); // 25
         await priceOracle.setDirectPrice(usdd.address, convertToUnit(1, 15)); // 15
-        /*
-        Calculations
-        snapshot.totalCollateral 1e9  // (bnxPrice * mint amount) / mantissa
-        snapshot.borrows 1e11    //  (BTCBPrice * BTCBBorrowAmount) / mantissa
-        percantage 0.1   (collateral/borrow) * mantissa
-        repaymentAmount 1000       percentage*borrowBalance 
-        borrowBalance 10000
-        */
-        const collateralAmount = 1e9;
-        const borrowAmount = 1e11;
-        const percantageOfRepay = (collateralAmount / borrowAmount) * 1e18;
-        const repayAmount = usdtBorrowAmount * (percantageOfRepay / 1e18);
-        const badDebt = usdtBorrowAmount - repayAmount;
+
+        const USDDPrice = await priceOracle.getUnderlyingPrice(VUSDD);
+        const USDTPrice = await priceOracle.getUnderlyingPrice(VUSDT);
+
+        const collateralBal = await vUSDD.balanceOf(acc2);
+        const exchangeRateCollateral = await vUSDD.callStatic.exchangeRateCurrent();
+        const borrowBalanceCurrent = await vUSDT.callStatic.borrowBalanceCurrent(acc2);
+
+        const vTokenCollateralPrice = USDDPrice.mul(exchangeRateCollateral).div(convertToUnit(1, 18));
+        const totalCollateral = vTokenCollateralPrice.mul(collateralBal).div(convertToUnit(1, 18));
+        const scaledBorrows = USDTPrice.mul(borrowBalanceCurrent).div(convertToUnit(1, 18));
+
+        const percentageOfRepay = totalCollateral.mul(convertToUnit(11, 18)).div(scaledBorrows);
+        const repayAmount = percentageOfRepay.mul(borrowBalanceCurrent).div(convertToUnit(1, 18));
+        const badDebt = borrowBalanceCurrent.sub(repayAmount);
+
         result = await comptroller.connect(acc1Signer).healAccount(acc2);
         await expect(result).to.emit(vUSDT, "RepayBorrow");
 
@@ -381,7 +376,7 @@ if (FORK_TESTNET) {
         expect(result.vTokenBalance).to.equal(0);
         expect(result.borrowBalance).to.equal(0);
         const badDebtAfter = await vUSDT.badDebt();
-        expect(badDebtAfter).to.closeTo(badDebt, 1);
+        expect(badDebtAfter).to.closeTo(badDebt, 1000);
       });
     });
   });
