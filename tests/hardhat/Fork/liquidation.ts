@@ -143,27 +143,26 @@ if (FORK_TESTNET) {
 
       it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
         await expect(
-          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, usdtBorrowAmount, vUSDT.address),
+          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, usdtBorrowAmount, vUSDD.address),
         ).to.be.revertedWithCustomError(comptroller, "MinimalCollateralViolated");
       });
 
       it("Should revert when liquidation is called through vToken and no shortfall", async function () {
         // Mint and Increase collateral of the user
-        const udnerlyingMintAmount = convertToUnit("1", 30);
-        await usdd.connect(acc2Signer).faucet(udnerlyingMintAmount);
-        await usdd.connect(acc2Signer).approve(vUSDD.address, udnerlyingMintAmount);
+        const underlyingMintAmount = convertToUnit("1", 30);
+        await usdd.connect(acc2Signer).faucet(underlyingMintAmount);
+        await usdd.connect(acc2Signer).approve(vUSDD.address, underlyingMintAmount);
 
-        await vUSDD.connect(acc2Signer).mint(udnerlyingMintAmount);
+        await vUSDD.connect(acc2Signer).mint(underlyingMintAmount);
 
         // Liquidation
         await expect(
-          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, usdtBorrowAmount, vUSDT.address),
+          vUSDT.connect(acc1Signer).liquidateBorrow(acc2, usdtBorrowAmount, vUSDD.address),
         ).to.be.revertedWithCustomError(comptroller, "InsufficientShortfall");
       });
 
       it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
         await comptroller.setMinLiquidatableCollateral(0);
-        // Mint and Increase collateral of the user
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 5));
         // Liquidation
         await expect(vUSDT.connect(acc1Signer).liquidateBorrow(acc2, 201, vUSDD.address)).to.be.revertedWith(
@@ -174,13 +173,12 @@ if (FORK_TESTNET) {
       it("Should revert when liquidation is called through vToken and trying to pay too much", async function () {
         // Mint and Incrrease collateral of the user
         await comptroller.setMinLiquidatableCollateral(0);
-        const udnerlyingMintAmount = convertToUnit("1", 18);
-        await usdd.connect(acc2Signer).faucet(udnerlyingMintAmount);
-        await usdd.connect(acc2Signer).approve(vUSDD.address, udnerlyingMintAmount);
+        const underlyingMintAmount = convertToUnit("1", 18);
+        await usdd.connect(acc2Signer).faucet(underlyingMintAmount);
+        await usdd.connect(acc2Signer).approve(vUSDD.address, underlyingMintAmount);
 
-        await expect(vUSDD.connect(acc2Signer).mint(udnerlyingMintAmount)).to.emit(vUSDD, "Mint");
-        // price manipulation and borrow to overcome insufficient shortfall
-
+        await expect(vUSDD.connect(acc2Signer).mint(underlyingMintAmount)).to.emit(vUSDD, "Mint");
+        // price manipulation to put user underwater
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 5));
         // Liquidation
         await expect(
@@ -220,19 +218,19 @@ if (FORK_TESTNET) {
         await expect(result).to.emit(vUSDT, "LiquidateBorrow");
         const vUSDDBalAcc2New = await vUSDD.balanceOf(acc2);
         const vUSDDBalAcc1New = await vUSDD.balanceOf(acc1);
-        const totalRerservesUsddNew = await vUSDD.totalReserves();
+        const totalReservesUsddNew = await vUSDD.totalReserves();
         const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
 
         const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
         const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
-        const reservIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
+        const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
         const borrowBalanceNew = await vUSDT.borrowBalanceStored(acc2);
 
         expect(borrowBalancePrev - maxClose).equals(borrowBalanceNew);
         expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
         expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
-        expect(totalRerservesUsddNew - totalRerservesUsddPrev).to.closeTo(
-          Math.round(reservIncrease),
+        expect(totalReservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+          Math.round(reserveIncrease),
           parseUnits("0.00003", 18),
         );
       });
@@ -285,8 +283,8 @@ if (FORK_TESTNET) {
         await usdd.connect(acc2Signer).approve(vUSDD.address, 10900000000);
         await vUSDD.connect(acc2Signer).mint(10900000000);
 
-        await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 14)); // 100000000000000
-        await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 2)); // 100000000000000
+        await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 14));
+        await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 2));
 
         const [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(acc2);
         expect(err).equals(0);
@@ -318,17 +316,17 @@ if (FORK_TESTNET) {
 
         const vUSDDBalAcc1New = await vUSDD.balanceOf(acc1);
         const vUSDDBalAcc2New = await vUSDD.balanceOf(acc2);
-        const totalRerservesUsddNew = await vUSDD.totalReserves();
+        const totalReservesUsddNew = await vUSDD.totalReserves();
         const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
 
         const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
         const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
-        const reservIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
+        const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
 
         expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
         expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
-        expect(totalRerservesUsddNew - totalRerservesUsddPrev).to.closeTo(
-          Math.round(reservIncrease),
+        expect(totalReservesUsddNew - totalRerservesUsddPrev).to.closeTo(
+          Math.round(reserveIncrease),
           parseUnits("0.00003", 18),
         );
       });
