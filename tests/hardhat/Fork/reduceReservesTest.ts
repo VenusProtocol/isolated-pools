@@ -27,7 +27,6 @@ const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 
 let ADMIN: string;
-let ORACLE_ADMIN: string;
 let ACM: string;
 let acc1: string;
 let acc2: string;
@@ -39,7 +38,6 @@ let POOL_REGISTRY: string;
 
 if (FORK_TESTNET) {
   ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
-  ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
