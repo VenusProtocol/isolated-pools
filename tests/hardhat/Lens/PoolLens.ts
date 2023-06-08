@@ -2,21 +2,24 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumberish, Signer } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Beacon,
   Comptroller,
   MockPriceOracle,
+  MockPriceOracle__factory,
   MockToken,
+  MockToken__factory,
   PoolLens,
+  PoolLens__factory,
   PoolRegistry,
-  ProtocolShareReserve,
-  Shortfall,
   VToken,
+  WhitePaperInterestRateModel__factory,
 } from "../../../typechain";
+import { makeVToken } from "../util/TokenTestHelpers";
 
 // Disable a warning about mixing beacons and transparent proxies
 upgrades.silenceWarnings();
@@ -59,7 +62,7 @@ describe("PoolLens", async function () {
   let closeFactor2: BigNumberish;
   let liquidationIncentive1: BigNumberish;
   let liquidationIncentive2: BigNumberish;
-  const minLiquidatableCollateral = convertToUnit(100, 18);
+  const minLiquidatableCollateral = parseUnits("100", 18);
   const maxLoopsLimit = 150;
   const defaultBtcPrice = "21000.34";
   const defaultDaiPrice = "1";
@@ -72,33 +75,11 @@ describe("PoolLens", async function () {
   }
 
   const poolRegistryFixture = async (): Promise<PoolRegistryFixture> => {
-    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
-    const vTokenFactory = await VTokenProxyFactory.deploy();
-    await vTokenFactory.deployed();
-
-    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
-    const jumpRateFactory = await JumpRateModelFactory.deploy();
-    await jumpRateFactory.deployed();
-
-    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
-    const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
-    await whitePaperRateFactory.deployed();
-
-    const shortfall = await smock.fake<Shortfall>("Shortfall");
-    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("Shortfall");
-
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
-      vTokenFactory.address,
-      jumpRateFactory.address,
-      whitePaperRateFactory.address,
-      shortfall.address,
-      protocolShareReserve.address,
-      fakeAccessControlManager.address,
-    ]);
+    poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;
 
     return { poolRegistry, fakeAccessControlManager };
   };
@@ -112,22 +93,13 @@ describe("PoolLens", async function () {
     ownerAddress = await owner.getAddress();
 
     ({ poolRegistry, fakeAccessControlManager } = await loadFixture(poolRegistryFixture));
-
     poolRegistryAddress = poolRegistry.address;
 
-    const VTokenContract = await ethers.getContractFactory("VToken");
-    const vToken = await VTokenContract.deploy();
-    await vToken.deployed();
-
-    const VTokenBeacon = await ethers.getContractFactory("Beacon");
-    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
-    await vTokenBeacon.deployed();
-
-    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
     priceOracle = await MockPriceOracle.deploy();
 
-    closeFactor1 = convertToUnit(0.05, 18);
-    liquidationIncentive1 = convertToUnit(1, 18);
+    closeFactor1 = parseUnits("0.05", 18);
+    liquidationIncentive1 = parseUnits("1", 18);
 
     const Comptroller = await ethers.getContractFactory("Comptroller");
     const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
@@ -139,7 +111,7 @@ describe("PoolLens", async function () {
           fakeAccessControlManager.address,
         ]);
         await comptroller.setPriceOracle(priceOracle.address);
-        return comptroller;
+        return comptroller as Comptroller;
       }),
     );
 
@@ -152,8 +124,8 @@ describe("PoolLens", async function () {
       minLiquidatableCollateral,
     );
 
-    closeFactor2 = convertToUnit(0.05, 18);
-    liquidationIncentive2 = convertToUnit(1, 18);
+    closeFactor2 = parseUnits("0.05", 18);
+    liquidationIncentive2 = parseUnits("1", 18);
 
     // Registering the second pool
     await poolRegistry.addPool(
@@ -164,74 +136,66 @@ describe("PoolLens", async function () {
       minLiquidatableCollateral,
     );
 
-    const MockDAI = await ethers.getContractFactory("MockToken");
-    mockDAI = await MockDAI.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(convertToUnit(1000, 18));
+    const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
+    mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
+    await mockDAI.faucet(parseUnits("1000", 18));
 
-    const daiBalance = await mockDAI.balanceOf(ownerAddress);
-    expect(daiBalance).equal(convertToUnit(1000, 18));
+    mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
+    await mockWBTC.faucet(parseUnits("1000", 8));
 
-    const MockWBTC = await ethers.getContractFactory("MockToken");
-    mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
-    await mockWBTC.faucet(convertToUnit(1000, 8));
-
-    await priceOracle.setPrice(mockDAI.address, convertToUnit(defaultDaiPrice, 18));
-    await priceOracle.setPrice(mockWBTC.address, convertToUnit(defaultBtcPrice, 28));
-
-    const VToken = await ethers.getContractFactory("VToken");
-    const tokenImplementation = await VToken.deploy();
-    await tokenImplementation.deployed();
+    await priceOracle.setPrice(mockDAI.address, parseUnits(defaultDaiPrice, 18));
+    await priceOracle.setPrice(mockWBTC.address, parseUnits(defaultBtcPrice, 28));
 
     // Get all pools list.
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1");
     expect(pools[1].name).equal("Pool 2");
 
-    const initialSupply = convertToUnit(1000, 18);
+    const initialSupply = parseUnits("1000", 18);
+    const RateModel = await ethers.getContractFactory<WhitePaperInterestRateModel__factory>(
+      "WhitePaperInterestRateModel",
+    );
+    const whitePaperInterestRateModel = await RateModel.deploy(0, parseUnits("0.04", 18));
+    vWBTC = await makeVToken({
+      underlying: mockWBTC,
+      comptroller: comptroller1Proxy,
+      accessControlManager: fakeAccessControlManager,
+      decimals: 8,
+      initialExchangeRateMantissa: parseUnits("1", 18),
+      admin: owner,
+      interestRateModel: whitePaperInterestRateModel,
+      beacon: vTokenBeacon,
+    });
+
     await mockWBTC.faucet(initialSupply);
     await mockWBTC.approve(poolRegistry.address, initialSupply);
+    await poolRegistry.addMarket({
+      vToken: vWBTC.address,
+      collateralFactor: parseUnits("0.7", 18),
+      liquidationThreshold: parseUnits("0.7", 18),
+      initialSupply,
+      vTokenReceiver: owner.address,
+      supplyCap: parseUnits("4000", 18),
+      borrowCap: parseUnits("2000", 18),
+    });
+
+    vDAI = await makeVToken({
+      underlying: mockDAI,
+      comptroller: comptroller1Proxy,
+      accessControlManager: fakeAccessControlManager,
+      decimals: 18,
+      initialExchangeRateMantissa: parseUnits("1", 18),
+      admin: owner,
+      interestRateModel: whitePaperInterestRateModel,
+      beacon: vTokenBeacon,
+    });
 
     await mockDAI.faucet(initialSupply);
     await mockDAI.approve(poolRegistry.address, initialSupply);
-
     await poolRegistry.addMarket({
-      comptroller: comptroller1Proxy.address,
-      asset: mockWBTC.address,
-      decimals: 8,
-      name: "Venus WBTC",
-      symbol: "vWBTC",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      reserveFactor: convertToUnit(0.3, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      beaconAddress: vTokenBeacon.address,
-      initialSupply,
-      vTokenReceiver: owner.address,
-      supplyCap: convertToUnit(4000, 18),
-      borrowCap: convertToUnit(2000, 18),
-    });
-
-    await poolRegistry.addMarket({
-      comptroller: comptroller1Proxy.address,
-      asset: mockDAI.address,
-      decimals: 18,
-      name: "Venus DAI",
-      symbol: "vDAI",
-      rateModel: 0,
-      baseRatePerYear: 0,
-      multiplierPerYear: "40000000000000000",
-      jumpMultiplierPerYear: 0,
-      kink_: 0,
-      collateralFactor: convertToUnit(0.7, 18),
-      liquidationThreshold: convertToUnit(0.7, 18),
-      reserveFactor: convertToUnit(0.3, 18),
-      accessControlManager: fakeAccessControlManager.address,
-      beaconAddress: vTokenBeacon.address,
+      vToken: vDAI.address,
+      collateralFactor: parseUnits("0.7", 18),
+      liquidationThreshold: parseUnits("0.7", 18),
       initialSupply,
       vTokenReceiver: owner.address,
       supplyCap: initialSupply,
@@ -260,7 +224,7 @@ describe("PoolLens", async function () {
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
 
-    const PoolLens = await ethers.getContractFactory("PoolLens");
+    const PoolLens = await ethers.getContractFactory<PoolLens__factory>("PoolLens");
     poolLens = await PoolLens.deploy();
   });
 
@@ -355,15 +319,15 @@ describe("PoolLens", async function () {
     it("get underlying price", async function () {
       const vTokenAddressDAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
       const res = await poolLens.vTokenUnderlyingPrice(vTokenAddressDAI);
-      expect(res[1]).equal(convertToUnit(1, 18));
+      expect(res[1]).equal(parseUnits("1", 18));
     });
 
     it("get underlying price all", async function () {
       const vTokenAddressWBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
       const vTokenAddressDAI = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
       const res = await poolLens.vTokenUnderlyingPriceAll([vTokenAddressDAI, vTokenAddressWBTC]);
-      expect(res[0][1]).equal(convertToUnit(1, 18));
-      expect(res[1][1]).equal(convertToUnit("21000.34", 28));
+      expect(res[0][1]).equal(parseUnits("1", 18));
+      expect(res[1][1]).equal(parseUnits("21000.34", 28));
     });
 
     it("get underlying price all", async function () {
@@ -383,16 +347,16 @@ describe("PoolLens", async function () {
 
       const vTokenMetadataActualParsed = cullTuple(vTokenMetadataActual);
       expect(vTokenMetadataActualParsed["vToken"]).equal(vTokenAddressWBTC);
-      expect(vTokenMetadataActualParsed["exchangeRateCurrent"]).equal(convertToUnit(1, 18));
+      expect(vTokenMetadataActualParsed["exchangeRateCurrent"]).equal(parseUnits("1", 18));
       expect(vTokenMetadataActualParsed["supplyRatePerBlock"]).equal("0");
       expect(vTokenMetadataActualParsed["borrowRatePerBlock"]).equal("0");
-      expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal(convertToUnit(0.3, 18));
+      expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal(parseUnits("0.3", 18));
       expect(vTokenMetadataActualParsed["supplyCaps"]).equal("4000000000000000000000");
       expect(vTokenMetadataActualParsed["borrowCaps"]).equal("2000000000000000000000");
       expect(vTokenMetadataActualParsed["totalBorrows"]).equal("0");
       expect(vTokenMetadataActualParsed["totalReserves"]).equal("0");
-      expect(vTokenMetadataActualParsed["totalSupply"]).equal(convertToUnit(10000000000000, 8));
-      expect(vTokenMetadataActualParsed["totalCash"]).equal(convertToUnit(10000000000000, 8));
+      expect(vTokenMetadataActualParsed["totalSupply"]).equal(parseUnits("10000000000000", 8));
+      expect(vTokenMetadataActualParsed["totalCash"]).equal(parseUnits("10000000000000", 8));
       expect(vTokenMetadataActualParsed["isListed"]).equal("true");
       expect(vTokenMetadataActualParsed["collateralFactorMantissa"]).equal("700000000000000000");
       expect(vTokenMetadataActualParsed["underlyingAssetAddress"]).equal(mockWBTC.address);
@@ -403,8 +367,8 @@ describe("PoolLens", async function () {
     it("is correct minted for user", async () => {
       const vTokenAddressWBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
       const vTokenBalance = await poolLens.callStatic.vTokenBalances(vTokenAddressWBTC, ownerAddress);
-      expect(vTokenBalance["balanceOfUnderlying"]).equal(convertToUnit(10000000000000, 8));
-      expect(vTokenBalance["balanceOf"]).equal(convertToUnit(10000000000000, 8));
+      expect(vTokenBalance["balanceOfUnderlying"]).equal(parseUnits("10000000000000", 8));
+      expect(vTokenBalance["balanceOf"]).equal(parseUnits("10000000000000", 8));
     });
   });
 
@@ -427,33 +391,33 @@ describe("PoolLens", async function () {
       // Setup
       await comptroller1Proxy.setMarketSupplyCaps(
         [vWBTC.address, vDAI.address],
-        [convertToUnit("9000000000", 18), convertToUnit("9000000000", 18)],
+        [parseUnits("9000000000", 18), parseUnits("9000000000", 18)],
       );
 
-      await mockWBTC.connect(borrowerDai).faucet(convertToUnit("20", 18));
-      await mockWBTC.connect(borrowerDai).approve(vWBTC.address, convertToUnit("20", 18));
-      await vWBTC.connect(borrowerDai).mint(convertToUnit("2", 18));
+      await mockWBTC.connect(borrowerDai).faucet(parseUnits("20", 18));
+      await mockWBTC.connect(borrowerDai).approve(vWBTC.address, parseUnits("20", 18));
+      await vWBTC.connect(borrowerDai).mint(parseUnits("2", 18));
       await comptroller1Proxy.connect(borrowerDai).enterMarkets([vWBTC.address]);
-      await vDAI.connect(borrowerDai).borrow(convertToUnit("0.05", 18));
+      await vDAI.connect(borrowerDai).borrow(parseUnits("0.05", 18));
       await mine(1);
 
-      await mockDAI.connect(borrowerWbtc).faucet(convertToUnit("900000000", 18));
-      await mockDAI.connect(borrowerWbtc).approve(vDAI.address, convertToUnit("9000000000", 18));
-      await mockDAI.connect(borrowerWbtc).approve(vDAI.address, convertToUnit("9000000000", 18));
-      await vDAI.connect(borrowerWbtc).mint(convertToUnit("900000000", 18));
+      await mockDAI.connect(borrowerWbtc).faucet(parseUnits("900000000", 18));
+      await mockDAI.connect(borrowerWbtc).approve(vDAI.address, parseUnits("9000000000", 18));
+      await mockDAI.connect(borrowerWbtc).approve(vDAI.address, parseUnits("9000000000", 18));
+      await vDAI.connect(borrowerWbtc).mint(parseUnits("900000000", 18));
       await comptroller1Proxy.connect(borrowerWbtc).enterMarkets([vDAI.address]);
-      await vWBTC.connect(borrowerWbtc).borrow(convertToUnit("0.000001", 18));
+      await vWBTC.connect(borrowerWbtc).borrow(parseUnits("0.000001", 18));
       await mine(1);
 
-      await mockDAI.connect(owner).approve(vDAI.address, convertToUnit("9000000000", 18));
-      await mockWBTC.connect(owner).approve(vWBTC.address, convertToUnit("9000000000", 18));
-      await priceOracle.setPrice(mockWBTC.address, convertToUnit("0.000000000000001", 18));
+      await mockDAI.connect(owner).approve(vDAI.address, parseUnits("9000000000", 18));
+      await mockWBTC.connect(owner).approve(vWBTC.address, parseUnits("9000000000", 18));
+      await priceOracle.setPrice(mockWBTC.address, parseUnits("0.000000000000001", 18));
       await mine(1);
 
       await comptroller1Proxy.connect(owner).healAccount(await borrowerDai.getAddress());
 
-      await priceOracle.setPrice(mockWBTC.address, convertToUnit(defaultBtcPrice, 28));
-      await priceOracle.setPrice(mockDAI.address, convertToUnit("0.0000000000000001", 18));
+      await priceOracle.setPrice(mockWBTC.address, parseUnits(defaultBtcPrice, 28));
+      await priceOracle.setPrice(mockDAI.address, parseUnits("0.0000000000000001", 18));
       await comptroller1Proxy.connect(owner).healAccount(await borrowerWbtc.getAddress());
       // End Setup
 
@@ -469,8 +433,8 @@ describe("PoolLens", async function () {
       expect(resp.badDebts[0][1].toString()).to.be.equal("210003400000000000000000000");
 
       // Cleanup
-      await priceOracle.setPrice(mockDAI.address, convertToUnit(defaultDaiPrice, 18));
-      await priceOracle.setPrice(mockWBTC.address, convertToUnit(defaultBtcPrice, 28));
+      await priceOracle.setPrice(mockDAI.address, parseUnits(defaultDaiPrice, 18));
+      await priceOracle.setPrice(mockWBTC.address, parseUnits(defaultBtcPrice, 28));
     });
   });
 });

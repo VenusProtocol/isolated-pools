@@ -17,7 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const vBep20Factory = await ethers.getContract("VTokenProxyFactory");
   let accessControlManager;
   if (hre.network.live) {
     const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
@@ -94,14 +93,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   await tx.wait();
   console.log("DEFAULT_ADMIN | PoolRegistry       | supportMarket(address)");
-
-  tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setInterestRateModel(address)",
-    vBep20Factory.address,
-  );
-  await tx.wait();
-  console.log("DEFAULT_ADMIN | VTokenProxyFactory | setInterestRateModel(address)");
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
