@@ -1,11 +1,10 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
+import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
-import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
@@ -105,14 +104,14 @@ describe("VToken", function () {
   describe("set reserve factor", () => {
     it("reverts if rejected by access control manager", async () => {
       accessControlManager.isAllowedToCall.returns(false);
-      await expect(vToken.connect(user).setReserveFactor(convertToUnit(1, 17))).to.be.revertedWithCustomError(
+      await expect(vToken.connect(user).setReserveFactor(parseUnits("1", 17))).to.be.revertedWithCustomError(
         vToken,
         "Unauthorized",
       );
     });
 
     it("success if allowed to set setReserveFactor", async () => {
-      await vToken.connect(root).setReserveFactor(convertToUnit(1, 17));
+      await vToken.connect(root).setReserveFactor(parseUnits("1", 17));
     });
   });
 

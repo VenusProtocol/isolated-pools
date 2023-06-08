@@ -1,13 +1,12 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber } from "bignumber.js";
 import chai from "chai";
-import { BigNumberish, constants } from "ethers";
+import { BigNumber, BigNumberish, constants } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
+import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
-import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
@@ -31,9 +30,9 @@ import {
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const repayAmount = convertToUnit("10", 18);
-const seizeTokens = convertToUnit("40", 18); // forced, repayAmount * 4
-const exchangeRate = convertToUnit("0.2", 18);
+const repayAmount = parseUnits("10", 18).toBigInt();
+const seizeTokens = parseUnits("40", 18).toBigInt(); // forced, repayAmount * 4
+const exchangeRate = parseUnits("0.2", 18).toBigInt();
 
 type LiquidateTestFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
@@ -78,11 +77,11 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   await collateralVToken.harnessSetExchangeRate(exchangeRate);
 
   // setup for success in liquidating
-  await collateralVToken.harnessSetTotalSupply(convertToUnit("10", 18));
+  await collateralVToken.harnessSetTotalSupply(parseUnits("10", 18));
   await collateralVToken.harnessSetBalance(liquidator.address, 0);
   await collateralVToken.harnessSetBalance(borrower.address, seizeTokens);
-  await pretendBorrow(collateralVToken, borrower, 0, 1, 0);
-  await pretendBorrow(borrowedVToken, borrower, 1, 1, repayAmount);
+  await pretendBorrow(collateralVToken, borrower, parseUnits("0", 18), parseUnits("1", 18), 0);
+  await pretendBorrow(borrowedVToken, borrower, parseUnits("1", 18), parseUnits("1", 18), repayAmount);
   await preApprove(borrowedUnderlying, borrowedVToken, liquidator, repayAmount, { faucet: true });
 
   return {
@@ -175,17 +174,14 @@ describe("VToken", function () {
   let collateralRateModel: FakeContract<InterestRateModel>;
   let collateralVToken: VTokenHarness;
 
-  const protocolSeizeShareMantissa = convertToUnit("0.05", 18); // 5%
+  const protocolSeizeShareMantissa = parseUnits("0.05", 18); // 5%
 
-  const protocolShareTokens = new BigNumber(seizeTokens)
-    .multipliedBy(protocolSeizeShareMantissa)
-    .dividedBy(convertToUnit("1", 18))
-    .toString();
-  const liquidatorShareTokens = new BigNumber(seizeTokens).minus(protocolShareTokens).toString();
-  const addReservesAmount = new BigNumber(protocolShareTokens)
-    .multipliedBy(exchangeRate)
-    .dividedBy(convertToUnit("1", 18))
-    .toString();
+  const protocolShareTokens = BigNumber.from(seizeTokens)
+    .mul(protocolSeizeShareMantissa)
+    .div(parseUnits("1", 18))
+    .toBigInt();
+  const liquidatorShareTokens = BigNumber.from(seizeTokens).sub(protocolShareTokens).toBigInt();
+  const addReservesAmount = BigNumber.from(protocolShareTokens).mul(exchangeRate).div(parseUnits("1", 18)).toBigInt();
 
   beforeEach(async () => {
     [, liquidator, borrower] = await ethers.getSigners();
@@ -325,7 +321,7 @@ describe("VToken", function () {
       );
       const result = await liquidate(borrowedVToken, liquidator, borrower, repayAmount, collateralVToken);
       const receipt = await result.wait();
-      const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toString();
+      const gasCost = receipt.effectiveGasPrice.mul(receipt.gasUsed).toBigInt();
       const afterBalances = await getBalances(
         [borrowedVToken, collateralVToken],
         [liquidator.address, borrower.address],

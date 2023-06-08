@@ -1,11 +1,9 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { BigNumber } from "bignumber.js";
 import chai from "chai";
-import { BigNumberish, Signer } from "ethers";
+import { BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
@@ -170,16 +168,16 @@ type HoldersSnapshot = {
 };
 
 type HolderSnapshot = {
-  eth: string;
-  cash: string;
-  tokens: string;
-  borrows: string;
-  reserves?: string;
+  eth: BigNumber;
+  cash: BigNumber;
+  tokens: BigNumber;
+  borrows: BigNumber;
+  reserves?: BigNumber;
 };
 
 type BalanceDeltaEntry =
-  | [VTokenHarness, string, keyof HolderSnapshot, string | number]
-  | [VTokenHarness, keyof HolderSnapshot, string | number];
+  | [VTokenHarness, string, keyof HolderSnapshot, BigNumberish]
+  | [VTokenHarness, keyof HolderSnapshot, BigNumberish];
 
 export async function getBalances(vTokens: VTokenHarness[], accounts: string[]): Promise<BalancesSnapshot> {
   const balances: BalancesSnapshot = {};
@@ -188,18 +186,18 @@ export async function getBalances(vTokens: VTokenHarness[], accounts: string[]):
     const underlying = await ethers.getContractAt("ERC20Harness", await vToken.underlying());
     for (const account of accounts) {
       vBalances[account] = {
-        eth: (await ethers.provider.getBalance(account)).toString(),
-        cash: (await underlying.balanceOf(account)).toString(),
-        tokens: (await vToken.balanceOf(account)).toString(),
-        borrows: (await vToken.harnessAccountBorrows(account)).principal.toString(),
+        eth: await ethers.provider.getBalance(account),
+        cash: await underlying.balanceOf(account),
+        tokens: await vToken.balanceOf(account),
+        borrows: (await vToken.harnessAccountBorrows(account)).principal,
       };
     }
     vBalances[vToken.address] = {
-      eth: (await ethers.provider.getBalance(vToken.address)).toString(),
-      cash: (await underlying.balanceOf(vToken.address)).toString(),
-      tokens: (await vToken.totalSupply()).toString(),
-      borrows: (await vToken.totalBorrows()).toString(),
-      reserves: (await vToken.totalReserves()).toString(),
+      eth: await ethers.provider.getBalance(vToken.address),
+      cash: await underlying.balanceOf(vToken.address),
+      tokens: await vToken.totalSupply(),
+      borrows: await vToken.totalBorrows(),
+      reserves: await vToken.totalReserves(),
     };
   }
   return balances;
@@ -210,16 +208,14 @@ export function adjustBalances(balances: BalancesSnapshot, deltas: BalanceDeltaE
     let vToken: VTokenHarness;
     let account: string;
     let key: keyof HolderSnapshot;
-    let diff: string | number;
+    let diff: BigNumberish;
     if (delta.length == 4) {
       [vToken, account, key, diff] = delta;
     } else {
       [vToken, key, diff] = delta;
       account = vToken.address;
     }
-    balances[vToken.address][account][key] = new BigNumber(balances[vToken.address][account][key]!)
-      .plus(diff)
-      .toString();
+    balances[vToken.address][account][key] = BigNumber.from(balances[vToken.address][account][key]!).add(diff);
   }
   return balances;
 }
@@ -241,14 +237,14 @@ export async function preApprove(
 export async function pretendBorrow(
   vToken: VTokenHarness,
   borrower: Signer,
-  accountIndex: number,
-  marketIndex: number,
+  accountIndexRaw: BigNumberish,
+  marketIndexRaw: BigNumberish,
   principalRaw: BigNumberish,
   blockNumber: number = 2e7,
 ) {
   await vToken.harnessSetTotalBorrows(principalRaw);
-  await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, convertToUnit(accountIndex, 18));
-  await vToken.harnessSetBorrowIndex(convertToUnit(marketIndex, 18));
+  await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, accountIndexRaw);
+  await vToken.harnessSetBorrowIndex(marketIndexRaw);
   await vToken.harnessSetAccrualBlockNumber(blockNumber);
   await vToken.harnessSetBlockNumber(blockNumber);
 }
