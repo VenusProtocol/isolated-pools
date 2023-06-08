@@ -45,6 +45,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         uint256 highestBidBlock;
         uint256 startBidBps;
         mapping(VToken => uint256) marketDebt;
+        mapping(VToken => uint256) bidAmount;
     }
 
     /// @dev Max basis points i.e., 100%
@@ -197,22 +198,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
-            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-                if (auction.highestBidder != address(0)) {
-                    uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) /
-                        MAX_BPS);
-                    erc20.safeTransfer(auction.highestBidder, previousBidAmount);
-                }
+            if (auction.highestBidder != address(0)) {
+                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
+            }
+            uint256 balanceBefore = erc20.balanceOf(address(this));
 
+            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
                 uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps) / MAX_BPS);
                 erc20.safeTransferFrom(msg.sender, address(this), currentBidAmount);
             } else {
-                if (auction.highestBidder != address(0)) {
-                    erc20.safeTransfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
-                }
-
                 erc20.safeTransferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
+
+            uint256 balanceAfter = erc20.balanceOf(address(this));
+            auction.bidAmount[auction.markets[i]] = balanceAfter - balanceBefore;
         }
 
         auction.highestBidder = msg.sender;
@@ -246,14 +245,10 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
-            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
-                uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) / MAX_BPS);
-                erc20.safeTransfer(address(auction.markets[i]), bidAmount);
-                marketsDebt[i] = bidAmount;
-            } else {
-                erc20.safeTransfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
-                marketsDebt[i] = auction.marketDebt[auction.markets[i]];
-            }
+            uint256 balanceBefore = erc20.balanceOf(address(auction.markets[i]));
+            erc20.safeTransfer(address(auction.markets[i]), auction.bidAmount[auction.markets[i]]);
+            uint256 balanceAfter = erc20.balanceOf(address(auction.markets[i]));
+            marketsDebt[i] = balanceAfter - balanceBefore;
 
             auction.markets[i].badDebtRecovered(marketsDebt[i]);
         }
