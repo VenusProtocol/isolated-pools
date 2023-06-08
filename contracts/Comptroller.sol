@@ -718,7 +718,7 @@ contract Comptroller is
      * @notice Sets the closeFactor to use when liquidating borrows
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @custom:event Emits NewCloseFactor on success
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
