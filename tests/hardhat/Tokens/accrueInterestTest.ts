@@ -1,4 +1,4 @@
-import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "bignumber.js";
@@ -17,7 +17,7 @@ const borrowIndex = convertToUnit("1", 18);
 const borrowRate = convertToUnit("0.000001", 18);
 
 async function pretendBlock(
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   accrualBlock: number | string = blockNumber,
   deltaBlocks: number | string = 1,
 ) {
@@ -30,7 +30,7 @@ async function preAccrue({
   vToken,
   interestRateModel,
 }: {
-  vToken: MockContract<VTokenHarness>;
+  vToken: VTokenHarness;
   interestRateModel: FakeContract<InterestRateModel>;
 }) {
   interestRateModel.getBorrowRate.reset();
@@ -40,7 +40,7 @@ async function preAccrue({
 }
 
 describe("VToken", () => {
-  let vToken: MockContract<VTokenHarness>;
+  let vToken: VTokenHarness;
   let interestRateModel: FakeContract<InterestRateModel>;
 
   beforeEach(async () => {

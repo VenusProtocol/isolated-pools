@@ -1,4 +1,4 @@
-import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
@@ -16,7 +16,7 @@ describe("VToken", function () {
   let guy: Signer;
   let rootAddress: string;
   let guyAddress: string;
-  let vToken: MockContract<VTokenHarness>;
+  let vToken: VTokenHarness;
   let comptroller: FakeContract<Comptroller>;
 
   beforeEach(async () => {

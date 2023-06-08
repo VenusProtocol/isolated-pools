@@ -45,12 +45,12 @@ async function preMint(
   await vToken.harnessSetExchangeRate(exchangeRate);
 }
 
-async function mintFresh(vToken: MockContract<VTokenHarness>, minter: Signer, mintAmount: BigNumberish) {
+async function mintFresh(vToken: VTokenHarness, minter: Signer, mintAmount: BigNumberish) {
   return vToken.harnessMintFresh(await minter.getAddress(), mintAmount);
 }
 
 async function preSupply(
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   account: Signer,
   tokens: BigNumberish,
   opts: { supply?: boolean } = { supply: true },
@@ -83,13 +83,13 @@ async function preRedeem(
   await vToken.harnessSetExchangeRate(exchangeRate);
 }
 
-async function redeemFreshTokens(vToken: MockContract<VTokenHarness>, redeemer: Signer, redeemTokens: BigNumberish) {
+async function redeemFreshTokens(vToken: VTokenHarness, redeemer: Signer, redeemTokens: BigNumberish) {
   const redeemerAddress = await redeemer.getAddress();
   return vToken.harnessRedeemFresh(redeemerAddress, redeemTokens, 0);
 }
 
 async function redeemFreshAmount(
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   redeemer: Signer,
   redeemTokens: BigNumberish,
   redeemAmount: BigNumberish,
@@ -100,7 +100,7 @@ async function redeemFreshAmount(
 
 async function quickMint(
   underlying: MockContract<ERC20Harness>,
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   minter: Signer,
   mintAmount: BigNumberish,
   opts: { approve?: boolean; exchangeRate?: BigNumberish; faucet?: boolean } = { approve: true, faucet: true },
@@ -118,7 +118,7 @@ async function quickMint(
 }
 
 async function quickRedeem(
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   redeemer: Signer,
   redeemTokens: BigNumberish,
   opts: { supply?: boolean; exchangeRate?: BigNumberish } = { supply: true },
@@ -135,7 +135,7 @@ async function quickRedeem(
 }
 
 async function quickRedeemUnderlying(
-  vToken: MockContract<VTokenHarness>,
+  vToken: VTokenHarness,
   redeemer: Signer,
   redeemAmount: BigNumberish,
   opts: { exchangeRate?: BigNumberish } = {},
@@ -158,7 +158,7 @@ describe("VToken", function () {
 
   let contracts: VTokenTestFixture;
   let comptroller: FakeContract<Comptroller>;
-  let vToken: MockContract<VTokenHarness>;
+  let vToken: VTokenHarness;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
 

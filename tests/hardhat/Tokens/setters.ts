@@ -1,4 +1,4 @@
-import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
@@ -26,7 +26,7 @@ async function settersTestFixture() {
 }
 
 describe("VToken", function () {
-  let vToken: MockContract<VTokenHarness>;
+  let vToken: VTokenHarness;
   let comptroller: FakeContract<Comptroller>;
   let newComptroller: FakeContract<Comptroller>;
   let accessControlManager: FakeContract<AccessControlManager>;

@@ -30,11 +30,11 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowA
   await vToken.harnessSetTotalBorrows(0);
 }
 
-async function borrowFresh(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
+async function borrowFresh(vToken: VTokenHarness, borrower: Signer, borrowAmount: BigNumberish) {
   return vToken.harnessBorrowFresh(await borrower.getAddress(), borrowAmount);
 }
 
-async function borrow(vToken: MockContract<VTokenHarness>, borrower: Signer, borrowAmount: BigNumberish) {
+async function borrow(vToken: VTokenHarness, borrower: Signer, borrowAmount: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
   return vToken.connect(borrower).borrow(borrowAmount);
@@ -55,29 +55,19 @@ async function preRepay(contracts: VTokenTestFixture, benefactor: Signer, borrow
   await preApprove(underlying, vToken, borrower, repayAmount, { faucet: true });
 }
 
-async function repayBorrowFresh(
-  vToken: MockContract<VTokenHarness>,
-  payer: Signer,
-  borrower: Signer,
-  repayAmount: BigNumberish,
-) {
+async function repayBorrowFresh(vToken: VTokenHarness, payer: Signer, borrower: Signer, repayAmount: BigNumberish) {
   const payerAddress = await payer.getAddress();
   const borrowerAddress = await borrower.getAddress();
   return vToken.connect(payer).harnessRepayBorrowFresh(payerAddress, borrowerAddress, repayAmount);
 }
 
-async function repayBorrow(vToken: MockContract<VTokenHarness>, borrower: Signer, repayAmount: BigNumberish) {
+async function repayBorrow(vToken: VTokenHarness, borrower: Signer, repayAmount: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
   return vToken.connect(borrower).repayBorrow(repayAmount);
 }
 
-async function repayBorrowBehalf(
-  vToken: MockContract<VTokenHarness>,
-  payer: Signer,
-  borrower: Signer,
-  repayAmount: BigNumberish,
-) {
+async function repayBorrowBehalf(vToken: VTokenHarness, payer: Signer, borrower: Signer, repayAmount: BigNumberish) {
   // make sure to have a block delta so we accrue interest
   await vToken.harnessFastForward(1);
   return vToken.connect(payer).repayBorrowBehalf(await borrower.getAddress(), repayAmount);
@@ -86,7 +76,7 @@ async function repayBorrowBehalf(
 describe("VToken", function () {
   let contracts: VTokenTestFixture;
   let comptroller: FakeContract<Comptroller>;
-  let vToken: MockContract<VTokenHarness>;
+  let vToken: VTokenHarness;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
   let _root: Signer;
