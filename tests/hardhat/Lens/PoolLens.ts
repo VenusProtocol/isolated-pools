@@ -18,6 +18,9 @@ import {
   VToken,
 } from "../../../typechain";
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 const cullTuple = (tuple: any) => {
   return Object.keys(tuple).reduce((acc, key) => {
     if (Number.isNaN(Number(key))) {
@@ -41,7 +44,6 @@ const assertVTokenMetadata = (vTokenMetadataActual: any, vTokenMetadataExpected:
 describe("PoolLens", async function () {
   let poolRegistry: PoolRegistry;
   let poolRegistryAddress: string;
-  let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
   let mockDAI: MockToken;
   let mockWBTC: MockToken;
@@ -113,17 +115,9 @@ describe("PoolLens", async function () {
 
     poolRegistryAddress = poolRegistry.address;
 
-    const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptroller = await Comptroller.deploy(poolRegistry.address);
-    await comptroller.deployed();
-
     const VTokenContract = await ethers.getContractFactory("VToken");
     const vToken = await VTokenContract.deploy();
     await vToken.deployed();
-
-    const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
-    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
-    await comptrollerBeacon.deployed();
 
     const VTokenBeacon = await ethers.getContractFactory("Beacon");
     vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
@@ -135,31 +129,39 @@ describe("PoolLens", async function () {
     closeFactor1 = convertToUnit(0.05, 18);
     liquidationIncentive1 = convertToUnit(1, 18);
 
+    const Comptroller = await ethers.getContractFactory("Comptroller");
+    const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+    [comptroller1Proxy, comptroller2Proxy] = await Promise.all(
+      [...Array(3)].map(async () => {
+        const comptroller = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ]);
+        await comptroller.setPriceOracle(priceOracle.address);
+        return comptroller;
+      }),
+    );
+
     // Registering the first pool
-    await poolRegistry.createRegistryPool(
+    await poolRegistry.addPool(
       "Pool 1",
-      comptrollerBeacon.address,
+      comptroller1Proxy.address,
       closeFactor1,
       liquidationIncentive1,
       minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
     );
 
     closeFactor2 = convertToUnit(0.05, 18);
     liquidationIncentive2 = convertToUnit(1, 18);
 
     // Registering the second pool
-    await poolRegistry.createRegistryPool(
+    await poolRegistry.addPool(
       "Pool 2",
-      comptrollerBeacon.address,
+      comptroller2Proxy.address,
       closeFactor2,
       liquidationIncentive2,
       minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
     );
 
     const MockDAI = await ethers.getContractFactory("MockToken");
@@ -184,12 +186,6 @@ describe("PoolLens", async function () {
     const pools = await poolRegistry.callStatic.getAllPools();
     expect(pools[0].name).equal("Pool 1");
     expect(pools[1].name).equal("Pool 2");
-
-    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-    await comptroller1Proxy.acceptOwnership();
-
-    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
-    await comptroller2Proxy.acceptOwnership();
 
     const initialSupply = convertToUnit(1000, 18);
     await mockWBTC.faucet(initialSupply);
@@ -263,9 +259,6 @@ describe("PoolLens", async function () {
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
-
-    // Set Oracle
-    await comptroller1Proxy.setPriceOracle(priceOracle.address);
 
     const PoolLens = await ethers.getContractFactory("PoolLens");
     poolLens = await PoolLens.deploy();

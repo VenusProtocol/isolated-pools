@@ -37,6 +37,9 @@ const WP_RATE_MODEL = 0;
 const JUMP_RATE_MODEL = 1;
 const INITIAL_SUPPLY = parseUnits("1000", 18);
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 interface NewMarketParameters {
   comptroller: string;
   asset: string;
@@ -63,7 +66,6 @@ describe("PoolRegistry: Tests", function () {
   let owner: SignerWithAddress;
   let user: SignerWithAddress;
   let poolRegistry: PoolRegistry;
-  let comptrollerBeacon: Beacon;
   let vTokenBeacon: Beacon;
   let mockDAI: MockContract<MockToken>;
   let mockWBTC: MockContract<MockToken>;
@@ -73,6 +75,7 @@ describe("PoolRegistry: Tests", function () {
   let priceOracle: MockPriceOracle;
   let comptroller1Proxy: Comptroller;
   let comptroller2Proxy: Comptroller;
+  let comptroller3Proxy: Comptroller;
   let vTokenFactory: VTokenProxyFactory;
   let jumpRateFactory: JumpRateModelFactory;
   let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
@@ -140,32 +143,12 @@ describe("PoolRegistry: Tests", function () {
       fakeAccessControlManager.address,
     ]);
 
-    const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptroller = await Comptroller.deploy(poolRegistry.address);
-    await comptroller.deployed();
-
-    const VTokenContract = await ethers.getContractFactory("VToken");
-    const vToken = await VTokenContract.deploy();
-    await vToken.deployed();
-
-    const ComptrollerBeacon = await ethers.getContractFactory<Beacon__factory>("Beacon");
-    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
-    await comptrollerBeacon.deployed();
-
-    const VTokenBeacon = await ethers.getContractFactory<Beacon__factory>("Beacon");
-    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
-    await vTokenBeacon.deployed();
-
     // Deploy Mock Tokens
     const MockToken = await smock.mock<MockToken__factory>("MockToken");
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
     await mockDAI.faucet(parseUnits("1000", 18));
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
     mockToken = await MockToken.deploy("SomeToken", "ST", 18);
-
-    const _closeFactor = parseUnits("0.05", 18);
-    const _liquidationIncentive = parseUnits("1", 18);
-    const _minLiquidatableCollateral = parseUnits("100", 18);
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
@@ -179,38 +162,51 @@ describe("PoolRegistry: Tests", function () {
     await priceOracle.setPrice(mockWBTC.address, parseUnits(btcPrice, 28));
     await priceOracle.setPrice(mockToken.address, parseUnits(someTokenPrice, 18));
 
+    const Comptroller = await ethers.getContractFactory("Comptroller");
+    const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+    [comptroller1Proxy, comptroller2Proxy, comptroller3Proxy] = await Promise.all(
+      [...Array(3)].map(async () => {
+        const comptroller = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
+        ]);
+        await comptroller.setPriceOracle(priceOracle.address);
+        return comptroller as Comptroller;
+      }),
+    );
+
+    const VTokenContract = await ethers.getContractFactory("VToken");
+    const vToken = await VTokenContract.deploy();
+    await vToken.deployed();
+
+    const VTokenBeacon = await ethers.getContractFactory<Beacon__factory>("Beacon");
+    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+    await vTokenBeacon.deployed();
+
+    const _closeFactor = parseUnits("0.05", 18);
+    const _liquidationIncentive = parseUnits("1", 18);
+    const _minLiquidatableCollateral = parseUnits("100", 18);
+
     // Registering the first pool
-    await poolRegistry.createRegistryPool(
+    await poolRegistry.addPool(
       "Pool 1",
-      comptrollerBeacon.address,
+      comptroller1Proxy.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
     );
 
     // Registering the second pool
-    await poolRegistry.createRegistryPool(
+    await poolRegistry.addPool(
       "Pool 2",
-      comptrollerBeacon.address,
+      comptroller2Proxy.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
-      priceOracle.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
     );
 
     // Setup Proxies
-    const pools = await poolRegistry.callStatic.getAllPools();
-    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-    await comptroller1Proxy.acceptOwnership();
-
-    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
-    await comptroller2Proxy.acceptOwnership();
-
     await mockWBTC.faucet(INITIAL_SUPPLY);
     await mockWBTC.approve(poolRegistry.address, INITIAL_SUPPLY);
 
@@ -560,20 +556,17 @@ describe("PoolRegistry: Tests", function () {
     });
   });
 
-  describe("createRegistryPool", async () => {
+  describe("addPool", async () => {
     it("reverts if ACM denies the access", async () => {
-      const createRegistryPool = "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)";
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, createRegistryPool).returns(false);
+      const addPoolSignature = "addPool(string,address,uint256,uint256,uint256)";
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, addPoolSignature).returns(false);
       await expect(
-        poolRegistry.createRegistryPool(
+        poolRegistry.addPool(
           "Pool 3",
-          comptrollerBeacon.address,
+          comptroller3Proxy.address,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
-          priceOracle.address,
-          maxLoopsLimit,
-          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
     });
@@ -581,45 +574,40 @@ describe("PoolRegistry: Tests", function () {
     it("reverts if pool name is too long", async () => {
       const longName = Array(101).fill("a").join("");
       await expect(
-        poolRegistry.createRegistryPool(
+        poolRegistry.addPool(
           longName,
-          comptrollerBeacon.address,
+          comptroller3Proxy.address,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
-          priceOracle.address,
-          maxLoopsLimit,
-          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWith("Pool's name is too large");
     });
 
-    it("reverts if beacon address is zero", async () => {
+    it("reverts if Comptroller address is zero", async () => {
       await expect(
-        poolRegistry.createRegistryPool(
+        poolRegistry.addPool(
           "Pool 3",
           constants.AddressZero,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
-          priceOracle.address,
-          maxLoopsLimit,
-          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
     it("reverts if price oracle address is zero", async () => {
+      // Deploy a Comptroller contract without a price oracle
+      // We skip proxies and initialization here because it shouldn't affect the test
+      const Comptroller = await ethers.getContractFactory("Comptroller");
+      const comptroller = await Comptroller.deploy(poolRegistry.address);
       await expect(
-        poolRegistry.createRegistryPool(
+        poolRegistry.addPool(
           "Pool 3",
-          comptrollerBeacon.address,
+          comptroller.address,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
-          constants.AddressZero,
-          maxLoopsLimit,
-          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });

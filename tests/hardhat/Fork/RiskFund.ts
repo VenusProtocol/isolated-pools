@@ -25,8 +25,10 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../../typechain";
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 let poolRegistry: PoolRegistry;
-let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
 let USDC: MockToken;
 let BUSD: MockToken;
@@ -139,7 +141,7 @@ const riskFundFixture = async (): Promise<void> => {
     to: shortfall.address,
     value: ethers.utils.parseEther("1"), // 1 ether
   });
-  await shortfall.convertibleBaseAsset.returns(BUSD.address);
+  shortfall.convertibleBaseAsset.returns(BUSD.address);
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = await upgrades.deployProxy(RiskFund, [
@@ -214,7 +216,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     poolRegistry.address,
-    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    "addPool(string,address,uint256,uint256,uint256)",
     admin.address,
   );
 
@@ -230,17 +232,9 @@ const riskFundFixture = async (): Promise<void> => {
 
   await shortfall.connect(shortfall.wallet).updatePoolRegistry(poolRegistry.address);
 
-  const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address);
-  await comptroller.deployed();
-
   const VTokenContract = await ethers.getContractFactory("VToken");
   const vToken = await VTokenContract.deploy();
   await vToken.deployed();
-
-  const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
-  comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
-  await comptrollerBeacon.deployed();
 
   const VTokenBeacon = await ethers.getContractFactory("Beacon");
   vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
@@ -262,58 +256,52 @@ const riskFundFixture = async (): Promise<void> => {
   await priceOracle.setPrice(USDT.address, convertToUnit(usdtPrice, 18));
   await priceOracle.setPrice(BUSD.address, convertToUnit(busdPrice, 18));
 
+  const Comptroller = await ethers.getContractFactory("Comptroller");
+  const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+  [comptroller1Proxy, comptroller2Proxy, comptroller3Proxy] = await Promise.all(
+    [...Array(3)].map(async () => {
+      const comptroller = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
+        maxLoopsLimit,
+        accessControlManager.address,
+      ]);
+      await comptroller.setPriceOracle(priceOracle.address);
+      return comptroller;
+    }),
+  );
+
   // Registering the first pool
-  await poolRegistry.createRegistryPool(
+  await poolRegistry.addPool(
     "Pool 1",
-    comptrollerBeacon.address,
+    comptroller1Proxy.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
-    priceOracle.address,
-    maxLoopsLimit,
-    accessControlManager.address,
   );
 
   // Registering the second pool
-  await poolRegistry.createRegistryPool(
+  await poolRegistry.addPool(
     "Pool 2",
-    comptrollerBeacon.address,
+    comptroller2Proxy.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
-    priceOracle.address,
-    maxLoopsLimit,
-    accessControlManager.address,
   );
 
   // Registering the third pool
-  await poolRegistry.createRegistryPool(
+  await poolRegistry.addPool(
     "Pool 3",
-    comptrollerBeacon.address,
+    comptroller3Proxy.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
-    priceOracle.address,
-    maxLoopsLimit,
-    accessControlManager.address,
   );
-
-  // Setup Proxies
-  const pools = await poolRegistry.callStatic.getAllPools();
-  comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  await comptroller1Proxy.acceptOwnership();
 
   await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
     "transferReserveForAuction(address,uint256)",
     admin.address,
   );
-
-  comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
-  await comptroller2Proxy.acceptOwnership();
-
-  comptroller3Proxy = await ethers.getContractAt("Comptroller", pools[2].comptroller);
-  await comptroller3Proxy.acceptOwnership();
 
   const VToken = await ethers.getContractFactory("VToken");
   const tokenImplementation = await VToken.deploy();

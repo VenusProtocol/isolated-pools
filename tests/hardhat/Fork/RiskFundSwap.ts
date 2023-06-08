@@ -24,8 +24,10 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../../typechain";
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 let poolRegistry: PoolRegistry;
-let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
 let BUSD: MockToken;
 let USDT: MockToken;
@@ -160,17 +162,9 @@ const riskFundFixture = async (): Promise<void> => {
 
   await shortfall.updatePoolRegistry(poolRegistry.address);
 
-  const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address);
-  await comptroller.deployed();
-
   const VTokenContract = await ethers.getContractFactory("VToken");
   const vToken = await VTokenContract.deploy();
   await vToken.deployed();
-
-  const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
-  comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
-  await comptrollerBeacon.deployed();
 
   const VTokenBeacon = await ethers.getContractFactory("Beacon");
   vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
@@ -190,22 +184,23 @@ const riskFundFixture = async (): Promise<void> => {
   await priceOracle.setPrice(USDT.address, parseUnits(usdtPrice, 18));
   await priceOracle.setPrice(BUSD.address, parseUnits(busdPrice, 18));
 
+  const Comptroller = await ethers.getContractFactory("Comptroller");
+  const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+  comptroller1Proxy = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
+    maxLoopsLimit,
+    fakeAccessControlManager.address,
+  ]);
+  await comptroller1Proxy.setPriceOracle(priceOracle.address);
+
   // Registering the first pool
-  await poolRegistry.createRegistryPool(
+  await poolRegistry.addPool(
     "Pool 1",
-    comptrollerBeacon.address,
+    comptroller1Proxy.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
-    priceOracle.address,
-    maxLoopsLimit,
-    fakeAccessControlManager.address,
   );
-
-  // Setup Proxies
-  const pools = await poolRegistry.callStatic.getAllPools();
-  comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  await comptroller1Proxy.acceptOwnership();
 
   const VToken = await ethers.getContractFactory("VToken");
   const tokenImplementation = await VToken.deploy();

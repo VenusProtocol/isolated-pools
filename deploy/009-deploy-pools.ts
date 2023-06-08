@@ -71,31 +71,42 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
-  let pools = await poolRegistry.callStatic.getAllPools();
+  const pools = await poolRegistry.callStatic.getAllPools();
 
   for (let i = 0; i < poolConfig.length; i++) {
     const pool = poolConfig[i];
     let comptrollerProxy;
 
     if (i >= pools.length) {
+      // Deploying a proxy for Comptroller
+      console.log("Deploying a proxy for Comptroller");
+      const Comptroller = await ethers.getContractFactory("Comptroller");
+      comptrollerProxy = await deploy(`Comptroller_${pool.name}`, {
+        from: deployer,
+        contract: "BeaconProxy",
+        args: [
+          ComptrollerBeacon.address,
+          Comptroller.interface.encodeFunctionData("initialize", [maxLoopsLimit, accessControlManager.address]),
+        ],
+      });
+
+      // Deploying a proxy for Comptroller
+      console.log("Setting price oracle for Comptroller");
+      const comptroller = await ethers.getContractAt("Comptroller", comptrollerProxy.address);
+      tx = await comptroller.setPriceOracle(priceOracle.address);
+      await tx.wait();
+
       // Create pool
       console.log("Registering new pool with name " + pool.name);
-      tx = await poolRegistry.createRegistryPool(
+      tx = await poolRegistry.addPool(
         pool.name,
-        ComptrollerBeacon.address,
+        comptroller.address,
         pool.closeFactor,
         pool.liquidationIncentive,
         pool.minLiquidatableCollateral,
-        priceOracle.address,
-        maxLoopsLimit,
-        accessControlManager.address,
       );
       await tx.wait();
       console.log("New Pool Registered");
-      pools = await poolRegistry.callStatic.getAllPools();
-      comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
-      tx = await comptrollerProxy.acceptOwnership();
-      await tx.wait();
     } else {
       comptrollerProxy = await ethers.getContractAt("Comptroller", pools[i].comptroller);
     }

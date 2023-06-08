@@ -23,9 +23,11 @@ import {
   WhitePaperInterestRateModelFactory,
 } from "../../typechain";
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 let root: SignerWithAddress;
 let poolRegistry: MockContract<PoolRegistry>;
-let comptrollerBeacon: Beacon;
 let vTokenBeacon: Beacon;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
@@ -71,17 +73,9 @@ async function rewardsFixture() {
     fakeAccessControlManager.address,
   ]);
 
-  const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptroller = await Comptroller.deploy(poolRegistry.address);
-  await comptroller.deployed();
-
   const VTokenContract = await ethers.getContractFactory("VToken");
   const vToken = await VTokenContract.deploy();
   await vToken.deployed();
-
-  const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
-  comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
-  await comptrollerBeacon.deployed();
 
   const VTokenBeacon = await ethers.getContractFactory("Beacon");
   vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
@@ -119,25 +113,25 @@ async function rewardsFixture() {
   const _liquidationIncentive = convertToUnit(1, 18);
   const _minLiquidatableCollateral = convertToUnit(100, 18);
 
+  const Comptroller = await ethers.getContractFactory("Comptroller");
+  const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+  comptrollerProxy = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
+    maxLoopsLimit,
+    fakeAccessControlManager.address,
+  ]);
+  await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+
   // Registering the first pool
-  await poolRegistry.createRegistryPool(
+  await poolRegistry.addPool(
     "Pool 1",
-    comptrollerBeacon.address,
+    comptrollerProxy.address,
     _closeFactor,
     _liquidationIncentive,
     _minLiquidatableCollateral,
-    fakePriceOracle.address,
-    maxLoopsLimit,
-    fakeAccessControlManager.address,
   );
 
   // Get all pools list.
-  const pools = await poolRegistry.callStatic.getAllPools();
-
-  comptrollerProxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  await comptrollerProxy.acceptOwnership();
-  await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
-
   const VToken = await ethers.getContractFactory("VToken");
   const tokenImplementation = await VToken.deploy();
   await tokenImplementation.deployed();
@@ -335,8 +329,8 @@ describe("Rewards: Tests", async function () {
       .withArgs(rewardsDistributor.address);
   });
 
-  it("Claim XVS", async function () {
-    const [_owner, user1, user2] = await ethers.getSigners();
+  it("Claim XVS", async () => {
+    const [, user1, user2] = await ethers.getSigners();
 
     await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
     await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
@@ -344,7 +338,10 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
     await vWBTC.connect(user1).mint(convertToUnit(10, 8));
 
-    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+    await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
+      vWBTC.address,
+      vDAI.address,
+    ]);
 
     /*
       Formula: (supplyIndex * supplyTokens * blocksDelta) + (borrowIndex * borrowTokens * blocksDelta)
@@ -361,8 +358,8 @@ describe("Rewards: Tests", async function () {
     expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
   });
 
-  it("Contributor Rewards", async function () {
-    const [_owner, user1] = await ethers.getSigners();
+  it("Contributor Rewards", async () => {
+    const [, user1] = await ethers.getSigners();
 
     expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
 

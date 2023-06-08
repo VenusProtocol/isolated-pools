@@ -113,13 +113,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     poolRegistry.address,
-    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    "addPool(string,address,uint256,uint256,uint256)",
     deployer,
   );
   await tx.wait();
-  console.log(
-    "PoolRegistry  | Deployer           | createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
-  );
+  console.log("PoolRegistry  | Deployer           | addPool(string,address,uint256,uint256,uint256)");
 
   tx = await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", deployer);
   await tx.wait();

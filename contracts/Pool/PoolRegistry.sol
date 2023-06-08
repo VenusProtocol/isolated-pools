@@ -204,55 +204,37 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @dev Deploys a new Venus pool and adds to the directory.
+     * @notice Adds a new Venus pool to the directory
+     * @dev Price oracle must be configured before adding a pool
      * @param name The name of the pool
-     * @param beaconAddress The upgradeable beacon contract address for Comptroller implementation
+     * @param comptroller Pool's Comptroller contract
      * @param closeFactor The pool's close factor (scaled by 1e18)
      * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
      * @param minLiquidatableCollateral Minimal collateral for regular (non-batch) liquidations flow
-     * @param priceOracle The pool's price oracle address
-     * @param maxLoopsLimit The maximum number of iterations the loops can perform
-     * @param accessControlManager AccessControlManager contract address
      * @return index The index of the registered Venus pool
-     * @return proxyAddress The the Comptroller proxy address
-     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller beacon address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when Comptroller address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when price oracle address is zero
      */
-    function createRegistryPool(
+    function addPool(
         string calldata name,
-        address beaconAddress,
+        Comptroller comptroller,
         uint256 closeFactor,
         uint256 liquidationIncentive,
-        uint256 minLiquidatableCollateral,
-        address priceOracle,
-        uint256 maxLoopsLimit,
-        address accessControlManager
-    ) external virtual returns (uint256 index, address proxyAddress) {
-        _checkAccessAllowed("createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)");
+        uint256 minLiquidatableCollateral
+    ) external virtual returns (uint256 index) {
+        _checkAccessAllowed("addPool(string,address,uint256,uint256,uint256)");
         // Input validation
-        ensureNonzeroAddress(beaconAddress);
-        ensureNonzeroAddress(priceOracle);
+        ensureNonzeroAddress(address(comptroller));
+        ensureNonzeroAddress(address(comptroller.oracle()));
 
-        BeaconProxy proxy = new BeaconProxy(
-            beaconAddress,
-            abi.encodeWithSelector(Comptroller.initialize.selector, maxLoopsLimit, accessControlManager)
-        );
-
-        proxyAddress = address(proxy);
-        Comptroller comptrollerProxy = Comptroller(proxyAddress);
-
-        uint256 poolId = _registerPool(name, proxyAddress);
+        uint256 poolId = _registerPool(name, address(comptroller));
 
         // Set Venus pool parameters
-        comptrollerProxy.setCloseFactor(closeFactor);
-        comptrollerProxy.setLiquidationIncentive(liquidationIncentive);
-        comptrollerProxy.setMinLiquidatableCollateral(minLiquidatableCollateral);
-        comptrollerProxy.setPriceOracle(ResilientOracleInterface(priceOracle));
+        comptroller.setCloseFactor(closeFactor);
+        comptroller.setLiquidationIncentive(liquidationIncentive);
+        comptroller.setMinLiquidatableCollateral(minLiquidatableCollateral);
 
-        // Start transferring ownership to msg.sender
-        comptrollerProxy.transferOwnership(msg.sender);
-
-        return (poolId, proxyAddress);
+        return poolId;
     }
 
     /**
