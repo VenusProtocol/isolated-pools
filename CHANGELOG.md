@@ -1,3 +1,12 @@
+## [1.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2023-06-08)
+
+
+### Bug Fixes
+
+* lint issues. ([c925fec](https://github.com/VenusProtocol/isolated-pools/commit/c925fec45c3f8d3992ef0b33e364ba19db04334a))
+* place bid method. ([3b4ce93](https://github.com/VenusProtocol/isolated-pools/commit/3b4ce931105dedf6c9e4bb339209b077eb51d2ab))
+* shortfall tests ([492f604](https://github.com/VenusProtocol/isolated-pools/commit/492f60496d8d9c38be3e377cb4816a2e6390227b))
+
 ## [1.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2023-06-02)
 
 ## [1.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2023-06-01)
