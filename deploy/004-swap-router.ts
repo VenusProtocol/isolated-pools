@@ -1,5 +1,5 @@
-import deployOracle from "@venusprotocol/venus-protocol/deploy/005-deploy-swaprouter";
+import deploySwapRouter from "@venusprotocol/venus-protocol/deploy/005-deploy-swaprouter";
 
-deployOracle.tags = ["SwapRouter", "il"];
+deploySwapRouter.tags = ["SwapRouter", "il"];
 
-export default deployOracle;
+export default deploySwapRouter;

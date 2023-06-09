@@ -39,6 +39,8 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "AccessControl",
     "Factories",
     "AccessControlConfig",
+    "Comptrollers",
+    "VTokens",
     "Pools",
     "RiskFund",
   ]);
