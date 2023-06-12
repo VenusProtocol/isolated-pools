@@ -8,6 +8,11 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 
+/**
+ * @title ReserveHelpers
+ * @author Venus
+ * @notice Contract with basic features to track/hold different assets for different Comptrollers.
+ */
 contract ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

@@ -24,7 +24,10 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
  * @title PoolRegistry
- * @notice PoolRegistry is a registry for Venus interest rate pools.
+ * @author Venus
+ * @notice The Isolated Pools architecture centers around the `PoolRegistry` contract. The `PoolRegistry` maintains a directory of isolated lending
+ * pools and can perform actions like creating and registering new pools, adding new markets to existing pools, setting and updating the pool's required
+ * metadata, and providing the getter methods to get information on the pools.
  */
 contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;

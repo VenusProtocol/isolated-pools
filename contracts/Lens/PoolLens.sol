@@ -12,6 +12,19 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 
+/**
+ * @title PoolLens
+ * @author Venus
+ * @notice The `PoolLens` contract is designed to retrieve important information for each registered pool. A list of essential information
+ * for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be
+ * looked up for specific pools and markets:
+- the vToken balance of a given user;
+- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
+- the vToken address in a pool for a given asset;
+- a list of all pools that support an asset;
+- the underlying asset price of a vToken;
+- the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
+ */
 contract PoolLens is ExponentialNoError {
     /**
      * @dev Struct for PoolDetails.

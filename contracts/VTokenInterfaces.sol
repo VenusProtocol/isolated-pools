@@ -7,6 +7,11 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 
+/**
+ * @title VTokenStorage
+ * @author Venus
+ * @notice Storage layout used by the `VToken` contract
+ */
 // solhint-disable-next-line max-states-count
 contract VTokenStorage {
     /**
@@ -130,6 +135,11 @@ contract VTokenStorage {
     uint256[50] private __gap;
 }
 
+/**
+ * @title VTokenInterface
+ * @author Venus
+ * @notice Interface implemented by the `VToken` contract
+ */
 abstract contract VTokenInterface is VTokenStorage {
     struct RiskManagementInit {
         address shortfall;

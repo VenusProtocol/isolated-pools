@@ -17,6 +17,16 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
+/**
+ * @title Shortfall
+ * @author Venus
+ * @notice Shortfall is an auction contract designed to auction off the `convertibleBaseAsset` accumulated in `RiskFund`. The `convertibleBaseAsset`
+ * is auctioned in exchange for users paying off the pool's bad debt. An auction can be started by anyone once a pool's bad debt has reached a minimum value.
+ * This value is set and can be changed by the authorized accounts. If the pool’s bad debt exceeds the risk fund plus a 10% incentive, then the auction winner
+ * is determined by who will pay off the largest percentage of the pool's bad debt. The auction winner then exchanges for the entire risk fund. Otherwise,
+ * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
+ * risk fund in exchange for paying off all the pool's bad debt.
+ */
 contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

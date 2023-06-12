@@ -11,6 +11,11 @@ import { ReserveHelpers } from "./ReserveHelpers.sol";
 import { IRiskFund } from "./IRiskFund.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
+/**
+ * @title ProtocolShareReserve
+ * @author Venus
+ * @notice Contract used to store and distribute the reserves generated in the markets.
+ */
 contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

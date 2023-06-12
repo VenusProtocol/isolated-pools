@@ -8,7 +8,7 @@ import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title Logic for Compound's JumpRateModel Contract V2.
- * @author Compound (modified by Dharma Labs, refactored by Arr00)
+ * @author Compound (modified by Dharma Labs, Arr00 and Venus)
  * @notice Version 2 modifies Version 1 by enabling updateable parameters.
  */
 abstract contract BaseJumpRateModelV2 is InterestRateModel {

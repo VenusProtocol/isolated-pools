@@ -15,8 +15,30 @@ import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
- * @title Venus VToken Contract
- * @author Venus Dev Team
+ * @title VToken
+ * @author Venus
+ * @notice Each asset that is supported by a pool is integrated through an instance of the `VToken` contract. As outlined in the protocol overview,
+ * each isolated pool creates its own `vToken` corresponding to an asset. Within a given pool, each included `vToken` is referred to as a market of
+ * the pool. The main actions a user regularly interacts with in a market are:
+
+- mint/redeem of vTokens;
+- transfer of vTokens;
+- borrow/repay a loan on an underlying asset;
+- liquidate a borrow or liquidate/heal an account.
+
+ * A user supplies the underlying asset to a pool by minting `vTokens`, where the corresponding `vToken` amount is determined by the `exchangeRate`.
+ * The `exchangeRate` will change over time, dependent on a number of factors, some of which accrue interest. Additionally, once users have minted
+ * `vToken` in a pool, they can borrow any asset in the isolated pool by using their `vToken` as collateral. In order to borrow an asset or use a `vToken`
+ * as collateral, the user must be entered into each corresponding market (else, the `vToken` will not be considered collateral for a borrow). Note that
+ * a user may borrow up to a portion of their collateral determined by the market’s collateral factor. However, if their borrowed amount exceeds an amount
+ * calculated using the market’s corresponding liquidation threshold, the borrow is eligible for liquidation. When a user repays a borrow, they must also
+ * pay off interest accrued on the borrow.
+ * 
+ * The Venus protocol includes unique mechanisms for healing an account and liquidating an account. These actions are performed in the `Comptroller`
+ * and consider all borrows and collateral for which a given account is entered within a market. These functions may only be called on an account with a
+ * total collateral amount that is no larger than a universal `minLiquidatableCollateral` value, which is used for all markets within a `Comptroller`.
+ * Both functions settle all of an account’s borrows, but `healAccount()` may add `badDebt` to a vToken. For more detail, see the description of
+ * `healAccount()` and `liquidateAccount()` in the `Comptroller` summary section below.
  */
 contract VToken is
     Ownable2StepUpgradeable,
