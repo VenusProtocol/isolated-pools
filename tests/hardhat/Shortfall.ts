@@ -300,6 +300,12 @@ describe("Shortfall: Tests", async function () {
       await mine(100);
       await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("auction is stale, restart it");
     });
+
+    it("fials if bidBps is zero", async () => {
+      await startAuction();
+      // await mine(100);
+      await expect(shortfall.placeBid(poolAddress, "0")).to.be.revertedWith("basis points cannot be zero");
+    });
   });
 
   describe("LARGE_POOL_DEBT Scenario", async function () {

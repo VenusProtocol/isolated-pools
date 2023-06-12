@@ -192,6 +192,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
+        require(bidBps > 0, "basis points cannot be zero");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
