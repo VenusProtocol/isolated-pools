@@ -225,7 +225,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Close an auction
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionClosed event on successful close
-     * @custom:event Errors if auctions are paused
      */
     function closeAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
@@ -290,7 +289,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Restart an auction
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
-     * @custom:event Errors if auctions are paused
      */
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];

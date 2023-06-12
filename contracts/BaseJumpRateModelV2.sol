@@ -134,7 +134,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 reserves,
         uint256 badDebt
     ) public pure returns (uint256) {
-        // Utilization rate is 0 when there are no borrows
+        // Utilization rate is 0 when there are no borrows and badDebt
         if ((borrows + badDebt) == 0) {
             return 0;
         }

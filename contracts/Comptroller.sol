@@ -161,10 +161,6 @@ contract Comptroller is
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
 
-        uint256 accountAssetsLen = accountAssets[msg.sender].length;
-
-        _ensureMaxLoops(accountAssetsLen + len);
-
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
             VToken vToken = VToken(vTokens[i]);
@@ -337,9 +333,6 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        //Update the prices of tokens
-        updatePrices(borrower);
-
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
         }
@@ -347,10 +340,13 @@ contract Comptroller is
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
             _checkSenderIs(vToken);
-            _ensureMaxLoops(accountAssets[msg.sender].length + 1);
+
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
         }
+
+        // Update the prices of tokens
+        updatePrices(borrower);
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
@@ -445,7 +441,7 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        //Update the prices of tokens
+        // Update the prices of tokens
         updatePrices(borrower);
 
         if (!markets[vTokenBorrowed].isListed) {
@@ -1313,7 +1309,7 @@ contract Comptroller is
             return;
         }
 
-        //Update the prices of tokens
+        // Update the prices of tokens
         updatePrices(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
