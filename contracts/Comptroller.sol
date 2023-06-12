@@ -333,9 +333,6 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        //Update the prices of tokens
-        updatePrices(borrower);
-
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
         }
@@ -347,6 +344,9 @@ contract Comptroller is
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
         }
+
+        // Update the prices of tokens
+        updatePrices(borrower);
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
@@ -441,7 +441,7 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        //Update the prices of tokens
+        // Update the prices of tokens
         updatePrices(borrower);
 
         if (!markets[vTokenBorrowed].isListed) {
@@ -1309,7 +1309,7 @@ contract Comptroller is
             return;
         }
 
-        //Update the prices of tokens
+        // Update the prices of tokens
         updatePrices(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
