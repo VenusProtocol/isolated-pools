@@ -1,3 +1,10 @@
+## [1.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2023-06-12)
+
+
+### Bug Fixes
+
+* prevent _ensureMaxLoops revert during liquidation ([#237](https://github.com/VenusProtocol/isolated-pools/issues/237)) ([6519349](https://github.com/VenusProtocol/isolated-pools/commit/651934903c288f28abaf35cf8765bc0b9b8b8805))
+
 ## [1.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2023-06-08)
 
 
