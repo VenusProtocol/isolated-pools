@@ -161,10 +161,6 @@ contract Comptroller is
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
 
-        uint256 accountAssetsLen = accountAssets[msg.sender].length;
-
-        _ensureMaxLoops(accountAssetsLen + len);
-
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
             VToken vToken = VToken(vTokens[i]);
@@ -347,7 +343,7 @@ contract Comptroller is
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
             _checkSenderIs(vToken);
-            _ensureMaxLoops(accountAssets[msg.sender].length + 1);
+
             // attempt to add borrower to the market or revert
             _addToMarket(VToken(msg.sender), borrower);
         }
