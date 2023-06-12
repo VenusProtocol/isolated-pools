@@ -48,9 +48,6 @@ contract RiskFund is
     /// @notice Emitted when PancakeSwap router contract address is updated
     event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
 
-    /// @notice Emitted when min amount out for PancakeSwap is updated
-    event AmountOutMinUpdated(uint256 oldAmountOutMin, uint256 newAmountOutMin);
-
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
 
