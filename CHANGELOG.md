@@ -1,3 +1,10 @@
+## [1.0.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2023-06-12)
+
+
+### Reverts
+
+* Revert "fix: [VEN-1497]" ([36feb1c](https://github.com/VenusProtocol/isolated-pools/commit/36feb1c4ae514e7cc8dbb581c5d40a0b0c86f949))
+
 ## [1.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2023-06-12)
 
 
