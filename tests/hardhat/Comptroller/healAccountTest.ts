@@ -89,16 +89,16 @@ describe("healAccount", () => {
     beforeEach(async () => {
       await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
 
-      // Supply 1.06 OMG, borrow 0 OMG
-      OMG.getAccountSnapshot.whenCalledWith(user.address).returns([0, parseUnits("1.06", 18), 0, parseUnits("1", 18)]);
+      // Supply 1.05 OMG, borrow 0 OMG
+      OMG.getAccountSnapshot.whenCalledWith(user.address).returns([0, parseUnits("1.05", 18), 0, parseUnits("1", 18)]);
 
       // Supply 1.15 ZRX, borrow 1 ZRX
       ZRX.getAccountSnapshot
         .whenCalledWith(user.address)
         .returns([0, parseUnits("1.15", 18), parseUnits("1", 18), parseUnits("1", 18)]);
 
-      // Supply 0 BAT, borrow 1.1 BAT
-      BAT.getAccountSnapshot.whenCalledWith(user.address).returns([0, 0, parseUnits("1.1", 18), parseUnits("1", 18)]);
+      // Supply 0 BAT, borrow 1 BAT
+      BAT.getAccountSnapshot.whenCalledWith(user.address).returns([0, 0, parseUnits("1", 18), parseUnits("1", 18)]);
     });
 
     it("fails if the vToken account snapshot returns an error", async () => {
@@ -113,11 +113,11 @@ describe("healAccount", () => {
       await comptroller.setMinLiquidatableCollateral("2199999999999999999");
       await expect(comptroller.connect(liquidator).healAccount(user.address))
         .to.be.revertedWithCustomError(comptroller, "CollateralExceedsThreshold")
-        .withArgs("2199999999999999999", "2210000000000000000");
+        .withArgs("2199999999999999999", "2200000000000000000");
     });
 
     it("seizes the entire collateral", async () => {
-      const omgToSeize = parseUnits("1.06", 18);
+      const omgToSeize = parseUnits("1.05", 18);
       const zrxToSeize = parseUnits("1.15", 18);
       await comptroller.connect(liquidator).healAccount(user.address);
       expect(OMG.seize).to.have.been.calledWith(liquidator.address, user.address, omgToSeize);
@@ -126,8 +126,8 @@ describe("healAccount", () => {
     });
 
     it("does not accrue bad debt", async () => {
-      const zrxToRepay = parseUnits(".956709956709956709", 18);
-      const batToRepay = parseUnits("1.052380952380952379", 18);
+      const zrxToRepay = parseUnits("1", 18);
+      const batToRepay = parseUnits("1", 18);
       await comptroller.connect(liquidator).healAccount(user.address);
       expect(OMG.healBorrow).to.have.not.been.called;
       expect(ZRX.healBorrow).to.have.been.calledWith(liquidator.address, user.address, zrxToRepay);
@@ -208,25 +208,6 @@ describe("healAccount", () => {
         comptroller,
         "InsufficientShortfall",
       );
-    });
-
-    it("fails if liquidation incentive * debt <= collateral", async () => {
-      await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
-
-      // Supply 1.05 OMG, borrow 0 OMG
-      OMG.getAccountSnapshot.whenCalledWith(user.address).returns([0, parseUnits("1.05", 18), 0, parseUnits("1", 18)]);
-
-      // Supply 1.15 ZRX, borrow 1 ZRX
-      ZRX.getAccountSnapshot
-        .whenCalledWith(user.address)
-        .returns([0, parseUnits("1.15", 18), parseUnits("1", 18), parseUnits("1", 18)]);
-
-      // Supply 0 BAT, borrow 1 BAT
-      BAT.getAccountSnapshot.whenCalledWith(user.address).returns([0, 0, parseUnits("1", 18), parseUnits("1", 18)]);
-
-      await expect(comptroller.connect(liquidator).healAccount(user.address))
-        .to.be.revertedWithCustomError(comptroller, "CollateralExceedsThreshold")
-        .withArgs("2200000000000000000", "2200000000000000000");
     });
   });
 });

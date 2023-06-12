@@ -625,7 +625,7 @@ contract Comptroller is
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanOrEqualExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
+        if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
             revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
         }
 
