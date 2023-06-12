@@ -685,7 +685,7 @@ contract Comptroller is
 
         uint256 ordersCount = orders.length;
 
-        _ensureMaxLoops(ordersCount);
+        _ensureMaxLoops(ordersCount / 2);
 
         for (uint256 i; i < ordersCount; ++i) {
             if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
