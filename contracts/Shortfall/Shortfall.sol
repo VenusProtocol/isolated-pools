@@ -303,6 +303,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
 
+        require(!auctionsPaused, "auctions are paused");
         require(_isStarted(auction), "no on-going auction");
         require(_isStale(auction), "you need to wait for more time for first bidder");
 
