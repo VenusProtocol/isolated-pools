@@ -887,7 +887,7 @@ contract VToken is
 
             uint256 _redeemAmount = mul_(redeemTokens, exchangeRate);
             if (_redeemAmount != 0 && _redeemAmount != redeemAmountIn) redeemTokens++; // round up
-            redeemAmount = redeemAmountIn;
+            redeemAmount =  mul_ScalarTruncate(exchangeRate, redeemTokens);
         }
 
         // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
