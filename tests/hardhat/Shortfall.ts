@@ -660,9 +660,7 @@ describe("Shortfall: Tests", async function () {
 
       await mine(100);
       await shortfall.pauseAuctions();
-      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWith(
-        "auctions are paused",
-      );
+      await expect(shortfall.restartAuction(poolAddress)).to.be.revertedWith("auctions are paused");
       // Close out auction created for this test case
       await mine(10);
       await shortfall.closeAuction(poolAddress);
@@ -684,16 +682,16 @@ describe("Shortfall: Tests", async function () {
       await shortfall.startAuction(poolAddress);
       const auction = await shortfall.auctions(poolAddress);
 
-      // await expect(shortfall.connect(owner).pauseAuctions())
-      //   .to.emit(shortfall, "AuctionsPaused")
-      //   .withArgs(owner.address);
+      await expect(shortfall.connect(owner).pauseAuctions())
+        .to.emit(shortfall, "AuctionsPaused")
+        .withArgs(owner.address);
 
-      // await shortfall.placeBid(poolAddress, auction.startBidBps);
-      // // Close out auction created for this test case
-      // await mine(10);
-      // await expect(shortfall.closeAuction(poolAddress));
+      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      // Close out auction created for this test case
+      await mine(10);
+      await expect(shortfall.closeAuction(poolAddress));
 
-      // await expect(shortfall.startAuction(poolAddress)).to.be.revertedWith("Auctions are paused");
+      await expect(shortfall.startAuction(poolAddress)).to.be.revertedWith("Auctions are paused");
     });
   });
 });
