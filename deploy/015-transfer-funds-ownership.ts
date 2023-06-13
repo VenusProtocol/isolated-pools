@@ -16,28 +16,6 @@ const contracts = ["RiskFund", "Shortfall", "ProtocolShareReserve"];
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await transfer2StepOwnerships(contracts, hre.network.name);
-
-  // Transfer ownership to the already added pools
-  const poolRegistry = await ethers.getContract("PoolRegistry");
-  const pools = await poolRegistry.callStatic.getAllPools();
-  for (const pool of pools) {
-    const comptrollerProxy = await ethers.getContractAt("Comptroller", pool.comptroller);
-    const owner = await comptrollerProxy.owner();
-    if (owner !== targetOwners[hre.network.name]) {
-      const tx = await comptrollerProxy.transferOwnership(targetOwners[hre.network.name]);
-      await tx.wait(1);
-      const pendingOwner = await comptrollerProxy.pendingOwner();
-      console.log(
-        `Comptroller ${comptrollerProxy.address} owner ${owner} sucessfully changed to ${pendingOwner}. Please accept the ownership.`,
-      );
-    } else {
-      console.error(
-        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${
-          targetOwners[hre.network.name]
-        }`,
-      );
-    }
-  }
 };
 
 const transfer2StepOwnerships = async (contractNames: string[], networkName: string) => {

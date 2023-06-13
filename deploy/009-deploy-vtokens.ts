@@ -7,23 +7,9 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
+import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 
 const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
-const treasuryAddresses: { [network: string]: string } = {
-  hardhat: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // signer[1] from hardhat mnemonic
-  bsctestnet: "0xFEA1c651A47FE29dB9b1bf3cC1f224d8D9CFF68C", // one of testnet admin accounts
-  bscmainnet: "0xF322942f644A996A617BD29c16bd7d231d9F35E9", // Venus Treasury
-};
-
-type AcmAddresses = {
-  bsctestnet: string;
-  bscmainnet: string;
-};
-
-const acmAddresses: AcmAddresses = {
-  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
-  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
-};
 
 const mantissaToBps = (num: BigNumberish) => {
   return BigNumber.from(num).div(parseUnits("1", 14)).toString();
@@ -33,13 +19,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  let accessControlManager;
-  if (hre.network.live) {
-    const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
-    accessControlManager = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
-  } else {
-    accessControlManager = await ethers.getContract("AccessControlManager");
-  }
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+
+  const accessControlManagerAddress = await toAddress(
+    preconfiguredAddresses.AccessControlManager || "AccessControlManager",
+    hre,
+  );
 
   // VToken Beacon
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
@@ -58,11 +43,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const { tokensConfig, poolConfig } = await getConfig(hre.network.name);
-
-  for (let i = 0; i < poolConfig.length; i++) {
-    const pool = poolConfig[i];
-    const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.name}`);
+  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
+  for (const pool of poolsWithUnregisteredVTokens) {
+    const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
 
     // Deploy Markets
     for (const vtoken of pool.vtokens) {
@@ -97,7 +80,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
-          args: [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManager.address],
+          args: [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManagerAddress],
           log: true,
           autoMine: true,
         });
@@ -120,6 +103,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
+      const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
       const args = [
         tokenContract.address,
         comptrollerProxy.address,
@@ -128,9 +112,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         name,
         symbol,
         vTokenDecimals,
-        deployer, // admin
-        accessControlManager.address,
-        [treasuryAddresses[hre.network.name], ADDRESS_ONE],
+        preconfiguredAddresses.NormalTimelock || deployer, // admin
+        accessControlManagerAddress,
+        [treasuryAddress, ADDRESS_ONE],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {
