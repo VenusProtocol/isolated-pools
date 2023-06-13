@@ -159,7 +159,7 @@ contract RiskFund is
      * @notice Swap array of pool assets into base asset's tokens of at least a minimum amount
      * @param markets Array of vTokens whose assets to swap for base asset
      * @param amountsOutMin Minimum amount to receive for swap
-     * @param paths A path conststing of PCS token pairs for each swap
+     * @param paths A path consisting of PCS token pairs for each swap
      * @return Number of swapped tokens
      * @custom:error ZeroAddressNotAllowed is thrown if PoolRegistry contract address is not configured
      */
@@ -239,7 +239,7 @@ contract RiskFund is
      * @param vToken VToken
      * @param comptroller Comptroller address
      * @param amountOutMin Minimum amount to receive for swap
-     * @param path A path for the swap conststing of PCS token pairs
+     * @param path A path for the swap consisting of PCS token pairs
      * @return Number of swapped tokens.
      */
     function _swapAsset(
