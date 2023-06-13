@@ -282,6 +282,7 @@ describe("Shortfall: Tests", async function () {
 
   describe("placeBid", async function () {
     beforeEach(setup);
+    let auctionStartBlock;
 
     async function startAuction() {
       vDAI.badDebt.returns(parseUnits("10000", 18));
@@ -289,22 +290,36 @@ describe("Shortfall: Tests", async function () {
       vWBTC.badDebt.returns(parseUnits("2", 8));
       await vWBTC.setVariable("badDebt", parseUnits("2", 8));
       await shortfall.startAuction(poolAddress);
+      const auction = await shortfall.auctions(poolAddress);
+      auctionStartBlock = auction.startBlock;
     }
 
     it("fails if auction is not active", async function () {
-      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("no on-going auction");
+      await expect(shortfall.placeBid(poolAddress, "10000", 0)).to.be.revertedWith("no on-going auction");
     });
 
     it("fails if auction is stale", async function () {
       await startAuction();
       await mine(100);
-      await expect(shortfall.placeBid(poolAddress, "10000")).to.be.revertedWith("auction is stale, restart it");
+      await expect(shortfall.placeBid(poolAddress, "10000", auctionStartBlock)).to.be.revertedWith(
+        "auction is stale, restart it",
+      );
     });
 
-    it("fials if bidBps is zero", async () => {
+    it("fails if bidBps is zero", async () => {
       await startAuction();
-      // await mine(100);
-      await expect(shortfall.placeBid(poolAddress, "0")).to.be.revertedWith("basis points cannot be zero");
+      await expect(shortfall.placeBid(poolAddress, "0", auctionStartBlock)).to.be.revertedWith(
+        "basis points cannot be zero",
+      );
+    });
+
+    it("fails if auctionStartBlock does not match the auction startBlock", async () => {
+      await startAuction();
+      await mine(10);
+      const latestBlock = await ethers.provider.getBlock("latest");
+      await expect(shortfall.placeBid(poolAddress, "0", latestBlock.number)).to.be.revertedWith(
+        "auction has been restarted",
+      );
     });
   });
 
@@ -340,8 +355,11 @@ describe("Shortfall: Tests", async function () {
     it("Should not be able to placeBid when there is no active auction", async function () {
       vDAI.badDebt.returns(parseUnits("20", 18));
       vWBTC.badDebt.returns(parseUnits("0.01", 8));
+      const auction = await shortfall.auctions(poolAddress);
 
-      await expect(shortfall.placeBid(poolAddress, "1800")).to.be.revertedWith("no on-going auction");
+      await expect(shortfall.placeBid(poolAddress, "1800", auction.startBlock)).to.be.revertedWith(
+        "no on-going auction",
+      );
     });
 
     it("Start auction", async function () {
@@ -354,6 +372,7 @@ describe("Shortfall: Tests", async function () {
       startBlockNumber = receipt.blockNumber;
 
       const auction = await shortfall.auctions(poolAddress);
+
       expect(auction.status).equal(1);
       expect(auction.auctionType).equal(0);
       expect(auction.seizedRiskFund).equal(parseUnits(riskFundBalance, 18));
@@ -363,7 +382,8 @@ describe("Shortfall: Tests", async function () {
     });
 
     it("Should not be able to place bid lower max basis points", async function () {
-      await expect(shortfall.placeBid(poolAddress, "10001")).to.be.revertedWith(
+      const auction = await shortfall.auctions(poolAddress);
+      await expect(shortfall.placeBid(poolAddress, "10001", auction.startBlock)).to.be.revertedWith(
         "basis points cannot be more than 10000",
       );
     });
@@ -377,7 +397,7 @@ describe("Shortfall: Tests", async function () {
       const previousDaiBalance = await mockDAI.balanceOf(owner.address);
       const previousWBTCBalance = await mockWBTC.balanceOf(owner.address);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
       expect((await mockDAI.balanceOf(owner.address)).div(parseUnits("1", 18)).toNumber()).lt(
         previousDaiBalance.div(parseUnits("1", 18)).toNumber(),
       );
@@ -408,7 +428,10 @@ describe("Shortfall: Tests", async function () {
     });
 
     it("Should not be able to place bid lower than highest bid", async function () {
-      await expect(shortfall.placeBid(poolAddress, "1200")).to.be.revertedWith("your bid is not the highest");
+      const auction = await shortfall.auctions(poolAddress);
+      await expect(shortfall.placeBid(poolAddress, "1200", auction.startBlock)).to.be.revertedWith(
+        "your bid is not the highest",
+      );
     });
 
     it("Transfer back previous balance after second bid", async function () {
@@ -423,7 +446,7 @@ describe("Shortfall: Tests", async function () {
       const totalVBtc = new BigNumber((await vWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString());
       const amountToDeductVBtc = new BigNumber(totalVBtc).times(percentageToDeduct).dividedBy(100).toString();
 
-      await shortfall.connect(bidder2).placeBid(poolAddress, "1800");
+      await shortfall.connect(bidder2).placeBid(poolAddress, "1800", auction.startBlock);
 
       expect(await mockDAI.balanceOf(owner.address)).to.be.equal(
         previousOwnerDaiBalance.add(convertToUnit(amountToDeductVDai, 18)),
@@ -507,7 +530,7 @@ describe("Shortfall: Tests", async function () {
       const previousDaiBalance = await mockDAI.balanceOf(owner.address);
       const previousWBTCBalance = await mockWBTC.balanceOf(owner.address);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
       expect((await mockDAI.balanceOf(owner.address)).div(parseUnits("1", 18)).toNumber()).lt(
         previousDaiBalance.div(parseUnits("1", 18)).toNumber(),
       );
@@ -545,7 +568,7 @@ describe("Shortfall: Tests", async function () {
       const totalVBtc = new BigNumber((await vWBTC.badDebt()).toString()).dividedBy(parseUnits("1", "18").toString());
       const amountToDeductVBtc = new BigNumber(totalVBtc).times(percentageToDeduct).dividedBy(100).toString();
 
-      await shortfall.connect(bidder2).placeBid(poolAddress, "1800");
+      await shortfall.connect(bidder2).placeBid(poolAddress, "1800", auction.startBlock);
 
       expect(await mockDAI.balanceOf(owner.address)).to.be.equal(
         previousOwnerDaiBalance.add(convertToUnit(amountToDeductVDai, 18)),
@@ -635,7 +658,7 @@ describe("Shortfall: Tests", async function () {
       // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
 
       await mine(100);
 
@@ -692,7 +715,7 @@ describe("Shortfall: Tests", async function () {
         .to.emit(shortfall, "AuctionsPaused")
         .withArgs(owner.address);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
       // Close out auction created for this test case
       await mine(10);
       await expect(shortfall.closeAuction(poolAddress));
@@ -731,14 +754,15 @@ describe("Shortfall: Deflationary token Scenario", async function () {
     const auction = await shortfall.auctions(poolAddress);
     await mockFloki.approve(shortfall.address, parseUnits("100", 18));
 
-    const tx = await shortfall.connect(bidder1).placeBid(poolAddress, auction.startBidBps);
+    const tx = await shortfall.connect(bidder1).placeBid(poolAddress, auction.startBidBps, auction.startBlock);
 
     await expect(tx).to.changeTokenBalance(mockFloki, bidder1.address, "-100000000000000000000");
     await expect(tx).to.changeTokenBalance(mockFloki, shortfall.address, convertToUnit("99", 18));
   });
 
   it("Transfer back previous balance after second bid", async function () {
-    const tx = await shortfall.connect(bidder2).placeBid(poolAddress, "120");
+    const auction = await shortfall.auctions(poolAddress);
+    const tx = await shortfall.connect(bidder2).placeBid(poolAddress, "120", auction.startBlock);
 
     await expect(tx).to.changeTokenBalance(mockFloki, bidder1.address, "98010000000000000000");
     await expect(tx).to.changeTokenBalance(mockFloki, bidder2.address, "-100000000000000000000");
