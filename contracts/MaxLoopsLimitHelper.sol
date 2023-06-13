@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+/**
+ * @title MaxLoopsLimitHelper
+ * @author Venus
+ * @notice Abstract contract used to avoid collection with too many items that would generate gas errors and DoS.
+ */
 abstract contract MaxLoopsLimitHelper {
     // Limit for the loops to avoid the DOS
     uint256 public maxLoopsLimit;

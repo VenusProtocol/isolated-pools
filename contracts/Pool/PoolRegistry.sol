@@ -24,7 +24,25 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
  * @title PoolRegistry
- * @notice PoolRegistry is a registry for Venus interest rate pools.
+ * @author Venus
+ * @notice The Isolated Pools architecture centers around the `PoolRegistry` contract. The `PoolRegistry` maintains a directory of isolated lending
+ * pools and can perform actions like creating and registering new pools, adding new markets to existing pools, setting and updating the pool's required
+ * metadata, and providing the getter methods to get information on the pools.
+ *
+ * Isolated lending has three main components: PoolRegistry, pools, and markets. The PoolRegistry is responsible for managing pools.
+ * It can create new pools, update pool metadata and manage markets within pools. PoolRegistry contains getter methods to get the details of
+ * any existing pool like `getVTokenForAsset` and `getPoolsSupportedByAsset`. It also contains methods for updating pool metadata (`updatePoolMetadata`)
+ * and setting pool name (`setPoolName`).
+ *
+ * The directory of pools is managed through two mappings: `_poolByComptroller` which is a hashmap with the comptroller address as the key and `VenusPool` as
+ * the value and `_poolsByID` which is an array of comptroller addresses. Individual pools can be accessed by calling `getPoolByComptroller` with the pool's
+ * comptroller address. `_poolsByID` is used to iterate through all of the pools.
+ *
+ * PoolRegistry also contains a map of asset addresses called `_supportedPools` that maps to an array of assets suppored by each pool. This array of pools by
+ * asset is retrieved by calling `getPoolsSupportedByAsset`.
+ *
+ * PoolRegistry registers new isolated pools in the directory with the `createRegistryPool` method. Isolated pools are composed of independent markets with
+ * specific assets and custom risk management configurations according to their markets.
  */
 contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegistryInterface {
     using SafeERC20Upgradeable for IERC20Upgradeable;
