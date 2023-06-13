@@ -891,9 +891,9 @@ contract VToken is
             redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokens);
         }
 
-        // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
-        if ((redeemTokens == 0 && redeemAmount == 0) || (redeemTokens != 0 && redeemAmount == 0)) {
-            revert("redeemTokens or redeemAmount is zero");
+        // Revert if amount is zero
+        if (redeemAmount == 0) {
+            revert("redeemAmount is zero");
         }
 
         /* Fail if redeem not allowed */
