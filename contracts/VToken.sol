@@ -868,6 +868,7 @@ contract VToken is
 
         uint256 redeemTokens;
         uint256 redeemAmount;
+
         /* If redeemTokensIn > 0: */
         if (redeemTokensIn > 0) {
             /*
@@ -881,7 +882,7 @@ contract VToken is
             /*
              * We get the current exchange rate and calculate the amount to be redeemed:
              *  redeemTokens = redeemAmountIn / exchangeRate
-             *  redeemAmount = redeemAmountIn
+             *  redeemAmount = exchangeRate * redeemTokens
              */
             redeemTokens = div_(redeemAmountIn, exchangeRate);
 
@@ -891,7 +892,7 @@ contract VToken is
         }
 
         // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
-        if ((redeemTokens == 0 && redeemAmount > 0) || (redeemTokens != 0 && redeemAmount == 0)) {
+        if ((redeemTokens == 0 && redeemAmount == 0) || (redeemTokens != 0 && redeemAmount == 0)) {
             revert("redeemTokens or redeemAmount is zero");
         }
 
