@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
@@ -21,14 +20,7 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 /**
  * @dev This contract does not support BNB.
  */
-contract RiskFund is
-    Ownable2StepUpgradeable,
-    AccessControlledV8,
-    ExponentialNoError,
-    ReserveHelpers,
-    MaxLoopsLimitHelper,
-    IRiskFund
-{
+contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private pancakeSwapRouter;

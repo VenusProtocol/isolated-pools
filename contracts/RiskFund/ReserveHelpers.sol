@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -8,7 +9,7 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 
-contract ReserveHelpers {
+contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
@@ -32,6 +33,30 @@ contract ReserveHelpers {
     /// @param asset Token address
     /// @param amount An amount by which the reserves have increased
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
+
+    /// @notice event emitted on sweep token success
+    event SweepToken(address indexed token, address indexed to, uint256 amount);
+
+    /**
+     * @notice A public function to sweep accidental BEP-20 transfers to this contract. Tokens are sent to the address `to`, provided in input
+     * @param _token The address of the BEP-20 token to sweep
+     * @param _to Recipient of the output tokens.
+     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
+     * @custom:access Only Owner
+     */
+    function sweepToken(address _token, address _to) external onlyOwner {
+        ensureNonzeroAddress(_to);
+        uint256 balanceDfference_;
+        uint256 balance_ = IERC20Upgradeable(_token).balanceOf(address(this));
+
+        require(balance_ > assetsReserves[_token], "ReserveHelpers: Zero surplus tokens");
+        unchecked {
+            balanceDfference_ = balance_ - assetsReserves[_token];
+        }
+
+        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
+        emit SweepToken(_token, _to, balanceDfference_);
+    }
 
     /**
      * @dev Get the Amount of the asset in the risk fund for the specific pool.
