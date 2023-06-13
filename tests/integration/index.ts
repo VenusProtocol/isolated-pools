@@ -37,10 +37,12 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     "Oracle",
     "SwapRouter",
     "AccessControl",
-    "Factories",
-    "AccessControlConfig",
+    "PoolRegistry",
     "Comptrollers",
     "VTokens",
+    "Rewards",
+    "InitialLiquidity",
+    "VIP",
     "Pools",
     "RiskFund",
   ]);
@@ -202,8 +204,8 @@ describe("Positive Cases", () => {
 
       rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
       await Comptroller.addRewardsDistributor(rewardDistributor.address);
-      const comptrollerRewardDistributor = await Comptroller.getRewardDistributors();
-      expect(comptrollerRewardDistributor[0]).equal(rewardDistributor.address);
+      const rewardsDistributors = await Comptroller.getRewardDistributors();
+      expect(rewardsDistributors[rewardsDistributors.length - 1]).equal(rewardDistributor.address);
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
