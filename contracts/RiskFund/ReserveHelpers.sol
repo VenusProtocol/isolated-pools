@@ -12,6 +12,10 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 private constant NOT_ENTERED = 1;
+
+    uint256 private constant ENTERED = 2;
+
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) internal assetsReserves;
 
@@ -21,6 +25,11 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
 
     // Address of pool registry contract
     address internal poolRegistry;
+
+    /**
+     * @dev Guard variable for re-entrancy checks
+     */
+    uint256 internal status;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -38,13 +47,23 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     */
+    modifier nonReentrant() {
+        require(status != ENTERED, "re-entered");
+        status = ENTERED;
+        _;
+        status = NOT_ENTERED;
+    }
+
+    /**
      * @notice A public function to sweep accidental BEP-20 transfers to this contract. Tokens are sent to the address `to`, provided in input
      * @param _token The address of the BEP-20 token to sweep
      * @param _to Recipient of the output tokens.
      * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      * @custom:access Only Owner
      */
-    function sweepToken(address _token, address _to) external onlyOwner {
+    function sweepToken(address _token, address _to) external onlyOwner nonReentrant {
         ensureNonzeroAddress(_to);
         uint256 balanceDfference_;
         uint256 balance_ = IERC20Upgradeable(_token).balanceOf(address(this));
