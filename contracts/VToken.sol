@@ -874,7 +874,6 @@ contract VToken is
             /*
              * We calculate the exchange rate and the amount of underlying to be redeemed:
              *  redeemTokens = redeemTokensIn
-             *  redeemAmount = redeemTokensIn x exchangeRateCurrent
              */
             redeemTokens = redeemTokensIn;
             redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokensIn);
@@ -882,14 +881,15 @@ contract VToken is
             /*
              * We get the current exchange rate and calculate the amount to be redeemed:
              *  redeemTokens = redeemAmountIn / exchangeRate
-             *  redeemAmount = exchangeRate * redeemTokens
              */
             redeemTokens = div_(redeemAmountIn, exchangeRate);
 
             uint256 _redeemAmount = mul_(redeemTokens, exchangeRate);
             if (_redeemAmount != 0 && _redeemAmount != redeemAmountIn) redeemTokens++; // round up
-            redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokens);
         }
+
+        // redeemAmount = exchangeRate * redeemTokens
+        redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokens);
 
         // Revert if amount is zero
         if (redeemAmount == 0) {
