@@ -153,6 +153,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         address underlyingAddress = vToken.underlying();
         IERC20Upgradeable underlying = IERC20Upgradeable(underlyingAddress);
 
+        require(_poolByComptroller[comptrollerAddress].creator != address(0), "PoolRegistry: Pool not registered");
         // solhint-disable-next-line reason-string
         require(
             _vTokens[comptrollerAddress][underlyingAddress] == address(0),

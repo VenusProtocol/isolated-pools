@@ -337,6 +337,24 @@ describe("PoolRegistry: Tests", function () {
       expect(mockToken.approve.atCall(1)).to.have.been.calledWith(vTokenAddress, INITIAL_SUPPLY);
     });
 
+    it("fails if the pool is not registered", async () => {
+      const MockToken = await smock.mock<MockToken__factory>("MockToken");
+      const mockToken = await MockToken.deploy("MockToken", "MT", 18);
+      await priceOracle.setPrice(mockToken.address, parseUnits("1", 18));
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, "addMarket(AddMarketInput)").returns(true);
+
+      const vToken = await makeVToken({
+        underlying: mockToken,
+        accessControlManager: fakeAccessControlManager,
+      });
+
+      await mockToken.faucet(INITIAL_SUPPLY);
+      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+      await expect(poolRegistry.addMarket(withDefaultMarketParameters({ vToken: vToken.address }))).to.be.revertedWith(
+        "PoolRegistry: Pool not registered",
+      );
+    });
+
     it("supports fee-on-transfer tokens", async () => {
       const FeeToken = await smock.mock<FeeToken__factory>("FeeToken");
       const feeToken = await FeeToken.deploy(INITIAL_SUPPLY, "FeeToken", 18, "FT", parseUnits("0.1", 4), owner.address);
