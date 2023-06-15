@@ -1,3 +1,23 @@
+## [1.0.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.8...v1.0.0-dev.9) (2023-06-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove unused contracts
+* pre-deploy vTokens and rate models
+* remove contract creation when adding new pool
+
+### Features
+
+* in addMarket ensure the pool is registered ([15a0262](https://github.com/VenusProtocol/isolated-pools/commit/15a0262ad654660fe92994747aa254d0f941ee9e))
+* pre-deploy vTokens and rate models ([15b2099](https://github.com/VenusProtocol/isolated-pools/commit/15b20999855eae9a8cdc5fd8ee9ae3acf5ab2825))
+* remove contract creation when adding new pool ([3cb0301](https://github.com/VenusProtocol/isolated-pools/commit/3cb0301cd833aceb4de41e5dd655d57a8eded9cb))
+
+
+### Code Refactoring
+
+* remove unused contracts ([14e5dce](https://github.com/VenusProtocol/isolated-pools/commit/14e5dce91b60b68bb2ad18bd88de8067c3da2438))
+
 ## [1.0.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.7...v1.0.0-dev.8) (2023-06-13)
 
 ## [1.0.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.6...v1.0.0-dev.7) (2023-06-12)
