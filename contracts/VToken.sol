@@ -868,31 +868,31 @@ contract VToken is
 
         uint256 redeemTokens;
         uint256 redeemAmount;
+
         /* If redeemTokensIn > 0: */
         if (redeemTokensIn > 0) {
             /*
              * We calculate the exchange rate and the amount of underlying to be redeemed:
              *  redeemTokens = redeemTokensIn
-             *  redeemAmount = redeemTokensIn x exchangeRateCurrent
              */
             redeemTokens = redeemTokensIn;
-            redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokensIn);
         } else {
             /*
              * We get the current exchange rate and calculate the amount to be redeemed:
              *  redeemTokens = redeemAmountIn / exchangeRate
-             *  redeemAmount = redeemAmountIn
              */
             redeemTokens = div_(redeemAmountIn, exchangeRate);
 
             uint256 _redeemAmount = mul_(redeemTokens, exchangeRate);
             if (_redeemAmount != 0 && _redeemAmount != redeemAmountIn) redeemTokens++; // round up
-            redeemAmount = redeemAmountIn;
         }
 
-        // Revert if tokens is zero and amount is nonzero or token is nonzero and amount is zero
-        if ((redeemTokens == 0 && redeemAmount > 0) || (redeemTokens != 0 && redeemAmount == 0)) {
-            revert("redeemTokens or redeemAmount is zero");
+        // redeemAmount = exchangeRate * redeemTokens
+        redeemAmount = mul_ScalarTruncate(exchangeRate, redeemTokens);
+
+        // Revert if amount is zero
+        if (redeemAmount == 0) {
+            revert("redeemAmount is zero");
         }
 
         /* Fail if redeem not allowed */
