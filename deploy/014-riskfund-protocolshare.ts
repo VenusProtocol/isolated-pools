@@ -9,7 +9,7 @@ import { convertToUnit } from "../helpers/utils";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
-const maxLoopsLimit = 150;
+const maxLoopsLimit = 100;
 
 const getAllMarkets = async (poolRegistry: Contract): Promise<Contract[]> => {
   const pools = await poolRegistry.getAllPools();

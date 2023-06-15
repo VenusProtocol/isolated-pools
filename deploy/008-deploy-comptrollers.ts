@@ -17,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
   );
-  const maxLoopsLimit = 150;
+  const maxLoopsLimit = 100;
 
   // Comptroller Beacon
   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl", {
