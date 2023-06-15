@@ -353,6 +353,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const unregisteredRewardsDistributors = await getUnregisteredRewardsDistributors(poolConfig, hre);
   const commands = [
     ...(await configureAccessControls(deploymentConfig, hre)),
+    ...(await acceptOwnership("PoolRegistry", hre)),
     ...(await addPools(unregisteredPools, hre)),
     ...(await addMarkets(unregisteredVTokens, deploymentConfig, hre)),
     ...(await configureRewards(unregisteredRewardsDistributors, hre)),
