@@ -17,7 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const vBep20Factory = await ethers.getContract("VTokenProxyFactory");
   let accessControlManager;
   if (hre.network.live) {
     const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
@@ -97,14 +96,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "setInterestRateModel(address)",
-    vBep20Factory.address,
-  );
-  await tx.wait();
-  console.log("DEFAULT_ADMIN | VTokenProxyFactory | setInterestRateModel(address)");
-
-  tx = await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
     "swapPoolsAssets(address[],uint256[],address[][])",
     deployer,
   );
@@ -113,13 +104,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await accessControlManager.giveCallPermission(
     poolRegistry.address,
-    "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
+    "addPool(string,address,uint256,uint256,uint256)",
     deployer,
   );
   await tx.wait();
-  console.log(
-    "PoolRegistry  | Deployer           | createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)",
-  );
+  console.log("PoolRegistry  | Deployer           | addPool(string,address,uint256,uint256,uint256)");
 
   tx = await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", deployer);
   await tx.wait();

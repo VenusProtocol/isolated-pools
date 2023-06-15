@@ -41,7 +41,7 @@ async function makeComptroller(): Promise<AccountLiquidityTestFixture> {
   return { accessControl, comptroller, oracle, poolRegistry };
 }
 
-async function makeVToken({
+async function makeFakeVToken({
   accessControl,
   comptroller,
   oracle,
@@ -129,7 +129,7 @@ describe("Comptroller", () => {
     });
 
     it("fails if a price has not been set", async () => {
-      const vToken = await makeVToken({
+      const vToken = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -153,7 +153,7 @@ describe("Comptroller", () => {
         underlyingPrice = 1,
         user = accounts[1],
         amount = 1e6;
-      const vToken = await makeVToken({
+      const vToken = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -234,7 +234,7 @@ describe("Comptroller", () => {
       const c2 = amount2 * cf2 * up2;
       const collateral = Math.floor(c1 + c2);
 
-      const vToken1 = await makeVToken({
+      const vToken1 = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -244,7 +244,7 @@ describe("Comptroller", () => {
         poolRegistry,
         maxLoopsLimit: 151,
       });
-      const vToken2 = await makeVToken({
+      const vToken2 = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -254,7 +254,7 @@ describe("Comptroller", () => {
         poolRegistry,
         maxLoopsLimit: 152,
       });
-      const vToken3 = await makeVToken({
+      const vToken3 = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -329,7 +329,7 @@ describe("Comptroller", () => {
     });
 
     it("reverts if market already listed", async () => {
-      const vToken = await makeVToken({
+      const vToken = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -355,7 +355,7 @@ describe("Comptroller", () => {
     });
 
     it("reverts if market already listed", async () => {
-      const vToken = await makeVToken({
+      const vToken = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,
@@ -374,7 +374,7 @@ describe("Comptroller", () => {
 
   describe("getHypotheticalAccountLiquidity", () => {
     it("returns 0 if not 'in' any markets", async () => {
-      const vToken = await makeVToken({ accessControl, comptroller, oracle, poolRegistry, maxLoopsLimit: 151 });
+      const vToken = await makeFakeVToken({ accessControl, comptroller, oracle, poolRegistry, maxLoopsLimit: 151 });
       const [error, liquidity, shortfall] = await comptroller.getHypotheticalAccountLiquidity(
         await accounts[0].getAddress(),
         vToken.address,
@@ -390,7 +390,7 @@ describe("Comptroller", () => {
       const collateralFactor = 0.5;
       const exchangeRate = 1;
       const underlyingPrice = 1;
-      const vToken = await makeVToken({
+      const vToken = await makeFakeVToken({
         accessControl,
         comptroller,
         oracle,

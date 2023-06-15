@@ -1,4 +1,5 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
@@ -21,16 +22,12 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const toggleMining = async status => {
+const toggleMining = async (status: boolean) => {
   if (!status) {
     await ethers.provider.send("evm_setAutomine", [false]);
   } else {
     await ethers.provider.send("evm_setAutomine", [true]);
   }
-};
-
-const mineBlock = async () => {
-  await ethers.provider.send("hardhat_mine");
 };
 
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
@@ -49,9 +46,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
   const RiskFund = await ethers.getContract("RiskFund");
-  const VTokenFactory = await ethers.getContract("VTokenProxyFactory");
-  const JumpRateModelFactory = await ethers.getContract("JumpRateModelFactory");
-  const WhitePaperRateFactory = await ethers.getContract("WhitePaperInterestRateModelFactory");
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
 
@@ -117,9 +111,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
       PoolRegistry,
       AccessControlManager,
       RiskFund,
-      VTokenFactory,
-      JumpRateModelFactory,
-      WhitePaperRateFactory,
       ProtocolShareReserve,
       priceOracle,
       Comptroller,
@@ -174,16 +165,9 @@ describe("Positive Cases", () => {
   });
   describe("Setup", () => {
     it("PoolRegistry should be initialized properly", async function () {
-      await expect(
-        PoolRegistry.initialize(
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-        ),
-      ).to.be.revertedWith("Initializable: contract is already initialized");
+      await expect(PoolRegistry.initialize(ethers.constants.AddressZero)).to.be.revertedWith(
+        "Initializable: contract is already initialized",
+      );
     });
 
     it("PoolRegistry has the required permissions ", async function () {
@@ -441,7 +425,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       );
     });
 
-    it("Should success on liquidation when repayamount is equal to borrowing", async function () {
+    it("Should success on liquidation when repay amount is equal to borrowing", async function () {
       await BNX.connect(acc2Signer).faucet(1e10);
       await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
       await vBNX.connect(acc2Signer).mint(1e10);
@@ -844,7 +828,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBTCB.connect(acc1Signer).mint(mintAmount1);
     await vBNX.connect(acc2Signer).mint(mintAmount2);
     await vBNX.connect(acc3Signer).mint(mintAmount3);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
     // Verify Balances of each account
     expect(await vBTCB.balanceOf(acc1)).to.equal(vTokenMintedAmount1);
@@ -856,7 +840,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
     await vBTCB.connect(acc3Signer).borrow(BTCBBorrowAmount);
     await vBNX.connect(acc1Signer).borrow(BTCBBorrowAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
 
     // Verify Balance of accounts
@@ -873,7 +857,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBNX.connect(acc1Signer).repayBorrow(BTCBBorrowAmount);
     await vBTCB.connect(acc2Signer).repayBorrow(BTCBBorrowAmount);
     await vBTCB.connect(acc3Signer).repayBorrow(BTCBBorrowAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
 
     [error, balance, borrowBalance] = await vBNX.connect(acc1Signer).getAccountSnapshot(acc1);
@@ -897,7 +881,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBNX.connect(acc1Signer).redeem(redeemAmount);
     await vBTCB.connect(acc2Signer).redeem(redeemAmount);
     await vBTCB.connect(acc3Signer).redeem(redeemAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
     [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getBorrowingPower(acc1);
     expect(error).to.equal(Error.NO_ERROR);
