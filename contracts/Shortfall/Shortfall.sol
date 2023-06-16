@@ -185,6 +185,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
+     * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
     function placeBid(
