@@ -685,7 +685,7 @@ describe("Shortfall: Tests", async function () {
       // simulate transferReserveForAuction
       await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
 
       await mine(100);
       await shortfall.pauseAuctions();
@@ -719,7 +719,6 @@ describe("Shortfall: Tests", async function () {
       // Close out auction created for this test case
       await mine(10);
       await expect(shortfall.closeAuction(poolAddress));
-
       await expect(shortfall.startAuction(poolAddress)).to.be.revertedWith("Auctions are paused");
     });
   });
