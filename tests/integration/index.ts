@@ -13,6 +13,7 @@ import {
   MockPriceOracle,
   MockToken,
   PoolRegistry,
+  ProtocolShareReserve,
   RewardsDistributor,
   RiskFund,
   VToken,
@@ -31,21 +32,7 @@ const toggleMining = async (status: boolean) => {
 };
 
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
-  await deployments.fixture([
-    "MockTokens",
-    "OracleDeploy",
-    "Oracle",
-    "SwapRouter",
-    "AccessControl",
-    "PoolRegistry",
-    "Comptrollers",
-    "VTokens",
-    "Rewards",
-    "InitialLiquidity",
-    "VIP",
-    "Pools",
-    "RiskFund",
-  ]);
+  await deployments.fixture();
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
@@ -134,7 +121,9 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   };
 });
 
-describe("Positive Cases", () => {
+describe("Positive Cases", function () {
+  this.timeout(500000);
+
   let fixture;
   let PoolRegistry: PoolRegistry;
   let AccessControlManager: AccessControlManager;
@@ -349,7 +338,9 @@ describe("Positive Cases", () => {
   });
 });
 
-describe("Straight Cases For Single User Liquidation and healing", () => {
+describe("Straight Cases For Single User Liquidation and healing", function () {
+  this.timeout(500000);
+
   let fixture;
   let Comptroller: Comptroller;
   let vBNX: VToken;
@@ -709,7 +700,9 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
   });
 });
 
-describe("Risk Fund and Auction related scenarios", () => {
+describe("Risk Fund and Auction related scenarios", function () {
+  this.timeout(500000);
+
   let fixture;
   let Comptroller: Comptroller;
   let vBNX: VToken;
@@ -778,7 +771,9 @@ describe("Risk Fund and Auction related scenarios", () => {
   });
 });
 
-describe("Multiple Users Engagement in a Block", () => {
+describe("Multiple Users Engagement in a Block", function () {
+  this.timeout(500000);
+
   let fixture;
   let vBNX: VToken;
   let vBTCB: VToken;
