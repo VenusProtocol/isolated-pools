@@ -47,6 +47,7 @@ type LiquidateTestFixture = {
 
 async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const comptroller = await fakeComptroller();
+  comptroller.liquidationIncentiveMantissa.returns((parseUnits("1.1", 18)))
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
   const [admin, liquidator, borrower] = await ethers.getSigners();
@@ -176,11 +177,8 @@ describe("VToken", function () {
 
   const protocolSeizeShareMantissa = parseUnits("0.05", 18); // 5%
 
-  const protocolShareTokens = BigNumber.from(seizeTokens)
-    .mul(protocolSeizeShareMantissa)
-    .div(parseUnits("1", 18))
-    .toBigInt();
-  const liquidatorShareTokens = BigNumber.from(seizeTokens).sub(protocolShareTokens).toBigInt();
+  const protocolShareTokens = parseUnits("1.818181818181818181",18).toBigInt();
+  const liquidatorShareTokens = parseUnits("38.181818181818181819", 18);
   const addReservesAmount = BigNumber.from(protocolShareTokens).mul(exchangeRate).div(parseUnits("1", 18)).toBigInt();
 
   beforeEach(async () => {
@@ -272,7 +270,7 @@ describe("VToken", function () {
       await expect(result)
         .to.emit(borrowedUnderlying, "Transfer")
         .withArgs(liquidator.address, borrowedVToken.address, repayAmount);
-
+      
       await expect(result)
         .to.emit(collateralVToken, "Transfer")
         .withArgs(borrower.address, liquidator.address, liquidatorShareTokens);
