@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
   "engines": {
-    "node": "16.x"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.3",
