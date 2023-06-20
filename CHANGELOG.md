@@ -1,3 +1,11 @@
+## [1.0.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.9...v1.0.0-dev.10) (2023-06-20)
+
+
+### Bug Fixes
+
+* ven-1494 ([f46d889](https://github.com/VenusProtocol/isolated-pools/commit/f46d889200c8439229c7b598aa009d0ec290952b))
+* ven-1510 NC-03 ([4043673](https://github.com/VenusProtocol/isolated-pools/commit/4043673d5c33f1ab7c01712c64c6687b1fbdc5e0))
+
 ## [1.0.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.8...v1.0.0-dev.9) (2023-06-15)
 
 
