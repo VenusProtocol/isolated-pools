@@ -257,7 +257,7 @@ describe("VToken", function () {
       await expect(liquidateFresh(borrowedVToken, liquidator, borrower, repayAmount, collateralVToken)).to.be.reverted;
     });
 
-    it.only("transfers the cash, borrows, tokens, and emits Transfer, LiquidateBorrow events", async () => {
+    it("transfers the cash, borrows, tokens, and emits Transfer, LiquidateBorrow events", async () => {
       const beforeBalances = await getBalances(
         [borrowedVToken, collateralVToken],
         [liquidator.address, borrower.address],
