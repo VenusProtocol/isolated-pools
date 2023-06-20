@@ -16,38 +16,26 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     })
     .flat();
 
+  const comptrollers = poolConfig.map((pool: PoolConfig) => `Comptroller_${pool.id}`);
+
   const contracts = {
     singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon", "DefaultProxyAdmin"],
-    twoStepOwnership: ["PoolRegistry", ...rewardsDistributors],
+    twoStepOwnership: ["PoolRegistry", ...comptrollers, ...rewardsDistributors],
   };
 
   await transferSingleStepOwnerships(contracts.singleStepOwnership, targetOwner);
   await transfer2StepOwnerships(contracts.twoStepOwnership, targetOwner);
-
-  // Transfer ownership to the already added pools
-  const poolRegistry = await ethers.getContract("PoolRegistry");
-  const pools = await poolRegistry.callStatic.getAllPools();
-  for (const pool of pools) {
-    const comptrollerProxy = await ethers.getContractAt("Comptroller", pool.comptroller);
-    const owner = await comptrollerProxy.owner();
-    if (owner !== targetOwner) {
-      const tx = await comptrollerProxy.transferOwnership(targetOwner);
-      await tx.wait(1);
-      const pendingOwner = await comptrollerProxy.pendingOwner();
-      console.log(
-        `Comptroller ${comptrollerProxy.address} owner ${owner} sucessfully changed to ${pendingOwner}. Please accept the ownership.`,
-      );
-    } else {
-      console.error(
-        `Comptroller ${comptrollerProxy} owner ${owner} is equal to target ownership address ${targetOwner}`,
-      );
-    }
-  }
 };
 
 const transfer2StepOwnerships = async (contractNames: string[], targetOwner: string) => {
+  const abi = [
+    "function owner() view returns (address)",
+    "function pendingOwner() view returns (address)",
+    "function transferOwnership(address newOwner)",
+  ];
   for (const contractName of contractNames) {
-    const contract = await ethers.getContract(contractName);
+    const contractAddress = (await ethers.getContract(contractName)).address;
+    const contract = await ethers.getContractAt(abi, contractAddress);
     const owner = await contract.owner();
 
     let tx;
