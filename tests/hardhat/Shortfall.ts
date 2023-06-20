@@ -259,8 +259,8 @@ describe("Shortfall: Tests", async function () {
       });
 
       it("emits NextBidderBlockLimitUpdated event", async function () {
-        const tx = shortfall.updateNextBidderBlockLimit(100);
-        await expect(tx).to.emit(shortfall, "NextBidderBlockLimitUpdated").withArgs(10, 100);
+        const tx = shortfall.updateNextBidderBlockLimit(110);
+        await expect(tx).to.emit(shortfall, "NextBidderBlockLimitUpdated").withArgs(100, 110);
       });
     });
   });

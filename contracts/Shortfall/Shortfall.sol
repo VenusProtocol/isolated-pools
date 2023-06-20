@@ -61,7 +61,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 10;
+    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
 
     uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
 
