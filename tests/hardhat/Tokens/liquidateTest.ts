@@ -47,6 +47,7 @@ type LiquidateTestFixture = {
 
 async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const comptroller = await fakeComptroller();
+  comptroller.liquidationIncentiveMantissa.returns(parseUnits("1.1", 18));
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
   const [admin, liquidator, borrower] = await ethers.getSigners();
