@@ -79,17 +79,17 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     mapping(address => address[]) private _supportedPools;
 
     /**
-     * @dev Emitted when a new Venus pool is added to the directory.
+     * @notice Emitted when a new Venus pool is added to the directory.
      */
     event PoolRegistered(address indexed comptroller, VenusPool pool);
 
     /**
-     * @dev Emitted when a pool name is set.
+     * @notice Emitted when a pool name is set.
      */
     event PoolNameSet(address indexed comptroller, string oldName, string newName);
 
     /**
-     * @dev Emitted when a pool metadata is updated.
+     * @notice Emitted when a pool metadata is updated.
      */
     event PoolMetadataUpdated(
         address indexed comptroller,
@@ -98,7 +98,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     );
 
     /**
-     * @dev Emitted when a Market is added to the pool.
+     * @notice Emitted when a Market is added to the pool.
      */
     event MarketAdded(address indexed comptroller, address indexed vTokenAddress);
 
@@ -110,7 +110,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
     }
 
     /**
-     * @dev Initializes the deployer to owner
+     * @notice Initializes the deployer to owner
      * @param accessControlManager_ AccessControlManager contract address
      */
     function initialize(address accessControlManager_) external initializer {

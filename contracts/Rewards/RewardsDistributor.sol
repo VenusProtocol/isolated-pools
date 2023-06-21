@@ -477,8 +477,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     /**
      * @notice Accrue REWARD TOKEN to the market by updating the borrow index
      * @param vToken The market whose borrow index to update
-     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      * @param marketBorrowIndex The current global borrow index of vToken
+     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      */
     function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];

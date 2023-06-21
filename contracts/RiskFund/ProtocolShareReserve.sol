@@ -39,7 +39,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Initializes the deployer to owner.
+     * @notice Initializes the deployer to owner.
      * @param protocolIncome_ The address protocol income will be sent to
      * @param riskFund_ Risk fund address
      * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
@@ -56,7 +56,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Pool registry setter.
+     * @notice Pool registry setter.
      * @param poolRegistry_ Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
@@ -68,7 +68,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Release funds
+     * @notice Release funds
      * @param comptroller Pool's Comptroller
      * @param asset  Asset to be released
      * @param amount Amount to release
@@ -104,7 +104,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+     * @notice Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
