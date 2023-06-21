@@ -162,10 +162,10 @@ const addPools = async (
   unregisteredPools: PoolConfig[],
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  const poolRegistry = await ethers.getContract("PoolRegistry");
+  const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const commands = await Promise.all(
     unregisteredPools.map(async (pool: PoolConfig) => {
-      const comptroller = await ethers.getContract(`Comptroller_${pool.id}`);
+      const comptroller = await ethers.getContract<Comptroller>(`Comptroller_${pool.id}`);
       return [
         ...(await acceptOwnership(`Comptroller_${pool.id}`, hre)),
         await setOracle(comptroller, pool),
@@ -338,7 +338,7 @@ const executeCommands = async (commands: GovernanceCommand[], hre: HardhatRuntim
       data: txdata,
       value: command.value,
     });
-    await tx.wait(1);
+    await tx.wait();
   }
 };
 
@@ -376,18 +376,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       againstDescription: "I do not think that Venus Protocol should proceed with IL Phase 1",
       abstainDescription: "I am indifferent to whether Venus Protocol proceeds with IL Phase 1",
     };
+    const signer = await ethers.getSigner(deployer);
     const tx = await governorBravo
-      .connect(deployer)
-      .populateTransaction.propose(
+      .connect(signer)
+      .propose(
         proposalActions.targets,
         proposalActions.values,
         proposalActions.signatures,
         proposalActions.calldatas,
-        meta,
+        JSON.stringify(meta),
         NORMAL_VIP,
       );
-    console.log("Please propose the VIP with the following calldata:");
-    console.log(tx.data);
+    await tx.wait();
   } else {
     await executeCommands(commands, hre);
   }
