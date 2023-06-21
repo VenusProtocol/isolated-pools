@@ -13,12 +13,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
   );
+  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
 
   await deploy("PoolRegistry", {
     from: deployer,
     contract: "PoolRegistry",
     proxy: {
-      owner: deployer,
+      owner: proxyOwnerAddress,
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",

@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const comptrollers = poolConfig.map((pool: PoolConfig) => `Comptroller_${pool.id}`);
 
   const contracts = {
-    singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon", "DefaultProxyAdmin"],
+    singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon"],
     twoStepOwnership: ["PoolRegistry", ...comptrollers, ...rewardsDistributors],
   };
 
