@@ -1,3 +1,13 @@
+## [1.0.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.10...v1.0.0-dev.11) (2023-06-21)
+
+
+### Bug Fixes
+
+* implement stricter validation for the bidbps ([61e1890](https://github.com/VenusProtocol/isolated-pools/commit/61e189076d89e75d6d19b5a79ee3d3ee77d1b526))
+* pr comment ([cf868ef](https://github.com/VenusProtocol/isolated-pools/commit/cf868efd80c19191e0d396413e438f2604716b73))
+* shortfall test ([8656341](https://github.com/VenusProtocol/isolated-pools/commit/86563416822f9ccf8c9a17ff3dfc449faf2b2bf5))
+* ven-1500 check for auction start block ([d8ff98a](https://github.com/VenusProtocol/isolated-pools/commit/d8ff98a404506f53f05a201b6aacdaa5d1b79b39))
+
 ## [1.0.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.9...v1.0.0-dev.10) (2023-06-20)
 
 
