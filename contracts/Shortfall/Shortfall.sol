@@ -185,13 +185,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
+     * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
+    function placeBid(
+        address comptroller,
+        uint256 bidBps,
+        uint256 auctionStartBlock
+    ) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
+        require(auction.startBlock == auctionStartBlock, "auction has been restarted");
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
+        require(bidBps > 0, "basis points cannot be zero");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
