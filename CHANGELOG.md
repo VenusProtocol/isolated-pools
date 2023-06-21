@@ -1,3 +1,11 @@
+## [1.0.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.11...v1.0.0-dev.12) (2023-06-21)
+
+
+### Bug Fixes
+
+* calculate values dynamically in tests ([8dea24c](https://github.com/VenusProtocol/isolated-pools/commit/8dea24c308fe1a8dbc538929977f68c2d4d6cf2e))
+* fix protocolSeizeTokens calculations ([d32f5a3](https://github.com/VenusProtocol/isolated-pools/commit/d32f5a3aba1b573e25e392e9ab4cc3f0a000cc4b))
+
 ## [1.0.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.10...v1.0.0-dev.11) (2023-06-21)
 
 
