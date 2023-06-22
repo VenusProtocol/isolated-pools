@@ -69,5 +69,5 @@ const transferSingleStepOwnerships = async (contractNames: string[], targetOwner
   }
 };
 
-func.tags = ["TransferPoolsOwnership"];
+func.tags = ["TransferPoolsOwnership", "il"];
 export default func;
