@@ -68,7 +68,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Initializes the deployer to owner.
+     * @notice Initializes the deployer to owner.
      * @param pancakeSwapRouter_ Address of the PancakeSwap router
      * @param minAmountToConvert_ Minimum amount assets must be worth to convert into base asset
      * @param convertibleBaseAsset_ Address of the base asset
@@ -100,7 +100,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Pool registry setter
+     * @notice Pool registry setter
      * @param poolRegistry_ Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
@@ -112,7 +112,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Shortfall contract address setter
+     * @notice Shortfall contract address setter
      * @param shortfallContractAddress_ Address of the auction contract
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      */
@@ -129,7 +129,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev PancakeSwap router address setter
+     * @notice PancakeSwap router address setter
      * @param pancakeSwapRouter_ Address of the PancakeSwap router
      * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
      */
@@ -141,7 +141,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Min amount to convert setter
+     * @notice Min amount to convert setter
      * @param minAmountToConvert_ Min amount to convert.
      */
     function setMinAmountToConvert(uint256 minAmountToConvert_) external {
@@ -195,7 +195,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Transfer tokens for auction.
+     * @notice Transfer tokens for auction.
      * @param comptroller Comptroller of the pool.
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
@@ -223,7 +223,7 @@ contract RiskFund is
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @notice Update the reserve of the asset for the specific pool after transferring to risk fund.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
