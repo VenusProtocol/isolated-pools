@@ -1,3 +1,16 @@
+## [1.0.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.12...v1.0.0-dev.13) (2023-06-22)
+
+
+### Features
+
+* add testnet deployment ([55d3cd5](https://github.com/VenusProtocol/isolated-pools/commit/55d3cd520c3081e61eb37e38d78dd326da0b22e9))
+* bundle typechain typings into the package ([450d647](https://github.com/VenusProtocol/isolated-pools/commit/450d647207df71881099932f39d38a6ec4ea334a))
+
+
+### Bug Fixes
+
+* add missing contract types in deployments ([26767c4](https://github.com/VenusProtocol/isolated-pools/commit/26767c488fad86b0e01eb0757cc52110b326740a))
+
 ## [1.0.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.11...v1.0.0-dev.12) (2023-06-21)
 
 
