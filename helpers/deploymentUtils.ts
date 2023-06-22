@@ -18,10 +18,6 @@ export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvir
   return deployment.address;
 };
 
-export const getPoolComptroller = async (poolConfig: PoolConfig): Promise<Comptroller> => {
-  return ethers.getContract<Comptroller>(`Comptroller_${poolConfig.name}`);
-};
-
 export const getUnderlyingMock = async (assetSymbol: string): Promise<MockToken> => {
   return ethers.getContract<MockToken>(`Mock${assetSymbol}`);
 };
