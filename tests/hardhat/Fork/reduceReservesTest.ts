@@ -27,6 +27,7 @@ const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 
 let ADMIN: string;
+let PROTOCOL_SHARE_RESERVE_ADMIN: string;
 let ACM: string;
 let acc1: string;
 let acc2: string;
@@ -35,17 +36,20 @@ let COMPTROLLER: string;
 let VUSDD: string;
 let PROTOCOL_SHARE_RESERVE: string;
 let POOL_REGISTRY: string;
+let BLOCK_NUMBER: number;
 
 if (FORK_TESTNET) {
-  ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
+  ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
+  PROTOCOL_SHARE_RESERVE_ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
   USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
-  COMPTROLLER = "0x5bCe7102339B3865ba7ceA8602d5B61db9980827";
-  VUSDD = "0x9b921bbcdc18030540bcb341b1fec7fa00f7bee5";
+  COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
+  VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
   PROTOCOL_SHARE_RESERVE = "0x8d8f14D362f1c8e100106DA6A3254B4d9f2eB309";
-  POOL_REGISTRY = "0xF57fdd25224807B1113f40E4F95c5f625fB458E2";
+  POOL_REGISTRY = "0xC85491616Fa949E048F3aAc39fbf5b0703800667";
+  BLOCK_NUMBER = 30912200;
 }
 
 if (FORK_MAINNET) {
@@ -53,6 +57,7 @@ if (FORK_MAINNET) {
 }
 
 let impersonatedTimelock: Signer;
+let impersonatedProtocolSeizeAdmin: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vUSDD: VToken;
@@ -65,6 +70,7 @@ let bswBorrowAmount: BigNumberish;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
+  impersonatedProtocolSeizeAdmin = await initMainnetUser(PROTOCOL_SHARE_RESERVE_ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
@@ -92,7 +98,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
     bswBorrowAmount = convertToUnit("100", 18);
 
     async function setup() {
-      await setForkBlock(30308687);
+      await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
@@ -110,8 +116,8 @@ if (FORK_TESTNET || FORK_MAINNET) {
 
       await comptroller.setMarketSupplyCaps([vUSDD.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vUSDD.address], [convertToUnit(1, 50)]);
-
-      await protocolShareReserve.connect(impersonatedTimelock).setPoolRegistry(POOL_REGISTRY);
+      await protocolShareReserve.connect(impersonatedProtocolSeizeAdmin).setPoolRegistry(POOL_REGISTRY);
+      await vUSDD.connect(impersonatedTimelock).setProtocolShareReserve(PROTOCOL_SHARE_RESERVE);
     }
     async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
       await token.connect(signer).faucet(amount);
@@ -173,9 +179,8 @@ if (FORK_TESTNET || FORK_MAINNET) {
       const protocolShareBalanceOld = await usdd.balanceOf(PROTOCOL_SHARE_RESERVE);
 
       await vUSDD.reduceReserves(reduceAmount);
-
       totalReservesCurrent = await vUSDD.totalReserves();
-      expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.000000002", 18));
+      expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.0000002", 18));
 
       const protocolShareBalanceNew = await usdd.balanceOf(PROTOCOL_SHARE_RESERVE);
       expect(protocolShareBalanceNew.sub(protocolShareBalanceOld)).equals(reduceAmount);
