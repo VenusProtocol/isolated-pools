@@ -4,6 +4,7 @@
   "description": "",
   "files": [
     "artifacts",
+    "typechain",
     "dist",
     "contracts",
     "deployments"
