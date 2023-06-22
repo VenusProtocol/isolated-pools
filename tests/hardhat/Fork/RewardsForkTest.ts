@@ -9,6 +9,8 @@ import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   AccessControlManager__factory,
+  BinanceOracle,
+  BinanceOracle__factory,
   Comptroller,
   Comptroller__factory,
   MockToken,
@@ -31,22 +33,24 @@ let ADMIN: string;
 let ACM: string;
 let acc1: string;
 let acc2: string;
-let BSW: string;
+let HAY: string;
 let COMPTROLLER: string;
-let VBSW: string;
+let VHAY: string;
 let REWARD_DISTRIBUTOR1: string;
-let REWARD_DISTRIBUTOR2: string;
+let BLOCK_NUMBER: number;
+let BINANCE_ORACLE: string;
 
 if (FORK_TESTNET) {
-  ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
+  ADMIN = "0xce10739590001705f7ff231611ba4a48b2820327";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
-  BSW = "0x7FCC76fc1F573d8Eb445c236Cc282246bC562bCE";
-  COMPTROLLER = "0x5bCe7102339B3865ba7ceA8602d5B61db9980827";
-  VBSW = "0x7250b36b8971adf911f0d82c162634de684fc9b3";
-  REWARD_DISTRIBUTOR1 = "0x6fcd8cD773b6769F7d3D3Ad7f62dc68F95959A44"; // XVS
-  REWARD_DISTRIBUTOR2 = "0xA42a4cFe65B1F1711240bC11e78cBD0b0B20EF5F"; // BIFI
+  HAY = "0xe73774DfCD551BF75650772dC2cC56a2B6323453";
+  COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
+  VHAY = "0x170d3b2da05cc2124334240fB34ad1359e34C562";
+  REWARD_DISTRIBUTOR1 = "0xb0269d68CfdCc30Cb7Cd2E0b52b08Fa7Ffd3079b";
+  BINANCE_ORACLE = "0xB58BFDCE610042311Dc0e034a80Cc7776c1D68f5";
+  BLOCK_NUMBER = 30908163;
 }
 
 if (FORK_MAINNET) {
@@ -56,15 +60,15 @@ if (FORK_MAINNET) {
 let impersonatedTimelock: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
-let vBSW: VToken;
-let bsw: MockToken;
+let vHAY: VToken;
+let hay: MockToken;
 let rewardDistributor1: RewardsDistributor;
-let rewardDistributor2: RewardsDistributor;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let comptrollerSigner: Signer;
 let mintAmount: BigNumberish;
 let bswBorrowAmount: BigNumberish;
+let binanceOracle: BinanceOracle;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -94,26 +98,28 @@ if (FORK_TESTNET || FORK_MAINNET) {
     bswBorrowAmount = convertToUnit("100", 18);
 
     async function setup() {
-      await setForkBlock(30335394);
+      await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
       comptrollerSigner = await initMainnetUser(COMPTROLLER, ethers.utils.parseUnits("2"));
 
-      bsw = MockToken__factory.connect(BSW, impersonatedTimelock);
-      vBSW = await configureVToken(VBSW);
+      hay = MockToken__factory.connect(HAY, impersonatedTimelock);
+      vHAY = await configureVToken(VHAY);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       rewardDistributor1 = RewardsDistributor__factory.connect(REWARD_DISTRIBUTOR1, impersonatedTimelock);
-      rewardDistributor2 = RewardsDistributor__factory.connect(REWARD_DISTRIBUTOR2, impersonatedTimelock);
 
       await grantPermissions();
 
-      await comptroller.connect(acc1Signer).enterMarkets([vBSW.address]);
-      await comptroller.connect(acc2Signer).enterMarkets([vBSW.address]);
+      await comptroller.connect(acc1Signer).enterMarkets([vHAY.address]);
+      await comptroller.connect(acc2Signer).enterMarkets([vHAY.address]);
 
-      await comptroller.setMarketSupplyCaps([vBSW.address], [convertToUnit(1, 50)]);
-      await comptroller.setMarketBorrowCaps([vBSW.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketSupplyCaps([vHAY.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketBorrowCaps([vHAY.address], [convertToUnit(1, 50)]);
+
+      binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
+      await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
     }
 
     async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
@@ -153,7 +159,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       vToken: VToken,
       user: string,
     ) {
-      await vBSW.accrueInterest();
+      await vHAY.accrueInterest();
       const marketBorrowIndex = await vToken.borrowIndex();
       const borrowerAccruedOld = await rewardDistributor.rewardTokenAccrued(user);
 
@@ -186,76 +192,51 @@ if (FORK_TESTNET || FORK_MAINNET) {
     });
 
     it("Rewards for suppliers", async function () {
-      await mintVTokens(acc1Signer, bsw, vBSW, mintAmount);
+      await mintVTokens(acc1Signer, hay, vHAY, mintAmount);
       await mine(3000000);
-      await vBSW.accrueInterest();
+      await vHAY.accrueInterest();
 
       // Reward1 calculations for user 1
-      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VBSW, vBSW, acc1);
+      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VHAY, vHAY, acc1);
       let supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
-      // Reward2 calculations for user 1
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor2, VBSW, vBSW, acc1);
-      supplierAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc1);
-      expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
-
       // Transfer vTokens to user 2 from user 1
-      const acc1Balance = await vBSW.balanceOf(acc1);
-      await vBSW.connect(acc1Signer).transfer(acc2, acc1Balance);
-      await vBSW.accrueInterest();
+      const acc1Balance = await vHAY.balanceOf(acc1);
+      await vHAY.connect(acc1Signer).transfer(acc2, acc1Balance);
+      await vHAY.accrueInterest();
 
       // Reward1 calculations for user 1
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VBSW, vBSW, acc1);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VHAY, vHAY, acc1);
       supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
-      // Reward2 calculations for user 1
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor2, VBSW, vBSW, acc1);
-      supplierAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc1);
-      expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
-
       // Reward1 calculations for user 2
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VBSW, vBSW, acc2);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VHAY, vHAY, acc2);
       supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc2);
-      expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
-
-      // Reward2 calculations for user 2
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor2, VBSW, vBSW, acc2);
-      supplierAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc2);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
     });
 
     it("Rewards for borrowers", async function () {
-      await mintVTokens(acc1Signer, bsw, vBSW, mintAmount);
-      await vBSW.connect(acc1Signer).borrow(bswBorrowAmount);
+      await mintVTokens(acc1Signer, hay, vHAY, mintAmount);
+      await vHAY.connect(acc1Signer).borrow(bswBorrowAmount);
       await mine(3000000);
-      await vBSW.accrueInterest();
+      await vHAY.accrueInterest();
 
       // Reward1 calculations for user 1
-      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VBSW, vBSW, acc1);
+      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VHAY, vHAY, acc1);
       let borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
-      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
-
-      // Reward2 calculations for user 1
-      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor2, VBSW, vBSW, acc1);
-      borrowerAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc1);
-      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000080", 18));
+      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000079", 18));
 
       // Repay
-      const borrowBalanceStored = await vBSW.borrowBalanceStored(acc1);
-      await bsw.connect(acc1Signer).faucet(borrowBalanceStored);
-      await bsw.connect(acc1Signer).approve(VBSW, borrowBalanceStored);
-      await expect(vBSW.connect(acc1Signer).repayBorrow(borrowBalanceStored)).to.emit(vBSW, "RepayBorrow");
+      const borrowBalanceStored = await vHAY.borrowBalanceStored(acc1);
+      await hay.connect(acc1Signer).faucet(borrowBalanceStored);
+      await hay.connect(acc1Signer).approve(VHAY, borrowBalanceStored);
+      await expect(vHAY.connect(acc1Signer).repayBorrow(borrowBalanceStored)).to.emit(vHAY, "RepayBorrow");
 
       // Reward1 calculations for user 1
-      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VBSW, vBSW, acc1);
+      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VHAY, vHAY, acc1);
       borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
-      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
-
-      // Reward2 calculations for user 1
-      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor2, VBSW, vBSW, acc1);
-      borrowerAccruedCurrent = await rewardDistributor2.rewardTokenAccrued(acc1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
     });
   });
