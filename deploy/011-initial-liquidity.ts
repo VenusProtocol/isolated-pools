@@ -1,23 +1,8 @@
-import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { DeploymentConfig, PoolConfig, TokenConfig, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
-import { getUnregisteredVTokens } from "../helpers/deploymentUtils";
-import { ERC20, MockToken } from "../typechain";
-
-const getUnderlyingMock = async (assetSymbol: string): Promise<MockToken> => {
-  return ethers.getContract<MockToken>(`Mock${assetSymbol}`);
-};
-
-const getUnderlyingToken = async (assetSymbol: string, tokensConfig: TokenConfig[]): Promise<ERC20> => {
-  const token = getTokenConfig(assetSymbol, tokensConfig);
-  let underlyingAddress = token.tokenAddress;
-  if (token.isMock) {
-    underlyingAddress = (await getUnderlyingMock(assetSymbol)).address;
-  }
-  return ethers.getContractAt<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
-};
+import { DeploymentConfig, PoolConfig, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { getUnderlyingMock, getUnderlyingToken, getUnregisteredVTokens } from "../helpers/deploymentUtils";
 
 const faucetTokens = async (deploymentConfig: DeploymentConfig, hre: HardhatRuntimeEnvironment) => {
   const { poolConfig, tokensConfig } = deploymentConfig;
