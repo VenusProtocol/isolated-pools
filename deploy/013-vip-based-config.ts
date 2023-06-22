@@ -98,7 +98,7 @@ const configureRewards = async (
       const poolCommands = await Promise.all(
         rewards.map(async (rewardConfig: RewardConfig) => {
           const contractName = `RewardsDistributor_${rewardConfig.asset}_${pool.id}`;
-          const rewardsDistributor = await ethers.getContract(contractName);
+          const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
           return [
             ...(await acceptOwnership(contractName, hre)),
             await addRewardsDistributor(rewardsDistributor, pool, rewardConfig),
@@ -273,7 +273,7 @@ const addMarkets = async (
   deploymentConfig: DeploymentConfig,
   hre: HardhatRuntimeEnvironment,
 ) => {
-  const poolRegistry = await ethers.getContract("PoolRegistry");
+  const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const poolCommands = await Promise.all(
     unregisteredVTokens.map(async (pool: PoolConfig) => {
       const vTokenCommands = await Promise.all(
