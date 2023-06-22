@@ -6,6 +6,11 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 
+/**
+ * @title ComptrollerStorage
+ * @author Venus
+ * @notice Storage layout for the `Comptroller` contract.
+ */
 contract ComptrollerStorage {
     struct LiquidationOrder {
         VToken vTokenCollateral;

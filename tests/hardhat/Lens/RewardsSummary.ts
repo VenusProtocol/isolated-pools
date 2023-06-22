@@ -10,6 +10,9 @@ import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor
 const { expect } = chai;
 chai.use(smock.matchers);
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 let comptroller: FakeContract<Comptroller>;
 let vBUSD: FakeContract<VToken>;
 let vWBTC: FakeContract<VToken>;

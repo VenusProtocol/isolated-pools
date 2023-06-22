@@ -6,6 +6,11 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 
+/**
+ * @title ComptrollerInterface
+ * @author Venus
+ * @notice Interface implemented by the `Comptroller` contract.
+ */
 interface ComptrollerInterface {
     /*** Assets You Are In ***/
 
@@ -70,6 +75,11 @@ interface ComptrollerInterface {
     function getAllMarkets() external view returns (VToken[] memory);
 }
 
+/**
+ * @title ComptrollerViewInterface
+ * @author Venus
+ * @notice Interface implemented by the `Comptroller` contract, including only some util view functions.
+ */
 interface ComptrollerViewInterface {
     function markets(address) external view returns (bool, uint256);
 

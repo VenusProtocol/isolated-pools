@@ -14,7 +14,27 @@ import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
- * @title Comptroller Contract
+ * @title Comptroller
+ * @author Venus
+ * @notice The Comptroller is designed to provide checks for all minting, redeeming, transferring, borrowing, lending, repaying, liquidating,
+ * and seizing done by the `vToken` contract. Each pool has one `Comptroller` checking these interactions across markets. When a user interacts
+ * with a given market by one of these main actions, a call is made to a corresponding hook in the associated `Comptroller`, which either allows
+ * or reverts the transaction. These hooks also update supply and borrow rewards as they are called. The comptroller holds the logic for assessing
+ * liquidity snapshots of an account via the collateral factor and liquidation threshold. This check determines the collateral needed for a borrow,
+ * as well as how much of a borrow may be liquidated. A user may borrow a portion of their collateral with the maximum amount determined by the
+ * markets collateral factor. However, if their borrowed amount exceeds an amount calculated using the market’s corresponding liquidation threshold,
+ * the borrow is eligible for liquidation.
+ *
+ * The `Comptroller` also includes two functions `liquidateAccount()` and `healAccount()`, which are meant to handle accounts that do not exceed
+ * the `minLiquidatableCollateral` for the `Comptroller`:
+ *
+ * - `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage
+ * of the debt calculated by `collateral/(borrows*liquidationIncentive)`. The function can only be called if the calculated percentage does not exceed
+ * 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of debt
+ * and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the associated pool.
+ * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation
+ * incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic
+ * verifying that the repay amount does not exceed the close factor.
  */
 contract Comptroller is
     Ownable2StepUpgradeable,
@@ -92,6 +112,9 @@ contract Comptroller is
     /// @notice Thrown when a market has an unexpected comptroller
     error ComptrollerMismatch();
 
+    /// @notice Thrown when user is not member of market
+    error MarketNotCollateral(address vToken, address user);
+
     /**
      * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
@@ -157,10 +180,6 @@ contract Comptroller is
      */
     function enterMarkets(address[] memory vTokens) external override returns (uint256[] memory) {
         uint256 len = vTokens.length;
-
-        uint256 accountAssetsLen = accountAssets[msg.sender].length;
-
-        _ensureMaxLoops(accountAssetsLen + len);
 
         uint256[] memory results = new uint256[](len);
         for (uint256 i; i < len; ++i) {
@@ -300,7 +319,7 @@ contract Comptroller is
         uint256 redeemTokens
     ) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
-        oracle.updatePrice(vToken);
+
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
@@ -334,9 +353,6 @@ contract Comptroller is
     ) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vToken);
-
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
         }
@@ -349,7 +365,10 @@ contract Comptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        if (oracle_.getUnderlyingPrice(vToken) == 0) {
+        // Update the prices of tokens
+        updatePrices(borrower);
+
+        if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
         }
 
@@ -442,9 +461,8 @@ contract Comptroller is
         // Action.SEIZE on it
         _checkActionPauseState(vTokenBorrowed, Action.LIQUIDATE);
 
-        ResilientOracleInterface oracle_ = oracle;
-        oracle_.updatePrice(vTokenBorrowed);
-        oracle_.updatePrice(vTokenCollateral);
+        // Update the prices of tokens
+        updatePrices(borrower);
 
         if (!markets[vTokenBorrowed].isListed) {
             revert MarketNotListed(address(vTokenBorrowed));
@@ -504,7 +522,9 @@ contract Comptroller is
         // Action.LIQUIDATE on it
         _checkActionPauseState(vTokenCollateral, Action.SEIZE);
 
-        if (!markets[vTokenCollateral].isListed) {
+        Market storage market = markets[vTokenCollateral];
+
+        if (!market.isListed) {
             revert MarketNotListed(vTokenCollateral);
         }
 
@@ -523,6 +543,10 @@ contract Comptroller is
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
                 revert ComptrollerMismatch();
             }
+        }
+
+        if (!market.accountMembership[borrower]) {
+            revert MarketNotCollateral(vTokenCollateral, borrower);
         }
 
         // Keep the flywheel moving
@@ -556,8 +580,6 @@ contract Comptroller is
         uint256 transferTokens
     ) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
-
-        oracle.updatePrice(vToken);
 
         // Currently the only consideration is whether or not
         //  the src is allowed to redeem this many tokens
@@ -679,7 +701,7 @@ contract Comptroller is
 
         uint256 ordersCount = orders.length;
 
-        _ensureMaxLoops(ordersCount);
+        _ensureMaxLoops(ordersCount / 2);
 
         for (uint256 i; i < ordersCount; ++i) {
             if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
@@ -712,7 +734,7 @@ contract Comptroller is
      * @notice Sets the closeFactor to use when liquidating borrows
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @custom:event Emits NewCloseFactor on success
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
@@ -907,7 +929,7 @@ contract Comptroller is
         uint256 marketsCount = marketsList.length;
         uint256 actionsCount = actionsList.length;
 
-        _ensureMaxLoops(marketsCount);
+        _ensureMaxLoops(marketsCount * actionsCount);
 
         for (uint256 marketIdx; marketIdx < marketsCount; ++marketIdx) {
             for (uint256 actionIdx; actionIdx < actionsCount; ++actionIdx) {
@@ -991,6 +1013,27 @@ contract Comptroller is
     }
 
     /**
+     * @notice Determine the current account liquidity with respect to liquidation threshold requirements
+     * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
+     * @param account The account get liquidity for
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @return liquidity Account liquidity in excess of liquidation threshold requirements,
+     * @return shortfall Account shortfall below liquidation threshold requirements
+     */
+    function getAccountLiquidity(address account)
+        external
+        view
+        returns (
+            uint256 error,
+            uint256 liquidity,
+            uint256 shortfall
+        )
+    {
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getLiquidationThreshold);
+        return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to collateral requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -998,7 +1041,7 @@ contract Comptroller is
      * @return liquidity Account liquidity in excess of collateral requirements,
      * @return shortfall Account shortfall below collateral requirements
      */
-    function getAccountLiquidity(address account)
+    function getBorrowingPower(address account)
         external
         view
         returns (
@@ -1164,6 +1207,21 @@ contract Comptroller is
     }
 
     /**
+     * @notice Update the prices of all the tokens associated with the provided account
+     * @param account Address of the account to get associated tokens with
+     */
+    function updatePrices(address account) public {
+        VToken[] memory vTokens = accountAssets[account];
+        uint256 vTokensCount = vTokens.length;
+
+        ResilientOracleInterface oracle_ = oracle;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            oracle_.updatePrice(address(vTokens[i]));
+        }
+    }
+
+    /**
      * @notice Checks if a certain action is paused on a market
      * @param market vToken address
      * @param action Action to check
@@ -1259,7 +1317,7 @@ contract Comptroller is
         address vToken,
         address redeemer,
         uint256 redeemTokens
-    ) internal view {
+    ) internal {
         Market storage market = markets[vToken];
 
         if (!market.isListed) {
@@ -1270,6 +1328,9 @@ contract Comptroller is
         if (!market.accountMembership[redeemer]) {
             return;
         }
+
+        // Update the prices of tokens
+        updatePrices(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(

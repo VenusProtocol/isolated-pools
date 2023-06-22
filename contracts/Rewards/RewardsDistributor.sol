@@ -11,6 +11,21 @@ import { VToken } from "../VToken.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 
+/**
+ * @title `RewardsDistributor`
+ * @author Venus
+ * @notice Contract used to configure, track and distribute rewards to users based on their actions (borrows and supplies) in the protocol.
+ * Users can receive additional rewards through a `RewardsDistributor`. Each `RewardsDistributor` proxy is initialized with a specific reward
+ * token and `Comptroller`, which can then distribute the reward token to users that supply or borrow in the associated pool.
+ * Authorized users can set the reward token borrow and supply speeds for each market in the pool. This sets a fixed amount of reward
+ * token to be released each block for borrowers and suppliers, which is distributed based on a user’s percentage of the borrows or supplies
+ * respectively. The owner can also set up reward distributions to contributor addresses (distinct from suppliers and borrowers) by setting
+ * their contributor reward token speed, which similarly allocates a fixed amount of reward token per block.
+ *
+ * The owner has the ability to transfer any amount of reward tokens held by the contract to any other address. Rewards are not distributed
+ * automatically and must be claimed by a user calling `claimRewardToken()`. Users should be aware that it is up to the owner and other centralized
+ * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
+ */
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlledV8, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -462,8 +477,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     /**
      * @notice Accrue REWARD TOKEN to the market by updating the borrow index
      * @param vToken The market whose borrow index to update
-     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      * @param marketBorrowIndex The current global borrow index of vToken
+     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      */
     function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
