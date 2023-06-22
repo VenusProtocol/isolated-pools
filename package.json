@@ -21,7 +21,7 @@
     "lint:ts:fix": "eslint --fix --ext .js,.ts .",
     "prettier": "prettier --write \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile",
+    "build": "rm -rf dist && hardhat compile && tsc --declaration",
     "docgen": "hardhat docgen",
     "prepare": "husky install"
   },
