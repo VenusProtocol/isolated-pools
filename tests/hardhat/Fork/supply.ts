@@ -27,18 +27,18 @@ chai.use(smock.matchers);
 
 const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 
-const ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
+const ADMIN = "0xce10739590001705f7ff231611ba4a48b2820327";
 const ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
 const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
-const ORACLE = "0xfc4e26B7fD56610E84d33372435F0275A359E8eF";
+const ORACLE = "0xCeA29f1266e880A1482c06eD656cD08C148BaA32";
 const acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
 const acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
 const acc3 = "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3";
 const USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
 const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
-const COMPTROLLER = "0x605AA769d14F6Af2E405295FEC2A4d8Baa623d80";
-const VUSDD = "0xeD7401294EBF0A1b0721562a69031565F4a4Bacd";
-const VUSDT = "0x296da137120562c79b26808c1aa142a59ebf31f4";
+const COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
+const VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
+const VUSDT = "0x3338988d0beb4419Acb8fE624218754053362D06";
 
 let impersonatedTimelock: Signer;
 let impersonatedOracleOwner: Signer;
@@ -96,7 +96,7 @@ async function grantPermissions() {
 if (FORK_TESTNET) {
   describe("Supply fork tests", async () => {
     async function setup() {
-      await setForkBlock(30080357);
+      await setForkBlock(30913473);
       await configureTimelock();
 
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
@@ -140,6 +140,10 @@ if (FORK_TESTNET) {
         .multipliedBy(Number(convertToUnit(1, 18)))
         .toFixed(0);
 
+      if (Number(supply) == 0) {
+        return await vUSDT.exchangeRateStored();
+      }
+
       return new BigNumber(exchangeRatecal).dividedBy(Number(supply)).toFixed(0);
     };
 
@@ -151,6 +155,7 @@ if (FORK_TESTNET) {
 
     const assertRedeemAmount = async (accountBalance, balanceBefore) => {
       const balanceAfter = await usdt.balanceOf(acc1);
+
       const exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
       const expectedRedeemAmount = new BigNumber(Number(accountBalance))
         .multipliedBy(Number(exchangeRate))
@@ -214,16 +219,16 @@ if (FORK_TESTNET) {
       // setup to liquidate the second account(acc2) with first account(acc1)
       await comptroller.setMinLiquidatableCollateral(0);
       await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
-      await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 13));
+      await priceOracle.setDirectPrice(usdd.address, convertToUnit("1.05", 14));
 
       const [err, liquidity, shortfall] = await comptroller.callStatic.getAccountLiquidity(acc2);
       expect(err).equals(0);
       expect(liquidity).equals(0);
       expect(shortfall).greaterThan(0);
 
-      const borrowBalance = await vUSDT.borrowBalanceStored(acc2);
-      const closeFactor = await comptroller.closeFactorMantissa();
-      const maxClose = (Number(borrowBalance) * Number(closeFactor)) / 2e18;
+      const borrowBalance = (await vUSDT.borrowBalanceStored(acc2)).toString();
+      const closeFactor = (await comptroller.closeFactorMantissa()).toString();
+      const maxClose = new BigNumber(borrowBalance).multipliedBy(closeFactor).dividedBy(2e18).toFixed(0);
       let result = vUSDT.connect(acc1Signer).liquidateBorrow(acc2, maxClose, vUSDD.address);
       await expect(result).to.emit(vUSDT, "LiquidateBorrow");
 
