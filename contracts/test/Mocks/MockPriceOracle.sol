@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { ChainlinkOracle } from "@venusprotocol/oracle/contracts/oracles/ChainlinkOracle.sol";
 import { BinanceOracle } from "@venusprotocol/oracle/contracts/oracles/BinanceOracle.sol";
 
 import { VToken } from "../../VToken.sol";
