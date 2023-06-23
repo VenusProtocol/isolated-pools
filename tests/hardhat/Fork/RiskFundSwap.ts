@@ -275,9 +275,9 @@ describe("Risk Fund: Swap Tests", () => {
   it("Swap All Pool Assets", async () => {
     await USDT.connect(usdtUser).approve(vUSDT.address, ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
-    await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT);
+    await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT, 0);
 
-    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
+    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT, 0);
 
     await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]]);
     expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");

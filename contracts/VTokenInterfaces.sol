@@ -6,19 +6,7 @@ import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 import "./ComptrollerInterface.sol";
 import "./InterestRateModel.sol";
 import "./ErrorReporter.sol";
-
-interface IProtocolShareReserve {
-    enum IncomeType {
-        SPREAD,
-        LIQUIDATION
-    }
-
-    function updateAssetsState(
-        address comptroller,
-        address underlying,
-        IncomeType kind
-    ) external;
-}
+import "./RiskFund/IProtocolShareReserve.sol";
 
 contract VTokenStorage {
     /**

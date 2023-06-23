@@ -49,7 +49,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
   it("Revert on invalid asset address.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(fakeComptroller.address, "0x0000000000000000000000000000000000000000", 10),
+      protocolShareReserve.releaseFunds(fakeComptroller.address, "0x0000000000000000000000000000000000000000", 10, 0),
     ).to.be.rejectedWith("ProtocolShareReserve: Asset address invalid");
   });
 
@@ -59,6 +59,7 @@ describe("ProtocolShareReserve: Tests", function () {
         fakeComptroller.address, // Mock comptroller address
         mockDAI.address,
         10,
+        0,
       ),
     ).to.be.rejectedWith("ProtocolShareReserve: Insufficient pool balance");
   });
@@ -70,6 +71,7 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
+      0,
     );
 
     const balance = await mockDAI.balanceOf(protocolShareReserve.address);
@@ -84,6 +86,7 @@ describe("ProtocolShareReserve: Tests", function () {
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
       convertToUnit(90, 18),
+      0,
     );
 
     protocolUSDT = await protocolShareReserve.getPoolAssetReserve(fakeComptroller.address, mockDAI.address);

@@ -46,6 +46,7 @@ describe("VToken", () => {
   beforeEach(async () => {
     const contracts = await loadFixture(vTokenTestFixture);
     ({ vToken, interestRateModel } = contracts);
+    await vToken.setReduceReservesBlockDelta(convertToUnit(4, 10));
   });
 
   beforeEach(async () => {

@@ -93,6 +93,18 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setReduceReservesBlockDelta(uint256)",
+    deployer,
+  );
+
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setReduceReservesThreshold(uint256)",
+    deployer,
+  );
+
   // Set supply caps
   const supply = convertToUnit(10, 36);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBTCB.address], [supply, supply]);
@@ -752,6 +764,8 @@ describe("Risk Fund and Auction related scenarios", () => {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
       deployerSigner = await ethers.getSigner(deployer);
+      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
+      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -768,24 +782,62 @@ describe("Risk Fund and Auction related scenarios", () => {
       await RiskFund.setPoolRegistry(PoolRegistry.address);
     });
 
-    it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
+    it("generate bad Debt, reduce reserves manually and distribute if blockDelta < last reduce && totalReserves < reduceThreshold", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const seizeTokens = (await vBNX.getAccountSnapshot(acc2)).vTokenBalance;
+      const exchangeRateStored = await vBNX.exchangeRateStored();
+      const protocolSeizeShareMantissa = await vBNX.protocolSeizeShareMantissa();
+
+      const protocolSeizeTokens = seizeTokens.mul(protocolSeizeShareMantissa).div(convertToUnit(1, 18));
+      const expectedTotalReserves = protocolSeizeTokens.mul(exchangeRateStored).div(convertToUnit(1, 18));
+
       await Comptroller.connect(acc1Signer).healAccount(acc2);
-      // At this point market contain bad debt
-      const totalReserves = await vBNX.totalReserves();
-      // Reserves of the market are being transferred to protocol share reserves
-      await vBNX.reduceReserves(totalReserves);
-      // Check the balance of protocol share reserve
-      expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
+      expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
       // Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
-      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-      expect(await BNX.balanceOf(deployer)).to.be.equal(totalReserves * 0.7);
-      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(totalReserves * 0.3);
+      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(
+        Comptroller.address,
+        BNX.address,
+        expectedTotalReserves,
+        0,
+      );
+
+      expect(await BNX.balanceOf(deployer)).to.be.equal(expectedTotalReserves * 0.7);
+      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.3);
+    });
+
+    it("reduce reserves if blockDelta > last reduce && totalReserves < reduceThreshold", async function () {
+      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(10, 1));
+      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
+
+      // Increase price of borrowed underlying tokens to surpass available collateral
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const balanceBefore = await BNX.balanceOf(ProtocolShareReserve.address);
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+      const balanceAfter = await BNX.balanceOf(ProtocolShareReserve.address);
+      expect(balanceAfter).to.be.greaterThanOrEqual(balanceBefore);
+    });
+
+    it("reduce reserves if blockDelta < last reduce && totalReserves > reduceThreshold", async function () {
+      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
+      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
+
+      // Increase price of borrowed underlying tokens to surpass available collateral
+      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
+      await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const balanceBefore = await BNX.balanceOf(ProtocolShareReserve.address);
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+      const balanceAfter = await BNX.balanceOf(ProtocolShareReserve.address);
+      expect(balanceAfter).to.be.greaterThanOrEqual(balanceBefore);
     });
   });
 });

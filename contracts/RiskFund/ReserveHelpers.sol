@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../ComptrollerInterface.sol";
 import "../Pool/PoolRegistryInterface.sol";
+import "./IProtocolShareReserve.sol";
 
 contract ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -58,7 +59,7 @@ contract ReserveHelpers {
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind
+        IProtocolShareReserve.IncomeType kind
     ) public virtual {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         require(asset != address(0), "ReserveHelpers: Asset address invalid");

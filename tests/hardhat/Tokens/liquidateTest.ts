@@ -7,7 +7,7 @@ import { BigNumberish, Signer, constants } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
-import { AccessControlManager, Comptroller, Shortfall, VTokenHarness } from "../../../typechain";
+import { AccessControlManager, Comptroller, ERC20Harness__factory, Shortfall, VTokenHarness } from "../../../typechain";
 import { Error } from "../util/Errors";
 import {
   VTokenContracts,
@@ -24,6 +24,7 @@ chai.use(smock.matchers);
 const repayAmount = convertToUnit("10", 18);
 const seizeTokens = convertToUnit("40", 18); // forced, repayAmount * 4
 const exchangeRate = convertToUnit("0.2", 18);
+const cash = convertToUnit("0.4", 18);
 
 type LiquidateTestFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
@@ -51,6 +52,9 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   await pretendBorrow(borrowed.vToken, borrower, 1, 1, repayAmount);
   await preApprove(borrowed.underlying, borrowed.vToken, liquidator, repayAmount, { faucet: true });
 
+  const underlyingCollateral = await collateral.vToken.underlying();
+  const collateralErc20 = ERC20Harness__factory.connect(underlyingCollateral, admin);
+  await collateralErc20.harnessSetBalance(collateral.vToken.address, cash);
   return { accessControlManager, comptroller, borrowed, collateral };
 }
 
@@ -141,6 +145,7 @@ describe("VToken", function () {
     const contracts = await loadFixture(liquidateTestFixture);
     configure(contracts);
     ({ comptroller, borrowed, collateral } = contracts);
+    await collateral.vToken.setReduceReservesBlockDelta(convertToUnit(4, 18));
   });
 
   describe("liquidateBorrowFresh", () => {
@@ -251,8 +256,9 @@ describe("VToken", function () {
           [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
           [borrowed.vToken, borrowerAddress, "borrows", -repayAmount],
           [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
-          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [collateral.vToken, collateral.vToken.address, "reserves", 0], // reserves transffered to protocol share reserve
           [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens],
+          [collateral.vToken, collateral.vToken.address, "cash", -cash],
         ]),
       );
     });
@@ -298,10 +304,11 @@ describe("VToken", function () {
           [borrowed.vToken, liquidatorAddress, "cash", -repayAmount],
           [collateral.vToken, liquidatorAddress, "eth", -gasCost],
           [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
-          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [collateral.vToken, collateral.vToken.address, "reserves", 0], // reserves transffered to protocol share reserve
           [borrowed.vToken, borrowerAddress, "borrows", -repayAmount],
           [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
           [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens], // total supply decreases
+          [collateral.vToken, collateral.vToken.address, "cash", -cash],
         ]),
       );
     });
@@ -353,8 +360,9 @@ describe("VToken", function () {
         adjustBalances(beforeBalances, [
           [collateral.vToken, liquidatorAddress, "tokens", liquidatorShareTokens],
           [collateral.vToken, borrowerAddress, "tokens", -seizeTokens],
-          [collateral.vToken, collateral.vToken.address, "reserves", addReservesAmount],
+          [collateral.vToken, collateral.vToken.address, "reserves", 0], // reserves transffered to protocol share reserve
           [collateral.vToken, collateral.vToken.address, "tokens", -protocolShareTokens], // total supply decreases
+          [collateral.vToken, collateral.vToken.address, "cash", -cash],
         ]),
       );
     });

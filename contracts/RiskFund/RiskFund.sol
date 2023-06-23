@@ -12,6 +12,7 @@ import "./IRiskFund.sol";
 import "../Shortfall/IShortfall.sol";
 import "../Governance/AccessControlled.sol";
 import "../MaxLoopsLimitHelper.sol";
+import "./IProtocolShareReserve.sol";
 
 /**
  * @dev This contract does not support BNB.
@@ -214,7 +215,7 @@ contract RiskFund is
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind
+        IProtocolShareReserve.IncomeType kind
     ) public override(IRiskFund, ReserveHelpers) {
         super.updateAssetsState(comptroller, asset, kind);
     }

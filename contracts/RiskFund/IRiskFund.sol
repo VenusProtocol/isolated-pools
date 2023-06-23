@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
+import "./IProtocolShareReserve.sol";
 
 interface IRiskFund {
     function swapPoolsAssets(
@@ -13,7 +14,7 @@ interface IRiskFund {
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind
+        IProtocolShareReserve.IncomeType kind
     ) external;
 
     function poolReserves(address comptroller) external view returns (uint256);

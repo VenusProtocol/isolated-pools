@@ -1250,7 +1250,6 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         _doTransferOut(protocolShareReserve, reduceAmount);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
-        console.log(1224);
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, kind);
 
         emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);

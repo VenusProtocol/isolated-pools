@@ -66,7 +66,8 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     function releaseFunds(
         address comptroller,
         address asset,
-        uint256 amount
+        uint256 amount,
+        IncomeType kind
     ) external returns (uint256) {
         require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
@@ -82,7 +83,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund).updateAssetsState(comptroller, asset, 0);
+        IRiskFund(riskFund).updateAssetsState(comptroller, asset, kind);
 
         emit FundsReleased(comptroller, asset, amount);
 
@@ -97,7 +98,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
     function updateAssetsState(
         address comptroller,
         address asset,
-        uint256 kind
+        IncomeType kind
     ) public override(IProtocolShareReserve, ReserveHelpers) {
         super.updateAssetsState(comptroller, asset, kind);
     }
