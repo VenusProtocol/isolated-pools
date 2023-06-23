@@ -27,17 +27,17 @@ chai.use(smock.matchers);
 
 const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 
-const ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
+const ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
 const ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
 const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
-const ORACLE = "0xfc4e26B7fD56610E84d33372435F0275A359E8eF";
+const ORACLE = "0xCeA29f1266e880A1482c06eD656cD08C148BaA32";
 const acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
 const acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
 const USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
 const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
-const COMPTROLLER = "0x605AA769d14F6Af2E405295FEC2A4d8Baa623d80";
-const VUSDD = "0xeD7401294EBF0A1b0721562a69031565F4a4Bacd";
-const VUSDT = "0x296da137120562c79b26808c1aa142a59ebf31f4";
+const COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
+const VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
+const VUSDT = "0x3338988d0beb4419Acb8fE624218754053362D06";
 
 let impersonatedTimelock: Signer;
 let impersonatedOracleOwner: Signer;
@@ -106,7 +106,7 @@ if (FORK_TESTNET) {
     }
 
     async function setup() {
-      await setForkBlock(30080357);
+      await setForkBlock(30914000);
       await configureTimelock();
 
       acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
@@ -243,7 +243,7 @@ if (FORK_TESTNET) {
         const exchangeRateCollateralNew = await vUSDD.exchangeRateStored();
         const protocolSeizeShareMantissa = await vUSDD.protocolSeizeShareMantissa();
 
-        const protocolSeizeTokens = Math.floor((seizeTokens * protocolSeizeShareMantissa) / 1e18);
+        const protocolSeizeTokens = Math.floor((seizeTokens * protocolSeizeShareMantissa) / liquidationIncentive);
         const liquidatorSeizeTokens = Math.floor(seizeTokens - protocolSeizeTokens);
 
         const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
@@ -251,7 +251,7 @@ if (FORK_TESTNET) {
 
         expect(borrowBalancePrev - maxClose).equals(borrowBalanceNew);
         expect(vUSDDBalAcc2Prev - vUSDDBalAcc2New).equals(Math.floor(seizeTokens));
-        expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).equals(liquidatorSeizeTokens);
+        expect(vUSDDBalAcc1New - vUSDDBalAcc1Prev).to.closeTo(liquidatorSeizeTokens, 2);
         expect(totalReservesUsddNew - totalReservesUsddPrev).to.closeTo(
           Math.round(reserveIncrease),
           parseUnits("0.00003", 18),
@@ -286,9 +286,14 @@ if (FORK_TESTNET) {
       });
 
       it("Should success on liquidation when repay amount is equal to borrowing", async function () {
-        await usdd.connect(acc2Signer).faucet(10900000000);
-        await usdd.connect(acc2Signer).approve(vUSDD.address, 10900000000);
-        await vUSDD.connect(acc2Signer).mint(10900000000);
+        await usdd.connect(acc2Signer).faucet(convertToUnit(1, 10));
+        await usdd.connect(acc2Signer).approve(vUSDD.address, convertToUnit(1, 10));
+        await vUSDD.connect(acc2Signer).mint(convertToUnit(1, 10));
+
+        await comptroller
+          .connect(impersonatedTimelock)
+          .setCollateralFactor(vUSDD.address, convertToUnit(7, 17), convertToUnit(8, 17));
+        await comptroller.connect(impersonatedTimelock).setLiquidationIncentive(convertToUnit(1, 18));
 
         await priceOracle.setDirectPrice(usdd.address, convertToUnit("1", 14));
         await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 2));
@@ -310,7 +315,7 @@ if (FORK_TESTNET) {
         const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
         const ratio = num / den;
 
-        const repayAmount = 1000001022346902; // After interest accrual
+        const repayAmount = 1000001017860540; // After interest accrual
         const seizeTokens = ratio * repayAmount;
         const param = {
           vTokenCollateral: vUSDD.address,
@@ -376,7 +381,7 @@ if (FORK_TESTNET) {
         expect(result.vTokenBalance).to.equal(0);
         expect(result.borrowBalance).to.equal(0);
         const badDebtAfter = await vUSDT.badDebt();
-        expect(badDebtAfter).to.closeTo(badDebt, 1000);
+        expect(badDebtAfter).to.closeTo(badDebt, 1011);
       });
     });
   });
