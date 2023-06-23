@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { Comptroller } from "../typechain";
-import { PoolConfig, RewardConfig, VTokenConfig } from "./deploymentConfig";
+import { Comptroller, ERC20, MockToken } from "../typechain";
+import { PoolConfig, RewardConfig, TokenConfig, VTokenConfig, getTokenConfig } from "./deploymentConfig";
 
 export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvironment): Promise<string> => {
   const { getNamedAccounts } = hre;
@@ -18,8 +18,17 @@ export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvir
   return deployment.address;
 };
 
-export const getPoolComptroller = async (poolConfig: PoolConfig): Promise<Comptroller> => {
-  return ethers.getContract<Comptroller>(`Comptroller_${poolConfig.name}`);
+export const getUnderlyingMock = async (assetSymbol: string): Promise<MockToken> => {
+  return ethers.getContract<MockToken>(`Mock${assetSymbol}`);
+};
+
+export const getUnderlyingToken = async (assetSymbol: string, tokensConfig: TokenConfig[]): Promise<ERC20> => {
+  const token = getTokenConfig(assetSymbol, tokensConfig);
+  let underlyingAddress = token.tokenAddress;
+  if (token.isMock) {
+    underlyingAddress = (await getUnderlyingMock(assetSymbol)).address;
+  }
+  return ethers.getContractAt<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
 };
 
 export const getUnregisteredPools = async (

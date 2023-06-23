@@ -9,18 +9,18 @@ import {
   DeploymentConfig,
   PoolConfig,
   RewardConfig,
-  TokenConfig,
   VTokenConfig,
   getConfig,
   getTokenConfig,
 } from "../helpers/deploymentConfig";
 import {
+  getUnderlyingToken,
   getUnregisteredPools,
   getUnregisteredRewardsDistributors,
   getUnregisteredVTokens,
   toAddress,
 } from "../helpers/deploymentUtils";
-import { Comptroller, ERC20, PoolRegistry, RewardsDistributor } from "../typechain";
+import { Comptroller, PoolRegistry, RewardsDistributor } from "../typechain";
 
 interface GovernanceCommand {
   contract: string;
@@ -174,19 +174,6 @@ const addPools = async (
     }),
   );
   return commands.flat();
-};
-
-const getUnderlyingMock = async (assetSymbol: string): Promise<ERC20> => {
-  return ethers.getContract(`Mock${assetSymbol}`);
-};
-
-const getUnderlyingToken = async (assetSymbol: string, tokensConfig: TokenConfig[]): Promise<ERC20> => {
-  const token = getTokenConfig(assetSymbol, tokensConfig);
-  let underlyingAddress = token.tokenAddress;
-  if (token.isMock) {
-    underlyingAddress = (await getUnderlyingMock(assetSymbol)).address;
-  }
-  return ethers.getContractAt<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
 };
 
 const transferInitialLiquidity = async (
