@@ -13,8 +13,6 @@ import {
   Comptroller__factory,
   MockToken,
   MockToken__factory,
-  ProtocolShareReserve,
-  ProtocolShareReserve__factory,
   VToken,
   VToken__factory,
 } from "../../../typechain";
@@ -27,7 +25,6 @@ const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 
 let ADMIN: string;
-let PROTOCOL_SHARE_RESERVE_ADMIN: string;
 let ACM: string;
 let acc1: string;
 let acc2: string;
@@ -40,16 +37,15 @@ let BLOCK_NUMBER: number;
 
 if (FORK_TESTNET) {
   ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
-  PROTOCOL_SHARE_RESERVE_ADMIN = "0x2Ce1d0ffD7E869D9DF33e28552b12DdDed326706";
   ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
   acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
   acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
   USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
   COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
   VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
-  PROTOCOL_SHARE_RESERVE = "0x8d8f14D362f1c8e100106DA6A3254B4d9f2eB309";
+  PROTOCOL_SHARE_RESERVE = "0x8b293600c50d6fbdc6ed4251cc75ece29880276f"; // VTreasury contract
   POOL_REGISTRY = "0xC85491616Fa949E048F3aAc39fbf5b0703800667";
-  BLOCK_NUMBER = 30912200;
+  BLOCK_NUMBER = 30951193;
 }
 
 if (FORK_MAINNET) {
@@ -62,7 +58,6 @@ let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vUSDD: VToken;
 let usdd: MockToken;
-let protocolShareReserve: ProtocolShareReserve;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let mintAmount: BigNumberish;
@@ -70,7 +65,6 @@ let bswBorrowAmount: BigNumberish;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
-  impersonatedProtocolSeizeAdmin = await initMainnetUser(PROTOCOL_SHARE_RESERVE_ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
@@ -107,7 +101,6 @@ if (FORK_TESTNET || FORK_MAINNET) {
       usdd = MockToken__factory.connect(USDD, impersonatedTimelock);
       vUSDD = await configureVToken(VUSDD);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      protocolShareReserve = ProtocolShareReserve__factory.connect(PROTOCOL_SHARE_RESERVE, impersonatedTimelock);
 
       await grantPermissions();
 
@@ -116,8 +109,6 @@ if (FORK_TESTNET || FORK_MAINNET) {
 
       await comptroller.setMarketSupplyCaps([vUSDD.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vUSDD.address], [convertToUnit(1, 50)]);
-      await protocolShareReserve.connect(impersonatedProtocolSeizeAdmin).setPoolRegistry(POOL_REGISTRY);
-      await vUSDD.connect(impersonatedTimelock).setProtocolShareReserve(PROTOCOL_SHARE_RESERVE);
     }
     async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
       await token.connect(signer).faucet(amount);
