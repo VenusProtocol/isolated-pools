@@ -5,6 +5,8 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { ChainlinkOracle } from "@venusprotocol/oracle/contracts/oracles/ChainlinkOracle.sol";
 import { BinanceOracle } from "@venusprotocol/oracle/contracts/oracles/BinanceOracle.sol";
 
+import { ChainlinkOracle } from "@venusprotocol/oracle/contracts/oracles/ChainlinkOracle.sol";
+
 import { VToken } from "../../VToken.sol";
 
 contract MockPriceOracle is ResilientOracleInterface {
