@@ -1,21 +1,14 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "0.1.0-develop.3",
+  "version": "1.0.0-dev.14",
   "description": "",
   "files": [
     "artifacts",
-    "deploy",
-    "helpers",
+    "typechain",
+    "dist",
     "contracts",
     "deployments"
   ],
-  "exports": {
-    "deploy": "./dist/deploy",
-    "artifacts": "./artifacts",
-    "helpers": "./helpers",
-    "contracts": "./contracts",
-    "deployments": "./deployments"
-  },
   "scripts": {
     "test": "hardhat test",
     "test:integration": "hardhat test tests/integration/index.ts",
@@ -29,7 +22,7 @@
     "lint:ts:fix": "eslint --fix --ext .js,.ts .",
     "prettier": "prettier --write \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile",
+    "build": "rm -rf dist && hardhat compile && tsc --declaration",
     "docgen": "hardhat docgen",
     "prepare": "husky install"
   },
@@ -45,7 +38,7 @@
   },
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
   "engines": {
-    "node": "16.x"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.3",
@@ -76,7 +69,7 @@
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "^1.0.0",
-    "@venusprotocol/oracle": "^1.6.11-dev.7",
+    "@venusprotocol/oracle": "1.6.12",
     "@venusprotocol/venus-protocol": "^0.6.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
@@ -113,8 +106,7 @@
     "provenance": true
   },
   "_moduleAliases": {
-    "@nomiclabs/hardhat-ethers": "node_modules/hardhat-deploy-ethers",
-    "@nomiclabs/hardhat-ethers/types": "hardhat-deploy-ethers/types"
+    "@nomiclabs/hardhat-ethers": "node_modules/hardhat-deploy-ethers"
   },
   "packageManager": "yarn@1.22.1"
 }

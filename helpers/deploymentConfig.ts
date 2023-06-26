@@ -9,9 +9,13 @@ export type NetworkConfig = {
   bscmainnet: DeploymentConfig;
 };
 
+export type PreconfiguredAddresses = { [contract: string]: string };
+
 export type DeploymentConfig = {
   tokensConfig: TokenConfig[];
   poolConfig: PoolConfig[];
+  accessControlConfig: AccessControlEntry[];
+  preconfiguredAddresses: PreconfiguredAddresses;
 };
 
 export type TokenConfig = {
@@ -23,6 +27,7 @@ export type TokenConfig = {
 };
 
 export type PoolConfig = {
+  id: string;
   name: string;
   closeFactor: string;
   liquidationIncentive: string;
@@ -59,6 +64,13 @@ export type VTokenConfig = {
   initialSupply: string;
   supplyCap: string;
   borrowCap: string;
+  vTokenReceiver: string;
+};
+
+export type AccessControlEntry = {
+  caller: string;
+  target: string;
+  method: string;
 };
 
 export enum InterestRateModels {
@@ -66,33 +78,102 @@ export enum InterestRateModels {
   JumpRate,
 }
 
-const stableTokenTemplate = {
-  rateModel: InterestRateModels.JumpRate.toString(),
-  baseRatePerYear: "0",
-  multiplierPerYear: convertToUnit(0.15, 18),
-  jumpMultiplierPerYear: convertToUnit(3, 18),
-  kink_: convertToUnit(0.6, 18),
-  collateralFactor: convertToUnit(0.7, 18),
-  liquidationThreshold: convertToUnit(0.8, 18),
-  reserveFactor: convertToUnit(0.1, 18), // 10%
-  initialSupply: convertToUnit(100_000, 18),
-  supplyCap: convertToUnit(10_000_000, 18),
-  borrowCap: convertToUnit(10_000_000, 18),
+const ANY_CONTRACT = ethers.constants.AddressZero;
+
+const preconfiguredAddresses = {
+  hardhat: {
+    VTreasury: "account:deployer",
+  },
+  bsctestnet: {
+    VTreasury: "account:deployer",
+    NormalTimelock: "0xce10739590001705F7FF231611ba4A48B2820327",
+    FastTrackTimelock: "0x3CFf21b7AF8390fE68799D58727d3b4C25a83cb6",
+    CriticalTimelock: "0x23B893a7C45a5Eb8c8C062b9F32d0D2e43eD286D",
+    GovernorBravo: "0x5573422A1a59385C247ec3a66B93B7C08eC2f8f2",
+    AccessControlManager: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
+  },
+  bscmainnet: {
+    VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
+    NormalTimelock: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396",
+    FastTrackTimelock: "0x555ba73dB1b006F3f2C7dB7126d6e4343aDBce02",
+    CriticalTimelock: "0x213c446ec11e45b15a6E29C1C1b402B8897f606d",
+    GovernorBravo: "0x2d56dC077072B53571b8252008C60e945108c75a",
+    AccessControlManager: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
+  },
 };
 
-const volatileTokenTemplate = {
-  rateModel: InterestRateModels.JumpRate.toString(),
-  baseRatePerYear: convertToUnit(1, 16), // 1%
-  multiplierPerYear: convertToUnit(0.25, 18),
-  jumpMultiplierPerYear: convertToUnit(4, 18),
-  kink_: convertToUnit(0.5, 18),
-  collateralFactor: convertToUnit(0.6, 18),
-  liquidationThreshold: convertToUnit(0.7, 18),
-  reserveFactor: convertToUnit(0.25, 18), // 25%
-  initialSupply: convertToUnit(100_000, 18),
-  supplyCap: convertToUnit(10_000_000, 18),
-  borrowCap: convertToUnit(10_000_000, 18),
+const poolRegistryPermissions = (): AccessControlEntry[] => {
+  const methods = [
+    "setCollateralFactor(address,uint256,uint256)",
+    "setMarketSupplyCaps(address[],uint256[])",
+    "setMarketBorrowCaps(address[],uint256[])",
+    "setLiquidationIncentive(uint256)",
+    "setCloseFactor(uint256)",
+    "setMinLiquidatableCollateral(uint256)",
+    "supportMarket(address)",
+  ];
+  return methods.map(method => ({
+    caller: "PoolRegistry",
+    target: ANY_CONTRACT,
+    method,
+  }));
 };
+
+const deployerPermissions = (): AccessControlEntry[] => {
+  const methods = [
+    "swapPoolsAssets(address[],uint256[],address[][])",
+    "addPool(string,address,uint256,uint256,uint256)",
+    "addMarket(AddMarketInput)",
+    "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+  ];
+  return methods.map(method => ({
+    caller: "account:deployer",
+    target: ANY_CONTRACT,
+    method,
+  }));
+};
+
+const normalTimelockPermissions = (timelock: string): AccessControlEntry[] => {
+  const methods = [
+    "setCloseFactor(uint256)",
+    "setCollateralFactor(address,uint256,uint256)",
+    "setLiquidationIncentive(uint256)",
+    "setMarketBorrowCaps(address[],uint256[])",
+    "setMarketSupplyCaps(address[],uint256[])",
+    "setActionsPaused(address[],uint256[],bool)",
+    "setMinLiquidatableCollateral(uint256)",
+    "addPool(string,address,uint256,uint256,uint256)",
+    "addMarket(AddMarketInput)",
+    "setPoolName(address,string)",
+    "updatePoolMetadata(address,VenusPoolMetaData)",
+    "setProtocolSeizeShare(uint256)",
+    "setReserveFactor(uint256)",
+    "setInterestRateModel(address)",
+    "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+    "updateJumpRateModel(uint256,uint256,uint256,uint256)",
+  ];
+  return methods.map(method => ({
+    caller: timelock,
+    target: ANY_CONTRACT,
+    method,
+  }));
+};
+
+const fastTrackTimelockPermissions = (timelock: string): AccessControlEntry[] => {
+  const methods = [
+    "setCollateralFactor(address,uint256,uint256)",
+    "setMarketBorrowCaps(address[],uint256[])",
+    "setMarketSupplyCaps(address[],uint256[])",
+    "setActionsPaused(address[],uint256[],bool)",
+  ];
+  return methods.map(method => ({
+    caller: timelock,
+    target: ANY_CONTRACT,
+    method,
+  }));
+};
+
+const criticalTimelockPermissions = fastTrackTimelockPermissions;
 
 export const globalConfig: NetworkConfig = {
   hardhat: {
@@ -184,6 +265,7 @@ export const globalConfig: NetworkConfig = {
     ],
     poolConfig: [
       {
+        id: "Pool1",
         name: "Pool 1",
         closeFactor: convertToUnit(0.05, 18),
         liquidationIncentive: convertToUnit(1, 18),
@@ -204,6 +286,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(932019, 18),
             borrowCap: convertToUnit(478980, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus BTCB",
@@ -220,6 +303,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(1000, 18),
+            vTokenReceiver: "account:deployer",
           },
         ],
         rewards: [
@@ -238,6 +322,7 @@ export const globalConfig: NetworkConfig = {
         ],
       },
       {
+        id: "Pool2",
         name: "Pool 2",
         closeFactor: convertToUnit(0.05, 18),
         liquidationIncentive: convertToUnit(1, 18),
@@ -258,6 +343,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(3000000, 18),
             borrowCap: convertToUnit(3000000, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus ankrBNB",
@@ -274,6 +360,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(100, 18),
             borrowCap: convertToUnit(100, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus MBOX",
@@ -290,6 +377,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(7000000, 18),
             borrowCap: convertToUnit(3184294, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus NFT",
@@ -306,6 +394,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(84985800573, 18),
             borrowCap: convertToUnit(24654278679, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus RACA",
@@ -322,6 +411,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(23758811062, 18),
             borrowCap: convertToUnit(3805812642, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus stkBNB",
@@ -338,6 +428,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(1963, 18),
             borrowCap: convertToUnit(324, 18),
+            vTokenReceiver: "account:deployer",
           },
           {
             name: "Venus USDD",
@@ -354,6 +445,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18),
             supplyCap: convertToUnit(10601805, 18),
             borrowCap: convertToUnit(1698253, 18),
+            vTokenReceiver: "account:deployer",
           },
         ],
         rewards: [
@@ -406,6 +498,8 @@ export const globalConfig: NetworkConfig = {
         ],
       },
     ],
+    accessControlConfig: [...poolRegistryPermissions(), ...deployerPermissions()],
+    preconfiguredAddresses: preconfiguredAddresses.hardhat,
   },
   bsctestnet: {
     tokensConfig: [
@@ -418,445 +512,114 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Binance USD",
-        symbol: "BUSD",
-        decimals: 18,
-        tokenAddress: "0x8301F2213c0eeD49a7E28Ae4c3e91722919B8B47",
-      },
-      {
-        isMock: false,
-        name: "Bitcoin BEP2",
-        symbol: "BTCB",
-        decimals: 18,
-        tokenAddress: "0xA808e341e8e723DC6BA0Bb5204Bafc2330d7B8e4",
-      },
-      {
-        isMock: false,
-        name: "Wrapped BNB",
-        symbol: "WBNB",
-        decimals: 18,
-        tokenAddress: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
-      },
-      {
-        isMock: false,
-        name: "TRON",
-        symbol: "TRX",
-        decimals: 18,
-        tokenAddress: "0x19E7215abF8B2716EE807c9f4b83Af0e7f92653F",
-      },
-      {
-        isMock: false,
         name: "USDT",
         symbol: "USDT",
         decimals: 6,
         tokenAddress: "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c",
       },
       {
-        isMock: true,
-        name: "Ankr",
-        symbol: "ANKR",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "Ankr Staked BNB",
-        symbol: "ankrBNB",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "NFT",
-        symbol: "NFT",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "RACA",
-        symbol: "RACA",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "pSTAKE Staked BNB",
-        symbol: "stkBNB",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "BIFI",
-        symbol: "BIFI",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "Biswap",
-        symbol: "BSW",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "WOO",
-        symbol: "WOO",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "FLOKI",
-        symbol: "FLOKI",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "BNBx",
-        symbol: "BNBx",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
+        isMock: false,
         name: "HAY",
         symbol: "HAY",
         decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
       },
       {
-        isMock: true,
-        name: "BTT",
-        symbol: "BTT",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "WIN",
-        symbol: "WIN",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
+        isMock: false,
         name: "USDD",
         symbol: "USDD",
         decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "ALPACA",
-        symbol: "ALPACA",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382",
       },
     ],
     poolConfig: [
       {
-        name: "DEFI",
-        closeFactor: convertToUnit(0.05, 18),
-        liquidationIncentive: convertToUnit(1, 18),
-        minLiquidatableCollateral: convertToUnit(100, 18),
+        id: "StableCoins",
+        name: "Stable Coins",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus BIFI",
-            asset: "BIFI",
-            symbol: "vBIFI",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus BSW",
-            asset: "BSW",
-            symbol: "vBSW",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus ALPACA",
-            asset: "ALPACA",
-            symbol: "vALPACA",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus WOO",
-            asset: "WOO",
-            symbol: "vWOO",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus USDT",
-            asset: "USDT",
-            symbol: "vUSDT",
-            ...stableTokenTemplate,
-            initialSupply: convertToUnit(100_000, 6),
-            supplyCap: convertToUnit(10_000_000, 6),
-            borrowCap: convertToUnit(10_000_000, 6),
-          },
-          {
-            name: "Venus USDD",
-            asset: "USDD",
-            symbol: "vUSDD",
-            ...stableTokenTemplate,
-          },
-        ],
-        rewards: [
-          {
-            asset: "XVS",
-            markets: ["BIFI", "BSW", "ALPACA", "WOO"],
-            supplySpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-            borrowSpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-          },
-          {
-            asset: "BIFI",
-            markets: ["BSW"],
-            supplySpeeds: [convertToUnit(33, 8)],
-            borrowSpeeds: [convertToUnit(33, 8)],
-          },
-        ],
-      },
-      {
-        name: "GAMEFI",
-        closeFactor: convertToUnit(0.05, 18),
-        liquidationIncentive: convertToUnit(1, 18),
-        minLiquidatableCollateral: convertToUnit(100, 18),
-        vtokens: [
-          {
-            name: "Venus RACA",
-            asset: "RACA",
-            symbol: "vRACA",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus FLOKI",
-            asset: "FLOKI",
-            symbol: "vFLOKI",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus USDT",
-            asset: "USDT",
-            symbol: "vUSDT",
-            ...stableTokenTemplate,
-            initialSupply: convertToUnit(100_000, 6),
-            supplyCap: convertToUnit(10_000_000, 6),
-            borrowCap: convertToUnit(10_000_000, 6),
-          },
-          {
-            name: "Venus USDD",
-            asset: "USDD",
-            symbol: "vUSDD",
-            ...stableTokenTemplate,
-          },
-        ],
-        rewards: [
-          {
-            asset: "XVS",
-            markets: ["RACA", "FLOKI"],
-            supplySpeeds: [convertToUnit(23, 8), convertToUnit(23, 8)],
-            borrowSpeeds: [convertToUnit(23, 8), convertToUnit(23, 8)],
-          },
-          {
-            asset: "RACA",
-            markets: ["FLOKI"],
-            supplySpeeds: [convertToUnit(33, 8)],
-            borrowSpeeds: [convertToUnit(33, 8)],
-          },
-        ],
-      },
-      {
-        name: "LIQUID STAKED BNB",
-        closeFactor: convertToUnit(0.05, 18),
-        liquidationIncentive: convertToUnit(1, 18),
-        minLiquidatableCollateral: convertToUnit(100, 18),
-        vtokens: [
-          {
-            name: "Venus ankrBNB",
-            asset: "ankrBNB",
-            symbol: "vankrBNB",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus BNBx",
-            asset: "BNBx",
-            symbol: "vBNBx",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus stkBNB",
-            asset: "stkBNB",
-            symbol: "vstkBNB",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus WBNB",
-            asset: "WBNB",
-            symbol: "vWBNB",
-            ...volatileTokenTemplate,
-            initialSupply: convertToUnit("0.5", 18),
-          },
-          {
-            name: "Venus ANKR",
-            asset: "ANKR",
-            symbol: "vANKR",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus USDT",
-            asset: "USDT",
-            symbol: "vUSDT",
-            ...stableTokenTemplate,
-            initialSupply: convertToUnit(100_000, 6),
-            supplyCap: convertToUnit(10_000_000, 6),
-            borrowCap: convertToUnit(10_000_000, 6),
-          },
-          {
-            name: "Venus USDD",
-            asset: "USDD",
-            symbol: "vUSDD",
-            ...stableTokenTemplate,
-          },
-        ],
-        rewards: [
-          {
-            asset: "XVS",
-            markets: ["ankrBNB", "BNBx", "stkBNB"],
-            supplySpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-            borrowSpeeds: [convertToUnit(23, 8), convertToUnit(23, 8), convertToUnit(23, 8)],
-          },
-          {
-            asset: "ankrBNB",
-            markets: ["BNBx"],
-            supplySpeeds: [convertToUnit(33, 8)],
-            borrowSpeeds: [convertToUnit(33, 8)],
-          },
-        ],
-      },
-      {
-        name: "STABLE COINS",
-        closeFactor: convertToUnit(0.05, 18),
-        liquidationIncentive: convertToUnit(1, 18),
-        minLiquidatableCollateral: convertToUnit(100, 18),
-        vtokens: [
-          {
-            name: "Venus HAY",
+            name: "Venus HAY (Stable Coins)",
             asset: "HAY",
-            symbol: "vHAY",
-            ...stableTokenTemplate,
+            symbol: "vHAY_StableCoins",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.65", 18),
+            liquidationThreshold: convertToUnit("0.7", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit(10_000, 18),
+            supplyCap: convertToUnit(500_000, 18),
+            borrowCap: convertToUnit(200_000, 18),
+            vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
           },
           {
-            name: "Venus USDT",
+            name: "Venus USDT (Stable Coins)",
             asset: "USDT",
-            symbol: "vUSDT",
-            ...stableTokenTemplate,
-            initialSupply: convertToUnit(100_000, 6),
-            supplyCap: convertToUnit(10_000_000, 6),
-            borrowCap: convertToUnit(10_000_000, 6),
+            symbol: "vUSDT_StableCoins",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.05", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.6", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.88", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(10_000, 6), // USDT has 6 decimals on testnet
+            supplyCap: convertToUnit(1_000_000, 6), // USDT has 6 decimals on testnet
+            borrowCap: convertToUnit(400_000, 6), // USDT has 6 decimals on testnet
+            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
           },
           {
-            name: "Venus USDD",
+            name: "Venus USDD (Stable Coins)",
             asset: "USDD",
-            symbol: "vUSDD",
-            ...stableTokenTemplate,
+            symbol: "vUSDD_StableCoins",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.65", 18),
+            liquidationThreshold: convertToUnit("0.7", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(10_000, 18),
+            supplyCap: convertToUnit(1_000_000, 18),
+            borrowCap: convertToUnit(400_000, 18),
+            vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
         rewards: [
           {
-            asset: "XVS",
+            asset: "HAY",
             markets: ["HAY"],
-            supplySpeeds: [convertToUnit(23, 8)],
-            borrowSpeeds: [convertToUnit(23, 8)],
-          },
-          {
-            asset: "HAY",
-            markets: ["USDT"],
-            supplySpeeds: [convertToUnit(33, 8)],
-            borrowSpeeds: [convertToUnit(33, 8)],
-          },
-        ],
-      },
-      {
-        name: "TRON FAMILY",
-        closeFactor: convertToUnit(0.05, 18),
-        liquidationIncentive: convertToUnit(1, 18),
-        minLiquidatableCollateral: convertToUnit(100, 18),
-        vtokens: [
-          {
-            name: "Venus BTT",
-            asset: "BTT",
-            symbol: "vBTT",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus NFT",
-            asset: "NFT",
-            symbol: "vNFT",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus WIN",
-            asset: "WIN",
-            symbol: "vWIN",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus TRX",
-            asset: "TRX",
-            symbol: "vTRX",
-            ...volatileTokenTemplate,
-          },
-          {
-            name: "Venus USDT",
-            asset: "USDT",
-            symbol: "vUSDT",
-            ...stableTokenTemplate,
-            initialSupply: convertToUnit(100_000, 6),
-            supplyCap: convertToUnit(10_000_000, 6),
-            borrowCap: convertToUnit(10_000_000, 6),
-          },
-          {
-            name: "Venus USDD",
-            asset: "USDD",
-            symbol: "vUSDD",
-            ...stableTokenTemplate,
-          },
-        ],
-        rewards: [
-          {
-            asset: "XVS",
-            markets: ["TRX", "BTT", "NFT", "USDD", "WIN"],
-            supplySpeeds: [
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-            ],
-            borrowSpeeds: [
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-              convertToUnit(23, 8),
-            ],
-          },
-          {
-            asset: "TRX",
-            markets: ["BTT"],
-            supplySpeeds: [convertToUnit(33, 8)],
-            borrowSpeeds: [convertToUnit(33, 8)],
+            supplySpeeds: ["1736111111111111"], // 1500 HAY over 30 days
+            borrowSpeeds: ["1736111111111111"], // 1500 HAY over 30 days
           },
         ],
       },
     ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.bsctestnet.NormalTimelock),
+      ...fastTrackTimelockPermissions(preconfiguredAddresses.bsctestnet.FastTrackTimelock),
+      ...criticalTimelockPermissions(preconfiguredAddresses.bsctestnet.CriticalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.bsctestnet,
   },
   bscmainnet: {
     tokensConfig: [],
     poolConfig: [],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.bscmainnet.NormalTimelock),
+      ...fastTrackTimelockPermissions(preconfiguredAddresses.bscmainnet.FastTrackTimelock),
+      ...criticalTimelockPermissions(preconfiguredAddresses.bscmainnet.CriticalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.bscmainnet,
   },
 };
 

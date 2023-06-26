@@ -12,19 +12,9 @@ The first generation of lending pools, including the Venus Core Pool, aggregate 
 
 ### PoolRegistry
 
-The Isolated Pools architecture centers around the `PoolRegistry` contract. The `PoolRegistry` maintains a directory of isolated lending pools and can perform actions like creating and registering new pools, adding new markets to existing pools, setting and updating the pool's required metadata, and providing the getter methods to get information on the pools.
+The Isolated Pools architecture centers around the `PoolRegistry` contract. The `PoolRegistry` maintains a directory of isolated lending pools and can perform actions like registering new pools, adding new markets to existing pools, setting and updating the pool's required metadata, and providing the getter methods to get information on the pools.
 
 ![image](https://user-images.githubusercontent.com/47150934/236290058-6b14a499-7afe-46e4-bca6-d72e3db8a28e.png)
-
-### Factories
-
-There are three factory contracts:
-
-- JumpRateModelFactory
-- VTokenProxyFactory
-- WhiteRateInterestModelFactory
-
-These contracts are designed to deploy contracts when adding markets to a pool. In particular, the `JumpRateModelFactory` and `WhiteRateInterestModelFactory` deploy contracts for the rate model based on which was chosen for the market. The `VtokenProxyFactory` is used to generate a new `vToken` proxy for each market when it is added to a pool.
 
 ### Risk Fund
 

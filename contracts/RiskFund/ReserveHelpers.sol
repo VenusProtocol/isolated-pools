@@ -8,6 +8,11 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 
+/**
+ * @title ReserveHelpers
+ * @author Venus
+ * @notice Contract with basic features to track/hold different assets for different Comptrollers.
+ */
 contract ReserveHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -34,7 +39,7 @@ contract ReserveHelpers {
     event AssetsReservesUpdated(address indexed comptroller, address indexed asset, uint256 amount);
 
     /**
-     * @dev Get the Amount of the asset in the risk fund for the specific pool.
+     * @notice Get the Amount of the asset in the risk fund for the specific pool.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      * @return Asset's reserve in risk fund.
@@ -47,7 +52,7 @@ contract ReserveHelpers {
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+     * @notice Update the reserve of the asset for the specific pool after transferring to risk fund
      * and transferring funds to the protocol share reserve
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
