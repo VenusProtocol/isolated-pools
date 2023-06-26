@@ -1,3 +1,11 @@
+## [1.0.0-dev.18](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.17...v1.0.0-dev.18) (2023-06-26)
+
+
+### Features
+
+* add bscmainnet deployment ([f71a9c8](https://github.com/VenusProtocol/isolated-pools/commit/f71a9c8b219d65c479f43144854f54d1142d5e25))
+* add SwapRouter_Stablecoins deployment ([075f976](https://github.com/VenusProtocol/isolated-pools/commit/075f976da2f28395b35ddc60d889d2ce74366968))
+
 ## [1.0.0-dev.17](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.16...v1.0.0-dev.17) (2023-06-26)
 
 
