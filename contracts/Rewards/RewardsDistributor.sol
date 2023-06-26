@@ -34,6 +34,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint224 index;
         // The block number the index was last updated at
         uint32 block;
+        // The block number at which to stop rewards
+        uint32 lastRewardingBlock;
     }
 
     /// @notice The initial REWARD TOKEN index for a market
@@ -455,6 +457,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        
+        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
+            blockNumber = supplyState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
@@ -484,6 +491,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        
+        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
+            blockNumber = borrowState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
