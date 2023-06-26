@@ -163,7 +163,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 kink_
     ) internal {
         baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
-        multiplierPerBlock = (multiplierPerYear * EXP_SCALE) / (BLOCKS_PER_YEAR * kink_);
+        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
         jumpMultiplierPerBlock = jumpMultiplierPerYear / BLOCKS_PER_YEAR;
         kink = kink_;
 
