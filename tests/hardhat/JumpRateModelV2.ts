@@ -46,9 +46,7 @@ describe("Jump rate model tests", () => {
 
   it("Update jump rate model", async () => {
     let baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(blocksPerYear).toFixed(0);
-    let multiplierPerBlock = new BigNumber(multiplierPerYear)
-      .dividedBy(new BigNumber(blocksPerYear))
-      .toFixed(0);
+    let multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(new BigNumber(blocksPerYear)).toFixed(0);
     let jumpMultiplierPerBlock = new BigNumber(jumpMultiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
 
     expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
@@ -59,9 +57,7 @@ describe("Jump rate model tests", () => {
     await jumpRateModel.updateJumpRateModel(convertToUnit(3, 12), convertToUnit(5, 14), convertToUnit(2.2, 18), kink);
 
     baseRatePerBlock = new BigNumber(convertToUnit(3, 12)).dividedBy(blocksPerYear).toFixed(0);
-    multiplierPerBlock = new BigNumber(convertToUnit(5, 14))
-      .dividedBy(new BigNumber(blocksPerYear))
-      .toFixed(0);
+    multiplierPerBlock = new BigNumber(convertToUnit(5, 14)).dividedBy(new BigNumber(blocksPerYear)).toFixed(0);
     jumpMultiplierPerBlock = new BigNumber(convertToUnit(2.2, 18)).dividedBy(blocksPerYear).toFixed(0);
 
     expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
