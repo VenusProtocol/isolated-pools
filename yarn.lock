@@ -3053,7 +3053,7 @@ __metadata:
     eslint-plugin-promise: ^5.2.0
     ethers: ^5.7.0
     hardhat: ^2.9.3
-    hardhat-deploy: ^0.11.14
+    hardhat-deploy: ^0.11.26
     hardhat-deploy-ethers: ^0.3.0-beta.13
     hardhat-gas-reporter: ^1.0.8
     husky: ^8.0.1
@@ -7572,6 +7572,38 @@ __metadata:
     qs: ^6.9.4
     zksync-web3: ^0.14.3
   checksum: 4a963e202271189566921fb7ab73bde4ed45204fddeeacdc9993883772b7349b513ba3dd17dee4bc178581724ab20d537f0b69c7ddf227710e7f070ec65c70d2
+  languageName: node
+  linkType: hard
+
+"hardhat-deploy@npm:^0.11.26":
+  version: 0.11.34
+  resolution: "hardhat-deploy@npm:0.11.34"
+  dependencies:
+    "@ethersproject/abi": ^5.7.0
+    "@ethersproject/abstract-signer": ^5.7.0
+    "@ethersproject/address": ^5.7.0
+    "@ethersproject/bignumber": ^5.7.0
+    "@ethersproject/bytes": ^5.7.0
+    "@ethersproject/constants": ^5.7.0
+    "@ethersproject/contracts": ^5.7.0
+    "@ethersproject/providers": ^5.7.2
+    "@ethersproject/solidity": ^5.7.0
+    "@ethersproject/transactions": ^5.7.0
+    "@ethersproject/wallet": ^5.7.0
+    "@types/qs": ^6.9.7
+    axios: ^0.21.1
+    chalk: ^4.1.2
+    chokidar: ^3.5.2
+    debug: ^4.3.2
+    enquirer: ^2.3.6
+    ethers: ^5.5.3
+    form-data: ^4.0.0
+    fs-extra: ^10.0.0
+    match-all: ^1.2.6
+    murmur-128: ^0.2.1
+    qs: ^6.9.4
+    zksync-web3: ^0.14.3
+  checksum: 3c4bcd657a80e4f22c1f8bcee021e5277060849ce4180cbc721e0c2d625f2f98de8ebbfad23875d32eeaf06d88bdba06cb43ab29359cb9531e8bb7851a98ead1
   languageName: node
   linkType: hard
 

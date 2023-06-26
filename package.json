@@ -81,7 +81,7 @@
     "eslint-plugin-prettier": "3.4.1",
     "eslint-plugin-promise": "^5.2.0",
     "hardhat": "^2.9.3",
-    "hardhat-deploy": "^0.11.14",
+    "hardhat-deploy": "^0.11.26",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "hardhat-gas-reporter": "^1.0.8",
     "husky": "^8.0.1",
