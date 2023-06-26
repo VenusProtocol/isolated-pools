@@ -1,3 +1,19 @@
+## [1.0.0-dev.15](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.14...v1.0.0-dev.15) (2023-06-26)
+
+
+### Bug Fixes
+
+* conflicts ([a04fe14](https://github.com/VenusProtocol/isolated-pools/commit/a04fe14aa62bdd934cbc0d97047f5f285a73e053))
+* pr comments ([4651fb2](https://github.com/VenusProtocol/isolated-pools/commit/4651fb2039bb0f5ad7bc667b2269087b10f7b6f0))
+* replaced pool address for fork tests ([58a9e69](https://github.com/VenusProtocol/isolated-pools/commit/58a9e690a70ba34075b1ccc9f9d354d23636e59f))
+* resolve comments ([3fd29da](https://github.com/VenusProtocol/isolated-pools/commit/3fd29dac299b786124541ac84b70cda1266cdd6a))
+* resolved typos and comments ([8d119ad](https://github.com/VenusProtocol/isolated-pools/commit/8d119ad8ca295b7bf7bbbd5969248b1a360b6c34))
+
+
+### Performance Improvements
+
+* add utils helper for fork test ([8295332](https://github.com/VenusProtocol/isolated-pools/commit/8295332ca9ca18041e5a6af6f1a48319d202a7ea))
+
 ## [1.0.0-dev.14](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.13...v1.0.0-dev.14) (2023-06-26)
 
 
