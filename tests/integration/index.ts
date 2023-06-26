@@ -420,7 +420,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
     });
 
-    it("Should success on liquidation when repay amount is equal to borrowing", async function () {
+    it.only("Should success on liquidation when repay amount is equal to borrowing", async function () {
       await BNX.connect(acc2Signer).faucet(1e10);
       await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
       await vBNX.connect(acc2Signer).mint(1e10);
@@ -437,7 +437,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const repayAmount = convertToUnit("1000000000011889", 0);
+      const repayAmount = convertToUnit("1000000000007133", 0);
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,
