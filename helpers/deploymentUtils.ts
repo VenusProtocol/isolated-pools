@@ -1,7 +1,7 @@
+import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { Comptroller, ERC20, MockToken } from "../typechain";
 import { PoolConfig, RewardConfig, TokenConfig, VTokenConfig, getTokenConfig } from "./deploymentConfig";
 
 export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvironment): Promise<string> => {
@@ -18,17 +18,17 @@ export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvir
   return deployment.address;
 };
 
-export const getUnderlyingMock = async (assetSymbol: string): Promise<MockToken> => {
-  return ethers.getContract<MockToken>(`Mock${assetSymbol}`);
+export const getUnderlyingMock = async (assetSymbol: string): Promise => {
+  return ethers.getContract(`Mock${assetSymbol}`);
 };
 
-export const getUnderlyingToken = async (assetSymbol: string, tokensConfig: TokenConfig[]): Promise<ERC20> => {
+export const getUnderlyingToken = async (assetSymbol: string, tokensConfig: TokenConfig[]): Promise => {
   const token = getTokenConfig(assetSymbol, tokensConfig);
   let underlyingAddress = token.tokenAddress;
   if (token.isMock) {
     underlyingAddress = (await getUnderlyingMock(assetSymbol)).address;
   }
-  return ethers.getContractAt<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
+  return ethers.getContractAt("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
 };
 
 export const getUnregisteredPools = async (
@@ -60,12 +60,12 @@ export const getUnregisteredVTokens = async (
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(
     registeredPools.map(async (p: { comptroller: string }) => {
-      return ethers.getContractAt<Comptroller>("Comptroller", p.comptroller);
+      return ethers.getContractAt("Comptroller", p.comptroller);
     }),
   );
   const registeredVTokens = (
     await Promise.all(
-      comptrollers.map(async (comptroller: Comptroller) => {
+      comptrollers.map(async (comptroller: Contract) => {
         return comptroller.getAllMarkets();
       }),
     )
@@ -97,13 +97,13 @@ export const getUnregisteredRewardsDistributors = async (
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(
     registeredPools.map(async (p: { comptroller: string }) => {
-      return ethers.getContractAt<Comptroller>("Comptroller", p.comptroller);
+      return ethers.getContractAt("Comptroller", p.comptroller);
     }),
   );
 
   const registeredRewardDistributors = (
     await Promise.all(
-      comptrollers.map(async (comptroller: Comptroller) => {
+      comptrollers.map(async (comptroller: Contract) => {
         return comptroller.getRewardDistributors();
       }),
     )

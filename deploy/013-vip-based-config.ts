@@ -1,4 +1,4 @@
-import { BigNumberish } from "ethers";
+import { BigNumberish, Contract } from "ethers";
 import { defaultAbiCoder, parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
@@ -20,7 +20,6 @@ import {
   getUnregisteredVTokens,
   toAddress,
 } from "../helpers/deploymentUtils";
-import { Comptroller, PoolRegistry, RewardsDistributor } from "../typechain";
 
 interface GovernanceCommand {
   contract: string;
@@ -46,7 +45,7 @@ const toProposalActions = (commands: GovernanceCommand[]): ProposalActions => {
 };
 
 const addRewardsDistributor = async (
-  rewardsDistributor: RewardsDistributor,
+  rewardsDistributor: Contract,
   pool: PoolConfig,
   rewardConfig: RewardConfig,
 ): Promise<GovernanceCommand> => {
@@ -63,7 +62,7 @@ const addRewardsDistributor = async (
 
 const setRewardSpeed = async (
   pool: PoolConfig,
-  rewardsDistributor: RewardsDistributor,
+  rewardsDistributor: Contract,
   rewardConfig: RewardConfig,
 ): Promise<GovernanceCommand> => {
   const vTokenAddresses = await Promise.all(
@@ -98,7 +97,7 @@ const configureRewards = async (
       const poolCommands = await Promise.all(
         rewards.map(async (rewardConfig: RewardConfig) => {
           const contractName = `RewardsDistributor_${rewardConfig.asset}_${pool.id}`;
-          const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
+          const rewardsDistributor = await ethers.getContract(contractName);
           return [
             ...(await acceptOwnership(contractName, hre)),
             await addRewardsDistributor(rewardsDistributor, pool, rewardConfig),
@@ -129,7 +128,7 @@ const acceptOwnership = async (contractName: string, hre: HardhatRuntimeEnvironm
   ];
 };
 
-const setOracle = async (comptroller: Comptroller, pool: PoolConfig): Promise<GovernanceCommand> => {
+const setOracle = async (comptroller: Contract, pool: PoolConfig): Promise<GovernanceCommand> => {
   const oracle = await ethers.getContract("ResilientOracle");
   console.log(`Adding a command to set the price oracle for Comptroller_${pool.id}`);
   return {
@@ -141,7 +140,7 @@ const setOracle = async (comptroller: Comptroller, pool: PoolConfig): Promise<Go
   };
 };
 
-const addPool = (poolRegistry: PoolRegistry, comptroller: Comptroller, pool: PoolConfig): GovernanceCommand => {
+const addPool = (poolRegistry: Contract, comptroller: Contract, pool: PoolConfig): GovernanceCommand => {
   console.log(`Adding a command to add Comptroller_${pool.id} to PoolRegistry`);
   return {
     contract: poolRegistry.address,
@@ -162,10 +161,10 @@ const addPools = async (
   unregisteredPools: PoolConfig[],
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
+  const poolRegistry = await ethers.getContract("PoolRegistry");
   const commands = await Promise.all(
     unregisteredPools.map(async (pool: PoolConfig) => {
-      const comptroller = await ethers.getContract<Comptroller>(`Comptroller_${pool.id}`);
+      const comptroller = await ethers.getContract(`Comptroller_${pool.id}`);
       return [
         ...(await acceptOwnership(`Comptroller_${pool.id}`, hre)),
         await setOracle(comptroller, pool),
@@ -214,7 +213,7 @@ const transferInitialLiquidity = async (
 };
 
 const approvePoolRegistry = async (
-  poolRegistry: PoolRegistry,
+  poolRegistry: Contract,
   vTokenConfig: VTokenConfig,
   deploymentConfig: DeploymentConfig,
 ): Promise<GovernanceCommand[]> => {
@@ -236,7 +235,7 @@ const approvePoolRegistry = async (
 };
 
 const addMarket = async (
-  poolRegistry: PoolRegistry,
+  poolRegistry: Contract,
   vTokenAddress: string,
   vTokenConfig: VTokenConfig,
   hre: HardhatRuntimeEnvironment,
@@ -260,7 +259,7 @@ const addMarkets = async (
   deploymentConfig: DeploymentConfig,
   hre: HardhatRuntimeEnvironment,
 ) => {
-  const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
+  const poolRegistry = await ethers.getContract("PoolRegistry");
   const poolCommands = await Promise.all(
     unregisteredVTokens.map(async (pool: PoolConfig) => {
       const vTokenCommands = await Promise.all(
