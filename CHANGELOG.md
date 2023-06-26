@@ -1,3 +1,16 @@
+## [1.0.0-dev.17](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.16...v1.0.0-dev.17) (2023-06-26)
+
+
+### Features
+
+* use core pool behavior for jump rate multiplier ([c75cfe4](https://github.com/VenusProtocol/isolated-pools/commit/c75cfe476091c0629266b2755c93d2d42d7802b8))
+
+
+### Bug Fixes
+
+* fixed integration test ([5fbdcc0](https://github.com/VenusProtocol/isolated-pools/commit/5fbdcc09a2535657b10e1d5a037e604494bbf161))
+* fixed JumpRateModelV2 tests ([e0410f3](https://github.com/VenusProtocol/isolated-pools/commit/e0410f3fd66fd9522788d324328948c9b525eba6))
+
 ## [1.0.0-dev.16](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.15...v1.0.0-dev.16) (2023-06-26)
 
 ## [1.0.0-dev.15](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.14...v1.0.0-dev.15) (2023-06-26)
