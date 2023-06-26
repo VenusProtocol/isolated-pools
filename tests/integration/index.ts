@@ -420,7 +420,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
     });
 
-    it.only("Should success on liquidation when repay amount is equal to borrowing", async function () {
+    it("Should success on liquidation when repay amount is equal to borrowing", async function () {
       await BNX.connect(acc2Signer).faucet(1e10);
       await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
       await vBNX.connect(acc2Signer).mint(1e10);
