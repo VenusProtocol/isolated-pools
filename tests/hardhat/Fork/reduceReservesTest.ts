@@ -53,7 +53,6 @@ if (FORK_MAINNET) {
 }
 
 let impersonatedTimelock: Signer;
-let impersonatedProtocolSeizeAdmin: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vUSDD: VToken;
