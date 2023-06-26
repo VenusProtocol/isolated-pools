@@ -114,6 +114,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
+    /// @notice Emitted when a reward token last rewarding block for supply is updated
+    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+
+    /// @notice Emitted when a reward token last rewarding block for borropw is updated
+    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
         _;
@@ -237,6 +243,29 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
+     * @notice Set REWARD TOKEN borrow and supply speeds last rewarding block for the specified markets
+     * @param vTokens The markets whose REWARD TOKEN rewarding block to update
+     * @param supplySpeeds New supply-side REWARD TOKEN speed for the corresponding market
+     * @param borrowSpeeds New borrow-side REWARD TOKEN speed for the corresponding market
+     */
+    function setLastRewardingBlocks(
+        VToken[] memory vTokens,
+        uint32[] memory supplyLastRewardingBlocks,
+        uint32[] memory borrowLastRewardingBlocks
+    ) external {
+        _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
+        uint256 numTokens = vTokens.length;
+        require(
+            numTokens == supplyLastRewardingBlocks.length && numTokens == borrowLastRewardingBlocks.length,
+            "RewardsDistributor::setLastRewardingBlocks invalid input"
+        );
+
+        for (uint256 i; i < numTokens; ++i) {
+            _setLastRewardingBlock(vTokens[i], supplyLastRewardingBlocks[i], borrowLastRewardingBlocks[i]);
+        }
+    }
+
+    /**
      * @notice Set REWARD TOKEN speed for a single contributor
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
@@ -318,6 +347,24 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
     function getBlockNumber() public view virtual returns (uint256) {
         return block.number;
+    }
+
+    function _setLastRewardingBlock(
+        VToken vToken,
+        uint32 supplyLastRewardingBlock,
+        uint32 borrowLastRewardingBlock
+    ) internal {
+        require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
+
+        if (rewardTokenSupplyState[address(vToken)].lastRewardingBlock != supplyLastRewardingBlock) {
+            rewardTokenSupplyState[address(vToken)].lastRewardingBlock = supplyLastRewardingBlock;
+            emit SupplyLastRewardingBlockUpdated(address(vToken), supplyLastRewardingBlock);
+        }
+
+        if(rewardTokenBorrowState[address(vToken)].lastRewardingBlock != borrowLastRewardingBlock) {
+            rewardTokenBorrowState[address(vToken)].lastRewardingBlock = borrowLastRewardingBlock;
+            emit BorrowLastRewardingBlockUpdated(address(vToken), borrowLastRewardingBlock);
+        }
     }
 
     /**
