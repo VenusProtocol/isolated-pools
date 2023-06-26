@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../VToken.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-import "./ComptrollerScenario.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+
+import { VToken } from "../VToken.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -123,7 +124,7 @@ contract VTokenHarness is VToken {
     }
 
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
-        return borrowRateMaxMantissa;
+        return MAX_BORROW_RATE_MANTISSA;
     }
 
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "../MaxLoopsLimitHelper.sol";
+import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 
 contract HarnessMaxLoopsLimitHelper is MaxLoopsLimitHelper {
     function setMaxLoopsLimit(uint256 limit) external {

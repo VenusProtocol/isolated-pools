@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
-import "./VToken.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
+import { VToken } from "./VToken.sol";
+import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
+
+/**
+ * @title ComptrollerStorage
+ * @author Venus
+ * @notice Storage layout for the `Comptroller` contract.
+ */
 contract ComptrollerStorage {
     struct LiquidationOrder {
         VToken vTokenCollateral;
@@ -56,7 +63,7 @@ contract ComptrollerStorage {
     /**
      * @notice Oracle which gives the price of any given asset
      */
-    PriceOracle public oracle;
+    ResilientOracleInterface public oracle;
 
     /**
      * @notice Multiplier used to calculate the maximum repayAmount when liquidating a borrow
@@ -88,7 +95,7 @@ contract ComptrollerStorage {
     /// @notice Minimal collateral required for regular (non-batch) liquidations
     uint256 public minLiquidatableCollateral;
 
-    /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting notAllowed
+    /// @notice Supply caps enforced by mintAllowed for each vToken address. Defaults to zero which corresponds to minting not allowed
     mapping(address => uint256) public supplyCaps;
 
     /// @notice True if a certain action is paused on a certain market
@@ -103,20 +110,13 @@ contract ComptrollerStorage {
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
-    uint256 internal constant closeFactorMinMantissa = 0.05e18; // 0.05
+    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18; // 0.05
 
     // closeFactorMantissa must not exceed this value
-    uint256 internal constant closeFactorMaxMantissa = 0.9e18; // 0.9
+    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18; // 0.9
 
     // No collateralFactorMantissa may exceed this value
-    uint256 internal constant collateralFactorMaxMantissa = 0.9e18; // 0.9
-
-    /// @notice Indicator that this is a Comptroller contract (for inspection)
-    bool internal constant _isComptroller = true;
-
-    // PoolRegistry, immutable to save on gas
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable poolRegistry;
+    uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.9e18; // 0.9
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -124,13 +124,4 @@ contract ComptrollerStorage {
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address poolRegistry_) {
-        // Note that the contract is upgradeable. We only initialize immutables in the
-        // constructor. Use initialize() or reinitializers to set the state variables.
-        require(poolRegistry_ != address(0), "invalid pool registry address");
-
-        poolRegistry = poolRegistry_;
-    }
 }

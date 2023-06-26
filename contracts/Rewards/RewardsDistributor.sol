@@ -1,14 +1,31 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../ExponentialNoError.sol";
-import "../VToken.sol";
-import "../Comptroller.sol";
-import "../MaxLoopsLimitHelper.sol";
-import "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { VToken } from "../VToken.sol";
+import { Comptroller } from "../Comptroller.sol";
+import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
+
+/**
+ * @title `RewardsDistributor`
+ * @author Venus
+ * @notice Contract used to configure, track and distribute rewards to users based on their actions (borrows and supplies) in the protocol.
+ * Users can receive additional rewards through a `RewardsDistributor`. Each `RewardsDistributor` proxy is initialized with a specific reward
+ * token and `Comptroller`, which can then distribute the reward token to users that supply or borrow in the associated pool.
+ * Authorized users can set the reward token borrow and supply speeds for each market in the pool. This sets a fixed amount of reward
+ * token to be released each block for borrowers and suppliers, which is distributed based on a user’s percentage of the borrows or supplies
+ * respectively. The owner can also set up reward distributions to contributor addresses (distinct from suppliers and borrowers) by setting
+ * their contributor reward token speed, which similarly allocates a fixed amount of reward token per block.
+ *
+ * The owner has the ability to transfer any amount of reward tokens held by the contract to any other address. Rewards are not distributed
+ * automatically and must be claimed by a user calling `claimRewardToken()`. Users should be aware that it is up to the owner and other centralized
+ * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
+ */
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlledV8, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -19,14 +36,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint32 block;
     }
 
+    /// @notice The initial REWARD TOKEN index for a market
+    uint224 public constant INITIAL_INDEX = 1e36;
+
     /// @notice The REWARD TOKEN market supply state for each market
     mapping(address => RewardToken) public rewardTokenSupplyState;
 
     /// @notice The REWARD TOKEN borrow index for each market for each supplier as of the last time they accrued REWARD TOKEN
     mapping(address => mapping(address => uint256)) public rewardTokenSupplierIndex;
-
-    /// @notice The initial REWARD TOKEN index for a market
-    uint224 public constant rewardTokenInitialIndex = 1e36;
 
     /// @notice The REWARD TOKEN accrued but not yet transferred to each user
     mapping(address => uint256) public rewardTokenAccrued;
@@ -78,22 +95,22 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     event RewardTokenBorrowSpeedUpdated(VToken indexed vToken, uint256 newSpeed);
 
     /// @notice Emitted when REWARD TOKEN is granted by admin
-    event RewardTokenGranted(address recipient, uint256 amount);
+    event RewardTokenGranted(address indexed recipient, uint256 amount);
 
     /// @notice Emitted when a new REWARD TOKEN speed is set for a contributor
     event ContributorRewardTokenSpeedUpdated(address indexed contributor, uint256 newSpeed);
 
     /// @notice Emitted when a market is initialized
-    event MarketInitialized(address vToken);
+    event MarketInitialized(address indexed vToken);
 
     /// @notice Emitted when a reward token supply index is updated
-    event RewardTokenSupplyIndexUpdated(address vToken);
+    event RewardTokenSupplyIndexUpdated(address indexed vToken);
 
     /// @notice Emitted when a reward token borrow index is updated
-    event RewardTokenBorrowIndexUpdated(address vToken, Exp marketBorrowIndex);
+    event RewardTokenBorrowIndexUpdated(address indexed vToken, Exp marketBorrowIndex);
 
     /// @notice Emitted when a reward for contributor is updated
-    event ContributorRewardsUpdated(address contributor, uint256 rewardAccrued);
+    event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -106,7 +123,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @dev Initializes the deployer to owner.
+     * @notice RewardsDistributor initializer
+     * @dev Initializes the deployer to owner
+     * @param comptroller_ Comptroller to attach the reward distributor to
+     * @param rewardToken_ Reward token to distribute
+     * @param loopsLimit_ Maximum number of iterations for the loops in this contract
+     * @param accessControlManager_ AccessControlManager contract address
      */
     function initialize(
         Comptroller comptroller_,
@@ -133,12 +155,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
          */
         if (supplyState.index == 0) {
             // Initialize supply state index with default value
-            supplyState.index = rewardTokenInitialIndex;
+            supplyState.index = INITIAL_INDEX;
         }
 
         if (borrowState.index == 0) {
             // Initialize borrow state index with default value
-            borrowState.index = rewardTokenInitialIndex;
+            borrowState.index = INITIAL_INDEX;
         }
 
         /*
@@ -156,9 +178,10 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      *         Borrowers will begin to accrue after the first interaction with the protocol.
      * @dev This function should only be called when the user has a borrow position in the market
      *      (e.g. Comptroller.preBorrowHook, and Comptroller.preRepayHook)
-     *      We avoid an external call to check if they are in the market to save gas because this function is called in many places.
+     *      We avoid an external call to check if they are in the market to save gas because this function is called in many places
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
+     * @param marketBorrowIndex The current global borrow index of vToken
      */
     function distributeBorrowerRewardToken(
         address vToken,
@@ -173,8 +196,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Transfer REWARD TOKEN to the recipient.
-     * @dev Note: If there is not enough REWARD TOKEN, we do not perform the transfer all.
+     * @notice Transfer REWARD TOKEN to the recipient
+     * @dev Note: If there is not enough REWARD TOKEN, we do not perform the transfer all
      * @param recipient The address of the recipient to transfer REWARD TOKEN to
      * @param amount The amount of REWARD TOKEN to (possibly) transfer
      */
@@ -189,10 +212,10 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Set REWARD TOKEN borrow and supply speeds for the specified markets.
-     * @param vTokens The markets whose REWARD TOKEN speed to update.
-     * @param supplySpeeds New supply-side REWARD TOKEN speed for the corresponding market.
-     * @param borrowSpeeds New borrow-side REWARD TOKEN speed for the corresponding market.
+     * @notice Set REWARD TOKEN borrow and supply speeds for the specified markets
+     * @param vTokens The markets whose REWARD TOKEN speed to update
+     * @param supplySpeeds New supply-side REWARD TOKEN speed for the corresponding market
+     * @param borrowSpeeds New borrow-side REWARD TOKEN speed for the corresponding market
      */
     function setRewardTokenSpeeds(
         VToken[] memory vTokens,
@@ -212,7 +235,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Set REWARD TOKEN speed for a single contributor.
+     * @notice Set REWARD TOKEN speed for a single contributor
      * @param contributor The contributor whose REWARD TOKEN speed to update
      * @param rewardTokenSpeed New REWARD TOKEN speed for contributor
      */
@@ -235,7 +258,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Claim all the rewardToken accrued by holder in all markets.
+     * @notice Claim all the rewardToken accrued by holder in all markets
      * @param holder The address to claim REWARD TOKEN for
      */
     function claimRewardToken(address holder) external {
@@ -251,7 +274,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Calculate additional accrued REWARD TOKEN for a contributor since last accrual.
+     * @notice Calculate additional accrued REWARD TOKEN for a contributor since last accrual
      * @param contributor The address to calculate contributor rewards for
      */
     function updateContributorRewards(address contributor) public {
@@ -270,7 +293,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Claim all the rewardToken accrued by holder in the specified markets.
+     * @notice Claim all the rewardToken accrued by holder in the specified markets
      * @param holder The address to claim REWARD TOKEN for
      * @param vTokens The list of markets to claim REWARD TOKEN in
      */
@@ -345,11 +368,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         // Update supplier's index to the current index since we are distributing accrued REWARD TOKEN
         rewardTokenSupplierIndex[vToken][supplier] = supplyIndex;
 
-        if (supplierIndex == 0 && supplyIndex >= rewardTokenInitialIndex) {
+        if (supplierIndex == 0 && supplyIndex >= INITIAL_INDEX) {
             // Covers the case where users supplied tokens before the market's supply state index was set.
             // Rewards the user with REWARD TOKEN accrued from the start of when supplier rewards were first
             // set for the market.
-            supplierIndex = rewardTokenInitialIndex;
+            supplierIndex = INITIAL_INDEX;
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per vToken accrued
@@ -370,6 +393,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @notice Calculate reward token accrued by a borrower and possibly transfer it to them.
      * @param vToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
+     * @param marketBorrowIndex The current global borrow index of vToken
      */
     function _distributeBorrowerRewardToken(
         address vToken,
@@ -383,11 +407,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         // Update borrowers's index to the current index since we are distributing accrued REWARD TOKEN
         rewardTokenBorrowerIndex[vToken][borrower] = borrowIndex;
 
-        if (borrowerIndex == 0 && borrowIndex >= rewardTokenInitialIndex) {
+        if (borrowerIndex == 0 && borrowIndex >= INITIAL_INDEX) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set.
             // Rewards the user with REWARD TOKEN accrued from the start of when borrower rewards were first
             // set for the market.
-            borrowerIndex = rewardTokenInitialIndex;
+            borrowerIndex = INITIAL_INDEX;
         }
 
         // Calculate change in the cumulative sum of the REWARD TOKEN per borrowed unit accrued
@@ -423,9 +447,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Accrue REWARD TOKEN to the market by updating the supply index.
+     * @notice Accrue REWARD TOKEN to the market by updating the supply index
      * @param vToken The market whose supply index to update
-     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
+     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      */
     function _updateRewardTokenSupplyIndex(address vToken) internal {
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
@@ -451,9 +475,10 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Accrue REWARD TOKEN to the market by updating the borrow index.
+     * @notice Accrue REWARD TOKEN to the market by updating the borrow index
      * @param vToken The market whose borrow index to update
-     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued.
+     * @param marketBorrowIndex The current global borrow index of vToken
+     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      */
     function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];

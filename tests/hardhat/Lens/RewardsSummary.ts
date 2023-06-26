@@ -1,11 +1,17 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
-import { expect } from "chai";
+import chai from "chai";
 import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor, VToken } from "../../../typechain";
+
+const { expect } = chai;
+chai.use(smock.matchers);
+
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
 
 let comptroller: FakeContract<Comptroller>;
 let vBUSD: FakeContract<VToken>;
@@ -152,6 +158,7 @@ describe("PoolLens: Rewards Summary", () => {
       startBlock,
     } = await loadFixture(rewardsFixture));
   });
+
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
     await mineUpTo(startBlock + 1000);
@@ -213,6 +220,41 @@ describe("PoolLens: Rewards Summary", () => {
         [
           [vBUSD.address, BigNumber.from(convertToUnit(10, 18))],
           [vWBTC.address, BigNumber.from(convertToUnit(0.0000001, 18))],
+        ],
+      ],
+    ];
+    expect(pendingRewards).to.have.deep.members(EXPECTED_OUTPUT);
+  });
+
+  it("Should return accrued rewards if borrower borrowed before initialization", async () => {
+    comptroller.getRewardDistributors.returns([rewardDistributor3.address]);
+    rewardDistributor3.rewardTokenBorrowerIndex.returns(0); // Borrower borrowed before initialization, so they have no index
+    rewardDistributor3.rewardTokenBorrowState.returns({
+      index: convertToUnit(1, 36), // Current index is 1.0, double scale
+      block: await ethers.provider.getBlockNumber(),
+    });
+    rewardDistributor3.INITIAL_INDEX.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
+
+    const pendingRewards = await poolLens.getPendingRewards(await account.getAddress(), comptroller.address);
+
+    // The user has 0.000001% of the market share, and the reward accumulated since the beginning of the
+    // distribution is proportional to 1.0 (current index) - 0.6 (initial index) = 0.4. The index gets increased
+    // according to the configured distribution speed, so the speed is already included in the computation.
+    // The user should have accrued 0.000001% * 0.4 = 0.00000004 of the reward token (assuming the reward token
+    // has 18 decimals).
+    //
+    // Supplier reward is zero, because the global supply index is equal to the user's supply index, and there
+    // are no blocks between the last update and the current block. Thus, the results account only for the
+    // borrower reward.
+
+    const EXPECTED_OUTPUT = [
+      [
+        rewardDistributor3.address,
+        rewardToken3.address,
+        BigNumber.from(convertToUnit(50, 18)),
+        [
+          [vBUSD.address, BigNumber.from(convertToUnit("0.000000004", 18))],
+          [vWBTC.address, BigNumber.from(convertToUnit("0.000000004", 18))],
         ],
       ],
     ];
