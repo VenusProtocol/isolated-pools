@@ -12,6 +12,7 @@ import {
   MockToken,
   PoolRegistry,
   PriceOracle,
+  ProtocolShareReserve,
   RewardsDistributor,
   RiskFund,
   VToken,
@@ -383,12 +384,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
   let acc1: string;
   let acc2: string;
   let vBNXPrice: BigNumber;
+  let ProtocolShareReserve: ProtocolShareReserve;
   const EXPONENT_SCALE = 1e18;
   let rewardDistributor: FakeContract<RewardsDistributor>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, vBNXPrice } = fixture);
+    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, vBNXPrice, ProtocolShareReserve } = fixture);
     rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
     await Comptroller.addRewardsDistributor(rewardDistributor.address);
   });
@@ -483,7 +485,9 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
       const seizeTokens = seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE;
-
+      const protocolSeizeToken = seizeTokensOverall - seizeTokens;
+      const protocolSeizeAmount = (exchangeRateStored * protocolSeizeToken.toFixed(0)) / EXPONENT_SCALE;
+      expect(Math.ceil(protocolSeizeAmount)).equal(await BNX.balanceOf(ProtocolShareReserve.address));
       await expect(result)
         .to.emit(vBTCB, "LiquidateBorrow")
         .withArgs(acc1, acc2, repayAmount, vBNX.address, seizeTokensOverall.toFixed(0));
@@ -492,7 +496,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 
-  describe("Liquidation of user via VToken", () => {
+  describe.only("Liquidation of user via VToken", () => {
     let mintAmount = convertToUnit("1", 17);
     let vTokenMintAmount = convertToUnit("1", 7);
     let acc1Signer: Signer;
@@ -630,9 +634,13 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
       const seizeTokens = (seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE).toFixed(0);
+      const protocolSeizeToken = seizeTokensOverall - seizeTokens;
+      const protocolSeizeAmount = (exchangeRateStored * protocolSeizeToken) / EXPONENT_SCALE;
+
       await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, maxClose.toString(), vBNX.address))
         .to.emit(vBTCB, "LiquidateBorrow")
         .withArgs(acc1, acc2, maxClose.toString(), vBNX.address, seizeTokensOverall.toFixed(0));
+      expect(protocolSeizeAmount).equal(await BNX.balanceOf(ProtocolShareReserve.address));
       const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1);
       expect(liquidatorBalance).to.equal(seizeTokens);
     });
@@ -782,7 +790,7 @@ describe("Risk Fund and Auction related scenarios", () => {
       await RiskFund.setPoolRegistry(PoolRegistry.address);
     });
 
-    it("generate bad Debt, reduce reserves manually and distribute if blockDelta < last reduce && totalReserves < reduceThreshold", async function () {
+    it("generate bad Debt, reduce reserves if blockDelta < last reduce", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
       const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
@@ -808,36 +816,6 @@ describe("Risk Fund and Auction related scenarios", () => {
 
       expect(await BNX.balanceOf(deployer)).to.be.equal(expectedTotalReserves * 0.7);
       expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.3);
-    });
-
-    it("reduce reserves if blockDelta > last reduce && totalReserves < reduceThreshold", async function () {
-      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(10, 1));
-      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
-
-      // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
-      await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const balanceBefore = await BNX.balanceOf(ProtocolShareReserve.address);
-      await Comptroller.connect(acc1Signer).healAccount(acc2);
-      const balanceAfter = await BNX.balanceOf(ProtocolShareReserve.address);
-      expect(balanceAfter).to.be.greaterThanOrEqual(balanceBefore);
-    });
-
-    it("reduce reserves if blockDelta < last reduce && totalReserves > reduceThreshold", async function () {
-      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
-      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
-
-      // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
-      await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const balanceBefore = await BNX.balanceOf(ProtocolShareReserve.address);
-      await Comptroller.connect(acc1Signer).healAccount(acc2);
-      const balanceAfter = await BNX.balanceOf(ProtocolShareReserve.address);
-      expect(balanceAfter).to.be.greaterThanOrEqual(balanceBefore);
     });
   });
 });

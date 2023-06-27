@@ -1147,7 +1147,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
-        _reduceReservesFresh(totalReservesNew, IProtocolShareReserve.IncomeType.LIQUIDATION);
+        _reduceReservesFresh(protocolSeizeAmount, IProtocolShareReserve.IncomeType.LIQUIDATION);
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
