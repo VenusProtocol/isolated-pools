@@ -9,13 +9,19 @@ import "./VTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./InterestRateModel.sol";
 import "./ExponentialNoError.sol";
-import "./Governance/AccessControlled.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 /**
  * @title Venus VToken Contract
  * @author Venus Dev Team
  */
-contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, ExponentialNoError, TokenErrorReporter {
+contract VToken is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    VTokenInterface,
+    ExponentialNoError,
+    TokenErrorReporter
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
@@ -1136,24 +1142,31 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
         uint256 protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
-        uint256 totalReservesNew = totalReserves + protocolSeizeAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
         /* We write the calculated values into storage */
-        totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
-        _reduceReservesFresh(protocolSeizeAmount, IProtocolShareReserve.IncomeType.LIQUIDATION);
+        // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
+        _doTransferOut(protocolShareReserve, protocolSeizeAmount);
+
+        // Update the pool asset's state in the protocol share reserve for the above transfer.
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.LIQUIDATION
+        );
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+        emit Transfer(address(this), protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {

@@ -135,10 +135,6 @@ describe("VToken", function () {
     .dividedBy(convertToUnit("1", 18))
     .toString();
   const liquidatorShareTokens = new BigNumber(seizeTokens).minus(protocolShareTokens).toString();
-  const addReservesAmount = new BigNumber(protocolShareTokens)
-    .multipliedBy(exchangeRate)
-    .dividedBy(convertToUnit("1", 18))
-    .toString();
 
   beforeEach(async () => {
     [_root, liquidator, borrower] = await ethers.getSigners();
@@ -351,10 +347,6 @@ describe("VToken", function () {
       await expect(result)
         .to.emit(collateral.vToken, "Transfer")
         .withArgs(borrowerAddress, collateral.vToken.address, protocolShareTokens);
-
-      await expect(result)
-        .to.emit(collateral.vToken, "ReservesAdded")
-        .withArgs(collateral.vToken.address, addReservesAmount, addReservesAmount);
 
       expect(afterBalances).to.deep.equal(
         adjustBalances(beforeBalances, [

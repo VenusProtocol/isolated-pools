@@ -1517,6 +1517,11 @@
     "@typescript-eslint/types" "5.44.0"
     eslint-visitor-keys "^3.3.0"
 
+"@venusprotocol/governance-contracts@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-1.0.0.tgz#264966365b75bb05219ce42de21c0af022d462a8"
+  integrity sha512-SHF8In2HPM3zbWWvPSQrD7omKRfwInecFrDldMir9yqPdKrJBXDlmjAOZLyGLK9wiH+GQPBHpVEZoxiBLmwKVw==
+
 "@venusprotocol/oracle@^1.6.10":
   version "1.6.10"
   resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.10.tgz#f32df925c2b400ff87ca8be1c44ba1a46d5b3c8f"
