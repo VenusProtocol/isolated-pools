@@ -496,7 +496,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
   });
 
-  describe.only("Liquidation of user via VToken", () => {
+  describe("Liquidation of user via VToken", () => {
     let mintAmount = convertToUnit("1", 17);
     let vTokenMintAmount = convertToUnit("1", 7);
     let acc1Signer: Signer;

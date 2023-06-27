@@ -63,7 +63,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
         address accessControlManager_,
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
-    ) external initializer {
+    ) external reinitializer(2) {
         require(admin_ != address(0), "invalid admin address");
 
         // Initialize the market
@@ -331,6 +331,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
 
     /**
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
+     * @dev Gracefully return if reserves already reduced in accrueInterest
      * @param reduceAmount Amount of reduction to reserves
      * @param kind kind of reserve
      * @custom:event Emits ReservesReduced event; may emit AccrueInterest
@@ -683,7 +684,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
     /**
      * @notice Applies accrued interest to total borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
-     *   up to the current block and writes new checkpoint to storage.
+     *   up to the current block and writes new checkpoint to storage and reduce spread reserves if currentBlock - reduceReservesBlockNumber > blockDelta
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
@@ -1216,6 +1217,7 @@ contract VToken is Ownable2StepUpgradeable, AccessControlled, VTokenInterface, E
      * @notice Reduces reserves by transferring to the protocol reserve contract
      * @dev Requires fresh interest accrual
      * @param reduceAmount Amount of reduction to reserves
+     * @param kind kind of reserve
      */
     function _reduceReservesFresh(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) internal {
         // totalReserves - reduceAmount
