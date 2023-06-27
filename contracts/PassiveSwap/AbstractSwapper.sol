@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { VTokenInterface } from "../VTokenInterfaces.sol";
-import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
 
-contract AbstractSwapper {
+contract AbstractSwapper is AccessControlledV8 {
     /// @notice Swap configuration for the tokens pair
     struct SwapConfiguration {
         /// tokenIn address
@@ -20,8 +20,7 @@ contract AbstractSwapper {
         bool enabled;
     }
 
-    /// @notice Access control manager
-    AccessControlManager public accessControlManager;
+    ResilientOracle public priceOracle;
 
     /// @notice swap configurations for the existing pairs
     mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
@@ -45,12 +44,12 @@ contract AbstractSwapper {
     /// @notice Thrown when underlying price is zero
     error InvalidOraclePrice();
 
-    /// @notice Thrown when the action is prohibited by AccessControlManager
-    error Unauthorized(address sender, address calledContract, string methodSignature);
-
-    /// @param accessControlManager_ Access control manager contract address
-    constructor(AccessControlManager accessControlManager_) {
-        accessControlManager = accessControlManager_;
+    /**
+     * @param accessControlManager_ Access control manager contract address
+     */
+    function initialize(address accessControlManager_, ResilientOracle priceOracle_) external initializer {
+        __AccessControlled_init(accessControlManager_);
+        priceOracle = priceOracle_;
     }
 
     /// @notice Set the configuration for new or existing swap pair
@@ -60,15 +59,7 @@ contract AbstractSwapper {
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
     /// @custom:access Controlled by AccessControlManager
     function setSwapConfiguration(SwapConfiguration calldata swapConfiguration) external {
-        bool isAllowedToCall = accessControlManager.isAllowedToCall(
-            msg.sender,
-            "setSwapConfiguration(SwapConfiguration)"
-        );
-
-        if (!isAllowedToCall) {
-            revert Unauthorized(msg.sender, address(this), "setSwapConfiguration(SwapConfiguration)");
-        }
-
+        _checkAccessAllowed("setSwapConfiguration(SwapConfiguration)");
         ensureNonzeroAddress(swapConfiguration.tokenAddressIn);
         ensureNonzeroAddress(swapConfiguration.tokenAddressOut);
 
@@ -92,5 +83,51 @@ contract AbstractSwapper {
             oldEnabled,
             swapConfiguration.enabled
         );
+    }
+
+    /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param tokenAddressIn Address of the token to swap
+    /// @param tokenAddressOut Address of the token to get after swap
+    /// @return amountSwappedMantissa Amount of tokenAddressIn should be transferred after swap
+    /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after swap
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error SwapConfigurationNotEnabled is thrown when swap is disabled or config does not exist for given pair
+    /// @custom:error InvalidOraclePrice is thrown when underlying price is zero
+    function getAmountOut(
+        uint256 amountInMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountSwappedMantissa, uint256 amountOutMantissa) {
+        if (amountInMantissa == 0) {
+            revert InsufficientInputAmount();
+        }
+
+        SwapConfiguration storage configuration = swapConfigurations[tokenAddressIn][tokenAddressOut];
+
+        if (!configuration.enabled) {
+            revert SwapConfigurationNotEnabled();
+        }
+
+        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+
+        if (tokenInUnderlyingPrice == 0 || tokenOutUnderlyingPrice == 0) {
+            revert InvalidOraclePrice();
+        }
+        /// amount of tokenAddressOut after including incentive
+        uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
+        /// conversion rate after considering incentive(conversionWithIncentive)
+        uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
+
+        amountOutMantissa = (amountInMantissa * tokenInToOutConversion) / EXP_SCALE;
+        amountSwappedMantissa = amountInMantissa;
+
+        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        if (maxTokenOutLiquidity < amountOutMantissa) {
+            amountSwappedMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
+            amountOutMantissa = maxTokenOutLiquidity;
+        }
     }
 }
