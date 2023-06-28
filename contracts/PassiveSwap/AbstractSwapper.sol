@@ -20,6 +20,8 @@ contract AbstractSwapper is AccessControlledV8 {
         bool enabled;
     }
 
+    uint256 public constant MAX_INCENTIVE = 5e18;
+
     ResilientOracle public priceOracle;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
@@ -49,6 +51,9 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Thrown when swap is disabled or config does not exist for given pair
     error SwapConfigurationNotEnabled();
 
+    /// @notice Thrown when incentive is higher than the MAX_INCENTIVE
+    error IncentiveTooHigh(uint256 incentive, uint256 maxIncentive);
+
     /// @param accessControlManager_ Access control manager contract address
     function initialize(address accessControlManager_, ResilientOracle priceOracle_) external initializer {
         __AccessControlled_init(accessControlManager_);
@@ -72,6 +77,10 @@ contract AbstractSwapper is AccessControlledV8 {
         _checkAccessAllowed("setSwapConfiguration(SwapConfiguration)");
         ensureNonzeroAddress(swapConfiguration.tokenAddressIn);
         ensureNonzeroAddress(swapConfiguration.tokenAddressOut);
+
+        if (swapConfiguration.incentive > MAX_INCENTIVE) {
+            revert IncentiveTooHigh(swapConfiguration.incentive, MAX_INCENTIVE);
+        }
 
         SwapConfiguration storage configuration = swapConfigurations[swapConfiguration.tokenAddressIn][
             swapConfiguration.tokenAddressOut

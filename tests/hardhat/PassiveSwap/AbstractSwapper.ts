@@ -95,6 +95,15 @@ describe("AbstractSwapper: tests", () => {
       );
     });
 
+    it("Revert on high incentive percentage", async () => {
+      const swapConfig = {
+        ...swapPairConfig,
+        incentive: convertToUnit("6", 18), // more than MAX_INCENTIVE = 5e18
+      };
+
+      await expect(swapper.setSwapConfiguration(swapConfig)).to.be.revertedWithCustomError(swapper, "IncentiveTooHigh");
+    });
+
     it("Set swap config for first time", async () => {
       let isExist = await swapper.swapConfigurations(tokenIn.address, tokenOut.address);
 
