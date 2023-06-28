@@ -188,4 +188,33 @@ describe("AbstractSwapper: tests", () => {
       expect(results[1]).to.equal(AMOUNT_IN);
     });
   });
+
+  describe("Set price oracle", () => {
+    let newOracle: FakeContract<ResilientOracleInterface>;
+
+    before(async () => {
+      newOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    });
+
+    it("Revert on non-owner call", async () => {
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(swapper.connect(nonOwner).setPriceOracle(newOracle.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("Revert on invalid oracle address", async () => {
+      await expect(swapper.setPriceOracle(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        swapper,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("Success on new price oracle update", async () => {
+      await expect(swapper.setPriceOracle(newOracle.address))
+        .to.emit(swapper, "PriceOracleUpdated")
+        .withArgs(oracle.address, newOracle.address);
+    });
+  });
 });

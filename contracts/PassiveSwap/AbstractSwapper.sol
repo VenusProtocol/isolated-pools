@@ -40,6 +40,8 @@ contract AbstractSwapper is AccessControlledV8 {
         bool oldEnabled,
         bool newEnabled
     );
+    /// @notice Emitted when price oracle address is updated
+    event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
@@ -50,7 +52,14 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @param accessControlManager_ Access control manager contract address
     function initialize(address accessControlManager_, ResilientOracle priceOracle_) external initializer {
         __AccessControlled_init(accessControlManager_);
-        priceOracle = priceOracle_;
+        _setPriceOracle(priceOracle_);
+    }
+
+    /// @notice Sets a new price oracle
+    /// @param priceOracle_ Address of the new price oracle to set
+    /// @custom:access Only Governance
+    function setPriceOracle(ResilientOracle priceOracle_) external onlyOwner {
+        _setPriceOracle(priceOracle_);
     }
 
     /// @notice Set the configuration for new or existing swap pair
@@ -126,5 +135,18 @@ contract AbstractSwapper is AccessControlledV8 {
             amountSwappedMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
             amountOutMantissa = maxTokenOutLiquidity;
         }
+    }
+
+    /// @notice Sets a new price oracle
+    /// @param priceOracle_ Address of the new price oracle to set
+    /// @custom:event Emits PriceOracleUpdated event on success
+    /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+    function _setPriceOracle(ResilientOracle priceOracle_) internal {
+        ensureNonzeroAddress(address(priceOracle_));
+
+        ResilientOracle oldPriceOracle = priceOracle;
+        priceOracle = priceOracle_;
+
+        emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
 }
