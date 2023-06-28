@@ -154,28 +154,6 @@ describe("AbstractSwapper: tests", () => {
       );
     });
 
-    it("Revert on invalid tokenIn oracle price", async () => {
-      await setSwapperConfig();
-      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(0);
-      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
-
-      await expect(swapper.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        swapper,
-        "InvalidOraclePrice",
-      );
-    });
-
-    it("Revert on invalid tokenOut oracle price", async () => {
-      await setSwapperConfig();
-      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
-      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(0);
-
-      await expect(swapper.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        swapper,
-        "InvalidOraclePrice",
-      );
-    });
-
     it("Success on swapping tokenIn to tokenOut for under tokenOut liquidity", async () => {
       await setSwapperConfig();
       await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);

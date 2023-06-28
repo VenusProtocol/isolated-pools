@@ -14,7 +14,7 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressIn;
         /// tokenOut address
         address tokenAddressOut;
-        /// incentive on swapping tokens
+        /// incentive on swapping tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
         uint256 incentive;
         /// whether the swap is enabled
         bool enabled;
@@ -22,13 +22,19 @@ contract AbstractSwapper is AccessControlledV8 {
 
     ResilientOracle public priceOracle;
 
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+    uint256[49] private __gap;
+
     /// @notice swap configurations for the existing pairs
+    /// @dev tokenAddressIn => tokenAddressOut => SwapConfiguration
     mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
 
     /// @notice Emitted when config is updated for tokens pair
     event SwapConfigurationUpdated(
-        address tokenAddressIn,
-        address tokenAddressOut,
+        address indexed tokenAddressIn,
+        address indexed tokenAddressOut,
         uint256 oldIncentive,
         uint256 newIncentive,
         bool oldEnabled,
@@ -41,12 +47,7 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Thrown when swap is disabled or config does not exist for given pair
     error SwapConfigurationNotEnabled();
 
-    /// @notice Thrown when underlying price is zero
-    error InvalidOraclePrice();
-
-    /**
-     * @param accessControlManager_ Access control manager contract address
-     */
+    /// @param accessControlManager_ Access control manager contract address
     function initialize(address accessControlManager_, ResilientOracle priceOracle_) external initializer {
         __AccessControlled_init(accessControlManager_);
         priceOracle = priceOracle_;
@@ -93,7 +94,6 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @return amountOutMantissa Amount of the tokenAddressOut sender should receive after swap
     /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
     /// @custom:error SwapConfigurationNotEnabled is thrown when swap is disabled or config does not exist for given pair
-    /// @custom:error InvalidOraclePrice is thrown when underlying price is zero
     function getAmountOut(
         uint256 amountInMantissa,
         address tokenAddressIn,
@@ -113,9 +113,6 @@ contract AbstractSwapper is AccessControlledV8 {
         uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
         uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
 
-        if (tokenInUnderlyingPrice == 0 || tokenOutUnderlyingPrice == 0) {
-            revert InvalidOraclePrice();
-        }
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
         /// conversion rate after considering incentive(conversionWithIncentive)
