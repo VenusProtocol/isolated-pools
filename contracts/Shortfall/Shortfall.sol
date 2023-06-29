@@ -471,7 +471,8 @@ contract Shortfall is
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolsBaseAssetReserves(comptroller);
+        uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
+            riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
