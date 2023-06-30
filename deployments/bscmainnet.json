@@ -6245,7 +6245,7 @@
       ]
     },
     "SwapRouter_DeFi": {
-      "address": "0x41cD8071670D7B3846b5fAf82697D47a12b8495e",
+      "address": "0x47bEe99BD8Cf5D8d7e815e2D2a3E2985CBCcC04b",
       "abi": [
         {
           "inputs": [
@@ -7945,7 +7945,7 @@
       ]
     },
     "SwapRouter_GameFi": {
-      "address": "0x36248B3e394e13978f08bE0361A8241a16b95f44",
+      "address": "0x9B15462a79D0948BdDF679E0E5a9841C44aAFB7A",
       "abi": [
         {
           "inputs": [
@@ -9645,7 +9645,7 @@
       ]
     },
     "SwapRouter_LiquidStakedBNB": {
-      "address": "0x17e6C5AFa0CAf38044dF3a9a9dDe33aaE8229653",
+      "address": "0x5f0ce69Aa564468492e860e8083BB001e4eb8d56",
       "abi": [
         {
           "inputs": [
@@ -11345,7 +11345,7 @@
       ]
     },
     "SwapRouter_Stablecoins": {
-      "address": "0x50d8ac56FC8525dcA9F41b12De0dbc6bDf7771e3",
+      "address": "0xBBd8E2b5d69fcE9Aaa599c50F0f0960AA58B32aA",
       "abi": [
         {
           "inputs": [
@@ -13045,7 +13045,7 @@
       ]
     },
     "SwapRouter_Tron": {
-      "address": "0x63555cca63c99e698b27e766b8e81282Bd2771b8",
+      "address": "0xacD270Ed7DFd4466Bd931d84fe5B904080E28Bfc",
       "abi": [
         {
           "inputs": [
