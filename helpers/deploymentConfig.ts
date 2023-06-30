@@ -94,7 +94,7 @@ const preconfiguredAddresses = {
     AccessControlManager: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
     PancakeFactory: "0x182859893230dC89b114d6e2D547BFFE30474a21",
     WBNB: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
-    VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
+    VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
@@ -105,7 +105,7 @@ const preconfiguredAddresses = {
     AccessControlManager: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
     PancakeFactory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
     WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-    VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
+    VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
   },
 };
 
