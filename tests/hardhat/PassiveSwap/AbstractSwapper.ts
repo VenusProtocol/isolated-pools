@@ -29,11 +29,9 @@ let swapPairConfig: {
 };
 
 const INCENTIVE = convertToUnit("1", 17);
-const AMOUNT_IN = convertToUnit("1.5", 18);
+const TOKEN_OUT_MAX = convertToUnit("1.5", 18);
 const TOKEN_IN_PRICE = convertToUnit("1", 18);
 const TOKEN_OUT_PRICE = convertToUnit("0.5", 18);
-const AMOUNT_IN_UNDER = convertToUnit("5", 17);
-const AMOUNT_IN_OVER = convertToUnit("1", 18);
 const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
@@ -144,9 +142,12 @@ describe("AbstractSwapper: tests", () => {
   });
 
   describe("Get amount out", () => {
+    const AMOUNT_IN_UNDER = convertToUnit("5", 17);
+    const AMOUNT_IN_OVER = convertToUnit("1", 18);
+
     const setSwapperConfig = async () => {
       await swapper.setSwapConfiguration(swapPairConfig);
-      await tokenOut.balanceOf.returns(AMOUNT_IN);
+      await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
     };
 
     it("Revert on zero amountIn value", async () => {
@@ -157,10 +158,9 @@ describe("AbstractSwapper: tests", () => {
     });
 
     it("Revert on no config or disabled swap for tokens pair", async () => {
-      await expect(swapper.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
-        swapper,
-        "SwapConfigurationNotEnabled",
-      );
+      await expect(
+        swapper.getAmountOut(TOKEN_OUT_MAX, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(swapper, "SwapConfigurationNotEnabled");
     });
 
     it("Success on swapping tokenIn to tokenOut for under tokenOut liquidity", async () => {
@@ -187,14 +187,71 @@ describe("AbstractSwapper: tests", () => {
       const results = await swapper.getAmountOut(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
       const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
       const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
-      const amountIn = new BigNumber(AMOUNT_IN)
+      const amountIn = new BigNumber(TOKEN_OUT_MAX)
         .multipliedBy(MANTISSA_ONE)
         .dividedBy(conversionRatio)
         .dividedBy(conversionWithIncentive)
         .toFixed(0);
 
       expect(results[0]).to.equal(amountIn);
-      expect(results[1]).to.equal(AMOUNT_IN);
+      expect(results[1]).to.equal(TOKEN_OUT_MAX);
+    });
+  });
+
+  describe("Get amount in", () => {
+    const AMOUNT_IN_UNDER = convertToUnit("1", 18);
+    const AMOUNT_IN_OVER = convertToUnit("2", 18);
+
+    const setSwapperConfig = async () => {
+      await swapper.setSwapConfiguration(swapPairConfig);
+      await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
+    };
+
+    it("Revert on zero amountIn value", async () => {
+      await expect(swapper.getAmountIn(0, tokenIn.address, tokenOut.address)).to.be.revertedWithCustomError(
+        swapper,
+        "InsufficientInputAmount",
+      );
+    });
+
+    it("Revert on no config or disabled swap for tokens pair", async () => {
+      await expect(
+        swapper.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(swapper, "SwapConfigurationNotEnabled");
+    });
+
+    it("Success on swapping tokenIn to tokenOut for under tokenOut liquidity", async () => {
+      await setSwapperConfig();
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+      const results = await swapper.getAmountIn(AMOUNT_IN_UNDER, tokenIn.address, tokenOut.address);
+      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
+      const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
+      const amountIn = new BigNumber(AMOUNT_IN_UNDER)
+        .multipliedBy(MANTISSA_ONE)
+        .dividedBy(conversionRatio)
+        .dividedBy(conversionWithIncentive)
+        .toFixed(0);
+
+      expect(results[0]).to.equal(AMOUNT_IN_UNDER);
+      expect(results[1]).to.equal(amountIn);
+    });
+
+    it("Success on swapping tokenIn to tokenOut for over tokenOut liquidity", async () => {
+      await setSwapperConfig();
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+      const results = await swapper.getAmountIn(AMOUNT_IN_OVER, tokenIn.address, tokenOut.address);
+      const conversionWithIncentive = Number(MANTISSA_ONE) + Number(INCENTIVE);
+      const conversionRatio = new BigNumber(TOKEN_IN_PRICE).dividedBy(TOKEN_OUT_PRICE);
+      const amountIn = new BigNumber(TOKEN_OUT_MAX)
+        .multipliedBy(MANTISSA_ONE)
+        .dividedBy(conversionRatio)
+        .dividedBy(conversionWithIncentive)
+        .toFixed(0);
+
+      expect(results[0]).to.equal(TOKEN_OUT_MAX);
+      expect(results[1]).to.equal(amountIn);
     });
   });
 

@@ -146,6 +146,48 @@ contract AbstractSwapper is AccessControlledV8 {
         }
     }
 
+    /// @notice To get the amount of tokenAddressIn tokens sender would send on receiving amountOutMantissa tokens of tokenAddressOut
+    /// @param amountOutMantissa Amount of tokenAddressOut user wants to receive
+    /// @param tokenAddressIn Address of the token to swap
+    /// @param tokenAddressOut Address of the token to get after swap
+    /// @return amountSwappedMantissa Amount of tokenAddressOut should be transferred after swap
+    /// @return amountInMantissa Amount of the tokenAddressIn sender would send to contract before swap
+    /// @custom:error InsufficientInputAmount error is thrown when given input amount is zero
+    /// @custom:error SwapConfigurationNotEnabled is thrown when swap is disabled or config does not exist for given pair
+    function getAmountIn(
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut
+    ) external view returns (uint256 amountSwappedMantissa, uint256 amountInMantissa) {
+        if (amountOutMantissa == 0) {
+            revert InsufficientInputAmount();
+        }
+
+        SwapConfiguration storage configuration = swapConfigurations[tokenAddressIn][tokenAddressOut];
+
+        if (!configuration.enabled) {
+            revert SwapConfigurationNotEnabled();
+        }
+
+        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+
+        /// amount of tokenAddressOut after including incentive
+        uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
+        /// conversion rate after considering incentive(conversionWithIncentive)
+        uint256 tokenInToOutConversion = (tokenInUnderlyingPrice * conversionWithIncentive) / tokenOutUnderlyingPrice;
+
+        amountInMantissa = ((amountOutMantissa * EXP_SCALE) / tokenInToOutConversion);
+        amountSwappedMantissa = amountOutMantissa;
+
+        /// If contract has less liquity for tokenAddressOut than amountOutMantissa
+        if (maxTokenOutLiquidity < amountOutMantissa) {
+            amountInMantissa = ((maxTokenOutLiquidity * EXP_SCALE) / tokenInToOutConversion);
+            amountSwappedMantissa = maxTokenOutLiquidity;
+        }
+    }
+
     /// @notice Sets a new price oracle
     /// @param priceOracle_ Address of the new price oracle to set
     /// @custom:event Emits PriceOracleUpdated event on success
