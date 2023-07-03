@@ -48,8 +48,11 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
 
-    /// @notice Emitted when exact tokens are swapped for tokens
+    /// @notice Emitted when exact amount of tokens are swapped for tokens
     event SwapExactTokensForTokens(uint256 amountIn, uint256 amountOut);
+
+    /// @notice Emitted when tokens are swapped for exact amount of tokens
+    event SwapTokensForExactTokens(uint256 amountIn, uint256 amountOut);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
@@ -70,6 +73,9 @@ contract AbstractSwapper is AccessControlledV8 {
         uint256 actualAmountOut,
         uint256 requiredAmountOut
     );
+
+    /// @notice Thrown when amountIn is higher than amountInMax
+    error AmountInHigherThanMax(uint256 amountInMantissa, uint256 amountInMaxMantissa);
 
     /// @param accessControlManager_ Access control manager contract address
     function initialize(
@@ -126,7 +132,7 @@ contract AbstractSwapper is AccessControlledV8 {
         );
     }
 
-    /// @notice Swap exact tokens for tokens
+    /// @notice Swap exact amount of tokenAddressIn for tokenAddressOut
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
     /// @param tokenAddressIn Address of the token to swap
@@ -178,6 +184,60 @@ contract AbstractSwapper is AccessControlledV8 {
         }
 
         emit SwapExactTokensForTokens(actualAmountIn, actualAmountOut);
+    }
+
+    /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
+    /// @param amountInMaxMantissa Max amount of tokenAddressIn
+    /// @param amountOutMantissa Amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to swap
+    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param to Address of the tokenAddressOut receiver
+    /// @custom:event Emits SwapTokensForExactTokens event on success
+    /// @custom:error AmountInHigherThanMax error is thrown when amount of tokenAddressIn is higher than amountInMaxMantissa
+    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
+    function swapTokensForExactTokens(
+        uint256 amountInMaxMantissa,
+        uint256 amountOutMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    ) external {
+        uint256 amountInMantissa;
+        uint256 amountSwappedMantissa;
+
+        (amountSwappedMantissa, amountInMantissa) = getAmountIn(amountOutMantissa, tokenAddressIn, tokenAddressOut);
+
+        if (amountInMantissa > amountInMaxMantissa) {
+            revert AmountInHigherThanMax(amountInMantissa, amountInMaxMantissa);
+        }
+
+        IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
+        uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
+        tokenIn.transferFrom(msg.sender, destinationAddress, amountInMantissa);
+        uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
+
+        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
+        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
+        tokenOut.transfer(to, amountSwappedMantissa);
+        uint256 balanceAfterTo = tokenOut.balanceOf(to);
+
+        uint256 actualAmountIn;
+        uint256 actualAmountOut;
+        unchecked {
+            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+            actualAmountOut = balanceAfterTo - balanceBeforeTo;
+        }
+
+        if ((actualAmountIn < amountInMantissa) || (actualAmountOut < amountSwappedMantissa)) {
+            revert AmountInOrAmountOutMismatched(
+                actualAmountIn,
+                amountInMantissa,
+                actualAmountOut,
+                amountSwappedMantissa
+            );
+        }
+
+        emit SwapTokensForExactTokens(actualAmountIn, actualAmountOut);
     }
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
