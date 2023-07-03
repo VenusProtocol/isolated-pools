@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
@@ -24,14 +25,16 @@ contract AbstractSwapper is AccessControlledV8 {
 
     ResilientOracle public priceOracle;
 
-    /// @dev This empty reserved space is put in place to allow future versions to add new
-    /// variables without shifting down storage in the inheritance chain.
-    /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-    uint256[49] private __gap;
-
     /// @notice swap configurations for the existing pairs
     /// @dev tokenAddressIn => tokenAddressOut => SwapConfiguration
     mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
+
+    address public destinationAddress;
+
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+    uint256[47] private __gap;
 
     /// @notice Emitted when config is updated for tokens pair
     event SwapConfigurationUpdated(
@@ -45,6 +48,9 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Emitted when price oracle address is updated
     event PriceOracleUpdated(ResilientOracle oldPriceOracle, ResilientOracle priceOracle);
 
+    /// @notice Emitted when exact tokens are swapped for tokens
+    event SwapExactTokensForTokens(uint256 amountIn, uint256 amountOut);
+
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
@@ -54,10 +60,26 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Thrown when incentive is higher than the MAX_INCENTIVE
     error IncentiveTooHigh(uint256 incentive, uint256 maxIncentive);
 
+    /// @notice Thrown when amountOut is lower than amountOutMin
+    error AmountOutLowerThanMinRequired(uint256 amountOutMantissa, uint256 amountOutMinMantissa);
+
+    /// @notice Thrown when actual amountIn or amountOut is lower than expected
+    error AmountInOrAmountOutMismatched(
+        uint256 actualAmountIn,
+        uint256 requiredAmountIn,
+        uint256 actualAmountOut,
+        uint256 requiredAmountOut
+    );
+
     /// @param accessControlManager_ Access control manager contract address
-    function initialize(address accessControlManager_, ResilientOracle priceOracle_) external initializer {
+    function initialize(
+        address accessControlManager_,
+        ResilientOracle priceOracle_,
+        address destinationAddress_
+    ) external initializer {
         __AccessControlled_init(accessControlManager_);
         _setPriceOracle(priceOracle_);
+        destinationAddress = destinationAddress_;
     }
 
     /// @notice Sets a new price oracle
@@ -104,6 +126,60 @@ contract AbstractSwapper is AccessControlledV8 {
         );
     }
 
+    /// @notice Swap exact tokens for tokens
+    /// @param amountInMantissa Amount of tokenAddressIn
+    /// @param amountOutMinMantissa Min amount of tokenAddressOut required as output
+    /// @param tokenAddressIn Address of the token to swap
+    /// @param tokenAddressOut Address of the token to get after swap
+    /// @param to Address of the tokenAddressOut receiver
+    /// @custom:event Emits SwapExactTokensForTokens event on success
+    /// @custom:error AmountOutLowerThanMinRequired error is thrown when amount of output tokenAddressOut is less than amountOutMinMantissa
+    /// @custom:error AmountInOrAmountOutMismatched error is thrown when Amount of tokenAddressIn or tokenAddressOut is lower than expected fater transfer
+    function swapExactTokensForTokens(
+        uint256 amountInMantissa,
+        uint256 amountOutMinMantissa,
+        address tokenAddressIn,
+        address tokenAddressOut,
+        address to
+    ) external {
+        uint256 amountOutMantissa;
+        uint256 amountSwappedMantissa;
+
+        (amountSwappedMantissa, amountOutMantissa) = getAmountOut(amountInMantissa, tokenAddressIn, tokenAddressOut);
+
+        if (amountOutMantissa < amountOutMinMantissa) {
+            revert AmountOutLowerThanMinRequired(amountOutMantissa, amountOutMinMantissa);
+        }
+
+        IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
+        uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
+        tokenIn.transferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
+        uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
+
+        IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
+        uint256 balanceBeforeTo = tokenOut.balanceOf(to);
+        tokenOut.transfer(to, amountOutMantissa);
+        uint256 balanceAfterTo = tokenOut.balanceOf(to);
+
+        uint256 actualAmountIn;
+        uint256 actualAmountOut;
+        unchecked {
+            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+            actualAmountOut = balanceAfterTo - balanceBeforeTo;
+        }
+
+        if ((actualAmountIn < amountSwappedMantissa) || (actualAmountOut < amountOutMantissa)) {
+            revert AmountInOrAmountOutMismatched(
+                actualAmountIn,
+                amountSwappedMantissa,
+                actualAmountOut,
+                amountOutMantissa
+            );
+        }
+
+        emit SwapExactTokensForTokens(actualAmountIn, actualAmountOut);
+    }
+
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to swap
@@ -116,7 +192,7 @@ contract AbstractSwapper is AccessControlledV8 {
         uint256 amountInMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) external view returns (uint256 amountSwappedMantissa, uint256 amountOutMantissa) {
+    ) public view returns (uint256 amountSwappedMantissa, uint256 amountOutMantissa) {
         if (amountInMantissa == 0) {
             revert InsufficientInputAmount();
         }
@@ -158,7 +234,7 @@ contract AbstractSwapper is AccessControlledV8 {
         uint256 amountOutMantissa,
         address tokenAddressIn,
         address tokenAddressOut
-    ) external view returns (uint256 amountSwappedMantissa, uint256 amountInMantissa) {
+    ) public view returns (uint256 amountSwappedMantissa, uint256 amountInMantissa) {
         if (amountOutMantissa == 0) {
             revert InsufficientInputAmount();
         }

@@ -2,6 +2,8 @@ import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "bignumber.js";
 import chai from "chai";
+import { Signer } from "ethers";
+import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -9,8 +11,11 @@ import {
   AbstractSwapper,
   AbstractSwapper__factory,
   AccessControlManager,
+  MockDeflatingToken,
+  MockDeflatingToken__factory,
+  MockToken,
+  MockToken__factory,
   ResilientOracleInterface,
-  VToken,
 } from "../../../typechain";
 
 const { expect } = chai;
@@ -18,9 +23,13 @@ chai.use(smock.matchers);
 
 let accessControl: FakeContract<AccessControlManager>;
 let swapper: MockContract<AbstractSwapper>;
-let tokenIn: FakeContract<VToken>;
-let tokenOut: FakeContract<VToken>;
+let tokenIn: MockContract<MockToken>;
+let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
+let tokenInDeflationary: MockContract<MockDeflatingToken>;
+let to: Signer;
+let destination: Signer;
+let owner: Signer;
 let swapPairConfig: {
   tokenAddressIn: string;
   tokenAddressOut: string;
@@ -35,13 +44,24 @@ const TOKEN_OUT_PRICE = convertToUnit("0.5", 18);
 const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
+  [owner, destination, to] = await ethers.getSigners();
   const Swapper = await smock.mock<AbstractSwapper__factory>("AbstractSwapper");
+
   accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
-  tokenIn = await smock.fake<VToken>("VToken");
-  tokenOut = await smock.fake<VToken>("VToken");
+
+  const MockToken = await smock.mock<MockToken__factory>("MockToken");
+  const MockTokenDeflationary = await smock.mock<MockDeflatingToken__factory>("MockDeflatingToken");
+  tokenIn = await MockToken.deploy("TokenIn", "tokenIn", 18);
+  await tokenIn.faucet(parseUnits("1000", 18));
+
+  tokenInDeflationary = await MockTokenDeflationary.deploy(parseUnits("1000", 18));
+
+  tokenOut = await MockToken.deploy("TokenOut", "tokenOut", 18);
+  await tokenOut.faucet(parseUnits("1000", 18));
+
   swapper = await Swapper.deploy();
-  await swapper.initialize(accessControl.address, oracle.address);
+  await swapper.initialize(accessControl.address, oracle.address, destination.address);
   accessControl.isAllowedToCall.returns(true);
 
   swapPairConfig = {
@@ -145,6 +165,11 @@ describe("AbstractSwapper: tests", () => {
     const AMOUNT_IN_UNDER = convertToUnit("5", 17);
     const AMOUNT_IN_OVER = convertToUnit("1", 18);
 
+    beforeEach(async () => {
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+    });
+
     const setSwapperConfig = async () => {
       await swapper.setSwapConfiguration(swapPairConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
@@ -202,6 +227,11 @@ describe("AbstractSwapper: tests", () => {
     const AMOUNT_IN_UNDER = convertToUnit("1", 18);
     const AMOUNT_IN_OVER = convertToUnit("2", 18);
 
+    beforeEach(async () => {
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+    });
+
     const setSwapperConfig = async () => {
       await swapper.setSwapConfiguration(swapPairConfig);
       await tokenOut.balanceOf.returns(TOKEN_OUT_MAX);
@@ -252,6 +282,72 @@ describe("AbstractSwapper: tests", () => {
 
       expect(results[0]).to.equal(TOKEN_OUT_MAX);
       expect(results[1]).to.equal(amountIn);
+    });
+  });
+
+  describe("Swap exact tokens for tokens", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await swapper.setSwapConfiguration(swapPairConfig);
+      await expect(
+        swapper.swapExactTokensForTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
+    });
+
+    it("Revert on deflationary token transfer", async () => {
+      const swapPairConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      await expect(
+        swapper.swapExactTokensForTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
+    });
+
+    it("Success on swap exact tokens", async () => {
+      const AMOUNT_IN = convertToUnit(".25", 18);
+      const MIN_AMOUNT_OUT = convertToUnit(".5", 18);
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      const expectedResults = await swapper.getAmountOut(AMOUNT_IN, tokenIn.address, tokenOut.address);
+
+      const tx = await swapper.swapExactTokensForTokens(
+        AMOUNT_IN,
+        MIN_AMOUNT_OUT,
+        tokenIn.address,
+        tokenOut.address,
+        to.getAddress(),
+      );
+
+      tx.wait();
+
+      await expect(tx).to.emit(swapper, "SwapExactTokensForTokens").withArgs(expectedResults[0], expectedResults[1]);
     });
   });
 
