@@ -37,9 +37,10 @@ const transfer2StepOwnerships = async (contractNames: string[], targetOwner: str
     const contractAddress = (await ethers.getContract(contractName)).address;
     const contract = await ethers.getContractAt(abi, contractAddress);
     const owner = await contract.owner();
+    const pendingOwner = await contract.pendingOwner();
 
     let tx;
-    if (owner !== targetOwner) {
+    if (owner !== targetOwner && pendingOwner !== targetOwner) {
       tx = await contract.transferOwnership(targetOwner);
       await tx.wait(1);
       const pendingOwner = await contract.pendingOwner();

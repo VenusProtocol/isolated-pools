@@ -11,7 +11,7 @@ const faucetTokens = async (deploymentConfig: DeploymentConfig, hre: HardhatRunt
 
   for (const vTokenConfig of vTokenConfigs) {
     const token = getTokenConfig(vTokenConfig.asset, tokensConfig);
-    if (!token.isMock) {
+    if (!token.isMock && !token.faucetInitialLiquidity) {
       continue;
     }
     const tokenContract = await getUnderlyingMock(token.symbol);
