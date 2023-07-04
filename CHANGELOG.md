@@ -1,3 +1,20 @@
+## [1.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0...v1.1.0-dev.1) (2023-07-03)
+
+
+### Features
+
+* add SwapRouter mainnet deployments ([c878a83](https://github.com/VenusProtocol/isolated-pools/commit/c878a83a75e0666be431ca42c318573d53583d06))
+* add SwapRouter testnet deployments ([44d39f0](https://github.com/VenusProtocol/isolated-pools/commit/44d39f0397ba9855849d7801b6f8b297f9bd2c95))
+* deploy IL phase 2 to mainnet ([4ae7a5d](https://github.com/VenusProtocol/isolated-pools/commit/4ae7a5d2fb2a63598a64c71c6e22768d2913f4a6))
+* deploy IL phase 2 to testnet ([f3cabed](https://github.com/VenusProtocol/isolated-pools/commit/f3cabeda9b5850ce09673fb332252379f4e7aa99))
+
+
+### Bug Fixes
+
+* fix swapped mainnet and testnet vBNB ([1b00e5b](https://github.com/VenusProtocol/isolated-pools/commit/1b00e5b6393f1251d7777d98605238e2bb9590e1))
+* redeploy SwapRouters to mainnet with the correct vBNB address ([925b709](https://github.com/VenusProtocol/isolated-pools/commit/925b709090171b47afb4b63cc95d615cf7eb97c6))
+* redeploy SwapRouters to testnet with the correct vBNB address ([c9ffe5d](https://github.com/VenusProtocol/isolated-pools/commit/c9ffe5d0150a2c214f17100fe7a266884624385a))
+
 ## 1.0.0 (2023-06-26)
 
 
@@ -87,6 +104,15 @@
 * ven-1559 ([52fd123](https://github.com/VenusProtocol/isolated-pools/commit/52fd123081999942f76bcc46c99a93a479b7fe18))
 * ven-1560 ([3546f67](https://github.com/VenusProtocol/isolated-pools/commit/3546f672a00b9904da74ae9fc7644b138d7b3a03))
 
+## [1.0.0-dev.19](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.18...v1.0.0-dev.19) (2023-07-03)
+
+
+### Features
+
+* add SwapRouter mainnet deployments ([c878a83](https://github.com/VenusProtocol/isolated-pools/commit/c878a83a75e0666be431ca42c318573d53583d06))
+* add SwapRouter testnet deployments ([44d39f0](https://github.com/VenusProtocol/isolated-pools/commit/44d39f0397ba9855849d7801b6f8b297f9bd2c95))
+* deploy IL phase 2 to mainnet ([4ae7a5d](https://github.com/VenusProtocol/isolated-pools/commit/4ae7a5d2fb2a63598a64c71c6e22768d2913f4a6))
+* deploy IL phase 2 to testnet ([f3cabed](https://github.com/VenusProtocol/isolated-pools/commit/f3cabeda9b5850ce09673fb332252379f4e7aa99))
 
 ### Bug Fixes
 
@@ -239,6 +265,9 @@
 * [VEN-1331][VPB-22] remove getPoolReserve ([552755b](https://github.com/VenusProtocol/isolated-pools/commit/552755b6e85f76328569e77f6d6a8440195cb287))
 * consolidate VToken contracts ([251e9b7](https://github.com/VenusProtocol/isolated-pools/commit/251e9b7493f920ebc9179e7739f3d8316b8eab3e))
 * remove unused contracts ([14e5dce](https://github.com/VenusProtocol/isolated-pools/commit/14e5dce91b60b68bb2ad18bd88de8067c3da2438))
+* fix swapped mainnet and testnet vBNB ([1b00e5b](https://github.com/VenusProtocol/isolated-pools/commit/1b00e5b6393f1251d7777d98605238e2bb9590e1))
+* redeploy SwapRouters to mainnet with the correct vBNB address ([925b709](https://github.com/VenusProtocol/isolated-pools/commit/925b709090171b47afb4b63cc95d615cf7eb97c6))
+* redeploy SwapRouters to testnet with the correct vBNB address ([c9ffe5d](https://github.com/VenusProtocol/isolated-pools/commit/c9ffe5d0150a2c214f17100fe7a266884624385a))
 
 ## [1.0.0-dev.18](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0-dev.17...v1.0.0-dev.18) (2023-06-26)
 
