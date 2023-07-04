@@ -34,6 +34,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint224 index;
         // The block number the index was last updated at
         uint32 block;
+        // The block number at which to start rewards
+        uint32 firstRewardingBlock;
         // The block number at which to stop rewards
         uint32 lastRewardingBlock;
     }
@@ -115,10 +117,10 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
     /// @notice Emitted when a reward token last rewarding block for supply is updated
-    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+    event SupplyRewardingBlocksUpdated(address indexed vToken, uint32 newFirstBlock, uint32 newLastBlock);
 
     /// @notice Emitted when a reward token last rewarding block for borrow is updated
-    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+    event BorrowRewardingBlocksUpdated(address indexed vToken, uint32 newFirstBlock, uint32 newLastBlock);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -248,20 +250,31 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @param supplyLastRewardingBlocks New supply-side REWARD TOKEN last rewarding block for the corresponding market
      * @param borrowLastRewardingBlocks New borrow-side REWARD TOKEN last rewarding block for the corresponding market
      */
-    function setLastRewardingBlocks(
+    function setRewardingBlocks(
         VToken[] memory vTokens,
+        uint32[] memory supplyFirstRewardingBlocks,
         uint32[] memory supplyLastRewardingBlocks,
+        uint32[] memory borrowFirstRewardingBlocks,
         uint32[] memory borrowLastRewardingBlocks
     ) external {
-        _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
+        _checkAccessAllowed("setRewardingBlock(address[],uint32[],uint32[],uint32[],uint32[])");
         uint256 numTokens = vTokens.length;
         require(
-            numTokens == supplyLastRewardingBlocks.length && numTokens == borrowLastRewardingBlocks.length,
-            "RewardsDistributor::setLastRewardingBlocks invalid input"
+            numTokens == supplyFirstRewardingBlocks.length &&
+                numTokens == borrowFirstRewardingBlocks.length &&
+                numTokens == supplyLastRewardingBlocks.length &&
+                numTokens == borrowLastRewardingBlocks.length,
+            "RewardsDistributor::setRewardingBlocks invalid input"
         );
 
         for (uint256 i; i < numTokens; ++i) {
-            _setLastRewardingBlock(vTokens[i], supplyLastRewardingBlocks[i], borrowLastRewardingBlocks[i]);
+            _setLastRewardingBlockRange(
+                vTokens[i],
+                supplyFirstRewardingBlocks[i],
+                supplyLastRewardingBlocks[i],
+                borrowFirstRewardingBlocks[i],
+                borrowLastRewardingBlocks[i]
+            );
         }
     }
 
@@ -355,21 +368,31 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @param supplyLastRewardingBlock New supply-side REWARD TOKEN last rewarding block for market
      * @param borrowLastRewardingBlock New borrow-side REWARD TOKEN last rewarding block for market
      */
-    function _setLastRewardingBlock(
+    function _setLastRewardingBlockRange(
         VToken vToken,
+        uint32 supplyFirstRewardingBlock,
         uint32 supplyLastRewardingBlock,
-        uint32 borrowLastRewardingBlock
+        uint32 borrowLastRewardingBlock,
+        uint32 borrowFirstRewardingBlock
     ) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
-        if (rewardTokenSupplyState[address(vToken)].lastRewardingBlock != supplyLastRewardingBlock) {
+        if (
+            rewardTokenSupplyState[address(vToken)].lastRewardingBlock != supplyLastRewardingBlock &&
+            rewardTokenSupplyState[address(vToken)].firstRewardingBlock != supplyFirstRewardingBlock
+        ) {
             rewardTokenSupplyState[address(vToken)].lastRewardingBlock = supplyLastRewardingBlock;
-            emit SupplyLastRewardingBlockUpdated(address(vToken), supplyLastRewardingBlock);
+            rewardTokenSupplyState[address(vToken)].firstRewardingBlock = supplyFirstRewardingBlock;
+            emit SupplyRewardingBlocksUpdated(address(vToken), supplyFirstRewardingBlock, supplyLastRewardingBlock);
         }
 
-        if (rewardTokenBorrowState[address(vToken)].lastRewardingBlock != borrowLastRewardingBlock) {
+        if (
+            rewardTokenBorrowState[address(vToken)].lastRewardingBlock != borrowLastRewardingBlock &&
+            rewardTokenBorrowState[address(vToken)].firstRewardingBlock != borrowFirstRewardingBlock
+        ) {
             rewardTokenBorrowState[address(vToken)].lastRewardingBlock = borrowLastRewardingBlock;
-            emit BorrowLastRewardingBlockUpdated(address(vToken), borrowLastRewardingBlock);
+            rewardTokenBorrowState[address(vToken)].firstRewardingBlock = borrowFirstRewardingBlock;
+            emit BorrowRewardingBlocksUpdated(address(vToken), borrowFirstRewardingBlock, borrowLastRewardingBlock);
         }
     }
 
@@ -510,6 +533,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint32 _firsRewardBlock = supplyState.firstRewardingBlock;
+
+        if (blockNumber >= _firsRewardBlock && supplyState.block < _firsRewardBlock) {
+            supplyState.block = _firsRewardBlock;
+        }
 
         if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
             blockNumber = supplyState.lastRewardingBlock;
@@ -545,6 +573,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint32 _firsRewardBlock = borrowState.firstRewardingBlock;
+
+        if (blockNumber >= _firsRewardBlock && borrowState.block < _firsRewardBlock) {
+            borrowState.block = _firsRewardBlock;
+        }
 
         if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
             blockNumber = borrowState.lastRewardingBlock;

@@ -114,6 +114,8 @@ contract PoolLens is ExponentialNoError {
         // The block number the index was last updated at
         uint32 block;
         // The block number at which to stop rewards
+        uint32 firstRewardingBlock;
+        // The block number at which to stop rewards
         uint32 lastRewardingBlock;
     }
 
@@ -446,10 +448,10 @@ contract PoolLens is ExponentialNoError {
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
+            (borrowState.index, borrowState.block, borrowState.firstRewardingBlock, borrowState.lastRewardingBlock) = rewardsDistributor
             .rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
+            (supplyState.index, supplyState.block, supplyState.firstRewardingBlock ,supplyState.lastRewardingBlock) = rewardsDistributor
             .rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
