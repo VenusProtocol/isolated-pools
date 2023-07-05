@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -14,7 +15,7 @@ import { IAbstractSwapper } from "./IAbstractSwapper.sol";
 /// @title AbstractSwapper
 /// @author Venus
 /// @notice Abstract contract will be extended by XVSVaultSwapper and RiskFundSwapper
-abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
+abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public constant MAX_INCENTIVE = 5e18;
@@ -105,6 +106,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
         address destinationAddress_
     ) external initializer {
         __AccessControlled_init(accessControlManager_);
+        __ReentrancyGuard_init();
+
         _setPriceOracle(priceOracle_);
         destinationAddress = destinationAddress_;
         swapPaused = false;
@@ -199,7 +202,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
         _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
@@ -242,7 +245,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
         _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
@@ -283,7 +286,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
         _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
@@ -315,7 +318,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
         _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
@@ -337,7 +340,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
     /// @param tokenAddress The address of the ERC-20 token to sweep
     /// @custom:event Emits SweepToken event on success
     /// @custom:access Only Governance
-    function sweepToken(address tokenAddress) external onlyOwner {
+    function sweepToken(address tokenAddress) external onlyOwner nonReentrant {
         preSweepToken(tokenAddress);
 
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
