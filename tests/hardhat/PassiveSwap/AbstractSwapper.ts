@@ -61,7 +61,7 @@ async function fixture(): Promise<void> {
   await tokenOut.faucet(parseUnits("1000", 18));
 
   swapper = await Swapper.deploy();
-  await swapper.initialize(accessControl.address, oracle.address, destination.getAddress());
+  await swapper.initialize(accessControl.address, oracle.address, await destination.getAddress());
   accessControl.isAllowedToCall.returns(true);
 
   swapPairConfig = {
@@ -304,7 +304,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
     });
@@ -325,7 +325,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
     });
@@ -342,10 +342,10 @@ describe("AbstractSwapper: tests", () => {
         MIN_AMOUNT_OUT,
         tokenIn.address,
         tokenOut.address,
-        to.getAddress(),
+        await to.getAddress(),
       );
 
-      tx.wait();
+      await tx.wait();
 
       await expect(tx).to.emit(swapper, "SwapExactTokensForTokens").withArgs(expectedResults[0], expectedResults[1]);
     });
@@ -370,7 +370,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
     });
@@ -391,7 +391,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
     });
@@ -408,10 +408,10 @@ describe("AbstractSwapper: tests", () => {
         AMOUNT_OUT,
         tokenIn.address,
         tokenOut.address,
-        to.getAddress(),
+        await to.getAddress(),
       );
 
-      tx.wait();
+      await tx.wait();
 
       await expect(tx).to.emit(swapper, "SwapTokensForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
     });
@@ -436,7 +436,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
     });
@@ -457,7 +457,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.emit(swapper, "SwapExactTokensForTokensSupportingFeeOnTransferTokens");
     });
@@ -482,7 +482,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit("1.5", 18),
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
     });
@@ -503,7 +503,7 @@ describe("AbstractSwapper: tests", () => {
           convertToUnit(".5", 18),
           tokenInDeflationary.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.emit(swapper, "SwapTokensForExactTokensSupportingFeeOnTransferTokens");
     });
@@ -566,11 +566,11 @@ describe("AbstractSwapper: tests", () => {
       await swapper.pauseSwap();
 
       await expect(
-        swapper.swapExactTokensForTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, to.getAddress()),
+        swapper.swapExactTokensForTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
       ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
 
       await expect(
-        swapper.swapTokensForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, to.getAddress()),
+        swapper.swapTokensForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, await to.getAddress()),
       ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
 
       await expect(
@@ -579,7 +579,7 @@ describe("AbstractSwapper: tests", () => {
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
 
@@ -589,7 +589,7 @@ describe("AbstractSwapper: tests", () => {
           VALUE_2,
           tokenIn.address,
           tokenOut.address,
-          to.getAddress(),
+          await to.getAddress(),
         ),
       ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
     });
