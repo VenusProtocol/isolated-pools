@@ -1,3 +1,10 @@
+## [1.1.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.0...v1.1.1-dev.1) (2023-07-05)
+
+
+### Bug Fixes
+
+* bump hardhat deploy ([84a8a62](https://github.com/VenusProtocol/isolated-pools/commit/84a8a62ee3d289562f82109486dcbac0492552bd))
+
 ## [1.1.0](https://github.com/VenusProtocol/isolated-pools/compare/v1.0.0...v1.1.0) (2023-07-04)
 
 
