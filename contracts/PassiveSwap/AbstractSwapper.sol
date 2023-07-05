@@ -346,12 +346,28 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @custom:event Emits SweepToken event on success
     /// @custom:access Only Governance
     function sweepToken(address tokenAddress) external onlyOwner {
+        preSweepToken(tokenAddress);
+        
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(owner(), balance);
 
         emit SweepToken(address(token));
+        
+        postSwapHook(tokenAddress);
     }
+
+    /// @notice Get the balance for specific token 
+    /// @param token Address od the token
+    function balanceOf(address token) public virtual {}
+
+    /// @notice Operations to perform before sweepToken
+    /// @param token Address od the token
+    function preSweepToken(address token) public virtual {}
+
+    /// @notice Operations to perform after sweepToken
+    /// @param token Address od the token
+    function postSwapHook(address token) public virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
