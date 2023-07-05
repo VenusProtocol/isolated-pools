@@ -9,21 +9,13 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { VTokenInterface } from "../VTokenInterfaces.sol";
+import { IAbstractSwapper } from "./IAbstractSwapper.sol";
 
-contract AbstractSwapper is AccessControlledV8 {
+/// @title AbstractSwapper
+/// @author Venus
+/// @notice Abstract contract will be extended by XVSVaultSwapper and RiskFundSwapper
+abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /// @notice Swap configuration for the tokens pair
-    struct SwapConfiguration {
-        /// tokenIn address
-        address tokenAddressIn;
-        /// tokenOut address
-        address tokenAddressOut;
-        /// incentive on swapping tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
-        uint256 incentive;
-        /// whether the swap is enabled
-        bool enabled;
-    }
 
     uint256 public constant MAX_INCENTIVE = 5e18;
 
@@ -347,17 +339,17 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @custom:access Only Governance
     function sweepToken(address tokenAddress) external onlyOwner {
         preSweepToken(tokenAddress);
-        
+
         IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(owner(), balance);
 
         emit SweepToken(address(token));
-        
+
         postSwapHook(tokenAddress);
     }
 
-    /// @notice Get the balance for specific token 
+    /// @notice Get the balance for specific token
     /// @param token Address od the token
     function balanceOf(address token) public virtual {}
 

@@ -8,11 +8,11 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
-  AbstractSwapper,
-  AbstractSwapper__factory,
   AccessControlManager,
   MockDeflatingToken,
   MockDeflatingToken__factory,
+  MockSwapper,
+  MockSwapper__factory,
   MockToken,
   MockToken__factory,
   ResilientOracleInterface,
@@ -22,7 +22,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 let accessControl: FakeContract<AccessControlManager>;
-let swapper: MockContract<AbstractSwapper>;
+let swapper: MockContract<MockSwapper>;
 let tokenIn: MockContract<MockToken>;
 let tokenOut: MockContract<MockToken>;
 let oracle: FakeContract<ResilientOracleInterface>;
@@ -45,7 +45,7 @@ const MANTISSA_ONE = convertToUnit("1", 18);
 
 async function fixture(): Promise<void> {
   [owner, destination, to] = await ethers.getSigners();
-  const Swapper = await smock.mock<AbstractSwapper__factory>("AbstractSwapper");
+  const Swapper = await smock.mock<MockSwapper__factory>("MockSwapper");
 
   accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
@@ -72,7 +72,7 @@ async function fixture(): Promise<void> {
   };
 }
 
-describe("AbstractSwapper: tests", () => {
+describe("MockSwapper: tests", () => {
   beforeEach(async () => {
     await loadFixture(fixture);
   });
