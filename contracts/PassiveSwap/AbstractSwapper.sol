@@ -29,7 +29,11 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @dev tokenAddressIn => tokenAddressOut => SwapConfiguration
     mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
 
+    /// @notice Address at all incoming tokens are transferred to
     address public destinationAddress;
+
+    /// @notice Boolean of if swap is paused
+    bool public swapPaused;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
@@ -60,6 +64,12 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Emitted when tokens are swapped for exact amount of tokens, for deflationary tokens
     event SwapTokensForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
+    /// @notice Emitted when swap is paused
+    event SwapPaused(address sender);
+
+    /// @notice Emitted when swap is unpaused
+    event SwapResumed(address sender);
+
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
@@ -83,6 +93,12 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Thrown when amountIn is higher than amountInMax
     error AmountInHigherThanMax(uint256 amountInMantissa, uint256 amountInMaxMantissa);
 
+    /// @notice Thrown when swap is paused
+    error SwapTokensPaused();
+
+    /// @notice Thrown when swap is Active
+    error SwapTokensActive();
+
     /// @param accessControlManager_ Access control manager contract address
     function initialize(
         address accessControlManager_,
@@ -92,6 +108,36 @@ contract AbstractSwapper is AccessControlledV8 {
         __AccessControlled_init(accessControlManager_);
         _setPriceOracle(priceOracle_);
         destinationAddress = destinationAddress_;
+        swapPaused = false;
+    }
+
+    /**
+     * @notice Pause swapping of tokens
+     * @custom:event Emits SwapPaused on success
+     * @custom:error SwapTokensPaused thrown when Swap is already paused
+     * @custom:access Restricted by ACM
+     */
+    function pauseSwap() external {
+        _checkAccessAllowed("pauseSwap()");
+        _checkSwapPaused();
+        swapPaused = true;
+        emit SwapPaused(msg.sender);
+    }
+
+    /**
+     * @notice Resume swapping of tokens.
+     * @custom:event Emits SwapResumed on success
+     * @custom:error SwapTokensActive thrown when Swap is already active
+     * @custom:access Restricted by ACM
+     */
+    function resumeSwap() external {
+        _checkAccessAllowed("resumeSwap()");
+        if (!swapPaused) {
+            revert SwapTokensActive();
+        }
+
+        swapPaused = false;
+        emit SwapResumed(msg.sender);
     }
 
     /// @notice Sets a new price oracle
@@ -155,6 +201,7 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressOut,
         address to
     ) external {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
         uint256 actualAmountOut;
@@ -197,6 +244,7 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressOut,
         address to
     ) external {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
@@ -237,6 +285,7 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressOut,
         address to
     ) external {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
         uint256 actualAmountOut;
@@ -268,6 +317,7 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressOut,
         address to
     ) external {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
@@ -475,5 +525,12 @@ contract AbstractSwapper is AccessControlledV8 {
         priceOracle = priceOracle_;
 
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
+    }
+
+    /// @notice To check, is swapping paused
+    function _checkSwapPaused() internal view {
+        if (swapPaused) {
+            revert SwapTokensPaused();
+        }
     }
 }

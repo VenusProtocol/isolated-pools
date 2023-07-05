@@ -537,4 +537,77 @@ describe("AbstractSwapper: tests", () => {
         .withArgs(oracle.address, newOracle.address);
     });
   });
+
+  describe("Pause/Resume functionality", () => {
+    beforeEach(async () => {
+      accessControl.isAllowedToCall.reset;
+      accessControl.isAllowedToCall.returns(true);
+    });
+
+    it("Revert on pauseSwap for non owner call", async () => {
+      accessControl.isAllowedToCall.reset;
+      accessControl.isAllowedToCall.returns(false);
+
+      await expect(swapper.connect(to).pauseSwap()).to.be.revertedWithCustomError(swapper, "Unauthorized");
+    });
+
+    it("Success on pauseSwap", async () => {
+      await expect(swapper.pauseSwap()).to.emit(swapper, "SwapPaused");
+    });
+
+    it("Revert on when swap is already paused", async () => {
+      await swapper.pauseSwap();
+      await expect(swapper.pauseSwap()).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+    });
+
+    it("Swap methods should revert on swap pause", async () => {
+      const Value_1 = convertToUnit(".25", 18);
+      const VALUE_2 = convertToUnit(".5", 18);
+      await swapper.pauseSwap();
+
+      await expect(
+        swapper.swapExactTokensForTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, to.getAddress()),
+      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+
+      await expect(
+        swapper.swapTokensForExactTokens(Value_1, VALUE_2, tokenIn.address, tokenOut.address, to.getAddress()),
+      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+
+      await expect(
+        swapper.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+          Value_1,
+          VALUE_2,
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+
+      await expect(
+        swapper.swapTokensForExactTokensSupportingFeeOnTransferTokens(
+          Value_1,
+          VALUE_2,
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "SwapTokensPaused");
+    });
+
+    it("Revert on resumeSwap for non owner call", async () => {
+      accessControl.isAllowedToCall.reset;
+      accessControl.isAllowedToCall.returns(false);
+
+      await expect(swapper.connect(to).resumeSwap()).to.be.revertedWithCustomError(swapper, "Unauthorized");
+    });
+
+    it("Success on resumeSwap", async () => {
+      await swapper.pauseSwap();
+      await expect(swapper.resumeSwap()).to.emit(swapper, "SwapResumed");
+    });
+
+    it("Revert on when swap is already active", async () => {
+      await expect(swapper.resumeSwap()).to.be.revertedWithCustomError(swapper, "SwapTokensActive");
+    });
+  });
 });
