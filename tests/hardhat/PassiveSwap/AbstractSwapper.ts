@@ -610,4 +610,20 @@ describe("AbstractSwapper: tests", () => {
       await expect(swapper.resumeSwap()).to.be.revertedWithCustomError(swapper, "SwapTokensActive");
     });
   });
+
+  describe("SweepTokens abstract swapper", () => {
+    it("Transfer sweep tokens", async () => {
+      expect(await tokenIn.balanceOf(swapper.address)).to.equals(0);
+      await expect(tokenIn.transfer(swapper.address, 1000)).to.changeTokenBalances(
+        tokenIn,
+        [await owner.getAddress(), swapper.address],
+        [-1000, 1000],
+      );
+      await expect(swapper.sweepToken(tokenIn.address)).to.changeTokenBalances(
+        tokenIn,
+        [await owner.getAddress(), swapper.address],
+        [1000, -1000],
+      );
+    });
+  });
 });

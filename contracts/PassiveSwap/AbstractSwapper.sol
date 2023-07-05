@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
+
+import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { VTokenInterface } from "../VTokenInterfaces.sol";
-import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
 
 contract AbstractSwapper is AccessControlledV8 {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     /// @notice Swap configuration for the tokens pair
     struct SwapConfiguration {
         /// tokenIn address
@@ -69,6 +73,9 @@ contract AbstractSwapper is AccessControlledV8 {
 
     /// @notice Emitted when swap is unpaused
     event SwapResumed(address sender);
+
+    /// @notice Event emitted when tokens are swept
+    event SweepToken(address indexed token);
 
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
@@ -334,6 +341,18 @@ contract AbstractSwapper is AccessControlledV8 {
         emit SwapTokensForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
+    /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+    /// @param tokenAddress The address of the ERC-20 token to sweep
+    /// @custom:event Emits SweepToken event on success
+    /// @custom:access Only Governance
+    function sweepToken(address tokenAddress) external onlyOwner {
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(owner(), balance);
+
+        emit SweepToken(address(token));
+    }
+
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
     /// @param tokenAddressIn Address of the token to swap
@@ -452,12 +471,12 @@ contract AbstractSwapper is AccessControlledV8 {
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
-        tokenIn.transferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
+        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.transfer(to, amountOutMantissa);
+        tokenOut.safeTransfer(to, amountOutMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
         unchecked {
@@ -500,12 +519,12 @@ contract AbstractSwapper is AccessControlledV8 {
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
-        tokenIn.transferFrom(msg.sender, destinationAddress, amountInMantissa);
+        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountInMantissa);
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.transfer(to, amountSwappedMantissa);
+        tokenOut.safeTransfer(to, amountSwappedMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
         unchecked {
