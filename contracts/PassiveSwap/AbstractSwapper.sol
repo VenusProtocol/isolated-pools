@@ -9,7 +9,6 @@ import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle
 
 import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { VTokenInterface } from "../VTokenInterfaces.sol";
 import { IAbstractSwapper } from "./IAbstractSwapper.sol";
 
 /// @title AbstractSwapper
@@ -387,9 +386,9 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
             revert SwapConfigurationNotEnabled();
         }
 
-        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
-        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
-        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
@@ -429,9 +428,9 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
             revert SwapConfigurationNotEnabled();
         }
 
-        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
-        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
-        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
