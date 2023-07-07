@@ -362,12 +362,27 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     ) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
-        if (rewardTokenSupplyState[address(vToken)].lastRewardingBlock != supplyLastRewardingBlock) {
+        require(supplyLastRewardingBlock > block.number, "setting last rewarding block in the past is not allowed");
+        require(borrowLastRewardingBlock > block.number, "setting last rewarding block in the past is not allowed");
+
+        uint32 currentSupplyLastRewardingBlock = rewardTokenSupplyState[address(vToken)].lastRewardingBlock;
+        uint32 currentBorrowLastRewardingBlock = rewardTokenBorrowState[address(vToken)].lastRewardingBlock;
+
+        require(
+            currentSupplyLastRewardingBlock == 0 || currentSupplyLastRewardingBlock > block.number,
+            "this RewardsDistributor is already locked"
+        );
+        require(
+            currentBorrowLastRewardingBlock == 0 || currentBorrowLastRewardingBlock > block.number,
+            "this RewardsDistributor is already locked"
+        );
+
+        if (currentSupplyLastRewardingBlock != supplyLastRewardingBlock) {
             rewardTokenSupplyState[address(vToken)].lastRewardingBlock = supplyLastRewardingBlock;
             emit SupplyLastRewardingBlockUpdated(address(vToken), supplyLastRewardingBlock);
         }
 
-        if (rewardTokenBorrowState[address(vToken)].lastRewardingBlock != borrowLastRewardingBlock) {
+        if (currentBorrowLastRewardingBlock != borrowLastRewardingBlock) {
             rewardTokenBorrowState[address(vToken)].lastRewardingBlock = borrowLastRewardingBlock;
             emit BorrowLastRewardingBlockUpdated(address(vToken), borrowLastRewardingBlock);
         }

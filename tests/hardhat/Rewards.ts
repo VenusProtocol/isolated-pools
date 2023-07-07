@@ -330,7 +330,7 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
     await vWBTC.connect(user1).mint(convertToUnit(10, 8));
 
-    let lastRewardingBlock = await ethers.provider.getBlockNumber();
+    let lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
 
     await rewardsDistributor.setLastRewardingBlocks(
       [vWBTC.address, vDAI.address],
@@ -338,49 +338,31 @@ describe("Rewards: Tests", async function () {
       [lastRewardingBlock, lastRewardingBlock],
     );
 
-    await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
-      vWBTC.address,
-      vDAI.address,
-    ]);
-
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
-
-    lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 1;
-
-    await rewardsDistributor.setLastRewardingBlocks(
-      [vWBTC.address, vDAI.address],
-      [lastRewardingBlock, lastRewardingBlock],
-      [lastRewardingBlock, lastRewardingBlock],
-    );
+    await mine(100);
 
     await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
       vWBTC.address,
       vDAI.address,
     ]);
 
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.75, 18));
-
-    lastRewardingBlock = 0;
-
-    await rewardsDistributor.setLastRewardingBlocks(
-      [vWBTC.address, vDAI.address],
-      [lastRewardingBlock, lastRewardingBlock],
-      [lastRewardingBlock, lastRewardingBlock],
-    );
-
-    await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
-      vWBTC.address,
-      vDAI.address,
-    ]);
-
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(1.5, 18));
+    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.5, 18));
 
     await expect(
       rewardsDistributor.setLastRewardingBlocks(
-        [vWBTC.address],
+        [vWBTC.address, vDAI.address],
+        [lastRewardingBlock - 10, lastRewardingBlock - 10],
+        [lastRewardingBlock - 10, lastRewardingBlock - 10],
+      ),
+    ).to.be.revertedWith("setting last rewarding block in the past is not allowed");
+
+    lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
+
+    await expect(
+      rewardsDistributor.setLastRewardingBlocks(
+        [vWBTC.address, vDAI.address],
         [lastRewardingBlock, lastRewardingBlock],
         [lastRewardingBlock, lastRewardingBlock],
       ),
-    ).to.be.revertedWith("RewardsDistributor::setLastRewardingBlocks invalid input");
+    ).to.be.revertedWith("this RewardsDistributor is already locked");
   });
 });
