@@ -260,8 +260,11 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
             "RewardsDistributor::setLastRewardingBlocks invalid input"
         );
 
-        for (uint256 i; i < numTokens; ++i) {
+        for (uint256 i; i < numTokens;) {
             _setLastRewardingBlock(vTokens[i], supplyLastRewardingBlocks[i], borrowLastRewardingBlocks[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
