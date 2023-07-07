@@ -20,7 +20,7 @@ import {
   getUnregisteredVTokens,
   toAddress,
 } from "../helpers/deploymentUtils";
-import { Comptroller, PoolRegistry, RewardsDistributor } from "../typechain";
+import { AccessControlManager, Comptroller, PoolRegistry, RewardsDistributor } from "../typechain";
 
 interface GovernanceCommand {
   contract: string;
@@ -29,21 +29,6 @@ interface GovernanceCommand {
   parameters: any[];
   value: BigNumberish;
 }
-
-interface ProposalActions {
-  targets: string[];
-  values: BigNumberish[];
-  signatures: string[];
-  calldatas: string[];
-}
-
-const toProposalActions = (commands: GovernanceCommand[]): ProposalActions => {
-  const targets = commands.map(c => c.contract);
-  const values = commands.map(c => c.value);
-  const signatures = commands.map(c => c.signature);
-  const calldatas = commands.map(c => ethers.utils.defaultAbiCoder.encode(c.argTypes, c.parameters));
-  return { targets, values, signatures, calldatas };
-};
 
 const addRewardsDistributor = async (
   rewardsDistributor: RewardsDistributor,
@@ -90,6 +75,7 @@ const setRewardSpeed = async (
 
 const configureRewards = async (
   unregisteredRewardDistributors: PoolConfig[],
+  owner: string,
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const commands = await Promise.all(
@@ -100,7 +86,7 @@ const configureRewards = async (
           const contractName = `RewardsDistributor_${rewardConfig.asset}_${pool.id}`;
           const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
           return [
-            ...(await acceptOwnership(contractName, hre)),
+            ...(await acceptOwnership(contractName, owner, hre)),
             await addRewardsDistributor(rewardsDistributor, pool, rewardConfig),
             await setRewardSpeed(pool, rewardsDistributor, rewardConfig),
           ];
@@ -112,15 +98,24 @@ const configureRewards = async (
   return commands.flat();
 };
 
-const acceptOwnership = async (contractName: string, hre: HardhatRuntimeEnvironment): Promise<GovernanceCommand[]> => {
+const acceptOwnership = async (
+  contractName: string,
+  targetOwner: string,
+  hre: HardhatRuntimeEnvironment,
+): Promise<GovernanceCommand[]> => {
   if (!hre.network.live) {
     return [];
   }
+  const abi = ["function owner() view returns (address)"];
+  const deployment = await hre.deployments.get(contractName);
+  const contract = await ethers.getContractAt(abi, deployment.address);
+  if ((await contract.owner()) === targetOwner) {
+    return [];
+  }
   console.log(`Adding a command to accept the admin rights over ${contractName}`);
-  const contract = await ethers.getContract(contractName);
   return [
     {
-      contract: contract.address,
+      contract: deployment.address,
       signature: "acceptOwnership()",
       argTypes: [],
       parameters: [],
@@ -160,6 +155,7 @@ const addPool = (poolRegistry: PoolRegistry, comptroller: Comptroller, pool: Poo
 
 const addPools = async (
   unregisteredPools: PoolConfig[],
+  poolsOwner: string,
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
@@ -167,7 +163,7 @@ const addPools = async (
     unregisteredPools.map(async (pool: PoolConfig) => {
       const comptroller = await ethers.getContract<Comptroller>(`Comptroller_${pool.id}`);
       return [
-        ...(await acceptOwnership(`Comptroller_${pool.id}`, hre)),
+        ...(await acceptOwnership(`Comptroller_${pool.id}`, poolsOwner, hre)),
         await setOracle(comptroller, pool),
         addPool(poolRegistry, comptroller, pool),
       ];
@@ -203,7 +199,7 @@ const transferInitialLiquidity = async (
     return [
       {
         contract: preconfiguredAddresses.VTreasury,
-        signature: "withdrawTreasuryBep20(address,uint256,address)",
+        signature: "withdrawTreasuryBEP20(address,uint256,address)",
         argTypes: ["address", "uint256", "address"],
         parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
         value: 0,
@@ -223,8 +219,15 @@ const approvePoolRegistry = async (
   const token = getTokenConfig(asset, tokensConfig);
   const tokenContract = await getUnderlyingToken(token.symbol, tokensConfig);
 
-  console.log(`Adding a command to approve ${initialSupply} ${token.symbol} to PoolRegistry`);
+  console.log(`Adding commands to approve ${initialSupply} ${token.symbol} to PoolRegistry`);
   return [
+    {
+      contract: tokenContract.address,
+      signature: "approve(address,uint256)",
+      argTypes: ["address", "uint256"],
+      parameters: [poolRegistry.address, 0],
+      value: 0,
+    },
     {
       contract: tokenContract.address,
       signature: "approve(address,uint256)",
@@ -283,26 +286,59 @@ const addMarkets = async (
   return poolCommands.flat();
 };
 
-const configureAccessControls = async (deploymentConfig: DeploymentConfig, hre: HardhatRuntimeEnvironment) => {
+const makeRole = (mainnetBehavior: boolean, targetContract: string, method: string): string => {
+  if (mainnetBehavior && targetContract === ethers.constants.AddressZero) {
+    return ethers.utils.keccak256(
+      ethers.utils.solidityPack(["bytes32", "string"], [ethers.constants.HashZero, method]),
+    );
+  }
+  return ethers.utils.keccak256(ethers.utils.solidityPack(["address", "string"], [targetContract, method]));
+};
+
+const hasPermission = async (
+  accessControl: AccessControlManager,
+  targetContract: string,
+  method: string,
+  caller: string,
+  hre: HardhatRuntimeEnvironment,
+): Promise<boolean> => {
+  const role = makeRole(hre.network.name === "bscmainnet", targetContract, method);
+  return accessControl.hasRole(role, caller);
+};
+
+const configureAccessControls = async (
+  deploymentConfig: DeploymentConfig,
+  hre: HardhatRuntimeEnvironment,
+): Promise<GovernanceCommand[]> => {
   const { accessControlConfig, preconfiguredAddresses } = deploymentConfig;
-  const accessControlManager = await toAddress(
+  const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
   );
-  return await Promise.all(
+  const accessControlManager = await ethers.getContractAt<AccessControlManager>(
+    "AccessControlManager",
+    accessControlManagerAddress,
+  );
+  const commands = await Promise.all(
     accessControlConfig.map(async (entry: AccessControlEntry) => {
       const { caller, target, method } = entry;
       const callerAddress = await toAddress(caller, hre);
       const targetAddress = await toAddress(target, hre);
-      return {
-        contract: accessControlManager,
-        signature: "giveCallPermission(address,string,address)",
-        argTypes: ["address", "string", "address"],
-        parameters: [targetAddress, method, callerAddress],
-        value: 0,
-      };
+      if (await hasPermission(accessControlManager, targetAddress, method, callerAddress, hre)) {
+        return [];
+      }
+      return [
+        {
+          contract: accessControlManagerAddress,
+          signature: "giveCallPermission(address,string,address)",
+          argTypes: ["address", "string", "address"],
+          parameters: [targetAddress, method, callerAddress],
+          value: 0,
+        },
+      ];
     }),
   );
+  return commands.flat();
 };
 
 const logCommand = (prefix: string, command: GovernanceCommand) => {
@@ -338,43 +374,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const unregisteredPools = await getUnregisteredPools(poolConfig, hre);
   const unregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
   const unregisteredRewardsDistributors = await getUnregisteredRewardsDistributors(poolConfig, hre);
+  const owner = preconfiguredAddresses.NormalTimelock || deployer;
   const commands = [
     ...(await configureAccessControls(deploymentConfig, hre)),
-    ...(await acceptOwnership("PoolRegistry", hre)),
-    ...(await addPools(unregisteredPools, hre)),
+    ...(await acceptOwnership("PoolRegistry", owner, hre)),
+    ...(await addPools(unregisteredPools, owner, hre)),
     ...(await addMarkets(unregisteredVTokens, deploymentConfig, hre)),
-    ...(await configureRewards(unregisteredRewardsDistributors, hre)),
+    ...(await configureRewards(unregisteredRewardsDistributors, owner, hre)),
   ];
 
-  const proposalActions = toProposalActions(commands);
-  console.log("targets", proposalActions.targets);
-  console.log("signatures", proposalActions.signatures);
-  console.log("calldatas", proposalActions.calldatas);
-  console.log("values", proposalActions.values);
-
   if (hre.network.live) {
-    const governorBravo = await ethers.getContractAt("GovernorBravoDelegate", preconfiguredAddresses.GovernorBravo);
-    const NORMAL_VIP = 0;
-    const meta = {
-      version: "v2",
-      title: "Isolated lending, phase 1",
-      description: ``,
-      forDescription: "I agree that Venus Protocol should proceed with IL Phase 1",
-      againstDescription: "I do not think that Venus Protocol should proceed with IL Phase 1",
-      abstainDescription: "I am indifferent to whether Venus Protocol proceeds with IL Phase 1",
-    };
-    const signer = await ethers.getSigner(deployer);
-    const tx = await governorBravo
-      .connect(signer)
-      .propose(
-        proposalActions.targets,
-        proposalActions.values,
-        proposalActions.signatures,
-        proposalActions.calldatas,
-        JSON.stringify(meta),
-        NORMAL_VIP,
-      );
-    await tx.wait();
+    console.log("Please propose a VIP with the following commands:");
+    console.log(
+      JSON.stringify(
+        commands.map(c => ({ target: c.contract, signature: c.signature, params: c.parameters, value: c.value })),
+      ),
+    );
   } else {
     await executeCommands(commands, hre);
   }
