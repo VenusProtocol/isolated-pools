@@ -249,9 +249,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @param borrowLastRewardingBlocks New borrow-side REWARD TOKEN last rewarding block for the corresponding market
      */
     function setLastRewardingBlocks(
-        VToken[] memory vTokens,
-        uint32[] memory supplyLastRewardingBlocks,
-        uint32[] memory borrowLastRewardingBlocks
+        VToken[] calldata vTokens,
+        uint32[] calldata supplyLastRewardingBlocks,
+        uint32[] calldata borrowLastRewardingBlocks
     ) external {
         _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
         uint256 numTokens = vTokens.length;
