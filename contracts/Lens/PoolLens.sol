@@ -488,6 +488,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
+            blockNumber = borrowState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
@@ -509,6 +514,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
+            blockNumber = supplyState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
