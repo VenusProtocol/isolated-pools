@@ -652,6 +652,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
       },
+      {
+        isMock: true,
+        name: "Stader (Wormhole)",
+        symbol: "SD",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -717,8 +724,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "HAY",
             markets: ["HAY"],
-            supplySpeeds: ["1736111111111111"], // 1500 HAY over 30 days
-            borrowSpeeds: ["1736111111111111"], // 1500 HAY over 30 days
+            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
           },
         ],
       },
@@ -832,6 +839,14 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
           },
         ],
+        rewards: [
+          {
+            asset: "BSW",
+            markets: ["BSW"],
+            supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+            borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+        ],
       },
       {
         id: "GameFi",
@@ -907,6 +922,20 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+          },
+        ],
+        rewards: [
+          {
+            asset: "FLOKI",
+            markets: ["FLOKI"],
+            supplySpeeds: ["230305570295138888888"], // 198984012.735 FLOKI over 30 days (864000 blocks), 18 decimals on testnet
+            borrowSpeeds: ["230305570295138888888"], // 198984012.735 FLOKI over 30 days (864000 blocks), 18 decimals on testnet
+          },
+          {
+            asset: "RACA",
+            markets: ["RACA"],
+            supplySpeeds: ["6076388888888888888"], // 5250000 RACA over 30 days (864000 blocks)
+            borrowSpeeds: ["6076388888888888888"], // 5250000 RACA over 30 days (864000 blocks)
           },
         ],
       },
@@ -1020,6 +1049,26 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
+        rewards: [
+          {
+            asset: "ankrBNB",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["26620370370370"], // 23 ankrBNB over 30 days (864000 blocks)
+            borrowSpeeds: ["26620370370370"], // 23 ankrBNB over 30 days (864000 blocks)
+          },
+          {
+            asset: "stkBNB",
+            markets: ["stkBNB"],
+            supplySpeeds: ["4629629629629"], // 4 stkBNB over 30 days (864000 blocks)
+            borrowSpeeds: ["1504629629629"], // 1.3 stkBNB over 30 days (864000 blocks)
+          },
+          {
+            asset: "SD",
+            markets: ["BNBx"],
+            supplySpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
+            borrowSpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
+          },
+        ],
       },
       {
         id: "Tron",
@@ -1129,6 +1178,32 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+          },
+        ],
+        rewards: [
+          {
+            asset: "BTT",
+            markets: ["BTT"],
+            supplySpeeds: ["19969071901620370370370"], // 17253278123 BTT over 30 days (864000 blocks)
+            borrowSpeeds: ["19969071901620370370370"], // 17253278123 BTT over 30 days (864000 blocks)
+          },
+          {
+            asset: "WIN",
+            markets: ["WIN"],
+            supplySpeeds: ["24805131365740740740"], // 21431633.5 WIN over 30 days (864000 blocks)
+            borrowSpeeds: ["24805131365740740740"], // 21431633.5 WIN over 30 days (864000 blocks)
+          },
+          {
+            asset: "TRX",
+            markets: ["TRX"],
+            supplySpeeds: ["45461"], // 39278.5 TRX over 30 days (864000 blocks)
+            borrowSpeeds: ["45461"], // 39278.5 TRX over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDD",
+            markets: ["USDD"],
+            supplySpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
+            borrowSpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
           },
         ],
       },
@@ -1269,6 +1344,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
       },
+      {
+        isMock: false,
+        name: "Stader (Wormhole)",
+        symbol: "SD",
+        decimals: 18,
+        tokenAddress: "0x3BC5AC0dFdC871B365d159f728dd1B9A0B5481E8",
+      },
     ],
     poolConfig: [
       {
@@ -1330,7 +1412,14 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "HAY",
+            markets: ["HAY"],
+            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+          },
+        ],
       },
       {
         id: "DeFi",
@@ -1442,7 +1531,14 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "BSW",
+            markets: ["BSW"],
+            supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+            borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+        ],
       },
       {
         id: "GameFi",
@@ -1520,7 +1616,20 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "FLOKI",
+            markets: ["FLOKI"],
+            supplySpeeds: ["230305570295"], // 198984012.735 FLOKI over 30 days (864000 blocks)
+            borrowSpeeds: ["230305570295"], // 198984012.735 FLOKI over 30 days (864000 blocks)
+          },
+          {
+            asset: "RACA",
+            markets: ["RACA"],
+            supplySpeeds: ["6076388888888888888"], // 5250000 RACA over 30 days (864000 blocks)
+            borrowSpeeds: ["6076388888888888888"], // 5250000 RACA over 30 days (864000 blocks)
+          },
+        ],
       },
       {
         id: "LiquidStakedBNB",
@@ -1632,7 +1741,26 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "ankrBNB",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["26620370370370"], // 23 ankrBNB over 30 days (864000 blocks)
+            borrowSpeeds: ["26620370370370"], // 23 ankrBNB over 30 days (864000 blocks)
+          },
+          {
+            asset: "stkBNB",
+            markets: ["stkBNB"],
+            supplySpeeds: ["4629629629629"], // 4 stkBNB over 30 days (864000 blocks)
+            borrowSpeeds: ["1504629629629"], // 1.3 stkBNB over 30 days (864000 blocks)
+          },
+          {
+            asset: "SD",
+            markets: ["BNBx"],
+            supplySpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
+            borrowSpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
+          },
+        ],
       },
       {
         id: "Tron",
@@ -1744,7 +1872,32 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "BTT",
+            markets: ["BTT"],
+            supplySpeeds: ["19969071901620370370370"], // 17253278123 BTT over 30 days (864000 blocks)
+            borrowSpeeds: ["19969071901620370370370"], // 17253278123 BTT over 30 days (864000 blocks)
+          },
+          {
+            asset: "WIN",
+            markets: ["WIN"],
+            supplySpeeds: ["24805131365740740740"], // 21431633.5 WIN over 30 days (864000 blocks)
+            borrowSpeeds: ["24805131365740740740"], // 21431633.5 WIN over 30 days (864000 blocks)
+          },
+          {
+            asset: "TRX",
+            markets: ["TRX"],
+            supplySpeeds: ["45461"], // 39278.5 TRX over 30 days (864000 blocks)
+            borrowSpeeds: ["45461"], // 39278.5 TRX over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDD",
+            markets: ["USDD"],
+            supplySpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
+            borrowSpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
+          },
+        ],
       },
     ],
     accessControlConfig: [
