@@ -244,7 +244,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
     /**
      * @notice Set REWARD TOKEN last rewarding block for the specified markets
-     * @param vTokens The markets whose REWARD TOKEN rewarding block to update
+     * @param vTokens The markets whose REWARD TOKEN last rewarding block to update
      * @param supplyLastRewardingBlocks New supply-side REWARD TOKEN last rewarding block for the corresponding market
      * @param borrowLastRewardingBlocks New borrow-side REWARD TOKEN last rewarding block for the corresponding market
      */
