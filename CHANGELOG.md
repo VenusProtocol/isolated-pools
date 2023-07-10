@@ -1,3 +1,11 @@
+## [1.2.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2023-07-10)
+
+
+### Bug Fixes
+
+* use hardhat 2.16.1 ([a5c01e7](https://github.com/VenusProtocol/isolated-pools/commit/a5c01e7d452d04b10dba7466be9e7d25f43cf01b))
+* use node 18 ([97d704e](https://github.com/VenusProtocol/isolated-pools/commit/97d704e0042a3d535d6605a8791541f2b671cdf3))
+
 ## [1.2.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.1-dev.1...v1.2.0-dev.1) (2023-07-10)
 
 
