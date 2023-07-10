@@ -234,7 +234,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
-            "setRewardTokenSpeeds invalid input"
+            "invalid setRewardTokenSpeeds"
         );
 
         for (uint256 i; i < numTokens; ++i) {
