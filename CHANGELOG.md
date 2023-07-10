@@ -1,3 +1,24 @@
+## [1.2.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.1-dev.1...v1.2.0-dev.1) (2023-07-10)
+
+
+### Features
+
+* added tests for pausing rewards ([4d8720f](https://github.com/VenusProtocol/isolated-pools/commit/4d8720f483bc76d7c1f39d69a6a2ff32118111d3))
+* set/update last rewarding block ([13bdc7f](https://github.com/VenusProtocol/isolated-pools/commit/13bdc7f862929f8cc350f47e0ba922cd2edfe65f))
+* stop rewards at a block number ([4b2ada4](https://github.com/VenusProtocol/isolated-pools/commit/4b2ada43e7de8375062036d3be7e71f4dd672fdd))
+
+
+### Bug Fixes
+
+* fixed tests ([1b173dc](https://github.com/VenusProtocol/isolated-pools/commit/1b173dc1b0a7232a02c174559535ae18c3801b9e))
+* pause rewards in  pool lens ([9b0566b](https://github.com/VenusProtocol/isolated-pools/commit/9b0566b24a06fe22180a3752eea0ac8c127eb4d7))
+* shorten the size of revert string ([e32ef5d](https://github.com/VenusProtocol/isolated-pools/commit/e32ef5dd249db156821b21984b46fd4c507de51e))
+* use getBlockNumber() ([71a36e6](https://github.com/VenusProtocol/isolated-pools/commit/71a36e64cf1f32d81ba9bd728f230fe488b9190b))
+* VEN-1684 and VEN-1685 ([c459065](https://github.com/VenusProtocol/isolated-pools/commit/c4590657669993c901e64a5fe9837faeef5017d0))
+* VENUS-RD-001 ([b6413c5](https://github.com/VenusProtocol/isolated-pools/commit/b6413c5908e3b62a14b038bc78486f2a765d085a))
+* VENUS-RD-002 ([1c1f749](https://github.com/VenusProtocol/isolated-pools/commit/1c1f7498d144702f61ec37f27011f60f1b955216))
+* VENUS-RD-003 ([07fd8f3](https://github.com/VenusProtocol/isolated-pools/commit/07fd8f3af742b7fa04f201f6024291ca46ba6a71))
+
 ## [1.1.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.0...v1.1.1-dev.1) (2023-07-05)
 
 
