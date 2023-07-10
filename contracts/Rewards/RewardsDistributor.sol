@@ -232,10 +232,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     ) external {
         _checkAccessAllowed("setRewardTokenSpeeds(address[],uint256[],uint256[])");
         uint256 numTokens = vTokens.length;
-        require(
-            numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
-            "invalid setRewardTokenSpeeds"
-        );
+        require(numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length, "invalid setRewardTokenSpeeds");
 
         for (uint256 i; i < numTokens; ++i) {
             _setRewardTokenSpeed(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
@@ -365,18 +362,20 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     ) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
-        require(supplyLastRewardingBlock > block.number, "setting last rewarding block in the past is not allowed");
-        require(borrowLastRewardingBlock > block.number, "setting last rewarding block in the past is not allowed");
+        uint256 blockNumber = getBlockNumber();
+
+        require(supplyLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
+        require(borrowLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
 
         uint32 currentSupplyLastRewardingBlock = rewardTokenSupplyState[address(vToken)].lastRewardingBlock;
         uint32 currentBorrowLastRewardingBlock = rewardTokenBorrowState[address(vToken)].lastRewardingBlock;
 
         require(
-            currentSupplyLastRewardingBlock == 0 || currentSupplyLastRewardingBlock > block.number,
+            currentSupplyLastRewardingBlock == 0 || currentSupplyLastRewardingBlock > blockNumber,
             "this RewardsDistributor is already locked"
         );
         require(
-            currentBorrowLastRewardingBlock == 0 || currentBorrowLastRewardingBlock > block.number,
+            currentBorrowLastRewardingBlock == 0 || currentBorrowLastRewardingBlock > blockNumber,
             "this RewardsDistributor is already locked"
         );
 
