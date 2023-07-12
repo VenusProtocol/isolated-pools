@@ -20,6 +20,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
 
   const pools = await getUnregisteredRewardsDistributors(poolConfig, hre);
+
+  await deploy("RewardsDistributorImpl", {
+    contract: "RewardsDistributor",
+    from: deployer,
+    autoMine: true,
+    log: true,
+  });
+
   for (const pool of pools) {
     const rewards = pool.rewards;
     if (!rewards) continue;
@@ -34,6 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         from: deployer,
         contract: "RewardsDistributor",
         proxy: {
+          implementationName: `RewardsDistributorImpl`,
           owner: proxyOwnerAddress,
           proxyContract: "OpenZeppelinTransparentProxy",
           execute: {

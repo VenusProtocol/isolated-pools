@@ -19,6 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         args: [token.name, token.symbol, token.decimals],
         log: true,
         autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
+        skipIfAlreadyDeployed: true,
       });
     }
   }

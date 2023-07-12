@@ -3,7 +3,7 @@ import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { deployments } from "hardhat";
 
 import { convertToUnit, scaleDownBy } from "../../helpers/utils";
@@ -25,9 +25,9 @@ chai.use(smock.matchers);
 
 const toggleMining = async (status: boolean) => {
   if (!status) {
-    await ethers.provider.send("evm_setAutomine", [false]);
+    await network.provider.send("evm_setAutomine", [false]);
   } else {
-    await ethers.provider.send("evm_setAutomine", [true]);
+    await network.provider.send("evm_setAutomine", [true]);
   }
 };
 
