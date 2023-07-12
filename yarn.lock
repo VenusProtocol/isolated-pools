@@ -3040,7 +3040,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": ^1.0.0
-    "@venusprotocol/oracle": 1.6.12-dev.3
+    "@venusprotocol/oracle": 1.6.12-dev.4
     "@venusprotocol/venus-protocol": ^0.6.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3071,9 +3071,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@venusprotocol/oracle@npm:1.6.12-dev.3":
-  version: 1.6.12-dev.3
-  resolution: "@venusprotocol/oracle@npm:1.6.12-dev.3"
+"@venusprotocol/oracle@npm:1.6.12-dev.4":
+  version: 1.6.12-dev.4
+  resolution: "@venusprotocol/oracle@npm:1.6.12-dev.4"
   dependencies:
     "@chainlink/contracts": ^0.5.1
     "@defi-wonderland/smock": ^2.3.4
@@ -3087,7 +3087,7 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
     solidity-docgen: ^0.6.0-beta.29
-  checksum: 3d77c39c691bea29b612c70720a5b264323941f614711218141c3eb207b52a5c67ac9d75ea2276f9650d090594c06f280f04690d33d8cf818f38a2e991263117
+  checksum: 152ffb3f754cb47c9698771fb8c13d8a24db8acac982773f582d143a99b4611226de67e6dc1bfd372b5ea28f8c653329f19bad5f414891017d556f3a63aa3f5a
   languageName: node
   linkType: hard
 
