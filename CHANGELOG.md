@@ -1,3 +1,14 @@
+## [1.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0-dev.3...v1.2.0-dev.4) (2023-07-12)
+
+
+### Features
+
+* add mainnet deployments for rewards distributors ([3a3a8a2](https://github.com/VenusProtocol/isolated-pools/commit/3a3a8a28a6563117604980fea689b5e3203fea85))
+* add reward configs ([a6cd456](https://github.com/VenusProtocol/isolated-pools/commit/a6cd456cd84de28d0adc2c69637c74a29cb5224f))
+* add testnet deployment for rewards distributors ([5cf6ea3](https://github.com/VenusProtocol/isolated-pools/commit/5cf6ea34496c1f17be196a40706cf0da64b8dd38))
+* redeploy PoolLens on mainnet ([feaeddf](https://github.com/VenusProtocol/isolated-pools/commit/feaeddf0b9a28c876cb4ca81b6129bbd69e4e348))
+* redeploy PoolLens on testnet ([ea5c204](https://github.com/VenusProtocol/isolated-pools/commit/ea5c20422274d6137591344c5259593ad99e4dd4))
+
 ## [1.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0-dev.2...v1.2.0-dev.3) (2023-07-12)
 
 ## [1.2.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2023-07-10)
