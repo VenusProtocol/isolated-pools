@@ -99,6 +99,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
     error SwapTokensActive();
 
     /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
