@@ -17,8 +17,10 @@ import { IAbstractSwapper } from "./IAbstractSwapper.sol";
 abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 5e18;
-
+    
+    /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
     /// @notice swap configurations for the existing pairs
@@ -483,10 +485,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
         tokenOut.safeTransfer(to, amountOutMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
-        unchecked {
-            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-            actualAmountOut = balanceAfterTo - balanceBeforeTo;
-        }
+        actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+        actualAmountOut = balanceAfterTo - balanceBeforeTo;
     }
 
     /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -531,10 +531,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
         tokenOut.safeTransfer(to, amountSwappedMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
-        unchecked {
-            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-            actualAmountOut = balanceAfterTo - balanceBeforeTo;
-        }
+        actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+        actualAmountOut = balanceAfterTo - balanceBeforeTo;
     }
 
     /// @notice Sets a new price oracle
