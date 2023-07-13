@@ -61,7 +61,7 @@ async function fixture(): Promise<void> {
   await tokenOut.faucet(parseUnits("1000", 18));
 
   swapper = await Swapper.deploy();
-  await swapper.initialize(accessControl.address, oracle.address, destination.address);
+  await swapper.initialize(accessControl.address, oracle.address, destination.getAddress());
   accessControl.isAllowedToCall.returns(true);
 
   swapPairConfig = {
@@ -348,6 +348,164 @@ describe("AbstractSwapper: tests", () => {
       tx.wait();
 
       await expect(tx).to.emit(swapper, "SwapExactTokensForTokens").withArgs(expectedResults[0], expectedResults[1]);
+    });
+  });
+
+  describe("Swap tokens for exact tokens", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await swapper.setSwapConfiguration(swapPairConfig);
+      await expect(
+        swapper.swapTokensForExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
+    });
+
+    it("Revert on deflationary token transfer", async () => {
+      const swapPairConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      await expect(
+        swapper.swapTokensForExactTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountInOrAmountOutMismatched");
+    });
+
+    it("Success on swap exact tokens", async () => {
+      const MAX_AMOUNT_IN = convertToUnit(".25", 18);
+      const AMOUNT_OUT = convertToUnit(".5", 18);
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      const expectedResults = await swapper.getAmountIn(AMOUNT_OUT, tokenIn.address, tokenOut.address);
+
+      const tx = await swapper.swapTokensForExactTokens(
+        MAX_AMOUNT_IN,
+        AMOUNT_OUT,
+        tokenIn.address,
+        tokenOut.address,
+        to.getAddress(),
+      );
+
+      tx.wait();
+
+      await expect(tx).to.emit(swapper, "SwapTokensForExactTokens").withArgs(expectedResults[1], expectedResults[0]);
+    });
+  });
+
+  describe("Swap exact tokens for tokens with supporting fee", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await swapper.setSwapConfiguration(swapPairConfig);
+      await expect(
+        swapper.swapExactTokensForTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountOutLowerThanMinRequired");
+    });
+
+    it("Success on swap exact tokens with supporting fee", async () => {
+      const swapPairConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      await expect(
+        swapper.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.emit(swapper, "SwapExactTokensForTokensSupportingFeeOnTransferTokens");
+    });
+  });
+
+  describe("Swap tokens for exact tokens", async () => {
+    beforeEach(async () => {
+      await tokenInDeflationary.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenIn.connect(owner).approve(swapper.address, convertToUnit("1", 18));
+      await tokenOut.transfer(swapper.address, convertToUnit("1.5", 18));
+
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenInDeflationary.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenIn.address).returns(TOKEN_IN_PRICE);
+      await oracle.getUnderlyingPrice.whenCalledWith(tokenOut.address).returns(TOKEN_OUT_PRICE);
+    });
+
+    it("Revert on lower amount out than expected", async () => {
+      await swapper.setSwapConfiguration(swapPairConfig);
+      await expect(
+        swapper.swapTokensForExactTokens(
+          convertToUnit(".5", 18),
+          convertToUnit("1.5", 18),
+          tokenIn.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.be.revertedWithCustomError(swapper, "AmountInHigherThanMax");
+    });
+
+    it("Success on swap exact tokens with supporting fee", async () => {
+      const swapPairConfig = {
+        tokenAddressIn: tokenInDeflationary.address,
+        tokenAddressOut: tokenOut.address,
+        incentive: INCENTIVE,
+        enabled: true,
+      };
+
+      await swapper.setSwapConfiguration(swapPairConfig);
+
+      await expect(
+        swapper.swapTokensForExactTokensSupportingFeeOnTransferTokens(
+          convertToUnit(".25", 18),
+          convertToUnit(".5", 18),
+          tokenInDeflationary.address,
+          tokenOut.address,
+          to.getAddress(),
+        ),
+      ).to.emit(swapper, "SwapTokensForExactTokensSupportingFeeOnTransferTokens");
     });
   });
 
