@@ -68,7 +68,7 @@
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "^1.0.0",
-    "@venusprotocol/oracle": "^1.6.11-dev.7",
+    "@venusprotocol/oracle": "1.6.12-dev.4",
     "@venusprotocol/venus-protocol": "^0.6.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",

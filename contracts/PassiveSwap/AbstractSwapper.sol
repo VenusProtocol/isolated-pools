@@ -1,35 +1,37 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracle } from "@venusprotocol/oracle/contracts/ResilientOracle.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { VTokenInterface } from "../VTokenInterfaces.sol";
+
 import { MANTISSA_ONE, EXP_SCALE } from "../lib/constants.sol";
+import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { IAbstractSwapper } from "./IAbstractSwapper.sol";
 
-contract AbstractSwapper is AccessControlledV8 {
-    /// @notice Swap configuration for the tokens pair
-    struct SwapConfiguration {
-        /// tokenIn address
-        address tokenAddressIn;
-        /// tokenOut address
-        address tokenAddressOut;
-        /// incentive on swapping tokens in mantissa i.e 10% incentive would be 0.1 * 1e18
-        uint256 incentive;
-        /// whether the swap is enabled
-        bool enabled;
-    }
+/// @title AbstractSwapper
+/// @author Venus
+/// @notice Abstract contract will be extended by XVSVaultSwapper and RiskFundSwapper
+abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 5e18;
-
+    
+    /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
     /// @notice swap configurations for the existing pairs
     /// @dev tokenAddressIn => tokenAddressOut => SwapConfiguration
     mapping(address => mapping(address => SwapConfiguration)) public swapConfigurations;
 
+    /// @notice Address at all incoming tokens are transferred to
     address public destinationAddress;
+
+    /// @notice Boolean of if swap is paused
+    bool public swapPaused;
 
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
@@ -60,6 +62,15 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Emitted when tokens are swapped for exact amount of tokens, for deflationary tokens
     event SwapTokensForExactTokensSupportingFeeOnTransferTokens(uint256 amountIn, uint256 amountOut);
 
+    /// @notice Emitted when swap is paused
+    event SwapPaused(address sender);
+
+    /// @notice Emitted when swap is unpaused
+    event SwapResumed(address sender);
+
+    /// @notice Event emitted when tokens are swept
+    event SweepToken(address indexed token);
+
     /// @notice Thrown when given input amount is zero
     error InsufficientInputAmount();
 
@@ -83,15 +94,55 @@ contract AbstractSwapper is AccessControlledV8 {
     /// @notice Thrown when amountIn is higher than amountInMax
     error AmountInHigherThanMax(uint256 amountInMantissa, uint256 amountInMaxMantissa);
 
+    /// @notice Thrown when swap is paused
+    error SwapTokensPaused();
+
+    /// @notice Thrown when swap is Active
+    error SwapTokensActive();
+
     /// @param accessControlManager_ Access control manager contract address
+    /// @param priceOracle_ Resilient oracle address
+    /// @param destinationAddress_  Address at all incoming tokens will transferred to
     function initialize(
         address accessControlManager_,
         ResilientOracle priceOracle_,
         address destinationAddress_
     ) external initializer {
         __AccessControlled_init(accessControlManager_);
+        __ReentrancyGuard_init();
+
         _setPriceOracle(priceOracle_);
         destinationAddress = destinationAddress_;
+        swapPaused = false;
+    }
+
+    /**
+     * @notice Pause swapping of tokens
+     * @custom:event Emits SwapPaused on success
+     * @custom:error SwapTokensPaused thrown when Swap is already paused
+     * @custom:access Restricted by ACM
+     */
+    function pauseSwap() external {
+        _checkAccessAllowed("pauseSwap()");
+        _checkSwapPaused();
+        swapPaused = true;
+        emit SwapPaused(msg.sender);
+    }
+
+    /**
+     * @notice Resume swapping of tokens.
+     * @custom:event Emits SwapResumed on success
+     * @custom:error SwapTokensActive thrown when Swap is already active
+     * @custom:access Restricted by ACM
+     */
+    function resumeSwap() external {
+        _checkAccessAllowed("resumeSwap()");
+        if (!swapPaused) {
+            revert SwapTokensActive();
+        }
+
+        swapPaused = false;
+        emit SwapResumed(msg.sender);
     }
 
     /// @notice Sets a new price oracle
@@ -154,7 +205,8 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
         uint256 actualAmountOut;
@@ -196,7 +248,8 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
@@ -236,7 +289,8 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountSwappedMantissa;
         uint256 actualAmountOut;
@@ -267,7 +321,8 @@ contract AbstractSwapper is AccessControlledV8 {
         address tokenAddressIn,
         address tokenAddressOut,
         address to
-    ) external {
+    ) external nonReentrant {
+        _checkSwapPaused();
         uint256 actualAmountIn;
         uint256 amountInMantissa;
         uint256 actualAmountOut;
@@ -283,6 +338,26 @@ contract AbstractSwapper is AccessControlledV8 {
 
         emit SwapTokensForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
+
+    /// @notice A public function to sweep accidental ERC-20 transfers to this contract. Tokens are sent to admin (timelock)
+    /// @param tokenAddress The address of the ERC-20 token to sweep
+    /// @custom:event Emits SweepToken event on success
+    /// @custom:access Only Governance
+    function sweepToken(address tokenAddress) external onlyOwner nonReentrant {
+        IERC20Upgradeable token = IERC20Upgradeable(tokenAddress);
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(owner(), balance);
+
+        emit SweepToken(address(token));
+    }
+
+    /// @notice Get the balance for specific token
+    /// @param token Address od the token
+    function balanceOf(address token) public virtual {}
+
+    /// @notice Operations to perform after sweepToken
+    /// @param token Address od the token
+    function postSwapHook(address token) public virtual {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -307,9 +382,9 @@ contract AbstractSwapper is AccessControlledV8 {
             revert SwapConfigurationNotEnabled();
         }
 
-        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
-        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
-        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
@@ -349,9 +424,9 @@ contract AbstractSwapper is AccessControlledV8 {
             revert SwapConfigurationNotEnabled();
         }
 
-        uint256 maxTokenOutLiquidity = VTokenInterface(tokenAddressOut).balanceOf(address(this));
-        uint256 tokenInUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressIn);
-        uint256 tokenOutUnderlyingPrice = priceOracle.getUnderlyingPrice(tokenAddressOut);
+        uint256 maxTokenOutLiquidity = IERC20Upgradeable(tokenAddressOut).balanceOf(address(this));
+        uint256 tokenInUnderlyingPrice = priceOracle.getPrice(tokenAddressIn);
+        uint256 tokenOutUnderlyingPrice = priceOracle.getPrice(tokenAddressOut);
 
         /// amount of tokenAddressOut after including incentive
         uint256 conversionWithIncentive = MANTISSA_ONE + configuration.incentive;
@@ -402,18 +477,16 @@ contract AbstractSwapper is AccessControlledV8 {
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
-        tokenIn.transferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
+        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountSwappedMantissa);
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.transfer(to, amountOutMantissa);
+        tokenOut.safeTransfer(to, amountOutMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
-        unchecked {
-            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-            actualAmountOut = balanceAfterTo - balanceBeforeTo;
-        }
+        actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+        actualAmountOut = balanceAfterTo - balanceBeforeTo;
     }
 
     /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -450,18 +523,16 @@ contract AbstractSwapper is AccessControlledV8 {
 
         IERC20Upgradeable tokenIn = IERC20Upgradeable(tokenAddressIn);
         uint256 balanceBeforeDestination = tokenIn.balanceOf(destinationAddress);
-        tokenIn.transferFrom(msg.sender, destinationAddress, amountInMantissa);
+        tokenIn.safeTransferFrom(msg.sender, destinationAddress, amountInMantissa);
         uint256 balanceAfterDestination = tokenIn.balanceOf(destinationAddress);
 
         IERC20Upgradeable tokenOut = IERC20Upgradeable(tokenAddressOut);
         uint256 balanceBeforeTo = tokenOut.balanceOf(to);
-        tokenOut.transfer(to, amountSwappedMantissa);
+        tokenOut.safeTransfer(to, amountSwappedMantissa);
         uint256 balanceAfterTo = tokenOut.balanceOf(to);
 
-        unchecked {
-            actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
-            actualAmountOut = balanceAfterTo - balanceBeforeTo;
-        }
+        actualAmountIn = balanceAfterDestination - balanceBeforeDestination;
+        actualAmountOut = balanceAfterTo - balanceBeforeTo;
     }
 
     /// @notice Sets a new price oracle
@@ -475,5 +546,12 @@ contract AbstractSwapper is AccessControlledV8 {
         priceOracle = priceOracle_;
 
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
+    }
+
+    /// @notice To check, is swapping paused
+    function _checkSwapPaused() internal view {
+        if (swapPaused) {
+            revert SwapTokensPaused();
+        }
     }
 }
