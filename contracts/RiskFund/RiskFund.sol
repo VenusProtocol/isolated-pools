@@ -9,13 +9,8 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { IRiskFund } from "./IRiskFund.sol";
 import { ReserveHelpers } from "./ReserveHelpers.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
-import { VToken } from "../VToken.sol";
-import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
-import { PoolRegistry } from "../Pool/PoolRegistry.sol";
-import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
 import { IShortfall } from "../Shortfall/IShortfall.sol";
-import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
@@ -24,44 +19,33 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
  * @notice Contract with basic features to track/hold different assets for different Comptrollers.
  * @dev This contract does not support BNB.
  */
-contract RiskFund is
-    Ownable2StepUpgradeable,
-    AccessControlledV8,
-    ExponentialNoError,
-    ReserveHelpers,
-    MaxLoopsLimitHelper,
-    IRiskFund
-{
+contract RiskFund is Ownable2StepUpgradeable, AccessControlledV8, ExponentialNoError, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private pancakeSwapRouter;
-    uint256 private minAmountToConvert;
-    address private convertibleBaseAsset;
-    address private shortfall;
+    address public convertibleBaseAsset;
+    address public shortfall;
+    address public riskFundSwapper;
 
     // Store base asset's reserve for specific pool
     mapping(address => uint256) public poolReserves;
 
     /// @notice Emitted when pool registry address is updated
-    event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
+    event RiskFundSwapperUpdated(address indexed oldRiskFundSwapper, address indexed newRiskFundSwapper);
 
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
-    /// @notice Emitted when PancakeSwap router contract address is updated
-    event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
-
-    /// @notice Emitted when minimum amount to convert is updated
-    event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
-
-    /// @notice Emitted when pools assets are swapped
-    event SwappedPoolsAssets(address[] markets, uint256[] amountsOutMin, uint256 totalAmount);
-
     /// @notice Emitted when reserves are transferred for auction
     event TransferredReserveForAuction(address indexed comptroller, uint256 amount);
 
+    /// @notice Emitted when pool states is updated with amount transferred to this contract
+    event PoolStateUpdated(address comptroller, uint256 amount);
+
+    /// @notice Error is thrown when updatePoolState is not called by riskFundSwapper
+    error InvalidRiskFundSwapper();
+
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
-    ///      to set the state variables.
+    /// to set the state variables.
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -69,8 +53,6 @@ contract RiskFund is
 
     /**
      * @dev Initializes the deployer to owner.
-     * @param pancakeSwapRouter_ Address of the PancakeSwap router
-     * @param minAmountToConvert_ Minimum amount assets must be worth to convert into base asset
      * @param convertibleBaseAsset_ Address of the base asset
      * @param accessControlManager_ Address of the access control contract
      * @param loopsLimit_ Limit for the loops in the contract to avoid DOS
@@ -78,37 +60,30 @@ contract RiskFund is
      * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
      */
     function initialize(
-        address pancakeSwapRouter_,
-        uint256 minAmountToConvert_,
         address convertibleBaseAsset_,
         address accessControlManager_,
         uint256 loopsLimit_
     ) external initializer {
-        ensureNonzeroAddress(pancakeSwapRouter_);
         ensureNonzeroAddress(convertibleBaseAsset_);
-        require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
         require(loopsLimit_ > 0, "Risk Fund: Loops limit can not be zero");
 
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
 
-        pancakeSwapRouter = pancakeSwapRouter_;
-        minAmountToConvert = minAmountToConvert_;
         convertibleBaseAsset = convertibleBaseAsset_;
-
-        _setMaxLoopsLimit(loopsLimit_);
     }
 
     /**
-     * @dev Pool registry setter
-     * @param poolRegistry_ Address of the pool registry
-     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+     * @dev Risk fund swapper setter
+     * @param riskFundSwapper_ Address of the risk fund swapper
+     * @custom:event RiskFundSwapperUpdated emit on success
+     * @custom:error ZeroAddressNotAllowed is thrown when risk fund swapper address is zero
      */
-    function setPoolRegistry(address poolRegistry_) external onlyOwner {
-        ensureNonzeroAddress(poolRegistry_);
-        address oldPoolRegistry = poolRegistry;
-        poolRegistry = poolRegistry_;
-        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
+    function setRiskFundSwapper(address riskFundSwapper_) external onlyOwner {
+        ensureNonzeroAddress(riskFundSwapper_);
+        address oldRiskFundSwapper = riskFundSwapper;
+        riskFundSwapper = riskFundSwapper_;
+        emit RiskFundSwapperUpdated(oldRiskFundSwapper, riskFundSwapper_);
     }
 
     /**
@@ -126,72 +101,6 @@ contract RiskFund is
         address oldShortfallContractAddress = shortfall;
         shortfall = shortfallContractAddress_;
         emit ShortfallContractUpdated(oldShortfallContractAddress, shortfallContractAddress_);
-    }
-
-    /**
-     * @dev PancakeSwap router address setter
-     * @param pancakeSwapRouter_ Address of the PancakeSwap router
-     * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
-     */
-    function setPancakeSwapRouter(address pancakeSwapRouter_) external onlyOwner {
-        ensureNonzeroAddress(pancakeSwapRouter_);
-        address oldPancakeSwapRouter = pancakeSwapRouter;
-        pancakeSwapRouter = pancakeSwapRouter_;
-        emit PancakeSwapRouterUpdated(oldPancakeSwapRouter, pancakeSwapRouter_);
-    }
-
-    /**
-     * @dev Min amount to convert setter
-     * @param minAmountToConvert_ Min amount to convert.
-     */
-    function setMinAmountToConvert(uint256 minAmountToConvert_) external {
-        _checkAccessAllowed("setMinAmountToConvert(uint256)");
-        require(minAmountToConvert_ > 0, "Risk Fund: Invalid min amount to convert");
-        uint256 oldMinAmountToConvert = minAmountToConvert;
-        minAmountToConvert = minAmountToConvert_;
-        emit MinAmountToConvertUpdated(oldMinAmountToConvert, minAmountToConvert_);
-    }
-
-    /**
-     * @notice Swap array of pool assets into base asset's tokens of at least a minimum amount
-     * @param markets Array of vTokens whose assets to swap for base asset
-     * @param amountsOutMin Minimum amount to receive for swap
-     * @param paths A path consisting of PCS token pairs for each swap
-     * @return Number of swapped tokens
-     * @custom:error ZeroAddressNotAllowed is thrown if PoolRegistry contract address is not configured
-     */
-    function swapPoolsAssets(
-        address[] calldata markets,
-        uint256[] calldata amountsOutMin,
-        address[][] calldata paths
-    ) external override returns (uint256) {
-        _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
-        address poolRegistry_ = poolRegistry;
-        ensureNonzeroAddress(poolRegistry_);
-        require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
-        require(markets.length == paths.length, "Risk fund: markets and paths are unequal lengths");
-
-        uint256 totalAmount;
-        uint256 marketsCount = markets.length;
-
-        _ensureMaxLoops(marketsCount);
-
-        for (uint256 i; i < marketsCount; ++i) {
-            VToken vToken = VToken(markets[i]);
-            address comptroller = address(vToken.comptroller());
-
-            PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry_).getPoolByComptroller(comptroller);
-            require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
-            require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
-
-            uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
-            poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
-            totalAmount = totalAmount + swappedTokens;
-        }
-
-        emit SwappedPoolsAssets(markets, amountsOutMin, totalAmount);
-
-        return totalAmount;
     }
 
     /**
@@ -215,81 +124,17 @@ contract RiskFund is
     }
 
     /**
-     * @notice Set the limit for the loops can iterate to avoid the DOS
-     * @param limit Limit for the max loops can execute at a time
+     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+     * @param comptroller  Comptroller address(pool)
+     * @param amount Amount transferred for the pool
      */
-    function setMaxLoopsLimit(uint256 limit) external onlyOwner {
-        _setMaxLoopsLimit(limit);
-    }
-
-    /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
-     * @param comptroller  Comptroller address(pool).
-     * @param asset Asset address.
-     */
-    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset);
-    }
-
-    /**
-     * @dev Swap single asset to base asset.
-     * @param vToken VToken
-     * @param comptroller Comptroller address
-     * @param amountOutMin Minimum amount to receive for swap
-     * @param path A path for the swap consisting of PCS token pairs
-     * @return Number of swapped tokens.
-     */
-    function _swapAsset(
-        VToken vToken,
-        address comptroller,
-        uint256 amountOutMin,
-        address[] calldata path
-    ) internal returns (uint256) {
-        require(amountOutMin != 0, "RiskFund: amountOutMin must be greater than 0 to swap vToken");
-        require(amountOutMin >= minAmountToConvert, "RiskFund: amountOutMin should be greater than minAmountToConvert");
-        uint256 totalAmount;
-
-        address underlyingAsset = vToken.underlying();
-        address convertibleBaseAsset_ = convertibleBaseAsset;
-        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
-
-        ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
-
-        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(
-            address(vToken)
-        );
-
-        if (balanceOfUnderlyingAsset > 0) {
-            Exp memory oraclePrice = Exp({ mantissa: underlyingAssetPrice });
-            uint256 amountInUsd = mul_ScalarTruncate(oraclePrice, balanceOfUnderlyingAsset);
-
-            if (amountInUsd >= minAmountToConvert) {
-                assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
-                poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
-
-                if (underlyingAsset != convertibleBaseAsset_) {
-                    require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");
-                    require(
-                        path[path.length - 1] == convertibleBaseAsset_,
-                        "RiskFund: finally path must be convertible base asset"
-                    );
-                    address pancakeSwapRouter_ = pancakeSwapRouter;
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, 0);
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, balanceOfUnderlyingAsset);
-                    uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
-                        balanceOfUnderlyingAsset,
-                        amountOutMin,
-                        path,
-                        address(this),
-                        block.timestamp
-                    );
-                    totalAmount = amounts[path.length - 1];
-                } else {
-                    totalAmount = balanceOfUnderlyingAsset;
-                }
-            }
+    function updatePoolState(address comptroller, uint256 amount) public {
+        if (msg.sender != riskFundSwapper) {
+            revert InvalidRiskFundSwapper();
         }
 
-        return totalAmount;
+        poolReserves[comptroller] += amount;
+
+        emit PoolStateUpdated(comptroller, amount);
     }
 }

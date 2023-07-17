@@ -19,7 +19,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
 
     /// @notice Maximum incentive could be
     uint256 public constant MAX_INCENTIVE = 5e18;
-    
+
     /// @notice Venus price oracle contract
     ResilientOracle public priceOracle;
 
@@ -230,6 +230,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
         }
 
         emit SwapExactTokensForTokens(actualAmountIn, actualAmountOut);
+
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
     }
 
     /// @notice Swap tokens for tokenAddressIn for exact amount of tokenAddressOut
@@ -272,6 +274,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
             );
         }
 
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+
         emit SwapTokensForExactTokens(actualAmountIn, actualAmountOut);
     }
 
@@ -303,6 +307,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
             tokenAddressOut,
             to
         );
+
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
 
         emit SwapExactTokensForTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
@@ -336,6 +342,8 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
             to
         );
 
+        postSwapHook(tokenAddressIn, actualAmountIn, actualAmountOut);
+
         emit SwapTokensForExactTokensSupportingFeeOnTransferTokens(actualAmountIn, actualAmountOut);
     }
 
@@ -353,11 +361,7 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
 
     /// @notice Get the balance for specific token
     /// @param token Address od the token
-    function balanceOf(address token) public virtual {}
-
-    /// @notice Operations to perform after sweepToken
-    /// @param token Address od the token
-    function postSwapHook(address token) public virtual {}
+    function balanceOf(address token) public virtual returns (uint256 tokenBalance) {}
 
     /// @notice To get the amount of tokenAddressOut tokens sender could receive on providing amountInMantissa tokens of tokenAddressIn
     /// @param amountInMantissa Amount of tokenAddressIn
@@ -547,6 +551,14 @@ abstract contract AbstractSwapper is AccessControlledV8, IAbstractSwapper, Reent
 
         emit PriceOracleUpdated(oldPriceOracle, priceOracle);
     }
+
+    /// @notice Operations to perform after sweepToken
+    /// @param tokenInAddress Address of the token
+    function postSwapHook(
+        address tokenInAddress,
+        uint256 amountIn,
+        uint256 amountOut
+    ) internal virtual {}
 
     /// @notice To check, is swapping paused
     function _checkSwapPaused() internal view {

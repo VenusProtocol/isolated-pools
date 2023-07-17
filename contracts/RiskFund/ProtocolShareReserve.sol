@@ -8,7 +8,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { ReserveHelpers } from "./ReserveHelpers.sol";
-import { IRiskFund } from "./IRiskFund.sol";
+import { IRiskFundSwapper } from "../PassiveSwap/IRiskFundSwapper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
@@ -96,7 +96,7 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund_).updateAssetsState(comptroller, asset);
+        IRiskFundSwapper(riskFund_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 
