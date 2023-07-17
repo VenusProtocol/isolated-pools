@@ -1,3 +1,32 @@
+## [1.2.0](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.0...v1.2.0) (2023-07-12)
+
+
+### Features
+
+* add mainnet deployments for rewards distributors ([3a3a8a2](https://github.com/VenusProtocol/isolated-pools/commit/3a3a8a28a6563117604980fea689b5e3203fea85))
+* add reward configs ([a6cd456](https://github.com/VenusProtocol/isolated-pools/commit/a6cd456cd84de28d0adc2c69637c74a29cb5224f))
+* add testnet deployment for rewards distributors ([5cf6ea3](https://github.com/VenusProtocol/isolated-pools/commit/5cf6ea34496c1f17be196a40706cf0da64b8dd38))
+* added tests for pausing rewards ([4d8720f](https://github.com/VenusProtocol/isolated-pools/commit/4d8720f483bc76d7c1f39d69a6a2ff32118111d3))
+* redeploy PoolLens on mainnet ([feaeddf](https://github.com/VenusProtocol/isolated-pools/commit/feaeddf0b9a28c876cb4ca81b6129bbd69e4e348))
+* redeploy PoolLens on testnet ([ea5c204](https://github.com/VenusProtocol/isolated-pools/commit/ea5c20422274d6137591344c5259593ad99e4dd4))
+* set/update last rewarding block ([13bdc7f](https://github.com/VenusProtocol/isolated-pools/commit/13bdc7f862929f8cc350f47e0ba922cd2edfe65f))
+* stop rewards at a block number ([4b2ada4](https://github.com/VenusProtocol/isolated-pools/commit/4b2ada43e7de8375062036d3be7e71f4dd672fdd))
+
+
+### Bug Fixes
+
+* bump hardhat deploy ([84a8a62](https://github.com/VenusProtocol/isolated-pools/commit/84a8a62ee3d289562f82109486dcbac0492552bd))
+* fixed tests ([1b173dc](https://github.com/VenusProtocol/isolated-pools/commit/1b173dc1b0a7232a02c174559535ae18c3801b9e))
+* pause rewards in  pool lens ([9b0566b](https://github.com/VenusProtocol/isolated-pools/commit/9b0566b24a06fe22180a3752eea0ac8c127eb4d7))
+* shorten the size of revert string ([e32ef5d](https://github.com/VenusProtocol/isolated-pools/commit/e32ef5dd249db156821b21984b46fd4c507de51e))
+* use getBlockNumber() ([71a36e6](https://github.com/VenusProtocol/isolated-pools/commit/71a36e64cf1f32d81ba9bd728f230fe488b9190b))
+* use hardhat 2.16.1 ([a5c01e7](https://github.com/VenusProtocol/isolated-pools/commit/a5c01e7d452d04b10dba7466be9e7d25f43cf01b))
+* use node 18 ([97d704e](https://github.com/VenusProtocol/isolated-pools/commit/97d704e0042a3d535d6605a8791541f2b671cdf3))
+* VEN-1684 and VEN-1685 ([c459065](https://github.com/VenusProtocol/isolated-pools/commit/c4590657669993c901e64a5fe9837faeef5017d0))
+* VENUS-RD-001 ([b6413c5](https://github.com/VenusProtocol/isolated-pools/commit/b6413c5908e3b62a14b038bc78486f2a765d085a))
+* VENUS-RD-002 ([1c1f749](https://github.com/VenusProtocol/isolated-pools/commit/1c1f7498d144702f61ec37f27011f60f1b955216))
+* VENUS-RD-003 ([07fd8f3](https://github.com/VenusProtocol/isolated-pools/commit/07fd8f3af742b7fa04f201f6024291ca46ba6a71))
+
 ## [1.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0-dev.3...v1.2.0-dev.4) (2023-07-12)
 
 
