@@ -182,9 +182,9 @@ contract RiskFund is
 
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
             poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
+            assetsReserves[convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
-        assetsReserves[convertibleBaseAsset] += totalAmount;
 
         emit SwappedPoolsAssets(markets, amountsOutMin, totalAmount);
 
