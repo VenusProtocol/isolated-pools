@@ -181,10 +181,10 @@ contract RiskFund is
             require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
 
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
-            assetsReserves[convertibleBaseAsset] += swappedTokens;
             poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
+        assetsReserves[convertibleBaseAsset] += totalAmount;
 
         emit SwappedPoolsAssets(markets, amountsOutMin, totalAmount);
 
@@ -209,6 +209,9 @@ contract RiskFund is
                 poolsAssetsReserves[comptroller][convertibleBaseAsset] -
                 amount;
         }
+        unchecked {
+            assetsReserves[convertibleBaseAsset] = assetsReserves[convertibleBaseAsset] - amount;
+        }
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
@@ -230,7 +233,6 @@ contract RiskFund is
      * @return Base Asset's reserve in risk fund.
      */
     function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
-        ensureNonzeroAddress(comptroller);
         require(ComptrollerInterface(comptroller).isComptroller(), "Risk Fund: Comptroller address invalid");
         return poolsAssetsReserves[comptroller][convertibleBaseAsset];
     }
