@@ -231,7 +231,7 @@ describe("Risk Fund: Swap Tests", () => {
     await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
 
     await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]]);
-    expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");
+    expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");
 
     const balance = await BUSD.balanceOf(riskFund.address);
     expect(Number(balance)).to.be.closeTo(Number(parseUnits("15", 18)), Number(parseUnits("1", 17)));
