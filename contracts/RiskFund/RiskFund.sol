@@ -5,7 +5,7 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-
+import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "./IRiskFund.sol";
 import { ReserveHelpers } from "./ReserveHelpers.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
@@ -33,14 +33,10 @@ contract RiskFund is
     IRiskFund
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
+    address public convertibleBaseAsset;
+    address private shortfall;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
-    address private convertibleBaseAsset;
-    address private shortfall;
-
-    // Store base asset's reserve for specific pool
-    mapping(address => uint256) public poolReserves;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -185,7 +181,8 @@ contract RiskFund is
             require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
 
             uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
-            poolReserves[comptroller] = poolReserves[comptroller] + swappedTokens;
+            assetsReserves[convertibleBaseAsset] += swappedTokens;
+            poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
 
@@ -203,9 +200,14 @@ contract RiskFund is
     function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
-        require(amount <= poolReserves[comptroller], "Risk Fund: Insufficient pool reserve.");
+        require(
+            amount <= poolsAssetsReserves[comptroller][convertibleBaseAsset],
+            "Risk Fund: Insufficient pool reserve."
+        );
         unchecked {
-            poolReserves[comptroller] = poolReserves[comptroller] - amount;
+            poolsAssetsReserves[comptroller][convertibleBaseAsset] =
+                poolsAssetsReserves[comptroller][convertibleBaseAsset] -
+                amount;
         }
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
@@ -220,6 +222,17 @@ contract RiskFund is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
+    }
+
+    /**
+     * @notice Get the Amount of the Base asset in the risk fund for the specific pool.
+     * @param comptroller  Comptroller address(pool).
+     * @return Base Asset's reserve in risk fund.
+     */
+    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
+        ensureNonzeroAddress(comptroller);
+        require(ComptrollerInterface(comptroller).isComptroller(), "Risk Fund: Comptroller address invalid");
+        return poolsAssetsReserves[comptroller][convertibleBaseAsset];
     }
 
     /**
