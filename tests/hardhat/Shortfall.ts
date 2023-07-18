@@ -331,7 +331,9 @@ describe("Shortfall: Tests", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
 
-      expect(await fakeRiskFund.getPoolsBaseAssetReserves(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
+      expect(await fakeRiskFund.getPoolsBaseAssetReserves(comptroller.address)).equal(
+        parseUnits(riskFundBalance, 18).toString(),
+      );
 
       expect(await vDAI.badDebt()).equal(parseUnits("1000", 18));
       expect(await vWBTC.badDebt()).equal(parseUnits("1", 8));
