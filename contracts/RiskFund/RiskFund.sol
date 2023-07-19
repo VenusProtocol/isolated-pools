@@ -34,7 +34,7 @@ contract RiskFund is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public convertibleBaseAsset;
-    address private shortfall;
+    address public shortfall;
     address private pancakeSwapRouter;
     uint256 private minAmountToConvert;
 
