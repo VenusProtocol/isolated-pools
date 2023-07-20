@@ -139,7 +139,7 @@ async function shortfallFixture() {
 
   comptroller.oracle.returns(fakePriceOracle.address);
 
-  fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
+  fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
   fakeRiskFund.transferReserveForAuction.returns(0);
 
   // Access Control
@@ -331,7 +331,9 @@ describe("Shortfall: Tests", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
 
-      expect(await fakeRiskFund.poolReserves(comptroller.address)).equal(parseUnits(riskFundBalance, 18).toString());
+      expect(await fakeRiskFund.getPoolsBaseAssetReserves(comptroller.address)).equal(
+        parseUnits(riskFundBalance, 18).toString(),
+      );
 
       expect(await vDAI.badDebt()).equal(parseUnits("1000", 18));
       expect(await vWBTC.badDebt()).equal(parseUnits("1", 8));
@@ -504,7 +506,7 @@ describe("Shortfall: Tests", async function () {
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
       riskFundBalance = "50000";
-      fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
+      fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
 
       const receipt = await shortfall.startAuction(poolAddress);
       startBlockNumber = receipt.blockNumber;
@@ -737,7 +739,7 @@ describe("Shortfall: Deflationary token Scenario", async function () {
     await vFloki.setVariable("badDebt", parseUnits("100", 18));
 
     riskFundBalance = "500";
-    fakeRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
+    fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
 
     await shortfall.connect(owner).updateMinimumPoolBadDebt(convertToUnit(10, 18));
 

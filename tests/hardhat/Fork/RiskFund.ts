@@ -659,7 +659,7 @@ describe("Risk Fund: Tests", function () {
         ],
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
 
       const balanceAfter = await USDC.balanceOf(riskFund.address);
       expect(balanceAfter).equal("0");
@@ -712,15 +712,13 @@ describe("Risk Fund: Tests", function () {
         ],
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
 
       const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
 
-      const pool1Reserve = await riskFund.poolReserves(comptroller1Proxy.address);
-      const pool2Reserve = await riskFund.poolReserves("0x0000000000000000000000000000000000000000");
+      const pool1Reserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
       expect(Number(pool1Reserve)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
-      expect(pool2Reserve).equal(0);
     });
   });
   // myContract.connect(myFake.wallet).doSomething();
@@ -783,7 +781,7 @@ describe("Risk Fund: Tests", function () {
         .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
       const afterTransfer = await BUSD.balanceOf(shortfall.address);
       const remainingBalance = await BUSD.balanceOf(riskFund.address);
-      const poolReserve = await riskFund.poolReserves(comptroller1Proxy.address);
+      const poolReserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
 
       const amount = Number(afterTransfer) - Number(beforeTransfer);
       expect(amount).to.be.closeTo(Number(convertToUnit(20, 18)), Number(convertToUnit(3, 17)));
@@ -824,7 +822,7 @@ describe("Risk Fund: Tests", function () {
         ],
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal(0);
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal(0);
 
       // revoke
       await accessControlManager.revokeCallPermission(
@@ -956,7 +954,7 @@ describe("Risk Fund: Tests", function () {
         ],
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("56841295980235012443");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("56841295980235012443");
 
       riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
       riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
@@ -970,13 +968,15 @@ describe("Risk Fund: Tests", function () {
       expect(riskUSDTFor2).equal(0);
       expect(riskUSDCFor2).equal(0);
       expect(riskUSDTFor3).equal(0);
-      expect(riskBUSDTFor3).equal(0);
 
-      const poolReserve1 = await riskFund.poolReserves(comptroller1Proxy.address);
+      // As BUSD is base asset so PoolAssetReserves should be present.
+      expect(riskBUSDTFor3).to.be.closeTo(convertToUnit(53, 18), convertToUnit(9, 17));
 
-      const poolReserve2 = await riskFund.poolReserves(comptroller2Proxy.address);
+      const poolReserve1 = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
 
-      const poolReserve3 = await riskFund.poolReserves(comptroller3Proxy.address);
+      const poolReserve2 = await riskFund.getPoolsBaseAssetReserves(comptroller2Proxy.address);
+
+      const poolReserve3 = await riskFund.getPoolsBaseAssetReserves(comptroller3Proxy.address);
 
       expect(poolReserve1).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));
       expect(poolReserve2).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));
