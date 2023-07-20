@@ -11,6 +11,21 @@ import { VToken } from "../VToken.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 
+/**
+ * @title `RewardsDistributor`
+ * @author Venus
+ * @notice Contract used to configure, track and distribute rewards to users based on their actions (borrows and supplies) in the protocol.
+ * Users can receive additional rewards through a `RewardsDistributor`. Each `RewardsDistributor` proxy is initialized with a specific reward
+ * token and `Comptroller`, which can then distribute the reward token to users that supply or borrow in the associated pool.
+ * Authorized users can set the reward token borrow and supply speeds for each market in the pool. This sets a fixed amount of reward
+ * token to be released each block for borrowers and suppliers, which is distributed based on a user’s percentage of the borrows or supplies
+ * respectively. The owner can also set up reward distributions to contributor addresses (distinct from suppliers and borrowers) by setting
+ * their contributor reward token speed, which similarly allocates a fixed amount of reward token per block.
+ *
+ * The owner has the ability to transfer any amount of reward tokens held by the contract to any other address. Rewards are not distributed
+ * automatically and must be claimed by a user calling `claimRewardToken()`. Users should be aware that it is up to the owner and other centralized
+ * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
+ */
 contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlledV8, MaxLoopsLimitHelper {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -19,6 +34,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint224 index;
         // The block number the index was last updated at
         uint32 block;
+        // The block number at which to stop rewards
+        uint32 lastRewardingBlock;
     }
 
     /// @notice The initial REWARD TOKEN index for a market
@@ -96,6 +113,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
+
+    /// @notice Emitted when a reward token last rewarding block for supply is updated
+    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+
+    /// @notice Emitted when a reward token last rewarding block for borrow is updated
+    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -209,13 +232,36 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     ) external {
         _checkAccessAllowed("setRewardTokenSpeeds(address[],uint256[],uint256[])");
         uint256 numTokens = vTokens.length;
-        require(
-            numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
-            "RewardsDistributor::setRewardTokenSpeeds invalid input"
-        );
+        require(numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length, "invalid setRewardTokenSpeeds");
 
         for (uint256 i; i < numTokens; ++i) {
             _setRewardTokenSpeed(vTokens[i], supplySpeeds[i], borrowSpeeds[i]);
+        }
+    }
+
+    /**
+     * @notice Set REWARD TOKEN last rewarding block for the specified markets
+     * @param vTokens The markets whose REWARD TOKEN last rewarding block to update
+     * @param supplyLastRewardingBlocks New supply-side REWARD TOKEN last rewarding block for the corresponding market
+     * @param borrowLastRewardingBlocks New borrow-side REWARD TOKEN last rewarding block for the corresponding market
+     */
+    function setLastRewardingBlocks(
+        VToken[] calldata vTokens,
+        uint32[] calldata supplyLastRewardingBlocks,
+        uint32[] calldata borrowLastRewardingBlocks
+    ) external {
+        _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
+        uint256 numTokens = vTokens.length;
+        require(
+            numTokens == supplyLastRewardingBlocks.length && numTokens == borrowLastRewardingBlocks.length,
+            "RewardsDistributor::setLastRewardingBlocks invalid input"
+        );
+
+        for (uint256 i; i < numTokens; ) {
+            _setLastRewardingBlock(vTokens[i], supplyLastRewardingBlocks[i], borrowLastRewardingBlocks[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -301,6 +347,47 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
     function getBlockNumber() public view virtual returns (uint256) {
         return block.number;
+    }
+
+    /**
+     * @notice Set REWARD TOKEN last rewarding block for a single market.
+     * @param vToken market's whose reward token last rewarding block to be updated
+     * @param supplyLastRewardingBlock New supply-side REWARD TOKEN last rewarding block for market
+     * @param borrowLastRewardingBlock New borrow-side REWARD TOKEN last rewarding block for market
+     */
+    function _setLastRewardingBlock(
+        VToken vToken,
+        uint32 supplyLastRewardingBlock,
+        uint32 borrowLastRewardingBlock
+    ) internal {
+        require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
+
+        uint256 blockNumber = getBlockNumber();
+
+        require(supplyLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
+        require(borrowLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
+
+        uint32 currentSupplyLastRewardingBlock = rewardTokenSupplyState[address(vToken)].lastRewardingBlock;
+        uint32 currentBorrowLastRewardingBlock = rewardTokenBorrowState[address(vToken)].lastRewardingBlock;
+
+        require(
+            currentSupplyLastRewardingBlock == 0 || currentSupplyLastRewardingBlock > blockNumber,
+            "this RewardsDistributor is already locked"
+        );
+        require(
+            currentBorrowLastRewardingBlock == 0 || currentBorrowLastRewardingBlock > blockNumber,
+            "this RewardsDistributor is already locked"
+        );
+
+        if (currentSupplyLastRewardingBlock != supplyLastRewardingBlock) {
+            rewardTokenSupplyState[address(vToken)].lastRewardingBlock = supplyLastRewardingBlock;
+            emit SupplyLastRewardingBlockUpdated(address(vToken), supplyLastRewardingBlock);
+        }
+
+        if (currentBorrowLastRewardingBlock != borrowLastRewardingBlock) {
+            rewardTokenBorrowState[address(vToken)].lastRewardingBlock = borrowLastRewardingBlock;
+            emit BorrowLastRewardingBlockUpdated(address(vToken), borrowLastRewardingBlock);
+        }
     }
 
     /**
@@ -440,7 +527,13 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
         uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+
+        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
+            blockNumber = supplyState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(supplyState.block));
+
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
             uint256 accruedSinceUpdate = mul_(deltaBlocks, supplySpeed);
@@ -462,13 +555,18 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     /**
      * @notice Accrue REWARD TOKEN to the market by updating the borrow index
      * @param vToken The market whose borrow index to update
-     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      * @param marketBorrowIndex The current global borrow index of vToken
+     * @dev Index is a cumulative sum of the REWARD TOKEN per vToken accrued
      */
     function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
         uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+
+        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
+            blockNumber = borrowState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);

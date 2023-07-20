@@ -33,7 +33,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @dev Initializes the deployer to owner.
+     * @notice Initializes the deployer to owner.
      * @param protocolIncome_ The address protocol income will be sent to
      * @param riskFund_ Risk fund address
      * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
@@ -50,7 +50,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @dev Pool registry setter.
+     * @notice Pool registry setter.
      * @param poolRegistry_ Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
@@ -62,18 +62,14 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @dev Release funds
+     * @notice Release funds
      * @param comptroller Pool's Comptroller
      * @param asset  Asset to be released
      * @param amount Amount to release
      * @return Number of total released tokens
      * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
-    function releaseFunds(
-        address comptroller,
-        address asset,
-        uint256 amount
-    ) external returns (uint256) {
+    function releaseFunds(address comptroller, address asset, uint256 amount) external returns (uint256) {
         ensureNonzeroAddress(asset);
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
@@ -98,14 +94,14 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+     * @notice Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset)
-        public
-        override(IProtocolShareReserve, ReserveHelpers)
-    {
+    function updateAssetsState(
+        address comptroller,
+        address asset
+    ) public override(IProtocolShareReserve, ReserveHelpers) {
         super.updateAssetsState(comptroller, asset);
     }
 }

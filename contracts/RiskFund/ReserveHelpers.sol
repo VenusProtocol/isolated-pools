@@ -78,7 +78,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     }
 
     /**
-     * @dev Get the Amount of the asset in the risk fund for the specific pool.
+     * @notice Get the Amount of the asset in the risk fund for the specific pool.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      * @return Asset's reserve in risk fund.
@@ -91,7 +91,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund
+     * @notice Update the reserve of the asset for the specific pool after transferring to risk fund
      * and transferring funds to the protocol share reserve
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.

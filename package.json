@@ -1,9 +1,10 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "1.0.0-dev.7",
+  "version": "1.2.0",
   "description": "",
   "files": [
     "artifacts",
+    "typechain",
     "dist",
     "contracts",
     "deployments"
@@ -21,7 +22,7 @@
     "lint:ts:fix": "eslint --fix --ext .js,.ts .",
     "prettier": "prettier --write \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
     "prettier:check": "prettier --check \"**/*.{js,json,md,sol,ts,yaml,yml}\"",
-    "build": "rm -rf dist && tsc --declaration && hardhat compile",
+    "build": "rm -rf dist && hardhat compile && tsc --declaration",
     "docgen": "hardhat docgen",
     "prepare": "husky install"
   },
@@ -37,7 +38,7 @@
   },
   "homepage": "https://github.com/VenusProtocol/isolated-pools#readme",
   "engines": {
-    "node": "16.x"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.3",
@@ -68,7 +69,7 @@
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "^1.0.0",
-    "@venusprotocol/oracle": "^1.6.11-dev.7",
+    "@venusprotocol/oracle": "^1.6.12-dev.5",
     "@venusprotocol/venus-protocol": "^0.6.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
@@ -79,8 +80,8 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "3.4.1",
     "eslint-plugin-promise": "^5.2.0",
-    "hardhat": "^2.9.3",
-    "hardhat-deploy": "^0.11.14",
+    "hardhat": "^2.16.1",
+    "hardhat-deploy": "^0.11.26",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "hardhat-gas-reporter": "^1.0.8",
     "husky": "^8.0.1",
@@ -88,7 +89,7 @@
     "prettier-plugin-solidity": "1.0.0-beta.13",
     "semantic-release": "^19.0.3",
     "solhint": "^3.3.7",
-    "solidity-coverage": "^0.7.21",
+    "solidity-coverage": "^0.8.4",
     "solidity-docgen": "^0.6.0-beta.29",
     "solparse": "^2.2.8",
     "ts-node": "^10.7.0",

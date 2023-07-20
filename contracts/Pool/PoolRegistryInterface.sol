@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+/**
+ * @title PoolRegistryInterface
+ * @author Venus
+ * @notice Interface implemented by `PoolRegistry`.
+ */
 interface PoolRegistryInterface {
     /**
-     * @dev Struct for a Venus interest rate pool.
+     * @notice Struct for a Venus interest rate pool.
      */
     struct VenusPool {
         string name;
@@ -14,7 +19,7 @@ interface PoolRegistryInterface {
     }
 
     /**
-     * @dev Struct for a Venus interest rate pool metadata.
+     * @notice Struct for a Venus interest rate pool metadata.
      */
     struct VenusPoolMetaData {
         string category;
@@ -22,18 +27,18 @@ interface PoolRegistryInterface {
         string description;
     }
 
-    /*** get All Pools in PoolRegistry ***/
+    /// @notice Get all pools in PoolRegistry
     function getAllPools() external view returns (VenusPool[] memory);
 
-    /*** get a Pool by comptrollerAddress ***/
+    /// @notice Get a pool by comptroller address
     function getPoolByComptroller(address comptroller) external view returns (VenusPool memory);
 
-    /*** get VToken in the Pool for an Asset ***/
+    /// @notice Get the address of the VToken contract in the Pool where the underlying token is the provided asset
     function getVTokenForAsset(address comptroller, address asset) external view returns (address);
 
-    /*** get Pools supported by Asset ***/
+    /// @notice Get the addresss of the Pools supported that include a market for the provided asset
     function getPoolsSupportedByAsset(address asset) external view returns (address[] memory);
 
-    /*** get metadata of a Pool by comptroller ***/
+    /// @notice Get the metadata of a Pool by comptroller address
     function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory);
 }

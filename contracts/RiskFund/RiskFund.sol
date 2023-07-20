@@ -18,6 +18,9 @@ import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
 /**
+ * @title ReserveHelpers
+ * @author Venus
+ * @notice Contract with basic features to track/hold different assets for different Comptrollers.
  * @dev This contract does not support BNB.
  */
 contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
@@ -40,9 +43,6 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @notice Emitted when PancakeSwap router contract address is updated
     event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
 
-    /// @notice Emitted when min amount out for PancakeSwap is updated
-    event AmountOutMinUpdated(uint256 oldAmountOutMin, uint256 newAmountOutMin);
-
     /// @notice Emitted when minimum amount to convert is updated
     event MinAmountToConvertUpdated(uint256 oldMinAmountToConvert, uint256 newMinAmountToConvert);
 
@@ -60,7 +60,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Initializes the deployer to owner.
+     * @notice Initializes the deployer to owner.
      * @param pancakeSwapRouter_ Address of the PancakeSwap router
      * @param minAmountToConvert_ Minimum amount assets must be worth to convert into base asset
      * @param convertibleBaseAsset_ Address of the base asset
@@ -92,7 +92,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Pool registry setter
+     * @notice Pool registry setter
      * @param poolRegistry_ Address of the pool registry
      * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
@@ -104,7 +104,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Shortfall contract address setter
+     * @notice Shortfall contract address setter
      * @param shortfallContractAddress_ Address of the auction contract
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      */
@@ -121,7 +121,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev PancakeSwap router address setter
+     * @notice PancakeSwap router address setter
      * @param pancakeSwapRouter_ Address of the PancakeSwap router
      * @custom:error ZeroAddressNotAllowed is thrown when PCS router address is zero
      */
@@ -133,7 +133,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Min amount to convert setter
+     * @notice Min amount to convert setter
      * @param minAmountToConvert_ Min amount to convert.
      */
     function setMinAmountToConvert(uint256 minAmountToConvert_) external {
@@ -148,7 +148,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @notice Swap array of pool assets into base asset's tokens of at least a minimum amount
      * @param markets Array of vTokens whose assets to swap for base asset
      * @param amountsOutMin Minimum amount to receive for swap
-     * @param paths A path conststing of PCS token pairs for each swap
+     * @param paths A path consisting of PCS token pairs for each swap
      * @return Number of swapped tokens
      * @custom:error ZeroAddressNotAllowed is thrown if PoolRegistry contract address is not configured
      */
@@ -187,7 +187,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Transfer tokens for auction.
+     * @notice Transfer tokens for auction.
      * @param comptroller Comptroller of the pool.
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
@@ -215,7 +215,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     }
 
     /**
-     * @dev Update the reserve of the asset for the specific pool after transferring to risk fund.
+     * @notice Update the reserve of the asset for the specific pool after transferring to risk fund.
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
@@ -228,7 +228,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param vToken VToken
      * @param comptroller Comptroller address
      * @param amountOutMin Minimum amount to receive for swap
-     * @param path A path for the swap conststing of PCS token pairs
+     * @param path A path for the swap consisting of PCS token pairs
      * @return Number of swapped tokens.
      */
     function _swapAsset(

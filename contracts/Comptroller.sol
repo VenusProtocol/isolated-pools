@@ -14,7 +14,27 @@ import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
- * @title Comptroller Contract
+ * @title Comptroller
+ * @author Venus
+ * @notice The Comptroller is designed to provide checks for all minting, redeeming, transferring, borrowing, lending, repaying, liquidating,
+ * and seizing done by the `vToken` contract. Each pool has one `Comptroller` checking these interactions across markets. When a user interacts
+ * with a given market by one of these main actions, a call is made to a corresponding hook in the associated `Comptroller`, which either allows
+ * or reverts the transaction. These hooks also update supply and borrow rewards as they are called. The comptroller holds the logic for assessing
+ * liquidity snapshots of an account via the collateral factor and liquidation threshold. This check determines the collateral needed for a borrow,
+ * as well as how much of a borrow may be liquidated. A user may borrow a portion of their collateral with the maximum amount determined by the
+ * markets collateral factor. However, if their borrowed amount exceeds an amount calculated using the market’s corresponding liquidation threshold,
+ * the borrow is eligible for liquidation.
+ *
+ * The `Comptroller` also includes two functions `liquidateAccount()` and `healAccount()`, which are meant to handle accounts that do not exceed
+ * the `minLiquidatableCollateral` for the `Comptroller`:
+ *
+ * - `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage
+ * of the debt calculated by `collateral/(borrows*liquidationIncentive)`. The function can only be called if the calculated percentage does not exceed
+ * 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of debt
+ * and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the associated pool.
+ * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation
+ * incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic
+ * verifying that the repay amount does not exceed the close factor.
  */
 contract Comptroller is
     Ownable2StepUpgradeable,
@@ -714,7 +734,7 @@ contract Comptroller is
      * @notice Sets the closeFactor to use when liquidating borrows
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @custom:event Emits NewCloseFactor on success
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");

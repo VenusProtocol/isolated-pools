@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+/**
+ * @title TokenErrorReporter
+ * @author Venus
+ * @notice Errors that can be thrown by the `VToken` contract.
+ */
 contract TokenErrorReporter {
     uint256 public constant NO_ERROR = 0; // support legacy return codes
 

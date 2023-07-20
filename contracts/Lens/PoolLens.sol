@@ -12,6 +12,19 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 
+/**
+ * @title PoolLens
+ * @author Venus
+ * @notice The `PoolLens` contract is designed to retrieve important information for each registered pool. A list of essential information
+ * for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be
+ * looked up for specific pools and markets:
+- the vToken balance of a given user;
+- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
+- the vToken address in a pool for a given asset;
+- a list of all pools that support an asset;
+- the underlying asset price of a vToken;
+- the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
+ */
 contract PoolLens is ExponentialNoError {
     /**
      * @dev Struct for PoolDetails.
@@ -100,6 +113,8 @@ contract PoolLens is ExponentialNoError {
         uint224 index;
         // The block number the index was last updated at
         uint32 block;
+        // The block number at which to stop rewards
+        uint32 lastRewardingBlock;
     }
 
     /**
@@ -431,9 +446,11 @@ contract PoolLens is ExponentialNoError {
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
+            (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
+            .rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
+            (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
+            .rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             // Update market supply and borrow index in-memory
@@ -471,6 +488,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
+            blockNumber = borrowState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
@@ -492,6 +514,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
+            blockNumber = supplyState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();

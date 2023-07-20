@@ -17,6 +17,16 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
+/**
+ * @title Shortfall
+ * @author Venus
+ * @notice Shortfall is an auction contract designed to auction off the `convertibleBaseAsset` accumulated in `RiskFund`. The `convertibleBaseAsset`
+ * is auctioned in exchange for users paying off the pool's bad debt. An auction can be started by anyone once a pool's bad debt has reached a minimum value.
+ * This value is set and can be changed by the authorized accounts. If the pool’s bad debt exceeds the risk fund plus a 10% incentive, then the auction winner
+ * is determined by who will pay off the largest percentage of the pool's bad debt. The auction winner then exchanges for the entire risk fund. Otherwise,
+ * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
+ * risk fund in exchange for paying off all the pool's bad debt.
+ */
 contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -51,7 +61,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 10;
+    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
 
     uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
 
@@ -175,13 +185,20 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
+     * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
+    function placeBid(
+        address comptroller,
+        uint256 bidBps,
+        uint256 auctionStartBlock
+    ) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
+        require(auction.startBlock == auctionStartBlock, "auction has been restarted");
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
+        require(bidBps > 0, "basis points cannot be zero");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
@@ -293,6 +310,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
 
+        require(!auctionsPaused, "auctions are paused");
         require(_isStarted(auction), "no on-going auction");
         require(_isStale(auction), "you need to wait for more time for first bidder");
 

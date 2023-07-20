@@ -8,8 +8,9 @@ import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title Logic for Compound's JumpRateModel Contract V2.
- * @author Compound (modified by Dharma Labs, refactored by Arr00)
- * @notice Version 2 modifies Version 1 by enabling updateable parameters.
+ * @author Compound (modified by Dharma Labs, Arr00 and Venus)
+ * @notice An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached.
+ * The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters.
  */
 abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
@@ -162,7 +163,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 kink_
     ) internal {
         baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
-        multiplierPerBlock = (multiplierPerYear * EXP_SCALE) / (BLOCKS_PER_YEAR * kink_);
+        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
         jumpMultiplierPerBlock = jumpMultiplierPerYear / BLOCKS_PER_YEAR;
         kink = kink_;
 
