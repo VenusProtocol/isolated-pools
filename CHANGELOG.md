@@ -1,3 +1,16 @@
+## [1.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2023-07-20)
+
+
+### Features
+
+* ven-1743 Risk Fund ([7413501](https://github.com/VenusProtocol/isolated-pools/commit/7413501ac5210ff5e688d353f383aaf4e057a3c6))
+
+
+### Bug Fixes
+
+* gas optimisation + correct state update in transferReserveForAuction ([5dc8120](https://github.com/VenusProtocol/isolated-pools/commit/5dc81207394f80b35a9923ef5d6ea4ee65073996))
+* update assetsReserves mapping for every swap ([3427b24](https://github.com/VenusProtocol/isolated-pools/commit/3427b24382f6a59d8c132701afe9c2bd0c62d881))
+
 ## [1.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0...v1.3.0-dev.1) (2023-07-20)
 
 
