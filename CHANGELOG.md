@@ -1,3 +1,11 @@
+## [1.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.2.0...v1.3.0-dev.1) (2023-07-20)
+
+
+### Features
+
+* add re-entrancy guard ([80c7435](https://github.com/VenusProtocol/isolated-pools/commit/80c74352e317d33df17daa95943c85f7648a35b4))
+* ven-1567 add sweep token function ([192a19d](https://github.com/VenusProtocol/isolated-pools/commit/192a19db17bef9e2f51c041b77abc6ff7077973e))
+
 ## [1.2.0](https://github.com/VenusProtocol/isolated-pools/compare/v1.1.0...v1.2.0) (2023-07-12)
 
 
