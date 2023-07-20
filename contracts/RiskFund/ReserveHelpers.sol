@@ -20,19 +20,11 @@ contract ReserveHelpers {
     // Address of pool registry contract
     address internal poolRegistry;
 
-    mapping(address => uint256) internal assetsLiquidationReserves;
-
-    mapping(address => uint256) internal assetsSpreadReserves;
-
-    mapping(address => mapping(address => uint256)) internal poolsLiquidationReserves;
-
-    mapping(address => mapping(address => uint256)) internal poolsSpreadReserves;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[44] private __gap;
+    uint256[48] private __gap;
 
     // Event emitted after the updation of the assets reserves.
     // amount -> reserve increased by amount.
