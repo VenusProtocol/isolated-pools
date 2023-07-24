@@ -223,6 +223,7 @@ describe("Risk Fund: Swap Tests", () => {
   beforeEach(async () => {
     await loadFixture(riskFundFixture);
   });
+
   it("Swap All Pool Assets", async () => {
     await USDT.connect(usdtUser).approve(vUSDT.address, ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
@@ -230,7 +231,8 @@ describe("Risk Fund: Swap Tests", () => {
 
     await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
 
-    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]]);
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]], deadline);
     expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");
 
     const balance = await BUSD.balanceOf(riskFund.address);
