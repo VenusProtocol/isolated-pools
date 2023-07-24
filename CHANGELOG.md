@@ -1,3 +1,10 @@
+## [1.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.2...v1.3.0-dev.3) (2023-07-24)
+
+
+### Features
+
+* upgrade HAY rewards distributor on bsctestnet ([12dceac](https://github.com/VenusProtocol/isolated-pools/commit/12dceac5746d38654539453ffbdcef2ec3a8efb0))
+
 ## [1.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2023-07-20)
 
 
