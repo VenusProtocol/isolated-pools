@@ -152,10 +152,6 @@ contract VTokenStorage {
  * @notice Interface implemented by the `VToken` contract
  */
 abstract contract VTokenInterface is VTokenStorage {
-    enum IncomeType {
-        LIQUIDATION,
-        SPREAD
-    }
     struct RiskManagementInit {
         address shortfall;
         address payable protocolShareReserve;
