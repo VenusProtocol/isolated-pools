@@ -452,8 +452,8 @@ library PancakeLibrary {
         address factory,
         address tokenA,
         address tokenB
-    ) internal pure returns (uint256 reserveA, uint256 reserveB) {
-        sortTokens(tokenA, tokenB);
+    ) internal view returns (uint256 reserveA, uint256 reserveB) {
+        (address token0, ) = sortTokens(tokenA, tokenB);
         pairFor(factory, tokenA, tokenB);
         // Always have reserves
         uint256 mockReserves = 100000 * 1e18;
@@ -503,7 +503,7 @@ library PancakeLibrary {
         address factory,
         uint256 amountIn,
         address[] memory path
-    ) internal pure returns (uint256[] memory amounts) {
+    ) internal view returns (uint256[] memory amounts) {
         require(path.length >= 2, "PancakeLibrary: INVALID_PATH");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
@@ -518,7 +518,7 @@ library PancakeLibrary {
         address factory,
         uint256 amountOut,
         address[] memory path
-    ) internal pure returns (uint256[] memory amounts) {
+    ) internal view returns (uint256[] memory amounts) {
         require(path.length >= 2, "PancakeLibrary: INVALID_PATH");
         amounts = new uint256[](path.length);
         amounts[amounts.length - 1] = amountOut;
@@ -822,7 +822,8 @@ contract PancakeRouter is IPancakeRouter02 {
     ) internal virtual {
         for (uint256 i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            PancakeLibrary.sortTokens(input, output);
+            (address token0, ) = PancakeLibrary.sortTokens(input, output);
+            uint256 amountOut = amounts[i + 1];
             // Mocking transfer tokens out directly from token contract instead of PancakePairs
             IERC20(output).transfer(_to, amounts[1]);
         }

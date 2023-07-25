@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-/**
- * @title PoolRegistryInterface
- * @author Venus
- * @notice Interface implemented by `PoolRegistry`.
- */
 interface PoolRegistryInterface {
     /**
-     * @notice Struct for a Venus interest rate pool.
+     * @dev Struct for a Venus interest rate pool.
      */
     struct VenusPool {
         string name;
@@ -19,26 +14,38 @@ interface PoolRegistryInterface {
     }
 
     /**
-     * @notice Struct for a Venus interest rate pool metadata.
+     * @dev Enum for risk rating of Venus interest rate pool.
+     */
+    enum RiskRating {
+        VERY_HIGH_RISK,
+        HIGH_RISK,
+        MEDIUM_RISK,
+        LOW_RISK,
+        MINIMAL_RISK
+    }
+
+    /**
+     * @dev Struct for a Venus interest rate pool metadata.
      */
     struct VenusPoolMetaData {
+        RiskRating riskRating;
         string category;
         string logoURL;
         string description;
     }
 
-    /// @notice Get all pools in PoolRegistry
-    function getAllPools() external view returns (VenusPool[] memory);
+    /*** get All Pools in PoolRegistry ***/
+    function getAllPools() external view virtual returns (VenusPool[] memory);
 
-    /// @notice Get a pool by comptroller address
-    function getPoolByComptroller(address comptroller) external view returns (VenusPool memory);
+    /*** get a Pool by comptrollerAddress ***/
+    function getPoolByComptroller(address comptroller) external view virtual returns (VenusPool memory);
 
-    /// @notice Get the address of the VToken contract in the Pool where the underlying token is the provided asset
-    function getVTokenForAsset(address comptroller, address asset) external view returns (address);
+    /*** get VToken in the Pool for an Asset ***/
+    function getVTokenForAsset(address comptroller, address asset) external view virtual returns (address);
 
-    /// @notice Get the addresss of the Pools supported that include a market for the provided asset
-    function getPoolsSupportedByAsset(address asset) external view returns (address[] memory);
+    /*** get Pools supported by Asset ***/
+    function getPoolsSupportedByAsset(address asset) external view virtual returns (address[] memory);
 
-    /// @notice Get the metadata of a Pool by comptroller address
-    function getVenusPoolMetadata(address comptroller) external view returns (VenusPoolMetaData memory);
+    /*** get metadata of a Pool by comptroller ***/
+    function getVenusPoolMetadata(address comptroller) external view virtual returns (VenusPoolMetaData memory);
 }

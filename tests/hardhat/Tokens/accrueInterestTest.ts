@@ -1,10 +1,11 @@
-import { FakeContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { PANIC_CODES } from "@nomicfoundation/hardhat-chai-matchers/panic";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { BigNumber } from "bignumber.js";
 import chai from "chai";
-import { BigNumber, BigNumberish, constants } from "ethers";
-import { parseUnits } from "ethers/lib/utils";
+import { constants } from "ethers";
 
+import { convertToUnit } from "../../../helpers/utils";
 import { InterestRateModel, VTokenHarness } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
 
@@ -12,16 +13,16 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 const blockNumber = 2e7;
-const borrowIndex = parseUnits("1", 18).toBigInt();
-const borrowRate = parseUnits("0.000001", 18).toBigInt();
+const borrowIndex = convertToUnit("1", 18);
+const borrowRate = convertToUnit("0.000001", 18);
 
 async function pretendBlock(
-  vToken: VTokenHarness,
-  accrualBlock: BigNumberish = blockNumber,
-  deltaBlocks: BigNumberish = 1,
+  vToken: MockContract<VTokenHarness>,
+  accrualBlock: number | string = blockNumber,
+  deltaBlocks: number | string = 1,
 ) {
   await vToken.harnessSetAccrualBlockNumber(accrualBlock);
-  await vToken.harnessSetBlockNumber(BigNumber.from(accrualBlock).add(deltaBlocks));
+  await vToken.harnessSetBlockNumber(new BigNumber(accrualBlock).plus(deltaBlocks).toFixed());
   await vToken.harnessSetBorrowIndex(borrowIndex);
 }
 
@@ -29,7 +30,7 @@ async function preAccrue({
   vToken,
   interestRateModel,
 }: {
-  vToken: VTokenHarness;
+  vToken: MockContract<VTokenHarness>;
   interestRateModel: FakeContract<InterestRateModel>;
 }) {
   interestRateModel.getBorrowRate.reset();
@@ -39,13 +40,13 @@ async function preAccrue({
 }
 
 describe("VToken", () => {
-  let vToken: VTokenHarness;
+  let vToken: MockContract<VTokenHarness>;
   let interestRateModel: FakeContract<InterestRateModel>;
 
   beforeEach(async () => {
     const contracts = await loadFixture(vTokenTestFixture);
     ({ vToken, interestRateModel } = contracts);
-    await vToken.setReduceReservesBlockDelta(parseUnits("4", 10));
+    await vToken.setReduceReservesBlockDelta(convertToUnit(4, 10));
   });
 
   beforeEach(async () => {
@@ -55,8 +56,8 @@ describe("VToken", () => {
   describe("accrueInterest", () => {
     it("reverts if the interest rate is absurdly high", async () => {
       await pretendBlock(vToken, blockNumber, 1);
-      expect(await vToken.getBorrowRateMaxMantissa()).to.equal(parseUnits("0.000005", 18)); // 0.0005% per block
-      interestRateModel.getBorrowRate.returns(parseUnits("0.00001", 18)); // 0.0010% per block
+      expect(await vToken.getBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
+      interestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
       await expect(vToken.accrueInterest()).to.be.revertedWith("borrow rate is absurdly high");
     });
 
@@ -67,12 +68,12 @@ describe("VToken", () => {
     });
 
     it("fails if simple interest factor calculation fails", async () => {
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 70));
+      await pretendBlock(vToken, blockNumber, convertToUnit("5", 70));
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if new borrow index calculation fails", async () => {
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 60));
+      await pretendBlock(vToken, blockNumber, convertToUnit("5", 60));
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
@@ -96,47 +97,52 @@ describe("VToken", () => {
     });
 
     it("fails if interest accumulated for reserves calculation fails", async () => {
-      interestRateModel.getBorrowRate.returns(parseUnits("0.000001", 18));
-      await vToken.harnessExchangeRateDetails(0, parseUnits("1", 30), constants.MaxUint256);
-      await vToken.harnessSetReserveFactorFresh(parseUnits("1", 10));
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 20));
+      interestRateModel.getBorrowRate.returns(convertToUnit("0.000001", 18));
+      await vToken.harnessExchangeRateDetails(0, convertToUnit("1", 30), constants.MaxUint256);
+      await vToken.harnessSetReserveFactorFresh(convertToUnit("1", 10));
+      await pretendBlock(vToken, blockNumber, 5e20);
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if new total reserves calculation fails", async () => {
       interestRateModel.getBorrowRate.returns("1");
-      await vToken.harnessExchangeRateDetails(0, parseUnits("1", 56), constants.MaxUint256);
-      await vToken.harnessSetReserveFactorFresh(parseUnits("1", 17));
+      await vToken.harnessExchangeRateDetails(0, convertToUnit("1", 56), constants.MaxUint256);
+      await vToken.harnessSetReserveFactorFresh(convertToUnit("1", 17));
       await pretendBlock(vToken);
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("succeeds and saves updated values in storage on success", async () => {
-      const startingTotalBorrows = parseUnits("1", 22);
-      const startingTotalReserves = parseUnits("1", 20);
-      const reserveFactor = parseUnits("1", 17);
+      const startingTotalBorrows = new BigNumber(1e22);
+      const startingTotalReserves = new BigNumber(1e20);
+      const reserveFactor = new BigNumber(1e17);
 
-      await vToken.harnessExchangeRateDetails(0, startingTotalBorrows, startingTotalReserves);
-      await vToken.harnessSetReserveFactorFresh(reserveFactor);
+      await vToken.harnessExchangeRateDetails(0, startingTotalBorrows.toFixed(), startingTotalReserves.toFixed());
+      await vToken.harnessSetReserveFactorFresh(reserveFactor.toFixed());
       await pretendBlock(vToken);
 
       const expectedAccrualBlockNumber = blockNumber + 1;
-      const expectedBorrowIndex = BigNumber.from(borrowIndex).add(
-        BigNumber.from(borrowIndex).mul(borrowRate).div(parseUnits("1", 18)),
+      const expectedBorrowIndex = new BigNumber(borrowIndex).plus(
+        new BigNumber(borrowIndex).multipliedBy(borrowRate).dividedBy(1e18),
       );
-      const expectedTotalBorrows = startingTotalBorrows.add(
-        startingTotalBorrows.mul(borrowRate).div(parseUnits("1", 18)),
+      const expectedTotalBorrows = startingTotalBorrows.plus(
+        startingTotalBorrows.multipliedBy(borrowRate).dividedBy(1e18),
       );
-      const expectedTotalReserves = startingTotalReserves.add(
-        startingTotalBorrows.mul(borrowRate).mul(reserveFactor).div(parseUnits("1", 36)),
+      const expectedTotalReserves = startingTotalReserves.plus(
+        startingTotalBorrows.multipliedBy(borrowRate).multipliedBy(reserveFactor).dividedBy(1e36),
       );
 
       const receipt = await vToken.accrueInterest();
-      const expectedInterestAccumulated = expectedTotalBorrows.sub(startingTotalBorrows);
+      const expectedInterestAccumulated = expectedTotalBorrows.minus(startingTotalBorrows);
 
       await expect(receipt)
         .to.emit(vToken, "AccrueInterest")
-        .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows);
+        .withArgs(
+          0,
+          expectedInterestAccumulated.toFixed(),
+          expectedBorrowIndex.toFixed(),
+          expectedTotalBorrows.toFixed(),
+        );
 
       expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
       expect(await vToken.borrowIndex()).to.equal(expectedBorrowIndex);

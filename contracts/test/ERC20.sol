@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { SafeMath } from "./SafeMath.sol";
+import "./SafeMath.sol";
 
 interface ERC20Base {
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -155,12 +155,7 @@ contract ERC20Harness is StandardToken {
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
-    )
-        StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol)
-    /* solhint-disable-next-line no-empty-blocks */
-    {
-
-    }
+    ) StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
 
     function transfer(address dst, uint256 amount) external override returns (bool success) {
         // Added for testing purposes

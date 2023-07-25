@@ -1,25 +1,21 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { expect } from "chai";
-import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
+  Beacon,
   Comptroller,
   MockToken,
-  MockToken__factory,
   PoolRegistry,
-  PoolRegistry__factory,
-  UpgradeableBeacon,
+  ProtocolShareReserve,
+  Shortfall,
 } from "../../typechain";
-import { deployVTokenBeacon, makeVToken } from "./util/TokenTestHelpers";
-
-// Disable a warning about mixing beacons and transparent proxies
-upgrades.silenceWarnings();
 
 let poolRegistry: PoolRegistry;
-let vTokenBeacon: UpgradeableBeacon;
+let comptrollerBeacon: Beacon;
+let vTokenBeacon: Beacon;
 let comptroller1Proxy: Comptroller;
 let mockWBTC: MockToken;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
@@ -29,16 +25,52 @@ describe("UpgradedVToken: Tests", function () {
    * Deploying required contracts along with the poolRegistry.
    */
   before(async function () {
-    const [root] = await ethers.getSigners();
+    const VTokenProxyFactory = await ethers.getContractFactory("VTokenProxyFactory");
+    const vTokenFactory = await VTokenProxyFactory.deploy();
+    await vTokenFactory.deployed();
+
+    const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelFactory");
+    const jumpRateFactory = await JumpRateModelFactory.deploy();
+    await jumpRateFactory.deployed();
+
+    const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModelFactory");
+    const whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+    await whitePaperRateFactory.deployed();
+
+    const shortfall = await smock.fake<Shortfall>("Shortfall");
+    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
-    const PoolRegistry = await ethers.getContractFactory<PoolRegistry__factory>("PoolRegistry");
-    poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;
+    const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
+    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
+      vTokenFactory.address,
+      jumpRateFactory.address,
+      whitePaperRateFactory.address,
+      shortfall.address,
+      protocolShareReserve.address,
+      fakeAccessControlManager.address,
+    ]);
+
+    const Comptroller = await ethers.getContractFactory("Comptroller");
+    const comptroller = await Comptroller.deploy(poolRegistry.address);
+    await comptroller.deployed();
+
+    const VTokenContract = await ethers.getContractFactory("VToken");
+    const vToken = await VTokenContract.deploy();
+    await vToken.deployed();
+
+    const ComptrollerBeacon = await ethers.getContractFactory("Beacon");
+    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
+    await comptrollerBeacon.deployed();
+
+    const VTokenBeacon = await ethers.getContractFactory("Beacon");
+    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+    await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
-    const MockWBTC = await ethers.getContractFactory<MockToken__factory>("MockToken");
+    const MockWBTC = await ethers.getContractFactory("MockToken");
     mockWBTC = await MockWBTC.deploy("Bitcoin", "BTC", 8);
 
     const _closeFactor = convertToUnit(0.05, 18);
@@ -54,44 +86,50 @@ describe("UpgradedVToken: Tests", function () {
 
     await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
 
-    const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
-
-    comptroller1Proxy = (await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
-    ])) as Comptroller;
-    await comptroller1Proxy.setPriceOracle(priceOracle.address);
-
     // Registering the first pool
-    await poolRegistry.addPool(
+    await poolRegistry.createRegistryPool(
       "Pool 1",
-      comptroller1Proxy.address,
+      comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
+      priceOracle.address,
+      maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
-    vTokenBeacon = await deployVTokenBeacon();
-    const vWBTC = await makeVToken({
-      underlying: mockWBTC.address,
-      comptroller: comptroller1Proxy.address,
-      accessControlManager: fakeAccessControlManager.address,
-      admin: root.address,
-      beacon: vTokenBeacon,
-    });
+    // Setup Proxies
+    const pools = await poolRegistry.callStatic.getAllPools();
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
 
-    const initialSupply = parseUnits("1000", 18);
+    await comptroller1Proxy.acceptOwnership();
+
+    const VToken = await ethers.getContractFactory("VToken");
+    const tokenImplementation = await VToken.deploy();
+    await tokenImplementation.deployed();
+
+    const initialSupply = convertToUnit(1000, 18);
     await mockWBTC.faucet(initialSupply);
     await mockWBTC.approve(poolRegistry.address, initialSupply);
 
     // Deploy VTokens
     await poolRegistry.addMarket({
-      vToken: vWBTC.address,
-      collateralFactor: parseUnits("0.7", 18),
-      liquidationThreshold: parseUnits("0.7", 18),
+      comptroller: pools[0].comptroller,
+      asset: mockWBTC.address,
+      decimals: 8,
+      name: "Compound WBTC",
+      symbol: "vWBTC",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      beaconAddress: vTokenBeacon.address,
       initialSupply,
-      vTokenReceiver: root.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
     });

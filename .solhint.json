@@ -3,12 +3,11 @@
   "rules": {
     "code-complexity": ["error", 9],
     "compiler-version": ["error", ">=0.5.0"],
-    "const-name-snakecase": "error",
+    "const-name-snakecase": "off",
     "constructor-syntax": "error",
     "func-visibility": ["error", { "ignoreConstructors": true }],
     "max-line-length": ["error", 175],
     "not-rely-on-time": "off",
-    "no-global-import": "error",
     "reason-string": ["warn", { "maxLength": 64 }],
     "ordering": "error"
   }

@@ -10,7 +10,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  ResilientOracleInterface,
+  PriceOracle,
   VToken,
 } from "../../../typechain";
 
@@ -21,7 +21,7 @@ type PauseFixture = {
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
   poolRegistry: FakeContract<PoolRegistry>;
-  oracle: FakeContract<ResilientOracleInterface>;
+  oracle: FakeContract<PriceOracle>;
   OMG: FakeContract<VToken>;
   ZRX: FakeContract<VToken>;
   BAT: FakeContract<VToken>;
@@ -30,7 +30,7 @@ type PauseFixture = {
   names: string[];
 };
 
-const maxLoopsLimit = 15;
+const maxLoopsLimit = 150;
 
 async function pauseFixture(): Promise<PauseFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
@@ -40,7 +40,7 @@ async function pauseFixture(): Promise<PauseFixture> {
     constructorArgs: [poolRegistry.address],
     initializer: "initialize(uint256,address)",
   });
-  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
   accessControl.isAllowedToCall.returns(true);
   await comptroller.setPriceOracle(oracle.address);
@@ -161,12 +161,6 @@ describe("Comptroller", () => {
       await expect(comptroller.exitMarket(SKT.address))
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(SKT.address);
-    });
-
-    it("reverts if maxloops limit is crossed", async () => {
-      await expect(comptroller.setActionsPaused([OMG.address, BAT.address, ZRX.address], [1, 2, 3, 4, 5, 6], true))
-        .to.be.revertedWithCustomError(comptroller, "MaxLoopsLimitExceeded")
-        .withArgs(maxLoopsLimit, 18);
     });
   });
 });

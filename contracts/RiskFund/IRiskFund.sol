@@ -2,11 +2,6 @@
 pragma solidity 0.8.13;
 import "./IProtocolShareReserve.sol";
 
-/**
- * @title IRiskFund
- * @author Venus
- * @notice Interface implemented by `RiskFund`.
- */
 interface IRiskFund {
     function swapPoolsAssets(
         address[] calldata markets,
@@ -22,7 +17,5 @@ interface IRiskFund {
         IProtocolShareReserve.IncomeType kind
     ) external;
 
-    function convertibleBaseAsset() external view returns (address);
-
-    function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256);
+    function poolReserves(address comptroller) external view returns (uint256);
 }

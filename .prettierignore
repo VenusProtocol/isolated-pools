@@ -7,4 +7,3 @@ dist
 scenario
 typechain
 contracts/oracle
-CHANGELOG.md

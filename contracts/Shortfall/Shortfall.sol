@@ -1,33 +1,20 @@
 /// @notice  SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
 
-import { VToken } from "../VToken.sol";
-import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
-import { IRiskFund } from "../RiskFund/IRiskFund.sol";
-import { IShortfall } from "./IShortfall.sol";
-import { PoolRegistry } from "../Pool/PoolRegistry.sol";
-import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { EXP_SCALE } from "../lib/constants.sol";
+import "../VToken.sol";
+import "../ComptrollerInterface.sol";
+import "../RiskFund/IRiskFund.sol";
+import "./IShortfall.sol";
+import "../Pool/PoolRegistry.sol";
+import "../Pool/PoolRegistryInterface.sol";
+import "../Governance/AccessControlled.sol";
 
-/**
- * @title Shortfall
- * @author Venus
- * @notice Shortfall is an auction contract designed to auction off the `convertibleBaseAsset` accumulated in `RiskFund`. The `convertibleBaseAsset`
- * is auctioned in exchange for users paying off the pool's bad debt. An auction can be started by anyone once a pool's bad debt has reached a minimum value.
- * This value is set and can be changed by the authorized accounts. If the pool’s bad debt exceeds the risk fund plus a 10% incentive, then the auction winner
- * is determined by who will pay off the largest percentage of the pool's bad debt. The auction winner then exchanges for the entire risk fund. Otherwise,
- * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
- * risk fund in exchange for paying off all the pool's bad debt.
- */
-contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
+contract Shortfall is Ownable2StepUpgradeable, AccessControlled, ReentrancyGuardUpgradeable, IShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -55,17 +42,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         uint256 highestBidBlock;
         uint256 startBidBps;
         mapping(VToken => uint256) marketDebt;
-        mapping(VToken => uint256) bidAmount;
     }
-
-    /// @dev Max basis points i.e., 100%
-    uint256 private constant MAX_BPS = 10000;
-
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
-
-    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
-
-    uint256 private constant DEFAULT_INCENTIVE_BPS = 1000; // 10%
 
     /// @notice Pool registry address
     address public poolRegistry;
@@ -79,11 +56,11 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
     uint256 private incentiveBps;
 
+    /// @notice Max basis points i.e., 100%
+    uint256 private constant MAX_BPS = 10000;
+
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
-
-    /// @notice Boolean of if auctions are paused
-    bool public auctionsPaused;
 
     /// @notice Time to wait for first bidder. initially waits for 100 blocks
     uint256 public waitForFirstBidder;
@@ -137,12 +114,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when incentiveBps is updated
     event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
 
-    /// @notice Emitted when auctions are paused
-    event AuctionsPaused(address sender);
-
-    /// @notice Emitted when auctions are unpaused
-    event AuctionsResumed(address sender);
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
@@ -151,13 +122,11 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     }
 
     /**
-     * @notice Initialize the shortfall contract
+     * @notice Initalize the shortfall contract
      * @param convertibleBaseAsset_ Asset to swap the funds to
      * @param riskFund_ RiskFund contract address
      * @param minimumPoolBadDebt_ Minimum bad debt in base asset for a pool to start auction
      * @param accessControlManager_ AccessControlManager contract address
-     * @custom:error ZeroAddressNotAllowed is thrown when convertible base asset address is zero
-     * @custom:error ZeroAddressNotAllowed is thrown when risk fund address is zero
      */
     function initialize(
         address convertibleBaseAsset_,
@@ -165,8 +134,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         uint256 minimumPoolBadDebt_,
         address accessControlManager_
     ) external initializer {
-        ensureNonzeroAddress(convertibleBaseAsset_);
-        ensureNonzeroAddress(address(riskFund_));
+        require(convertibleBaseAsset_ != address(0), "invalid base asset address");
+        require(address(riskFund_) != address(0), "invalid risk fund address");
         require(minimumPoolBadDebt_ != 0, "invalid minimum pool bad debt");
 
         __Ownable2Step_init();
@@ -175,30 +144,22 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
-        waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
-        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
-        incentiveBps = DEFAULT_INCENTIVE_BPS;
-        auctionsPaused = false;
+        waitForFirstBidder = 100;
+        nextBidderBlockLimit = 10;
+        incentiveBps = 1000;
     }
 
     /**
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
-     * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(
-        address comptroller,
-        uint256 bidBps,
-        uint256 auctionStartBlock
-    ) external nonReentrant {
+    function placeBid(address comptroller, uint256 bidBps) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock == auctionStartBlock, "auction has been restarted");
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
-        require(bidBps > 0, "basis points cannot be zero");
         require(bidBps <= MAX_BPS, "basis points cannot be more than 10000");
         require(
             (auction.auctionType == AuctionType.LARGE_POOL_DEBT &&
@@ -215,20 +176,22 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
-            if (auction.highestBidder != address(0)) {
-                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
-            }
-            uint256 balanceBefore = erc20.balanceOf(address(this));
-
             if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                if (auction.highestBidder != address(0)) {
+                    uint256 previousBidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) /
+                        MAX_BPS);
+                    erc20.safeTransfer(auction.highestBidder, previousBidAmount);
+                }
+
                 uint256 currentBidAmount = ((auction.marketDebt[auction.markets[i]] * bidBps) / MAX_BPS);
                 erc20.safeTransferFrom(msg.sender, address(this), currentBidAmount);
             } else {
+                if (auction.highestBidder != address(0)) {
+                    erc20.safeTransfer(auction.highestBidder, auction.marketDebt[auction.markets[i]]);
+                }
+
                 erc20.safeTransferFrom(msg.sender, address(this), auction.marketDebt[auction.markets[i]]);
             }
-
-            uint256 balanceAfter = erc20.balanceOf(address(this));
-            auction.bidAmount[auction.markets[i]] = balanceAfter - balanceBefore;
         }
 
         auction.highestBidder = msg.sender;
@@ -261,10 +224,14 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             VToken vToken = VToken(address(auction.markets[i]));
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
-            uint256 balanceBefore = erc20.balanceOf(address(auction.markets[i]));
-            erc20.safeTransfer(address(auction.markets[i]), auction.bidAmount[auction.markets[i]]);
-            uint256 balanceAfter = erc20.balanceOf(address(auction.markets[i]));
-            marketsDebt[i] = balanceAfter - balanceBefore;
+            if (auction.auctionType == AuctionType.LARGE_POOL_DEBT) {
+                uint256 bidAmount = ((auction.marketDebt[auction.markets[i]] * auction.highestBidBps) / MAX_BPS);
+                erc20.safeTransfer(address(auction.markets[i]), bidAmount);
+                marketsDebt[i] = bidAmount;
+            } else {
+                erc20.safeTransfer(address(auction.markets[i]), auction.marketDebt[auction.markets[i]]);
+                marketsDebt[i] = auction.marketDebt[auction.markets[i]];
+            }
 
             auction.markets[i].badDebtRecovered(marketsDebt[i]);
         }
@@ -295,10 +262,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Start a auction when there is not currently one active
      * @param comptroller Comptroller address of the pool
      * @custom:event Emits AuctionStarted event on success
-     * @custom:event Errors if auctions are paused
      */
     function startAuction(address comptroller) external {
-        require(!auctionsPaused, "Auctions are paused");
         _startAuction(comptroller);
     }
 
@@ -310,7 +275,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     function restartAuction(address comptroller) external {
         Auction storage auction = auctions[comptroller];
 
-        require(!auctionsPaused, "auctions are paused");
         require(_isStarted(auction), "no on-going auction");
         require(_isStale(auction), "you need to wait for more time for first bidder");
 
@@ -377,42 +341,15 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /**
      * @notice Update the pool registry this shortfall supports
      * @dev After Pool Registry is deployed we need to set the pool registry address
-     * @param poolRegistry_ Address of pool registry contract
+     * @param _poolRegistry Address of pool registry contract
      * @custom:event Emits PoolRegistryUpdated on success
      * @custom:access Restricted to owner
-     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
      */
-    function updatePoolRegistry(address poolRegistry_) external onlyOwner {
-        ensureNonzeroAddress(poolRegistry_);
+    function updatePoolRegistry(address _poolRegistry) external onlyOwner {
+        require(_poolRegistry != address(0), "invalid address");
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = poolRegistry_;
-        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
-    }
-
-    /**
-     * @notice Pause auctions. This disables starting new auctions but lets the current auction finishes
-     * @custom:event Emits AuctionsPaused on success
-     * @custom:error Errors is auctions are paused
-     * @custom:access Restricted by ACM
-     */
-    function pauseAuctions() external {
-        _checkAccessAllowed("pauseAuctions()");
-        require(!auctionsPaused, "Auctions are already paused");
-        auctionsPaused = true;
-        emit AuctionsPaused(msg.sender);
-    }
-
-    /**
-     * @notice Resume paused auctions.
-     * @custom:event Emits AuctionsResumed on success
-     * @custom:error Errors is auctions are active
-     * @custom:access Restricted by ACM
-     */
-    function resumeAuctions() external {
-        _checkAccessAllowed("resumeAuctions()");
-        require(auctionsPaused, "Auctions are not paused");
-        auctionsPaused = false;
-        emit AuctionsResumed(msg.sender);
+        poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
@@ -443,7 +380,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         VToken[] memory vTokens = _getAllMarkets(comptroller);
         marketsCount = vTokens.length;
-        ResilientOracleInterface priceOracle = _getPriceOracle(comptroller);
+        PriceOracle priceOracle = _getPriceOracle(comptroller);
         uint256 poolBadDebt;
 
         uint256[] memory marketsDebt = new uint256[](marketsCount);
@@ -453,7 +390,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             uint256 marketBadDebt = vTokens[i].badDebt();
 
             priceOracle.updatePrice(address(vTokens[i]));
-            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / EXP_SCALE;
+            uint256 usdValue = (priceOracle.getUnderlyingPrice(address(vTokens[i])) * marketBadDebt) / 1e18;
 
             poolBadDebt = poolBadDebt + usdValue;
             auction.markets[i] = vTokens[i];
@@ -463,7 +400,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolsBaseAssetReserves(comptroller);
+        uint256 riskFundBalance = riskFund.poolReserves(comptroller);
         uint256 remainingRiskFundBalance = riskFundBalance;
         uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
         if (incentivizedRiskFundBalance >= riskFundBalance) {
@@ -501,8 +438,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param comptroller Address of the pool's comptroller
      * @return oracle The pool's price oracle
      */
-    function _getPriceOracle(address comptroller) internal view returns (ResilientOracleInterface) {
-        return ResilientOracleInterface(ComptrollerViewInterface(comptroller).oracle());
+    function _getPriceOracle(address comptroller) internal view returns (PriceOracle) {
+        return PriceOracle(ComptrollerViewInterface(comptroller).oracle());
     }
 
     /**
@@ -517,7 +454,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /**
      * @dev Checks if the auction has started
      * @param auction The auction to query the status for
-     * @return True if the auction has started
      */
     function _isStarted(Auction storage auction) internal view returns (bool) {
         return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
@@ -527,7 +463,6 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
      *   was started more than waitForFirstBidder blocks ago.
      * @param auction The auction to query the status for
-     * @return True if the auction is stale
      */
     function _isStale(Auction storage auction) internal view returns (bool) {
         bool noBidder = auction.highestBidder == address(0);

@@ -10,7 +10,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  ResilientOracleInterface,
+  PriceOracle,
   VToken,
 } from "../../../typechain";
 
@@ -19,7 +19,7 @@ chai.use(smock.matchers);
 
 type SimpleComptrollerFixture = {
   poolRegistry: FakeContract<PoolRegistry>;
-  oracle: FakeContract<ResilientOracleInterface>;
+  oracle: FakeContract<PriceOracle>;
   accessControl: FakeContract<AccessControlManager>;
   comptroller: MockContract<Comptroller>;
 };
@@ -28,7 +28,7 @@ const maxLoopsLimit = 150;
 
 async function deploySimpleComptroller(): Promise<SimpleComptrollerFixture> {
   const poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
-  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+  const oracle = await smock.fake<PriceOracle>("PriceOracle");
   const accessControl = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControl.isAllowedToCall.returns(true);
   const Comptroller = await smock.mock<Comptroller__factory>("Comptroller");

@@ -11,7 +11,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  ResilientOracleInterface,
+  PriceOracle,
   VToken,
 } from "../../../typechain";
 import { Error } from "../util/Errors";
@@ -38,7 +38,7 @@ function rando(min: number, max: number): number {
 
 describe("Comptroller", () => {
   let comptroller: MockContract<Comptroller>;
-  let oracle: FakeContract<ResilientOracleInterface>;
+  let oracle: FakeContract<PriceOracle>;
   let vTokenBorrowed: FakeContract<VToken>;
   let vTokenCollateral: FakeContract<VToken>;
   const maxLoopsLimit = 150;
@@ -46,7 +46,7 @@ describe("Comptroller", () => {
   type LiquidateFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>;
-    oracle: FakeContract<ResilientOracleInterface>;
+    oracle: FakeContract<PriceOracle>;
     vTokenBorrowed: FakeContract<VToken>;
     vTokenCollateral: FakeContract<VToken>;
   };
@@ -63,7 +63,7 @@ describe("Comptroller", () => {
       constructorArgs: [poolRegistry.address],
       initializer: "initialize(uint256,address)",
     });
-    const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);

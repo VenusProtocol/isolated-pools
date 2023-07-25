@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
-import { ExponentialNoError } from "../ExponentialNoError.sol";
-import { ReserveHelpers } from "./ReserveHelpers.sol";
-import { IRiskFund } from "./IRiskFund.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
+import "../ExponentialNoError.sol";
+import "./IRiskFund.sol";
+import "./ReserveHelpers.sol";
+import "./IProtocolShareReserve.sol";
 
-contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
+contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private protocolIncome;
     address private riskFund;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
-    uint256 private constant BASE_UNIT = 100;
+    uint256 private constant protocolSharePercentage = 70;
+    uint256 private constant baseUnit = 100;
 
     /// @notice Emitted when funds are released
-    event FundsReleased(address indexed comptroller, address indexed asset, uint256 amount);
+    event FundsReleased(address comptroller, address asset, uint256 amount);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -33,41 +32,36 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @notice Initializes the deployer to owner.
-     * @param protocolIncome_ The address protocol income will be sent to
-     * @param riskFund_ Risk fund address
-     * @custom:error ZeroAddressNotAllowed is thrown when protocol income address is zero
-     * @custom:error ZeroAddressNotAllowed is thrown when risk fund address is zero
+     * @dev Initializes the deployer to owner.
+     * @param _protocolIncome The address protocol income will be sent to
+     * @param _riskFund Risk fund address
      */
-    function initialize(address protocolIncome_, address riskFund_) external initializer {
-        ensureNonzeroAddress(protocolIncome_);
-        ensureNonzeroAddress(riskFund_);
+    function initialize(address _protocolIncome, address _riskFund) external initializer {
+        require(_protocolIncome != address(0), "ProtocolShareReserve: Protocol Income address invalid");
+        require(_riskFund != address(0), "ProtocolShareReserve: Risk Fund address invalid");
 
         __Ownable2Step_init();
 
-        protocolIncome = protocolIncome_;
-        riskFund = riskFund_;
+        protocolIncome = _protocolIncome;
+        riskFund = _riskFund;
     }
 
     /**
-     * @notice Pool registry setter.
-     * @param poolRegistry_ Address of the pool registry
-     * @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
+     * @dev Pool registry setter.
+     * @param _poolRegistry Address of the pool registry
      */
-    function setPoolRegistry(address poolRegistry_) external onlyOwner {
-        ensureNonzeroAddress(poolRegistry_);
+    function setPoolRegistry(address _poolRegistry) external onlyOwner {
+        require(_poolRegistry != address(0), "ProtocolShareReserve: Pool registry address invalid");
         address oldPoolRegistry = poolRegistry;
-        poolRegistry = poolRegistry_;
-        emit PoolRegistryUpdated(oldPoolRegistry, poolRegistry_);
+        poolRegistry = _poolRegistry;
+        emit PoolRegistryUpdated(oldPoolRegistry, _poolRegistry);
     }
 
     /**
-     * @notice Release funds
-     * @param comptroller Pool's Comptroller
+     * @dev Release funds
      * @param asset  Asset to be released
      * @param amount Amount to release
      * @return Number of total released tokens
-     * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
     function releaseFunds(
         address comptroller,
@@ -75,23 +69,21 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
         uint256 amount,
         IncomeType kind
     ) external returns (uint256) {
-        ensureNonzeroAddress(asset);
+        require(asset != address(0), "ProtocolShareReserve: Asset address invalid");
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
         poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
-            div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
+            div_(Exp({ mantissa: protocolSharePercentage * expScale }), baseUnit)
         ).mantissa;
 
-        address riskFund_ = riskFund;
-
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
-        IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
+        IERC20Upgradeable(asset).safeTransfer(riskFund, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund_).updateAssetsState(comptroller, asset, kind);
+        IRiskFund(riskFund).updateAssetsState(comptroller, asset, kind);
 
         emit FundsReleased(comptroller, asset, amount);
 
@@ -99,7 +91,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     }
 
     /**
-     * @notice Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
+     * @dev Update the reserve of the asset for the specific pool after transferring to the protocol share reserve.
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */

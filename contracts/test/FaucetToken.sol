@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { StandardToken, NonStandardToken } from "./ERC20.sol";
-import { SafeMath } from "./SafeMath.sol";
+import "./ERC20.sol";
 
 /**
  * @title The Compound Faucet Test Token
@@ -15,12 +14,7 @@ contract FaucetToken is StandardToken {
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
-    )
-        StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol)
-    /* solhint-disable-next-line no-empty-blocks */
-    {
-
-    }
+    ) StandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
 
     function allocateTo(address _owner, uint256 value) public {
         balanceOf[_owner] += value;
@@ -40,12 +34,7 @@ contract FaucetNonStandardToken is NonStandardToken {
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
-    )
-        NonStandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol)
-    /* solhint-disable-next-line no-empty-blocks */
-    {
-
-    }
+    ) NonStandardToken(_initialAmount, _tokenName, _decimalUnits, _tokenSymbol) {}
 
     function allocateTo(address _owner, uint256 value) public {
         balanceOf[_owner] += value;
@@ -65,9 +54,9 @@ contract FaucetTokenReEntrantHarness {
     string public name;
     string public symbol;
     uint8 public decimals;
-    uint256 private totalSupply_;
-    mapping(address => mapping(address => uint256)) private allowance_;
-    mapping(address => uint256) private balanceOf_;
+    uint256 totalSupply_;
+    mapping(address => mapping(address => uint256)) allowance_;
+    mapping(address => uint256) balanceOf_;
 
     bytes public reEntryCallData;
     string public reEntryFun;
@@ -79,9 +68,7 @@ contract FaucetTokenReEntrantHarness {
         string memory _reEntryFun = reEntryFun;
         if (compareStrings(_reEntryFun, funName)) {
             reEntryFun = ""; // Clear re-entry fun
-            // solhint-disable-next-line avoid-low-level-calls
             (bool success, bytes memory returndata) = msg.sender.call(reEntryCallData);
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 if eq(success, 0) {
                     revert(add(returndata, 0x20), returndatasize())
@@ -152,8 +139,8 @@ contract FaucetTokenReEntrantHarness {
         address spender,
         uint256 amount
     ) internal {
-        require(spender != address(0), "FaucetToken: approve to the zero address");
-        require(owner != address(0), "FaucetToken: approve from the zero address");
+        require(spender != address(0));
+        require(owner != address(0));
         allowance_[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
@@ -163,7 +150,7 @@ contract FaucetTokenReEntrantHarness {
         address dst,
         uint256 amount
     ) internal {
-        require(dst != address(0), "FaucetToken: transfer to the zero address");
+        require(dst != address(0));
         balanceOf_[src] = balanceOf_[src].sub(amount);
         balanceOf_[dst] = balanceOf_[dst].add(amount);
         emit Transfer(src, dst, amount);

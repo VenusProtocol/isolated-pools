@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import "./ComptrollerInterface.sol";
+import "./InterestRateModel.sol";
+import "./ErrorReporter.sol";
+import "./RiskFund/IProtocolShareReserve.sol";
 
-import { ComptrollerInterface } from "./ComptrollerInterface.sol";
-import { InterestRateModel } from "./InterestRateModel.sol";
-import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
-
-/**
- * @title VTokenStorage
- * @author Venus
- * @notice Storage layout used by the `VToken` contract
- */
-// solhint-disable-next-line max-states-count
 contract VTokenStorage {
     /**
      * @notice Container for borrow balance information
@@ -56,10 +50,10 @@ contract VTokenStorage {
     address payable public protocolShareReserve;
 
     // Maximum borrow rate that can ever be applied (.0005% / block)
-    uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
+    uint256 internal constant borrowRateMaxMantissa = 0.0005e16;
 
     // Maximum fraction of interest that can be set aside for reserves
-    uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
+    uint256 internal constant reserveFactorMaxMantissa = 1e18;
 
     /**
      * @notice Contract which oversees inter-vToken operations
@@ -146,11 +140,6 @@ contract VTokenStorage {
     uint256[48] private __gap;
 }
 
-/**
- * @title VTokenInterface
- * @author Venus
- * @notice Interface implemented by the `VToken` contract
- */
 abstract contract VTokenInterface is VTokenStorage {
     enum IncomeType {
         LIQUIDATION,
@@ -160,6 +149,11 @@ abstract contract VTokenInterface is VTokenStorage {
         address shortfall;
         address payable protocolShareReserve;
     }
+
+    /**
+     * @notice Indicator that this is a VToken contract (for inspection)
+     */
+    bool public constant isVToken = true;
 
     /*** Market Events ***/
 
@@ -277,14 +271,14 @@ abstract contract VTokenInterface is VTokenStorage {
     event Approval(address indexed owner, address indexed spender, uint256 amount);
 
     /**
-     * @notice Event emitted when healing the borrow
+     * @notice Event emitted when the healing the borrow
      */
-    event HealBorrow(address indexed payer, address indexed borrower, uint256 repayAmount);
+    event HealBorrow(address payer, address borrower, uint256 repayAmount);
 
     /**
      * @notice Event emitted when tokens are swept
      */
-    event SweepToken(address indexed token);
+    event SweepToken(address token);
 
     event NewReduceReservesThreshold(uint256 oldReduceReservesThreshold, uint256 NewReduceReservesThreshold);
 
@@ -312,7 +306,11 @@ abstract contract VTokenInterface is VTokenStorage {
         VTokenInterface vTokenCollateral
     ) external virtual returns (uint256);
 
-    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
+    function healBorrow(
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) external virtual;
 
     function forceLiquidateBorrow(
         address liquidator,
@@ -322,11 +320,19 @@ abstract contract VTokenInterface is VTokenStorage {
         bool skipCloseFactorCheck
     ) external virtual;
 
-    function seize(address liquidator, address borrower, uint256 seizeTokens) external virtual;
+    function seize(
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens
+    ) external virtual;
 
     function transfer(address dst, uint256 amount) external virtual returns (bool);
 
-    function transferFrom(address src, address dst, uint256 amount) external virtual returns (bool);
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 amount
+    ) external virtual returns (bool);
 
     function accrueInterest() external virtual returns (uint256);
 
@@ -352,15 +358,20 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function approve(address spender, uint256 amount) external virtual returns (bool);
 
-    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool);
-
-    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool);
-
     function allowance(address owner, address spender) external view virtual returns (uint256);
 
     function balanceOf(address owner) external view virtual returns (uint256);
 
-    function getAccountSnapshot(address account) external view virtual returns (uint256, uint256, uint256, uint256);
+    function getAccountSnapshot(address account)
+        external
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
     function borrowRatePerBlock() external view virtual returns (uint256);
 
@@ -371,12 +382,4 @@ abstract contract VTokenInterface is VTokenStorage {
     function exchangeRateStored() external view virtual returns (uint256);
 
     function getCash() external view virtual returns (uint256);
-
-    /**
-     * @notice Indicator that this is a VToken contract (for inspection)
-     * @return Always true
-     */
-    function isVToken() external pure virtual returns (bool) {
-        return true;
-    }
 }

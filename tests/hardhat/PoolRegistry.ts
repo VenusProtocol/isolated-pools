@@ -1,68 +1,96 @@
-import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import chai from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
 import { BigNumberish, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
-import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
+import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
+  Beacon,
+  Beacon__factory,
   Comptroller,
-  FeeToken__factory,
+  JumpRateModelFactory,
+  JumpRateModelFactory__factory,
+  JumpRateModelV2,
   MockPriceOracle,
   MockPriceOracle__factory,
   MockToken,
   MockToken__factory,
   PoolRegistry,
-  UpgradeableBeacon,
+  ProtocolShareReserve,
+  RewardsDistributor,
+  Shortfall,
   VToken,
+  VTokenProxyFactory,
+  VTokenProxyFactory__factory,
+  WhitePaperInterestRateModelFactory,
+  WhitePaperInterestRateModelFactory__factory,
 } from "../../typechain";
-import { makeVToken } from "./util/TokenTestHelpers";
 
-const { expect } = chai;
-chai.use(smock.matchers);
-
-const INITIAL_SUPPLY = parseUnits("1000", 18);
-
-// Disable a warning about mixing beacons and transparent proxies
-upgrades.silenceWarnings();
+const WP_RATE_MODEL = 0;
+const JUMP_RATE_MODEL = 1;
+const INITIAL_SUPPLY = convertToUnit(1000, 18);
 
 interface NewMarketParameters {
-  vToken: string;
+  comptroller: string;
+  asset: string;
+  decimals: BigNumberish;
+  name: string;
+  symbol: string;
+  rateModel: BigNumberish;
+  baseRatePerYear: BigNumberish;
+  multiplierPerYear: BigNumberish;
+  jumpMultiplierPerYear: BigNumberish;
+  kink_: BigNumberish;
   collateralFactor: BigNumberish;
   liquidationThreshold: BigNumberish;
+  accessControlManager: string;
+  beaconAddress: string;
   initialSupply: BigNumberish;
-  vTokenReceiver: string;
-  supplyCap: BigNumberish;
-  borrowCap: BigNumberish;
 }
 
 describe("PoolRegistry: Tests", function () {
   let owner: SignerWithAddress;
   let user: SignerWithAddress;
   let poolRegistry: PoolRegistry;
-  let vTokenBeacon: UpgradeableBeacon;
-  let mockDAI: MockContract<MockToken>;
-  let mockWBTC: MockContract<MockToken>;
-  let mockToken: MockContract<MockToken>;
+  let comptrollerBeacon: Beacon;
+  let vTokenBeacon: Beacon;
+  let mockDAI: MockToken;
+  let mockWBTC: MockToken;
+  let mockToken: MockToken;
   let vDAI: VToken;
   let vWBTC: VToken;
-  let vMockToken: VToken;
   let priceOracle: MockPriceOracle;
   let comptroller1Proxy: Comptroller;
   let comptroller2Proxy: Comptroller;
-  let comptroller3Proxy: Comptroller;
+  let vTokenFactory: VTokenProxyFactory;
+  let jumpRateFactory: JumpRateModelFactory;
+  let whitePaperRateFactory: WhitePaperInterestRateModelFactory;
   let fakeAccessControlManager: FakeContract<AccessControlManager>;
+  let rewardDistributor: FakeContract<RewardsDistributor>;
   const maxLoopsLimit = 150;
 
-  const withDefaultMarketParameters = (overwrites: Partial<NewMarketParameters> = {}): NewMarketParameters => {
+  const withDefaultMarketParameters = async (overwrites: Partial<NewMarketParameters> = {}) => {
     const defaults = {
-      vToken: vMockToken.address,
-      collateralFactor: parseUnits("0.7", 18),
-      liquidationThreshold: parseUnits("0.7", 18),
+      comptroller: comptroller1Proxy.address,
+      asset: mockToken.address,
+      decimals: 8,
+      name: "Venus SomeToken",
+      symbol: "vST",
+      rateModel: 0,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
-      vTokenReceiver: owner.address,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
     };
@@ -74,19 +102,62 @@ describe("PoolRegistry: Tests", function () {
    */
   const poolRegistryFixture = async () => {
     [owner, user] = await ethers.getSigners();
+    const VTokenProxyFactory = await ethers.getContractFactory<VTokenProxyFactory__factory>("VTokenProxyFactory");
+    vTokenFactory = await VTokenProxyFactory.deploy();
+    await vTokenFactory.deployed();
+    const JumpRateModelFactory = await ethers.getContractFactory<JumpRateModelFactory__factory>("JumpRateModelFactory");
+    jumpRateFactory = await JumpRateModelFactory.deploy();
+    await jumpRateFactory.deployed();
+
+    const WhitePaperInterestRateModelFactory =
+      await ethers.getContractFactory<WhitePaperInterestRateModelFactory__factory>(
+        "WhitePaperInterestRateModelFactory",
+      );
+    whitePaperRateFactory = await WhitePaperInterestRateModelFactory.deploy();
+    await whitePaperRateFactory.deployed();
+
+    const shortfall = await smock.fake<Shortfall>("Shortfall");
+    const protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
 
     fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     fakeAccessControlManager.isAllowedToCall.returns(true);
 
     const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-    poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;
+    poolRegistry = await upgrades.deployProxy(PoolRegistry, [
+      vTokenFactory.address,
+      jumpRateFactory.address,
+      whitePaperRateFactory.address,
+      shortfall.address,
+      protocolShareReserve.address,
+      fakeAccessControlManager.address,
+    ]);
+
+    const Comptroller = await ethers.getContractFactory("Comptroller");
+    const comptroller = await Comptroller.deploy(poolRegistry.address);
+    await comptroller.deployed();
+
+    const VTokenContract = await ethers.getContractFactory("VToken");
+    const vToken = await VTokenContract.deploy();
+    await vToken.deployed();
+
+    const ComptrollerBeacon = await ethers.getContractFactory<Beacon__factory>("Beacon");
+    comptrollerBeacon = await ComptrollerBeacon.deploy(comptroller.address);
+    await comptrollerBeacon.deployed();
+
+    const VTokenBeacon = await ethers.getContractFactory<Beacon__factory>("Beacon");
+    vTokenBeacon = await VTokenBeacon.deploy(vToken.address);
+    await vTokenBeacon.deployed();
 
     // Deploy Mock Tokens
-    const MockToken = await smock.mock<MockToken__factory>("MockToken");
+    const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
     mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
-    await mockDAI.faucet(parseUnits("1000", 18));
+    await mockDAI.faucet(convertToUnit(1000, 18));
     mockWBTC = await MockToken.deploy("Bitcoin", "BTC", 8);
     mockToken = await MockToken.deploy("SomeToken", "ST", 18);
+
+    const _closeFactor = convertToUnit(0.05, 18);
+    const _liquidationIncentive = convertToUnit(1, 18);
+    const _minLiquidatableCollateral = convertToUnit(100, 18);
 
     // Deploy Price Oracle
     const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
@@ -96,104 +167,103 @@ describe("PoolRegistry: Tests", function () {
     const daiPrice = "1";
     const someTokenPrice = "1234";
 
-    await priceOracle.setPrice(mockDAI.address, parseUnits(daiPrice, 18));
-    await priceOracle.setPrice(mockWBTC.address, parseUnits(btcPrice, 28));
-    await priceOracle.setPrice(mockToken.address, parseUnits(someTokenPrice, 18));
-
-    const Comptroller = await ethers.getContractFactory("Comptroller");
-    const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
-
-    [comptroller1Proxy, comptroller2Proxy, comptroller3Proxy] = await Promise.all(
-      [...Array(3)].map(async () => {
-        const comptroller = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
-          maxLoopsLimit,
-          fakeAccessControlManager.address,
-        ]);
-        await comptroller.setPriceOracle(priceOracle.address);
-        return comptroller as Comptroller;
-      }),
-    );
-
-    const _closeFactor = parseUnits("0.05", 18);
-    const _liquidationIncentive = parseUnits("1", 18);
-    const _minLiquidatableCollateral = parseUnits("100", 18);
+    await priceOracle.setPrice(mockDAI.address, convertToUnit(daiPrice, 18));
+    await priceOracle.setPrice(mockWBTC.address, convertToUnit(btcPrice, 28));
+    await priceOracle.setPrice(mockToken.address, convertToUnit(someTokenPrice, 18));
 
     // Registering the first pool
-    await poolRegistry.addPool(
+    await poolRegistry.createRegistryPool(
       "Pool 1",
-      comptroller1Proxy.address,
+      comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
+      priceOracle.address,
+      maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Registering the second pool
-    await poolRegistry.addPool(
+    await poolRegistry.createRegistryPool(
       "Pool 2",
-      comptroller2Proxy.address,
+      comptrollerBeacon.address,
       _closeFactor,
       _liquidationIncentive,
       _minLiquidatableCollateral,
+      priceOracle.address,
+      maxLoopsLimit,
+      fakeAccessControlManager.address,
     );
 
     // Setup Proxies
-    vWBTC = await makeVToken({
-      underlying: mockWBTC,
-      comptroller: comptroller1Proxy,
-      accessControlManager: fakeAccessControlManager,
-      decimals: 8,
-      initialExchangeRateMantissa: parseUnits("1", 18),
-      admin: owner.address,
-      beacon: vTokenBeacon,
-    });
+    const pools = await poolRegistry.callStatic.getAllPools();
+    comptroller1Proxy = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+    await comptroller1Proxy.acceptOwnership();
+
+    comptroller2Proxy = await ethers.getContractAt("Comptroller", pools[1].comptroller);
+    await comptroller2Proxy.acceptOwnership();
 
     await mockWBTC.faucet(INITIAL_SUPPLY);
     await mockWBTC.approve(poolRegistry.address, INITIAL_SUPPLY);
-    await poolRegistry.addMarket({
-      vToken: vWBTC.address,
-      collateralFactor: parseUnits("0.7", 18),
-      liquidationThreshold: parseUnits("0.7", 18),
-      initialSupply: INITIAL_SUPPLY,
-      vTokenReceiver: owner.address,
-      supplyCap: INITIAL_SUPPLY,
-      borrowCap: INITIAL_SUPPLY,
-    });
-
-    vDAI = await makeVToken({
-      underlying: mockDAI,
-      comptroller: comptroller1Proxy,
-      accessControlManager: fakeAccessControlManager,
-      decimals: 18,
-      initialExchangeRateMantissa: parseUnits("1", 18),
-      admin: owner.address,
-      beacon: vTokenBeacon,
-    });
 
     await mockDAI.faucet(INITIAL_SUPPLY);
     await mockDAI.approve(poolRegistry.address, INITIAL_SUPPLY);
+
+    // Deploy VTokens
     await poolRegistry.addMarket({
-      vToken: vDAI.address,
-      collateralFactor: parseUnits("0.7", 18),
-      liquidationThreshold: parseUnits("0.7", 18),
+      comptroller: comptroller1Proxy.address,
+      asset: mockWBTC.address,
+      decimals: 8,
+      name: "Compound WBTC",
+      symbol: "vWBTC",
+      rateModel: WP_RATE_MODEL,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      beaconAddress: vTokenBeacon.address,
       initialSupply: INITIAL_SUPPLY,
-      vTokenReceiver: owner.address,
       supplyCap: INITIAL_SUPPLY,
       borrowCap: INITIAL_SUPPLY,
     });
 
-    vMockToken = await makeVToken({
-      underlying: mockToken,
-      comptroller: comptroller1Proxy,
-      accessControlManager: fakeAccessControlManager,
-      decimals: 8,
-      initialExchangeRateMantissa: parseUnits("1", 28), // underlying.decimals + 18 - vToken.decimals
-      admin: owner.address,
-      beacon: vTokenBeacon,
+    await poolRegistry.addMarket({
+      comptroller: comptroller1Proxy.address,
+      asset: mockDAI.address,
+      decimals: 18,
+      name: "Compound DAI",
+      symbol: "vDAI",
+      rateModel: WP_RATE_MODEL,
+      baseRatePerYear: 0,
+      multiplierPerYear: "40000000000000000",
+      jumpMultiplierPerYear: 0,
+      kink_: 0,
+      collateralFactor: convertToUnit(0.7, 18),
+      liquidationThreshold: convertToUnit(0.7, 18),
+      reserveFactor: convertToUnit(0.3, 18),
+      accessControlManager: fakeAccessControlManager.address,
+      beaconAddress: vTokenBeacon.address,
+      initialSupply: INITIAL_SUPPLY,
+      supplyCap: INITIAL_SUPPLY,
+      borrowCap: INITIAL_SUPPLY,
     });
+
+    const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
+    const vDAIAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
+
+    vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
+    vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 
     // Enter Markets
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy.connect(user).enterMarkets([vDAI.address, vWBTC.address]);
+
+    // Set Oracle
+    await comptroller1Proxy.setPriceOracle(priceOracle.address);
   };
 
   beforeEach(async () => {
@@ -240,27 +310,9 @@ describe("PoolRegistry: Tests", function () {
       fakeAccessControlManager.isAllowedToCall
         .whenCalledWith(owner.address, "addMarket(AddMarketInput)")
         .returns(false);
-      await expect(poolRegistry.addMarket(withDefaultMarketParameters())).to.be.revertedWithCustomError(
+      await expect(poolRegistry.addMarket(await withDefaultMarketParameters({}))).to.be.revertedWithCustomError(
         poolRegistry,
         "Unauthorized",
-      );
-    });
-
-    it("reverts if the vToken address is zero", async () => {
-      await expect(
-        poolRegistry.addMarket(withDefaultMarketParameters({ vToken: constants.AddressZero })),
-      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
-    });
-
-    it("reverts if vTokenReceiver address is zero", async () => {
-      await expect(
-        poolRegistry.addMarket(withDefaultMarketParameters({ vTokenReceiver: constants.AddressZero })),
-      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
-    });
-
-    it("reverts if initial supply is zero", async () => {
-      await expect(poolRegistry.addMarket(withDefaultMarketParameters({ initialSupply: 0 }))).to.be.revertedWith(
-        "PoolRegistry: initialSupply is zero",
       );
     });
 
@@ -272,7 +324,10 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
-      await poolRegistry.addMarket(withDefaultMarketParameters());
+      rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
+      await comptroller1Proxy.addRewardsDistributor(rewardDistributor.address);
+
+      await poolRegistry.addMarket(await withDefaultMarketParameters());
       const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
       expect(vTokenAddress).to.be.a.properAddress;
       expect(vTokenAddress).to.not.equal(constants.AddressZero);
@@ -287,7 +342,7 @@ describe("PoolRegistry: Tests", function () {
       expect(await vToken.accessControlManager()).to.equal(fakeAccessControlManager.address);
     });
 
-    it("transfers initial supply from the sender's address", async () => {
+    it("transfers initial supply fron the sender's address", async () => {
       expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
         constants.AddressZero,
       );
@@ -296,97 +351,40 @@ describe("PoolRegistry: Tests", function () {
       await mockToken.connect(user).faucet(INITIAL_SUPPLY);
       await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
 
-      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters());
+      await poolRegistry.connect(user).addMarket(await withDefaultMarketParameters());
 
       expect(await mockToken.balanceOf(user.address)).to.equal(0);
-    });
-
-    it("transfers vTokens to vTokenReceiver address", async () => {
-      const vTokenReceiver = (await ethers.getSigners())[5]; // hardhat-ethers does not support getSigner(5)
-      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
-        constants.AddressZero,
-      );
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
-
-      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
-      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
-
-      await poolRegistry
-        .connect(user)
-        .addMarket(withDefaultMarketParameters({ vTokenReceiver: vTokenReceiver.address }));
-
-      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
-      const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
-      expect(await vToken.balanceOf(vTokenReceiver.address)).to.equal(parseUnits("1000", 8));
-    });
-
-    it("uses two-step approval", async () => {
-      expect(await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address)).to.equal(
-        constants.AddressZero,
-      );
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
-
-      await mockToken.connect(user).faucet(INITIAL_SUPPLY);
-      await mockToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
-
-      mockToken.approve.reset();
-      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters());
-      expect(mockToken.approve).to.have.been.calledTwice;
-      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
-      expect(mockToken.approve.atCall(0)).to.have.been.calledWith(vTokenAddress, 0);
-      expect(mockToken.approve.atCall(1)).to.have.been.calledWith(vTokenAddress, INITIAL_SUPPLY);
-    });
-
-    it("fails if the pool is not registered", async () => {
-      const MockToken = await smock.mock<MockToken__factory>("MockToken");
-      const mockToken = await MockToken.deploy("MockToken", "MT", 18);
-      await priceOracle.setPrice(mockToken.address, parseUnits("1", 18));
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, "addMarket(AddMarketInput)").returns(true);
-
-      const vToken = await makeVToken({
-        underlying: mockToken,
-        accessControlManager: fakeAccessControlManager,
-      });
-
-      await mockToken.faucet(INITIAL_SUPPLY);
-      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
-      await expect(poolRegistry.addMarket(withDefaultMarketParameters({ vToken: vToken.address }))).to.be.revertedWith(
-        "PoolRegistry: Pool not registered",
-      );
-    });
-
-    it("supports fee-on-transfer tokens", async () => {
-      const FeeToken = await smock.mock<FeeToken__factory>("FeeToken");
-      const feeToken = await FeeToken.deploy(INITIAL_SUPPLY, "FeeToken", 18, "FT", parseUnits("0.1", 4), owner.address);
-      await priceOracle.setPrice(feeToken.address, parseUnits("1", 18));
-
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(user.address, "addMarket(AddMarketInput)").returns(true);
-
-      const vToken = await makeVToken({
-        underlying: feeToken,
-        comptroller: comptroller1Proxy,
-        accessControlManager: fakeAccessControlManager,
-        decimals: 8,
-        initialExchangeRateMantissa: parseUnits("1", 28), // underlying.decimals + 18 - vToken.decimals
-        admin: user.address,
-        beacon: vTokenBeacon,
-      });
-
-      await feeToken.allocateTo(user.address, INITIAL_SUPPLY);
-      await feeToken.connect(user).approve(poolRegistry.address, INITIAL_SUPPLY);
-      await poolRegistry.connect(user).addMarket(withDefaultMarketParameters({ vToken: vToken.address }));
-
-      expect(await vToken.balanceOf(owner.address)).to.equal(parseUnits("810", 8));
     });
 
     it("reverts if market is readded with same comptroller asset combination", async () => {
       await mockToken.faucet(INITIAL_SUPPLY);
       await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
 
-      await poolRegistry.addMarket(withDefaultMarketParameters());
-      await expect(poolRegistry.addMarket(withDefaultMarketParameters())).to.be.revertedWith(
-        "PoolRegistry: Market already added for asset comptroller combination",
+      await poolRegistry.addMarket(await withDefaultMarketParameters());
+      await expect(poolRegistry.addMarket(await withDefaultMarketParameters())).to.be.revertedWith(
+        "RegistryPool: Market already added for asset comptroller combination",
       );
+    });
+
+    it("sets rate model to a new JumpRateModel with the correct parameters", async () => {
+      await mockToken.faucet(INITIAL_SUPPLY);
+      await mockToken.approve(poolRegistry.address, INITIAL_SUPPLY);
+
+      await poolRegistry.addMarket(
+        await withDefaultMarketParameters({
+          comptroller: comptroller1Proxy.address,
+          rateModel: JUMP_RATE_MODEL,
+          jumpMultiplierPerYear: convertToUnit("1.1", 18),
+          kink_: convertToUnit("0.8", 18),
+        }),
+      );
+      const vTokenAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockToken.address);
+      const vToken = await ethers.getContractAt<VToken>("VToken", vTokenAddress);
+      const rateModelAddress = await vToken.interestRateModel();
+      expect(rateModelAddress).to.be.a.properAddress;
+      expect(rateModelAddress).to.not.equal(constants.AddressZero);
+      const rateModel = await ethers.getContractAt<JumpRateModelV2>("JumpRateModelV2", rateModelAddress);
+      expect(await rateModel.kink()).to.equal(convertToUnit("0.8", 18));
     });
   });
 
@@ -412,13 +410,13 @@ describe("PoolRegistry: Tests", function () {
 
   it("Should be correct balances in tokens", async () => {
     const [owner] = await ethers.getSigners();
-    await mockWBTC.faucet(parseUnits("1000", 8));
+    await mockWBTC.faucet(convertToUnit(1000, 8));
 
     const daiBalance = await mockDAI.balanceOf(owner.address);
-    expect(daiBalance).equal(parseUnits("1000", 18));
+    expect(daiBalance).equal(convertToUnit(1000, 18));
 
     const btcBalance = await mockWBTC.balanceOf(owner.address);
-    expect(btcBalance).equal(parseUnits("1000", 8));
+    expect(btcBalance).equal(convertToUnit(1000, 8));
   });
 
   // Get all pools that support a given asset
@@ -435,10 +433,12 @@ describe("PoolRegistry: Tests", function () {
   });
 
   describe("updatePoolMetadata", async () => {
+    const riskRating = 2;
     const category = "High market cap";
     const logoURL = "http://venus.io/pool1";
     const description = "An sample description";
     const newMetadata = {
+      riskRating,
       category,
       logoURL,
       description,
@@ -456,6 +456,7 @@ describe("PoolRegistry: Tests", function () {
     it("sets new pool metadata", async () => {
       await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata);
       const metadata = await poolRegistry.metadata(comptroller1Proxy.address);
+      expect(metadata.riskRating).equal(riskRating);
       expect(metadata.category).equal(category);
       expect(metadata.logoURL).equal(logoURL);
       expect(metadata.description).equal(description);
@@ -466,21 +467,24 @@ describe("PoolRegistry: Tests", function () {
       const tx = await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, newMetadata);
       await expect(tx)
         .to.emit(poolRegistry, "PoolMetadataUpdated")
-        .withArgs(comptroller1Proxy.address, oldMetadata, [category, logoURL, description]);
+        .withArgs(comptroller1Proxy.address, oldMetadata, [riskRating, category, logoURL, description]);
     });
   });
 
-  describe("addPool", async () => {
+  describe("createRegistryPool", async () => {
     it("reverts if ACM denies the access", async () => {
-      const addPoolSignature = "addPool(string,address,uint256,uint256,uint256)";
-      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, addPoolSignature).returns(false);
+      const createRegistryPool = "createRegistryPool(string,address,uint256,uint256,uint256,address,uint256,address)";
+      fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, createRegistryPool).returns(false);
       await expect(
-        poolRegistry.addPool(
+        poolRegistry.createRegistryPool(
           "Pool 3",
-          comptroller3Proxy.address,
+          comptrollerBeacon.address,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
     });
@@ -488,42 +492,65 @@ describe("PoolRegistry: Tests", function () {
     it("reverts if pool name is too long", async () => {
       const longName = Array(101).fill("a").join("");
       await expect(
-        poolRegistry.addPool(
+        poolRegistry.createRegistryPool(
           longName,
-          comptroller3Proxy.address,
+          comptrollerBeacon.address,
           parseUnits("0.5", 18),
           parseUnits("1.1", 18),
           parseUnits("100", 18),
+          priceOracle.address,
+          maxLoopsLimit,
+          fakeAccessControlManager.address,
         ),
       ).to.be.revertedWith("Pool's name is too large");
     });
+  });
 
-    it("reverts if Comptroller address is zero", async () => {
-      await expect(
-        poolRegistry.addPool(
-          "Pool 3",
-          constants.AddressZero,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
-      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+  describe("setProtocolShareReserve", () => {
+    let protocolShareReserve: FakeContract<ProtocolShareReserve>;
+
+    beforeEach(async () => {
+      protocolShareReserve = await smock.fake<ProtocolShareReserve>("ProtocolShareReserve");
     });
 
-    it("reverts if price oracle address is zero", async () => {
-      // Deploy a Comptroller contract without a price oracle
-      // We skip proxies and initialization here because it shouldn't affect the test
-      const Comptroller = await ethers.getContractFactory("Comptroller");
-      const comptroller = await Comptroller.deploy(poolRegistry.address);
+    it("reverts if called by a non-owner", async () => {
+      await expect(poolRegistry.connect(user).setProtocolShareReserve(protocolShareReserve.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
       await expect(
-        poolRegistry.addPool(
-          "Pool 3",
-          comptroller.address,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
-      ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+        poolRegistry.connect(owner).setProtocolShareReserve(ethers.constants.AddressZero),
+      ).revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+    });
+
+    it("sets protocol share reserve if called by admin", async () => {
+      await poolRegistry.connect(owner).setProtocolShareReserve(protocolShareReserve.address);
+    });
+  });
+
+  describe("setShortfallContract", () => {
+    let shortfall: FakeContract<Shortfall>;
+
+    beforeEach(async () => {
+      shortfall = await smock.fake<Shortfall>("Shortfall");
+    });
+
+    it("reverts if called by a non-owner", async () => {
+      await expect(poolRegistry.connect(user).setShortfallContract(shortfall.address)).revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("reverts if zero address", async () => {
+      await expect(
+        poolRegistry.connect(owner).setShortfallContract(ethers.constants.AddressZero),
+      ).revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
+    });
+
+    it("sets shortfall contract if called by admin", async () => {
+      await poolRegistry.connect(owner).setShortfallContract(shortfall.address);
     });
   });
 });

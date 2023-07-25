@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { VToken } from "../VToken.sol";
-import { ComptrollerInterface } from "../ComptrollerInterface.sol";
-import { InterestRateModel } from "../InterestRateModel.sol";
+import "../VToken.sol";
+import "../Governance/AccessControlManager.sol";
 
 /**
  * @title Venus's VToken Contract
@@ -27,7 +26,7 @@ contract UpgradedVToken is VToken {
      */
 
     /// @notice We added this new function to test contract upgrade
-    function version() external pure returns (uint256) {
+    function version() external view returns (uint256) {
         return 2;
     }
 

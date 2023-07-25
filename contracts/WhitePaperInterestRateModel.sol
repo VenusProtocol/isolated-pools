@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { InterestRateModel } from "./InterestRateModel.sol";
-import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
+import "./InterestRateModel.sol";
 
 /**
  * @title Compound's WhitePaperInterestRateModel Contract
@@ -10,6 +9,13 @@ import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
 contract WhitePaperInterestRateModel is InterestRateModel {
+    uint256 private constant BASE = 1e18;
+
+    /**
+     * @notice The approximate number of blocks per year that is assumed by the interest rate model
+     */
+    uint256 public constant blocksPerYear = 2102400;
+
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
      */
@@ -24,12 +30,12 @@ contract WhitePaperInterestRateModel is InterestRateModel {
 
     /**
      * @notice Construct an interest rate model
-     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
+     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by BASE)
+     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by BASE)
      */
     constructor(uint256 baseRatePerYear, uint256 multiplierPerYear) {
-        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
-        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
+        baseRatePerBlock = baseRatePerYear / blocksPerYear;
+        multiplierPerBlock = multiplierPerYear / blocksPerYear;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
     }
@@ -39,17 +45,15 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
-     * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per block as a mantissa (scaled by EXP_SCALE)
+     * @return The borrow rate percentage per block as a mantissa (scaled by BASE)
      */
     function getBorrowRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves,
-        uint256 badDebt
+        uint256 reserves
     ) public view override returns (uint256) {
-        uint256 ur = utilizationRate(cash, borrows, reserves, badDebt);
-        return ((ur * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
+        uint256 ur = utilizationRate(cash, borrows, reserves);
+        return ((ur * multiplierPerBlock) / BASE) + baseRatePerBlock;
     }
 
     /**
@@ -58,49 +62,37 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param reserveFactorMantissa The current reserve factor for the market
-     * @param badDebt The amount of badDebt in the market
-     * @return The supply rate percentage per block as a mantissa (scaled by EXP_SCALE)
+     * @return The supply rate percentage per block as a mantissa (scaled by BASE)
      */
     function getSupplyRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves,
-        uint256 reserveFactorMantissa,
-        uint256 badDebt
+        uint256 reserveFactorMantissa
     ) public view override returns (uint256) {
-        uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
-        uint256 borrowRate = getBorrowRate(cash, borrows, reserves, badDebt);
-        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
-        uint256 incomeToDistribute = borrows * rateToPool;
-        uint256 supply = cash + borrows + badDebt - reserves;
-        return incomeToDistribute / supply;
+        uint256 oneMinusReserveFactor = BASE - reserveFactorMantissa;
+        uint256 borrowRate = getBorrowRate(cash, borrows, reserves);
+        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / BASE;
+        return (utilizationRate(cash, borrows, reserves) * rateToPool) / BASE;
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
+     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market (currently unused)
-     * @param badDebt The amount of badDebt in the market
-     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
+     * @return The utilization rate as a mantissa between [0, BASE]
      */
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves,
-        uint256 badDebt
+        uint256 reserves
     ) public pure returns (uint256) {
-        // Utilization rate is 0 when there are no borrows and badDebt
-        if ((borrows + badDebt) == 0) {
+        // Utilization rate is 0 when there are no borrows
+        if (borrows == 0) {
             return 0;
         }
 
-        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
-
-        if (rate > EXP_SCALE) {
-            rate = EXP_SCALE;
-        }
-
-        return rate;
+        return (borrows * BASE) / (cash + borrows - reserves);
     }
 }

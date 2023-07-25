@@ -10,7 +10,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  ResilientOracleInterface,
+  PriceOracle,
   VToken,
 } from "../../../typechain";
 import { Error } from "../util/Errors";
@@ -33,7 +33,7 @@ describe("assetListTest", () => {
   type AssetListFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>;
-    oracle: FakeContract<ResilientOracleInterface>;
+    oracle: FakeContract<PriceOracle>;
     OMG: FakeContract<VToken>;
     ZRX: FakeContract<VToken>;
     BAT: FakeContract<VToken>;
@@ -50,7 +50,7 @@ describe("assetListTest", () => {
       constructorArgs: [poolRegistry.address],
       initializer: "initialize(uint256,address)",
     });
-    const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);

@@ -11,7 +11,7 @@ import {
   Comptroller,
   Comptroller__factory,
   PoolRegistry,
-  ResilientOracleInterface,
+  PriceOracle,
   VToken,
 } from "../../../typechain";
 
@@ -58,7 +58,7 @@ describe("liquidateAccount", () => {
   type LiquidateAccountFixture = {
     accessControl: FakeContract<AccessControlManager>;
     comptroller: MockContract<Comptroller>;
-    oracle: FakeContract<ResilientOracleInterface>;
+    oracle: FakeContract<PriceOracle>;
     OMG: FakeContract<VToken>;
     ZRX: FakeContract<VToken>;
     BAT: FakeContract<VToken>;
@@ -74,7 +74,7 @@ describe("liquidateAccount", () => {
       constructorArgs: [poolRegistry.address],
       initializer: "initialize(uint256,address)",
     });
-    const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const oracle = await smock.fake<PriceOracle>("PriceOracle");
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
@@ -90,7 +90,7 @@ describe("liquidateAccount", () => {
         oracle.getUnderlyingPrice.returns(parseUnits("1", 18));
         await comptroller
           .connect(poolRegistry.wallet)
-          .setCollateralFactor(vToken.address, parseUnits("0.8", 18), parseUnits("0.9", 18));
+          .setCollateralFactor(vToken.address, parseUnits("0.9", 18), parseUnits("0.9", 18));
         return vToken;
       }),
     );
@@ -204,16 +204,6 @@ describe("liquidateAccount", () => {
       await expect(comptroller.connect(liquidator).liquidateAccount(user.address, ordersWithUnknownBorrow))
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(unknownVToken.address);
-    });
-
-    it("fails if user is not listed in market", async () => {
-      const [, , unknownUser] = await ethers.getSigners();
-
-      await expect(
-        comptroller.connect(liquidator).preSeizeHook(ZRX.address, OMG.address, liquidator.address, unknownUser.address),
-      )
-        .to.be.revertedWithCustomError(comptroller, "MarketNotCollateral")
-        .withArgs(ZRX.address, unknownUser.address);
     });
   });
 
