@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
+/**
+ * @title MaxLoopsLimitHelper
+ * @author Venus
+ * @notice Abstract contract used to avoid collection with too many items that would generate gas errors and DoS.
+ */
 abstract contract MaxLoopsLimitHelper {
     // Limit for the loops to avoid the DOS
     uint256 public maxLoopsLimit;
@@ -28,11 +33,11 @@ abstract contract MaxLoopsLimitHelper {
         uint256 oldMaxLoopsLimit = maxLoopsLimit;
         maxLoopsLimit = limit;
 
-        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, maxLoopsLimit);
+        emit MaxLoopsLimitUpdated(oldMaxLoopsLimit, limit);
     }
 
     /**
-     * @notice Comapre the maxLoopsLimit with number of the times loop iterate
+     * @notice Compare the maxLoopsLimit with number of the times loop iterate
      * @param len Length of the loops iterate
      * @custom:error MaxLoopsLimitExceeded error is thrown when loops length exceeds maxLoopsLimit
      */

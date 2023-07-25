@@ -1,4 +1,4 @@
-import configureOracleFeeds from "@venusprotocol/oracle/deploy/2-configure-feeds";
+import configureOracleFeeds from "@venusprotocol/oracle/dist/deploy/2-configure-feeds";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 configureOracleFeeds.tags = ["Oracle"];

@@ -1,17 +1,18 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
+import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { deployments } from "hardhat";
 
 import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
+  MockPriceOracle,
   MockToken,
   PoolRegistry,
-  PriceOracle,
   ProtocolShareReserve,
   RewardsDistributor,
   RiskFund,
@@ -22,41 +23,24 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const toggleMining = async status => {
+const toggleMining = async (status: boolean) => {
   if (!status) {
-    await ethers.provider.send("evm_setAutomine", [false]);
+    await network.provider.send("evm_setAutomine", [false]);
   } else {
-    await ethers.provider.send("evm_setAutomine", [true]);
+    await network.provider.send("evm_setAutomine", [true]);
   }
 };
 
-const mineBlock = async () => {
-  await ethers.provider.send("hardhat_mine");
-};
-
 const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
-  await deployments.fixture([
-    "MockTokens",
-    "OracleDeploy",
-    "Oracle",
-    "SwapRouter",
-    "AccessControl",
-    "Factories",
-    "AccessControlConfig",
-    "Pools",
-    "RiskFund",
-  ]);
+  await deployments.fixture();
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
   const RiskFund = await ethers.getContract("RiskFund");
-  const VTokenFactory = await ethers.getContract("VTokenProxyFactory");
-  const JumpRateModelFactory = await ethers.getContract("JumpRateModelFactory");
-  const WhitePaperRateFactory = await ethers.getContract("WhitePaperInterestRateModelFactory");
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
 
-  const PriceOracle = await ethers.getContract("ResilientOracle");
+  const priceOracle = await ethers.getContract("ResilientOracle");
 
   const pools = await PoolRegistry.callStatic.getAllPools();
   const Comptroller = await ethers.getContractAt("Comptroller", pools[0].comptroller);
@@ -69,7 +53,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
   // Set Oracle
-  await Comptroller.setPriceOracle(PriceOracle.address);
+  await Comptroller.setPriceOracle(priceOracle.address);
 
   const vBNXAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, BNX.address);
   const vBTCBAddress = await PoolRegistry.getVTokenForAsset(Comptroller.address, BTCB.address);
@@ -115,10 +99,10 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await Comptroller.setMarketBorrowCaps([vBNX.address, vBTCB.address], [borrowCap, borrowCap]);
 
   const vBNXPrice: BigNumber = new BigNumber(
-    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
+    scaleDownBy((await priceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
   );
   const vBTCBPrice: BigNumber = new BigNumber(
-    scaleDownBy((await PriceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
+    scaleDownBy((await priceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
   );
 
   await RiskFund.setPoolRegistry(PoolRegistry.address);
@@ -130,11 +114,8 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
       PoolRegistry,
       AccessControlManager,
       RiskFund,
-      VTokenFactory,
-      JumpRateModelFactory,
-      WhitePaperRateFactory,
       ProtocolShareReserve,
-      PriceOracle,
+      priceOracle,
       Comptroller,
       vBNX,
       vBTCB,
@@ -152,7 +133,9 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   };
 });
 
-describe("Positive Cases", () => {
+describe("Positive Cases", function () {
+  this.timeout(500000);
+
   let fixture;
   let PoolRegistry: PoolRegistry;
   let AccessControlManager: AccessControlManager;
@@ -187,16 +170,9 @@ describe("Positive Cases", () => {
   });
   describe("Setup", () => {
     it("PoolRegistry should be initialized properly", async function () {
-      await expect(
-        PoolRegistry.initialize(
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-        ),
-      ).to.be.revertedWith("Initializable: contract is already initialized");
+      await expect(PoolRegistry.initialize(ethers.constants.AddressZero)).to.be.revertedWith(
+        "Initializable: contract is already initialized",
+      );
     });
 
     it("PoolRegistry has the required permissions ", async function () {
@@ -229,8 +205,8 @@ describe("Positive Cases", () => {
 
       rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
       await Comptroller.addRewardsDistributor(rewardDistributor.address);
-      const comptrollerRewardDistributor = await Comptroller.getRewardDistributors();
-      expect(comptrollerRewardDistributor[0]).equal(rewardDistributor.address);
+      const rewardsDistributors = await Comptroller.getRewardDistributors();
+      expect(rewardsDistributors[rewardsDistributors.length - 1]).equal(rewardDistributor.address);
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -306,7 +282,7 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(bnxCollateralFactor).multipliedBy(vBNXPrice));
       expect(shortfall).to.equal(0);
@@ -321,7 +297,7 @@ describe("Positive Cases", () => {
       expect(error).to.equal(Error.NO_ERROR);
       expect(balance).to.equal(vTokenMintAmount);
       expect(borrowBalance).to.equal(0);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getBorrowingPower(acc1);
       expect(error).to.equal(Error.NO_ERROR);
       expect(liquidity).to.equal(new BigNumber(mintAmount).multipliedBy(btcbCollateralFactor).multipliedBy(vBTCBPrice));
       expect(shortfall).to.equal(0);
@@ -351,7 +327,7 @@ describe("Positive Cases", () => {
       const bnxLiquidity = new BigNumber(mintAmount).minus(new BigNumber(tokenRedeemAmount)).multipliedBy(vBNXPrice);
       const BTCBBorrow = new BigNumber(borrowBalance.toString()).multipliedBy(vBTCBPrice);
       let preComputeLiquidity = bnxLiquidity.minus(BTCBBorrow).multipliedBy(bnxCollateralFactor);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 18)));
       expect(shortfall).to.equal(0);
@@ -366,7 +342,7 @@ describe("Positive Cases", () => {
       expect(balance).to.equal(balanceAfterVToken);
       expect(borrowBalance).to.equal(0);
       preComputeLiquidity = balanceAfter.multipliedBy(bnxCollateralFactor).multipliedBy(vBNXPrice);
-      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getAccountLiquidity(acc2);
+      [error, liquidity, shortfall] = await Comptroller.connect(acc2Signer).getBorrowingPower(acc2);
       expect(error).to.equal(Error.NO_ERROR);
       expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 14)));
       expect(shortfall).to.equal(0);
@@ -374,7 +350,9 @@ describe("Positive Cases", () => {
   });
 });
 
-describe("Straight Cases For Single User Liquidation and healing", () => {
+describe("Straight Cases For Single User Liquidation and healing", function () {
+  this.timeout(500000);
+
   let fixture;
   let Comptroller: Comptroller;
   let vBNX: VToken;
@@ -446,7 +424,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         vTokenBorrowed: vBTCB.address,
         repayAmount: repayAmount,
       };
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 12));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -455,12 +433,12 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       );
     });
 
-    it("Should success on liquidation when repayamount is equal to borrowing", async function () {
+    it("Should success on liquidation when repay amount is equal to borrowing", async function () {
       await BNX.connect(acc2Signer).faucet(1e10);
       await BNX.connect(acc2Signer).approve(vBNX.address, 1e10);
       await vBNX.connect(acc2Signer).mint(1e10);
 
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 12));
 
@@ -472,7 +450,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const repayAmount = convertToUnit("1000000000011889", 0);
+      const repayAmount = convertToUnit("1000000000007133", 0);
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,
@@ -540,7 +518,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert when try to drain market", async function () {
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 40));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -577,7 +555,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       // price manipulation and borrow to overcome insufficient shortfall
       BTCBBorrowAmount = convertToUnit("1", 18);
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 40));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -599,7 +577,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .to.emit(vBNX, "Mint")
         .withArgs(acc2, udnerlyingMintAmount, VTokenMintAmount, expectedTotalBalance);
       // price manipulation and borrow to overcome insufficient shortfall
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 20));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -622,7 +600,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
         .withArgs(acc2, mintAmount, vTokenMintAmount, expectedTotalBalance);
 
       // price manipulation and borrow to overcome insufficient shortfall
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -696,7 +674,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
     });
 
     it("Should revert on healing if borrow is less then collateral amount", async function () {
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1.4", 15));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 23));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -707,7 +685,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
 
     it("Should success on healing and forgive borrow account", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -727,7 +705,7 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
       result = await Comptroller.connect(acc1Signer).healAccount(acc2);
       await expect(result)
         .to.emit(vBTCB, "RepayBorrow")
-        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, repayAmount, 0)
+        .withArgs(vBTCB.address, acc2, BTCBBorrowAmount - repayAmount, 0, 0)
         .to.emit(vBTCB, "BadDebtIncreased")
         .withArgs(acc2, BTCBBorrowAmount - repayAmount, 0, badDebt);
 
@@ -741,7 +719,9 @@ describe("Straight Cases For Single User Liquidation and healing", () => {
   });
 });
 
-describe("Risk Fund and Auction related scenarios", () => {
+describe("Risk Fund and Auction related scenarios", function () {
+  this.timeout(500000);
+
   let fixture;
   let Comptroller: Comptroller;
   let vBNX: VToken;
@@ -792,7 +772,7 @@ describe("Risk Fund and Auction related scenarios", () => {
 
     it("generate bad Debt, reduce reserves if blockDelta < last reduce", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
-      const dummyPriceOracle = await smock.fake<PriceOracle>("PriceOracle");
+      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
@@ -820,7 +800,9 @@ describe("Risk Fund and Auction related scenarios", () => {
   });
 });
 
-describe("Multiple Users Engagement in a Block", () => {
+describe("Multiple Users Engagement in a Block", function () {
+  this.timeout(500000);
+
   let fixture;
   let vBNX: VToken;
   let vBTCB: VToken;
@@ -874,7 +856,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBTCB.connect(acc1Signer).mint(mintAmount1);
     await vBNX.connect(acc2Signer).mint(mintAmount2);
     await vBNX.connect(acc3Signer).mint(mintAmount3);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
     // Verify Balances of each account
     expect(await vBTCB.balanceOf(acc1)).to.equal(vTokenMintedAmount1);
@@ -886,7 +868,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
     await vBTCB.connect(acc3Signer).borrow(BTCBBorrowAmount);
     await vBNX.connect(acc1Signer).borrow(BTCBBorrowAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
 
     // Verify Balance of accounts
@@ -903,7 +885,7 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBNX.connect(acc1Signer).repayBorrow(BTCBBorrowAmount);
     await vBTCB.connect(acc2Signer).repayBorrow(BTCBBorrowAmount);
     await vBTCB.connect(acc3Signer).repayBorrow(BTCBBorrowAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
 
     [error, balance, borrowBalance] = await vBNX.connect(acc1Signer).getAccountSnapshot(acc1);
@@ -927,19 +909,19 @@ describe("Multiple Users Engagement in a Block", () => {
     await vBNX.connect(acc1Signer).redeem(redeemAmount);
     await vBTCB.connect(acc2Signer).redeem(redeemAmount);
     await vBTCB.connect(acc3Signer).redeem(redeemAmount);
-    await mineBlock();
+    await mine();
     await toggleMining(true);
-    [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getAccountLiquidity(acc1);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc1Signer).getBorrowingPower(acc1);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount1 * btcbCollateralFactor * vBTCBPrice).toString());
     expect(shortfall).to.equal(0);
 
-    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc2);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getBorrowingPower(acc2);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount2 * bnxCollateralFactor * vBNXPrice).toString());
     expect(shortfall).to.equal(0);
 
-    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getAccountLiquidity(acc3);
+    [error, liquidity, shortfall] = await Comptroller.connect(acc3Signer).getBorrowingPower(acc3);
     expect(error).to.equal(Error.NO_ERROR);
     expect(liquidity).to.equal((mintAmount3 * bnxCollateralFactor * vBNXPrice).toString());
     expect(shortfall).to.equal(0);

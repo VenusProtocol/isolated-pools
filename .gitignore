@@ -44,6 +44,14 @@ node_modules_tmp
 
 secrets.json
 
+# yarn
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+
 # Build
 dist
 docs
