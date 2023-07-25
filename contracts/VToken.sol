@@ -422,20 +422,15 @@ contract VToken is
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
      * @dev Gracefully return if reserves already reduced in accrueInterest
      * @param reduceAmount Amount of reduction to reserves
-     * @param kind kind of reserve
      * @custom:event Emits ReservesReduced event; may emit AccrueInterest
      * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
      * @custom:error ReduceReservesCashValidation is thrown when trying to withdraw more cash than the reserves have
      * @custom:access Not restricted
      */
-    function reduceReserves(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind)
-        external
-        override
-        nonReentrant
-    {
+    function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
         if (reduceReservesBlockNumber == _getBlockNumber()) return;
-        _reduceReservesFresh(reduceAmount, kind);
+        _reduceReservesFresh(reduceAmount, IProtocolShareReserve.IncomeType.SPREAD);
     }
 
     /**

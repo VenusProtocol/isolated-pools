@@ -342,7 +342,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
 
-    function reduceReserves(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) external virtual;
+    function reduceReserves(uint256 reduceAmount) external virtual;
 
     function exchangeRateCurrent() external virtual returns (uint256);
 

@@ -226,7 +226,7 @@ describe("Risk Fund: Swap Tests", () => {
   it("Swap All Pool Assets", async () => {
     await USDT.connect(usdtUser).approve(vUSDT.address, ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
-    await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT, 0);
+    await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT);
 
     await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT, 0);
 
