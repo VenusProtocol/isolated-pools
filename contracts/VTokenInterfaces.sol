@@ -282,8 +282,6 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event SweepToken(address indexed token);
 
-    event NewReduceReservesThreshold(uint256 oldReduceReservesThreshold, uint256 NewReduceReservesThreshold);
-
     event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
 
     /*** User Interface ***/
