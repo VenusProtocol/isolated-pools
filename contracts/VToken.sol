@@ -102,7 +102,7 @@ contract VToken is
         address accessControlManager_,
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_
-    ) external reinitializer(2) {
+    ) external initializer {
         ensureNonzeroAddress(admin_);
 
         // Initialize the market
