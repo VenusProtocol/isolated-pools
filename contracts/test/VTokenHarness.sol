@@ -5,6 +5,7 @@ import { AccessControlManager } from "@venusprotocol/governance-contracts/contra
 
 import { VToken } from "../VToken.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
+import { IProtocolShareReserve } from "../RiskFund/IProtocolShareReserve.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;

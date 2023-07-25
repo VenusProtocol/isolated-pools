@@ -1926,15 +1926,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@venusprotocol/governance-contracts/-/governance-contracts-1.0.0.tgz#264966365b75bb05219ce42de21c0af022d462a8"
-  integrity sha512-SHF8In2HPM3zbWWvPSQrD7omKRfwInecFrDldMir9yqPdKrJBXDlmjAOZLyGLK9wiH+GQPBHpVEZoxiBLmwKVw==
-
-"@venusprotocol/oracle@^1.6.10":
-  version "1.6.10"
-  resolved "https://registry.yarnpkg.com/@venusprotocol/oracle/-/oracle-1.6.10.tgz#f32df925c2b400ff87ca8be1c44ba1a46d5b3c8f"
-  integrity sha512-6QV5kOqPktcMkCApc4iWz3Ki7WOls9hD52icjtqZGl56j5fQ+D8qp7jNF8z862bdLpBe8fQZ/VW0mREoeIRDTQ==
 "@npmcli/metavuln-calculator@npm:^3.0.1":
   version: 3.1.1
   resolution: "@npmcli/metavuln-calculator@npm:3.1.1"

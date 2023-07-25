@@ -125,6 +125,7 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
+      0,
     );
 
     await expect(protocolShareReserve.sweepToken(mockDAI.address, signer2.address)).to.be.revertedWith(
@@ -143,6 +144,7 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
+      0,
     );
     let protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
     expect(protocolShareReserveBal.sub(protocolShareReserveBalPrev)).equal(amount);

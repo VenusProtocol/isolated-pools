@@ -418,17 +418,17 @@ describe("Risk Fund: Tests", function () {
 
   beforeEach(async function () {
     await loadFixture(riskFundFixture);
-    await cUSDC.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDC.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-    await cUSDT.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDT.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-    await cUSDC2.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDC2.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-    await cUSDT2.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDT2.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-    await cUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-    await bUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
+    await vUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
   });
 
   describe("Test all setters", async function () {

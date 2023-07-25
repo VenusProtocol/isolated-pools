@@ -8,7 +8,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
-import "./IProtocolShareReserve.sol";
+import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;

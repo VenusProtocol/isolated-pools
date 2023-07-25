@@ -16,7 +16,7 @@ import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
 import { IShortfall } from "../Shortfall/IShortfall.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
+import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 
 /**
  * @title ReserveHelpers
