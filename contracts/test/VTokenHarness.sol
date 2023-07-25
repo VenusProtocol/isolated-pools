@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../VToken.sol";
-import "../Governance/AccessControlManager.sol";
-import "./ComptrollerScenario.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+
+import { VToken } from "../VToken.sol";
+import { InterestRateModel } from "../InterestRateModel.sol";
+import { IProtocolShareReserve } from "../RiskFund/IProtocolShareReserve.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -40,11 +42,7 @@ contract VTokenHarness is VToken {
         totalReserves = totalReserves_;
     }
 
-    function harnessExchangeRateDetails(
-        uint256 totalSupply_,
-        uint256 totalBorrows_,
-        uint256 totalReserves_
-    ) external {
+    function harnessExchangeRateDetails(uint256 totalSupply_, uint256 totalBorrows_, uint256 totalReserves_) external {
         totalSupply = totalSupply_;
         totalBorrows = totalBorrows_;
         totalReserves = totalReserves_;
@@ -63,19 +61,11 @@ contract VTokenHarness is VToken {
         super._mintFresh(account, account, mintAmount);
     }
 
-    function harnessRedeemFresh(
-        address payable account,
-        uint256 vTokenAmount,
-        uint256 underlyingAmount
-    ) external {
+    function harnessRedeemFresh(address payable account, uint256 vTokenAmount, uint256 underlyingAmount) external {
         super._redeemFresh(account, vTokenAmount, underlyingAmount);
     }
 
-    function harnessSetAccountBorrows(
-        address account,
-        uint256 principal,
-        uint256 interestIndex
-    ) external {
+    function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) external {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
@@ -87,11 +77,7 @@ contract VTokenHarness is VToken {
         _borrowFresh(account, borrowAmount);
     }
 
-    function harnessRepayBorrowFresh(
-        address payer,
-        address account,
-        uint256 repayAmount
-    ) external {
+    function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) external {
         _repayBorrowFresh(payer, account, repayAmount);
     }
 
@@ -123,7 +109,7 @@ contract VTokenHarness is VToken {
     }
 
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
-        return borrowRateMaxMantissa;
+        return MAX_BORROW_RATE_MANTISSA;
     }
 
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {

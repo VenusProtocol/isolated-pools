@@ -6,7 +6,10 @@
     "esModuleInterop": true,
     "outDir": "dist",
     "declaration": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@nomiclabs/hardhat-ethers": ["./node_modules/hardhat-deploy-ethers"]
+    }
   },
   "include": ["./typechain", "./deploy", "./helpers"],
   "files": ["./hardhat.config.ts"]

@@ -10,6 +10,9 @@ import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor
 const { expect } = chai;
 chai.use(smock.matchers);
 
+// Disable a warning about mixing beacons and transparent proxies
+upgrades.silenceWarnings();
+
 let comptroller: FakeContract<Comptroller>;
 let vBUSD: FakeContract<VToken>;
 let vWBTC: FakeContract<VToken>;
@@ -71,10 +74,12 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor1.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor1.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   rewardDistributor2.rewardToken.returns(rewardToken2.address);
@@ -88,10 +93,12 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor2.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor2.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   rewardDistributor3.rewardToken.returns(rewardToken3.address);
@@ -105,10 +112,12 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor3.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor3.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
     block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   vBUSD.borrowIndex.returns(convertToUnit(1, 18));
@@ -229,8 +238,9 @@ describe("PoolLens: Rewards Summary", () => {
     rewardDistributor3.rewardTokenBorrowState.returns({
       index: convertToUnit(1, 36), // Current index is 1.0, double scale
       block: await ethers.provider.getBlockNumber(),
+      lastRewardingBlock: 0,
     });
-    rewardDistributor3.rewardTokenInitialIndex.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
+    rewardDistributor3.INITIAL_INDEX.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
 
     const pendingRewards = await poolLens.getPendingRewards(await account.getAddress(), comptroller.address);
 

@@ -1,6 +1,8 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
+import { constants } from "ethers";
 import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../helpers/utils";
@@ -42,15 +44,16 @@ describe("ProtocolShareReserve: Tests", function () {
   /**
    * Deploying required contracts along with the poolRegistry.
    */
-
+  let signer2: SignerWithAddress;
   before(async function () {
     await loadFixture(fixture);
+    [, signer2] = await ethers.getSigners();
   });
 
   it("Revert on invalid asset address.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(fakeComptroller.address, "0x0000000000000000000000000000000000000000", 10, 0),
-    ).to.be.rejectedWith("ProtocolShareReserve: Asset address invalid");
+      protocolShareReserve.releaseFunds(fakeComptroller.address, constants.AddressZero, 10, 0),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "ZeroAddressNotAllowed");
   });
 
   it("Revert on Insufficient balance.", async function () {
@@ -61,7 +64,7 @@ describe("ProtocolShareReserve: Tests", function () {
         10,
         0,
       ),
-    ).to.be.rejectedWith("ProtocolShareReserve: Insufficient pool balance");
+    ).to.be.revertedWith("ProtocolShareReserve: Insufficient pool balance");
   });
 
   it("Release liquidated share reserve", async function () {
@@ -100,5 +103,60 @@ describe("ProtocolShareReserve: Tests", function () {
     expect(riskFundBal).equal(convertToUnit(27, 18));
     expect(liquidatedShareBal).equal(convertToUnit(63, 18));
     expect(protocolShareReserveBal).equal(convertToUnit(10, 18));
+  });
+
+  it("Revert if try to sweep tokens by non admin", async function () {
+    await expect(protocolShareReserve.connect(signer2).sweepToken(mockDAI.address, signer2.address)).to.be.revertedWith(
+      "Ownable: caller is not the owner",
+    );
+  });
+
+  it("Revert if recipient address is zero", async function () {
+    await expect(
+      protocolShareReserve.sweepToken(mockDAI.address, ethers.constants.AddressZero),
+    ).to.be.revertedWithCustomError(protocolShareReserve, "ZeroAddressNotAllowed");
+  });
+
+  it("Revert if there are no surplus tokens to sweep", async function () {
+    await mockDAI.transfer(protocolShareReserve.address, convertToUnit(100, 18));
+
+    fakeComptroller.isComptroller.returns(true);
+    // Update assetReserves with all available balance
+    await protocolShareReserve.updateAssetsState(
+      fakeComptroller.address, // Mock comptroller address
+      mockDAI.address,
+      0,
+    );
+
+    await expect(protocolShareReserve.sweepToken(mockDAI.address, signer2.address)).to.be.revertedWith(
+      "ReserveHelpers: Zero surplus tokens",
+    );
+  });
+
+  it("Success on sweep tokens", async function () {
+    const amount = convertToUnit(100, 18);
+    const excessAmount = convertToUnit(50, 18);
+    const protocolShareReserveBalPrev = await mockDAI.balanceOf(protocolShareReserve.address);
+    await mockDAI.transfer(protocolShareReserve.address, amount);
+
+    fakeComptroller.isComptroller.returns(true);
+    // Update assetReserves with all available balance
+    await protocolShareReserve.updateAssetsState(
+      fakeComptroller.address, // Mock comptroller address
+      mockDAI.address,
+      0,
+    );
+    let protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
+    expect(protocolShareReserveBal.sub(protocolShareReserveBalPrev)).equal(amount);
+
+    // Sending some extra funds but not updating assetReserves
+    await mockDAI.transfer(protocolShareReserve.address, excessAmount);
+
+    await protocolShareReserve.sweepToken(mockDAI.address, signer2.address);
+    protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
+    expect(protocolShareReserveBal).equal(protocolShareReserveBalPrev.add(amount));
+
+    const recipientBal = await mockDAI.balanceOf(signer2.address);
+    expect(recipientBal).equal(excessAmount);
   });
 });

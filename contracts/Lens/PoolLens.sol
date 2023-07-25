@@ -1,14 +1,30 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@venusprotocol/oracle/contracts/PriceOracle.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
-import "../VToken.sol";
-import "../ComptrollerInterface.sol";
-import "../Pool/PoolRegistryInterface.sol";
-import "../Pool/PoolRegistry.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { VToken } from "../VToken.sol";
+import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { PoolRegistry } from "../Pool/PoolRegistry.sol";
+import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 
+/**
+ * @title PoolLens
+ * @author Venus
+ * @notice The `PoolLens` contract is designed to retrieve important information for each registered pool. A list of essential information
+ * for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be
+ * looked up for specific pools and markets:
+- the vToken balance of a given user;
+- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
+- the vToken address in a pool for a given asset;
+- a list of all pools that support an asset;
+- the underlying asset price of a vToken;
+- the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
+ */
 contract PoolLens is ExponentialNoError {
     /**
      * @dev Struct for PoolDetails.
@@ -19,7 +35,6 @@ contract PoolLens is ExponentialNoError {
         address comptroller;
         uint256 blockPosted;
         uint256 timestampPosted;
-        PoolRegistry.RiskRating riskRating;
         string category;
         string logoURL;
         string description;
@@ -98,6 +113,8 @@ contract PoolLens is ExponentialNoError {
         uint224 index;
         // The block number the index was last updated at
         uint32 block;
+        // The block number at which to stop rewards
+        uint32 lastRewardingBlock;
     }
 
     /**
@@ -118,9 +135,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @param account The user Account.
-     * @notice Returns the BalanceInfo of all VTokens.
+     * @notice Queries the user's supply/borrow balances in vTokens
+     * @param vTokens The list of vToken addresses
+     * @param account The user Account
+     * @return A list of structs containing balances data
      */
     function vTokenBalancesAll(VToken[] calldata vTokens, address account) external returns (VTokenBalances[] memory) {
         uint256 vTokenCount = vTokens.length;
@@ -132,9 +150,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @notice Returns arrays of all Venus pools' data.
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive.
+     * @notice Queries all pools with addtional details for each of them
+     * @dev This function is not designed to be called in a transaction: it is too gas-intensive
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @return Arrays of all Venus pools' data
      */
     function getAllPools(address poolRegistryAddress) external view returns (PoolData[] memory) {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
@@ -153,9 +172,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param comptroller The Comptroller implementation address.
-     * @notice Returns Venus pool Unitroller (Comptroller proxy) contract addresses.
+     * @notice Queries the details of a pool identified by Comptroller address
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param comptroller The Comptroller implementation address
+     * @return PoolData structure containing the details of the pool
      */
     function getPoolByComptroller(address poolRegistryAddress, address comptroller)
         external
@@ -167,10 +187,11 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param comptroller The pool comptroller.
-     * @param asset The underlyingAsset of VToken.
-     * @notice Returns VToken in a Pool for an Asset.
+     * @notice Returns vToken holding the specified underlying asset in the specified pool
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param comptroller The pool comptroller
+     * @param asset The underlyingAsset of VToken
+     * @return Address of the vToken
      */
     function getVTokenForAsset(
         address poolRegistryAddress,
@@ -182,9 +203,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param poolRegistryAddress The address of Pool.
-     * @param asset The underlyingAsset of VToken.
-     * @notice Returns all Pools supported by an Asset.
+     * @notice Returns all pools that support the specified underlying asset
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param asset The underlying asset of vToken
+     * @return A list of Comptroller contracts
      */
     function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
         external
@@ -196,8 +218,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @notice Returns the underlyingPrice Info of all VTokens.
+     * @notice Returns the price data for the underlying assets of the specified vTokens
+     * @param vTokens The list of vToken addresses
+     * @return An array containing the price data for each asset
      */
     function vTokenUnderlyingPriceAll(VToken[] calldata vTokens)
         external
@@ -246,13 +269,13 @@ contract PoolLens is ExponentialNoError {
      * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
      *   a break down of bad debt by market
      */
-    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory badDebtSummary) {
+    function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
         // Get every market in the pool
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
         VToken[] memory markets = comptroller.getAllMarkets();
-        PriceOracle priceOracle = comptroller.oracle();
+        ResilientOracleInterface priceOracle = comptroller.oracle();
 
         BadDebt[] memory badDebts = new BadDebt[](markets.length);
 
@@ -265,8 +288,8 @@ contract PoolLens is ExponentialNoError {
             BadDebt memory badDebt;
             badDebt.vTokenAddress = address(markets[i]);
             badDebt.badDebtUsd =
-                VToken(address(markets[i])).badDebt() *
-                priceOracle.getUnderlyingPrice(address(markets[i]));
+                (VToken(address(markets[i])).badDebt() * priceOracle.getUnderlyingPrice(address(markets[i]))) /
+                EXP_SCALE;
             badDebtSummary.badDebts[i] = badDebt;
             totalBadDebtUsd = totalBadDebtUsd + badDebt.badDebtUsd;
         }
@@ -277,9 +300,10 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The vTokenAddress.
-     * @param account The user Account.
-     * @notice Returns the BalanceInfo of VToken.
+     * @notice Queries the user's supply/borrow balances in the specified vToken
+     * @param vToken vToken address
+     * @param account The user Account
+     * @return A struct containing the balances data
      */
     function vTokenBalances(VToken vToken, address account) public returns (VTokenBalances memory) {
         uint256 balanceOf = vToken.balanceOf(account);
@@ -304,15 +328,17 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param venusPool The VenusPool Object from PoolRegistry.
-     * @notice Returns enriched PoolData.
+     * @notice Queries additional information for the pool
+     * @param poolRegistryAddress Address of the PoolRegistry
+     * @param venusPool The VenusPool Object from PoolRegistry
+     * @return Enriched PoolData
      */
     function getPoolDataFromVenusPool(address poolRegistryAddress, PoolRegistry.VenusPool memory venusPool)
         public
         view
         returns (PoolData memory)
     {
-        //get tokens in the Pool
+        // Get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
         VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
@@ -333,7 +359,6 @@ contract PoolLens is ExponentialNoError {
             comptroller: venusPool.comptroller,
             blockPosted: venusPool.blockPosted,
             timestampPosted: venusPool.timestampPosted,
-            riskRating: venusPoolMetaData.riskRating,
             category: venusPoolMetaData.category,
             logoURL: venusPoolMetaData.logoURL,
             description: venusPoolMetaData.description,
@@ -348,19 +373,18 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The address of vToken.
-     * @notice Returns the metadata of VToken.
+     * @notice Returns the metadata of VToken
+     * @param vToken The address of vToken
+     * @return VTokenMetadata struct
      */
     function vTokenMetadata(VToken vToken) public view returns (VTokenMetadata memory) {
         uint256 exchangeRateCurrent = vToken.exchangeRateStored();
         address comptrollerAddress = address(vToken.comptroller());
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
         (bool isListed, uint256 collateralFactorMantissa) = comptroller.markets(address(vToken));
-        address underlyingAssetAddress;
-        uint256 underlyingDecimals;
 
-        underlyingAssetAddress = vToken.underlying();
-        underlyingDecimals = IERC20Metadata(vToken.underlying()).decimals();
+        address underlyingAssetAddress = vToken.underlying();
+        uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
 
         return
             VTokenMetadata({
@@ -384,8 +408,9 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vTokens The list of vToken Addresses.
-     * @notice Returns the metadata of all VTokens.
+     * @notice Returns the metadata of all VTokens
+     * @param vTokens The list of vToken addresses
+     * @return An array of VTokenMetadata structs
      */
     function vTokenMetadataAll(VToken[] memory vTokens) public view returns (VTokenMetadata[] memory) {
         uint256 vTokenCount = vTokens.length;
@@ -397,12 +422,13 @@ contract PoolLens is ExponentialNoError {
     }
 
     /**
-     * @param vToken The vToken Addresses.
-     * @notice Returns the underlyingPrice of VToken.
+     * @notice Returns the price data for the underlying asset of the specified vToken
+     * @param vToken vToken address
+     * @return The price data for each asset
      */
     function vTokenUnderlyingPrice(VToken vToken) public view returns (VTokenUnderlyingPrice memory) {
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(address(vToken.comptroller()));
-        PriceOracle priceOracle = comptroller.oracle();
+        ResilientOracleInterface priceOracle = comptroller.oracle();
 
         return
             VTokenUnderlyingPrice({
@@ -420,16 +446,18 @@ contract PoolLens is ExponentialNoError {
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
+            (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
+            .rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
+            (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
+            .rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
-            //Update market supply and borrow index in-memory
+            // Update market supply and borrow index in-memory
             updateMarketBorrowIndex(address(markets[i]), rewardsDistributor, borrowState, marketBorrowIndex);
             updateMarketSupplyIndex(address(markets[i]), rewardsDistributor, supplyState);
 
-            //Calculate pending rewards
+            // Calculate pending rewards
             uint256 borrowReward = calculateBorrowerReward(
                 address(markets[i]),
                 rewardsDistributor,
@@ -460,6 +488,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
+            blockNumber = borrowState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
@@ -481,6 +514,11 @@ contract PoolLens is ExponentialNoError {
     ) internal view {
         uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
         uint256 blockNumber = block.number;
+
+        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
+            blockNumber = supplyState.lastRewardingBlock;
+        }
+
         uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
@@ -505,9 +543,9 @@ contract PoolLens is ExponentialNoError {
         Double memory borrowerIndex = Double({
             mantissa: rewardsDistributor.rewardTokenBorrowerIndex(vToken, borrower)
         });
-        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa > 0) {
+        if (borrowerIndex.mantissa == 0 && borrowIndex.mantissa >= rewardsDistributor.INITIAL_INDEX()) {
             // Covers the case where users borrowed tokens before the market's borrow state index was set
-            borrowerIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            borrowerIndex.mantissa = rewardsDistributor.INITIAL_INDEX();
         }
         Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
         uint256 borrowerAmount = div_(VToken(vToken).borrowBalanceStored(borrower), marketBorrowIndex);
@@ -525,9 +563,9 @@ contract PoolLens is ExponentialNoError {
         Double memory supplierIndex = Double({
             mantissa: rewardsDistributor.rewardTokenSupplierIndex(vToken, supplier)
         });
-        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa > 0) {
+        if (supplierIndex.mantissa == 0 && supplyIndex.mantissa >= rewardsDistributor.INITIAL_INDEX()) {
             // Covers the case where users supplied tokens before the market's supply state index was set
-            supplierIndex.mantissa = rewardsDistributor.rewardTokenInitialIndex();
+            supplierIndex.mantissa = rewardsDistributor.INITIAL_INDEX();
         }
         Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
