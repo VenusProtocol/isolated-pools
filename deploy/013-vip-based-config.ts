@@ -258,6 +258,21 @@ const addMarket = async (
   };
 };
 
+const setReduceReservesBlockDelta = async (
+  vTokenAddress: string,
+  vTokenConfig: VTokenConfig,
+): Promise<GovernanceCommand> => {
+  const { name, reduceReservesBlockDelta } = vTokenConfig;
+  console.log("Adding a command to set reduce reserves blcok delta to " + name);
+  return {
+    contract: vTokenAddress,
+    signature: "setReduceReservesBlockDelta(uint256)",
+    argTypes: ["uint256"],
+    parameters: [reduceReservesBlockDelta],
+    value: 0,
+  };
+};
+
 const addMarkets = async (
   unregisteredVTokens: PoolConfig[],
   deploymentConfig: DeploymentConfig,
@@ -276,6 +291,7 @@ const addMarkets = async (
           return [
             ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
+            await setReduceReservesBlockDelta(vToken.address, vTokenConfig),
             await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
           ];
         }),

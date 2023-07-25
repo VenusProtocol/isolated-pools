@@ -66,6 +66,7 @@ export type VTokenConfig = {
   supplyCap: string;
   borrowCap: string;
   vTokenReceiver: string;
+  reduceReservesBlockDelta: string;
 };
 
 export type AccessControlEntry = {
@@ -132,6 +133,7 @@ const deployerPermissions = (): AccessControlEntry[] => {
     "addPool(string,address,uint256,uint256,uint256)",
     "addMarket(AddMarketInput)",
     "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+    "setReduceReservesBlockDelta(uint256)",
   ];
   return methods.map(method => ({
     caller: "account:deployer",
@@ -294,6 +296,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(932019, 18),
             borrowCap: convertToUnit(478980, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus BTCB",
@@ -311,6 +314,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(1000, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
         ],
         rewards: [
@@ -351,6 +355,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(3000000, 18),
             borrowCap: convertToUnit(3000000, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus ankrBNB",
@@ -368,6 +373,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100, 18),
             borrowCap: convertToUnit(100, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus MBOX",
@@ -385,6 +391,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(7000000, 18),
             borrowCap: convertToUnit(3184294, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus NFT",
@@ -402,6 +409,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(84985800573, 18),
             borrowCap: convertToUnit(24654278679, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus RACA",
@@ -419,6 +427,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(23758811062, 18),
             borrowCap: convertToUnit(3805812642, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus stkBNB",
@@ -436,6 +445,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1963, 18),
             borrowCap: convertToUnit(324, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
           {
             name: "Venus USDD",
@@ -453,6 +463,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(10601805, 18),
             borrowCap: convertToUnit(1698253, 18),
             vTokenReceiver: "account:deployer",
+            reduceReservesBlockDelta: convertToUnit(4, 18),
           },
         ],
         rewards: [
