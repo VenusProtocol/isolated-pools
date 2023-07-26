@@ -1,3 +1,17 @@
+## [1.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.3...v1.3.0-dev.4) (2023-07-26)
+
+
+### Features
+
+* add mainnet deployment ([3b29e3e](https://github.com/VenusProtocol/isolated-pools/commit/3b29e3e591078cab0aaf868b4187f735fa9a61db))
+* add testnet deployment of new market in DeFi pool ([8c9053f](https://github.com/VenusProtocol/isolated-pools/commit/8c9053f75a8f0f3c0bf082cdb75a01a44ef29ca3))
+* export ankrBNB market deployment ([ec43dd8](https://github.com/VenusProtocol/isolated-pools/commit/ec43dd8d2efd2eece7494f143089a9506d40ad14))
+
+
+### Bug Fixes
+
+* lint ([ba43cef](https://github.com/VenusProtocol/isolated-pools/commit/ba43cef02cbf28995d0b7834b365eb1e6b907ac6))
+
 ## [1.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.2...v1.3.0-dev.3) (2023-07-24)
 
 
