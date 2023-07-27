@@ -201,24 +201,6 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     ethers.constants.AddressZero,
-    "setReduceReservesThreshold(uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setReduceReservesBlockDelta(uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setReduceReservesThreshold(uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
     "setReduceReservesBlockDelta(uint256)",
     admin.address,
   );
@@ -517,7 +499,7 @@ describe("Risk Fund: Tests", function () {
       it("fails if start path is not market", async function () {
         await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
         await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+        await vUSDC.reduceReserves(convertToUnit(100, 18));
         await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18), 0);
         await expect(
           riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDT.address, BUSD.address]]),
@@ -527,7 +509,7 @@ describe("Risk Fund: Tests", function () {
       it("fails if final path is not base convertible asset", async function () {
         await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
         await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+        await vUSDC.reduceReserves(convertToUnit(100, 18));
         await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18), 0);
         await expect(
           riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDC.address, USDT.address]]),
@@ -630,7 +612,7 @@ describe("Risk Fund: Tests", function () {
     it("Below min threshold amount", async function () {
       await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
       await vUSDC.connect(usdcUser).addReserves(convertToUnit(100, 18));
-      await vUSDC.reduceReserves(convertToUnit(50, 18), 0);
+      await vUSDC.reduceReserves(convertToUnit(50, 18));
 
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
@@ -661,7 +643,7 @@ describe("Risk Fund: Tests", function () {
     it("Above min threshold amount", async function () {
       await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
       await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-      await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+      await vUSDC.reduceReserves(convertToUnit(100, 18));
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
@@ -705,9 +687,9 @@ describe("Risk Fund: Tests", function () {
 
       await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
 
-      await vUSDT.reduceReserves(convertToUnit(100, 18), 0);
+      await vUSDT.reduceReserves(convertToUnit(100, 18));
 
-      await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+      await vUSDC.reduceReserves(convertToUnit(100, 18));
 
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
@@ -776,8 +758,8 @@ describe("Risk Fund: Tests", function () {
 
       await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
 
-      await vUSDT.reduceReserves(convertToUnit(100, 18), 0);
-      await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+      await vUSDT.reduceReserves(convertToUnit(100, 18));
+      await vUSDC.reduceReserves(convertToUnit(100, 18));
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
@@ -831,8 +813,8 @@ describe("Risk Fund: Tests", function () {
 
       await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
 
-      await vUSDT.reduceReserves(convertToUnit(100, 18), 0);
-      await vUSDC.reduceReserves(convertToUnit(100, 18), 0);
+      await vUSDT.reduceReserves(convertToUnit(100, 18));
+      await vUSDC.reduceReserves(convertToUnit(100, 18));
       await riskFund.swapPoolsAssets(
         [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
         [
@@ -902,12 +884,12 @@ describe("Risk Fund: Tests", function () {
 
       await vBUSD3.connect(busdUser).addReserves(convertToUnit(50, 18));
 
-      await vUSDT.reduceReserves(convertToUnit(110, 18), 0);
-      await vUSDC.reduceReserves(convertToUnit(120, 18), 0);
-      await vUSDT2.reduceReserves(convertToUnit(150, 18), 0);
-      await vUSDC2.reduceReserves(convertToUnit(160, 18), 0);
-      await vUSDT3.reduceReserves(convertToUnit(175, 18), 0);
-      await vBUSD3.reduceReserves(convertToUnit(50, 18), 0);
+      await vUSDT.reduceReserves(convertToUnit(110, 18));
+      await vUSDC.reduceReserves(convertToUnit(120, 18));
+      await vUSDT2.reduceReserves(convertToUnit(150, 18));
+      await vUSDC2.reduceReserves(convertToUnit(160, 18));
+      await vUSDT3.reduceReserves(convertToUnit(175, 18));
+      await vBUSD3.reduceReserves(convertToUnit(50, 18));
 
       let protocolUSDTFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
       let protocolUSDCFor1 = await protocolShareReserve.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);

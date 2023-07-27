@@ -152,10 +152,6 @@ contract VTokenStorage {
  * @notice Interface implemented by the `VToken` contract
  */
 abstract contract VTokenInterface is VTokenStorage {
-    enum IncomeType {
-        LIQUIDATION,
-        SPREAD
-    }
     struct RiskManagementInit {
         address shortfall;
         address payable protocolShareReserve;
@@ -286,8 +282,6 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event SweepToken(address indexed token);
 
-    event NewReduceReservesThreshold(uint256 oldReduceReservesThreshold, uint256 NewReduceReservesThreshold);
-
     event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
 
     /*** User Interface ***/
@@ -348,7 +342,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
 
-    function reduceReserves(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) external virtual;
+    function reduceReserves(uint256 reduceAmount) external virtual;
 
     function exchangeRateCurrent() external virtual returns (uint256);
 
