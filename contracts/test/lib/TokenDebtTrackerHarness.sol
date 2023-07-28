@@ -26,4 +26,12 @@ contract TokenDebtTrackerHarness is TokenDebtTracker {
     ) external {
         _transferOutOrTrackDebt(token, user, amount);
     }
+
+    function transferOutOrTrackDebtSkippingBalanceCheck(
+        IERC20Upgradeable token,
+        address user,
+        uint256 amount
+    ) external {
+        _transferOutOrTrackDebtSkippingBalanceCheck(token, user, amount);
+    }
 }

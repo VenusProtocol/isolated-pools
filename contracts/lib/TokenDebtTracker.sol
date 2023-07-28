@@ -64,9 +64,19 @@ abstract contract TokenDebtTracker is Initializable {
     error InsufficientDebt(address token, address user, uint256 owedAmount, uint256 amount);
 
     /**
+     * @notice Thrown if trying to transfer more tokens than the contract currently has
+     * @param token The token the contract is trying to transfer
+     * @param recipient The recipient of the transfer
+     * @param amount The amount of tokens the contract is trying to transfer
+     * @param availableBalance The amount of tokens the contract currently has
+     */
+    error InsufficientBalance(address token, address recipient, uint256 amount, uint256 availableBalance);
+
+    /**
      * @notice Transfers the tokens we owe to msg.sender, if any
      * @param token The token to claim
      * @param amount_ The amount of tokens to claim (or max uint256 to claim all)
+     * @custom:error InsufficientDebt The contract doesn't have enough debt to the user
      */
     function claimTokenDebt(IERC20Upgradeable token, uint256 amount_) external {
         uint256 owedAmount = tokenDebt[token][msg.sender];
@@ -92,12 +102,34 @@ abstract contract TokenDebtTracker is Initializable {
     function __TokenDebtTracker_init_unchained() internal onlyInitializing {}
 
     /**
-     * @dev Transfers tokens to the recipient, or records the debt if the transfer fails.
+     * @dev Transfers tokens to the recipient if the contract has enough balance, or
+     * records the debt if the transfer fails due to reasons unrelated to the contract's
+     * balance (e.g. if the token forbids transfers to the recipient).
+     * @param token The token to transfer
+     * @param to The recipient of the transfer
+     * @param amount The amount to transfer
+     * @custom:error InsufficientBalance The contract doesn't have enough balance to transfer
+     */
+    function _transferOutOrTrackDebt(
+        IERC20Upgradeable token,
+        address to,
+        uint256 amount
+    ) internal {
+        uint256 balance = token.balanceOf(address(this));
+        if (balance < amount) {
+            revert InsufficientBalance(address(token), address(this), amount, balance);
+        }
+        _transferOutOrTrackDebtSkippingBalanceCheck(token, to, amount);
+    }
+
+    /**
+     * @dev Transfers tokens to the recipient, or records the debt if the transfer fails
+     * due to any reason, including insufficient balance.
      * @param token The token to transfer
      * @param to The recipient of the transfer
      * @param amount The amount to transfer
      */
-    function _transferOutOrTrackDebt(
+    function _transferOutOrTrackDebtSkippingBalanceCheck(
         IERC20Upgradeable token,
         address to,
         uint256 amount

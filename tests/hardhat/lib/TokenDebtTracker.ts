@@ -44,21 +44,33 @@ describe("Token debt tracker", () => {
     await token.transfer(tokenDebtTracker.address, parseUnits("100", 18));
   });
 
-  describe("_transferOutOrTrackDebt", () => {
+  describe("_transferOutOrTrackDebtSkippingBalanceCheck", () => {
     describe("ERC20 tokens", () => {
       it("transfers out the specified amount", async () => {
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("44", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("44", 18),
+        );
         expect(await token.balanceOf(tokenDebtTracker.address)).to.equal(parseUnits("56", 18));
         expect(await token.balanceOf(user.address)).to.equal(parseUnits("44", 18));
       });
 
       it("does not emit TokenDebtAdded event upon successful transfer", async () => {
-        const tx = await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("44", 18));
+        const tx = await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("44", 18),
+        );
         await expect(tx).to.not.emit(tokenDebtTracker, "TokenDebtAdded");
       });
 
       it("records the debt if requested amount can't be transferred", async () => {
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("101", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("101", 18),
+        );
         expect(await token.balanceOf(tokenDebtTracker.address)).to.equal(parseUnits("100", 18));
         expect(await token.balanceOf(user.address)).to.equal(parseUnits("0", 18));
         expect(await tokenDebtTracker.tokenDebt(token.address, user.address)).to.equal(parseUnits("101", 18));
@@ -66,20 +78,40 @@ describe("Token debt tracker", () => {
       });
 
       it("tracks total debt amount", async () => {
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("111", 18));
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user2.address, parseUnits("444", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("111", 18),
+        );
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user2.address,
+          parseUnits("444", 18),
+        );
         expect(await tokenDebtTracker.totalTokenDebt(token.address)).to.equal(parseUnits("555", 18));
       });
 
       it("tracks individual debt amounts", async () => {
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("111", 18));
-        await tokenDebtTracker.transferOutOrTrackDebt(token.address, user2.address, parseUnits("444", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("111", 18),
+        );
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user2.address,
+          parseUnits("444", 18),
+        );
         expect(await tokenDebtTracker.tokenDebt(token.address, user.address)).to.equal(parseUnits("111", 18));
         expect(await tokenDebtTracker.tokenDebt(token.address, user2.address)).to.equal(parseUnits("444", 18));
       });
 
       it("emits TokenDebtAdded event upon failed transfer", async () => {
-        const tx = await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("101", 18));
+        const tx = await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          token.address,
+          user.address,
+          parseUnits("101", 18),
+        );
         await expect(tx)
           .to.emit(tokenDebtTracker, "TokenDebtAdded")
           .withArgs(token.address, user.address, parseUnits("101", 18));
@@ -88,7 +120,11 @@ describe("Token debt tracker", () => {
       it("tracks debt if the token contract returns false on transfer()", async () => {
         const tokenReturningFalse = await smock.fake<ERC20Harness>("ERC20Harness");
         tokenReturningFalse.transfer.returns(false);
-        await tokenDebtTracker.transferOutOrTrackDebt(tokenReturningFalse.address, user.address, parseUnits("1", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          tokenReturningFalse.address,
+          user.address,
+          parseUnits("1", 18),
+        );
         expect(await tokenDebtTracker.tokenDebt(tokenReturningFalse.address, user.address)).to.equal(
           parseUnits("1", 18),
         );
@@ -98,7 +134,7 @@ describe("Token debt tracker", () => {
       it("tracks debt if the token contract reverts on transfer()", async () => {
         const revertingTokenContract = await smock.fake<ERC20Harness>("ERC20Harness");
         revertingTokenContract.transfer.reverts();
-        await tokenDebtTracker.transferOutOrTrackDebt(
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
           revertingTokenContract.address,
           user.address,
           parseUnits("100", 18),
@@ -122,16 +158,38 @@ describe("Token debt tracker", () => {
         );
         const nonCompliantToken = await NonCompliantToken.deploy(INITIAL_SUPPLY, "Test", 18, "TST");
         await nonCompliantToken.transfer(tokenDebtTracker.address, parseUnits("100", 18));
-        await tokenDebtTracker.transferOutOrTrackDebt(nonCompliantToken.address, user.address, parseUnits("100", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          nonCompliantToken.address,
+          user.address,
+          parseUnits("100", 18),
+        );
         expect(await nonCompliantToken.balanceOf(tokenDebtTracker.address)).to.equal(0);
         expect(await nonCompliantToken.balanceOf(user.address)).to.equal(parseUnits("100", 18));
       });
 
       it("tracks debt if the token contract is an EOA", async () => {
-        await tokenDebtTracker.transferOutOrTrackDebt(user.address, user.address, parseUnits("100", 18));
+        await tokenDebtTracker.transferOutOrTrackDebtSkippingBalanceCheck(
+          user.address,
+          user.address,
+          parseUnits("100", 18),
+        );
         expect(await tokenDebtTracker.tokenDebt(user.address, user.address)).to.equal(parseUnits("100", 18));
         expect(await tokenDebtTracker.totalTokenDebt(user.address)).to.equal(parseUnits("100", 18));
       });
+    });
+  });
+
+  describe("_transferOutOrTrackDebt", () => {
+    it("transfers out the specified amount", async () => {
+      await tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("44", 18));
+      expect(await token.balanceOf(tokenDebtTracker.address)).to.equal(parseUnits("56", 18));
+      expect(await token.balanceOf(user.address)).to.equal(parseUnits("44", 18));
+    });
+
+    it("fails if the balance is not enough for the transfer", async () => {
+      await expect(tokenDebtTracker.transferOutOrTrackDebt(token.address, user.address, parseUnits("101", 18)))
+        .to.be.revertedWithCustomError(tokenDebtTracker, "InsufficientBalance")
+        .withArgs(token.address, tokenDebtTracker.address, parseUnits("101", 18), parseUnits("100", 18));
     });
   });
 
