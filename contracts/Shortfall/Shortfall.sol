@@ -14,6 +14,7 @@ import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { IShortfall } from "./IShortfall.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
@@ -27,7 +28,13 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
  * risk fund in exchange for paying off all the pool's bad debt.
  */
-contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
+contract Shortfall is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    ReentrancyGuardUpgradeable,
+    TokenDebtTracker,
+    IShortfall
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -172,6 +179,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
+        __TokenDebtTracker_init();
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
@@ -216,7 +224,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
             if (auction.highestBidder != address(0)) {
-                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
+                _transferOutOrTrackDebt(erc20, auction.highestBidder, auction.bidAmount[auction.markets[i]]);
             }
             uint256 balanceBefore = erc20.balanceOf(address(this));
 
