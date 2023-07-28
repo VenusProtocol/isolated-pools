@@ -471,6 +471,7 @@ contract Shortfall is
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
+        priceOracle.updateAssetPrice(riskFund.convertibleBaseAsset());
         uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
             riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
