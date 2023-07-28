@@ -16,7 +16,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     address private protocolIncome;
     address private riskFund;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
+    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 50;
     uint256 private constant BASE_UNIT = 100;
 
     /// @notice Emitted when funds are released
