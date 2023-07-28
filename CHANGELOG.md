@@ -1,3 +1,10 @@
+## [1.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.4...v1.3.0-dev.5) (2023-07-28)
+
+
+### Features
+
+* support deadline in swapPoolsAssets ([103be13](https://github.com/VenusProtocol/isolated-pools/commit/103be136015e45d88086a8e001bf7f01cc767fff))
+
 ## [1.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.3...v1.3.0-dev.4) (2023-07-26)
 
 
