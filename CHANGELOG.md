@@ -1,3 +1,11 @@
+## [1.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.5...v1.3.0-dev.6) (2023-07-28)
+
+
+### Features
+
+* add a balance check to graceful transfer ([03370b9](https://github.com/VenusProtocol/isolated-pools/commit/03370b97fa767fc763fad157bd08e6158e441fbb))
+* avoid locking on failed transfers to previous bidders ([a689850](https://github.com/VenusProtocol/isolated-pools/commit/a6898500d17e41a8db4e3bdd03e5feaf1cae5a63))
+
 ## [1.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.4...v1.3.0-dev.5) (2023-07-28)
 
 
