@@ -78,13 +78,13 @@ contract Shortfall is
     address public poolRegistry;
 
     /// @notice Risk fund address
-    IRiskFund private riskFund;
+    IRiskFund public riskFund;
 
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 private incentiveBps;
+    uint256 public incentiveBps;
 
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
@@ -471,17 +471,19 @@ contract Shortfall is
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolsBaseAssetReserves(comptroller);
+        priceOracle.updateAssetPrice(riskFund.convertibleBaseAsset());
+        uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
+            riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
-        uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
-        if (incentivizedRiskFundBalance >= riskFundBalance) {
+        uint256 badDebtPlusIncentive = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
+        if (badDebtPlusIncentive >= riskFundBalance) {
             auction.startBidBps =
                 (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
                 (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
-            uint256 maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
+            uint256 maxSeizeableRiskFundBalance = badDebtPlusIncentive;
 
             remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
             auction.auctionType = AuctionType.LARGE_RISK_FUND;

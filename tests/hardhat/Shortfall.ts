@@ -107,6 +107,7 @@ async function shortfallFixture() {
   vDAI.decimals.returns(18);
 
   vDAI.underlying.returns(mockDAI.address);
+  fakeRiskFund.convertibleBaseAsset.returns(mockDAI.address);
   await vWBTC.setVariable("underlying", mockWBTC.address);
   await vFloki.setVariable("underlying", mockFloki.address);
 
@@ -136,6 +137,8 @@ async function shortfallFixture() {
 
     return convertToUnit(1, 18);
   });
+
+  fakePriceOracle.getPrice.whenCalledWith(mockDAI.address).returns(convertToUnit(1, 18));
 
   comptroller.oracle.returns(fakePriceOracle.address);
 
