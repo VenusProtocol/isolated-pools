@@ -1,3 +1,20 @@
+## [2.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.6...v2.0.0-dev.1) (2023-08-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* align the gap in reserve helpers
+
+### Features
+
+* set risk fund percentage to 50% ([4ff68c0](https://github.com/VenusProtocol/isolated-pools/commit/4ff68c088bf83fe029b76016399f1a5bf1733631))
+* update base asset price before querying ([a2cb18a](https://github.com/VenusProtocol/isolated-pools/commit/a2cb18a74db663cb79890aa4d5891d840be32769))
+
+
+### Code Refactoring
+
+* align the gap in reserve helpers ([c47d6c0](https://github.com/VenusProtocol/isolated-pools/commit/c47d6c076b5caac4f544f1c8a499056d5f7f7eca))
+
 ## [1.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.5...v1.3.0-dev.6) (2023-07-28)
 
 
