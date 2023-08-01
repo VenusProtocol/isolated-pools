@@ -17,14 +17,14 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     uint256 private constant ENTERED = 2;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
-    mapping(address => uint256) internal assetsReserves;
+    mapping(address => uint256) public assetsReserves;
 
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) internal poolsAssetsReserves;
+    mapping(address => mapping(address => uint256)) public poolsAssetsReserves;
 
     // Address of pool registry contract
-    address internal poolRegistry;
+    address public poolRegistry;
 
     /**
      * @dev Guard variable for re-entrancy checks

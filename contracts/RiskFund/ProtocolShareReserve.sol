@@ -13,8 +13,8 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private protocolIncome;
-    address private riskFund;
+    address public protocolIncome;
+    address public riskFund;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
     uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 50;
     uint256 private constant BASE_UNIT = 100;

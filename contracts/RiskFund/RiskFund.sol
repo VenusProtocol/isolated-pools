@@ -27,8 +27,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public convertibleBaseAsset;
     address public shortfall;
-    address private pancakeSwapRouter;
-    uint256 private minAmountToConvert;
+    address public pancakeSwapRouter;
+    uint256 public minAmountToConvert;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);

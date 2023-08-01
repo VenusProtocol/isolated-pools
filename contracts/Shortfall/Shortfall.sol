@@ -78,13 +78,13 @@ contract Shortfall is
     address public poolRegistry;
 
     /// @notice Risk fund address
-    IRiskFund private riskFund;
+    IRiskFund public riskFund;
 
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 private incentiveBps;
+    uint256 public incentiveBps;
 
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
