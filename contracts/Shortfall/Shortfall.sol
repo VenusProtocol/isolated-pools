@@ -475,15 +475,15 @@ contract Shortfall is
         uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
             riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
-        uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
-        if (incentivizedRiskFundBalance >= riskFundBalance) {
+        uint256 badDebtPlusIncentive = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
+        if (badDebtPlusIncentive >= riskFundBalance) {
             auction.startBidBps =
                 (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
                 (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
-            uint256 maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
+            uint256 maxSeizeableRiskFundBalance = badDebtPlusIncentive;
 
             remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
             auction.auctionType = AuctionType.LARGE_RISK_FUND;
