@@ -14,6 +14,7 @@ import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { IShortfall } from "./IShortfall.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
@@ -27,7 +28,13 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
  * risk fund in exchange for paying off all the pool's bad debt.
  */
-contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, IShortfall {
+contract Shortfall is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    ReentrancyGuardUpgradeable,
+    TokenDebtTracker,
+    IShortfall
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -71,13 +78,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     address public poolRegistry;
 
     /// @notice Risk fund address
-    IRiskFund private riskFund;
+    IRiskFund public riskFund;
 
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 private incentiveBps;
+    uint256 public incentiveBps;
 
     /// @notice Time to wait for next bidder. initially waits for 10 blocks
     uint256 public nextBidderBlockLimit;
@@ -172,6 +179,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
+        __TokenDebtTracker_init();
         minimumPoolBadDebt = minimumPoolBadDebt_;
         convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
@@ -216,7 +224,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
             if (auction.highestBidder != address(0)) {
-                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
+                _transferOutOrTrackDebt(erc20, auction.highestBidder, auction.bidAmount[auction.markets[i]]);
             }
             uint256 balanceBefore = erc20.balanceOf(address(this));
 
@@ -463,17 +471,19 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.getPoolsBaseAssetReserves(comptroller);
+        priceOracle.updateAssetPrice(riskFund.convertibleBaseAsset());
+        uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
+            riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
-        uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
-        if (incentivizedRiskFundBalance >= riskFundBalance) {
+        uint256 badDebtPlusIncentive = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
+        if (badDebtPlusIncentive >= riskFundBalance) {
             auction.startBidBps =
                 (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
                 (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
-            uint256 maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
+            uint256 maxSeizeableRiskFundBalance = badDebtPlusIncentive;
 
             remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
             auction.auctionType = AuctionType.LARGE_RISK_FUND;

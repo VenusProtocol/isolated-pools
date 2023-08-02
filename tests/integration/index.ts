@@ -786,7 +786,7 @@ describe("Risk Fund and Auction related scenarios", function () {
       await Comptroller.connect(acc1Signer).healAccount(acc2);
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
-      // Reduce reserves, transfer 70% to protocol income and rest 30% to riskFund
+      // Reduce reserves, transfer 50% to protocol income and rest 50% to riskFund
       await ProtocolShareReserve.connect(deployerSigner).releaseFunds(
         Comptroller.address,
         BNX.address,
@@ -794,8 +794,8 @@ describe("Risk Fund and Auction related scenarios", function () {
         0,
       );
 
-      expect(await BNX.balanceOf(deployer)).to.be.equal(expectedTotalReserves * 0.7);
-      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.3);
+      expect(await BNX.balanceOf(deployer)).to.be.equal(expectedTotalReserves * 0.5);
+      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.5);
     });
   });
 });

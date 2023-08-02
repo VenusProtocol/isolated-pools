@@ -100,8 +100,8 @@ describe("ProtocolShareReserve: Tests", function () {
     const liquidatedShareBal = await mockDAI.balanceOf(fakeProtocolIncome.address);
     const protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
 
-    expect(riskFundBal).equal(convertToUnit(27, 18));
-    expect(liquidatedShareBal).equal(convertToUnit(63, 18));
+    expect(riskFundBal).equal(convertToUnit(45, 18));
+    expect(liquidatedShareBal).equal(convertToUnit(45, 18));
     expect(protocolShareReserveBal).equal(convertToUnit(10, 18));
   });
 

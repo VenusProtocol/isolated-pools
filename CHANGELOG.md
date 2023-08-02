@@ -1,3 +1,49 @@
+## [2.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.6...v2.0.0-dev.1) (2023-08-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* align the gap in reserve helpers
+
+### Features
+
+* set risk fund percentage to 50% ([4ff68c0](https://github.com/VenusProtocol/isolated-pools/commit/4ff68c088bf83fe029b76016399f1a5bf1733631))
+* update base asset price before querying ([a2cb18a](https://github.com/VenusProtocol/isolated-pools/commit/a2cb18a74db663cb79890aa4d5891d840be32769))
+
+
+### Code Refactoring
+
+* align the gap in reserve helpers ([c47d6c0](https://github.com/VenusProtocol/isolated-pools/commit/c47d6c076b5caac4f544f1c8a499056d5f7f7eca))
+
+## [1.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.5...v1.3.0-dev.6) (2023-07-28)
+
+
+### Features
+
+* add a balance check to graceful transfer ([03370b9](https://github.com/VenusProtocol/isolated-pools/commit/03370b97fa767fc763fad157bd08e6158e441fbb))
+* avoid locking on failed transfers to previous bidders ([a689850](https://github.com/VenusProtocol/isolated-pools/commit/a6898500d17e41a8db4e3bdd03e5feaf1cae5a63))
+
+## [1.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.4...v1.3.0-dev.5) (2023-07-28)
+
+
+### Features
+
+* support deadline in swapPoolsAssets ([103be13](https://github.com/VenusProtocol/isolated-pools/commit/103be136015e45d88086a8e001bf7f01cc767fff))
+
+## [1.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.3...v1.3.0-dev.4) (2023-07-26)
+
+
+### Features
+
+* add mainnet deployment ([3b29e3e](https://github.com/VenusProtocol/isolated-pools/commit/3b29e3e591078cab0aaf868b4187f735fa9a61db))
+* add testnet deployment of new market in DeFi pool ([8c9053f](https://github.com/VenusProtocol/isolated-pools/commit/8c9053f75a8f0f3c0bf082cdb75a01a44ef29ca3))
+* export ankrBNB market deployment ([ec43dd8](https://github.com/VenusProtocol/isolated-pools/commit/ec43dd8d2efd2eece7494f143089a9506d40ad14))
+
+
+### Bug Fixes
+
+* lint ([ba43cef](https://github.com/VenusProtocol/isolated-pools/commit/ba43cef02cbf28995d0b7834b365eb1e6b907ac6))
+
 ## [1.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.2...v1.3.0-dev.3) (2023-07-24)
 
 

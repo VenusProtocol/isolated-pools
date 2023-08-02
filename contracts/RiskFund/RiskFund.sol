@@ -28,8 +28,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public convertibleBaseAsset;
     address public shortfall;
-    address private pancakeSwapRouter;
-    uint256 private minAmountToConvert;
+    address public pancakeSwapRouter;
+    uint256 public minAmountToConvert;
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -146,15 +146,18 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param markets Array of vTokens whose assets to swap for base asset
      * @param amountsOutMin Minimum amount to receive for swap
      * @param paths A path consisting of PCS token pairs for each swap
+     * @param deadline Deadline for the swap
      * @return Number of swapped tokens
      * @custom:error ZeroAddressNotAllowed is thrown if PoolRegistry contract address is not configured
      */
     function swapPoolsAssets(
         address[] calldata markets,
         uint256[] calldata amountsOutMin,
-        address[][] calldata paths
+        address[][] calldata paths,
+        uint256 deadline
     ) external override returns (uint256) {
         _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
+        require(deadline >= block.timestamp, "Risk fund: deadline passed");
         address poolRegistry_ = poolRegistry;
         ensureNonzeroAddress(poolRegistry_);
         require(markets.length == amountsOutMin.length, "Risk fund: markets and amountsOutMin are unequal lengths");
@@ -166,14 +169,13 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         _ensureMaxLoops(marketsCount);
 
         for (uint256 i; i < marketsCount; ++i) {
-            VToken vToken = VToken(markets[i]);
-            address comptroller = address(vToken.comptroller());
+            address comptroller = address(VToken(markets[i]).comptroller());
 
             PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry_).getPoolByComptroller(comptroller);
             require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
-            require(Comptroller(comptroller).isMarketListed(vToken), "market is not listed");
+            require(Comptroller(comptroller).isMarketListed(VToken(markets[i])), "market is not listed");
 
-            uint256 swappedTokens = _swapAsset(vToken, comptroller, amountsOutMin[i], paths[i]);
+            uint256 swappedTokens = _swapAsset(VToken(markets[i]), comptroller, amountsOutMin[i], paths[i]);
             poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
             assetsReserves[convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;

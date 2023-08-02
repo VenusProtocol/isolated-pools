@@ -87,7 +87,7 @@ const preconfiguredAddresses = {
     VTreasury: "account:deployer",
   },
   bsctestnet: {
-    VTreasury: "account:deployer",
+    VTreasury: "0x8b293600c50d6fbdc6ed4251cc75ece29880276f",
     NormalTimelock: "0xce10739590001705F7FF231611ba4A48B2820327",
     FastTrackTimelock: "0x3CFf21b7AF8390fE68799D58727d3b4C25a83cb6",
     CriticalTimelock: "0x23B893a7C45a5Eb8c8C062b9F32d0D2e43eD286D",
@@ -858,6 +858,23 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "10512000",
           },
+          {
+            name: "Venus ankrBNB (DeFi)",
+            asset: "ankrBNB",
+            symbol: "vankrBNB_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.035", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("39", 18),
+            supplyCap: convertToUnit("5000", 18),
+            borrowCap: convertToUnit("4000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+          },
         ],
         rewards: [
           {
@@ -865,6 +882,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["BSW"],
             supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
             borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+          {
+            asset: "ANKR",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+            borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
           },
         ],
       },
@@ -1575,6 +1598,24 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "10512000",
           },
+
+          {
+            name: "Venus ankrBNB (DeFi)",
+            asset: "ankrBNB",
+            symbol: "vankrBNB_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.035", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("39", 18),
+            supplyCap: convertToUnit("5000", 18),
+            borrowCap: convertToUnit("4000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+          },
         ],
         rewards: [
           {
@@ -1582,6 +1623,13 @@ export const globalConfig: NetworkConfig = {
             markets: ["BSW"],
             supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
             borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+
+          {
+            asset: "ANKR",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+            borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
           },
         ],
       },
