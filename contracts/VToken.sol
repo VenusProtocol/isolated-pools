@@ -1292,6 +1292,9 @@ contract VToken is
      * @param kind kind of reserve
      */
     function _reduceReservesFresh(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) internal {
+        if (reduceAmount == 0) {
+            return;
+        }
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
