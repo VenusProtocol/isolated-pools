@@ -77,8 +77,8 @@ const grabTokensTo = async (userAddress: string) => {
   const trxHolder = await initMainnetUser("0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", parseEther("2"));
   const usdtHolder = await initMainnetUser("0xF977814e90dA44bFA03b6295A0616a897441aceC", parseEther("2"));
 
-  trx.connect(trxHolder).transfer(userAddress, parseUnits("10000", 6));
-  usdt.connect(usdtHolder).transfer(userAddress, parseUnits("10000", 18));
+  await trx.connect(trxHolder).transfer(userAddress, parseUnits("10000", 6));
+  await usdt.connect(usdtHolder).transfer(userAddress, parseUnits("10000", 18));
 };
 
 const setupRiskManagementContracts = async () => {
@@ -113,7 +113,7 @@ const setupRiskManagementContracts = async () => {
     MINIMUM_POOL_BAD_DEBT,
     ACM,
   ])) as Shortfall;
-  shortfall.updatePoolRegistry(POOL_REGISTRY);
+  await shortfall.updatePoolRegistry(POOL_REGISTRY);
 };
 
 const setupTokens = async () => {

@@ -874,6 +874,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            reduceReservesBlockDelta: "10512000",
           },
         ],
         rewards: [
@@ -1615,6 +1616,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            reduceReservesBlockDelta: "10512000",
           },
         ],
         rewards: [
