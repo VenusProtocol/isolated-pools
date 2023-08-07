@@ -1223,7 +1223,8 @@ contract VToken is
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
-        emit LiquidationReservesReduced(borrower, protocolShareReserve, protocolSeizeAmount);
+        emit Transfer(borrower, address(this), protocolSeizeTokens);
+        emit Transfer(address(this), protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
@@ -1328,7 +1329,7 @@ contract VToken is
         // Update the pool asset's state in the protocol share reserve for the above transfer.
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, kind);
 
-        emit SpreadReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
+        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**

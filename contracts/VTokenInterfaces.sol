@@ -258,9 +258,9 @@ abstract contract VTokenInterface is VTokenStorage {
     event ReservesAdded(address indexed benefactor, uint256 addAmount, uint256 newTotalReserves);
 
     /**
-     * @notice Event emitted when the spread reserves are reduced
+     * @notice Event emitted when the reserves are reduced
      */
-    event SpreadReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
+    event ReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
@@ -283,11 +283,6 @@ abstract contract VTokenInterface is VTokenStorage {
     event SweepToken(address indexed token);
 
     event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
-
-    /**
-     * @notice Event emitted when liquidation reserves are reduced
-     */
-    event LiquidationReservesReduced(address indexed from, address indexed to, uint256 amount);
 
     /*** User Interface ***/
 

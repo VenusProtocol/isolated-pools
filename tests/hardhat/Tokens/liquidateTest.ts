@@ -287,6 +287,10 @@ describe("VToken", function () {
         .to.emit(collateralVToken, "Transfer")
         .withArgs(borrower.address, liquidator.address, liquidatorShareTokens);
 
+      await expect(result)
+        .to.emit(collateralVToken, "Transfer")
+        .withArgs(borrower.address, collateralVToken.address, protocolShareTokens.toString());
+
       expect(afterBalances).to.deep.equal(
         adjustBalances(beforeBalances, [
           [borrowedVToken, "cash", repayAmount],
@@ -382,6 +386,10 @@ describe("VToken", function () {
       await expect(result)
         .to.emit(collateralVToken, "Transfer")
         .withArgs(borrower.address, liquidator.address, liquidatorShareTokens);
+
+      await expect(result)
+        .to.emit(collateralVToken, "Transfer")
+        .withArgs(borrower.address, collateralVToken.address, protocolShareTokens);
 
       expect(afterBalances).to.deep.equal(
         adjustBalances(beforeBalances, [
