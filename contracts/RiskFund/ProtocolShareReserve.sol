@@ -72,8 +72,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     function releaseFunds(
         address comptroller,
         address asset,
-        uint256 amount,
-        IncomeType kind
+        uint256 amount
     ) external returns (uint256) {
         ensureNonzeroAddress(asset);
         require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
@@ -91,7 +90,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
         IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
-        IRiskFund(riskFund_).updateAssetsState(comptroller, asset, kind);
+        IRiskFund(riskFund_).updateAssetsState(comptroller, asset);
 
         emit FundsReleased(comptroller, asset, amount);
 
@@ -103,11 +102,10 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
-    function updateAssetsState(
-        address comptroller,
-        address asset,
-        IncomeType kind
-    ) public override(IProtocolShareReserve, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset, kind);
+    function updateAssetsState(address comptroller, address asset)
+        public
+        override(IProtocolShareReserve, ReserveHelpers)
+    {
+        super.updateAssetsState(comptroller, asset);
     }
 }

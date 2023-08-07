@@ -6,7 +6,6 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
 
 /**
  * @title VTokenStorage

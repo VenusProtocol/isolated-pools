@@ -8,7 +8,6 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
-import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -98,11 +97,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
      * @param asset Asset address.
      * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
-    function updateAssetsState(
-        address comptroller,
-        address asset,
-        IProtocolShareReserve.IncomeType kind
-    ) public virtual {
+    function updateAssetsState(address comptroller, address asset) public virtual {
         ensureNonzeroAddress(asset);
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         address poolRegistry_ = poolRegistry;
