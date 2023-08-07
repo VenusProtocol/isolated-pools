@@ -543,14 +543,6 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "beefy.finance",
-        symbol: "BIFI",
-        decimals: 18,
-        tokenAddress: "0x5B662703775171c4212F2FBAdb7F92e64116c154",
-        faucetInitialLiquidity: true,
-      },
-      {
-        isMock: false,
         name: "Biswap",
         symbol: "BSW",
         decimals: 18,
@@ -1251,13 +1243,6 @@ export const globalConfig: NetworkConfig = {
         symbol: "USDD",
         decimals: 18,
         tokenAddress: "0xd17479997F34dd9156Deef8F95A52D81D265be9c",
-      },
-      {
-        isMock: false,
-        name: "beefy.finance",
-        symbol: "BIFI",
-        decimals: 18,
-        tokenAddress: "0xCa3F508B8e4Dd382eE878A314789373D80A5190A",
       },
       {
         isMock: false,
