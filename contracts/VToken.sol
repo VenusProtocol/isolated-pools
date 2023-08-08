@@ -1223,7 +1223,7 @@ contract VToken is
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
-        emit LiquidationReservesReduced(borrower, protocolShareReserve, protocolSeizeAmount);
+        emit ProtocolSeize(borrower, protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {

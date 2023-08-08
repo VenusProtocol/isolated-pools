@@ -286,7 +286,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when liquidation reserves are reduced
      */
-    event LiquidationReservesReduced(address indexed from, address indexed to, uint256 amount);
+    event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
     /*** User Interface ***/
 
