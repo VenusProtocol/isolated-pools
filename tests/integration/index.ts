@@ -335,6 +335,47 @@ describe("Positive Cases", function () {
       expect(Number(liquidity)).to.be.closeTo(preComputeLiquidity.toNumber(), Number(convertToUnit(1, 14)));
       expect(shortfall).to.equal(0);
     });
+
+    it("Should revert when borrow cap is reached", async () => {
+      // Minting amount to account 1 so that it can also heal account
+      const fauceAmount = convertToUnit(20, 18);
+      await BTCB.connect(acc1Signer).faucet(fauceAmount);
+      await BNX.connect(acc1Signer).faucet(fauceAmount);
+
+      const mintAmountForAccount1 = convertToUnit(10, 18);
+      await BTCB.connect(acc1Signer).approve(vBTCB.address, mintAmountForAccount1);
+
+      // Minting in vBTCB so that vToken also has sufficient funds
+      await vBTCB.connect(acc1Signer).mint(mintAmountForAccount1);
+
+      // Setting market caps for market
+      const borrowCap = convertToUnit(10, 18);
+      await Comptroller.setMarketBorrowCaps([vBTCB.address], [borrowCap]);
+
+      const mintAmountForBNX = convertToUnit(1, 16);
+      await vBNX.connect(acc2Signer).mint(mintAmountForBNX);
+
+      const BTCBBorrowAmount = convertToUnit(46, 17);
+      await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
+
+      // Mining blocks
+      await mine(300000000);
+
+      await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
+      await Comptroller.connect(acc1Signer).healAccount(acc2);
+
+      // Now another user should not be able to borrow equal to borrowCap - totalBorrows as there is badDebt also
+      await expect(vBTCB.connect(acc1Signer).borrow(borrowCap)).to.be.revertedWithCustomError(
+        Comptroller,
+        "BorrowCapExceeded",
+      );
+
+      // User should be able to borrow equal to borrowCap - badDebt as there is badDebt also.
+      const amountToBorrow = BigInt(borrowCap) - BigInt((await vBTCB.badDebt()).toString());
+      await expect(vBTCB.connect(acc1Signer).borrow(amountToBorrow))
+        .to.emit(vBTCB, "Borrow")
+        .withArgs(acc1, amountToBorrow, amountToBorrow, amountToBorrow);
+    });
   });
 });
 
