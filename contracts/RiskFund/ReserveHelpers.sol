@@ -73,8 +73,8 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
             balanceDfference_ = balance_ - assetsReserves[_token];
         }
 
-        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
         emit SweepToken(_token, _to, balanceDfference_);
+        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
     }
 
     /**

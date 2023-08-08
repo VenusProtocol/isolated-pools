@@ -154,7 +154,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         uint256[] calldata amountsOutMin,
         address[][] calldata paths,
         uint256 deadline
-    ) external override returns (uint256) {
+    ) external override nonReentrant returns (uint256) {
         _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
         require(deadline >= block.timestamp, "Risk fund: deadline passed");
         address poolRegistry_ = poolRegistry;
@@ -191,7 +191,12 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount) external override returns (uint256) {
+    function transferReserveForAuction(address comptroller, uint256 amount)
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(
@@ -206,9 +211,9 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         unchecked {
             assetsReserves[convertibleBaseAsset] = assetsReserves[convertibleBaseAsset] - amount;
         }
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         emit TransferredReserveForAuction(comptroller, amount);
+        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
 
         return amount;
     }

@@ -305,7 +305,7 @@ contract Shortfall is
      * @custom:event Emits AuctionStarted event on success
      * @custom:event Errors if auctions are paused
      */
-    function startAuction(address comptroller) external {
+    function startAuction(address comptroller) external nonReentrant {
         require(!auctionsPaused, "Auctions are paused");
         _startAuction(comptroller);
     }
@@ -315,7 +315,7 @@ contract Shortfall is
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
      */
-    function restartAuction(address comptroller) external {
+    function restartAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(!auctionsPaused, "auctions are paused");
