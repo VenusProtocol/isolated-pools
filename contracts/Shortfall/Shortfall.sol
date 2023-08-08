@@ -286,7 +286,7 @@ contract Shortfall is
         }
 
         uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
+        _transferOutOrTrackDebt(IERC20Upgradeable(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
 
         emit AuctionClosed(
             comptroller,
