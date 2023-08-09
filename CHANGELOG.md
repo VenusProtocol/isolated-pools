@@ -1,3 +1,10 @@
+## [2.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2023-08-09)
+
+
+### Bug Fixes
+
+* comments ([fecd4bb](https://github.com/VenusProtocol/isolated-pools/commit/fecd4bb093ff267c1ba5ec03cf574a9c0e137828))
+
 ## [2.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.6...v2.0.0-dev.1) (2023-08-01)
 
 
