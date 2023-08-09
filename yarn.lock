@@ -2966,6 +2966,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": ^1.0.0
     "@venusprotocol/oracle": 1.7.2
+    "@venusprotocol/protocol-reserve": ^1.0.0-dev.2
     "@venusprotocol/venus-protocol": ^0.6.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3013,6 +3014,13 @@ __metadata:
     module-alias: ^2.2.2
     solidity-docgen: ^0.6.0-beta.29
   checksum: 71dc7faf761e110cda526dabbe2ac7bdda40849cccb6473647cf80edd6940e1cbe02528c270f83e9d14c7815cdfaf736a1acef3c8896cf04926f72a8c53ff9df
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/protocol-reserve@npm:^1.0.0-dev.2":
+  version: 1.0.0-dev.2
+  resolution: "@venusprotocol/protocol-reserve@npm:1.0.0-dev.2"
+  checksum: 072bb3c6f9e6263a86a51ba014302f4e7c9a1420c9faa0c859c60af060a7a6e4661484909fa8ee3174324d9c7ac54beea593fd97638f3095f7443ce30c4b82ab
   languageName: node
   linkType: hard
 
