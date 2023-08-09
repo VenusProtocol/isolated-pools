@@ -175,7 +175,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
             require(Comptroller(comptroller).isMarketListed(VToken(markets[i])), "market is not listed");
 
             uint256 swappedTokens = _swapAsset(VToken(markets[i]), comptroller, amountsOutMin[i], paths[i]);
-            poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
+            _poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
             assetsReserves[convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
@@ -200,12 +200,12 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(
-            amount <= poolsAssetsReserves[comptroller][convertibleBaseAsset],
+            amount <= _poolsAssetsReserves[comptroller][convertibleBaseAsset],
             "Risk Fund: Insufficient pool reserve."
         );
         unchecked {
-            poolsAssetsReserves[comptroller][convertibleBaseAsset] =
-                poolsAssetsReserves[comptroller][convertibleBaseAsset] -
+            _poolsAssetsReserves[comptroller][convertibleBaseAsset] =
+                _poolsAssetsReserves[comptroller][convertibleBaseAsset] -
                 amount;
         }
         unchecked {
@@ -233,7 +233,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      */
     function getPoolsBaseAssetReserves(address comptroller) external view returns (uint256) {
         require(ComptrollerInterface(comptroller).isComptroller(), "Risk Fund: Comptroller address invalid");
-        return poolsAssetsReserves[comptroller][convertibleBaseAsset];
+        return _poolsAssetsReserves[comptroller][convertibleBaseAsset];
     }
 
     /**
@@ -265,7 +265,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
 
         address underlyingAsset = vToken.underlying();
         address convertibleBaseAsset_ = convertibleBaseAsset;
-        uint256 balanceOfUnderlyingAsset = poolsAssetsReserves[comptroller][underlyingAsset];
+        uint256 balanceOfUnderlyingAsset = _poolsAssetsReserves[comptroller][underlyingAsset];
 
         ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
 
@@ -279,7 +279,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
 
             if (amountInUsd >= minAmountToConvert) {
                 assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
-                poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
+                _poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
 
                 if (underlyingAsset != convertibleBaseAsset_) {
                     require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");

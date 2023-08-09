@@ -75,10 +75,10 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
         uint256 amount
     ) external nonReentrant returns (uint256) {
         ensureNonzeroAddress(asset);
-        require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
+        require(amount <= _poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
-        poolsAssetsReserves[comptroller][asset] -= amount;
+        _poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
             div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
