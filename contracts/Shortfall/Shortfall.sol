@@ -433,8 +433,7 @@ contract Shortfall is
 
         Auction storage auction = auctions[comptroller];
         require(
-            (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
-                auction.status == AuctionStatus.ENDED,
+            auction.status == AuctionStatus.NOT_STARTED || auction.status == AuctionStatus.ENDED,
             "auction is on-going"
         );
 
@@ -530,7 +529,7 @@ contract Shortfall is
      * @return True if the auction has started
      */
     function _isStarted(Auction storage auction) internal view returns (bool) {
-        return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
+        return auction.status == AuctionStatus.STARTED;
     }
 
     /**
