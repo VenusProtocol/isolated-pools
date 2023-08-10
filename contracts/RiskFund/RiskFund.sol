@@ -16,7 +16,6 @@ import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
 import { IShortfall } from "../Shortfall/IShortfall.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { IProtocolShareReserve } from "./IProtocolShareReserve.sol";
 
 /**
  * @title ReserveHelpers
@@ -237,12 +236,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(
-        address comptroller,
-        address asset,
-        IProtocolShareReserve.IncomeType kind
-    ) public override(IRiskFund, ReserveHelpers) {
-        super.updateAssetsState(comptroller, asset, kind);
+    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
+        super.updateAssetsState(comptroller, asset);
     }
 
     /**

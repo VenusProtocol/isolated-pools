@@ -5,13 +5,13 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts/Interfaces/IProtocolShareReserve.sol";
 
 import { VTokenInterface } from "./VTokenInterfaces.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInterface.sol";
 import { TokenErrorReporter } from "./ErrorReporter.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
-import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
@@ -1223,8 +1223,7 @@ contract VToken is
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
-        emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit Transfer(address(this), protocolShareReserve, protocolSeizeAmount);
+        emit ProtocolSeize(borrower, protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
@@ -1329,7 +1328,7 @@ contract VToken is
         // Update the pool asset's state in the protocol share reserve for the above transfer.
         IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, kind);
 
-        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
+        emit SpreadReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**

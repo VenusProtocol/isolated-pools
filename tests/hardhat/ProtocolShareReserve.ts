@@ -52,7 +52,7 @@ describe("ProtocolShareReserve: Tests", function () {
 
   it("Revert on invalid asset address.", async function () {
     await expect(
-      protocolShareReserve.releaseFunds(fakeComptroller.address, constants.AddressZero, 10, 0),
+      protocolShareReserve.releaseFunds(fakeComptroller.address, constants.AddressZero, 10),
     ).to.be.revertedWithCustomError(protocolShareReserve, "ZeroAddressNotAllowed");
   });
 
@@ -62,7 +62,6 @@ describe("ProtocolShareReserve: Tests", function () {
         fakeComptroller.address, // Mock comptroller address
         mockDAI.address,
         10,
-        0,
       ),
     ).to.be.revertedWith("ProtocolShareReserve: Insufficient pool balance");
   });
@@ -74,7 +73,6 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
-      0,
     );
 
     const balance = await mockDAI.balanceOf(protocolShareReserve.address);
@@ -89,7 +87,6 @@ describe("ProtocolShareReserve: Tests", function () {
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
       convertToUnit(90, 18),
-      0,
     );
 
     protocolUSDT = await protocolShareReserve.getPoolAssetReserve(fakeComptroller.address, mockDAI.address);
@@ -125,7 +122,6 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
-      0,
     );
 
     await expect(protocolShareReserve.sweepToken(mockDAI.address, signer2.address)).to.be.revertedWith(
@@ -144,7 +140,6 @@ describe("ProtocolShareReserve: Tests", function () {
     await protocolShareReserve.updateAssetsState(
       fakeComptroller.address, // Mock comptroller address
       mockDAI.address,
-      0,
     );
     let protocolShareReserveBal = await mockDAI.balanceOf(protocolShareReserve.address);
     expect(protocolShareReserveBal.sub(protocolShareReserveBalPrev)).equal(amount);

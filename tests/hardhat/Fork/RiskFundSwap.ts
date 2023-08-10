@@ -229,7 +229,7 @@ describe("Risk Fund: Swap Tests", () => {
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT);
 
-    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT, 0);
+    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
 
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
     await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]], deadline);
