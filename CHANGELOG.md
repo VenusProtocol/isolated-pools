@@ -1,3 +1,18 @@
+## [2.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2023-08-10)
+
+
+### Bug Fixes
+
+* lint issues ([2cc0f29](https://github.com/VenusProtocol/isolated-pools/commit/2cc0f29baebc822280a65257b1feae061c4d729e))
+* ven-1817 pve003 ([f603afd](https://github.com/VenusProtocol/isolated-pools/commit/f603afd7071c495971690e39f1bc4d59eb4df964))
+
+## [2.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2023-08-09)
+
+
+### Bug Fixes
+
+* comments ([fecd4bb](https://github.com/VenusProtocol/isolated-pools/commit/fecd4bb093ff267c1ba5ec03cf574a9c0e137828))
+
 ## [2.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0-dev.6...v2.0.0-dev.1) (2023-08-01)
 
 
