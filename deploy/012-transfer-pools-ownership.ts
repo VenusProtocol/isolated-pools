@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const rewardsDistributors = poolConfig
     .map((pool: PoolConfig) => {
       const rewards = pool.rewards || [];
-      return rewards.map((reward: RewardConfig) => `RewardsDistributor_${reward.asset}_${pool.id}`);
+      return rewards.map((_, idx: number) => `RewardsDistributor_${pool.id}_${idx}`);
     })
     .flat();
 
