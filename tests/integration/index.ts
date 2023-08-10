@@ -338,9 +338,9 @@ describe("Positive Cases", function () {
 
     it("Should revert when borrow cap is reached", async () => {
       // Minting amount to account 1 so that it can also heal account
-      const fauceAmount = convertToUnit(20, 18);
-      await BTCB.connect(acc1Signer).faucet(fauceAmount);
-      await BNX.connect(acc1Signer).faucet(fauceAmount);
+      const faucetAmount = convertToUnit(20, 18);
+      await BTCB.connect(acc1Signer).faucet(faucetAmount);
+      await BNX.connect(acc1Signer).faucet(faucetAmount);
 
       const mintAmountForAccount1 = convertToUnit(10, 18);
       await BTCB.connect(acc1Signer).approve(vBTCB.address, mintAmountForAccount1);
