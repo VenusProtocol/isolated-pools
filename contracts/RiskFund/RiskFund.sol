@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "./IRiskFund.sol";
 import { ReserveHelpers } from "./ReserveHelpers.sol";
@@ -260,48 +261,45 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         address[] calldata path
     ) internal returns (uint256) {
         require(amountOutMin != 0, "RiskFund: amountOutMin must be greater than 0 to swap vToken");
-        require(amountOutMin >= minAmountToConvert, "RiskFund: amountOutMin should be greater than minAmountToConvert");
         uint256 totalAmount;
 
         address underlyingAsset = vToken.underlying();
         address convertibleBaseAsset_ = convertibleBaseAsset;
         uint256 balanceOfUnderlyingAsset = _poolsAssetsReserves[comptroller][underlyingAsset];
 
-        ComptrollerViewInterface(comptroller).oracle().updatePrice(address(vToken));
+        if (balanceOfUnderlyingAsset == 0) {
+            return 0;
+        }
 
-        uint256 underlyingAssetPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(
-            address(vToken)
-        );
+        ResilientOracleInterface oracle = ComptrollerViewInterface(comptroller).oracle();
+        oracle.updateAssetPrice(convertibleBaseAsset_);
+        Exp memory baseAssetPrice = Exp({ mantissa: oracle.getPrice(convertibleBaseAsset_) });
+        uint256 amountOutMinInUsd = mul_ScalarTruncate(baseAssetPrice, amountOutMin);
 
-        if (balanceOfUnderlyingAsset > 0) {
-            Exp memory oraclePrice = Exp({ mantissa: underlyingAssetPrice });
-            uint256 amountInUsd = mul_ScalarTruncate(oraclePrice, balanceOfUnderlyingAsset);
+        require(amountOutMinInUsd >= minAmountToConvert, "RiskFund: minAmountToConvert violated");
 
-            if (amountInUsd >= minAmountToConvert) {
-                assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
-                _poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
+        assetsReserves[underlyingAsset] -= balanceOfUnderlyingAsset;
+        _poolsAssetsReserves[comptroller][underlyingAsset] -= balanceOfUnderlyingAsset;
 
-                if (underlyingAsset != convertibleBaseAsset_) {
-                    require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");
-                    require(
-                        path[path.length - 1] == convertibleBaseAsset_,
-                        "RiskFund: finally path must be convertible base asset"
-                    );
-                    address pancakeSwapRouter_ = pancakeSwapRouter;
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, 0);
-                    IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, balanceOfUnderlyingAsset);
-                    uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
-                        balanceOfUnderlyingAsset,
-                        amountOutMin,
-                        path,
-                        address(this),
-                        block.timestamp
-                    );
-                    totalAmount = amounts[path.length - 1];
-                } else {
-                    totalAmount = balanceOfUnderlyingAsset;
-                }
-            }
+        if (underlyingAsset != convertibleBaseAsset_) {
+            require(path[0] == underlyingAsset, "RiskFund: swap path must start with the underlying asset");
+            require(
+                path[path.length - 1] == convertibleBaseAsset_,
+                "RiskFund: finally path must be convertible base asset"
+            );
+            address pancakeSwapRouter_ = pancakeSwapRouter;
+            IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, 0);
+            IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, balanceOfUnderlyingAsset);
+            uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
+                balanceOfUnderlyingAsset,
+                amountOutMin,
+                path,
+                address(this),
+                block.timestamp
+            );
+            totalAmount = amounts[path.length - 1];
+        } else {
+            totalAmount = balanceOfUnderlyingAsset;
         }
 
         return totalAmount;
