@@ -17,6 +17,7 @@ import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
 import { IShortfall } from "../Shortfall/IShortfall.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
 
 /**
  * @title RiskFund
@@ -26,6 +27,8 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
  */
 contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using ApproveOrRevert for IERC20Upgradeable;
+
     address public convertibleBaseAsset;
     address public shortfall;
     address public pancakeSwapRouter;
@@ -288,8 +291,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
                 "RiskFund: finally path must be convertible base asset"
             );
             address pancakeSwapRouter_ = pancakeSwapRouter;
-            IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, 0);
-            IERC20Upgradeable(underlyingAsset).approve(pancakeSwapRouter_, balanceOfUnderlyingAsset);
+            IERC20Upgradeable(underlyingAsset).approveOrRevert(pancakeSwapRouter_, 0);
+            IERC20Upgradeable(underlyingAsset).approveOrRevert(pancakeSwapRouter_, balanceOfUnderlyingAsset);
             uint256[] memory amounts = IPancakeswapV2Router(pancakeSwapRouter_).swapExactTokensForTokens(
                 balanceOfUnderlyingAsset,
                 amountOutMin,
