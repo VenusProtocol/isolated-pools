@@ -156,7 +156,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         address[][] calldata paths,
         uint256 deadline
     ) external override nonReentrant returns (uint256) {
-        _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][])");
+        _checkAccessAllowed("swapPoolsAssets(address[],uint256[],address[][],uint256)");
         require(deadline >= block.timestamp, "Risk fund: deadline passed");
         address poolRegistry_ = poolRegistry;
         ensureNonzeroAddress(poolRegistry_);

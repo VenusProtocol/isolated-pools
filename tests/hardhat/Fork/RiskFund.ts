@@ -205,7 +205,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     riskFund.address,
-    "swapPoolsAssets(address[],uint256[],address[][])",
+    "swapPoolsAssets(address[],uint256[],address[][],uint256)",
     admin.address,
   );
 
@@ -525,7 +525,7 @@ describe("Risk Fund: Tests", function () {
         ]);
         await accessControlManager.giveCallPermission(
           misconfiguredRiskFund.address,
-          "swapPoolsAssets(address[],uint256[],address[][])",
+          "swapPoolsAssets(address[],uint256[],address[][],uint256)",
           admin.address,
         );
         await expect(
@@ -576,7 +576,7 @@ describe("Risk Fund: Tests", function () {
       // Revoke
       await accessControlManager.revokeCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Fails
@@ -588,7 +588,7 @@ describe("Risk Fund: Tests", function () {
       // Reset
       await accessControlManager.giveCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Succeeds
