@@ -245,7 +245,7 @@ describe("Rewards: Tests", async function () {
     expect(res[1][2].toString()).equal(convertToUnit(0.1, 18));
   });
 
-  it("Cannot add reward distributors with duplicate reward tokens", async function () {
+  it("Can add reward distributors with duplicate reward tokens", async function () {
     const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
     rewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
       comptrollerProxy.address,
@@ -254,9 +254,9 @@ describe("Rewards: Tests", async function () {
       fakeAccessControlManager.address,
     ])) as RewardsDistributor;
 
-    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address)).to.be.revertedWith(
-      "distributor already exists with this reward",
-    );
+    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
+      .to.emit(comptrollerProxy, "NewRewardsDistributor")
+      .withArgs(rewardsDistributor.address);
   });
 
   it("Emits event correctly", async () => {
@@ -319,6 +319,49 @@ describe("Rewards: Tests", async function () {
       0.5 * 1001 = 500.5
     */
     expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(500.5, 18));
+  });
+
+  it("Multiple reward distributors with same reward token", async () => {
+    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+    const newRewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
+      comptrollerProxy.address,
+      xvs.address,
+      maxLoopsLimit,
+      fakeAccessControlManager.address,
+    ])) as RewardsDistributor;
+
+    await comptrollerProxy.addRewardsDistributor(newRewardsDistributor.address);
+
+    const initialXvs = convertToUnit(1000000, 18);
+    await xvs.faucet(initialXvs);
+    await xvs.transfer(newRewardsDistributor.address, initialXvs);
+
+    const [, user1] = await ethers.getSigners();
+
+    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
+
+    await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
+    await newRewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
+
+    await mine(1000);
+    await rewardsDistributor.updateContributorRewards(user1.address);
+    await newRewardsDistributor.updateContributorRewards(user1.address);
+
+    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+    await newRewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+
+    /*
+      Reward Distributor 1
+      Formula: speed * blocks
+      0.5 * 1001 = 500.5
+
+      Reward Distributor 2
+      Formula: speed * blocks
+      0.5 * 1003 = 501.5
+
+      Total xvs reward = 500.5 + 501.5 = 1002
+    */
+    expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(1002, 18));
   });
 
   it("pause rewards", async () => {
