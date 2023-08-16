@@ -21,7 +21,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
 
     // Store the asset's reserve per pool in the ProtocolShareReserve.
     // Comptroller(pool) -> Asset -> amount
-    mapping(address => mapping(address => uint256)) public poolsAssetsReserves;
+    mapping(address => mapping(address => uint256)) internal _poolsAssetsReserves;
 
     // Address of pool registry contract
     address public poolRegistry;
@@ -73,8 +73,8 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
             balanceDfference_ = balance_ - assetsReserves[_token];
         }
 
-        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
         emit SweepToken(_token, _to, balanceDfference_);
+        IERC20Upgradeable(_token).safeTransfer(_to, balanceDfference_);
     }
 
     /**
@@ -87,7 +87,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     function getPoolAssetReserve(address comptroller, address asset) external view returns (uint256) {
         ensureNonzeroAddress(asset);
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
-        return poolsAssetsReserves[comptroller][asset];
+        return _poolsAssetsReserves[comptroller][asset];
     }
 
     /**
@@ -115,7 +115,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
                 balanceDifference = currentBalance - assetReserve;
             }
             assetsReserves[asset] += balanceDifference;
-            poolsAssetsReserves[comptroller][asset] += balanceDifference;
+            _poolsAssetsReserves[comptroller][asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
     }

@@ -73,12 +73,12 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
         address comptroller,
         address asset,
         uint256 amount
-    ) external returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         ensureNonzeroAddress(asset);
-        require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
+        require(amount <= _poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
-        poolsAssetsReserves[comptroller][asset] -= amount;
+        _poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
             div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
@@ -86,13 +86,13 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
 
         address riskFund_ = riskFund;
 
+        emit FundsReleased(comptroller, asset, amount);
+
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
         IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund_).updateAssetsState(comptroller, asset);
-
-        emit FundsReleased(comptroller, asset, amount);
 
         return amount;
     }
