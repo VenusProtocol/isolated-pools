@@ -7,9 +7,8 @@ import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/con
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { EXP_SCALE } from "../lib/constants.sol";
 
-contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
+contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
     using SafeERC20 for IERC20;
 
     /**
@@ -28,51 +27,7 @@ contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
     ResilientOracleInterface public oracle;
-    /**
-     * @notice Mapping of chain ID to max limit in USD of single transaction.
-     */
-    mapping(uint16 => uint256) public chainIdToMaxSingleTransactionLimit;
-    /**
-     * @notice Mapping of chain ID to max limit in USD in 24 hour window.
-     */
-    mapping(uint16 => uint256) public chainIdToMaxDailyLimit;
-    /**
-     * @notice Mapping of chain ID to transferred amount in USD in current 24 hour window.
-     */
-    mapping(uint16 => uint256) public chainIdToLast24HourTransferred;
-    /**
-     * @notice Mapping of chain ID to start timestamp of current 24 hour window.
-     */
-    mapping(uint16 => uint256) public chainIdToLast24HourWindowStart;
-    /**
-     * @notice  Mapping of chain ID to delay in blocks between two consecutive transaction.
-     */
-    mapping(uint16 => uint256) public chainIdtoDelayBlocks;
-    /**
-     * @notice  Mapping of chain ID to last sent block.
-     */
-    mapping(uint16 => uint256) public chainIdToLastSentBlock;
-    /**
-     * @notice Address on which cap check and bound limit is not appicable.
-     */
-    mapping(address => bool) public whitelist;
 
-    /**
-     * @notice Emmited when address is added to whitelist.
-     */
-    event SetWhitelist(address indexed addr, bool isWhitelist);
-    /**
-     * @notice Emmited when limit of single transaction is modified.
-     */
-    event SetMaxSingleTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
-    /**
-     * @notice Emmited when limit of daily (24Hour) is modified.
-     */
-    event SetMaxDailyLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
-    /**
-     * @notice Emmited when delay is modified.
-     */
-    event DelayBlocksChanged(uint256 oldDelay, uint256 newDelay);
     /**
      * @notice Emmited when address of accessControlManager contract is modified.
      */
@@ -81,10 +36,6 @@ contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
      * @notice Event emitted when oracle is modified.
      */
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
-
-    error MaxDailyLimitExceed(uint256 amount, uint256 limit);
-    error MaxSingleTransactionLimitExceed(uint256 amount, uint256 limit);
-    error DelayBlocksNotPassed();
 
     constructor(
         address to_,
@@ -131,39 +82,6 @@ contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
     }
 
     /**
-     * @notice Sets the limit of single transaction amount.
-     * @param chainId_ Destination chain id.
-     * @param limit_ Amount in USD.
-     */
-    function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxSingleTransactionLimit(uint16,uint256)");
-        emit SetMaxSingleTransactionLimit(chainIdToMaxSingleTransactionLimit[chainId_], limit_);
-        chainIdToMaxSingleTransactionLimit[chainId_] = limit_;
-    }
-
-    /**
-     * @notice Sets the limit of daily (24 Hour) transactions amount.
-     * @param chainId_ Destination chain id.
-     * @param limit_ Amount in USD.
-     */
-    function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxSingleTransactionLimit(uint16,uint256)");
-        emit SetMaxDailyLimit(chainIdToMaxDailyLimit[chainId_], limit_);
-        chainIdToMaxDailyLimit[chainId_] = limit_;
-    }
-
-    /**
-     * @notice Sets the delay in consecutive transactions.
-     * @param chainId_ Destination chain id.
-     * @param delay_ Delta block.
-     */
-    function setDelayBlock(uint16 chainId_, uint256 delay_) external {
-        _ensureAllowed("setDelayBlock(uint16,uiChangednt256)");
-        emit DelayBlocksChanged(chainIdtoDelayBlocks[chainId_], delay_);
-        chainIdtoDelayBlocks[chainId_] = delay_;
-    }
-
-    /**
      * @notice Triggers stopped state of the bridge.
      */
     function pause() external {
@@ -196,12 +114,11 @@ contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
 
     function _debitFrom(
         address from_,
-        uint16 dstChainId_,
+        uint16,
         bytes32,
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
         require(from_ == _msgSender(), "ProxyOFT: owner is not send caller");
-        _isEligibleToSend(from_, dstChainId_, amount_);
         amount_ = _transferFrom(from_, address(this), amount_);
 
         // amount_ still may have dust if the token has transfer fee, then give the dust back to the sender
@@ -230,49 +147,6 @@ contract XVSProxyOFTSrc is Pausable, BaseOFTV2 {
             innerToken.safeTransferFrom(from_, to_, amount_);
         }
         return innerToken.balanceOf(to_) - before;
-    }
-
-    function _isEligibleToSend(
-        address from_,
-        uint16 dstChainId_,
-        uint256 amount_
-    ) internal {
-        if (whitelist[from_]) {
-            return;
-        }
-        uint256 amountInUsd;
-        uint256 oraclePrice = oracle.getPrice(address(innerToken));
-        amountInUsd = (oraclePrice * amount_) / EXP_SCALE;
-
-        uint256 currentBlock = block.timestamp;
-        uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
-        uint256 transferredInWindow = chainIdToLast24HourTransferred[dstChainId_];
-        uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
-        uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
-        uint256 delayInBlocks = chainIdtoDelayBlocks[dstChainId_];
-        uint256 lastSentBlockNumber = chainIdToLastSentBlock[dstChainId_];
-
-        if (currentBlock - lastSentBlockNumber < delayInBlocks) {
-            revert DelayBlocksNotPassed();
-        }
-
-        if (amountInUsd > maxSingleTransactionLimit) {
-            revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
-        }
-
-        if (currentBlock - lastDayWindowStart > 1 days) {
-            transferredInWindow = amountInUsd;
-            chainIdToLast24HourWindowStart[dstChainId_] = currentBlock;
-        } else {
-            transferredInWindow += amountInUsd;
-        }
-
-        if (transferredInWindow > maxDailyLimit) {
-            revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
-        }
-        chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
-        chainIdToLastSentBlock[dstChainId_] = currentBlock;
-        return;
     }
 
     /// @dev Checks the caller is allowed to call the specified fuction
