@@ -125,13 +125,12 @@ const acceptOwnership = async (
 };
 
 const setOracle = async (comptroller: Comptroller, pool: PoolConfig): Promise<GovernanceCommand> => {
-  const oracle = await ethers.getContract("ResilientOracle");
   console.log(`Adding a command to set the price oracle for Comptroller_${pool.id}`);
   return {
     contract: comptroller.address,
     signature: "setPriceOracle(address)",
     argTypes: ["address"],
-    parameters: [oracle.address],
+    parameters: ["0xEa6c8D847Fd8A0a7410Fae0d49f21308AeaF95A2"], // Add resilient oracle address here
     value: 0,
   };
 };
@@ -170,43 +169,6 @@ const addPools = async (
     }),
   );
   return commands.flat();
-};
-
-const transferInitialLiquidity = async (
-  vTokenConfig: VTokenConfig,
-  deploymentConfig: DeploymentConfig,
-  hre: HardhatRuntimeEnvironment,
-): Promise<GovernanceCommand[]> => {
-  const { deployer } = await hre.getNamedAccounts();
-  const { preconfiguredAddresses, tokensConfig } = deploymentConfig;
-  const { asset, initialSupply } = vTokenConfig;
-  const token = getTokenConfig(asset, tokensConfig);
-  const tokenContract = await getUnderlyingToken(token.symbol, tokensConfig);
-
-  if (hre.network.name === "bsctestnet") {
-    console.log(`Adding a command to transfer ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: tokenContract.address,
-        signature: "transferFrom(address,address,uint256)",
-        argTypes: ["address", "address", "uint256"],
-        parameters: [deployer, preconfiguredAddresses.NormalTimelock, initialSupply],
-        value: 0,
-      },
-    ];
-  } else if (hre.network.name === "bscmainnet") {
-    console.log(`Adding a command to withdraw ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: preconfiguredAddresses.VTreasury,
-        signature: "withdrawTreasuryBEP20(address,uint256,address)",
-        argTypes: ["address", "uint256", "address"],
-        parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
-        value: 0,
-      },
-    ];
-  }
-  return [];
 };
 
 const approvePoolRegistry = async (
@@ -274,7 +236,6 @@ const addMarkets = async (
 
           console.log("Adding market " + name + " to pool " + pool.name);
           return [
-            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
             await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
           ];
@@ -382,17 +343,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ...(await addMarkets(unregisteredVTokens, deploymentConfig, hre)),
     ...(await configureRewards(unregisteredRewardsDistributors, owner, hre)),
   ];
-
-  if (hre.network.live) {
-    console.log("Please propose a VIP with the following commands:");
-    console.log(
-      JSON.stringify(
-        commands.map(c => ({ target: c.contract, signature: c.signature, params: c.parameters, value: c.value })),
-      ),
-    );
-  } else {
-    await executeCommands(commands, hre);
-  }
+  await executeCommands(commands, hre);
 };
 
 func.tags = ["VIP", "il"];
