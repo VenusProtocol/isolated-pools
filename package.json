@@ -53,7 +53,6 @@
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
     "@defi-wonderland/smock": "^2.2.0",
-    "@layerzerolabs/solidity-examples": "^0.0.13",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.4",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
