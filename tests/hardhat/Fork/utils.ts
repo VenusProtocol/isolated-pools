@@ -17,7 +17,8 @@ export async function setForkBlock(blockNumber: number) {
     params: [
       {
         forking: {
-          jsonRpcUrl: process.env.BSC_ARCHIVE_NODE,
+          jsonRpcUrl:
+            process.env.NETWORK_NAME == "sepolia" ? process.env.SEPOLIA_ARCHIVE_NODE : process.env.BSC_ARCHIVE_NODE,
           blockNumber: blockNumber,
         },
       },
