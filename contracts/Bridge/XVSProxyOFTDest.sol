@@ -1,24 +1,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
+import { ProxyOFTV2 } from "./oft/ProxyOFTV2.sol";
+import { ILayerZeroUserApplicationConfig } from "./interfaces/ILayerZeroUserApplicationConfig.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+import { IXVS } from "./interfaces/IXVS.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { EXP_SCALE } from "../lib/constants.sol";
 
-contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
-    using SafeERC20 for IERC20;
-
+contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2 {
     /**
-     * @dev Address of underlying token of this bridge.
+     * @notice Address of XVS token
      */
-    IERC20 internal immutable innerToken;
-    /**
-     * @notice Conversion rate of innerToken decimals to shared decimals.
-     */
-    uint256 public immutable ld2sdRate;
+    IXVS public XVS;
     /**
      * @notice Address of access control manager contract.
      */
@@ -27,7 +23,39 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
     ResilientOracleInterface public oracle;
+    /**
+     * @notice Mapping of chain ID to max limit in USD of single transaction.
+     */
+    mapping(uint16 => uint256) public chainIdToMaxSingleTransactionLimit;
+    /**
+     * @notice Mapping of chain ID to max limit in USD in 24 hour window.
+     */
+    mapping(uint16 => uint256) public chainIdToMaxDailyLimit;
+    /**
+     * @notice Mapping of chain ID to transferred amount in USD in current 24 hour window.
+     */
+    mapping(uint16 => uint256) public chainIdToLast24HourTransferred;
+    /**
+     * @notice Mapping of chain ID to start timestamp of current 24 hour window.
+     */
+    mapping(uint16 => uint256) public chainIdToLast24HourWindowStart;
+    /**
+     * @notice Address on which cap check and bound limit is not appicable.
+     */
+    mapping(address => bool) public whitelist;
 
+    /**
+     * @notice Emmited when address is added to whitelist.
+     */
+    event SetWhitelist(address indexed addr, bool isWhitelist);
+    /**
+     * @notice Emmited when limit of single transaction is modified.
+     */
+    event SetMaxSingleTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    /**
+     * @notice Emmited when limit of daily (24Hour) is modified.
+     */
+    event SetMaxDailyLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Emmited when address of accessControlManager contract is modified.
      */
@@ -37,25 +65,49 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
      */
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
 
+    error MaxDailyLimitExceed(uint256 amount, uint256 limit);
+    error MaxSingleTransactionLimitExceed(uint256 amount, uint256 limit);
+
     constructor(
-        address to_,
+        address tokenAddress_,
         uint8 sharedDecimals_,
         address lzEndpoint_,
         address accessControlManager_,
-        address oracle_
-    ) BaseOFTV2(sharedDecimals_, lzEndpoint_) {
-        innerToken = IERC20(to_);
-
-        (bool success, bytes memory data) = to_.staticcall(abi.encodeWithSignature("decimals()"));
-        require(success, "ProxyOFT: failed to get token decimals");
-        uint8 decimals = abi.decode(data, (uint8));
-
-        require(sharedDecimals_ <= decimals, "ProxyOFT: sharedDecimals must be <= decimals");
-        ld2sdRate = 10**(decimals - sharedDecimals_);
+        address oracle_,
+        address xvs_
+    ) ProxyOFTV2(tokenAddress_, sharedDecimals_, lzEndpoint_) {
         ensureNonzeroAddress(accessControlManager_);
         ensureNonzeroAddress(oracle_);
+        ensureNonzeroAddress(xvs_);
         accessControlManager = accessControlManager_;
-        oracle = ResilientOracleInterface(oracle);
+        oracle = ResilientOracleInterface(oracle_);
+        XVS = IXVS(xvs_);
+    }
+
+    // generic config for LayerZero user Application
+    function setConfig(
+        uint16 version_,
+        uint16 chainId_,
+        uint256 configType_,
+        bytes calldata config_
+    ) external override {
+        _ensureAllowed("setConfig(uint16,uint16,uint256,bytes)");
+        lzEndpoint.setConfig(version_, chainId_, configType_, config_);
+    }
+
+    function setSendVersion(uint16 version_) external override {
+        _ensureAllowed("setSendVersion(uint16)");
+        lzEndpoint.setSendVersion(version_);
+    }
+
+    function setReceiveVersion(uint16 version_) external override {
+        _ensureAllowed("setReceiveVersion(uint16)");
+        lzEndpoint.setReceiveVersion(version_);
+    }
+
+    function forceResumeReceive(uint16 srcChainId_, bytes calldata srcAddress_) external override {
+        _ensureAllowed("forceResumeReceive(uint16,bytes)");
+        lzEndpoint.forceResumeReceive(srcChainId_, srcAddress_);
     }
 
     /**
@@ -82,6 +134,28 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
     }
 
     /**
+     * @notice Sets the limit of single transaction amount.
+     * @param chainId_ Destination chain id.
+     * @param limit_ Amount in USD.
+     */
+    function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external {
+        _ensureAllowed("setMaxSingleTransactionLimit(uint16,uint256)");
+        emit SetMaxSingleTransactionLimit(chainIdToMaxSingleTransactionLimit[chainId_], limit_);
+        chainIdToMaxSingleTransactionLimit[chainId_] = limit_;
+    }
+
+    /**
+     * @notice Sets the limit of daily (24 Hour) transactions amount.
+     * @param chainId_ Destination chain id.
+     * @param limit_ Amount in USD.
+     */
+    function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external {
+        _ensureAllowed("setMaxDailyLimit(uint16,uint256)");
+        emit SetMaxDailyLimit(chainIdToMaxDailyLimit[chainId_], limit_);
+        chainIdToMaxDailyLimit[chainId_] = limit_;
+    }
+
+    /**
      * @notice Triggers stopped state of the bridge.
      */
     function pause() external {
@@ -97,34 +171,15 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
         _unpause();
     }
 
-    /**
-     * @return Circulating supply of current chain.
-     */
-    function circulatingSupply() public view override returns (uint256) {
-        uint256 balance = innerToken.balanceOf(address(this));
-        return innerToken.totalSupply() - balance;
-    }
-
-    /**
-     * @return Address of underlying token.
-     */
-    function token() public view virtual override returns (address) {
-        return address(innerToken);
-    }
-
     function _debitFrom(
         address from_,
-        uint16,
+        uint16 dstChainId_,
         bytes32,
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
-        require(from_ == _msgSender(), "ProxyOFT: owner is not send caller");
-        amount_ = _transferFrom(from_, address(this), amount_);
-
-        // amount_ still may have dust if the token has transfer fee, then give the dust back to the sender
-        (uint256 amount, uint256 dust) = _removeDust(amount_);
-        if (dust > 0) innerToken.safeTransfer(from_, dust);
-        return amount;
+        _isEligibleToSend(from_, dstChainId_, amount_);
+        XVS.burn(from_, amount_);
+        return amount_;
     }
 
     function _creditTo(
@@ -132,21 +187,44 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
         address toAddress_,
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
-        return _transferFrom(address(this), toAddress_, amount_);
+        XVS.mint(toAddress_, amount_);
+        return amount_;
     }
 
-    function _transferFrom(
+    function _isEligibleToSend(
         address from_,
-        address to_,
+        uint16 dstChainId_,
         uint256 amount_
-    ) internal override returns (uint256) {
-        uint256 before = innerToken.balanceOf(to_);
-        if (from_ == address(this)) {
-            innerToken.safeTransfer(to_, amount_);
-        } else {
-            innerToken.safeTransferFrom(from_, to_, amount_);
+    ) internal {
+        if (whitelist[from_]) {
+            return;
         }
-        return innerToken.balanceOf(to_) - before;
+        uint256 amountInUsd;
+        uint256 oraclePrice = oracle.getPrice(address(innerToken));
+        amountInUsd = (oraclePrice * amount_) / EXP_SCALE;
+
+        uint256 currentBlock = block.timestamp;
+        uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
+        uint256 transferredInWindow = chainIdToLast24HourTransferred[dstChainId_];
+        uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
+        uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
+
+        if (amountInUsd > maxSingleTransactionLimit) {
+            revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
+        }
+
+        if (currentBlock - lastDayWindowStart > 1 days) {
+            transferredInWindow = amountInUsd;
+            chainIdToLast24HourWindowStart[dstChainId_] = currentBlock;
+        } else {
+            transferredInWindow += amountInUsd;
+        }
+
+        if (transferredInWindow > maxDailyLimit) {
+            revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
+        }
+        chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
+        return;
     }
 
     /// @dev Checks the caller is allowed to call the specified fuction
@@ -155,9 +233,5 @@ contract XVSProxyOFTDest is Pausable, BaseOFTV2 {
             IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
             "access denied"
         );
-    }
-
-    function _ld2sdRate() internal view override returns (uint256) {
-        return ld2sdRate;
     }
 }
