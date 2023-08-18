@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { ProxyOFTV2 } from "./oft/ProxyOFTV2.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { BaseOFTV2 } from "./oft/BaseOFTV2.sol";
 
-contract BaseXVSProxyOFT is Pausable, ExponentialNoError, ProxyOFTV2 {
+abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
@@ -57,12 +57,11 @@ contract BaseXVSProxyOFT is Pausable, ExponentialNoError, ProxyOFTV2 {
     error MaxSingleTransactionLimitExceed(uint256 amount, uint256 limit);
 
     constructor(
-        address tokenAddress_,
         uint8 sharedDecimals_,
         address lzEndpoint_,
         address accessControlManager_,
         address oracle_
-    ) ProxyOFTV2(tokenAddress_, sharedDecimals_, lzEndpoint_) {
+    ) BaseOFTV2(sharedDecimals_, lzEndpoint_) {
         ensureNonzeroAddress(accessControlManager_);
         ensureNonzeroAddress(oracle_);
         accessControlManager = accessControlManager_;
@@ -139,7 +138,7 @@ contract BaseXVSProxyOFT is Pausable, ExponentialNoError, ProxyOFTV2 {
         bool isWhiteListedUser = whitelist[from_];
 
         uint256 amountInUsd;
-        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(innerToken)) });
+        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
         amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
         uint256 currentBlock = block.timestamp;
