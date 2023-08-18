@@ -10,11 +10,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
-contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2 {
-    /**
-     * @notice Address of XVS token
-     */
-    IXVS public XVS;
+contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2 {
     /**
      * @notice Address of access control manager contract.
      */
@@ -73,15 +69,12 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
         uint8 sharedDecimals_,
         address lzEndpoint_,
         address accessControlManager_,
-        address oracle_,
-        address xvs_
+        address oracle_
     ) ProxyOFTV2(tokenAddress_, sharedDecimals_, lzEndpoint_) {
         ensureNonzeroAddress(accessControlManager_);
         ensureNonzeroAddress(oracle_);
-        ensureNonzeroAddress(xvs_);
         accessControlManager = accessControlManager_;
         oracle = ResilientOracleInterface(oracle_);
-        XVS = IXVS(xvs_);
     }
 
     // generic config for LayerZero user Application
@@ -178,7 +171,7 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
         _isEligibleToSend(from_, dstChainId_, amount_);
-        XVS.burn(from_, amount_);
+        IXVS(address(innerToken)).burn(from_, amount_);
         return amount_;
     }
 
@@ -187,7 +180,7 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
         address toAddress_,
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
-        XVS.mint(toAddress_, amount_);
+        IXVS(address(innerToken)).mint(toAddress_, amount_);
         return amount_;
     }
 
