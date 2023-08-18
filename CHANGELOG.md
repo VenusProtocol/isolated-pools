@@ -1,3 +1,10 @@
+## [2.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2023-08-18)
+
+
+### Bug Fixes
+
+* allow reward distributor with same reward token ([7603b4e](https://github.com/VenusProtocol/isolated-pools/commit/7603b4ed84040dd883aa3a8f411dd2d2d1fb4956))
+
 ## [2.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2023-08-16)
 
 
