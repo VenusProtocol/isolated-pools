@@ -8,8 +8,9 @@ import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/con
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
 
-contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2 {
+contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ExponentialNoError, ProxyOFTV2 {
     /**
      * @notice Address of access control manager contract.
      */
@@ -173,17 +174,12 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
         return super._debitFrom(from_, dstChainId_, toAddress_, amount_);
     }
 
-    function _isEligibleToSend(
-        address from_,
-        uint16 dstChainId_,
-        uint256 amount_
-    ) internal {
-        if (whitelist[from_]) {
-            return;
-        }
+    function _isEligibleToSend(address from_, uint16 dstChainId_, uint256 amount_) internal {
+        bool isWhiteListedUser = whitelist[from_];
+
         uint256 amountInUsd;
-        uint256 oraclePrice = oracle.getPrice(address(innerToken));
-        amountInUsd = (oraclePrice * amount_) / EXP_SCALE;
+        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(innerToken)) });
+        amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
         uint256 currentBlock = block.timestamp;
         uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
@@ -191,7 +187,7 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
         uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
 
-        if (amountInUsd > maxSingleTransactionLimit) {
+        if (amountInUsd > maxSingleTransactionLimit && !isWhiteListedUser) {
             revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
         }
 
@@ -202,7 +198,7 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2
             transferredInWindow += amountInUsd;
         }
 
-        if (transferredInWindow > maxDailyLimit) {
+        if (transferredInWindow > maxDailyLimit && !isWhiteListedUser) {
             revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
         }
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
