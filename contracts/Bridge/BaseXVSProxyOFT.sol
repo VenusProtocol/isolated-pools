@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { BaseOFTV2 } from "./oft/BaseOFTV2.sol";
 
-abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
+abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
     /**
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */

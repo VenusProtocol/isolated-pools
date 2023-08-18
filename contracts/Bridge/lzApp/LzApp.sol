@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { ILayerZeroReceiver } from "../interfaces/ILayerZeroReceiver.sol";
 import { ILayerZeroUserApplicationConfig } from "../interfaces/ILayerZeroUserApplicationConfig.sol";
@@ -12,7 +13,7 @@ import { BytesLib } from "../util/BytesLib.sol";
 /*
  * a generic LzReceiver implementation
  */
-abstract contract LzApp is Ownable, ILayerZeroReceiver, ILayerZeroUserApplicationConfig {
+abstract contract LzApp is Ownable, Pausable, ILayerZeroReceiver, ILayerZeroUserApplicationConfig {
     using BytesLib for bytes;
     /**
      * @notice Address of access control manager contract.
