@@ -5,13 +5,14 @@ pragma solidity ^0.8.0;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { ILayerZeroReceiver } from "../interfaces/ILayerZeroReceiver.sol";
+import { ILayerZeroUserApplicationConfig } from "../interfaces/ILayerZeroUserApplicationConfig.sol";
 import { ILayerZeroEndpoint } from "../interfaces/ILayerZeroEndpoint.sol";
 import { BytesLib } from "../util/BytesLib.sol";
 
 /*
  * a generic LzReceiver implementation
  */
-abstract contract LzApp is Ownable, ILayerZeroReceiver {
+abstract contract LzApp is Ownable, ILayerZeroReceiver, ILayerZeroUserApplicationConfig {
     using BytesLib for bytes;
     /**
      * @notice Address of access control manager contract.
@@ -122,6 +123,32 @@ abstract contract LzApp is Ownable, ILayerZeroReceiver {
         uint256 _configType
     ) external view returns (bytes memory) {
         return lzEndpoint.getConfig(_version, _chainId, address(this), _configType);
+    }
+
+    // generic config for LayerZero user Application
+    function setConfig(
+        uint16 version_,
+        uint16 chainId_,
+        uint256 configType_,
+        bytes calldata config_
+    ) external override {
+        _ensureAllowed("setConfig(uint16,uint16,uint256,bytes)");
+        lzEndpoint.setConfig(version_, chainId_, configType_, config_);
+    }
+
+    function setSendVersion(uint16 version_) external override {
+        _ensureAllowed("setSendVersion(uint16)");
+        lzEndpoint.setSendVersion(version_);
+    }
+
+    function setReceiveVersion(uint16 version_) external override {
+        _ensureAllowed("setReceiveVersion(uint16)");
+        lzEndpoint.setReceiveVersion(version_);
+    }
+
+    function forceResumeReceive(uint16 srcChainId_, bytes calldata srcAddress_) external override {
+        _ensureAllowed("forceResumeReceive(uint16,bytes)");
+        lzEndpoint.forceResumeReceive(srcChainId_, srcAddress_);
     }
 
     // _path = abi.encodePacked(remoteAddress, localAddress)
