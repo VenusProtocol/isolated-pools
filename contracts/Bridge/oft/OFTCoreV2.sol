@@ -75,7 +75,8 @@ abstract contract OFTCoreV2 is NonblockingLzApp {
         );
     }
 
-    function setUseCustomAdapterParams(bool _useCustomAdapterParams) public virtual onlyOwner {
+    function setUseCustomAdapterParams(bool _useCustomAdapterParams) public virtual {
+        _ensureAllowed("setUseCustomAdapterParams(bool)");
         useCustomAdapterParams = _useCustomAdapterParams;
         emit SetUseCustomAdapterParams(_useCustomAdapterParams);
     }

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { ILayerZeroReceiver } from "../interfaces/ILayerZeroReceiver.sol";
 import { ILayerZeroEndpoint } from "../interfaces/ILayerZeroEndpoint.sol";
 import { BytesLib } from "../util/BytesLib.sol";
@@ -12,6 +13,10 @@ import { BytesLib } from "../util/BytesLib.sol";
  */
 abstract contract LzApp is Ownable, ILayerZeroReceiver {
     using BytesLib for bytes;
+    /**
+     * @notice Address of access control manager contract.
+     */
+    address public accessControlManager;
 
     // ua can not send payload larger than this by default, but it can be changed by the ua owner
     uint256 public constant DEFAULT_PAYLOAD_SIZE_LIMIT = 10000;
@@ -121,23 +126,27 @@ abstract contract LzApp is Ownable, ILayerZeroReceiver {
 
     // _path = abi.encodePacked(remoteAddress, localAddress)
     // this function set the trusted path for the cross-chain communication
-    function setTrustedRemote(uint16 _remoteChainId, bytes calldata _path) external onlyOwner {
+    function setTrustedRemote(uint16 _remoteChainId, bytes calldata _path) external {
+        _ensureAllowed("setTrustedRemote(uint16,bytes)");
         trustedRemoteLookup[_remoteChainId] = _path;
         emit SetTrustedRemote(_remoteChainId, _path);
     }
 
-    function setTrustedRemoteAddress(uint16 _remoteChainId, bytes calldata _remoteAddress) external onlyOwner {
+    function setTrustedRemoteAddress(uint16 _remoteChainId, bytes calldata _remoteAddress) external {
+        _ensureAllowed("setTrustedRemoteAddress(uint16,bytes)");
         trustedRemoteLookup[_remoteChainId] = abi.encodePacked(_remoteAddress, address(this));
         emit SetTrustedRemoteAddress(_remoteChainId, _remoteAddress);
     }
 
     function getTrustedRemoteAddress(uint16 _remoteChainId) external view returns (bytes memory) {
+        _ensureAllowed("getTrustedRemoteAddress(uint16)");
         bytes memory path = trustedRemoteLookup[_remoteChainId];
         require(path.length != 0, "LzApp: no trusted path record");
         return path.slice(0, path.length - 20); // the last 20 bytes should be address(this)
     }
 
-    function setPrecrime(address _precrime) external onlyOwner {
+    function setPrecrime(address _precrime) external {
+        _ensureAllowed("setPrecrime(address)");
         precrime = _precrime;
         emit SetPrecrime(_precrime);
     }
@@ -146,14 +155,16 @@ abstract contract LzApp is Ownable, ILayerZeroReceiver {
         uint16 _dstChainId,
         uint16 _packetType,
         uint256 _minGas
-    ) external onlyOwner {
+    ) external {
+        _ensureAllowed("setMinDstGas(uint16,uint16,uint256)");
         require(_minGas > 0, "LzApp: invalid minGas");
         minDstGasLookup[_dstChainId][_packetType] = _minGas;
         emit SetMinDstGas(_dstChainId, _packetType, _minGas);
     }
 
     // if the size is 0, it means default size limit
-    function setPayloadSizeLimit(uint16 _dstChainId, uint256 _size) external onlyOwner {
+    function setPayloadSizeLimit(uint16 _dstChainId, uint256 _size) external {
+        _ensureAllowed("setPayloadSizeLimit(uint16,uint256)");
         payloadSizeLimitLookup[_dstChainId] = _size;
     }
 
@@ -161,5 +172,13 @@ abstract contract LzApp is Ownable, ILayerZeroReceiver {
     function isTrustedRemote(uint16 _srcChainId, bytes calldata _srcAddress) external view returns (bool) {
         bytes memory trustedSource = trustedRemoteLookup[_srcChainId];
         return keccak256(trustedSource) == keccak256(_srcAddress);
+    }
+
+    /// @dev Checks the caller is allowed to call the specified fuction
+    function _ensureAllowed(string memory functionSig_) internal view {
+        require(
+            IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
+            "access denied"
+        );
     }
 }

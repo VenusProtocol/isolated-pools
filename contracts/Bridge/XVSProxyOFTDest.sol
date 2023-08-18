@@ -4,17 +4,12 @@ pragma solidity 0.8.13;
 import { ProxyOFTV2 } from "./oft/ProxyOFTV2.sol";
 import { ILayerZeroUserApplicationConfig } from "./interfaces/ILayerZeroUserApplicationConfig.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
-import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { IXVS } from "./interfaces/IXVS.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { EXP_SCALE } from "../lib/constants.sol";
+import { ExponentialNoError } from "../ExponentialNoError.sol";
 
-contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV2 {
-    /**
-     * @notice Address of access control manager contract.
-     */
-    address public accessControlManager;
+contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ExponentialNoError, ProxyOFTV2 {
     /**
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
@@ -189,12 +184,11 @@ contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV
         uint16 dstChainId_,
         uint256 amount_
     ) internal {
-        if (whitelist[from_]) {
-            return;
-        }
+        bool isWhiteListedUser = whitelist[from_];
+
         uint256 amountInUsd;
-        uint256 oraclePrice = oracle.getPrice(address(innerToken));
-        amountInUsd = (oraclePrice * amount_) / EXP_SCALE;
+        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(innerToken)) });
+        amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
         uint256 currentBlock = block.timestamp;
         uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
@@ -202,7 +196,7 @@ contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
         uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
 
-        if (amountInUsd > maxSingleTransactionLimit) {
+        if (amountInUsd > maxSingleTransactionLimit && !isWhiteListedUser) {
             revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
         }
 
@@ -213,18 +207,10 @@ contract XVSProxyOFTDest is Pausable, ILayerZeroUserApplicationConfig, ProxyOFTV
             transferredInWindow += amountInUsd;
         }
 
-        if (transferredInWindow > maxDailyLimit) {
+        if (transferredInWindow > maxDailyLimit && !isWhiteListedUser) {
             revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
         }
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
         return;
-    }
-
-    /// @dev Checks the caller is allowed to call the specified fuction
-    function _ensureAllowed(string memory functionSig_) internal view {
-        require(
-            IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
-            "access denied"
-        );
     }
 }

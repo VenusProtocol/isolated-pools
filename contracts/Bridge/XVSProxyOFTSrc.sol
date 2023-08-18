@@ -4,17 +4,11 @@ pragma solidity 0.8.13;
 import { ProxyOFTV2 } from "./oft/ProxyOFTV2.sol";
 import { ILayerZeroUserApplicationConfig } from "./interfaces/ILayerZeroUserApplicationConfig.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
-import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { EXP_SCALE } from "../lib/constants.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 
 contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, ExponentialNoError, ProxyOFTV2 {
-    /**
-     * @notice Address of access control manager contract.
-     */
-    address public accessControlManager;
     /**
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
@@ -174,7 +168,11 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, Exponentia
         return super._debitFrom(from_, dstChainId_, toAddress_, amount_);
     }
 
-    function _isEligibleToSend(address from_, uint16 dstChainId_, uint256 amount_) internal {
+    function _isEligibleToSend(
+        address from_,
+        uint16 dstChainId_,
+        uint256 amount_
+    ) internal {
         bool isWhiteListedUser = whitelist[from_];
 
         uint256 amountInUsd;
@@ -203,13 +201,5 @@ contract XVSProxyOFTSrc is Pausable, ILayerZeroUserApplicationConfig, Exponentia
         }
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
         return;
-    }
-
-    /// @dev Checks the caller is allowed to call the specified fuction
-    function _ensureAllowed(string memory functionSig_) internal view {
-        require(
-            IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
-            "access denied"
-        );
     }
 }
