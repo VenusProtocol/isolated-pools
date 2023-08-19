@@ -162,9 +162,12 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    bscmainnet: {
+      url: "http://127.0.0.1:1248",
+      chainId: 56,
+      timeout: 1200000,
     },
     bscmainnet: {
       url: "https://bsc-dataseed.binance.org/",
