@@ -2966,7 +2966,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": ^1.0.0
     "@venusprotocol/oracle": 1.7.2
-    "@venusprotocol/venus-protocol": ^0.6.0
+    "@venusprotocol/venus-protocol": 3.0.0-dev.16
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3028,15 +3028,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "@venusprotocol/venus-protocol@npm:0.6.0"
+"@venusprotocol/venus-protocol@npm:3.0.0-dev.16":
+  version: 3.0.0-dev.16
+  resolution: "@venusprotocol/venus-protocol@npm:3.0.0-dev.16"
   dependencies:
+    "@openzeppelin/contracts": ^4.8.3
     "@openzeppelin/contracts-upgradeable": ^4.8.0
     dotenv: ^16.0.1
+    module-alias: ^2.2.2
   peerDependencies:
     hardhat: ^2.10.1
-  checksum: e05bf173d0320560b64bda12dfc32c1d2c205dd997ea1ca327d91e3b78dc03094f4a81bab4a84499c780d599e1574f70370becad0b3abb5b563d4154ba91668a
+  checksum: f20528a962c73f27725a09006798961f3994da274493fbfa4ac4c2caa0550908e65b4b2ae8e6dec8887a00c745db06a4b400cf7fdb837a23a4f5c26ce9d5ac31
   languageName: node
   linkType: hard
 

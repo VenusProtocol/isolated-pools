@@ -229,7 +229,10 @@ const config: HardhatUserConfig = {
       },
     ],
     deployments: {
-      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
+      bsctestnet: [
+        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+      ],
     },
   },
 };
