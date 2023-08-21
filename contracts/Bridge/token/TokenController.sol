@@ -5,7 +5,7 @@ import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 
-abstract contract TokenController is Ownable, Pausable {
+contract TokenController is Ownable, Pausable {
     address public accessControlManager;
     mapping(address => bool) internal _blacklist;
     mapping(address => uint256) internal minterToCap;
