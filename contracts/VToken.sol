@@ -741,7 +741,9 @@ contract VToken is
     /**
      * @notice Applies accrued interest to total borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
-     *   up to the current block and writes new checkpoint to storage and reduce spread reserves if currentBlock - reduceReservesBlockNumber > blockDelta
+     *  up to the current block and writes new checkpoint to storage and
+     *  reduce spread reserves to protocol share reserve
+     *  if currentBlock - reduceReservesBlockNumber >= blockDelta
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
@@ -798,7 +800,7 @@ contract VToken is
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
-        if (currentBlockNumber - reduceReservesBlockNumber > reduceReservesBlockDelta) {
+        if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
             reduceReservesBlockNumber = currentBlockNumber;
             _reduceReservesFresh(totalReservesNew, IProtocolShareReserve.IncomeType.SPREAD);
         }
