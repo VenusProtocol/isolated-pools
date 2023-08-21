@@ -1,3 +1,30 @@
+## [2.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2023-08-18)
+
+
+### Bug Fixes
+
+* allow reward distributor with same reward token ([7603b4e](https://github.com/VenusProtocol/isolated-pools/commit/7603b4ed84040dd883aa3a8f411dd2d2d1fb4956))
+
+## [2.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2023-08-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* [RHR-01] make poolsAssetsReserves internal
+
+### Bug Fixes
+
+* [RFR-01][RFR-03] unify the meaning of minAmountToConvert ([db0e468](https://github.com/VenusProtocol/isolated-pools/commit/db0e468de1fc0f536e05d0a716b6572c60a28c53))
+* [SSV-01] use _transferOutOrTrackDebt upon closing the auction ([5ca628c](https://github.com/VenusProtocol/isolated-pools/commit/5ca628c1a94abe654d8cc7461e0fe920898f808c))
+* [VPB-04] fix potential re-entrancy issues ([42a9f78](https://github.com/VenusProtocol/isolated-pools/commit/42a9f78dbe59afa8477235f8a9be20bcacad6b7c))
+* revert on approval failures ([6c559f1](https://github.com/VenusProtocol/isolated-pools/commit/6c559f1b31bd3b9ab1e8ff4023353e54308f8210))
+* update method signature in access control check ([e4820ff](https://github.com/VenusProtocol/isolated-pools/commit/e4820ff035e06c5d83caa1397b28dd3ca3cc64a5))
+
+
+### Code Refactoring
+
+* [RHR-01] make poolsAssetsReserves internal ([9085787](https://github.com/VenusProtocol/isolated-pools/commit/908578705a8ab2cb6058bca205a6af3083895c13))
+
 ## [2.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2023-08-10)
 
 

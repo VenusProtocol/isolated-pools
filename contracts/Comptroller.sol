@@ -965,16 +965,6 @@ contract Comptroller is
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
-        uint256 rewardsDistributorsLength = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardsDistributorsLength; ++i) {
-            address rewardToken = address(rewardsDistributors[i].rewardToken());
-            require(
-                rewardToken != address(_rewardsDistributor.rewardToken()),
-                "distributor already exists with this reward"
-            );
-        }
-
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);
 
