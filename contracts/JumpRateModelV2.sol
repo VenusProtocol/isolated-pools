@@ -12,13 +12,21 @@ import { BaseJumpRateModelV2 } from "./BaseJumpRateModelV2.sol";
  */
 contract JumpRateModelV2 is BaseJumpRateModelV2 {
     constructor(
+        uint256 _blocksPerYear,
         uint256 baseRatePerYear,
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
         uint256 kink_,
         IAccessControlManagerV8 accessControlManager_
     )
-        BaseJumpRateModelV2(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManager_)
+        BaseJumpRateModelV2(
+            _blocksPerYear,
+            baseRatePerYear,
+            multiplierPerYear,
+            jumpMultiplierPerYear,
+            kink_,
+            accessControlManager_
+        )
     /* solhint-disable-next-line no-empty-blocks */
     {
 

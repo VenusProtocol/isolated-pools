@@ -5,7 +5,7 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { blocksPerYear, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 
@@ -74,6 +74,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       }
 
       let rateModelAddress: string;
+      const BLOCKS_PER_YEAR: number = blocksPerYear[hre.network.name];
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
@@ -81,7 +82,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
-          args: [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManagerAddress],
+          args: [
+            BLOCKS_PER_YEAR,
+            baseRatePerYear,
+            multiplierPerYear,
+            jumpMultiplierPerYear,
+            kink_,
+            accessControlManagerAddress,
+          ],
           log: true,
           autoMine: true,
         });
@@ -93,7 +101,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
-          args: [baseRatePerYear, multiplierPerYear],
+          args: [BLOCKS_PER_YEAR, baseRatePerYear, multiplierPerYear],
           log: true,
           autoMine: true,
         });

@@ -82,6 +82,21 @@ export enum InterestRateModels {
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
+const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
+const ETH_BLOCKS_PER_YEAR = 2_252_571; // assuming a block is mined every 14 seconds
+
+export type BlocksPerYear = {
+  [key: string]: number;
+};
+
+export const blocksPerYear: BlocksPerYear = {
+  hardhat: BSC_BLOCKS_PER_YEAR,
+  bsctestnet: BSC_BLOCKS_PER_YEAR,
+  bscmainnet: BSC_BLOCKS_PER_YEAR,
+  goerli: ETH_BLOCKS_PER_YEAR,
+  ethereum: ETH_BLOCKS_PER_YEAR,
+};
+
 const preconfiguredAddresses = {
   hardhat: {
     VTreasury: "account:deployer",
