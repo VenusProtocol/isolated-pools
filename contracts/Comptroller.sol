@@ -86,7 +86,7 @@ contract Comptroller is
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
     /// @notice Emitted when a rewards distributor is added
-    event NewRewardsDistributor(address indexed rewardsDistributor);
+    event NewRewardsDistributor(address indexed rewardsDistributor, address indexed rewardToken);
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
@@ -977,7 +977,7 @@ contract Comptroller is
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
 
-        emit NewRewardsDistributor(address(_rewardsDistributor));
+        emit NewRewardsDistributor(address(_rewardsDistributor), address(_rewardsDistributor.rewardToken()));
     }
 
     /**
