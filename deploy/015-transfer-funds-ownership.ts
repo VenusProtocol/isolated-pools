@@ -6,7 +6,7 @@ interface Config {
   [key: string]: string;
 }
 
-//TODO: double check addresses before deploying to sepolia and ethereum
+//  TODO: double check addresses before deploying to sepolia and ethereum
 const TESTNET_MNEMONIC_SIGNER = "0xFA747c4a62c4D168276329F822d004026A1c05E9"; // signer[1] from testnet mnemonic
 
 const targetOwners: Config = {
