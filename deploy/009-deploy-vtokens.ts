@@ -8,8 +8,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { blocksPerYear, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
-
-const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
+import { AddressOne } from "../helpers/utils";
 
 const mantissaToBps = (num: BigNumberish) => {
   return BigNumber.from(num).div(parseUnits("1", 14)).toString();
@@ -123,10 +122,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [
-          preconfiguredAddresses.Shortfall || ADDRESS_ONE,
-          protocolShareReserve ? protocolShareReserve.address : treasuryAddress,
-        ],
+        [AddressOne, treasuryAddress],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {

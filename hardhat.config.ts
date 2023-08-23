@@ -162,17 +162,27 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
+    sepolia: {
+      url: "https://rpc2.sepolia.org",
+      chainId: 11155111,
+      live: true,
+      gasPrice: 20000000000,
+      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    // Mainnet deployments are done through Frame wallet RPC
     bscmainnet: {
       url: "https://bsc-dataseed.binance.org/",
       chainId: 56,
-      timeout: 1200000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      live: true,
+      timeout: 1200000, // 20 minutes
+    },
+    ethereum: {
+      url: "http://127.0.0.1:1248",
+      chainId: 56,
+      live: true,
+      timeout: 1200000, // 20 minutes
     },
     sepolia: {
       url: process.env.RPC_URL || "https://rpc.notadegen.com/eth/sepolia",
