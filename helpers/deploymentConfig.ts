@@ -651,6 +651,21 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Trust Wallet",
+        symbol: "TWT",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+
+      {
+        isMock: true,
+        name: "THENA",
+        symbol: "THE",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -830,6 +845,40 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
           },
+          {
+            name: "Venus THE (DeFi)",
+            asset: "THE",
+            symbol: "vTHE_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.2", 18),
+            liquidationThreshold: convertToUnit("0.3", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("588235", 18),
+            supplyCap: convertToUnit("2600000", 18),
+            borrowCap: convertToUnit("1400000", 18),
+            vTokenReceiver: "0x1c6C2498854662FDeadbC4F14eA2f30ca305104b",
+          },
+          {
+            name: "Venus TWT (DeFi)",
+            asset: "TWT",
+            symbol: "vTWT_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.5", 18),
+            liquidationThreshold: convertToUnit("0.6", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("588235", 18), // To be revised
+            supplyCap: convertToUnit("500000", 18),
+            borrowCap: convertToUnit("1000000", 18),
+            vTokenReceiver: "0x1c6C2498854662FDeadbC4F14eA2f30ca305104b", // To be revised
+          },
         ],
         rewards: [
           {
@@ -843,6 +892,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["ankrBNB"],
             supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
             borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+          },
+          {
+            asset: "THE",
+            markets: ["THE"],
+            supplySpeeds: ["680827546296296296"], // 588235 ANKR over 30 days (864000 blocks)
+            borrowSpeeds: ["680827546296296296"], // 588235 ANKR over 30 days (864000 blocks)
           },
         ],
       },
