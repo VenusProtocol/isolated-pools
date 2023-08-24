@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
-import { BaseOFTV2 } from "./oft/BaseOFTV2.sol";
 
-abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
+abstract contract BaseXVSProxyOFT is Ownable, Pausable, ExponentialNoError, BaseOFTV2 {
+    /**
+     * @notice Address of access control manager contract.
+     */
+    address public accessControlManager;
     /**
      * @notice The address of ResilientOracle contract wrapped in its interface.
      */
@@ -75,9 +82,6 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
      * @notice Event emitted when oracle is modified.
      */
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
-
-    error MaxDailyLimitExceed(uint256 amount, uint256 limit);
-    error MaxSingleTransactionLimitExceed(uint256 amount, uint256 limit);
 
     constructor(
         uint8 sharedDecimals_,
@@ -187,22 +191,20 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
         // Check if the recipient's address is whitelisted
         bool isWhiteListedUser = whitelist[from_];
 
-        // Calculate the received amount in USD using the oracle price
+        // Calculate the amount in USD using the oracle price
         uint256 amountInUsd;
         Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
         amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
-        // Load values for the 24-hour window checks for receiving
+        // Load values for the 24-hour window checks
         uint256 currentBlock = block.timestamp;
         uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
         uint256 transferredInWindow = chainIdToLast24HourTransferred[dstChainId_];
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
         uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
 
-        // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
-        if (amountInUsd > maxSingleTransactionLimit && !isWhiteListedUser) {
-            revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
-        }
+        // Revert if the amount exceeds the single transaction limit and the recipient is not whitelisted
+        require(amountInUsd <= maxSingleTransactionLimit || isWhiteListedUser, "Single Transaction Limit Exceed");
 
         // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlock - lastDayWindowStart > 1 days) {
@@ -212,12 +214,10 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
             transferredInWindow += amountInUsd;
         }
 
-        // Check if the received amount exceeds the daily limit and the recipient is not whitelisted
-        if (transferredInWindow > maxDailyLimit && !isWhiteListedUser) {
-            revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
-        }
+        // Revert if the amount exceeds the daily limit and the recipient is not whitelisted
+        require(transferredInWindow <= maxDailyLimit || isWhiteListedUser, "Daily Transaction Limit Exceed");
 
-        // Update the received amount for the 24-hour window
+        // Update the amount for the 24-hour window
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
     }
 
@@ -239,9 +239,10 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
         uint256 maxDailyReceiveLimit = chainIdToMaxDailyReceiveLimit[srcChainId];
 
         // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
-        if (receivedAmountInUsd > maxSingleReceiveTransactionLimit && !isWhiteListedUser) {
-            revert MaxSingleTransactionLimitExceed(receivedAmountInUsd, maxSingleReceiveTransactionLimit);
-        }
+        require(
+            receivedAmountInUsd <= maxSingleReceiveTransactionLimit || isWhiteListedUser,
+            "Single Transaction Limit Exceed"
+        );
 
         // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlock - lastDayReceiveWindowStart > 1 days) {
@@ -251,12 +252,18 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
             receivedInWindow += receivedAmountInUsd;
         }
 
-        // Check if the received amount exceeds the daily limit and the recipient is not whitelisted
-        if (receivedInWindow > maxDailyReceiveLimit && !isWhiteListedUser) {
-            revert MaxDailyLimitExceed(receivedAmountInUsd, maxDailyReceiveLimit);
-        }
+        // Revert if the received amount exceeds the daily limit and the recipient is not whitelisted
+        require(receivedInWindow <= maxDailyReceiveLimit || isWhiteListedUser, "Daily Transaction Limit Exceed");
 
         // Update the received amount for the 24-hour window
         chainIdToLast24HourReceived[srcChainId] = receivedInWindow;
+    }
+
+    /// @dev Checks the caller is allowed to call the specified fuction
+    function _ensureAllowed(string memory functionSig_) internal view {
+        require(
+            IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
+            "access denied"
+        );
     }
 }

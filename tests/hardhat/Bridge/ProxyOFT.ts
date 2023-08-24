@@ -47,8 +47,8 @@ describe("Proxy OFTV2: ", function () {
     bob: SignerWithAddress,
     accessControlManager: FakeContract<AccessControlManager>,
     oracle: FakeContract<ResilientOracleInterface>,
-    initialAmount: string,
-    amount: string;
+    initialAmount: BigNumber,
+    amount: BigNumber;
 
   before(async function () {
     LZEndpointMock = await ethers.getContractFactory("LZEndpointMock");
@@ -186,9 +186,7 @@ describe("Proxy OFTV2: ", function () {
           [alice.address, ethers.constants.AddressZero, "0x"],
           { value: nativeFee },
         ),
-    )
-      .to.be.revertedWithCustomError(localOFT, "MaxSingleTransactionLimitExceed")
-      .withArgs(amount, singleTransactionLimit);
+    ).to.be.revertedWith("Single Transaction Limit Exceed");
   });
 
   it("Reverts if single transaction limit exceed on remote chain", async function () {
@@ -248,9 +246,7 @@ describe("Proxy OFTV2: ", function () {
           [alice.address, ethers.constants.AddressZero, "0x"],
           { value: nativeFee },
         ),
-    )
-      .to.be.revertedWithCustomError(localOFT, "MaxDailyLimitExceed")
-      .withArgs(amount, maxDailyTransactionLimit);
+    ).to.be.revertedWith("Daily Transaction Limit Exceed");
   });
 
   it("Reverts if max daily transaction limit exceed on remote chain", async function () {
@@ -330,9 +326,7 @@ describe("Proxy OFTV2: ", function () {
           [alice.address, ethers.constants.AddressZero, "0x"],
           { value: nativeFee },
         ),
-    )
-      .to.be.revertedWithCustomError(localOFT, "MaxDailyLimitExceed")
-      .withArgs(amount, maxDailyTransactionLimit);
+    ).to.be.revertedWith("Daily Transaction Limit Exceed");
 
     await time.increase(86400);
 
