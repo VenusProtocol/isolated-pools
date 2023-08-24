@@ -875,8 +875,8 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.6", 18),
             reserveFactor: convertToUnit("0.25", 18),
             initialSupply: convertToUnit("58823.5", 18), // To be revised
-            supplyCap: convertToUnit("500000", 18),
-            borrowCap: convertToUnit("1000000", 18),
+            supplyCap: convertToUnit("1000000", 18),
+            borrowCap: convertToUnit("500000", 18),
             vTokenReceiver: "0x1c6C2498854662FDeadbC4F14eA2f30ca305104b", // To be revised
           },
         ],
@@ -896,8 +896,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "THE",
             markets: ["THE"],
-            supplySpeeds: ["68082754629629629"], // 58823.5 ANKR over 30 days (864000 blocks)
-            borrowSpeeds: ["68082754629629629"], // 58823.5 ANKR over 30 days (864000 blocks)
+            supplySpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
+            borrowSpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
           },
         ],
       },
@@ -1622,8 +1622,8 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.6", 18),
             reserveFactor: convertToUnit("0.25", 18),
             initialSupply: convertToUnit("58823.5", 18), // To be revised
-            supplyCap: convertToUnit("500000", 18),
-            borrowCap: convertToUnit("1000000", 18),
+            supplyCap: convertToUnit("1000000", 18),
+            borrowCap: convertToUnit("500000", 18),
             vTokenReceiver: "0x1c6C2498854662FDeadbC4F14eA2f30ca305104b", // To be revised
           },
         ],
@@ -1644,8 +1644,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "THE",
             markets: ["THE"],
-            supplySpeeds: ["68082754629629629"], // 58823.5 ANKR over 30 days (864000 blocks)
-            borrowSpeeds: ["68082754629629629"], // 58823.5 ANKR over 30 days (864000 blocks)
+            supplySpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
+            borrowSpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
           },
         ],
       },
