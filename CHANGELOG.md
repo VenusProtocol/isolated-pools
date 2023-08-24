@@ -1,3 +1,5 @@
+## [2.0.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2023-08-24)
+
 ## [2.0.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2023-08-24)
 
 
