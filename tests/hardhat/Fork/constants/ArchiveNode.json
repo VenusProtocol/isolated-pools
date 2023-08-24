@@ -1,0 +1,5 @@
+{
+  "sepolia": "SEPOLIA_ARCHIVE_NODE",
+  "bsctestnet": "BSC_TESTNET_ARCHIVE_NODE",
+  "bsc": "BSC_ARCHIVE_NODE"
+}

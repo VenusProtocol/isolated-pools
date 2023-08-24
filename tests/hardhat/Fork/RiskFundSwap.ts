@@ -21,6 +21,10 @@ import {
   VToken,
 } from "../../../typechain";
 import { deployVTokenBeacon, makeVToken } from "../util/TokenTestHelpers";
+import CONTRACT_ADDRESSES from "./constants/Contracts.json";
+
+const network = process.env.NETWORK_NAME;
+const PANCAKE_SWAP_ROUTER: string = CONTRACT_ADDRESSES[network as string].PANCAKE_SWAP_ROUTER;
 
 // Disable a warning about mixing beacons and transparent proxies
 upgrades.silenceWarnings();
@@ -38,7 +42,6 @@ let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
 let busdUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
-
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
 const REDUCE_RESERVE_AMOUNT = parseUnits("50", 18);
@@ -47,14 +50,11 @@ const initPancakeSwapRouter = async (
   admin: SignerWithAddress,
 ): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
   let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-  if (FORK_MAINNET) {
-    pancakeSwapRouter = PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
+  if (network == "bsc") {
+    pancakeSwapRouter = PancakeRouter__factory.connect(PANCAKE_SWAP_ROUTER, admin);
   } else {
     const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
-    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
-      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-      admin.address,
-    );
+    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(PANCAKE_SWAP_ROUTER, admin.address);
     await pancakeSwapRouter.deployed();
     const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
     // Send some BNB to account so it can faucet money from mock tokens
@@ -85,13 +85,13 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, ...signers] = await ethers.getSigners();
-  if (FORK_MAINNET) {
+  if (network == "bsc") {
     // MAINNET USER WITH BALANCE
-    busdUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
-    usdtUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
+    busdUser = await initMainnetUser(CONTRACT_ADDRESSES[network as string].BUSD_USER2);
+    usdtUser = await initMainnetUser(CONTRACT_ADDRESSES[network as string].USDC_USER2);
 
-    BUSD = MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
-    USDT = MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
+    BUSD = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].BUSD, user);
+    USDT = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].USDT, user);
   } else {
     [busdUser, usdtUser] = signers;
 
