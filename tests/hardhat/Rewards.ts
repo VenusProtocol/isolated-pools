@@ -256,7 +256,7 @@ describe("Rewards: Tests", async function () {
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
       .to.emit(comptrollerProxy, "NewRewardsDistributor")
-      .withArgs(rewardsDistributor.address);
+      .withArgs(rewardsDistributor.address, xvs.address);
   });
 
   it("Emits event correctly", async () => {
@@ -270,7 +270,7 @@ describe("Rewards: Tests", async function () {
 
     await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
       .to.emit(comptrollerProxy, "NewRewardsDistributor")
-      .withArgs(rewardsDistributor.address);
+      .withArgs(rewardsDistributor.address, mockWBTC.address);
   });
 
   it("Claim XVS", async () => {
