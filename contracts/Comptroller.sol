@@ -956,7 +956,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Add a new RewardsDistributor and initialize it with all markets
+     * @notice Add a new RewardsDistributor and initialize it with all markets. We can add several RewardsDistributor
+     * contracts with the same rewardToken, and there could be overlaping among them considering the last reward block
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance
