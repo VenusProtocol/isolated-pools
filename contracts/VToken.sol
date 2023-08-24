@@ -633,9 +633,8 @@ contract VToken is
      */
     function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
         _checkAccessAllowed("setReduceReservesBlockDelta(uint256)");
-        uint256 oldReduceReservesBlockDelta_ = reduceReservesBlockDelta;
+        emit NewReduceReservesBlockDelta(reduceReservesBlockDelta, _newReduceReservesBlockDelta);
         reduceReservesBlockDelta = _newReduceReservesBlockDelta;
-        emit NewReduceReservesBlockDelta(oldReduceReservesBlockDelta_, _newReduceReservesBlockDelta);
     }
 
     /**
