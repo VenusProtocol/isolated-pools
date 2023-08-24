@@ -98,11 +98,18 @@ describe("Proxy OFTV2: ", function () {
     await remoteOFT.setTrustedRemote(localChainId, localPath); // for B, set A
 
     await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
+
     await localOFT.setMaxSingleTransactionLimit(remoteChainId, singleTransactionLimit);
     await localOFT.setMaxDailyLimit(remoteChainId, maxDailyTransactionLimit);
 
+    await localOFT.setMaxSingleReceiveTransactionLimit(remoteChainId, singleTransactionLimit);
+    await localOFT.setMaxDailyReceiveLimit(remoteChainId, maxDailyTransactionLimit);
+
     await remoteOFT.setMaxSingleTransactionLimit(localChainId, singleTransactionLimit);
     await remoteOFT.setMaxDailyLimit(localChainId, maxDailyTransactionLimit);
+
+    await remoteOFT.setMaxSingleReceiveTransactionLimit(localChainId, singleTransactionLimit);
+    await remoteOFT.setMaxDailyReceiveLimit(localChainId, maxDailyTransactionLimit);
   });
 
   it("send tokens from proxy oft and receive them back", async function () {
@@ -184,6 +191,28 @@ describe("Proxy OFTV2: ", function () {
       .withArgs(amount, singleTransactionLimit);
   });
 
+  it("Reverts if single transaction limit exceed on remote chain", async function () {
+    await remoteOFT.setMaxSingleReceiveTransactionLimit(localChainId, convertToUnit(5, 18));
+    amount = ethers.utils.parseEther("10", 18);
+    await localToken.connect(alice).faucet(amount);
+    await localToken.connect(alice).approve(localOFT.address, amount);
+
+    const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
+    let nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    await expect(
+      localOFT
+        .connect(alice)
+        .sendFrom(
+          alice.address,
+          remoteChainId,
+          bobAddressBytes32,
+          amount,
+          [alice.address, ethers.constants.AddressZero, "0x"],
+          { value: nativeFee },
+        ),
+    ).not.to.emit(remoteOFT, "ReceiveFromChain");
+  });
+
   it("Reverts if max daily transaction limit exceed", async function () {
     initialAmount = ethers.utils.parseEther("110", 18);
     amount = ethers.utils.parseEther("10", 18);
@@ -222,6 +251,46 @@ describe("Proxy OFTV2: ", function () {
     )
       .to.be.revertedWithCustomError(localOFT, "MaxDailyLimitExceed")
       .withArgs(amount, maxDailyTransactionLimit);
+  });
+
+  it("Reverts if max daily transaction limit exceed on remote chain", async function () {
+    const remoteReceiveLimit = convertToUnit(90, 18);
+    await remoteOFT.setMaxDailyReceiveLimit(localChainId, remoteReceiveLimit);
+    initialAmount = ethers.utils.parseEther("110", 18);
+    amount = ethers.utils.parseEther("10", 18);
+    await localToken.connect(alice).faucet(initialAmount);
+    await localToken.connect(alice).approve(localOFT.address, initialAmount);
+
+    const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
+    let nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+
+    // After 10 transaction it should fail as limit of max daily transaction is 100 USD and price per full token in USD is 1
+    for (let i = 0; i < 9; i++) {
+      await localOFT
+        .connect(alice)
+        .sendFrom(
+          alice.address,
+          remoteChainId,
+          bobAddressBytes32,
+          amount,
+          [alice.address, ethers.constants.AddressZero, "0x"],
+          { value: nativeFee },
+        );
+    }
+    await expect(
+      localOFT
+        .connect(alice)
+        .sendFrom(
+          alice.address,
+          remoteChainId,
+          bobAddressBytes32,
+          amount,
+          [alice.address, ethers.constants.AddressZero, "0x"],
+          { value: nativeFee },
+        ),
+    ).not.to.emit(remoteOFT, "ReceiveFromChain");
+    expect(await localOFT.chainIdToLast24HourTransferred(remoteChainId)).equals(maxDailyTransactionLimit);
+    expect(await remoteOFT.circulatingSupply()).equals(remoteReceiveLimit);
   });
 
   it("Reset limit if 24hour window passed", async function () {

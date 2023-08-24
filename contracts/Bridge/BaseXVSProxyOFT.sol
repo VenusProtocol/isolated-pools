@@ -11,21 +11,37 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
      */
     ResilientOracleInterface public oracle;
     /**
-     * @notice Mapping of chain ID to max limit in USD of single transaction.
+     * @notice Maximum limit for a single transaction in USD from local chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxSingleTransactionLimit;
     /**
-     * @notice Mapping of chain ID to max limit in USD in 24 hour window.
+     * @notice Maximum daily limit for transactions in USD from local chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxDailyLimit;
     /**
-     * @notice Mapping of chain ID to transferred amount in USD in current 24 hour window.
+     * @notice Total sent amount in USD within the last 24-hour window from local chain.
      */
     mapping(uint16 => uint256) public chainIdToLast24HourTransferred;
     /**
-     * @notice Mapping of chain ID to start timestamp of current 24 hour window.
+     * @notice Timestamp when the last 24-hour window started from local chain.
      */
     mapping(uint16 => uint256) public chainIdToLast24HourWindowStart;
+    /**
+     * @notice Maximum limit for a single receive transaction in USD from remote chain.
+     */
+    mapping(uint16 => uint256) public chainIdToMaxSingleReceiveTransactionLimit;
+    /**
+     * @notice Maximum daily limit for receiving transactions in USD from remote chain.
+     */
+    mapping(uint16 => uint256) public chainIdToMaxDailyReceiveLimit;
+    /**
+     * @notice Total received amount in USD within the last 24-hour window from remote chain.
+     */
+    mapping(uint16 => uint256) public chainIdToLast24HourReceived;
+    /**
+     * @notice Timestamp when the last 24-hour window started from remote chain.
+     */
+    mapping(uint16 => uint256) public chainIdToLast24HourReceiveWindowStart;
     /**
      * @notice Address on which cap check and bound limit is not appicable.
      */
@@ -36,13 +52,21 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
      */
     event SetWhitelist(address indexed addr, bool isWhitelist);
     /**
-     * @notice Emmited when limit of single transaction is modified.
+     * @notice  Emitted when the maximum limit for a single transaction from local chain is modified.
      */
     event SetMaxSingleTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
-     * @notice Emmited when limit of daily (24Hour) is modified.
+     * @notice Emitted when the maximum daily limit of transactions from local chain is modified.
      */
     event SetMaxDailyLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    /**
+     * @notice Emitted when the maximum limit for a single receive transaction from remote chain is modified.
+     */
+    event SetMaxSingleReceiveTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    /**
+     * @notice Emitted when the maximum daily limit for receiving transactions from remote chain is modified.
+     */
+    event SetMaxDailyReceiveLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Emmited when address of accessControlManager contract is modified.
      */
@@ -114,6 +138,32 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
     }
 
     /**
+     * @notice Sets the maximum limit for a single receive transaction.
+     * @param chainId The destination chain ID.
+     * @param limit The new maximum limit in USD.
+     */
+    function setMaxSingleReceiveTransactionLimit(uint16 chainId, uint256 limit) external {
+        _ensureAllowed("setMaxSingleReceiveTransactionLimit(uint16,uint256)");
+        emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId], limit);
+        chainIdToMaxSingleReceiveTransactionLimit[chainId] = limit;
+    }
+
+    /**
+     * @notice Sets the maximum daily limit for receiving transactions.
+     * @param chainId The destination chain ID.
+     * @param limit The new maximum daily limit in USD.
+     */
+    function setMaxDailyReceiveLimit(uint16 chainId, uint256 limit) external {
+        _ensureAllowed("setMaxDailyReceiveLimit(uint16,uint256)");
+        require(
+            limit >= chainIdToMaxSingleReceiveTransactionLimit[chainId],
+            "Daily limit < single receive transaction limit"
+        );
+        emit SetMaxDailyReceiveLimit(chainIdToMaxDailyReceiveLimit[chainId], limit);
+        chainIdToMaxDailyReceiveLimit[chainId] = limit;
+    }
+
+    /**
      * @notice Triggers stopped state of the bridge.
      */
     function pause() external {
@@ -134,22 +184,27 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
         uint16 dstChainId_,
         uint256 amount_
     ) internal {
+        // Check if the recipient's address is whitelisted
         bool isWhiteListedUser = whitelist[from_];
 
+        // Calculate the received amount in USD using the oracle price
         uint256 amountInUsd;
         Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
         amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
+        // Load values for the 24-hour window checks for receiving
         uint256 currentBlock = block.timestamp;
         uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
         uint256 transferredInWindow = chainIdToLast24HourTransferred[dstChainId_];
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
         uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
 
+        // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
         if (amountInUsd > maxSingleTransactionLimit && !isWhiteListedUser) {
             revert MaxSingleTransactionLimitExceed(amountInUsd, maxSingleTransactionLimit);
         }
 
+        // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlock - lastDayWindowStart > 1 days) {
             transferredInWindow = amountInUsd;
             chainIdToLast24HourWindowStart[dstChainId_] = currentBlock;
@@ -157,10 +212,51 @@ abstract contract BaseXVSProxyOFT is ExponentialNoError, BaseOFTV2 {
             transferredInWindow += amountInUsd;
         }
 
+        // Check if the received amount exceeds the daily limit and the recipient is not whitelisted
         if (transferredInWindow > maxDailyLimit && !isWhiteListedUser) {
             revert MaxDailyLimitExceed(amountInUsd, maxDailyLimit);
         }
+
+        // Update the received amount for the 24-hour window
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
-        return;
+    }
+
+    function _isEligibleToReceive(uint16 srcChainId, uint256 receivedAmount) internal {
+        // Check if the recipient's address is whitelisted
+        bool isWhiteListedUser = whitelist[msg.sender];
+
+        // Calculate the received amount in USD using the oracle price
+        uint256 receivedAmountInUsd;
+        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
+        receivedAmountInUsd = mul_ScalarTruncate(oraclePrice, receivedAmount);
+
+        uint256 currentBlock = block.timestamp;
+
+        // Load values for the 24-hour window checks for receiving
+        uint256 lastDayReceiveWindowStart = chainIdToLast24HourReceiveWindowStart[srcChainId];
+        uint256 receivedInWindow = chainIdToLast24HourReceived[srcChainId];
+        uint256 maxSingleReceiveTransactionLimit = chainIdToMaxSingleReceiveTransactionLimit[srcChainId];
+        uint256 maxDailyReceiveLimit = chainIdToMaxDailyReceiveLimit[srcChainId];
+
+        // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
+        if (receivedAmountInUsd > maxSingleReceiveTransactionLimit && !isWhiteListedUser) {
+            revert MaxSingleTransactionLimitExceed(receivedAmountInUsd, maxSingleReceiveTransactionLimit);
+        }
+
+        // Check if the time window has changed (more than 24 hours have passed)
+        if (currentBlock - lastDayReceiveWindowStart > 1 days) {
+            receivedInWindow = receivedAmountInUsd;
+            chainIdToLast24HourReceiveWindowStart[srcChainId] = currentBlock;
+        } else {
+            receivedInWindow += receivedAmountInUsd;
+        }
+
+        // Check if the received amount exceeds the daily limit and the recipient is not whitelisted
+        if (receivedInWindow > maxDailyReceiveLimit && !isWhiteListedUser) {
+            revert MaxDailyLimitExceed(receivedAmountInUsd, maxDailyReceiveLimit);
+        }
+
+        // Update the received amount for the 24-hour window
+        chainIdToLast24HourReceived[srcChainId] = receivedInWindow;
     }
 }

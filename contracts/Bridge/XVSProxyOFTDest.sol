@@ -52,10 +52,11 @@ contract XVSProxyOFTDest is BaseXVSProxyOFT {
     }
 
     function _creditTo(
-        uint16,
+        uint16 srcChainId_,
         address toAddress_,
         uint256 amount_
     ) internal override whenNotPaused returns (uint256) {
+        _isEligibleToReceive(srcChainId_, amount_);
         IXVS(address(innerToken)).mint(toAddress_, amount_);
         return amount_;
     }
