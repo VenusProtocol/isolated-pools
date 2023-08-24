@@ -41015,7 +41015,7 @@
       ]
     },
     "VToken_vTHE_DeFi": {
-      "address": "0xDC2510CE5b2f28E1D4ee1708AE0A041f9B35131F",
+      "address": "0x5Ec06c9dD9654d42B69A8EdBBa99b1e8Afa0D4C0",
       "abi": [
         {
           "inputs": [
@@ -41163,7 +41163,7 @@
       ]
     },
     "VToken_vTWT_DeFi": {
-      "address": "0xc0349EFd5a72E39e8f6F5Fe16152001cFD8Ba46D",
+      "address": "0x4C94e67d239aD585275Fdd3246Ab82c8a2668564",
       "abi": [
         {
           "inputs": [
