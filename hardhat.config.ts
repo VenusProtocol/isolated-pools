@@ -73,7 +73,6 @@ task("addMarket", "Add a market to an existing pool")
 task("deployComptroller", "Deploys a Comptroller Implementation")
   .addParam("contractName", "Contract name, later we can load contracts by name")
   .addParam("poolRegistry", "Address of PoolRegistry Contract")
-  .addParam("verify", "Verify the contract")
   .setAction(async (taskArgs, hre) => {
     const { deployer } = await hre.getNamedAccounts();
     const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
@@ -82,13 +81,6 @@ task("deployComptroller", "Deploys a Comptroller Implementation")
       args: [taskArgs.poolRegistry],
       log: true,
     });
-
-    if (taskArgs.verify == "true") {
-      await hre.run("verify:verify", {
-        address: Comptroller.address,
-        constructorArguments: [taskArgs.poolRegistry],
-      });
-    }
 
     console.log("Comptroller implementation deployed with address: " + Comptroller.address);
   });
