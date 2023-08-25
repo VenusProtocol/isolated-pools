@@ -259,7 +259,7 @@ abstract contract VTokenInterface is VTokenStorage {
     /**
      * @notice Event emitted when the spread reserves are reduced
      */
-    event SpreadReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
+    event SpreadReservesReduced(address indexed protocolShareReserve, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
