@@ -2,13 +2,12 @@
 pragma solidity 0.8.13;
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 
-abstract contract BaseXVSProxyOFT is Ownable, Pausable, ExponentialNoError, BaseOFTV2 {
+abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Address of access control manager contract.
      */
@@ -143,28 +142,39 @@ abstract contract BaseXVSProxyOFT is Ownable, Pausable, ExponentialNoError, Base
 
     /**
      * @notice Sets the maximum limit for a single receive transaction.
-     * @param chainId The destination chain ID.
-     * @param limit The new maximum limit in USD.
+     * @param chainId_ The destination chain ID.
+     * @param limit_ The new maximum limit in USD.
      */
-    function setMaxSingleReceiveTransactionLimit(uint16 chainId, uint256 limit) external {
+    function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external {
         _ensureAllowed("setMaxSingleReceiveTransactionLimit(uint16,uint256)");
-        emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId], limit);
-        chainIdToMaxSingleReceiveTransactionLimit[chainId] = limit;
+        emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
+        chainIdToMaxSingleReceiveTransactionLimit[chainId_] = limit_;
     }
 
     /**
      * @notice Sets the maximum daily limit for receiving transactions.
-     * @param chainId The destination chain ID.
-     * @param limit The new maximum daily limit in USD.
+     * @param chainId_ The destination chain ID.
+     * @param limit_ The new maximum daily limit in USD.
      */
-    function setMaxDailyReceiveLimit(uint16 chainId, uint256 limit) external {
+    function setMaxDailyReceiveLimit(uint16 chainId_, uint256 limit_) external {
         _ensureAllowed("setMaxDailyReceiveLimit(uint16,uint256)");
         require(
-            limit >= chainIdToMaxSingleReceiveTransactionLimit[chainId],
+            limit_ >= chainIdToMaxSingleReceiveTransactionLimit[chainId_],
             "Daily limit < single receive transaction limit"
         );
-        emit SetMaxDailyReceiveLimit(chainIdToMaxDailyReceiveLimit[chainId], limit);
-        chainIdToMaxDailyReceiveLimit[chainId] = limit;
+        emit SetMaxDailyReceiveLimit(chainIdToMaxDailyReceiveLimit[chainId_], limit_);
+        chainIdToMaxDailyReceiveLimit[chainId_] = limit_;
+    }
+
+    /**
+     * @notice Sets the whitelist address to skip checks on transaction limit.
+     * @param user_ Adress to be add in whitelist.
+     * @param val_ Boolean to be set (true for isWhitelisted address)
+     */
+    function setWhitelist(address user_, bool val_) external {
+        _ensureAllowed("SetWhitelistAddress(uint16,address)");
+        emit SetWhitelist(user_, val_);
+        whitelist[user_] = val_;
     }
 
     /**
