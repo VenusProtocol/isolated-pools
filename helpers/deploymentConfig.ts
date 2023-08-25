@@ -1621,7 +1621,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.5", 18),
             liquidationThreshold: convertToUnit("0.6", 18),
             reserveFactor: convertToUnit("0.25", 18),
-            initialSupply: convertToUnit("58823.5", 18), // To be revised
+            initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("1000000", 18),
             borrowCap: convertToUnit("500000", 18),
             vTokenReceiver: "0x1c6C2498854662FDeadbC4F14eA2f30ca305104b", // To be revised
