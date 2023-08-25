@@ -86,13 +86,13 @@ contract Shortfall is
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
     uint256 public incentiveBps;
 
-    /// @notice Time to wait for next bidder. initially waits for 10 blocks
+    /// @notice Time to wait for next bidder. Initially waits for 100 blocks
     uint256 public nextBidderBlockLimit;
 
     /// @notice Boolean of if auctions are paused
     bool public auctionsPaused;
 
-    /// @notice Time to wait for first bidder. initially waits for 100 blocks
+    /// @notice Time to wait for first bidder. Initially waits for 100 blocks
     uint256 public waitForFirstBidder;
 
     /// @notice base asset contract address
@@ -286,7 +286,7 @@ contract Shortfall is
         }
 
         uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
-        IERC20Upgradeable(convertibleBaseAsset).safeTransfer(auction.highestBidder, riskFundBidAmount);
+        _transferOutOrTrackDebt(IERC20Upgradeable(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
 
         emit AuctionClosed(
             comptroller,
@@ -305,7 +305,7 @@ contract Shortfall is
      * @custom:event Emits AuctionStarted event on success
      * @custom:event Errors if auctions are paused
      */
-    function startAuction(address comptroller) external {
+    function startAuction(address comptroller) external nonReentrant {
         require(!auctionsPaused, "Auctions are paused");
         _startAuction(comptroller);
     }
@@ -315,7 +315,7 @@ contract Shortfall is
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
      */
-    function restartAuction(address comptroller) external {
+    function restartAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(!auctionsPaused, "auctions are paused");
@@ -332,7 +332,7 @@ contract Shortfall is
      * @notice Update next bidder block limit which is used determine when an auction can be closed
      * @param _nextBidderBlockLimit  New next bidder block limit
      * @custom:event Emits NextBidderBlockLimitUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
         _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
@@ -343,10 +343,10 @@ contract Shortfall is
     }
 
     /**
-     * @notice Updates the inventive BPS
+     * @notice Updates the incentive BPS
      * @param _incentiveBps New incentive BPS
      * @custom:event Emits IncentiveBpsUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateIncentiveBps(uint256 _incentiveBps) external {
         _checkAccessAllowed("updateIncentiveBps(uint256)");
@@ -360,7 +360,7 @@ contract Shortfall is
      * @notice Update minimum pool bad debt to start auction
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
         _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
@@ -373,7 +373,7 @@ contract Shortfall is
      * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
      * @param _waitForFirstBidder  New wait for first bidder block count
      * @custom:event Emits WaitForFirstBidderUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
         _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
@@ -433,8 +433,7 @@ contract Shortfall is
 
         Auction storage auction = auctions[comptroller];
         require(
-            (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
-                auction.status == AuctionStatus.ENDED,
+            auction.status == AuctionStatus.NOT_STARTED || auction.status == AuctionStatus.ENDED,
             "auction is on-going"
         );
 
@@ -530,7 +529,7 @@ contract Shortfall is
      * @return True if the auction has started
      */
     function _isStarted(Auction storage auction) internal view returns (bool) {
-        return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
+        return auction.status == AuctionStatus.STARTED;
     }
 
     /**

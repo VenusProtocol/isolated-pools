@@ -376,7 +376,8 @@ contract Comptroller is
         // Skipping the cap check for uncapped coins to save some gas
         if (borrowCap != type(uint256).max) {
             uint256 totalBorrows = VToken(vToken).totalBorrows();
-            uint256 nextTotalBorrows = totalBorrows + borrowAmount;
+            uint256 badDebt = VToken(vToken).badDebt();
+            uint256 nextTotalBorrows = totalBorrows + borrowAmount + badDebt;
             if (nextTotalBorrows > borrowCap) {
                 revert BorrowCapExceeded(vToken, borrowCap);
             }
@@ -963,16 +964,6 @@ contract Comptroller is
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
-
-        uint256 rewardsDistributorsLength = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardsDistributorsLength; ++i) {
-            address rewardToken = address(rewardsDistributors[i].rewardToken());
-            require(
-                rewardToken != address(_rewardsDistributor.rewardToken()),
-                "distributor already exists with this reward"
-            );
-        }
 
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);

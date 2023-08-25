@@ -205,7 +205,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     riskFund.address,
-    "swapPoolsAssets(address[],uint256[],address[][])",
+    "swapPoolsAssets(address[],uint256[],address[][],uint256)",
     admin.address,
   );
 
@@ -525,7 +525,7 @@ describe("Risk Fund: Tests", function () {
         ]);
         await accessControlManager.giveCallPermission(
           misconfiguredRiskFund.address,
-          "swapPoolsAssets(address[],uint256[],address[][])",
+          "swapPoolsAssets(address[],uint256[],address[][],uint256)",
           admin.address,
         );
         await expect(
@@ -576,7 +576,7 @@ describe("Risk Fund: Tests", function () {
       // Revoke
       await accessControlManager.revokeCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Fails
@@ -588,7 +588,7 @@ describe("Risk Fund: Tests", function () {
       // Reset
       await accessControlManager.giveCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Succeeds
@@ -630,25 +630,26 @@ describe("Risk Fund: Tests", function () {
       const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(9, 18));
 
-      const amount = await riskFund.callStatic.swapPoolsAssets(
-        [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-        [
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-        ],
-        [
-          [USDT.address, BUSD.address],
-          [USDC.address, BUSD.address],
-          [USDT.address, BUSD.address],
-          [USDC.address, BUSD.address],
-          [USDT.address, BUSD.address],
-        ],
-        deadline,
-      );
-      expect(amount).equal("0");
+      await expect(
+        riskFund.swapPoolsAssets(
+          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
+          [
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+          ],
+          [
+            [USDT.address, BUSD.address],
+            [USDC.address, BUSD.address],
+            [USDT.address, BUSD.address],
+            [USDC.address, BUSD.address],
+            [USDT.address, BUSD.address],
+          ],
+          deadline,
+        ),
+      ).to.be.revertedWith("RiskFund: minAmountToConvert violated");
     });
 
     it("Above min threshold amount", async function () {
