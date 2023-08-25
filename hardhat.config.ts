@@ -15,6 +15,7 @@ import "solidity-coverage";
 import "solidity-docgen";
 
 import { convertToUnit } from "./helpers/utils";
+import { run } from "hardhat";
 
 dotenv.config();
 
@@ -72,15 +73,22 @@ task("addMarket", "Add a market to an existing pool")
 task("deployComptroller", "Deploys a Comptroller Implementation")
   .addParam("contractName", "Contract name, later we can load contracts by name")
   .addParam("poolRegistry", "Address of PoolRegistry Contract")
-  .addParam("accessControl", "Address of AccessControlManager contract")
+  .addParam("verify", "Verify the contract")
   .setAction(async (taskArgs, hre) => {
     const { deployer } = await hre.getNamedAccounts();
     const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
       contract: "Comptroller",
       from: deployer,
-      args: [taskArgs.poolRegistry, taskArgs.accessControl],
+      args: [taskArgs.poolRegistry],
       log: true,
     });
+
+    if (taskArgs.verify == "true") {
+      await hre.run("verify:verify", {
+        address: Comptroller.address,
+        constructorArguments: [taskArgs.poolRegistry],
+      });
+    }
 
     console.log("Comptroller implementation deployed with address: " + Comptroller.address);
   });
@@ -167,6 +175,14 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC || "",
       },
     },
+    bscmainnet: {
+      url: "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      live: true,
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -182,7 +198,19 @@ const config: HardhatUserConfig = {
           browserURL: "https://testnet.bscscan.com",
         },
       },
+      {
+        network: "bscmainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
+        },
+      },
     ],
+    apiKey: {
+      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+    }
   },
   paths: {
     tests: "./tests",
