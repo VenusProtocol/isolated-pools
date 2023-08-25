@@ -2,7 +2,7 @@ import { ethers, getNamedAccounts } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { PoolConfig, RewardConfig, getConfig } from "../helpers/deploymentConfig";
+import { PoolConfig, getConfig } from "../helpers/deploymentConfig";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();

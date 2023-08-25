@@ -15,7 +15,6 @@ import "solidity-coverage";
 import "solidity-docgen";
 
 import { convertToUnit } from "./helpers/utils";
-import { run } from "hardhat";
 
 dotenv.config();
 
@@ -202,7 +201,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-    }
+    },
   },
   paths: {
     tests: "./tests",
