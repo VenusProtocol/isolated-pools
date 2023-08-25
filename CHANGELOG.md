@@ -1,3 +1,13 @@
+## [2.0.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2023-08-24)
+
+## [2.0.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2023-08-24)
+
+
+### Bug Fixes
+
+* fixed tests ([83c1c3b](https://github.com/VenusProtocol/isolated-pools/commit/83c1c3b5a52c383241373dce676bab4c3b9e3fb5))
+* include reward token in event ([b5b1558](https://github.com/VenusProtocol/isolated-pools/commit/b5b1558ef375adde0892343e4caed0ad18b6a045))
+
 ## [2.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2023-08-18)
 
 

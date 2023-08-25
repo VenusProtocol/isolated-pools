@@ -86,7 +86,7 @@ contract Comptroller is
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
     /// @notice Emitted when a rewards distributor is added
-    event NewRewardsDistributor(address indexed rewardsDistributor);
+    event NewRewardsDistributor(address indexed rewardsDistributor, address indexed rewardToken);
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
@@ -956,7 +956,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Add a new RewardsDistributor and initialize it with all markets
+     * @notice Add a new RewardsDistributor and initialize it with all markets. We can add several RewardsDistributor
+     * contracts with the same rewardToken, and there could be overlaping among them considering the last reward block
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance
@@ -977,7 +978,7 @@ contract Comptroller is
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
 
-        emit NewRewardsDistributor(address(_rewardsDistributor));
+        emit NewRewardsDistributor(address(_rewardsDistributor), address(_rewardsDistributor.rewardToken()));
     }
 
     /**
