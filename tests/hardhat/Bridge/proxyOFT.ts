@@ -2,18 +2,20 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
+  IXVSBridge,
   LZEndpointMock,
   LZEndpointMock__factory,
   MockToken,
   MockToken__factory,
   ResilientOracleInterface,
   XVS,
+  XVSBridgeAdmin,
   XVSProxyOFTDest,
   XVSProxyOFTDest__factory,
   XVSProxyOFTSrc,
@@ -40,11 +42,13 @@ describe("Proxy OFTV2: ", function () {
     localOFT: XVSProxyOFTSrc,
     remoteOFT: XVSProxyOFTDest,
     localToken: MockToken,
+    bridgeAdmin: XVSBridgeAdmin,
     remoteToken: XVS,
     remotePath: string,
     localPath: string,
     alice: SignerWithAddress,
     bob: SignerWithAddress,
+    deployer: SignerWithAddress,
     accessControlManager: FakeContract<AccessControlManager>,
     oracle: FakeContract<ResilientOracleInterface>,
     initialAmount: BigNumber,
@@ -55,12 +59,13 @@ describe("Proxy OFTV2: ", function () {
     ProxyOFTV2Src = await ethers.getContractFactory("XVSProxyOFTSrc");
     ProxyOFTV2Dest = await ethers.getContractFactory("XVSProxyOFTDest");
     LocalTokenFactory = await ethers.getContractFactory("MockToken");
+    accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
+    accessControlManager.isAllowedToCall.returns(true);
     RemoteTokenFactory = await ethers.getContractFactory("XVS");
+    deployer = (await ethers.getSigners())[0];
     alice = (await ethers.getSigners())[1];
     bob = (await ethers.getSigners())[2];
-    accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
     oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
-    accessControlManager.isAllowedToCall.returns(true);
     oracle.getPrice.returns(convertToUnit(1, 18));
   });
 
@@ -83,10 +88,17 @@ describe("Proxy OFTV2: ", function () {
       remoteToken.address,
       sharedDecimals,
       remoteEndpoint.address,
-      accessControlManager.address,
       oracle.address,
     );
 
+    const bridgeAdminFactory = await ethers.getContractFactory("XVSBridgeAdmin");
+    bridgeAdmin = await upgrades.deployProxy(bridgeAdminFactory, [accessControlManager.address], {
+      constructorArgs: [remoteOFT.address],
+      initializer: "initialize",
+    });
+    await bridgeAdmin.deployed();
+
+    await remoteOFT.transferOwnership(bridgeAdmin.address);
     // internal bookkeeping for endpoints (not part of a real deploy, just for this test)
     await localEndpoint.setDestLzEndpoint(remoteOFT.address, remoteEndpoint.address);
     await remoteEndpoint.setDestLzEndpoint(localOFT.address, localEndpoint.address);
@@ -94,8 +106,19 @@ describe("Proxy OFTV2: ", function () {
     // set each contracts source address so it can send to each other
     remotePath = ethers.utils.solidityPack(["address", "address"], [remoteOFT.address, localOFT.address]);
     localPath = ethers.utils.solidityPack(["address", "address"], [localOFT.address, remoteOFT.address]);
+
     await localOFT.setTrustedRemote(remoteChainId, remotePath); // for A, set B
-    await remoteOFT.setTrustedRemote(localChainId, localPath); // for B, set A
+
+    // Should revert admin of remoteOFT is BridgeAdmin contract
+    await expect(remoteOFT.setTrustedRemote(localChainId, localPath)).to.be.revertedWith(
+      "Ownable: caller is not the owner",
+    );
+
+    let data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, localPath]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
 
     await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
 
@@ -105,11 +128,36 @@ describe("Proxy OFTV2: ", function () {
     await localOFT.setMaxSingleReceiveTransactionLimit(remoteChainId, singleTransactionLimit);
     await localOFT.setMaxDailyReceiveLimit(remoteChainId, maxDailyTransactionLimit);
 
-    await remoteOFT.setMaxSingleTransactionLimit(localChainId, singleTransactionLimit);
-    await remoteOFT.setMaxDailyLimit(localChainId, maxDailyTransactionLimit);
+    // Setting remote chain
+    data = remoteOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
+      localChainId,
+      singleTransactionLimit,
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
 
-    await remoteOFT.setMaxSingleReceiveTransactionLimit(localChainId, singleTransactionLimit);
-    await remoteOFT.setMaxDailyReceiveLimit(localChainId, maxDailyTransactionLimit);
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
+    data = remoteOFT.interface.encodeFunctionData("setMaxSingleReceiveTransactionLimit", [
+      localChainId,
+      singleTransactionLimit,
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
   });
 
   it("send tokens from proxy oft and receive them back", async function () {
@@ -190,7 +238,15 @@ describe("Proxy OFTV2: ", function () {
   });
 
   it("Reverts if single transaction limit exceed on remote chain", async function () {
-    await remoteOFT.setMaxSingleReceiveTransactionLimit(localChainId, convertToUnit(5, 18));
+    const data = remoteOFT.interface.encodeFunctionData("setMaxSingleReceiveTransactionLimit", [
+      localChainId,
+      convertToUnit(5, 18),
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
     amount = ethers.utils.parseEther("10", 18);
     await localToken.connect(alice).faucet(amount);
     await localToken.connect(alice).approve(localOFT.address, amount);
@@ -251,7 +307,12 @@ describe("Proxy OFTV2: ", function () {
 
   it("Reverts if max daily transaction limit exceed on remote chain", async function () {
     const remoteReceiveLimit = convertToUnit(90, 18);
-    await remoteOFT.setMaxDailyReceiveLimit(localChainId, remoteReceiveLimit);
+    const data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, remoteReceiveLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
     initialAmount = ethers.utils.parseEther("110", 18);
     amount = ethers.utils.parseEther("10", 18);
     await localToken.connect(alice).faucet(initialAmount);
@@ -375,7 +436,7 @@ describe("Proxy OFTV2: ", function () {
   });
 
   it("Reverts on remote chain if minting cap is reached", async function () {
-    await remoteToken.setMintCap(remoteOFT.address, convertToUnit(10, 18));
+    await remoteToken.connect(deployer).setMintCap(remoteOFT.address, convertToUnit(10, 18));
     expect(await remoteEndpoint.inboundNonce(localChainId, localPath)).lessThanOrEqual(0);
     initialAmount = ethers.utils.parseEther("20", 18);
     amount = ethers.utils.parseEther("10", 18);
@@ -454,7 +515,12 @@ describe("Proxy OFTV2: ", function () {
   });
 
   it("Reverts on remote chain if bridge is paused", async function () {
-    await remoteOFT.pause();
+    const data = remoteOFT.interface.encodeFunctionData("pause");
+    await deployer.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
     amount = ethers.utils.parseEther("10", 18);
     await localToken.connect(alice).faucet(amount);
     await localToken.connect(alice).approve(localOFT.address, amount);
