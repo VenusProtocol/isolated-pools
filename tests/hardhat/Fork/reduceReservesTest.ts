@@ -11,8 +11,8 @@ import {
   AccessControlManager__factory,
   Comptroller,
   Comptroller__factory,
-  MockToken,
-  MockToken__factory,
+  IERC20,
+  IERC20__factory,
   VToken,
   VToken__factory,
 } from "../../../typechain";
@@ -25,31 +25,43 @@ chai.use(smock.matchers);
 const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const network = process.env.NETWORK_NAME;
+const {
+  ACM,
+  ACC1,
+  ACC2,
+  ADMIN,
+  USDC_HOLDER,
+  USDC,
+  VUSDC,
+  USDD,
+  VUSDD,
+  USDD_HOLDER,
+  COMPTROLLER,
+  BLOCK_NUMBER,
+} = CONTRACT_ADDRESSES[network as string];
 
-const ADMIN: string = CONTRACT_ADDRESSES[network as string].ADMIN;
-const ACM: string = CONTRACT_ADDRESSES[network as string].ACM;
-const acc1: string = CONTRACT_ADDRESSES[network as string].acc1;
-const acc2: string = CONTRACT_ADDRESSES[network as string].acc2;
-const COMPTROLLER: string = CONTRACT_ADDRESSES[network as string].COMPTROLLER;
-const POOL_REGISTRY: string = CONTRACT_ADDRESSES[network as string].POOL_REGISTRY;
-const BLOCK_NUMBER: number = CONTRACT_ADDRESSES[network as string].BLOCK_NUMBER;
+
 let TOKEN1: string;
 let VTOKEN1: string;
 let PROTOCOL_SHARE_RESERVE: string;
+let TOKEN1_HOLDER: string;
 
 if (network == "sepolia") {
-  TOKEN1 = CONTRACT_ADDRESSES[network as string].USDC; // TOKEN1 = USDC
-  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VUSDC; // VTOKEN2 = VUSDC
-} else if (network == "bsctestnet") {
-  TOKEN1 = CONTRACT_ADDRESSES[network as string].USDD; // TOKEN1 = USDD
-  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VUSDD; // VTOKEN1 = VUSDD
+  TOKEN1_HOLDER = USDC_HOLDER;
+  TOKEN1 = USDC; // TOKEN1 = USDC
+  VTOKEN1 = VUSDC; // VTOKEN2 = VUSDC
+} else {
+  TOKEN1 = USDD; // TOKEN1 = USDD
+  VTOKEN1 = VUSDD; // VTOKEN1 = VUSDD
+  TOKEN1_HOLDER = USDD_HOLDER;
 }
 
 let impersonatedTimelock: Signer;
+let token1Holder: string;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vTOKEN1: VToken;
-let token1: MockToken;
+let token1: IERC20;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let mintAmount: BigNumberish;
@@ -87,15 +99,16 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
-      acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
-      acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
+      acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
+      acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
 
-      token1 = MockToken__factory.connect(TOKEN1, impersonatedTimelock);
+      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
 
       const PSR = await ethers.getContractFactory("ProtocolShareReserve");
-      const psr = await upgrades.deployProxy(PSR, [ADMIN, acc1]);
+      const psr = await upgrades.deployProxy(PSR, [ADMIN, ACC1]);
       await psr.deployed();
 
       const FakePSR = await smock.fake("ProtocolShareReserve");
@@ -113,8 +126,9 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await comptroller.setMarketSupplyCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
     }
-    async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
-      await token.connect(signer).faucet(amount);
+
+    async function mintVTokens(signer: Signer, token: IERC20, vToken: VToken, amount: BigNumberish) {
+      await token.connect(token1Holder).transfer(await signer.getAddress(), amount);
       await token.connect(signer).approve(vToken.address, amount);
       await expect(vToken.connect(signer).mint(amount)).to.emit(vToken, "Mint");
     }

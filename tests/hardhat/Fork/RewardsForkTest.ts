@@ -13,8 +13,8 @@ import {
   BinanceOracle__factory,
   Comptroller,
   Comptroller__factory,
-  MockToken,
-  MockToken__factory,
+  IERC20,
+  IERC20__factory,
   RewardsDistributor,
   RewardsDistributor__factory,
   VToken,
@@ -30,32 +30,35 @@ const FORK_TESTNET = process.env.FORK_TESTNET === "true";
 const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const network = process.env.NETWORK_NAME;
 
+const {
+  ACM,
+  ACC1,
+  ACC2,
+  ADMIN,
+  HAY,
+  VHAY,
+  HAY_HOLDER,
+  COMPTROLLER,
+  BLOCK_NUMBER,
+  REWARD_DISTRIBUTOR1,
+  BINANCE_ORACLE
+} = CONTRACT_ADDRESSES[network as string];
+
 const MANTISSA_ONE = convertToUnit(1, 18);
 
-let BINANCE_ORACLE: string;
-
-const ADMIN: string = CONTRACT_ADDRESSES[network as string].ADMIN;
-const ACM: string = CONTRACT_ADDRESSES[network as string].ACM;
-const acc1: string = CONTRACT_ADDRESSES[network as string].acc1;
-const acc2: string = CONTRACT_ADDRESSES[network as string].acc2;
-const TOKEN1: string = CONTRACT_ADDRESSES[network as string].HAY; // HAY
-const COMPTROLLER: string = CONTRACT_ADDRESSES[network as string].COMPTROLLER;
-const VTOKEN1: string = CONTRACT_ADDRESSES[network as string].VHAY; // VHAY
-const REWARD_DISTRIBUTOR1: string = CONTRACT_ADDRESSES[network as string].REWARD_DISTRIBUTOR1;
-const BLOCK_NUMBER: number = CONTRACT_ADDRESSES[network as string].BLOCK_NUMBER;
-
-if (network == "bsctestnet") {
-  BINANCE_ORACLE = CONTRACT_ADDRESSES[network as string].BINANCE_ORACLE;
-}
+const TOKEN1: string = HAY; // HAY
+const VTOKEN1: string = VHAY; // VHAY
+const TOKEN1_HOLDER: string = HAY_HOLDER; // HAY_HOLDER
 
 let impersonatedTimelock: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vTOKEN1: VToken;
-let token1: MockToken;
+let token1: IERC20;
 let rewardDistributor1: RewardsDistributor;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
+let token1Holder: Signer;
 let comptrollerSigner: Signer;
 let mintAmount: BigNumberish;
 let bswBorrowAmount: BigNumberish;
@@ -85,18 +88,19 @@ async function grantPermissions() {
 
 if (FORK_TESTNET || FORK_MAINNET) {
   describe("Rewards distributions", async () => {
-    mintAmount = convertToUnit("100000000", 18);
+    mintAmount = convertToUnit("10000", 18);
     bswBorrowAmount = convertToUnit("100", 18);
 
     async function setup() {
       await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
-      acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
-      acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
+      acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
+      acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       comptrollerSigner = await initMainnetUser(COMPTROLLER, ethers.utils.parseUnits("2"));
 
-      token1 = MockToken__factory.connect(TOKEN1, impersonatedTimelock);
+      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       rewardDistributor1 = RewardsDistributor__factory.connect(REWARD_DISTRIBUTOR1, impersonatedTimelock);
@@ -109,14 +113,14 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await comptroller.setMarketSupplyCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
 
-      if (network == "bsctestnet") {
+      if (network != "sepolia") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
         await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
       }
     }
 
-    async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
-      await token.connect(signer).faucet(amount);
+    async function mintVTokens(signer: Signer, token: IERC20, vToken: VToken, amount: BigNumberish) {
+      await token.connect(token1Holder).transfer(await signer.getAddress(), amount);
       await token.connect(signer).approve(vToken.address, amount);
       await expect(vToken.connect(signer).mint(amount)).to.emit(vToken, "Mint");
     }
@@ -190,25 +194,26 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await vTOKEN1.accrueInterest();
 
       // Reward1 calculations for user 1
-      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, acc1);
-      let supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
+      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      let supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
       // Transfer vTokens to user 2 from user 1
-      const acc1Balance = await vTOKEN1.balanceOf(acc1);
-      await vTOKEN1.connect(acc1Signer).transfer(acc2, acc1Balance);
+      const acc1Balance = await vTOKEN1.balanceOf(ACC1);
+      await vTOKEN1.connect(acc1Signer).transfer(ACC2, acc1Balance);
       await vTOKEN1.accrueInterest();
 
       // Reward1 calculations for user 1
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, acc1);
-      supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
       // Reward1 calculations for user 2
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, acc2);
-      supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc2);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC2);
+      supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC2);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
     });
+
     it("Rewards for borrowers", async function () {
       await mintVTokens(acc1Signer, token1, vTOKEN1, mintAmount);
       await vTOKEN1.connect(acc1Signer).borrow(bswBorrowAmount);
@@ -216,19 +221,20 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await vTOKEN1.accrueInterest();
 
       // Reward1 calculations for user 1
-      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, acc1);
-      let borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
+      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      let borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000079", 18));
 
       // Repay
-      const borrowBalanceStored = await vTOKEN1.borrowBalanceStored(acc1);
-      await token1.connect(acc1Signer).faucet(borrowBalanceStored);
+      const borrowBalanceStored = await vTOKEN1.borrowBalanceStored(ACC1);
+      // await token1.connect(acc1Signer).faucet(borrowBalanceStored);
+      await token1.connect(token1Holder).transfer(ACC1, borrowBalanceStored);
       await token1.connect(acc1Signer).approve(VTOKEN1, borrowBalanceStored);
       await expect(vTOKEN1.connect(acc1Signer).repayBorrow(borrowBalanceStored)).to.emit(vTOKEN1, "RepayBorrow");
 
       // Reward1 calculations for user 1
-      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, acc1);
-      borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(acc1);
+      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
     });
   });
