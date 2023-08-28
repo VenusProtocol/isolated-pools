@@ -100,6 +100,7 @@ export const blocksPerYear: BlocksPerYear = {
 };
 
 const SIGNER_TESTNET_MNEMONIC = "0xFA747c4a62c4D168276329F822d004026A1c05E9"; // signer[1] from testnet mnemonic
+const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 
 const preconfiguredAddresses = {
   hardhat: {
@@ -134,11 +135,11 @@ const preconfiguredAddresses = {
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
   sepolia: {
-    VTreasury: SIGNER_TESTNET_MNEMONIC,
-    NormalTimelock: SIGNER_TESTNET_MNEMONIC, // signer[1] from testnet mnemonic
-    FastTrackTimelock: SIGNER_TESTNET_MNEMONIC,
-    CriticalTimelock: SIGNER_TESTNET_MNEMONIC,
-    GovernorBravo: SIGNER_TESTNET_MNEMONIC,
+    VTreasury: SEPOLIA_MULTISIG,
+    NormalTimelock: SEPOLIA_MULTISIG,
+    FastTrackTimelock: SEPOLIA_MULTISIG,
+    CriticalTimelock: SEPOLIA_MULTISIG,
+    GovernorBravo: SEPOLIA_MULTISIG,
     //  TODO: add AccessControlManager address when deployed
   },
   ethereum: {
