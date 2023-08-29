@@ -8,7 +8,6 @@ import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
-  IXVSBridge,
   LZEndpointMock,
   LZEndpointMock__factory,
   MockToken,
@@ -211,8 +210,6 @@ describe("Proxy OFTV2: ", function () {
     expect(await remoteToken.balanceOf(bob.address)).to.be.equal(halfAmount);
     // tokens received on the local chain and unlocked from the proxy
     expect(await localToken.balanceOf(localOFT.address)).to.be.equal(halfAmount);
-    // console.log(halfAmount, dust, typeof halfAmount, typeof dust)
-    // console.log(halfAmount.add(dust), typeof halfAmount.add(dust))
     expect(await localToken.balanceOf(alice.address)).to.be.equal(halfAmount.add(dust));
   });
 
