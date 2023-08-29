@@ -896,8 +896,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "THE",
             markets: ["THE"],
-            supplySpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
-            borrowSpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
+            supplySpeeds: ["17020688657407407"], // 29411.75 THE over 60 days (1728000 blocks)
+            borrowSpeeds: ["17020688657407407"], // 29411.75 THE over 60 days (1728000 blocks)
           },
         ],
       },
@@ -1644,8 +1644,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "THE",
             markets: ["THE"],
-            supplySpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
-            borrowSpeeds: ["68082754629629629"], // 58823.5 THE over 30 days (864000 blocks)
+            supplySpeeds: ["17020688657407407"], // 29411.75 THE over 60 days (1728000 blocks)
+            borrowSpeeds: ["17020688657407407"], // 29411.75 THE over 60 days (1728000 blocks)
           },
         ],
       },
