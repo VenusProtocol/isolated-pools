@@ -22875,7 +22875,7 @@
       ]
     },
     "RewardsDistributor_StableCoins_1": {
-      "address": "0xFFfC3fC29AFdc14408F1461d9AD4Ba976E25dcDc",
+      "address": "0x2aBEf3602B688493fe698EF11D27DCa43a0CE4BE",
       "abi": [
         {
           "anonymous": false,
@@ -24007,7 +24007,7 @@
       ]
     },
     "RewardsDistributor_StableCoins_1_Proxy": {
-      "address": "0xFFfC3fC29AFdc14408F1461d9AD4Ba976E25dcDc",
+      "address": "0x2aBEf3602B688493fe698EF11D27DCa43a0CE4BE",
       "abi": [
         {
           "inputs": [
