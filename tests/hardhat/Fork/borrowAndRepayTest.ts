@@ -25,9 +25,9 @@ import { initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK_TESTNET === "true";
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
-const network = process.env.NETWORK_NAME;
+const FORKING = process.env.FORKING === "true";
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
 
 const {
   ACM,
@@ -35,37 +35,16 @@ const {
   ACC2,
   ACC3,
   ADMIN,
-  USDC_HOLDER,
-  USDC,
-  VUSDC,
-  USDD,
-  VUSDD,
-  HAY,
-  VHAY,
-  HAY_HOLDER,
-  USDD_HOLDER,
   COMPTROLLER,
   BLOCK_NUMBER,
-  BINANCE_ORACLE
+  BINANCE_ORACLE,
+  TOKEN1,
+  TOKEN2,
+  VTOKEN1,
+  VTOKEN2,
+  TOKEN1_HOLDER,
+  TOKEN2_HOLDER,
 } = CONTRACT_ADDRESSES[network as string];
-
-const TOKEN2: string = HAY; // TOKEN2 = HAY
-const VTOKEN2: string = VHAY; // VTOKEN2 = VHAY
-const TOKEN2_HOLDER: string = HAY_HOLDER;
-
-let TOKEN1: string;
-let VTOKEN1: string;
-let TOKEN1_HOLDER: string;
-
-if (network == "sepolia") {
-  TOKEN1 = USDC; // TOKEN1 = USDC
-  VTOKEN1 = VUSDC; // VTOKEN2 = VUSDC
-  TOKEN1_HOLDER = USDC_HOLDER;
-} else {
-  TOKEN1 = USDD; // TOKEN1 = USDD
-  VTOKEN1 = VUSDD; // VTOKEN1 = VUSDD
-  TOKEN1_HOLDER = USDD_HOLDER;
-}
 
 let impersonatedTimelock: Signer;
 let accessControlManager: AccessControlManager;
@@ -106,7 +85,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORK_TESTNET || FORK_MAINNET) {
+if (FORKING) {
   describe("Borrow and Repay", async () => {
     mintAmount = BigNumber.from(convertToUnit(1, 21));
     TOKEN2BorrowAmount = convertToUnit("3", 20);
@@ -124,7 +103,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       if (network == "bsc") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
         await binanceOracle.setMaxStalePeriod("HAY", BigInt(150000000000000000));
-        await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000))
+        await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));
       }
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
@@ -296,9 +275,9 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await expect(vTOKEN1.connect(acc1Signer).mint(mintAmount)).to.emit(vTOKEN1, "Mint");
 
       const exchangeRateCollateral = await vTOKEN1.exchangeRateStored();
-      const USDDPrice = await priceOracle.getUnderlyingPrice(VTOKEN1);
-      const HAYPrice = await priceOracle.getUnderlyingPrice(VTOKEN2);
-      const vTokenPrice = exchangeRateCollateral.mul(USDDPrice).div(convertToUnit(1, 18));
+      const TOKEN1Price = await priceOracle.getUnderlyingPrice(VTOKEN1);
+      const TOKEN2Price = await priceOracle.getUnderlyingPrice(VTOKEN2);
+      const vTokenPrice = exchangeRateCollateral.mul(TOKEN1Price).div(convertToUnit(1, 18));
       const weighhtedPriceTOKEN1 = vTokenPrice
         .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
@@ -318,7 +297,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       await expect(vTOKEN2.connect(acc1Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
       expect(TOKEN2BorrowAmount).equals(await vTOKEN2.borrowBalanceStored(ACC1));
 
-      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(HAYPrice.mul(TOKEN2BorrowAmount).div(convertToUnit(1, 18)));
+      expectedLiquidityAcc1 = expectedLiquidityAcc1.sub(TOKEN2Price.mul(TOKEN2BorrowAmount).div(convertToUnit(1, 18)));
       [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC1);
       expect(err).equals(0);
       expect(liquidity).to.be.closeTo(BigNumber.from(expectedLiquidityAcc1), 325002723328);

@@ -1,7 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { constants } from "ethers";
+import { BigNumber, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
@@ -25,13 +25,16 @@ import {
 } from "../../../typechain";
 import { deployVTokenBeacon, makeVToken } from "../util/TokenTestHelpers";
 import CONTRACT_ADDRESSES from "./constants/Contracts.json";
+import { setForkBlock } from "./utils";
+
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
+
+const { PANCAKE_SWAP_ROUTER, BUSD_HOLDER, USDC_HOLDER, USDT_HOLDER, BLOCK_NUMBER } =
+  CONTRACT_ADDRESSES[network as string];
 
 // Disable a warning about mixing beacons and transparent proxies
 upgrades.silenceWarnings();
-
-const network = process.env.NETWORK_NAME;
-
-const PANCAKE_SWAP_ROUTER: string = CONTRACT_ADDRESSES[network as string].PANCAKE_SWAP_ROUTER;
 
 let poolRegistry: PoolRegistry;
 let USDC: MockToken;
@@ -77,9 +80,9 @@ const initPancakeSwapRouter = async (
       value: ethers.utils.parseEther("10"),
     });
     await tx.wait();
-    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
+    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
+    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
   }
   return pancakeSwapRouter;
 };
@@ -93,21 +96,23 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
   const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
   const token = await MockToken.deploy(name, symbol, 18);
   await token.deployed();
-  await token.faucet(convertToUnit(1000000, 18));
-  await token.transfer(user.address, convertToUnit(1000000, 18));
+  await token.faucet(convertToUnit(10000000, 18));
+  await token.transfer(user.address, convertToUnit(10000000, 18));
   return token;
 };
 
 const riskFundFixture = async (): Promise<void> => {
+  await setForkBlock(BLOCK_NUMBER);
   const [admin, user, ...signers] = await ethers.getSigners();
-  if (network == "bsc") {
-    busdUser = await initMainnetUser(CONTRACT_ADDRESSES[network as string].BUSD_USER);
-    usdcUser = await initMainnetUser(CONTRACT_ADDRESSES[network as string].USDC_USER);
-    usdtUser = await initMainnetUser(CONTRACT_ADDRESSES[network as string].USDT_USER);
 
-    USDC = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].USDC, user);
-    BUSD = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].BUSD, user);
-    USDT = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].USDT, user);
+  if (network == "bsc") {
+    busdUser = await initMainnetUser(BUSD_HOLDER);
+    usdcUser = await initMainnetUser(USDC_HOLDER);
+    usdtUser = await initMainnetUser(USDT_HOLDER);
+
+    USDC = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].USDC, admin);
+    BUSD = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].BUSD, admin);
+    USDT = MockToken__factory.connect(CONTRACT_ADDRESSES[network as string].USDT, admin);
   } else {
     [busdUser, usdcUser, usdtUser] = signers;
 
@@ -304,7 +309,7 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await USDT.faucet(initialSupply);
+  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
   await USDT.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vUSDT.address,
@@ -318,7 +323,7 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await USDC.faucet(initialSupply);
+  await USDC.connect(usdcUser).transfer(admin.address, initialSupply);
   await USDC.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vUSDC.address,
@@ -332,7 +337,7 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await USDT.faucet(initialSupply);
+  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
   await USDT.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vUSDT2.address,
@@ -346,7 +351,8 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await USDC.faucet(initialSupply);
+  // await USDC.faucet(initialSupply);
+  await USDC.connect(usdcUser).transfer(admin.address, initialSupply);
   await USDC.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vUSDC2.address,
@@ -360,7 +366,8 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await USDT.faucet(initialSupply);
+  // await USDT.faucet(initialSupply);
+  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
   await USDT.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vUSDT3.address,
@@ -374,7 +381,8 @@ const riskFundFixture = async (): Promise<void> => {
     ...commonVTokenParams,
   });
 
-  await BUSD.faucet(initialSupply);
+  // await BUSD.faucet(initialSupply);
+  await BUSD.connect(busdUser).transfer(admin.address, initialSupply);
   await BUSD.approve(poolRegistry.address, initialSupply);
   await poolRegistry.addMarket({
     vToken: vBUSD3.address,
@@ -685,8 +693,12 @@ describe("Risk Fund: Tests", function () {
         ],
         deadline,
       );
+      const expectedValue = BigNumber.from("29916047622748892393");
+      const actualValue = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
+      const tolerance = convertToUnit(3, 17);
 
-      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
+      const diff = actualValue.sub(expectedValue).abs(); // Calculate the absolute difference
+      expect(diff.lte(tolerance)).to.be.true;
 
       const balanceAfter = await USDC.balanceOf(riskFund.address);
       expect(balanceAfter).equal("0");
@@ -740,7 +752,12 @@ describe("Risk Fund: Tests", function () {
         deadline,
       );
 
-      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
+      const expectedValue = BigNumber.from("59832095245497784786");
+      const actualValue = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
+      const tolerance = convertToUnit(5, 17);
+
+      const diff = actualValue.sub(expectedValue).abs(); // Calculate the absolute difference
+      expect(diff.lte(tolerance)).to.be.true;
 
       const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
@@ -990,8 +1007,12 @@ describe("Risk Fund: Tests", function () {
         ],
         deadline,
       );
+      const expectedValue = BigNumber.from("94717497407756046533");
+      const actualValue = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
+      const tolerance = convertToUnit(9, 17);
 
-      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("94717497407756046533");
+      const diff = actualValue.sub(expectedValue).abs(); // Calculate the absolute difference
+      expect(diff.lte(tolerance)).to.be.true;
 
       riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
       riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);

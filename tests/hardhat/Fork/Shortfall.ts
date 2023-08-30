@@ -24,28 +24,55 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
+import CONTRACT_ADDRESSES from "./constants/Contracts.json";
 import { initMainnetUser, setForkBlock } from "./utils";
+
+const FORKING = process.env.FORKING === "true";
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
+
+const {
+  ADMIN,
+  TREASURY,
+  ACM,
+  RESILIENT_ORACLE,
+  CHAINLINK_ORACLE,
+  POOL_REGISTRY,
+  SWAP_ROUTER_CORE_POOL,
+  COMPTROLLER,
+  COMPTROLLER_TRON,
+  USDT_HOLDER,
+  TRX_HOLDER,
+  BLOCK_NUMBER,
+} = CONTRACT_ADDRESSES[network as string];
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
-
-const ADMIN = "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396";
-const TREASURY = "0xF322942f644A996A617BD29c16bd7d231d9F35E9";
-const ACM = "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555";
-const ORACLE = "0x6592b5DE802159F3E74B2486b091D11a8256ab8A";
-const CHAINLINK_ORACLE = "0x1B2103441A0A108daD8848D8F5d790e4D402921F";
-const POOL_REGISTRY = "0x9F7b01A536aFA00EF10310A162877fd792cD0666";
-
-const SWAP_ROUTER_CORE_POOL = "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4";
-const COMPTROLLER_TRON = "0x23b4404E4E5eC5FF5a6FFb70B7d14E3FabF237B0";
-
-const USDT = "0x55d398326f99059fF775485246999027B3197955";
-const TRX = "0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3";
-
-const VUSDT_TRON = "0x281E5378f99A4bc55b295ABc0A3E7eD32Deba059";
-const VTRX_TRON = "0x836beb2cB723C498136e1119248436A645845F4E";
+let COMPTROLLER_ADDRESS: string;
+let TOKEN1: string;
+let TOKEN2: string;
+let VTOKEN1: string;
+let VTOKEN2: string;
+let TOKEN1_HOLDER: string;
+let TOKEN2_HOLDER: string;
+if (network == "bsc") {
+  COMPTROLLER_ADDRESS = COMPTROLLER_TRON;
+  TOKEN1 = CONTRACT_ADDRESSES[network as string].USDT; // 18 decimal
+  TOKEN2 = CONTRACT_ADDRESSES[network as string].TRX; // 6 decimal
+  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VUSDT_TRON;
+  VTOKEN2 = CONTRACT_ADDRESSES[network as string].VTRX_TRON;
+  TOKEN1_HOLDER = USDT_HOLDER;
+  TOKEN2_HOLDER = TRX_HOLDER;
+} else if (network == "bsctestnet") {
+  COMPTROLLER_ADDRESS = COMPTROLLER;
+  TOKEN1 = CONTRACT_ADDRESSES[network as string].TOKEN1; // token1 -> usdd ->18 decimal
+  TOKEN2 = CONTRACT_ADDRESSES[network as string].USDT; // testnet usdt -> 6 decimal
+  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VTOKEN1; // vtoken1
+  VTOKEN2 = CONTRACT_ADDRESSES[network as string].VUSDT; // vusdt
+  TOKEN1_HOLDER = CONTRACT_ADDRESSES[network as string].TOKEN1_HOLDER;
+  TOKEN2_HOLDER = USDT_HOLDER;
+}
 
 const MINIMUM_POOL_BAD_DEBT = parseUnits("10", 18); // USD
 const LOOPS_LIMIT = 100;
@@ -59,11 +86,11 @@ let user1: SignerWithAddress;
 let liquidator: SignerWithAddress;
 
 let comptroller: Comptroller;
-let vTRX: VToken;
-let vUSDT: VToken;
+let vTOKEN2: VToken;
+let vTOKEN1: VToken;
 
-let trx: IERC20;
-let usdt: IERC20;
+let token2: IERC20;
+let token1: IERC20;
 
 let shortfall: Shortfall;
 let protocolShareReserve: ProtocolShareReserve;
@@ -74,11 +101,11 @@ const configureTimelock = async () => {
 };
 
 const grabTokensTo = async (userAddress: string) => {
-  const trxHolder = await initMainnetUser("0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", parseEther("2"));
-  const usdtHolder = await initMainnetUser("0xF977814e90dA44bFA03b6295A0616a897441aceC", parseEther("2"));
+  const token2Holder = await initMainnetUser(TOKEN2_HOLDER, parseEther("2"));
+  const token1Holder = await initMainnetUser(TOKEN1_HOLDER, parseEther("2"));
 
-  await trx.connect(trxHolder).transfer(userAddress, parseUnits("10000", 6));
-  await usdt.connect(usdtHolder).transfer(userAddress, parseUnits("10000", 18));
+  await token2.connect(token2Holder).transfer(userAddress, parseUnits("10000", 6));
+  await token1.connect(token1Holder).transfer(userAddress, parseUnits("10000", 18));
 };
 
 const setupRiskManagementContracts = async () => {
@@ -91,7 +118,7 @@ const setupRiskManagementContracts = async () => {
   riskFund = (await upgrades.deployProxy(riskFundFactory, [
     swapRouter.address,
     parseUnits("1", 18),
-    TRX, // convertibleBaseAsset
+    TOKEN2, // convertibleBaseAsset
     ACM,
     LOOPS_LIMIT,
   ])) as RiskFund;
@@ -108,7 +135,7 @@ const setupRiskManagementContracts = async () => {
 
   const shortfallFactory = await ethers.getContractFactory<Shortfall__factory>("Shortfall");
   shortfall = (await upgrades.deployProxy(shortfallFactory, [
-    TRX, // convertibleBaseAsset
+    TOKEN2, // convertibleBaseAsset
     riskFund.address,
     MINIMUM_POOL_BAD_DEBT,
     ACM,
@@ -117,71 +144,73 @@ const setupRiskManagementContracts = async () => {
 };
 
 const setupTokens = async () => {
-  trx = await ethers.getContractAt<IERC20__factory>("MockToken", TRX);
-  usdt = await ethers.getContractAt<IERC20__factory>("MockToken", USDT);
+  token2 = await ethers.getContractAt<IERC20__factory>("MockToken", TOKEN2);
+  token1 = await ethers.getContractAt<IERC20__factory>("MockToken", TOKEN1);
 
   await grabTokensTo(manager.address);
   await grabTokensTo(user1.address);
   await grabTokensTo(liquidator.address);
 
-  comptroller = Comptroller__factory.connect(COMPTROLLER_TRON, impersonatedTimelock);
+  comptroller = Comptroller__factory.connect(COMPTROLLER_ADDRESS, impersonatedTimelock);
   chainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
 
-  vTRX = await ethers.getContractAt<VToken__factory>("VToken", VTRX_TRON);
-  vUSDT = await ethers.getContractAt<VToken__factory>("VToken", VUSDT_TRON);
+  vTOKEN2 = await ethers.getContractAt<VToken__factory>("VToken", VTOKEN2);
+  vTOKEN1 = await ethers.getContractAt<VToken__factory>("VToken", VTOKEN1);
 
-  for (const vToken of [vTRX, vUSDT]) {
+  for (const vToken of [vTOKEN2, vTOKEN1]) {
     await vToken.connect(impersonatedTimelock).setShortfallContract(shortfall.address);
     await vToken.connect(impersonatedTimelock).setProtocolShareReserve(protocolShareReserve.address);
   }
 };
 
-const generateUsdtBadDebt = async () => {
-  await chainlinkOracle.setDirectPrice(trx.address, parseUnits("100", 18));
-  const trxSupplyAmount = parseUnits("100", 6);
-  const usdtBorrowAmount = parseUnits("500", 18);
-  await usdt.connect(manager).approve(vUSDT.address, usdtBorrowAmount);
-  await vUSDT.connect(manager).mint(usdtBorrowAmount);
-  await trx.connect(user1).approve(vTRX.address, trxSupplyAmount);
-  await vTRX.connect(user1).mint(trxSupplyAmount);
-  await comptroller.connect(user1).enterMarkets([vTRX.address]);
-  await vUSDT.connect(user1).borrow(usdtBorrowAmount);
-  await chainlinkOracle.setDirectPrice(trx.address, "1");
+const generateToken1BadDebt = async () => {
+  await chainlinkOracle.setDirectPrice(token2.address, parseUnits("100", 18));
+  const token2SupplyAmount = parseUnits("100", 6);
+  const token1BorrowAmount = parseUnits("500", 18);
+  await token1.connect(manager).approve(vTOKEN1.address, token1BorrowAmount);
+  await vTOKEN1.connect(manager).mint(token1BorrowAmount);
+  await token2.connect(user1).approve(vTOKEN2.address, token2SupplyAmount);
+  await vTOKEN2.connect(user1).mint(token2SupplyAmount);
+  await comptroller.connect(user1).enterMarkets([vTOKEN2.address]);
+  await vTOKEN1.connect(user1).borrow(token1BorrowAmount);
+  await chainlinkOracle.setDirectPrice(token2.address, "1");
 
-  // We repay about 91 USDT but the majority of the debt is bad debt
-  await usdt.connect(liquidator).approve(vUSDT.address, parseUnits("91.1", 18));
+  // We repay about 91 TOKEN1 but the majority of the debt is bad debt
+  await token1.connect(liquidator).approve(vTOKEN1.address, parseUnits("91.1", 18));
   await comptroller.connect(liquidator).healAccount(user1.address);
 
-  // Restore original TRX price
-  await chainlinkOracle.setDirectPrice(trx.address, parseUnits("0.08098989", 18));
+  // Restore original TOKEN2 price
+  await chainlinkOracle.setDirectPrice(token2.address, parseUnits("0.08098989", 18));
 
-  // Pretend to recover the dust so that the bad debt is exactly 500 USDT
+  // Pretend to recover the dust so that the bad debt is exactly 500 TOKEN1
   const shortfallSigner = await initMainnetUser(shortfall.address, parseEther("1"));
-  const dust = (await vUSDT.badDebt()).sub(parseUnits("500", 18));
-  await vUSDT.connect(shortfallSigner).badDebtRecovered(dust);
+  const dust = (await vTOKEN1.badDebt()).sub(parseUnits("500", 18));
+  await vTOKEN1.connect(shortfallSigner).badDebtRecovered(dust);
 };
 
 const pretendRiskFundAccumulatedBaseAsset = async () => {
-  const trxReserve = parseUnits("1000", 6);
-  await trx.approve(vTRX.address, trxReserve);
-  await vTRX.addReserves(trxReserve);
-  await vTRX.reduceReserves(trxReserve);
-  await protocolShareReserve.releaseFunds(comptroller.address, trx.address, trxReserve);
+  const token2Reserve = parseUnits("1000", 6);
+  await token2.approve(vTOKEN2.address, token2Reserve);
+  await vTOKEN2.addReserves(token2Reserve);
+  await vTOKEN2.reduceReserves(token2Reserve);
+  await protocolShareReserve.releaseFunds(comptroller.address, token2.address, token2Reserve);
 };
 
 const setup = async () => {
   [manager, user1, liquidator] = await ethers.getSigners();
 
-  await setForkBlock(30245720);
+  await setForkBlock(BLOCK_NUMBER);
 
-  comptroller = await ethers.getContractAt<Comptroller__factory>("Comptroller", COMPTROLLER_TRON);
+  comptroller = await ethers.getContractAt<Comptroller__factory>("Comptroller", COMPTROLLER_ADDRESS);
   chainlinkOracle = await ethers.getContractAt<ChainlinkOracle__factory>("ChainlinkOracle", CHAINLINK_ORACLE);
-  oracle = await ethers.getContractAt<ResilientOracleInterface__factory>("ResilientOracleInterface", ORACLE);
+  oracle = await ethers.getContractAt<ResilientOracleInterface__factory>("ResilientOracleInterface", RESILIENT_ORACLE);
 
   await configureTimelock();
   await setupRiskManagementContracts();
   await setupTokens();
-  await generateUsdtBadDebt();
+  await chainlinkOracle.setDirectPrice(token2.address, parseUnits("8098989", 22));
+  await chainlinkOracle.setDirectPrice(token1.address, parseUnits("99971612", 10));
+  await generateToken1BadDebt();
   await pretendRiskFundAccumulatedBaseAsset();
 };
 
@@ -190,61 +219,61 @@ enum AuctionType {
   LARGE_RISK_FUND = 1,
 }
 
-if (FORK_MAINNET) {
+if (FORKING && (network == "bsc" || network == "bsctestnet")) {
   describe("Shortfall fork tests", async () => {
-    const usdtBadDebt = parseUnits("500", 18);
-    const trxRiskFund = parseUnits("500", 6);
+    const token1BadDebt = parseUnits("500", 18);
+    const token2RiskFund = parseUnits("500", 6);
 
     beforeEach(async () => {
       await loadFixture(setup);
     });
 
     it("initializes as expected", async () => {
-      expect(await vUSDT.badDebt()).to.equal(usdtBadDebt);
-      expect(await vTRX.badDebt()).to.equal(0);
-      expect(await riskFund.getPoolsBaseAssetReserves(COMPTROLLER_TRON)).to.equal(trxRiskFund);
+      expect(await vTOKEN1.badDebt()).to.equal(token1BadDebt);
+      expect(await vTOKEN2.badDebt()).to.equal(0);
+      expect(await riskFund.getPoolsBaseAssetReserves(COMPTROLLER_ADDRESS)).to.equal(token2RiskFund);
     });
 
     describe("startAuction", async () => {
       it("starts a LARGE_POOL_DEBT auction if risk fund reserve ($) < bad debt plus incentive ($)", async () => {
-        // Convertible base asset is TRX, the risk fund balance is about 500 TRX or $40
-        await shortfall.startAuction(COMPTROLLER_TRON);
+        // Convertible base asset is TOKEN2, the risk fund balance is about 500 TOKEN2 or $40
+        await shortfall.startAuction(COMPTROLLER_ADDRESS);
 
-        const auction = await shortfall.auctions(COMPTROLLER_TRON);
+        const auction = await shortfall.auctions(COMPTROLLER_ADDRESS);
         expect(auction.auctionType).to.equal(AuctionType.LARGE_POOL_DEBT);
       });
 
       it("starts a LARGE_RISK_FUND auction if risk fund reserve ($) > bad debt plus incentive ($)", async () => {
-        // Convertible base asset is TRX, we set its price to $1.11 so that 500 TRX = $555 > bad debt plus incentive
-        await chainlinkOracle.setDirectPrice(trx.address, parseUnits("1.11", 18));
-        await shortfall.startAuction(COMPTROLLER_TRON);
+        // Convertible base asset is TOKEN2, we set its price to $1.11 so that 500 TOKEN2 = $555 > bad debt plus incentive
+        await chainlinkOracle.setDirectPrice(token2.address, parseUnits("1.11", 18));
+        await shortfall.startAuction(COMPTROLLER_ADDRESS);
 
-        const auction = await shortfall.auctions(COMPTROLLER_TRON);
+        const auction = await shortfall.auctions(COMPTROLLER_ADDRESS);
         expect(auction.auctionType).to.equal(AuctionType.LARGE_RISK_FUND);
       });
 
       it("starts a LARGE_POOL_DEBT auction if risk fund reserve ($) == bad debt plus incentive ($)", async () => {
-        // Convertible base asset is TRX, we set its price to $1.1 so that 500 TRX = $550
-        await chainlinkOracle.setDirectPrice(trx.address, parseUnits("1.1", 18));
-        // We set USDT price to $1 so that bad debt plus incentive is exactly $550
-        await chainlinkOracle.setDirectPrice(usdt.address, parseUnits("1.0", 18));
+        // Convertible base asset is TOKEN2, we set its price to $1.1 so that 500 TOKEN2 = $550
+        await chainlinkOracle.setDirectPrice(token2.address, parseUnits("1.1", 18));
+        // We set TOKEN1 price to $1 so that bad debt plus incentive is exactly $550
+        await chainlinkOracle.setDirectPrice(token1.address, parseUnits("1.0", 18));
 
         // Ensure our computations are correct
-        const usdtPrice = await oracle.getPrice(usdt.address);
-        const badDebtPlusIncentive = (await vUSDT.badDebt())
+        const token1Price = await oracle.getPrice(token1.address);
+        const badDebtPlusIncentive = (await vTOKEN1.badDebt())
           .mul(parseUnits("1.1", 18))
-          .mul(usdtPrice)
+          .mul(token1Price)
           .div(parseUnits("1", 36));
         expect(badDebtPlusIncentive).to.equal(parseUnits("550", 18));
 
-        const trxPrice = await oracle.getPrice(trx.address);
-        const riskFundReserve = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER_TRON);
-        const riskFundReserveInUsd = riskFundReserve.mul(trxPrice).div(parseUnits("1", 18));
+        const token2Price = await oracle.getPrice(token2.address);
+        const riskFundReserve = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER_ADDRESS);
+        const riskFundReserveInUsd = riskFundReserve.mul(token2Price).div(parseUnits("1", 18));
         expect(riskFundReserveInUsd).to.equal(parseUnits("550", 18));
 
-        await shortfall.startAuction(COMPTROLLER_TRON);
+        await shortfall.startAuction(COMPTROLLER_ADDRESS);
 
-        const auction = await shortfall.auctions(COMPTROLLER_TRON);
+        const auction = await shortfall.auctions(COMPTROLLER_ADDRESS);
         expect(auction.auctionType).to.equal(AuctionType.LARGE_POOL_DEBT);
       });
     });

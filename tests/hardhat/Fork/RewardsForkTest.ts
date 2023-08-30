@@ -26,39 +26,35 @@ import { initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK_TESTNET === "true";
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
-const network = process.env.NETWORK_NAME;
+const FORKING = process.env.FORKING === "true";
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
 
 const {
   ACM,
   ACC1,
   ACC2,
   ADMIN,
-  HAY,
-  VHAY,
-  HAY_HOLDER,
+  TOKEN2,
+  VTOKEN2,
+  TOKEN2_HOLDER,
   COMPTROLLER,
   BLOCK_NUMBER,
   REWARD_DISTRIBUTOR1,
-  BINANCE_ORACLE
+  BINANCE_ORACLE,
 } = CONTRACT_ADDRESSES[network as string];
 
 const MANTISSA_ONE = convertToUnit(1, 18);
 
-const TOKEN1: string = HAY; // HAY
-const VTOKEN1: string = VHAY; // VHAY
-const TOKEN1_HOLDER: string = HAY_HOLDER; // HAY_HOLDER
-
 let impersonatedTimelock: Signer;
 let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
-let vTOKEN1: VToken;
-let token1: IERC20;
+let vTOKEN2: VToken;
+let token2: IERC20;
 let rewardDistributor1: RewardsDistributor;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
-let token1Holder: Signer;
+let token2Holder: Signer;
 let comptrollerSigner: Signer;
 let mintAmount: BigNumberish;
 let bswBorrowAmount: BigNumberish;
@@ -86,7 +82,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORK_TESTNET || FORK_MAINNET) {
+if (FORKING) {
   describe("Rewards distributions", async () => {
     mintAmount = convertToUnit("10000", 18);
     bswBorrowAmount = convertToUnit("100", 18);
@@ -97,21 +93,21 @@ if (FORK_TESTNET || FORK_MAINNET) {
 
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
-      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
+      token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
       comptrollerSigner = await initMainnetUser(COMPTROLLER, ethers.utils.parseUnits("2"));
 
-      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
-      vTOKEN1 = await configureVToken(VTOKEN1);
+      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
+      vTOKEN2 = await configureVToken(VTOKEN2);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       rewardDistributor1 = RewardsDistributor__factory.connect(REWARD_DISTRIBUTOR1, impersonatedTimelock);
 
       await grantPermissions();
 
-      await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);
-      await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
+      await comptroller.connect(acc1Signer).enterMarkets([vTOKEN2.address]);
+      await comptroller.connect(acc2Signer).enterMarkets([vTOKEN2.address]);
 
-      await comptroller.setMarketSupplyCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
-      await comptroller.setMarketBorrowCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketSupplyCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketBorrowCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
 
       if (network != "sepolia") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
@@ -120,7 +116,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
     }
 
     async function mintVTokens(signer: Signer, token: IERC20, vToken: VToken, amount: BigNumberish) {
-      await token.connect(token1Holder).transfer(await signer.getAddress(), amount);
+      await token.connect(token2Holder).transfer(await signer.getAddress(), amount);
       await token.connect(signer).approve(vToken.address, amount);
       await expect(vToken.connect(signer).mint(amount)).to.emit(vToken, "Mint");
     }
@@ -156,7 +152,7 @@ if (FORK_TESTNET || FORK_MAINNET) {
       vToken: VToken,
       user: string,
     ) {
-      await vTOKEN1.accrueInterest();
+      await vTOKEN2.accrueInterest();
       const marketBorrowIndex = await vToken.borrowIndex();
       const borrowerAccruedOld = await rewardDistributor.rewardTokenAccrued(user);
 
@@ -189,51 +185,50 @@ if (FORK_TESTNET || FORK_MAINNET) {
     });
 
     it("Rewards for suppliers", async function () {
-      await mintVTokens(acc1Signer, token1, vTOKEN1, mintAmount);
+      await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
       await mine(3000000);
-      await vTOKEN1.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Reward1 calculations for user 1
-      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      let supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       let supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
       // Transfer vTokens to user 2 from user 1
-      const acc1Balance = await vTOKEN1.balanceOf(ACC1);
-      await vTOKEN1.connect(acc1Signer).transfer(ACC2, acc1Balance);
-      await vTOKEN1.accrueInterest();
+      const acc1Balance = await vTOKEN2.balanceOf(ACC1);
+      await vTOKEN2.connect(acc1Signer).transfer(ACC2, acc1Balance);
+      await vTOKEN2.accrueInterest();
 
       // Reward1 calculations for user 1
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
 
       // Reward1 calculations for user 2
-      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC2);
+      supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC2);
       supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC2);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
     });
 
     it("Rewards for borrowers", async function () {
-      await mintVTokens(acc1Signer, token1, vTOKEN1, mintAmount);
-      await vTOKEN1.connect(acc1Signer).borrow(bswBorrowAmount);
+      await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
+      await vTOKEN2.connect(acc1Signer).borrow(bswBorrowAmount);
       await mine(3000000);
-      await vTOKEN1.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Reward1 calculations for user 1
-      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       let borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000079", 18));
 
       // Repay
-      const borrowBalanceStored = await vTOKEN1.borrowBalanceStored(ACC1);
-      // await token1.connect(acc1Signer).faucet(borrowBalanceStored);
-      await token1.connect(token1Holder).transfer(ACC1, borrowBalanceStored);
-      await token1.connect(acc1Signer).approve(VTOKEN1, borrowBalanceStored);
-      await expect(vTOKEN1.connect(acc1Signer).repayBorrow(borrowBalanceStored)).to.emit(vTOKEN1, "RepayBorrow");
+      const borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC1);
+      await token2.connect(token2Holder).transfer(ACC1, borrowBalanceStored);
+      await token2.connect(acc1Signer).approve(VTOKEN2, borrowBalanceStored);
+      await expect(vTOKEN2.connect(acc1Signer).repayBorrow(borrowBalanceStored)).to.emit(vTOKEN2, "RepayBorrow");
 
       // Reward1 calculations for user 1
-      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN1, vTOKEN1, ACC1);
+      borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
     });

@@ -22,40 +22,14 @@ import { initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK_TESTNET === "true";
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
-const network = process.env.NETWORK_NAME;
-const {
-  ACM,
-  ACC1,
-  ACC2,
-  ADMIN,
-  USDC_HOLDER,
-  USDC,
-  VUSDC,
-  USDD,
-  VUSDD,
-  USDD_HOLDER,
-  COMPTROLLER,
-  BLOCK_NUMBER,
-} = CONTRACT_ADDRESSES[network as string];
+const FORKING = process.env.FORKING === "true";
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
 
+const { ACM, ACC1, ACC2, ADMIN, TOKEN1, VTOKEN1, TOKEN1_HOLDER, COMPTROLLER, BLOCK_NUMBER } =
+  CONTRACT_ADDRESSES[network as string];
 
-let TOKEN1: string;
-let VTOKEN1: string;
 let PROTOCOL_SHARE_RESERVE: string;
-let TOKEN1_HOLDER: string;
-
-if (network == "sepolia") {
-  TOKEN1_HOLDER = USDC_HOLDER;
-  TOKEN1 = USDC; // TOKEN1 = USDC
-  VTOKEN1 = VUSDC; // VTOKEN2 = VUSDC
-} else {
-  TOKEN1 = USDD; // TOKEN1 = USDD
-  VTOKEN1 = VUSDD; // VTOKEN1 = VUSDD
-  TOKEN1_HOLDER = USDD_HOLDER;
-}
-
 let impersonatedTimelock: Signer;
 let token1Holder: string;
 let accessControlManager: AccessControlManager;
@@ -90,7 +64,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORK_TESTNET || FORK_MAINNET) {
+if (FORKING) {
   describe("Reduce Reserves", async () => {
     mintAmount = convertToUnit("1000", 18);
     TOKEN1BorrowAmount = convertToUnit("100", 18);

@@ -1,8 +1,7 @@
 import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
-import BigNumber from "bignumber.js";
 import chai from "chai";
-import { Signer } from "ethers";
+import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -13,52 +12,65 @@ import {
   ChainlinkOracle__factory,
   Comptroller,
   Comptroller__factory,
-  FaucetToken,
-  FaucetToken__factory,
-  MockToken,
-  MockToken__factory,
+  IERC20,
+  IERC20__factory,
+  MockPriceOracle,
+  MockPriceOracle__factory,
   VToken,
   VToken__factory,
 } from "../../../typechain";
+import CONTRACT_ADDRESSES from "./constants/Contracts.json";
 import { initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK_TESTNET === "true";
+const FORKING = process.env.FORKING === "true";
+let network = process.env.NETWORK_NAME;
+if (network == "") network = "bsc";
 
-const ADMIN = "0xce10739590001705f7ff231611ba4a48b2820327";
-const ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
-const ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
-const ORACLE = "0xCeA29f1266e880A1482c06eD656cD08C148BaA32";
-const acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
-const acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
-const acc3 = "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3";
-const USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
-const USDT = "0xA11c8D9DC9b66E209Ef60F0C8D969D3CD988782c";
-const COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
-const VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
-const VUSDT = "0x3338988d0beb4419Acb8fE624218754053362D06";
+const {
+  ACM,
+  ACC1,
+  ACC2,
+  ACC3,
+  ADMIN,
+  TOKEN1,
+  VTOKEN1,
+  TOKEN2,
+  VTOKEN2,
+  TOKEN1_HOLDER,
+  TOKEN2_HOLDER,
+  COMPTROLLER,
+  BLOCK_NUMBER,
+  RESILIENT_ORACLE,
+  CHAINLINK_ORACLE,
+} = CONTRACT_ADDRESSES[network as string];
+
+const AddressZero = "0x0000000000000000000000000000000000000000";
 
 let impersonatedTimelock: Signer;
 let impersonatedOracleOwner: Signer;
 let accessControlManager: AccessControlManager;
 let priceOracle: ChainlinkOracle;
 let comptroller: Comptroller;
-let vUSDD: VToken;
-let vUSDT: VToken;
-let usdd: MockToken;
-let usdt: FaucetToken;
+let vTOKEN1: VToken;
+let vTOKEN2: VToken;
+let token1: IERC20;
+let token2: IERC20;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let acc3Signer: Signer;
+let token1Holder: string;
+let token2Holder: string;
+let resilientOracle: MockPriceOracle;
 
-const blocksToMint: number = 300000;
-const usdtBorrowAmount = convertToUnit("1", 4);
+const blocksToMine: number = 300000;
+const TOKEN2BorrowAmount = convertToUnit("1", 17);
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
-  impersonatedOracleOwner = await initMainnetUser(ORACLE_ADMIN, ethers.utils.parseUnits("2"));
+  impersonatedOracleOwner = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
@@ -67,7 +79,6 @@ async function configureVToken(vTokenAddress: string) {
 
 async function grantPermissions() {
   accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-
   let tx = await accessControlManager
     .connect(impersonatedTimelock)
     .giveCallPermission(comptroller.address, "setMarketSupplyCaps(address[],uint256[])", ADMIN);
@@ -80,7 +91,7 @@ async function grantPermissions() {
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(ORACLE, "setDirectPrice(address,uint256)", ADMIN);
+    .giveCallPermission(CHAINLINK_ORACLE, "setDirectPrice(address,uint256)", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
@@ -93,181 +104,222 @@ async function grantPermissions() {
     .giveCallPermission(comptroller.address, "setCollateralFactor(address,uint256,uint256)", ADMIN);
 }
 
-if (FORK_TESTNET) {
+if (FORKING) {
   describe("Supply fork tests", async () => {
     async function setup() {
-      await setForkBlock(30913473);
+      await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
+      acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
+      acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
+      acc3Signer = await initMainnetUser(ACC3, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
+      token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
+      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
+      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
+      vTOKEN2 = await configureVToken(VTOKEN2);
+      vTOKEN1 = await configureVToken(VTOKEN1);
 
-      acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
-      acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
-      acc3Signer = await initMainnetUser(acc3, ethers.utils.parseUnits("2"));
-
-      usdt = FaucetToken__factory.connect(USDT, impersonatedTimelock);
-      usdd = MockToken__factory.connect(USDD, impersonatedTimelock);
-      vUSDT = await configureVToken(VUSDT);
-      vUSDD = await configureVToken(VUSDD);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      priceOracle = ChainlinkOracle__factory.connect(ORACLE, impersonatedOracleOwner);
+      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedOracleOwner);
+
+      const tupleForToken2 = {
+        asset: TOKEN2,
+        oracles: [CHAINLINK_ORACLE, AddressZero, AddressZero],
+        enableFlagsForOracles: [true, false, false],
+      };
+
+      const tupleForToken1 = {
+        asset: TOKEN1,
+        oracles: [CHAINLINK_ORACLE, AddressZero, AddressZero],
+        enableFlagsForOracles: [true, false, false],
+      };
+
+      if (network == "bsctestnet") {
+        resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
+        await resilientOracle.setTokenConfig(tupleForToken2);
+      } else if (network == "bsc") {
+        resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
+        await resilientOracle.setTokenConfig(tupleForToken2);
+        await resilientOracle.setTokenConfig(tupleForToken1);
+        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 18));
+      }
 
       await grantPermissions();
 
       await comptroller.setMarketSupplyCaps(
-        [vUSDT.address, vUSDD.address],
+        [vTOKEN2.address, vTOKEN1.address],
         [convertToUnit(1, 50), convertToUnit(1, 50)],
       );
       await comptroller.setMarketBorrowCaps(
-        [vUSDT.address, vUSDD.address],
+        [vTOKEN2.address, vTOKEN1.address],
         [convertToUnit(1, 50), convertToUnit(1, 50)],
       );
-      await comptroller.connect(acc1Signer).enterMarkets([vUSDT.address]);
-      await comptroller.connect(acc2Signer).enterMarkets([vUSDT.address, vUSDD.address]);
-      await comptroller.connect(acc3Signer).enterMarkets([vUSDD.address]);
+      await comptroller.connect(acc1Signer).enterMarkets([vTOKEN2.address]);
+      await comptroller.connect(acc2Signer).enterMarkets([vTOKEN2.address, vTOKEN1.address]);
+      await comptroller.connect(acc3Signer).enterMarkets([vTOKEN1.address]);
     }
 
     beforeEach(async () => {
       await setup();
-      await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 15));
+      await priceOracle.setDirectPrice(token2.address, convertToUnit("1", 15));
     });
 
     const calculateExchangeRate = async () => {
-      const cash = await vUSDT.getCash();
-      const borrows = await vUSDT.totalBorrows();
-      const badDebt = await vUSDT.badDebt();
-      const reserves = await vUSDT.totalReserves();
-      const supply = await vUSDT.totalSupply();
-      const exchangeRatecal = new BigNumber(Number(cash) + Number(borrows) + Number(badDebt) - Number(reserves))
-        .multipliedBy(Number(convertToUnit(1, 18)))
-        .toFixed(0);
+      const cash = await vTOKEN2.getCash();
+      const borrows = await vTOKEN2.totalBorrows();
+      const badDebt = await vTOKEN2.badDebt();
+      const reserves = await vTOKEN2.totalReserves();
+      const supply = await vTOKEN2.totalSupply();
 
       if (Number(supply) == 0) {
-        return await vUSDT.exchangeRateStored();
+        return await vTOKEN2.exchangeRateStored();
       }
 
-      return new BigNumber(exchangeRatecal).dividedBy(Number(supply)).toFixed(0);
+      const exchangeRatecal = BigNumber.from(cash)
+        .add(BigNumber.from(borrows))
+        .add(BigNumber.from(badDebt))
+        .sub(BigNumber.from(reserves))
+        .mul(BigNumber.from(convertToUnit(1, 18)));
+
+      return BigNumber.from(exchangeRatecal).div(BigNumber.from(supply));
     };
 
     const assertExchangeRate = async () => {
-      const exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
+      await vTOKEN2.accrueInterest();
+      const exchangeRate = await vTOKEN2.exchangeRateStored();
       const calculatedRate = await calculateExchangeRate();
-      expect(exchangeRate).closeTo(calculatedRate, 1);
+      expect(exchangeRate).equals(calculatedRate);
     };
 
     const assertRedeemAmount = async (accountBalance, balanceBefore) => {
-      const balanceAfter = await usdt.balanceOf(acc1);
-
-      const exchangeRate = await vUSDT.callStatic.exchangeRateCurrent();
-      const expectedRedeemAmount = new BigNumber(Number(accountBalance))
-        .multipliedBy(Number(exchangeRate))
-        .dividedBy(Number(convertToUnit(1, 18)))
-        .plus(Number(balanceBefore))
-        .toFixed(0);
-      expect(expectedRedeemAmount).closeTo(balanceAfter, 10);
+      const balanceAfter = await token2.balanceOf(ACC1);
+      const exchangeRate = await vTOKEN2.callStatic.exchangeRateCurrent();
+      const expectedRedeemAmount = BigNumber.from(accountBalance)
+        .mul(BigNumber.from(exchangeRate))
+        .div(BigNumber.from(convertToUnit(1, 18)))
+        .add(BigNumber.from(balanceBefore));
+      expect(expectedRedeemAmount).closeTo(balanceAfter, 120);
     };
 
     it("Evolution of exchange rate", async () => {
-      const mintAmount = convertToUnit("1", 17);
-      // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      const mintAmount = convertToUnit("1", 18);
+      await vTOKEN2.accrueInterest();
+
+      // Assert current exchange rate
+      await assertExchangeRate();
+      // Mint vTOKEN2 with first account(ACC1)
+      await token2.connect(token2Holder).transfer(ACC1, convertToUnit(2, 18));
+      await token2.connect(acc1Signer).approve(vTOKEN2.address, convertToUnit(2, 18));
+      await expect(vTOKEN2.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
+
+      // Mining  3,00,000 blocks
+      await mine(300000);
 
       // Assert current exchange rate
       await assertExchangeRate();
 
-      // Mint vUSDT with first account(acc1)
-      await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(2, 18));
-      await usdt.connect(acc1Signer).approve(vUSDT.address, convertToUnit(2, 18));
-      await expect(vUSDT.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vUSDT, "Mint");
+      // Set oracle price for TOKEN2
+      await priceOracle.setDirectPrice(token2.address, convertToUnit("1", 15));
+
+      let [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(ACC2);
+
+      // Mint vTOKEN1 with second account(ACC2)
+      await token1.connect(token1Holder).transfer(ACC2, mintAmount);
+      await token1.connect(acc2Signer).approve(vTOKEN1.address, mintAmount);
+      await expect(vTOKEN1.connect(acc2Signer).mint(mintAmount)).to.emit(vTOKEN1, "Mint");
+
+      // Borrow TOKEN2 with second account(ACC2)
+      await expect(vTOKEN2.connect(acc2Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
-
-      // Assert current exchange rate
-      await assertExchangeRate();
-
-      // Set oracle price for usdt
-      await priceOracle.setDirectPrice(usdt.address, convertToUnit("1", 15));
-
-      // Mint vUSDD with second account(acc2)
-      await usdd.connect(acc2Signer).faucet(mintAmount);
-      await usdd.connect(acc2Signer).approve(vUSDD.address, mintAmount);
-      await expect(vUSDD.connect(acc2Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
-
-      // Borrow usdt with second account(acc2)
-      await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
-
-      // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
       // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
 
-      await usdt.connect(acc2Signer).approve(vUSDT.address, convertToUnit(1, 5));
-      await vUSDT.connect(acc2Signer).repayBorrow(usdtBorrowAmount);
+      await token2.connect(acc2Signer).approve(vTOKEN2.address, convertToUnit(1, 18));
+
+      await vTOKEN2.connect(acc2Signer).repayBorrow(TOKEN2BorrowAmount);
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
       // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
 
-      // setup to liquidate the second account(acc2) with first account(acc1)
+      // setup to liquidate the second account(ACC2) with first account(ACC1)
       await comptroller.setMinLiquidatableCollateral(0);
-      await expect(vUSDT.connect(acc2Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
-      await priceOracle.setDirectPrice(usdd.address, convertToUnit("1.05", 14));
+      const tuple1 = {
+        asset: TOKEN2,
+        feed: CHAINLINK_ORACLE,
+        maxStalePeriod: "900000000000000000000000000000000000000000000000000000000000",
+      };
+      const tuple2 = {
+        asset: TOKEN1,
+        feed: CHAINLINK_ORACLE,
+        maxStalePeriod: "900000000000000000000000000000000000000000000000000000000000",
+      };
+      await priceOracle.setTokenConfig(tuple1);
+      await priceOracle.setTokenConfig(tuple2);
 
-      const [err, liquidity, shortfall] = await comptroller.callStatic.getAccountLiquidity(acc2);
+      await expect(vTOKEN2.connect(acc2Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
+      await priceOracle.setDirectPrice(token1.address, convertToUnit("1.05", 14));
+
+      [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(ACC2);
+
       expect(err).equals(0);
       expect(liquidity).equals(0);
       expect(shortfall).greaterThan(0);
 
-      const borrowBalance = (await vUSDT.borrowBalanceStored(acc2)).toString();
+      const borrowBalance = (await vTOKEN2.borrowBalanceStored(ACC2)).toString();
       const closeFactor = (await comptroller.closeFactorMantissa()).toString();
-      const maxClose = new BigNumber(borrowBalance).multipliedBy(closeFactor).dividedBy(2e18).toFixed(0);
-      let result = vUSDT.connect(acc1Signer).liquidateBorrow(acc2, maxClose, vUSDD.address);
-      await expect(result).to.emit(vUSDT, "LiquidateBorrow");
+      const maxClose = BigInt(BigInt(borrowBalance) * BigInt(closeFactor)) / BigInt(2e18);
+      let result = vTOKEN2.connect(acc1Signer).liquidateBorrow(ACC2, maxClose, vTOKEN1.address);
+      await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
       // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
 
-      // Setup for healAccount(acc2)
-      await priceOracle.setDirectPrice(usdd.address, convertToUnit(1, 10));
-      await priceOracle.setDirectPrice(usdt.address, convertToUnit(1, 18));
+      // Setup for healAccount(ACC2)
 
-      const [err2, liquidity2, shortfall2] = await comptroller.callStatic.getAccountLiquidity(acc2);
+      await priceOracle.setDirectPrice(token1.address, convertToUnit(1, 10));
+      await priceOracle.setDirectPrice(token2.address, convertToUnit(1, 18));
+
+      const [err2, liquidity2, shortfall2] = await comptroller.getAccountLiquidity(ACC2);
       expect(err2).equals(0);
       expect(liquidity2).equals(0);
       expect(shortfall2).greaterThan(0);
       await comptroller.setMinLiquidatableCollateral(convertToUnit(1, 22));
 
-      result = comptroller.connect(acc1Signer).healAccount(acc2);
-      await expect(result).to.emit(vUSDT, "RepayBorrow");
+      result = comptroller.connect(acc1Signer).healAccount(ACC2);
+      await expect(result).to.emit(vTOKEN2, "RepayBorrow");
 
       // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
 
-      const totalBal = await vUSDT.balanceOf(acc1);
-      await expect(vUSDT.connect(acc1Signer).redeem(totalBal)).to.emit(vUSDT, "Redeem");
+      const totalBal = await vTOKEN2.balanceOf(ACC1);
+      await expect(vTOKEN2.connect(acc1Signer).redeem(totalBal)).to.emit(vTOKEN2, "Redeem");
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
       // Accural all the interest till latest block
-      await vUSDT.accrueInterest();
+      await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
@@ -275,41 +327,41 @@ if (FORK_TESTNET) {
 
     it("Three users Mint, one redeems", async () => {
       const mintAmount = convertToUnit("1", 18);
-      // Mint vUSDT with first account(acc1)
-      await usdt.connect(acc1Signer).allocateTo(acc1, convertToUnit(2, 18));
-      await usdt.connect(acc1Signer).approve(vUSDT.address, convertToUnit(2, 18));
-      await expect(vUSDT.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vUSDT, "Mint");
+      // Mint vTOKEN2 with first account(ACC1)
+      await token2.connect(token2Holder).transfer(ACC1, convertToUnit(2, 18));
+      await token2.connect(acc1Signer).approve(vTOKEN2.address, convertToUnit(2, 18));
+      await expect(vTOKEN2.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
 
-      // Mint vUSDT with second account(acc2)
-      await usdt.connect(acc2Signer).allocateTo(acc2, convertToUnit(2, 18));
-      await usdt.connect(acc2Signer).approve(vUSDT.address, convertToUnit(2, 18));
-      await expect(vUSDT.connect(acc2Signer).mint(convertToUnit(1, 18))).to.emit(vUSDT, "Mint");
+      // Mint vTOKEN2 with second account(ACC2)
+      await token2.connect(token2Holder).transfer(ACC2, convertToUnit(2, 18));
+      await token2.connect(acc2Signer).approve(vTOKEN2.address, convertToUnit(2, 18));
+      await expect(vTOKEN2.connect(acc2Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
 
-      // Mint vUSDD with second account(acc2)
-      await usdd.connect(acc3Signer).faucet(mintAmount);
-      await usdd.connect(acc3Signer).approve(vUSDD.address, mintAmount);
-      await expect(vUSDD.connect(acc3Signer).mint(mintAmount)).to.emit(vUSDD, "Mint");
+      // Mint vTOKEN1 with second account(ACC2)
+      await token1.connect(token1Holder).transfer(ACC3, mintAmount);
+      await token1.connect(acc3Signer).approve(vTOKEN1.address, mintAmount);
+      await expect(vTOKEN1.connect(acc3Signer).mint(mintAmount)).to.emit(vTOKEN1, "Mint");
 
-      // Borrow usdt with third account(acc3)
-      await expect(vUSDT.connect(acc3Signer).borrow(usdtBorrowAmount)).to.be.emit(vUSDT, "Borrow");
+      // Borrow TOKEN2 with third account(ACC3)
+      await expect(vTOKEN2.connect(acc3Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
-      // Partial redeem for first account(acc1)
-      let balanceBefore = await usdt.balanceOf(acc1);
-      await vUSDT.connect(acc1Signer).redeem(convertToUnit(5, 17));
+      // Partial redeem for first account(ACC1)
+      let balanceBefore = await token2.balanceOf(ACC1);
+      await vTOKEN2.connect(acc1Signer).redeem(convertToUnit(5, 7));
 
       // Assert undelying after partial redeem
-      await assertRedeemAmount(convertToUnit(5, 17), balanceBefore);
+      await assertRedeemAmount(convertToUnit(5, 7), balanceBefore);
 
       // Mine 300,000 blocks
-      await mine(blocksToMint);
+      await mine(blocksToMine);
 
-      // Complete redeem for first account(acc1)
-      const accountBalance = await vUSDT.balanceOf(acc1);
-      balanceBefore = await usdt.balanceOf(acc1);
-      await vUSDT.connect(acc1Signer).redeem(accountBalance);
+      // Complete redeem for first account(ACC1)
+      const accountBalance = await vTOKEN2.balanceOf(ACC1);
+      balanceBefore = await token2.balanceOf(ACC1);
+      await vTOKEN2.connect(acc1Signer).redeem(accountBalance);
 
       // Assert undelying after complete redeem
       await assertRedeemAmount(accountBalance, balanceBefore);
