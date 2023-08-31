@@ -3,7 +3,6 @@ pragma solidity 0.8.13;
 
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
@@ -131,8 +130,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @dev Reverts if the new address is zero.
      * @param oracleAddress_ The new address of the ResilientOracle contract.
      */
-    function setOracle(address oracleAddress_) external {
-        _ensureAllowed("setOracle(address)");
+    function setOracle(address oracleAddress_) external onlyOwner {
         ensureNonzeroAddress(oracleAddress_);
         emit OracleChanged(address(oracle), oracleAddress_);
         oracle = ResilientOracleInterface(oracleAddress_);
@@ -143,8 +141,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param chainId_ Destination chain id.
      * @param limit_ Amount in USD.
      */
-    function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxSingleTransactionLimit(uint16,uint256)");
+    function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         emit SetMaxSingleTransactionLimit(chainIdToMaxSingleTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleTransactionLimit[chainId_] = limit_;
     }
@@ -154,8 +151,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param chainId_ Destination chain id.
      * @param limit_ Amount in USD.
      */
-    function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxDailyLimit(uint16,uint256)");
+    function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(limit_ >= chainIdToMaxSingleTransactionLimit[chainId_], "Daily limit < single transaction limit");
         emit SetMaxDailyLimit(chainIdToMaxDailyLimit[chainId_], limit_);
         chainIdToMaxDailyLimit[chainId_] = limit_;
@@ -166,8 +162,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param chainId_ The destination chain ID.
      * @param limit_ The new maximum limit in USD.
      */
-    function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxSingleReceiveTransactionLimit(uint16,uint256)");
+    function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleReceiveTransactionLimit[chainId_] = limit_;
     }
@@ -177,8 +172,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param chainId_ The destination chain ID.
      * @param limit_ The new maximum daily limit in USD.
      */
-    function setMaxDailyReceiveLimit(uint16 chainId_, uint256 limit_) external {
-        _ensureAllowed("setMaxDailyReceiveLimit(uint16,uint256)");
+    function setMaxDailyReceiveLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(
             limit_ >= chainIdToMaxSingleReceiveTransactionLimit[chainId_],
             "Daily limit < single receive transaction limit"
@@ -192,8 +186,7 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param user_ Adress to be add in whitelist.
      * @param val_ Boolean to be set (true for isWhitelisted address)
      */
-    function setWhitelist(address user_, bool val_) external {
-        _ensureAllowed("SetWhitelistAddress(uint16,address)");
+    function setWhitelist(address user_, bool val_) external onlyOwner {
         emit SetWhitelist(user_, val_);
         whitelist[user_] = val_;
     }
@@ -201,16 +194,14 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Triggers stopped state of the bridge.
      */
-    function pause() external {
-        _ensureAllowed("pause()");
+    function pause() external onlyOwner {
         _pause();
     }
 
     /**
      * @notice Triggers resume state of the bridge.
      */
-    function unpause() external {
-        _ensureAllowed("unpause()");
+    function unpause() external onlyOwner {
         _unpause();
     }
 
@@ -352,13 +343,5 @@ contract XVSProxyOFTSrc is Pausable, ExponentialNoError, BaseOFTV2 {
 
     function _ld2sdRate() internal view override returns (uint256) {
         return ld2sdRate;
-    }
-
-    /// @dev Checks the caller is allowed to call the specified fuction
-    function _ensureAllowed(string memory functionSig_) internal view {
-        require(
-            IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_),
-            "access denied"
-        );
     }
 }

@@ -41,7 +41,8 @@ describe("Proxy OFTV2: ", function () {
     localOFT: XVSProxyOFTSrc,
     remoteOFT: XVSProxyOFTDest,
     localToken: MockToken,
-    bridgeAdmin: XVSBridgeAdmin,
+    bridgeAdminRemote: XVSBridgeAdmin,
+    bridgeAdminLocal: XVSBridgeAdmin,
     remoteToken: XVS,
     remotePath: string,
     localPath: string,
@@ -91,13 +92,20 @@ describe("Proxy OFTV2: ", function () {
     );
 
     const bridgeAdminFactory = await ethers.getContractFactory("XVSBridgeAdmin");
-    bridgeAdmin = await upgrades.deployProxy(bridgeAdminFactory, [accessControlManager.address], {
+    bridgeAdminRemote = await upgrades.deployProxy(bridgeAdminFactory, [accessControlManager.address], {
       constructorArgs: [remoteOFT.address],
       initializer: "initialize",
     });
-    await bridgeAdmin.deployed();
+    await bridgeAdminRemote.deployed();
 
-    await remoteOFT.transferOwnership(bridgeAdmin.address);
+    bridgeAdminLocal = await upgrades.deployProxy(bridgeAdminFactory, [accessControlManager.address], {
+      constructorArgs: [localOFT.address],
+      initializer: "initialize",
+    });
+    await bridgeAdminLocal.deployed();
+
+    await remoteOFT.transferOwnership(bridgeAdminRemote.address);
+    await localOFT.transferOwnership(bridgeAdminLocal.address);
     // internal bookkeeping for endpoints (not part of a real deploy, just for this test)
     await localEndpoint.setDestLzEndpoint(remoteOFT.address, remoteEndpoint.address);
     await remoteEndpoint.setDestLzEndpoint(localOFT.address, localEndpoint.address);
@@ -106,40 +114,70 @@ describe("Proxy OFTV2: ", function () {
     remotePath = ethers.utils.solidityPack(["address", "address"], [remoteOFT.address, localOFT.address]);
     localPath = ethers.utils.solidityPack(["address", "address"], [localOFT.address, remoteOFT.address]);
 
-    await localOFT.setTrustedRemote(remoteChainId, remotePath); // for A, set B
-
     // Should revert admin of remoteOFT is BridgeAdmin contract
     await expect(remoteOFT.setTrustedRemote(localChainId, localPath)).to.be.revertedWith(
       "Ownable: caller is not the owner",
     );
 
-    let data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, localPath]);
+    await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
+
+    // Setting local chain
+    let data = localOFT.interface.encodeFunctionData("setTrustedRemote", [remoteChainId, remotePath]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminLocal.address,
       data: data,
     });
 
-    await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
+    data = localOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
+      remoteChainId,
+      singleTransactionLimit,
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
 
-    await localOFT.setMaxSingleTransactionLimit(remoteChainId, singleTransactionLimit);
-    await localOFT.setMaxDailyLimit(remoteChainId, maxDailyTransactionLimit);
+    data = localOFT.interface.encodeFunctionData("setMaxDailyLimit", [remoteChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
 
-    await localOFT.setMaxSingleReceiveTransactionLimit(remoteChainId, singleTransactionLimit);
-    await localOFT.setMaxDailyReceiveLimit(remoteChainId, maxDailyTransactionLimit);
+    data = localOFT.interface.encodeFunctionData("setMaxSingleReceiveTransactionLimit", [
+      remoteChainId,
+      singleTransactionLimit,
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
+
+    data = localOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [remoteChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
 
     // Setting remote chain
+
+    data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, localPath]);
+    await deployer.sendTransaction({
+      to: bridgeAdminRemote.address,
+      data: data,
+    });
+
     data = remoteOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
       localChainId,
       singleTransactionLimit,
     ]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
     data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
@@ -148,13 +186,13 @@ describe("Proxy OFTV2: ", function () {
       singleTransactionLimit,
     ]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
     data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
   });
@@ -240,7 +278,7 @@ describe("Proxy OFTV2: ", function () {
       convertToUnit(5, 18),
     ]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
@@ -306,7 +344,7 @@ describe("Proxy OFTV2: ", function () {
     const remoteReceiveLimit = convertToUnit(90, 18);
     const data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, remoteReceiveLimit]);
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
@@ -514,7 +552,7 @@ describe("Proxy OFTV2: ", function () {
   it("Reverts on remote chain if bridge is paused", async function () {
     const data = remoteOFT.interface.encodeFunctionData("pause");
     await deployer.sendTransaction({
-      to: bridgeAdmin.address,
+      to: bridgeAdminRemote.address,
       data: data,
     });
 
@@ -562,8 +600,20 @@ describe("Proxy OFTV2: ", function () {
   });
 
   it("total outbound amount overflow", async function () {
-    await localOFT.setMaxSingleTransactionLimit(remoteChainId, ethers.constants.MaxUint256);
-    await localOFT.setMaxDailyLimit(remoteChainId, ethers.constants.MaxUint256);
+    let data = localOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
+      remoteChainId,
+      ethers.constants.MaxUint256,
+    ]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
+
+    data = localOFT.interface.encodeFunctionData("setMaxDailyLimit", [remoteChainId, ethers.constants.MaxUint256]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
 
     await localToken.connect(alice).faucet(ethers.constants.MaxUint256);
     const maxUint64 = BigNumber.from(2).pow(64).sub(1);
