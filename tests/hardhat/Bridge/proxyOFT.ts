@@ -77,13 +77,7 @@ describe("Proxy OFTV2: ", function () {
     localToken = await LocalTokenFactory.deploy(name, symbol, 18);
     remoteToken = await RemoteTokenFactory.deploy(accessControlManager.address);
 
-    localOFT = await ProxyOFTV2Src.deploy(
-      localToken.address,
-      sharedDecimals,
-      localEndpoint.address,
-      accessControlManager.address,
-      oracle.address,
-    );
+    localOFT = await ProxyOFTV2Src.deploy(localToken.address, sharedDecimals, localEndpoint.address, oracle.address);
     remoteOFT = await ProxyOFTV2Dest.deploy(
       remoteToken.address,
       sharedDecimals,
