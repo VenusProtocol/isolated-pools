@@ -2,7 +2,7 @@ import { ethers, getNamedAccounts } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { PoolConfig, RewardConfig, getConfig } from "../helpers/deploymentConfig";
+import { PoolConfig, getConfig } from "../helpers/deploymentConfig";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const rewardsDistributors = poolConfig
     .map((pool: PoolConfig) => {
       const rewards = pool.rewards || [];
-      return rewards.map((reward: RewardConfig) => `RewardsDistributor_${reward.asset}_${pool.id}`);
+      return rewards.map((_, idx: number) => `RewardsDistributor_${pool.id}_${idx}`);
     })
     .flat();
 
