@@ -180,7 +180,7 @@ const config: HardhatUserConfig = {
     },
     ethereum: {
       url: "http://127.0.0.1:1248",
-      chainId: 56,
+      chainId: 1,
       live: true,
       timeout: 1200000, // 20 minutes
     },
