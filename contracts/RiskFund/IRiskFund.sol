@@ -13,11 +13,7 @@ interface IRiskFund {
         address[][] calldata paths
     ) external returns (uint256);
 
-    function transferReserveForAuction(
-        address comptroller,
-        address highestBidder,
-        uint256 amount
-    ) external returns (uint256);
+    function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256);
 
     function updateAssetsState(address comptroller, address asset) external;
 

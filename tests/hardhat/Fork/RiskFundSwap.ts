@@ -106,6 +106,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
   const shortfall = await upgrades.deployProxy(Shortfall, [
+    BUSD.address,
     AddressOne,
     parseUnits("10000", 18),
     fakeAccessControlManager.address,
