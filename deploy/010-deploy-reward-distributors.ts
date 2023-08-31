@@ -26,18 +26,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     autoMine: true,
     log: true,
+    skipIfAlreadyDeployed: true,
   });
 
   for (const pool of pools) {
     const rewards = pool.rewards;
     if (!rewards) continue;
     const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
-    for (const reward of rewards) {
+    for (const [idx, reward] of rewards.entries()) {
       // Get reward token address
       const tokenConfig = getTokenConfig(reward.asset, tokensConfig);
       const rewardTokenAddress = await getTokenAddress(tokenConfig, deployments);
       // Custom contract name so we can obtain the proxy after that easily
-      const contractName = `RewardsDistributor_${reward.asset}_${pool.id}`;
+      const contractName = `RewardsDistributor_${pool.id}_${idx}`;
       await deploy(contractName, {
         from: deployer,
         contract: "RewardsDistributor",
@@ -53,6 +54,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         },
         autoMine: true,
         log: true,
+        skipIfAlreadyDeployed: true,
       });
     }
   }

@@ -86,7 +86,7 @@ const preconfiguredAddresses = {
     VTreasury: "account:deployer",
   },
   bsctestnet: {
-    VTreasury: "account:deployer",
+    VTreasury: "0x8b293600c50d6fbdc6ed4251cc75ece29880276f",
     NormalTimelock: "0xce10739590001705F7FF231611ba4A48B2820327",
     FastTrackTimelock: "0x3CFf21b7AF8390fE68799D58727d3b4C25a83cb6",
     CriticalTimelock: "0x23B893a7C45a5Eb8c8C062b9F32d0D2e43eD286D",
@@ -550,14 +550,6 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "beefy.finance",
-        symbol: "BIFI",
-        decimals: 18,
-        tokenAddress: "0x5B662703775171c4212F2FBAdb7F92e64116c154",
-        faucetInitialLiquidity: true,
-      },
-      {
-        isMock: false,
         name: "Biswap",
         symbol: "BSW",
         decimals: 18,
@@ -734,6 +726,12 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
           },
+          {
+            asset: "HAY",
+            markets: ["HAY"],
+            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
         ],
       },
       {
@@ -743,23 +741,6 @@ export const globalConfig: NetworkConfig = {
         liquidationIncentive: convertToUnit("1.1", 18),
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
-          {
-            name: "Venus BIFI (DeFi)",
-            asset: "BIFI",
-            symbol: "vBIFI_DeFi",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: convertToUnit("0.02", 18),
-            multiplierPerYear: convertToUnit("0.2", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.5", 18),
-            collateralFactor: convertToUnit("0.25", 18),
-            liquidationThreshold: convertToUnit("0.3", 18),
-            reserveFactor: convertToUnit("0.25", 18),
-            initialSupply: convertToUnit("50", 18),
-            supplyCap: convertToUnit("379", 18),
-            borrowCap: convertToUnit("266", 18),
-            vTokenReceiver: "0x7C780b8A63eE9B7d0F985E8a922Be38a1F7B2141",
-          },
           {
             name: "Venus BSW (DeFi)",
             asset: "BSW",
@@ -845,6 +826,23 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
           },
+          {
+            name: "Venus ankrBNB (DeFi)",
+            asset: "ankrBNB",
+            symbol: "vankrBNB_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.035", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("39", 18),
+            supplyCap: convertToUnit("5000", 18),
+            borrowCap: convertToUnit("4000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+          },
         ],
         rewards: [
           {
@@ -852,6 +850,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["BSW"],
             supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
             borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+          {
+            asset: "ANKR",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+            borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
           },
         ],
       },
@@ -1075,6 +1079,12 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
             borrowSpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
           },
+          {
+            asset: "SD",
+            markets: ["BNBx"],
+            supplySpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
+            borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
+          },
         ],
       },
       {
@@ -1255,13 +1265,6 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "beefy.finance",
-        symbol: "BIFI",
-        decimals: 18,
-        tokenAddress: "0xCa3F508B8e4Dd382eE878A314789373D80A5190A",
-      },
-      {
-        isMock: false,
         name: "Biswap",
         symbol: "BSW",
         decimals: 18,
@@ -1426,6 +1429,12 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
           },
+          {
+            asset: "HAY",
+            markets: ["HAY"],
+            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
         ],
       },
       {
@@ -1435,23 +1444,6 @@ export const globalConfig: NetworkConfig = {
         liquidationIncentive: convertToUnit("1.1", 18),
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
-          {
-            name: "Venus BIFI (DeFi)",
-            asset: "BIFI",
-            symbol: "vBIFI_DeFi",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: convertToUnit("0.02", 18),
-            multiplierPerYear: convertToUnit("0.2", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.5", 18),
-            collateralFactor: convertToUnit("0.25", 18),
-            liquidationThreshold: convertToUnit("0.3", 18),
-            reserveFactor: convertToUnit("0.25", 18),
-            initialSupply: convertToUnit("50", 18),
-            supplyCap: convertToUnit("379", 18),
-            borrowCap: convertToUnit("266", 18),
-            vTokenReceiver: "0x7C780b8A63eE9B7d0F985E8a922Be38a1F7B2141",
-          },
           {
             name: "Venus BSW (DeFi)",
             asset: "BSW",
@@ -1537,6 +1529,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
           },
+
+          {
+            name: "Venus ankrBNB (DeFi)",
+            asset: "ankrBNB",
+            symbol: "vankrBNB_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.035", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("39", 18),
+            supplyCap: convertToUnit("5000", 18),
+            borrowCap: convertToUnit("4000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+          },
         ],
         rewards: [
           {
@@ -1544,6 +1554,13 @@ export const globalConfig: NetworkConfig = {
             markets: ["BSW"],
             supplySpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
             borrowSpeeds: ["16753472222222222"], // 14475 BSW over 30 days (864000 blocks)
+          },
+
+          {
+            asset: "ANKR",
+            markets: ["ankrBNB"],
+            supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+            borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
           },
         ],
       },
@@ -1766,6 +1783,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["BNBx"],
             supplySpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
             borrowSpeeds: ["3703703703703703"], // 3200 SD over 30 days (864000 blocks)
+          },
+          {
+            asset: "SD",
+            markets: ["BNBx"],
+            supplySpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
+            borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
           },
         ],
       },

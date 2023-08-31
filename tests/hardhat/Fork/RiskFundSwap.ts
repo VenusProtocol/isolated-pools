@@ -222,6 +222,7 @@ describe("Risk Fund: Swap Tests", () => {
   beforeEach(async () => {
     await loadFixture(riskFundFixture);
   });
+
   it("Swap All Pool Assets", async () => {
     await USDT.connect(usdtUser).approve(vUSDT.address, ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
@@ -229,10 +230,11 @@ describe("Risk Fund: Swap Tests", () => {
 
     await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
 
-    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]]);
-    expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("14960261570862459704");
+    const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+    await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]], deadline);
+    expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("24931282761361385504");
 
     const balance = await BUSD.balanceOf(riskFund.address);
-    expect(Number(balance)).to.be.closeTo(Number(parseUnits("15", 18)), Number(parseUnits("1", 17)));
+    expect(Number(balance)).to.be.closeTo(Number(parseUnits("25", 18)), Number(parseUnits("1", 17)));
   });
 });
