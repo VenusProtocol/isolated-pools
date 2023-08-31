@@ -72,9 +72,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         IAccessControlManagerV8 accessControlManager_
     ) {
         require(address(accessControlManager_) != address(0), "invalid ACM address");
-        require(_blocksPerYear != 0, "Invalid blocks per year");
+        require(blocksPerYear_ != 0, "Invalid blocks per year");
         accessControlManager = accessControlManager_;
-        blocksPerYear = _blocksPerYear;
+        blocksPerYear = blocksPerYear_;
 
         _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
     }
