@@ -1,3 +1,22 @@
+## [2.0.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2023-08-31)
+
+
+### Features
+
+* add deployment info for the last rewards in the LSB pool ([5e8a082](https://github.com/VenusProtocol/isolated-pools/commit/5e8a08218984caed92fb6591f03c53648478f8ea))
+* deploy HAY rewards distributor ([30325ea](https://github.com/VenusProtocol/isolated-pools/commit/30325ea4a680f2b81457ce7f72f857292ccf18bf))
+* deployed SD Rewards distributor ([98b514d](https://github.com/VenusProtocol/isolated-pools/commit/98b514dc49b38c3a37eaf9a8d69081ffdd7d7516))
+
+
+### Bug Fixes
+
+* added SD rewards distributor ([ed4ed8a](https://github.com/VenusProtocol/isolated-pools/commit/ed4ed8a3a26620d06143cf9912889cb82bb35cd9))
+* deployed latest comptroller ([3599ed4](https://github.com/VenusProtocol/isolated-pools/commit/3599ed40c6c10f1f09df2d7288566eccb7c6e2a2))
+* deployed reward distributors for mainnet and testnet ([2aedd92](https://github.com/VenusProtocol/isolated-pools/commit/2aedd92714a101d2ce8d255ab24051049d647ed3))
+* fix deployment of comptroller and verification ([50d6edd](https://github.com/VenusProtocol/isolated-pools/commit/50d6edd8e6184407777eeb8fc281fe3862a7988c))
+* redeployed HAY reward distributors ([5c62416](https://github.com/VenusProtocol/isolated-pools/commit/5c62416d2fa791be949c7d37b0490ca221a87e9d))
+* set the last reward distributor deployed for HAY ([0955403](https://github.com/VenusProtocol/isolated-pools/commit/09554032ca5ed3b04db228d5359a2e4db2fa8fd3))
+
 ## [2.0.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2023-08-24)
 
 ## [2.0.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2023-08-24)
