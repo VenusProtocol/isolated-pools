@@ -57,6 +57,11 @@ describe("Bridge Admin: ", function () {
       .connect(deployer)
       .giveCallPermission(bridgeAdmin.address, "setMaxDailyReceiveLimit(uint16,uint256)", alice.address);
     await tx.wait();
+
+    tx = await accessControlManager
+      .connect(deployer)
+      .giveCallPermission(bridgeAdmin.address, "transferBridgeOwnership(address)", alice.address);
+    await tx.wait();
   }
 
   before(async function () {
@@ -186,5 +191,10 @@ describe("Bridge Admin: ", function () {
       to: bridgeAdmin.address,
       data: data,
     });
+  });
+
+  it("Success on trnafer bridge owner", async function () {
+    await bridgeAdmin.connect(alice).transferBridgeOwnership(alice.address);
+    expect(await remoteOFT.owner()).equals(alice.address);
   });
 });

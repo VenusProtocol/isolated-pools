@@ -219,6 +219,7 @@ describe("Proxy OFTV2: ", function () {
 
     // tokens are now owned by the proxy contract, because this is the original oft chain
     expect(await localToken.balanceOf(localOFT.address)).to.equal(amount);
+    expect(await localOFT.circulatingSupply()).to.equal(amount.div(10 ** (18 - sharedDecimals)));
     expect(await localToken.balanceOf(alice.address)).to.equal(dust);
     // tokens received on the remote chain
     expect(await remoteOFT.circulatingSupply()).to.equal(amount);
@@ -549,6 +550,30 @@ describe("Proxy OFTV2: ", function () {
       to: bridgeAdminRemote.address,
       data: data,
     });
+
+    amount = ethers.utils.parseEther("10", 18);
+    await localToken.connect(alice).faucet(amount);
+    await localToken.connect(alice).approve(localOFT.address, amount);
+
+    const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
+    let nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+
+    await expect(
+      localOFT
+        .connect(alice)
+        .sendFrom(
+          alice.address,
+          remoteChainId,
+          bobAddressBytes32,
+          amount,
+          [alice.address, ethers.constants.AddressZero, "0x"],
+          { value: nativeFee },
+        ),
+    ).not.to.emit(remoteOFT, "ReceiveFromChain");
+  });
+
+  it("Reverts on remote chain if xvs token is paused", async function () {
+    await remoteToken.pause();
 
     amount = ethers.utils.parseEther("10", 18);
     await localToken.connect(alice).faucet(amount);
