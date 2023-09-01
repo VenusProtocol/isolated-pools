@@ -2244,16 +2244,84 @@ export const globalConfig: NetworkConfig = {
   },
   sepolia: {
     tokensConfig: [
-      // TODO: add token config for Sepolia network
+      {
+        isMock: true,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
-      // TODO: add pool config for Sepolia network
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus WBTC (Core)",
+            asset: "WBTC",
+            symbol: "vWBTC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.75", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit(1, 8), // 1 WBTC
+            supplyCap: convertToUnit(100, 8),
+            borrowCap: convertToUnit(50, 8),
+            vTokenReceiver: SEPOLIA_MULTISIG, //TODO: replace with VTreasury when deployed
+          },
+          {
+            name: "Venus WETH (Core)",
+            asset: "WETH",
+            symbol: "vWETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.75", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit(10, 18), // 10 WETH
+            supplyCap: convertToUnit(1000, 18),
+            borrowCap: convertToUnit(500, 18),
+            vTokenReceiver: SEPOLIA_MULTISIG, //TODO: replace with VTreasury when deployed
+          },
+        ],
+        rewards: [],
+      },
     ],
     accessControlConfig: [
       ...poolRegistryPermissions(),
       ...normalTimelockPermissions(preconfiguredAddresses.sepolia.NormalTimelock),
-      ...fastTrackTimelockPermissions(preconfiguredAddresses.sepolia.FastTrackTimelock),
-      ...criticalTimelockPermissions(preconfiguredAddresses.sepolia.CriticalTimelock),
     ],
     preconfiguredAddresses: preconfiguredAddresses.sepolia,
   },
