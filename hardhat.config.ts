@@ -165,11 +165,11 @@ const config: HardhatUserConfig = {
       accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
     sepolia: {
-      url: "https://rpc2.sepolia.org",
+      url: "https://rpc.notadegen.com/eth/sepolia",
       chainId: 11155111,
       live: true,
       gasPrice: 20000000000,
-      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     // Mainnet deployments are done through Frame wallet RPC
     bscmainnet: {
