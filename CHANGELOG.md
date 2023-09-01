@@ -1,3 +1,10 @@
+## [2.0.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.8...v2.0.0-dev.9) (2023-09-01)
+
+
+### Features
+
+* make convertibleBaseAsset configurable ([d8d49de](https://github.com/VenusProtocol/isolated-pools/commit/d8d49de42c718fdeceb6bf31da5dc9265ccaf191))
+
 ## [2.0.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2023-08-31)
 
 
