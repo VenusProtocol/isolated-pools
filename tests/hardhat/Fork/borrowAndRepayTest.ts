@@ -19,8 +19,7 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import CONTRACT_ADDRESSES from "./constants/Contracts.json";
-import { initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -44,7 +43,7 @@ const {
   VTOKEN2,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
-} = CONTRACT_ADDRESSES[network as string];
+} = getContractAddresses(network as string);
 
 let impersonatedTimelock: Signer;
 let accessControlManager: AccessControlManager;

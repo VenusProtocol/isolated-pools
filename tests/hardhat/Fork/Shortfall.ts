@@ -24,8 +24,7 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import CONTRACT_ADDRESSES from "./constants/Contracts.json";
-import { initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const FORKING = process.env.FORKING === "true";
 let network = process.env.NETWORK_NAME;
@@ -44,7 +43,7 @@ const {
   USDT_HOLDER,
   TRX_HOLDER,
   BLOCK_NUMBER,
-} = CONTRACT_ADDRESSES[network as string];
+} = getContractAddresses(network as string);
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -58,19 +57,19 @@ let TOKEN1_HOLDER: string;
 let TOKEN2_HOLDER: string;
 if (network == "bsc") {
   COMPTROLLER_ADDRESS = COMPTROLLER_TRON;
-  TOKEN1 = CONTRACT_ADDRESSES[network as string].USDT; // 18 decimal
-  TOKEN2 = CONTRACT_ADDRESSES[network as string].TRX; // 6 decimal
-  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VUSDT_TRON;
-  VTOKEN2 = CONTRACT_ADDRESSES[network as string].VTRX_TRON;
+  TOKEN1 = getContractAddresses(network as string).USDT;
+  TOKEN2 = getContractAddresses(network as string).TRX;
+  VTOKEN1 = getContractAddresses(network as string).VUSDT_TRON;
+  VTOKEN2 = getContractAddresses(network as string).VTRX_TRON;
   TOKEN1_HOLDER = USDT_HOLDER;
   TOKEN2_HOLDER = TRX_HOLDER;
 } else if (network == "bsctestnet") {
   COMPTROLLER_ADDRESS = COMPTROLLER;
-  TOKEN1 = CONTRACT_ADDRESSES[network as string].TOKEN1; // token1 -> usdd ->18 decimal
-  TOKEN2 = CONTRACT_ADDRESSES[network as string].USDT; // testnet usdt -> 6 decimal
-  VTOKEN1 = CONTRACT_ADDRESSES[network as string].VTOKEN1; // vtoken1
-  VTOKEN2 = CONTRACT_ADDRESSES[network as string].VUSDT; // vusdt
-  TOKEN1_HOLDER = CONTRACT_ADDRESSES[network as string].TOKEN1_HOLDER;
+  TOKEN1 = getContractAddresses(network as string).TOKEN1;
+  TOKEN2 = getContractAddresses(network as string).USDT;
+  VTOKEN1 = getContractAddresses(network as string).VTOKEN1;
+  VTOKEN2 = getContractAddresses(network as string).VUSDT;
+  TOKEN1_HOLDER = getContractAddresses(network as string).TOKEN1_HOLDER;
   TOKEN2_HOLDER = USDT_HOLDER;
 }
 

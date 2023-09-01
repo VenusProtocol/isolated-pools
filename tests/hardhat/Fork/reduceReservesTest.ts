@@ -16,8 +16,7 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import CONTRACT_ADDRESSES from "./constants/Contracts.json";
-import { initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -26,8 +25,9 @@ const FORKING = process.env.FORKING === "true";
 let network = process.env.NETWORK_NAME;
 if (network == "") network = "bsc";
 
-const { ACM, ACC1, ACC2, ADMIN, TOKEN1, VTOKEN1, TOKEN1_HOLDER, COMPTROLLER, BLOCK_NUMBER } =
-  CONTRACT_ADDRESSES[network as string];
+const { ACM, ACC1, ACC2, ADMIN, TOKEN1, VTOKEN1, TOKEN1_HOLDER, COMPTROLLER, BLOCK_NUMBER } = getContractAddresses(
+  network as string,
+);
 
 let PROTOCOL_SHARE_RESERVE: string;
 let impersonatedTimelock: Signer;

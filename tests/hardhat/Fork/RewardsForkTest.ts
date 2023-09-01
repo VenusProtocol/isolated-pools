@@ -20,8 +20,7 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import CONTRACT_ADDRESSES from "./constants/Contracts.json";
-import { initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -42,7 +41,7 @@ const {
   BLOCK_NUMBER,
   REWARD_DISTRIBUTOR1,
   BINANCE_ORACLE,
-} = CONTRACT_ADDRESSES[network as string];
+} = getContractAddresses(network as string);
 
 const MANTISSA_ONE = convertToUnit(1, 18);
 
