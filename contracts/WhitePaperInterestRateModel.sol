@@ -32,14 +32,14 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
      */
     constructor(
-        uint256 _blocksPerYear,
+        uint256 blocksPerYear_,
         uint256 baseRatePerYear,
         uint256 multiplierPerYear
     ) {
-        require(_blocksPerYear != 0, "Invalid blocks per year");
-        baseRatePerBlock = baseRatePerYear / _blocksPerYear;
-        multiplierPerBlock = multiplierPerYear / _blocksPerYear;
-        blocksPerYear = _blocksPerYear;
+        require(blocksPerYear_ != 0, "Invalid blocks per year");
+        baseRatePerBlock = baseRatePerYear / blocksPerYear_;
+        multiplierPerBlock = multiplierPerYear / blocksPerYear_;
+        blocksPerYear = blocksPerYear_;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
     }

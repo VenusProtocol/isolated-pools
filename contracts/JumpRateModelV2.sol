@@ -12,7 +12,7 @@ import { BaseJumpRateModelV2 } from "./BaseJumpRateModelV2.sol";
  */
 contract JumpRateModelV2 is BaseJumpRateModelV2 {
     constructor(
-        uint256 _blocksPerYear,
+        uint256 blocksPerYear_,
         uint256 baseRatePerYear,
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
@@ -20,7 +20,7 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
         IAccessControlManagerV8 accessControlManager_
     )
         BaseJumpRateModelV2(
-            _blocksPerYear,
+            blocksPerYear_,
             baseRatePerYear,
             multiplierPerYear,
             jumpMultiplierPerYear,
