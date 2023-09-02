@@ -27,8 +27,7 @@ import {
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const FORKING = process.env.FORKING === "true";
-let network = process.env.NETWORK_NAME;
-if (network == "") network = "bsc";
+const network = process.env.NETWORK_NAME || "bsc";
 
 const {
   ADMIN,

@@ -5,17 +5,11 @@ import { ethers, network } from "hardhat";
 import { archiveNodes, contractAddreseses } from "./constants";
 
 function getArchieveNode(name: string) {
-  if (name != "") {
-    return archiveNodes[name];
-  }
-  return archiveNodes["bsc"];
+  return archiveNodes[name];
 }
 
 export function getContractAddresses(name: string) {
-  if (name != "") {
-    return contractAddreseses[name];
-  }
-  return contractAddreseses["bsc"];
+  return contractAddreseses[name];
 }
 
 export const forking = (blockNumber: number, fn: () => void) => {

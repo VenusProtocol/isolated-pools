@@ -26,8 +26,7 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 const FORKING = process.env.FORKING === "true";
-let network = process.env.NETWORK_NAME;
-if (network == "") network = "bsc";
+const network = process.env.NETWORK_NAME || "bsc";
 
 const {
   ACM,

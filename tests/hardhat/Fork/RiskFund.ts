@@ -26,8 +26,8 @@ import {
 import { deployVTokenBeacon, makeVToken } from "../util/TokenTestHelpers";
 import { getContractAddresses, setForkBlock } from "./utils";
 
-let network = process.env.NETWORK_NAME;
-if (network == "") network = "bsc";
+const FORKING = process.env.FORKING === "true";
+const network = process.env.NETWORK_NAME || "bsc";
 
 const { PANCAKE_SWAP_ROUTER, BUSD_HOLDER, USDC_HOLDER, USDT_HOLDER, BLOCK_NUMBER } = getContractAddresses(
   network as string,
@@ -59,8 +59,6 @@ let busdUser: SignerWithAddress;
 let usdcUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
-
-const FORKING = process.env.FORKING === "true";
 const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
 
 const initPancakeSwapRouter = async (
