@@ -61,7 +61,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice  Emitted when the maximum limit for a single transaction from local chain is modified.
      */
-    event SetMaxSingleTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    event SetMaxSingleTransactionLimit(uint16 chainId, uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Emitted when the maximum daily limit of transactions from local chain is modified.
      */
@@ -115,7 +115,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @param limit_ Amount in USD.
      */
     function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
-        emit SetMaxSingleTransactionLimit(chainIdToMaxSingleTransactionLimit[chainId_], limit_);
+        emit SetMaxSingleTransactionLimit(chainId_, chainIdToMaxSingleTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleTransactionLimit[chainId_] = limit_;
     }
 
@@ -197,11 +197,11 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
 
         // Calculate the amount in USD using the oracle price
         uint256 amountInUsd;
-        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
+        Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(token()) });
         amountInUsd = mul_ScalarTruncate(oraclePrice, amount_);
 
         // Load values for the 24-hour window checks
-        uint256 currentBlock = block.timestamp;
+        uint256 currentBlockTimestamp = block.timestamp;
         uint256 lastDayWindowStart = chainIdToLast24HourWindowStart[dstChainId_];
         uint256 transferredInWindow = chainIdToLast24HourTransferred[dstChainId_];
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
@@ -211,9 +211,9 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         require(amountInUsd <= maxSingleTransactionLimit || isWhiteListedUser, "Single Transaction Limit Exceed");
 
         // Check if the time window has changed (more than 24 hours have passed)
-        if (currentBlock - lastDayWindowStart > 1 days) {
+        if (currentBlockTimestamp - lastDayWindowStart > 1 days) {
             transferredInWindow = amountInUsd;
-            chainIdToLast24HourWindowStart[dstChainId_] = currentBlock;
+            chainIdToLast24HourWindowStart[dstChainId_] = currentBlockTimestamp;
         } else {
             transferredInWindow += amountInUsd;
         }
@@ -226,7 +226,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     }
 
     function _isEligibleToReceive(uint16 srcChainId, uint256 receivedAmount) internal {
-        // Check if the recipient's address is whitelisted
+        // Check if the sender's address is whitelisted
         bool isWhiteListedUser = whitelist[msg.sender];
 
         // Calculate the received amount in USD using the oracle price
@@ -234,7 +234,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
         receivedAmountInUsd = mul_ScalarTruncate(oraclePrice, receivedAmount);
 
-        uint256 currentBlock = block.timestamp;
+        uint256 currentBlockTimestamp = block.timestamp;
 
         // Load values for the 24-hour window checks for receiving
         uint256 lastDayReceiveWindowStart = chainIdToLast24HourReceiveWindowStart[srcChainId];
@@ -249,9 +249,9 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         );
 
         // Check if the time window has changed (more than 24 hours have passed)
-        if (currentBlock - lastDayReceiveWindowStart > 1 days) {
+        if (currentBlockTimestamp - lastDayReceiveWindowStart > 1 days) {
             receivedInWindow = receivedAmountInUsd;
-            chainIdToLast24HourReceiveWindowStart[srcChainId] = currentBlock;
+            chainIdToLast24HourReceiveWindowStart[srcChainId] = currentBlockTimestamp;
         } else {
             receivedInWindow += receivedAmountInUsd;
         }
