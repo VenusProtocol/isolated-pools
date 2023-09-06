@@ -24,12 +24,13 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     /**
      * @notice Invoked when called function does not exist in the contract
      */
-    fallback() external {
-        string memory res = _getFunctionName(msg.sig);
-        require(bytes(res).length != 0, "Function not found");
-        _checkAccessAllowed(res);
-        (bool ok, ) = address(XVSBridge).call(msg.data);
+    fallback(bytes calldata data) external payable returns (bytes memory) {
+        string memory fun = _getFunctionName(msg.sig);
+        require(bytes(fun).length != 0, "Function not found");
+        _checkAccessAllowed(fun);
+        (bool ok, bytes memory res) = address(XVSBridge).call(msg.data);
         require(ok, "call failed");
+        return res;
     }
 
     function initialize(address accessControlManager_) external initializer {
