@@ -88,6 +88,28 @@ describe("Bridge Admin: ", function () {
     await remoteOFT.transferOwnership(bridgeAdmin.address);
 
     remotePath = ethers.utils.solidityPack(["address", "address"], [AddressOne, remoteOFT.address]);
+    const functionregistry = [
+      "setOracle(address)",
+      "setMaxSingleTransactionLimit(uint16,uint256)",
+      "setMaxDailyLimit(uint16,uint256)",
+      "setMaxSingleReceiveTransactionLimit(uint16,uint256)",
+      "setMaxDailyReceiveLimit(uint16,uint256)",
+      "pause()",
+      "unpause()",
+      "setWhitelist(address,bool)",
+      "setConfig(uint16,uint16,uint256,bytes)",
+      "setSendVersion(uint16)",
+      "setReceiveVersion(uint16)",
+      "forceResumeReceive(uint16,bytes)",
+      "setTrustedRemote(uint16,bytes)",
+      "setTrustedRemoteAddress(uint16,bytes)",
+      "setPrecrime(address)",
+      "setMinDstGas(uint16,uint16,uint256)",
+      "setPayloadSizeLimit(uint16,uint256)",
+      "setUseCustomAdapterParams(bool)",
+    ];
+    const removeArray = new Array(functionregistry.length).fill(false);
+    await bridgeAdmin.upsertSignature(functionregistry, removeArray);
   });
 
   it("Revert if EOA called owner function of bridge", async function () {
@@ -144,16 +166,6 @@ describe("Bridge Admin: ", function () {
     ).to.revertedWithCustomError(bridgeAdmin, "Unauthorized");
   });
 
-  it("Revert if function is not found in bridge admin registry", async function () {
-    const data = remoteOFT.interface.encodeFunctionData("oracle");
-    await expect(
-      deployer.sendTransaction({
-        to: bridgeAdmin.address,
-        data: data,
-      }),
-    ).to.be.revertedWith("Function not found");
-  });
-
   it("Success if permisssions are granted to call owner functions of bridge", async function () {
     await grantPermissions();
     let data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, remotePath]);
@@ -191,6 +203,30 @@ describe("Bridge Admin: ", function () {
       to: bridgeAdmin.address,
       data: data,
     });
+  });
+
+  it("Revert if function is not found in bridge admin registry", async function () {
+    await bridgeAdmin.upsertSignature(["setMaxDailyReceiveLimit(uint16,uint256)"], [true]);
+    const data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [
+      localChainId,
+      maxDailyTransactionLimit,
+    ]);
+    await expect(
+      deployer.sendTransaction({
+        to: bridgeAdmin.address,
+        data: data,
+      }),
+    ).to.be.revertedWith("Function not found");
+  });
+
+  it("Revert if function is removed from function registry", async function () {
+    const data = remoteOFT.interface.encodeFunctionData("oracle");
+    await expect(
+      deployer.sendTransaction({
+        to: bridgeAdmin.address,
+        data: data,
+      }),
+    ).to.be.revertedWith("Function not found");
   });
 
   it("Success on trnafer bridge owner", async function () {

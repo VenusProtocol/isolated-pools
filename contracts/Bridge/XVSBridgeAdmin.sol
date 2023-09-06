@@ -14,6 +14,9 @@ contract XVSBridgeAdmin is AccessControlledV8 {
 
     mapping(bytes4 => string) public functionRegistry;
 
+    // Event emitted when function registry updated
+    event FunctionRegistryChanged(string signature, bool isRemoved);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address XVSBridge_) {
         require(XVSBridge_ != address(0), "Address must not be zero");
@@ -28,7 +31,7 @@ contract XVSBridgeAdmin is AccessControlledV8 {
         string memory fun = _getFunctionName(msg.sig);
         require(bytes(fun).length != 0, "Function not found");
         _checkAccessAllowed(fun);
-        (bool ok, bytes memory res) = address(XVSBridge).call(msg.data);
+        (bool ok, bytes memory res) = address(XVSBridge).call(data);
         require(ok, "call failed");
         return res;
     }
@@ -36,25 +39,21 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     function initialize(address accessControlManager_) external initializer {
         require(address(accessControlManager_) != address(0), "Address must not be zero");
         __AccessControlled_init(accessControlManager_);
+    }
 
-        functionRegistry[hex"7adbf973"] = "setOracle(address)";
-        functionRegistry[hex"53489d6c"] = "setMaxSingleTransactionLimit(uint16,uint256)";
-        functionRegistry[hex"2488eec8"] = "setMaxDailyLimit(uint16,uint256)";
-        functionRegistry[hex"cc01e9b6"] = "setMaxSingleReceiveTransactionLimit(uint16,uint256)";
-        functionRegistry[hex"69c1e7b8"] = "setMaxDailyReceiveLimit(uint16,uint256)";
-        functionRegistry[hex"8456cb59"] = "pause()";
-        functionRegistry[hex"3f4ba83a"] = "unpause()";
-        functionRegistry[hex"53d6fd59"] = "setWhitelist(address,bool)";
-        functionRegistry[hex"cbed8b9c"] = "setConfig(uint16,uint16,uint256,bytes)";
-        functionRegistry[hex"07e0db17"] = "setSendVersion(uint16)";
-        functionRegistry[hex"10ddb137"] = "setReceiveVersion(uint16)";
-        functionRegistry[hex"42d65a8d"] = "forceResumeReceive(uint16,bytes)";
-        functionRegistry[hex"eb8d72b7"] = "setTrustedRemote(uint16,bytes)";
-        functionRegistry[hex"a6c3d165"] = "setTrustedRemoteAddress(uint16,bytes)";
-        functionRegistry[hex"baf3292d"] = "setPrecrime(address)";
-        functionRegistry[hex"df2a5b3b"] = "setMinDstGas(uint16,uint16,uint256)";
-        functionRegistry[hex"0df37483"] = "setPayloadSizeLimit(uint16,uint256)";
-        functionRegistry[hex"eab45d9c"] = "setUseCustomAdapterParams(bool)";
+    function upsertSignature(string[] calldata signatures, bool[] calldata remove) external onlyOwner {
+        uint256 signatureLength = signatures.length;
+        require(signatureLength == remove.length, "Input arrays must have the same length");
+        for (uint256 i; i < signatureLength; i++) {
+            bytes4 sigHash = bytes4(keccak256(bytes(signatures[i])));
+            if (remove[i]) {
+                delete functionRegistry[sigHash];
+                emit FunctionRegistryChanged(signatures[i], true);
+            } else {
+                functionRegistry[sigHash] = signatures[i];
+                emit FunctionRegistryChanged(signatures[i], false);
+            }
+        }
     }
 
     /**
