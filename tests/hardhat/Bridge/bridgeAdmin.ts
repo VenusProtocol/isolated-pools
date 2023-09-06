@@ -205,7 +205,7 @@ describe("Bridge Admin: ", function () {
     });
   });
 
-  it("Revert if function is not found in bridge admin registry", async function () {
+  it("Revert if function is removed from function registry", async function () {
     await bridgeAdmin.upsertSignature(["setMaxDailyReceiveLimit(uint16,uint256)"], [true]);
     const data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [
       localChainId,
@@ -219,7 +219,7 @@ describe("Bridge Admin: ", function () {
     ).to.be.revertedWith("Function not found");
   });
 
-  it("Revert if function is removed from function registry", async function () {
+  it("Revert if function is not found in bridge admin function registry", async function () {
     const data = remoteOFT.interface.encodeFunctionData("oracle");
     await expect(
       deployer.sendTransaction({
