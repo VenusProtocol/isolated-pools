@@ -26,11 +26,7 @@ contract UnderlyingModelNonStandard is EIP20NonStandardInterface, SimulationInte
         balances[dst] += amount;
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override {
+    function transferFrom(address src, address dst, uint256 amount) external override {
         require(allowances[src][msg.sender] >= amount);
         require(balances[src] >= amount);
         require(balances[dst] + amount >= balances[dst]);

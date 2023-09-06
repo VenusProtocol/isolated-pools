@@ -69,11 +69,7 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
      * @return Number of total released tokens
      * @custom:error ZeroAddressNotAllowed is thrown when asset address is zero
      */
-    function releaseFunds(
-        address comptroller,
-        address asset,
-        uint256 amount
-    ) external nonReentrant returns (uint256) {
+    function releaseFunds(address comptroller, address asset, uint256 amount) external nonReentrant returns (uint256) {
         ensureNonzeroAddress(asset);
         require(amount <= _poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
@@ -102,10 +98,10 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
      * @param comptroller  Comptroller address(pool)
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset)
-        public
-        override(IProtocolShareReserve, ReserveHelpers)
-    {
+    function updateAssetsState(
+        address comptroller,
+        address asset
+    ) public override(IProtocolShareReserve, ReserveHelpers) {
         super.updateAssetsState(comptroller, asset);
     }
 }

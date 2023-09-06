@@ -108,11 +108,7 @@ contract VBep20DelegatorCertora is VBep20Delegator {
         return abi.decode(data, (uint256));
     }
 
-    function repayBorrowFreshPub(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) public returns (uint256) {
+    function repayBorrowFreshPub(address payer, address borrower, uint256 repayAmount) public returns (uint256) {
         bytes memory data = delegateToImplementation(
             abi.encodeWithSignature("_repayBorrowFreshPub(address,address,uint256)", payer, borrower, repayAmount)
         );

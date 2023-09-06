@@ -144,7 +144,7 @@ contract Vat {
     // --- Administration ---
     function init(bytes32 ilk) external note auth {
         require(ilks[ilk].rate == 0, "Vat/ilk-already-init");
-        ilks[ilk].rate = 10**27;
+        ilks[ilk].rate = 10 ** 27;
     }
 
     function file(bytes32 what, uint256 data) external note auth {
@@ -153,11 +153,7 @@ contract Vat {
         else revert("Vat/file-unrecognized-param");
     }
 
-    function file(
-        bytes32 ilk,
-        bytes32 what,
-        uint256 data
-    ) external note auth {
+    function file(bytes32 ilk, bytes32 what, uint256 data) external note auth {
         require(live == 1, "Vat/not-live");
         if (what == "spot") ilks[ilk].spot = data;
         else if (what == "line") ilks[ilk].line = data;
@@ -170,30 +166,17 @@ contract Vat {
     }
 
     // --- Fungibility ---
-    function slip(
-        bytes32 ilk,
-        address usr,
-        int256 wad
-    ) external note auth {
+    function slip(bytes32 ilk, address usr, int256 wad) external note auth {
         gem[ilk][usr] = add(gem[ilk][usr], wad);
     }
 
-    function flux(
-        bytes32 ilk,
-        address src,
-        address dst,
-        uint256 wad
-    ) external note {
+    function flux(bytes32 ilk, address src, address dst, uint256 wad) external note {
         require(wish(src, msg.sender), "Vat/not-allowed");
         gem[ilk][src] = sub(gem[ilk][src], wad);
         gem[ilk][dst] = add(gem[ilk][dst], wad);
     }
 
-    function move(
-        address src,
-        address dst,
-        uint256 rad
-    ) external note {
+    function move(address src, address dst, uint256 rad) external note {
         require(wish(src, msg.sender), "Vat/not-allowed");
         dai[src] = sub(dai[src], rad);
         dai[dst] = add(dai[dst], rad);
@@ -212,14 +195,7 @@ contract Vat {
     }
 
     // --- CDP Manipulation ---
-    function frob(
-        bytes32 i,
-        address u,
-        address v,
-        address w,
-        int256 dink,
-        int256 dart
-    ) external note {
+    function frob(bytes32 i, address u, address v, address w, int256 dink, int256 dart) external note {
         // system is live
         require(live == 1, "Vat/not-live");
 
@@ -259,13 +235,7 @@ contract Vat {
     }
 
     // --- CDP Fungibility ---
-    function fork(
-        bytes32 ilk,
-        address src,
-        address dst,
-        int256 dink,
-        int256 dart
-    ) external note {
+    function fork(bytes32 ilk, address src, address dst, int256 dink, int256 dart) external note {
         Urn storage u = urns[ilk][src];
         Urn storage v = urns[ilk][dst];
         Ilk storage i = ilks[ilk];
@@ -291,14 +261,7 @@ contract Vat {
     }
 
     // --- CDP Confiscation ---
-    function grab(
-        bytes32 i,
-        address u,
-        address v,
-        address w,
-        int256 dink,
-        int256 dart
-    ) external note auth {
+    function grab(bytes32 i, address u, address v, address w, int256 dink, int256 dart) external note auth {
         Urn storage urn = urns[i][u];
         Ilk storage ilk = ilks[i];
 
@@ -322,11 +285,7 @@ contract Vat {
         debt = sub(debt, rad);
     }
 
-    function suck(
-        address u,
-        address v,
-        uint256 rad
-    ) external note auth {
+    function suck(address u, address v, uint256 rad) external note auth {
         sin[u] = add(sin[u], rad);
         dai[v] = add(dai[v], rad);
         vice = add(vice, rad);
@@ -334,11 +293,7 @@ contract Vat {
     }
 
     // --- Rates ---
-    function fold(
-        bytes32 i,
-        address u,
-        int256 rate
-    ) external note auth {
+    function fold(bytes32 i, address u, int256 rate) external note auth {
         require(live == 1, "Vat/not-live");
         Ilk storage ilk = ilks[i];
         ilk.rate = add(ilk.rate, rate);

@@ -207,12 +207,10 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount)
-        external
-        override
-        nonReentrant
-        returns (uint256)
-    {
+    function transferReserveForAuction(
+        address comptroller,
+        uint256 amount
+    ) external override nonReentrant returns (uint256) {
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(

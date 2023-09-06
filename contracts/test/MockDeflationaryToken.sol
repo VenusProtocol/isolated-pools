@@ -43,11 +43,7 @@ contract MockDeflatingToken {
         return true;
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external returns (bool) {
+    function transferFrom(address from, address to, uint256 value) external returns (bool) {
         if (allowance[from][msg.sender] != type(uint256).max) {
             allowance[from][msg.sender] = allowance[from][msg.sender] - value;
         }
@@ -89,20 +85,12 @@ contract MockDeflatingToken {
         emit Transfer(from, address(0), value);
     }
 
-    function _approve(
-        address owner,
-        address spender,
-        uint256 value
-    ) private {
+    function _approve(address owner, address spender, uint256 value) private {
         allowance[owner][spender] = value;
         emit Approval(owner, spender, value);
     }
 
-    function _transfer(
-        address from,
-        address to,
-        uint256 value
-    ) private {
+    function _transfer(address from, address to, uint256 value) private {
         uint256 burnAmount = value / 100;
         _burn(from, burnAmount);
         uint256 transferAmount = value - burnAmount;
