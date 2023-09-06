@@ -115,6 +115,30 @@ describe("Proxy OFTV2: ", function () {
 
     await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
 
+    const functionregistry = [
+      "setOracle(address)",
+      "setMaxSingleTransactionLimit(uint16,uint256)",
+      "setMaxDailyLimit(uint16,uint256)",
+      "setMaxSingleReceiveTransactionLimit(uint16,uint256)",
+      "setMaxDailyReceiveLimit(uint16,uint256)",
+      "pause()",
+      "unpause()",
+      "setWhitelist(address,bool)",
+      "setConfig(uint16,uint16,uint256,bytes)",
+      "setSendVersion(uint16)",
+      "setReceiveVersion(uint16)",
+      "forceResumeReceive(uint16,bytes)",
+      "setTrustedRemote(uint16,bytes)",
+      "setTrustedRemoteAddress(uint16,bytes)",
+      "setPrecrime(address)",
+      "setMinDstGas(uint16,uint16,uint256)",
+      "setPayloadSizeLimit(uint16,uint256)",
+      "setUseCustomAdapterParams(bool)",
+    ];
+    const removeArray = new Array(functionregistry.length).fill(false);
+    await bridgeAdminRemote.upsertSignature(functionregistry, removeArray);
+    await bridgeAdminLocal.upsertSignature(functionregistry, removeArray);
+
     // Setting local chain
     let data = localOFT.interface.encodeFunctionData("setTrustedRemote", [remoteChainId, remotePath]);
     await deployer.sendTransaction({
