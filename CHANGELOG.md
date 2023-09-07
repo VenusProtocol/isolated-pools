@@ -1,3 +1,59 @@
+## [2.0.0](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0...v2.0.0) (2023-09-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* [RHR-01] make poolsAssetsReserves internal
+* align the gap in reserve helpers
+
+### Features
+
+* add a balance check to graceful transfer ([03370b9](https://github.com/VenusProtocol/isolated-pools/commit/03370b97fa767fc763fad157bd08e6158e441fbb))
+* add deployment info for the last rewards in the LSB pool ([5e8a082](https://github.com/VenusProtocol/isolated-pools/commit/5e8a08218984caed92fb6591f03c53648478f8ea))
+* add mainnet deployment ([3b29e3e](https://github.com/VenusProtocol/isolated-pools/commit/3b29e3e591078cab0aaf868b4187f735fa9a61db))
+* add re-entrancy guard ([80c7435](https://github.com/VenusProtocol/isolated-pools/commit/80c74352e317d33df17daa95943c85f7648a35b4))
+* add testnet deployment of new market in DeFi pool ([8c9053f](https://github.com/VenusProtocol/isolated-pools/commit/8c9053f75a8f0f3c0bf082cdb75a01a44ef29ca3))
+* avoid locking on failed transfers to previous bidders ([a689850](https://github.com/VenusProtocol/isolated-pools/commit/a6898500d17e41a8db4e3bdd03e5feaf1cae5a63))
+* deploy HAY rewards distributor ([30325ea](https://github.com/VenusProtocol/isolated-pools/commit/30325ea4a680f2b81457ce7f72f857292ccf18bf))
+* deployed SD Rewards distributor ([98b514d](https://github.com/VenusProtocol/isolated-pools/commit/98b514dc49b38c3a37eaf9a8d69081ffdd7d7516))
+* export ankrBNB market deployment ([ec43dd8](https://github.com/VenusProtocol/isolated-pools/commit/ec43dd8d2efd2eece7494f143089a9506d40ad14))
+* set risk fund percentage to 50% ([4ff68c0](https://github.com/VenusProtocol/isolated-pools/commit/4ff68c088bf83fe029b76016399f1a5bf1733631))
+* support deadline in swapPoolsAssets ([103be13](https://github.com/VenusProtocol/isolated-pools/commit/103be136015e45d88086a8e001bf7f01cc767fff))
+* update base asset price before querying ([a2cb18a](https://github.com/VenusProtocol/isolated-pools/commit/a2cb18a74db663cb79890aa4d5891d840be32769))
+* upgrade HAY rewards distributor on bsctestnet ([12dceac](https://github.com/VenusProtocol/isolated-pools/commit/12dceac5746d38654539453ffbdcef2ec3a8efb0))
+* ven-1567 add sweep token function ([192a19d](https://github.com/VenusProtocol/isolated-pools/commit/192a19db17bef9e2f51c041b77abc6ff7077973e))
+* ven-1743 Risk Fund ([7413501](https://github.com/VenusProtocol/isolated-pools/commit/7413501ac5210ff5e688d353f383aaf4e057a3c6))
+
+
+### Bug Fixes
+
+* [RFR-01][RFR-03] unify the meaning of minAmountToConvert ([db0e468](https://github.com/VenusProtocol/isolated-pools/commit/db0e468de1fc0f536e05d0a716b6572c60a28c53))
+* [SSV-01] use _transferOutOrTrackDebt upon closing the auction ([5ca628c](https://github.com/VenusProtocol/isolated-pools/commit/5ca628c1a94abe654d8cc7461e0fe920898f808c))
+* [VPB-04] fix potential re-entrancy issues ([42a9f78](https://github.com/VenusProtocol/isolated-pools/commit/42a9f78dbe59afa8477235f8a9be20bcacad6b7c))
+* added SD rewards distributor ([ed4ed8a](https://github.com/VenusProtocol/isolated-pools/commit/ed4ed8a3a26620d06143cf9912889cb82bb35cd9))
+* allow reward distributor with same reward token ([7603b4e](https://github.com/VenusProtocol/isolated-pools/commit/7603b4ed84040dd883aa3a8f411dd2d2d1fb4956))
+* comments ([fecd4bb](https://github.com/VenusProtocol/isolated-pools/commit/fecd4bb093ff267c1ba5ec03cf574a9c0e137828))
+* deployed latest comptroller ([3599ed4](https://github.com/VenusProtocol/isolated-pools/commit/3599ed40c6c10f1f09df2d7288566eccb7c6e2a2))
+* deployed reward distributors for mainnet and testnet ([2aedd92](https://github.com/VenusProtocol/isolated-pools/commit/2aedd92714a101d2ce8d255ab24051049d647ed3))
+* fix deployment of comptroller and verification ([50d6edd](https://github.com/VenusProtocol/isolated-pools/commit/50d6edd8e6184407777eeb8fc281fe3862a7988c))
+* fixed tests ([83c1c3b](https://github.com/VenusProtocol/isolated-pools/commit/83c1c3b5a52c383241373dce676bab4c3b9e3fb5))
+* gas optimisation + correct state update in transferReserveForAuction ([5dc8120](https://github.com/VenusProtocol/isolated-pools/commit/5dc81207394f80b35a9923ef5d6ea4ee65073996))
+* include reward token in event ([b5b1558](https://github.com/VenusProtocol/isolated-pools/commit/b5b1558ef375adde0892343e4caed0ad18b6a045))
+* lint ([ba43cef](https://github.com/VenusProtocol/isolated-pools/commit/ba43cef02cbf28995d0b7834b365eb1e6b907ac6))
+* lint issues ([2cc0f29](https://github.com/VenusProtocol/isolated-pools/commit/2cc0f29baebc822280a65257b1feae061c4d729e))
+* redeployed HAY reward distributors ([5c62416](https://github.com/VenusProtocol/isolated-pools/commit/5c62416d2fa791be949c7d37b0490ca221a87e9d))
+* revert on approval failures ([6c559f1](https://github.com/VenusProtocol/isolated-pools/commit/6c559f1b31bd3b9ab1e8ff4023353e54308f8210))
+* set the last reward distributor deployed for HAY ([0955403](https://github.com/VenusProtocol/isolated-pools/commit/09554032ca5ed3b04db228d5359a2e4db2fa8fd3))
+* update assetsReserves mapping for every swap ([3427b24](https://github.com/VenusProtocol/isolated-pools/commit/3427b24382f6a59d8c132701afe9c2bd0c62d881))
+* update method signature in access control check ([e4820ff](https://github.com/VenusProtocol/isolated-pools/commit/e4820ff035e06c5d83caa1397b28dd3ca3cc64a5))
+* ven-1817 pve003 ([f603afd](https://github.com/VenusProtocol/isolated-pools/commit/f603afd7071c495971690e39f1bc4d59eb4df964))
+
+
+### Code Refactoring
+
+* [RHR-01] make poolsAssetsReserves internal ([9085787](https://github.com/VenusProtocol/isolated-pools/commit/908578705a8ab2cb6058bca205a6af3083895c13))
+* align the gap in reserve helpers ([c47d6c0](https://github.com/VenusProtocol/isolated-pools/commit/c47d6c076b5caac4f544f1c8a499056d5f7f7eca))
+
 ## [2.0.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0-dev.8...v2.0.0-dev.9) (2023-09-01)
 
 
