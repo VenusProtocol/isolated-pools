@@ -12,6 +12,7 @@ import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerIn
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
@@ -25,7 +26,7 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
  * risk fund in exchange for paying off all the pool's bad debt.
  */
-contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable {
+contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, TokenDebtTracker {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -69,21 +70,21 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     address public poolRegistry;
 
     /// @notice Risk fund address
-    IRiskFund private riskFund;
+    IRiskFund public riskFund;
 
     /// @notice Minimum USD debt in pool for shortfall to trigger
     uint256 public minimumPoolBadDebt;
 
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 private incentiveBps;
+    uint256 public incentiveBps;
 
-    /// @notice Time to wait for next bidder. initially waits for 10 blocks
+    /// @notice Time to wait for next bidder. Initially waits for 100 blocks
     uint256 public nextBidderBlockLimit;
 
     /// @notice Boolean of if auctions are paused
     bool public auctionsPaused;
 
-    /// @notice Time to wait for first bidder. initially waits for 100 blocks
+    /// @notice Time to wait for first bidder. Initially waits for 100 blocks
     uint256 public waitForFirstBidder;
 
     /// @notice Auctions for each pool
@@ -164,6 +165,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
+        __TokenDebtTracker_init();
         minimumPoolBadDebt = minimumPoolBadDebt_;
         riskFund = riskFund_;
         waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
@@ -207,7 +209,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             IERC20Upgradeable erc20 = IERC20Upgradeable(address(vToken.underlying()));
 
             if (auction.highestBidder != address(0)) {
-                erc20.safeTransfer(auction.highestBidder, auction.bidAmount[auction.markets[i]]);
+                _transferOutOrTrackDebt(erc20, auction.highestBidder, auction.bidAmount[auction.markets[i]]);
             }
             uint256 balanceBefore = erc20.balanceOf(address(this));
 
@@ -268,11 +270,10 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
         }
 
-        uint256 transferredAmount = riskFund.transferReserveForAuction(
-            comptroller,
-            auction.highestBidder,
-            riskFundBidAmount
-        );
+        address convertibleBaseAsset = riskFund.convertibleBaseAsset();
+
+        uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
+        _transferOutOrTrackDebt(IERC20Upgradeable(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
 
         emit AuctionClosed(
             comptroller,
@@ -291,7 +292,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @custom:event Emits AuctionStarted event on success
      * @custom:event Errors if auctions are paused
      */
-    function startAuction(address comptroller) external {
+    function startAuction(address comptroller) external nonReentrant {
         require(!auctionsPaused, "Auctions are paused");
         _startAuction(comptroller);
     }
@@ -301,7 +302,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param comptroller Address of the pool
      * @custom:event Emits AuctionRestarted event on successful restart
      */
-    function restartAuction(address comptroller) external {
+    function restartAuction(address comptroller) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(!auctionsPaused, "auctions are paused");
@@ -318,7 +319,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Update next bidder block limit which is used determine when an auction can be closed
      * @param _nextBidderBlockLimit  New next bidder block limit
      * @custom:event Emits NextBidderBlockLimitUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
         _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
@@ -329,10 +330,10 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     }
 
     /**
-     * @notice Updates the inventive BPS
+     * @notice Updates the incentive BPS
      * @param _incentiveBps New incentive BPS
      * @custom:event Emits IncentiveBpsUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateIncentiveBps(uint256 _incentiveBps) external {
         _checkAccessAllowed("updateIncentiveBps(uint256)");
@@ -346,7 +347,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Update minimum pool bad debt to start auction
      * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
         _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
@@ -359,7 +360,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
      * @param _waitForFirstBidder  New wait for first bidder block count
      * @custom:event Emits WaitForFirstBidderUpdated on success
-     * @custom:access Restricted to owner
+     * @custom:access Restricted by ACM
      */
     function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
         _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
@@ -419,8 +420,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         Auction storage auction = auctions[comptroller];
         require(
-            (auction.startBlock == 0 && auction.status == AuctionStatus.NOT_STARTED) ||
-                auction.status == AuctionStatus.ENDED,
+            auction.status == AuctionStatus.NOT_STARTED || auction.status == AuctionStatus.ENDED,
             "auction is on-going"
         );
 
@@ -457,17 +457,19 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(poolBadDebt >= minimumPoolBadDebt, "pool bad debt is too low");
 
-        uint256 riskFundBalance = riskFund.poolReserves(comptroller);
+        priceOracle.updateAssetPrice(riskFund.convertibleBaseAsset());
+        uint256 riskFundBalance = (priceOracle.getPrice(riskFund.convertibleBaseAsset()) *
+            riskFund.getPoolsBaseAssetReserves(comptroller)) / EXP_SCALE;
         uint256 remainingRiskFundBalance = riskFundBalance;
-        uint256 incentivizedRiskFundBalance = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
-        if (incentivizedRiskFundBalance >= riskFundBalance) {
+        uint256 badDebtPlusIncentive = poolBadDebt + ((poolBadDebt * incentiveBps) / MAX_BPS);
+        if (badDebtPlusIncentive >= riskFundBalance) {
             auction.startBidBps =
                 (MAX_BPS * MAX_BPS * remainingRiskFundBalance) /
                 (poolBadDebt * (MAX_BPS + incentiveBps));
             remainingRiskFundBalance = 0;
             auction.auctionType = AuctionType.LARGE_POOL_DEBT;
         } else {
-            uint256 maxSeizeableRiskFundBalance = incentivizedRiskFundBalance;
+            uint256 maxSeizeableRiskFundBalance = badDebtPlusIncentive;
 
             remainingRiskFundBalance = remainingRiskFundBalance - maxSeizeableRiskFundBalance;
             auction.auctionType = AuctionType.LARGE_RISK_FUND;
@@ -514,7 +516,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @return True if the auction has started
      */
     function _isStarted(Auction storage auction) internal view returns (bool) {
-        return auction.startBlock != 0 && auction.status == AuctionStatus.STARTED;
+        return auction.status == AuctionStatus.STARTED;
     }
 
     /**

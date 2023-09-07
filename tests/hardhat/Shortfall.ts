@@ -12,12 +12,11 @@ import {
   AccessControlManager,
   Comptroller,
   Comptroller__factory,
+  IRiskFund,
   MockDeflatingToken,
   MockToken,
   PoolRegistry,
   ResilientOracleInterface,
-  RiskFund,
-  RiskFund__factory,
   Shortfall,
   Shortfall__factory,
   VToken,
@@ -34,7 +33,7 @@ let bidder1: SignerWithAddress;
 let bidder2: SignerWithAddress;
 let shortfall: MockContract<Shortfall>;
 let accessControlManager: AccessControlManager;
-let mockRiskFund: MockContract<RiskFund>;
+let fakeRiskFund: FakeContract<IRiskFund>;
 let mockBUSD: MockToken;
 let mockDAI: MockToken;
 let mockWBTC: MockToken;
@@ -59,18 +58,14 @@ async function shortfallFixture() {
 
   const AccessControlManagerFactor = await ethers.getContractFactory("AccessControlManager");
   accessControlManager = await AccessControlManagerFactor.deploy();
-
-  const RiskFund = await smock.mock<RiskFund__factory>("RiskFund");
-  mockRiskFund = await RiskFund.deploy();
+  fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const Shortfall = await smock.mock<Shortfall__factory>("Shortfall");
   shortfall = await upgrades.deployProxy(Shortfall, [
-    mockRiskFund.address,
+    fakeRiskFund.address,
     parseUnits(minimumPoolBadDebt, "18"),
     accessControlManager.address,
   ]);
-
-  await mockRiskFund.setVariable("shortfall", shortfall.address);
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
 
@@ -94,12 +89,6 @@ async function shortfallFixture() {
   comptroller = await Comptroller.deploy(poolRegistry.address);
   poolAddress = comptroller.address;
 
-  await mockRiskFund.setVariable("poolReserves", {
-    [comptroller.address]: parseUnits(riskFundBalance, 18),
-  });
-
-  await mockRiskFund.setVariable("convertibleBaseAsset", mockBUSD.address);
-
   poolRegistry.getPoolByComptroller.returns({
     name: "test",
     creator: AddressOne,
@@ -117,6 +106,7 @@ async function shortfallFixture() {
   vDAI.decimals.returns(18);
 
   vDAI.underlying.returns(mockDAI.address);
+  fakeRiskFund.convertibleBaseAsset.returns(mockDAI.address);
   await vWBTC.setVariable("underlying", mockWBTC.address);
   await vFloki.setVariable("underlying", mockFloki.address);
 
@@ -147,9 +137,11 @@ async function shortfallFixture() {
     return convertToUnit(1, 18);
   });
 
+  fakePriceOracle.getPrice.whenCalledWith(mockDAI.address).returns(convertToUnit(1, 18));
+
   comptroller.oracle.returns(fakePriceOracle.address);
 
-  mockRiskFund.transferReserveForAuction.returns(0);
+  fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
 
   // Access Control
   await accessControlManager.giveCallPermission(shortfall.address, "updateIncentiveBps(uint256)", owner.address);
@@ -340,6 +332,10 @@ describe("Shortfall: Tests", async function () {
       vDAI.badDebt.returns(parseUnits("1000", 18));
       vWBTC.badDebt.returns(parseUnits("1", 8));
 
+      expect(await fakeRiskFund.getPoolsBaseAssetReserves(comptroller.address)).equal(
+        parseUnits(riskFundBalance, 18).toString(),
+      );
+
       expect(await vDAI.badDebt()).equal(parseUnits("1000", 18));
       expect(await vWBTC.badDebt()).equal(parseUnits("1", 8));
     });
@@ -470,11 +466,12 @@ describe("Shortfall: Tests", async function () {
     });
 
     it("Close Auction", async function () {
-      const originalBalance = await mockBUSD.balanceOf(bidder2.address);
+      const originalBalance = await mockDAI.balanceOf(bidder2.address);
       await mine((await shortfall.nextBidderBlockLimit()).toNumber() + 2);
 
-      // transfer "reserves" to risk fund
-      await mockBUSD.transfer(mockRiskFund.address, parseUnits(riskFundBalance, 18));
+      // simulate transferReserveForAuction
+      await mockDAI.transfer(shortfall.address, parseUnits(riskFundBalance, 18));
+      fakeRiskFund.transferReserveForAuction.returns(parseUnits("10000", 18));
 
       await expect(shortfall.closeAuction(poolAddress))
         .to.emit(shortfall, "AuctionClosed")
@@ -496,17 +493,12 @@ describe("Shortfall: Tests", async function () {
 
       expect(vDAI.badDebtRecovered).to.have.been.calledOnce;
       expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("1800", 18));
-      expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(auction.seizedRiskFund));
+      expect(await mockDAI.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(auction.seizedRiskFund));
     });
   });
 
   describe("LARGE_RISK_FUND Scenario", async function () {
-    before(async () => {
-      await setup();
-      await mockRiskFund.setVariable("poolReserves", {
-        [comptroller.address]: parseUnits("10000000", 18),
-      });
-    });
+    before(setup);
     let startBlockNumber;
     it("Start auction", async function () {
       vDAI.badDebt.returns(parseUnits("10000", 18));
@@ -515,6 +507,7 @@ describe("Shortfall: Tests", async function () {
       await vWBTC.setVariable("badDebt", parseUnits("1", 8));
 
       riskFundBalance = "50000";
+      fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
 
       const receipt = await shortfall.startAuction(poolAddress);
       startBlockNumber = receipt.blockNumber;
@@ -589,13 +582,14 @@ describe("Shortfall: Tests", async function () {
     });
 
     it("Close Auction", async function () {
-      const originalBalance = await mockBUSD.balanceOf(bidder2.address);
+      const originalBalance = await mockDAI.balanceOf(bidder2.address);
       let auction = await shortfall.auctions(poolAddress);
 
       await mine((await shortfall.nextBidderBlockLimit()).toNumber() + 2);
 
-      // transfer "reserves" to risk fund
-      await mockBUSD.transfer(mockRiskFund.address, auction.seizedRiskFund);
+      // simulate transferReserveForAuction
+      await mockDAI.transfer(shortfall.address, auction.seizedRiskFund);
+      fakeRiskFund.transferReserveForAuction.returns("6138067320000000000000");
 
       await expect(shortfall.closeAuction(poolAddress))
         .to.emit(shortfall, "AuctionClosed")
@@ -617,7 +611,7 @@ describe("Shortfall: Tests", async function () {
       expect(vDAI.badDebtRecovered).to.have.been.calledTwice;
       expect(vDAI.badDebtRecovered).to.have.been.calledWith(parseUnits("10000", 18));
       const riskFundBidAmount = auction.seizedRiskFund.mul(auction.highestBidBps).div(10000);
-      expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(riskFundBidAmount));
+      expect(await mockDAI.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(riskFundBidAmount));
     });
   });
 
@@ -664,8 +658,8 @@ describe("Shortfall: Tests", async function () {
       await mockDAI.approve(shortfall.address, parseUnits("50000", 18));
       await mockWBTC.approve(shortfall.address, parseUnits("50000", 8));
 
-      // transfer "reserves" to risk fund
-      await mockBUSD.transfer(mockRiskFund.address, auction.seizedRiskFund);
+      // simulate transferReserveForAuction
+      await mockDAI.transfer(shortfall.address, auction.seizedRiskFund);
 
       await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
 
@@ -688,14 +682,11 @@ describe("Shortfall: Tests", async function () {
       await shortfall.startAuction(poolAddress);
       const auction = await shortfall.auctions(poolAddress);
 
-      // transfer "reserves" to risk fund
-      await mockBUSD.connect(owner).transfer(mockRiskFund.address, auction.seizedRiskFund);
-
       await mockDAI.approve(shortfall.address, parseUnits("50000", 18));
       await mockWBTC.approve(shortfall.address, parseUnits("50000", 8));
 
       // simulate transferReserveForAuction
-      await mockBUSD.transfer(shortfall.address, auction.seizedRiskFund);
+      await mockDAI.transfer(shortfall.address, auction.seizedRiskFund);
 
       await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
 
@@ -715,19 +706,22 @@ describe("Shortfall: Tests", async function () {
     });
 
     it("can close current auction but not start new one when they are paused", async function () {
-      vDAI.badDebt.returns(parseUnits("1000", 18));
-      await vDAI.setVariable("badDebt", parseUnits("1000", 18));
-      vWBTC.badDebt.returns(parseUnits("1", 8));
-      await vWBTC.setVariable("badDebt", parseUnits("1", 8));
+      vDAI.badDebt.returns(parseUnits("10000", 18));
+      await vDAI.setVariable("badDebt", parseUnits("10000", 18));
+      vWBTC.badDebt.returns(parseUnits("2", 8));
+      await vWBTC.setVariable("badDebt", parseUnits("2", 8));
 
       await shortfall.startAuction(poolAddress);
       const auction = await shortfall.auctions(poolAddress);
+
+      // simulate transferReserveForAuction
+      await mockDAI.transfer(shortfall.address, auction.seizedRiskFund);
 
       await expect(shortfall.connect(owner).pauseAuctions())
         .to.emit(shortfall, "AuctionsPaused")
         .withArgs(owner.address);
 
-      await shortfall.placeBid(poolAddress, auction.startBidBps.add(1), auction.startBlock);
+      await shortfall.placeBid(poolAddress, auction.startBidBps, auction.startBlock);
       // Close out auction created for this test case
       await mine(10);
       await expect(shortfall.closeAuction(poolAddress));
@@ -749,7 +743,7 @@ describe("Shortfall: Deflationary token Scenario", async function () {
     await vFloki.setVariable("badDebt", parseUnits("100", 18));
 
     riskFundBalance = "500";
-    mockRiskFund.poolReserves.returns(parseUnits(riskFundBalance, 18));
+    fakeRiskFund.getPoolsBaseAssetReserves.returns(parseUnits(riskFundBalance, 18));
 
     await shortfall.connect(owner).updateMinimumPoolBadDebt(convertToUnit(10, 18));
 
@@ -781,13 +775,13 @@ describe("Shortfall: Deflationary token Scenario", async function () {
   });
 
   it("Close Auction", async function () {
-    const originalBalance = await mockBUSD.balanceOf(bidder2.address);
+    const originalBalance = await mockDAI.balanceOf(bidder2.address);
     let auction = await shortfall.auctions(poolAddress);
 
     await mine((await shortfall.nextBidderBlockLimit()).toNumber() + 2);
 
-    // transfer "reserves" to risk fund
-    await mockBUSD.transfer(mockRiskFund.address, auction.seizedRiskFund);
+    // simulate transferReserveForAuction
+    await mockDAI.transfer(shortfall.address, auction.seizedRiskFund);
 
     const tx = await shortfall.closeAuction(poolAddress);
     await expect(tx)
@@ -797,7 +791,7 @@ describe("Shortfall: Deflationary token Scenario", async function () {
         startBlockNumber,
         bidder2.address,
         120,
-        convertToUnit("1.32", 18),
+        "6138067320000000000000",
         [vDAI.address, vWBTC.address, vFloki.address],
         ["0", "0", "98010000000000000000"],
       );
@@ -810,6 +804,7 @@ describe("Shortfall: Deflationary token Scenario", async function () {
     expect(vFloki.badDebtRecovered).to.have.been.calledWith("98010000000000000000");
 
     const riskFundBidAmount = auction.seizedRiskFund.mul(auction.highestBidBps).div(10000);
-    expect(await mockBUSD.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(riskFundBidAmount));
+
+    expect(await mockDAI.balanceOf(bidder2.address)).to.be.equal(originalBalance.add(riskFundBidAmount));
   });
 });

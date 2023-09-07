@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -11,18 +10,13 @@ import { ReserveHelpers } from "./ReserveHelpers.sol";
 import { IRiskFund } from "./IRiskFund.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 
-/**
- * @title ProtocolShareReserve
- * @author Venus
- * @notice Contract used to store and distribute the reserves generated in the markets.
- */
-contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
+contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolShareReserve {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private protocolIncome;
-    address private riskFund;
+    address public protocolIncome;
+    address public riskFund;
     // Percentage of funds not sent to the RiskFund contract when the funds are released, following the project Tokenomics
-    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 70;
+    uint256 private constant PROTOCOL_SHARE_PERCENTAGE = 50;
     uint256 private constant BASE_UNIT = 100;
 
     /// @notice Emitted when funds are released
@@ -79,12 +73,12 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
         address comptroller,
         address asset,
         uint256 amount
-    ) external returns (uint256) {
+    ) external nonReentrant returns (uint256) {
         ensureNonzeroAddress(asset);
-        require(amount <= poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
+        require(amount <= _poolsAssetsReserves[comptroller][asset], "ProtocolShareReserve: Insufficient pool balance");
 
         assetsReserves[asset] -= amount;
-        poolsAssetsReserves[comptroller][asset] -= amount;
+        _poolsAssetsReserves[comptroller][asset] -= amount;
         uint256 protocolIncomeAmount = mul_(
             Exp({ mantissa: amount }),
             div_(Exp({ mantissa: PROTOCOL_SHARE_PERCENTAGE * EXP_SCALE }), BASE_UNIT)
@@ -92,13 +86,13 @@ contract ProtocolShareReserve is Ownable2StepUpgradeable, ExponentialNoError, Re
 
         address riskFund_ = riskFund;
 
+        emit FundsReleased(comptroller, asset, amount);
+
         IERC20Upgradeable(asset).safeTransfer(protocolIncome, protocolIncomeAmount);
         IERC20Upgradeable(asset).safeTransfer(riskFund_, amount - protocolIncomeAmount);
 
         // Update the pool asset's state in the risk fund for the above transfer.
         IRiskFund(riskFund_).updateAssetsState(comptroller, asset);
-
-        emit FundsReleased(comptroller, asset, amount);
 
         return amount;
     }

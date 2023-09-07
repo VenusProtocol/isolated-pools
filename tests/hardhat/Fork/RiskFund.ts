@@ -204,7 +204,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   await accessControlManager.giveCallPermission(
     riskFund.address,
-    "swapPoolsAssets(address[],uint256[],address[][])",
+    "swapPoolsAssets(address[],uint256[],address[][],uint256)",
     admin.address,
   );
 
@@ -467,15 +467,26 @@ describe("Risk Fund: Tests", function () {
     });
 
     describe("swapPoolsAssets", async function () {
+      let deadline: number;
+
+      beforeEach(async function () {
+        deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+      });
+
       it("fails if called with incorrect arguments", async function () {
         await expect(
-          riskFund.swapPoolsAssets([vUSDT.address, vUSDC.address], [convertToUnit(10, 18)], []),
+          riskFund.swapPoolsAssets([vUSDT.address, vUSDC.address], [convertToUnit(10, 18)], [], deadline),
         ).to.be.revertedWith("Risk fund: markets and amountsOutMin are unequal lengths");
       });
 
       it("fails if called with incorrect path length", async function () {
         await expect(
-          riskFund.swapPoolsAssets([vUSDT.address, vUSDC.address], [convertToUnit(10, 18), convertToUnit(10, 18)], []),
+          riskFund.swapPoolsAssets(
+            [vUSDT.address, vUSDC.address],
+            [convertToUnit(10, 18), convertToUnit(10, 18)],
+            [],
+            deadline,
+          ),
         ).to.be.revertedWith("Risk fund: markets and paths are unequal lengths");
       });
 
@@ -487,7 +498,7 @@ describe("Risk Fund: Tests", function () {
         await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
 
         await expect(
-          riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDT.address, BUSD.address]]),
+          riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDT.address, BUSD.address]], deadline),
         ).to.be.revertedWith("RiskFund: swap path must start with the underlying asset");
       });
 
@@ -498,7 +509,7 @@ describe("Risk Fund: Tests", function () {
         await vUSDC.reduceReserves(convertToUnit(100, 18));
         await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
         await expect(
-          riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDC.address, USDT.address]]),
+          riskFund.swapPoolsAssets([vUSDC.address], [convertToUnit(10, 18)], [[USDC.address, USDT.address]], deadline),
         ).to.be.revertedWith("RiskFund: finally path must be convertible base asset");
       });
 
@@ -514,7 +525,7 @@ describe("Risk Fund: Tests", function () {
         ]);
         await accessControlManager.giveCallPermission(
           misconfiguredRiskFund.address,
-          "swapPoolsAssets(address[],uint256[],address[][])",
+          "swapPoolsAssets(address[],uint256[],address[][],uint256)",
           admin.address,
         );
         await expect(
@@ -525,6 +536,7 @@ describe("Risk Fund: Tests", function () {
               [USDT.address, BUSD.address],
               [USDC.address, BUSD.address],
             ],
+            deadline,
           ),
         ).to.be.revertedWithCustomError(misconfiguredRiskFund, "ZeroAddressNotAllowed");
       });
@@ -575,25 +587,34 @@ describe("Risk Fund: Tests", function () {
   });
 
   describe("Risk fund transfers", async function () {
+    let deadline: number;
+
+    beforeEach(async function () {
+      deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+    });
+
     it("Checks access control", async function () {
       const [admin] = await ethers.getSigners();
       // Revoke
       await accessControlManager.revokeCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Fails
-      await expect(riskFund.swapPoolsAssets([], [], [])).to.be.revertedWithCustomError(riskFund, "Unauthorized");
+      await expect(riskFund.swapPoolsAssets([], [], [], deadline)).to.be.revertedWithCustomError(
+        riskFund,
+        "Unauthorized",
+      );
 
       // Reset
       await accessControlManager.giveCallPermission(
         riskFund.address,
-        "swapPoolsAssets(address[],uint256[],address[][])",
+        "swapPoolsAssets(address[],uint256[],address[][],uint256)",
         admin.address,
       );
       // Succeeds
-      await riskFund.swapPoolsAssets([], [], []);
+      await riskFund.swapPoolsAssets([], [], [], deadline);
     });
 
     it("Convert to BUSD without funds", async function () {
@@ -613,6 +634,7 @@ describe("Risk Fund: Tests", function () {
           [USDC.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
       expect(amount).equal("0");
     });
@@ -626,28 +648,30 @@ describe("Risk Fund: Tests", function () {
 
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(30, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(18, 18));
       const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(9, 18));
 
-      const amount = await riskFund.callStatic.swapPoolsAssets(
-        [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-        [
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-          convertToUnit(10, 18),
-        ],
-        [
-          [USDT.address, BUSD.address],
-          [USDC.address, BUSD.address],
-          [USDT.address, BUSD.address],
-          [USDC.address, BUSD.address],
-          [USDT.address, BUSD.address],
-        ],
-      );
-      expect(amount).equal("0");
+      await expect(
+        riskFund.swapPoolsAssets(
+          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
+          [
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+            convertToUnit(9, 18),
+          ],
+          [
+            [USDT.address, BUSD.address],
+            [USDC.address, BUSD.address],
+            [USDT.address, BUSD.address],
+            [USDC.address, BUSD.address],
+            [USDT.address, BUSD.address],
+          ],
+          deadline,
+        ),
+      ).to.be.revertedWith("RiskFund: minAmountToConvert violated");
     });
 
     it("Above min threshold amount", async function () {
@@ -659,7 +683,7 @@ describe("Risk Fund: Tests", function () {
       const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(60, 18));
       const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
@@ -679,9 +703,10 @@ describe("Risk Fund: Tests", function () {
           [USDC.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
 
       const balanceAfter = await USDC.balanceOf(riskFund.address);
       expect(balanceAfter).equal("0");
@@ -708,8 +733,8 @@ describe("Risk Fund: Tests", function () {
       const protocolReserveUSDTBal = await USDT.balanceOf(protocolShareReserve.address);
       expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
 
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(100, 18));
-      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, convertToUnit(100, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDC.address, convertToUnit(60, 18));
+      await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, convertToUnit(60, 18));
       const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
       expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
 
@@ -732,35 +757,36 @@ describe("Risk Fund: Tests", function () {
           [USDC.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("59832095245497784786");
 
       const balanceBUSD = await BUSD.balanceOf(riskFund.address);
       expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
 
-      const pool1Reserve = await riskFund.poolReserves(comptroller1Proxy.address);
-      const pool2Reserve = await riskFund.poolReserves("0x0000000000000000000000000000000000000000");
+      const pool1Reserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
       expect(Number(pool1Reserve)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
-      expect(pool2Reserve).equal(0);
     });
   });
 
   describe("Transfer to Auction contract", async function () {
+    let deadline: number;
+
+    beforeEach(async function () {
+      deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+    });
+
     it("Revert while transfering funds to Auction contract", async function () {
       await expect(
-        riskFund
-          .connect(busdUser)
-          .transferReserveForAuction(comptroller1Proxy.address, busdUser.address, convertToUnit(30, 18)),
+        riskFund.connect(busdUser).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
       ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       const auctionContract = shortfall.address;
       await riskFund.setShortfallContractAddress(auctionContract);
 
       await expect(
-        riskFund
-          .connect(shortfall.wallet)
-          .transferReserveForAuction(comptroller1Proxy.address, busdUser.address, convertToUnit(100, 18)),
+        riskFund.connect(shortfall.wallet).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
       ).to.be.revertedWith("Risk Fund: Insufficient pool reserve.");
     });
 
@@ -801,13 +827,14 @@ describe("Risk Fund: Tests", function () {
           [USDC.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
 
       await riskFund
         .connect(shortfall.wallet)
-        .transferReserveForAuction(comptroller1Proxy.address, busdUser.address, convertToUnit(20, 18));
+        .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
       const remainingBalance = await BUSD.balanceOf(riskFund.address);
-      const poolReserve = await riskFund.poolReserves(comptroller1Proxy.address);
+      const poolReserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
 
       expect(remainingBalance).equal(poolReserve);
     });
@@ -844,9 +871,10 @@ describe("Risk Fund: Tests", function () {
           [USDC.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal(0);
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal(0);
 
       // revoke
       await accessControlManager.revokeCallPermission(
@@ -856,7 +884,7 @@ describe("Risk Fund: Tests", function () {
       );
 
       await expect(
-        riskFund.transferReserveForAuction(comptroller1Proxy.address, busdUser.address, convertToUnit(20, 18)),
+        riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
       ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
 
       // reset
@@ -950,12 +978,12 @@ describe("Risk Fund: Tests", function () {
       let riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
       let riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
 
-      expect(riskUSDTFor1).equal(convertToUnit(30, 18));
-      expect(riskUSDCFor1).equal(convertToUnit(27, 18));
-      expect(riskUSDTFor2).equal(convertToUnit(33, 18));
-      expect(riskUSDCFor2).equal(convertToUnit(24, 18));
-      expect(riskUSDTFor3).equal(convertToUnit(39, 18));
-      expect(riskBUSDTFor3).equal(convertToUnit(15, 18));
+      expect(riskUSDTFor1).equal(convertToUnit(50, 18));
+      expect(riskUSDCFor1).equal(convertToUnit(45, 18));
+      expect(riskUSDTFor2).equal(convertToUnit(55, 18));
+      expect(riskUSDCFor2).equal(convertToUnit(40, 18));
+      expect(riskUSDTFor3).equal(convertToUnit(65, 18));
+      expect(riskBUSDTFor3).equal(convertToUnit(25, 18));
 
       await riskFund.swapPoolsAssets(
         [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address, vBUSD3.address],
@@ -975,9 +1003,10 @@ describe("Risk Fund: Tests", function () {
           [USDT.address, BUSD.address],
           [USDT.address, BUSD.address],
         ],
+        deadline,
       );
 
-      expect(await riskFund.poolReserves(comptroller1Proxy.address)).to.be.equal("56841295980235012443");
+      expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("94717497407756046533");
 
       riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
       riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
@@ -991,17 +1020,19 @@ describe("Risk Fund: Tests", function () {
       expect(riskUSDTFor2).equal(0);
       expect(riskUSDCFor2).equal(0);
       expect(riskUSDTFor3).equal(0);
-      expect(riskBUSDTFor3).equal(0);
 
-      const poolReserve1 = await riskFund.poolReserves(comptroller1Proxy.address);
+      // As BUSD is base asset so PoolAssetReserves should be present.
+      expect(riskBUSDTFor3).to.be.closeTo(convertToUnit(90, 18), convertToUnit(9, 17));
 
-      const poolReserve2 = await riskFund.poolReserves(comptroller2Proxy.address);
+      const poolReserve1 = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
 
-      const poolReserve3 = await riskFund.poolReserves(comptroller3Proxy.address);
+      const poolReserve2 = await riskFund.getPoolsBaseAssetReserves(comptroller2Proxy.address);
 
-      expect(poolReserve1).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));
-      expect(poolReserve2).to.be.closeTo(convertToUnit(56, 18), convertToUnit(9, 17));
-      expect(poolReserve3).to.be.closeTo(convertToUnit(53, 18), convertToUnit(9, 17));
+      const poolReserve3 = await riskFund.getPoolsBaseAssetReserves(comptroller3Proxy.address);
+
+      expect(poolReserve1).to.be.closeTo(convertToUnit(95, 18), convertToUnit(9, 17));
+      expect(poolReserve2).to.be.closeTo(convertToUnit(95, 18), convertToUnit(9, 17));
+      expect(poolReserve3).to.be.closeTo(convertToUnit(90, 18), convertToUnit(9, 17));
     });
   });
 });

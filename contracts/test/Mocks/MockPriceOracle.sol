@@ -21,6 +21,13 @@ contract MockPriceOracle is ResilientOracleInterface {
     // solhint-disable-next-line no-empty-blocks
     function updatePrice(address vToken) external override {}
 
+    // solhint-disable-next-line no-empty-blocks
+    function updateAssetPrice(address asset) external override {}
+
+    function getPrice(address asset) external view returns (uint256) {
+        return assetPrices[asset];
+    }
+
     //https://compound.finance/docs/prices
     function getUnderlyingPrice(address vToken) public view override returns (uint256) {
         return assetPrices[VToken(vToken).underlying()];

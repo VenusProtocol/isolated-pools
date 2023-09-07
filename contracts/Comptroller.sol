@@ -86,7 +86,7 @@ contract Comptroller is
     event NewSupplyCap(VToken indexed vToken, uint256 newSupplyCap);
 
     /// @notice Emitted when a rewards distributor is added
-    event NewRewardsDistributor(address indexed rewardsDistributor);
+    event NewRewardsDistributor(address indexed rewardsDistributor, address indexed rewardToken);
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
@@ -376,7 +376,8 @@ contract Comptroller is
         // Skipping the cap check for uncapped coins to save some gas
         if (borrowCap != type(uint256).max) {
             uint256 totalBorrows = VToken(vToken).totalBorrows();
-            uint256 nextTotalBorrows = totalBorrows + borrowAmount;
+            uint256 badDebt = VToken(vToken).badDebt();
+            uint256 nextTotalBorrows = totalBorrows + borrowAmount + badDebt;
             if (nextTotalBorrows > borrowCap) {
                 revert BorrowCapExceeded(vToken, borrowCap);
             }
@@ -955,7 +956,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Add a new RewardsDistributor and initialize it with all markets
+     * @notice Add a new RewardsDistributor and initialize it with all markets. We can add several RewardsDistributor
+     * contracts with the same rewardToken, and there could be overlaping among them considering the last reward block
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance
@@ -963,16 +965,6 @@ contract Comptroller is
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
         require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
-
-        uint256 rewardsDistributorsLength = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardsDistributorsLength; ++i) {
-            address rewardToken = address(rewardsDistributors[i].rewardToken());
-            require(
-                rewardToken != address(_rewardsDistributor.rewardToken()),
-                "distributor already exists with this reward"
-            );
-        }
 
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);
@@ -986,7 +978,7 @@ contract Comptroller is
             _rewardsDistributor.initializeMarket(address(allMarkets[i]));
         }
 
-        emit NewRewardsDistributor(address(_rewardsDistributor));
+        emit NewRewardsDistributor(address(_rewardsDistributor), address(_rewardsDistributor.rewardToken()));
     }
 
     /**
