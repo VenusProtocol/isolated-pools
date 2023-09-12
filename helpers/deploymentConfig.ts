@@ -86,7 +86,7 @@ const preconfiguredAddresses = {
     VTreasury: "account:deployer",
   },
   bsctestnet: {
-    VTreasury: "0x8b293600c50d6fbdc6ed4251cc75ece29880276f",
+    VTreasury: "0x8b293600C50D6fbdc6Ed4251cc75ECe29880276f",
     NormalTimelock: "0xce10739590001705F7FF231611ba4A48B2820327",
     FastTrackTimelock: "0x3CFf21b7AF8390fE68799D58727d3b4C25a83cb6",
     CriticalTimelock: "0x23B893a7C45a5Eb8c8C062b9F32d0D2e43eD286D",
@@ -95,6 +95,7 @@ const preconfiguredAddresses = {
     PancakeFactory: "0x182859893230dC89b114d6e2D547BFFE30474a21",
     WBNB: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
+    SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
@@ -106,6 +107,7 @@ const preconfiguredAddresses = {
     PancakeFactory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
     WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
     VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
+    SwapRouter_CorePool: "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4",
   },
 };
 
@@ -201,7 +203,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        name: "Tether",
+        name: "Binance-Peg BSC-USD",
         symbol: "USDT",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
@@ -1245,7 +1247,7 @@ export const globalConfig: NetworkConfig = {
       {
         isMock: false,
         name: "Binance-Peg BSC-USD",
-        symbol: "BUSD",
+        symbol: "USDT",
         decimals: 18,
         tokenAddress: "0x55d398326f99059fF775485246999027B3197955",
       },
