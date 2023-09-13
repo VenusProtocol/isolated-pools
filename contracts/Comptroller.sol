@@ -91,6 +91,9 @@ contract Comptroller is
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
 
+    /// @notice Emitted when forced liquidation is enabled or disabled for a market
+    event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -475,7 +478,7 @@ contract Comptroller is
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
         /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
-        if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed))) {
+        if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed)) || isForcedLiquidationEnabled[vTokenBorrowed]) {
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
             }
@@ -1002,6 +1005,24 @@ contract Comptroller is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
+    }
+
+    /**
+     * @notice Enables forced liquidations for a market. If forced liquidation is enabled,
+     * borrows in the market may be liquidated regardless of the account liquidity
+     * @param vTokenBorrowed Borrowed vToken
+     * @param enable Whether to enable forced liquidations
+     */
+    function setForcedLiquidation(address vTokenBorrowed, bool enable) external {
+        _checkAccessAllowed("setForcedLiquidation(address,bool)");
+        ensureNonzeroAddress(vTokenBorrowed);
+
+        if (!markets[vTokenBorrowed].isListed) {
+            revert MarketNotListed(vTokenBorrowed);
+        }
+
+        isForcedLiquidationEnabled[address(vTokenBorrowed)] = enable;
+        emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
     }
 
     /**

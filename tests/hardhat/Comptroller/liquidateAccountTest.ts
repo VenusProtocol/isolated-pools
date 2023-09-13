@@ -53,6 +53,7 @@ describe("liquidateAccount", () => {
   let OMG: FakeContract<VToken>;
   let ZRX: FakeContract<VToken>;
   let BAT: FakeContract<VToken>;
+  let accessControl: FakeContract<AccessControlManager>;
   const maxLoopsLimit = 150;
 
   type LiquidateAccountFixture = {
@@ -113,7 +114,7 @@ describe("liquidateAccount", () => {
     [, liquidator, user] = await ethers.getSigners();
     const contracts = await loadFixture(liquidateAccountFixture);
     configure(contracts);
-    ({ comptroller, OMG, ZRX, BAT } = contracts);
+    ({ comptroller, OMG, ZRX, BAT, accessControl } = contracts);
   });
 
   describe("collateral to borrows ratio requirements", async () => {
@@ -340,6 +341,41 @@ describe("liquidateAccount", () => {
       await expect(comptroller.connect(liquidator).liquidateAccount(user.address, [])).to.be.revertedWith(
         "Nonzero borrow balance after liquidation",
       );
+    });
+  });
+
+  describe("setForcedLiquidation", async () => {
+    it("fails if asset is not listed", async () => {
+      const someVToken = await smock.fake<VToken>("VToken");
+      await expect(comptroller.setForcedLiquidation(someVToken.address, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "MarketNotListed",
+      );
+    });
+
+    it("fails if ACM does not allow the call", async () => {
+      accessControl.isAllowedToCall.returns(false);
+      await expect(comptroller.setForcedLiquidation(OMG.address, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "Unauthorized",
+      );
+      accessControl.isAllowedToCall.returns(true);
+    });
+
+    it("sets forced liquidation", async () => {
+      await comptroller.setForcedLiquidation(OMG.address, true);
+      expect(await comptroller.isForcedLiquidationEnabled(OMG.address)).to.be.true;
+
+      await comptroller.setForcedLiquidation(OMG.address, false);
+      expect(await comptroller.isForcedLiquidationEnabled(OMG.address)).to.be.false;
+    });
+
+    it("emits IsForcedLiquidationEnabledUpdated event", async () => {
+      const tx1 = await comptroller.setForcedLiquidation(OMG.address, true);
+      await expect(tx1).to.emit(comptroller, "IsForcedLiquidationEnabledUpdated").withArgs(OMG.address, true);
+
+      const tx2 = await comptroller.setForcedLiquidation(OMG.address, false);
+      await expect(tx2).to.emit(comptroller, "IsForcedLiquidationEnabledUpdated").withArgs(OMG.address, false);
     });
   });
 });
