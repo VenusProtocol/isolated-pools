@@ -478,7 +478,7 @@ contract Comptroller is
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
         /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
-        if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed)) || isForcedLiquidationEnabled[vTokenBorrowed]) {
+        if (skipLiquidityCheck || isForcedLiquidationEnabled[vTokenBorrowed]) {
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
             }
@@ -1242,19 +1242,6 @@ contract Comptroller is
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
-    }
-
-    /**
-     * @notice Check if a vToken market has been deprecated
-     * @dev All borrows in a deprecated vToken market can be immediately liquidated
-     * @param vToken The market to check if deprecated
-     * @return deprecated True if the given vToken market has been deprecated
-     */
-    function isDeprecated(VToken vToken) public view returns (bool) {
-        return
-            markets[address(vToken)].collateralFactorMantissa == 0 &&
-            actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == MANTISSA_ONE;
     }
 
     /**

@@ -107,6 +107,9 @@ contract ComptrollerStorage {
     // Used to check if rewards distributor is added
     mapping(address => bool) internal rewardsDistributorExists;
 
+    /// @notice Flag indicating whether forced liquidation enabled for a market
+    mapping(address => bool) public isForcedLiquidationEnabled;
+
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
@@ -117,9 +120,6 @@ contract ComptrollerStorage {
 
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.9e18; // 0.9
-
-    /// @notice Flag indicating whether forced liquidation enabled for a market
-    mapping(address => bool) public isForcedLiquidationEnabled;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
