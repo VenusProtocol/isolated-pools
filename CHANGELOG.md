@@ -1,3 +1,11 @@
+## [2.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.1-dev.1...v2.1.0-dev.1) (2023-09-15)
+
+
+### Features
+
+* deploy PSR, RiskFund, Shortfall ([93408b1](https://github.com/VenusProtocol/isolated-pools/commit/93408b18da5a390869aab251354789910416c80e))
+* set needed dependency to allow the deployment of SwapRouter ([96a684f](https://github.com/VenusProtocol/isolated-pools/commit/96a684fb80775b82a0ea02c2afc383fb032a7c09))
+
 ## [2.0.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.0...v2.0.1-dev.1) (2023-09-12)
 
 ## [2.0.0](https://github.com/VenusProtocol/isolated-pools/compare/v1.3.0...v2.0.0) (2023-09-07)
