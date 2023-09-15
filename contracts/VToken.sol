@@ -1522,8 +1522,7 @@ contract VToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
-        return token.balanceOf(address(this));
+        return IERC20Upgradeable(underlying).balanceOf(address(this));
     }
 
     /**
