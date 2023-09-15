@@ -162,17 +162,12 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
     bscmainnet: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: "http://127.0.0.1:1248",
       chainId: 56,
-      live: true,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      timeout: 1200000,
     },
   },
   gasReporter: {
@@ -229,7 +224,10 @@ const config: HardhatUserConfig = {
       },
     ],
     deployments: {
-      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
+      bsctestnet: [
+        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+      ],
     },
   },
 };
