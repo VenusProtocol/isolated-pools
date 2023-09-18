@@ -135,7 +135,7 @@ const preconfiguredAddresses = {
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
   sepolia: {
-    VTreasury: SEPOLIA_MULTISIG,
+    VTreasury: "0xD51008eAe81475b542638433a617f5f4171b39ee",
     NormalTimelock: SEPOLIA_MULTISIG,
     FastTrackTimelock: SEPOLIA_MULTISIG,
     CriticalTimelock: SEPOLIA_MULTISIG,
@@ -144,7 +144,7 @@ const preconfiguredAddresses = {
   },
   ethereum: {
     //  TODO: replace testnet mnemonic with multisig
-    VTreasury: SIGNER_TESTNET_MNEMONIC,
+    VTreasury: SIGNER_TESTNET_MNEMONIC, // To be revised
     NormalTimelock: SIGNER_TESTNET_MNEMONIC, // signer[1] from testnet mnemonic
     FastTrackTimelock: SIGNER_TESTNET_MNEMONIC,
     CriticalTimelock: SIGNER_TESTNET_MNEMONIC,
