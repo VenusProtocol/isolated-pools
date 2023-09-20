@@ -793,6 +793,7 @@ describe("Risk Fund and Auction related scenarios", function () {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
       deployerSigner = await ethers.getSigner(deployer);
+      await expect(vBNX.connect(deployerSigner).setReduceReservesBlockDelta(0)).to.be.revertedWith("Invalid Input");
       await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
       await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
 

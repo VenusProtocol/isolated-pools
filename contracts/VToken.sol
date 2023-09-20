@@ -632,6 +632,7 @@ contract VToken is
      */
     function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
         _checkAccessAllowed("setReduceReservesBlockDelta(uint256)");
+        require(_newReduceReservesBlockDelta > 0, "Invalid Input");
         emit NewReduceReservesBlockDelta(reduceReservesBlockDelta, _newReduceReservesBlockDelta);
         reduceReservesBlockDelta = _newReduceReservesBlockDelta;
     }
@@ -1521,8 +1522,7 @@ contract VToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
-        return token.balanceOf(address(this));
+        return IERC20Upgradeable(underlying).balanceOf(address(this));
     }
 
     /**
