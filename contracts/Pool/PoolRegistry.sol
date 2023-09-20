@@ -292,11 +292,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         return numberOfPools_;
     }
 
-    function _transferIn(
-        IERC20Upgradeable token,
-        address from,
-        uint256 amount
-    ) internal returns (uint256) {
+    function _transferIn(IERC20Upgradeable token, address from, uint256 amount) internal returns (uint256) {
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));

@@ -24,11 +24,7 @@ contract GemLike {
 
     function transfer(address, uint256) external returns (bool);
 
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) external returns (bool);
+    function transferFrom(address, address, uint256) external returns (bool);
 }
 
 contract DSTokenLike {
@@ -38,17 +34,9 @@ contract DSTokenLike {
 }
 
 contract VatLike {
-    function slip(
-        bytes32,
-        address,
-        int256
-    ) external;
+    function slip(bytes32, address, int256) external;
 
-    function move(
-        address,
-        address,
-        uint256
-    ) external;
+    function move(address, address, uint256) external;
 }
 
 /*
@@ -98,11 +86,7 @@ contract GemJoin is LibNote {
     uint256 public dec;
     uint256 public live; // Access Flag
 
-    constructor(
-        address vat_,
-        bytes32 ilk_,
-        address gem_
-    ) public {
+    constructor(address vat_, bytes32 ilk_, address gem_) public {
         wards[msg.sender] = 1;
         live = 1;
         vat = VatLike(vat_);
@@ -123,7 +107,7 @@ contract GemJoin is LibNote {
     }
 
     function exit(address usr, uint256 wad) external note {
-        require(wad <= 2**255, "GemJoin/overflow");
+        require(wad <= 2 ** 255, "GemJoin/overflow");
         vat.slip(ilk, msg.sender, -int256(wad));
         require(gem.transfer(usr, wad), "GemJoin/failed-transfer");
     }
@@ -206,7 +190,7 @@ contract DaiJoin is LibNote {
         live = 0;
     }
 
-    uint256 constant ONE = 10**27;
+    uint256 constant ONE = 10 ** 27;
 
     function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require(y == 0 || (z = x * y) / y == x);
