@@ -2324,7 +2324,7 @@ export const globalConfig: NetworkConfig = {
             multiplierPerYear: convertToUnit("0.05", 18),
             jumpMultiplierPerYear: convertToUnit("2.5", 18),
             kink_: convertToUnit("0.8", 18),
-            collateralFactor: convertToUnit("0.825", 18),
+            collateralFactor: convertToUnit("0.8", 18),
             liquidationThreshold: convertToUnit("0.85", 18),
             reserveFactor: convertToUnit("0.1", 18),
             initialSupply: convertToUnit(10_000, 6), // 10,000 USDT
