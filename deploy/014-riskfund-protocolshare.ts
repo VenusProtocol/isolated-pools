@@ -1,75 +1,29 @@
-import * as ERC20 from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { getConfig } from "../helpers/deploymentConfig";
+import { getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
 const maxLoopsLimit = 100;
 
-const getAllMarkets = async (poolRegistry: Contract): Promise<Contract[]> => {
-  const pools = await poolRegistry.getAllPools();
-  const markets = await Promise.all(
-    pools.map(async ({ comptroller }: { comptroller: string }): Promise<Contract[]> => {
-      const poolComptroller = await ethers.getContractAt("Comptroller", comptroller);
-      const vTokenAddresses = await poolComptroller.getAllMarkets();
-      const vTokens = await Promise.all(
-        vTokenAddresses.map((vTokenAddress: string) => ethers.getContractAt("VToken", vTokenAddress)),
-      );
-      return vTokens;
-    }),
-  );
-  return markets.flat();
-};
-
-const configureVToken = async (vToken: Contract, shortfallAddress: string, protocolShareReserveAddress: string) => {
-  console.log("Setting shortfall contract for vToken: ", vToken.address);
-  const tx1 = await vToken.setShortfallContract(shortfallAddress);
-  await tx1.wait();
-  console.log("Setting protocol share reserve for vToken: ", vToken.address);
-  const tx2 = await vToken.setProtocolShareReserve(protocolShareReserveAddress);
-  await tx2.wait();
-  console.log("Finished configuring vToken: ", vToken.address);
-};
-
-type AcmAddresses = {
-  bsctestnet: string;
-  bscmainnet: string;
-};
-
-const acmAddresses: AcmAddresses = {
-  bsctestnet: "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA",
-  bscmainnet: "0x4788629ABc6cFCA10F9f969efdEAa1cF70c23555",
-};
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig } = await getConfig(hre.network.name);
-  const busdConfig = getTokenConfig("BUSD", tokensConfig);
-
-  let BUSD;
-  if (busdConfig.isMock) {
-    BUSD = await ethers.getContract("MockBUSD");
-  } else {
-    BUSD = await ethers.getContractAt(ERC20.abi, busdConfig.tokenAddress);
-  }
+  const { tokensConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const usdt = await getUnderlyingToken("USDT", tokensConfig);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
-  const swapRouter = await ethers.getContract("SwapRouter");
-  let accessControl;
-  if (hre.network.live) {
-    const networkName = hre.network.name === "bscmainnet" ? "bscmainnet" : "bsctestnet";
-    accessControl = await ethers.getContractAt("AccessControlManager", acmAddresses[networkName]);
-  } else {
-    accessControl = await ethers.getContract("AccessControlManager");
-  }
+  const swapRouterAddress = await toAddress(preconfiguredAddresses.SwapRouter_CorePool || "SwapRouter", hre);
+  const accessControlManagerAddress = await toAddress(
+    preconfiguredAddresses.AccessControlManager || "AccessControlManager",
+    hre,
+  );
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
@@ -81,7 +35,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [swapRouter.address, MIN_AMOUNT_TO_CONVERT, BUSD.address, accessControl.address, maxLoopsLimit],
+        args: [swapRouterAddress, MIN_AMOUNT_TO_CONVERT, usdt.address, accessControlManagerAddress, maxLoopsLimit],
       },
       upgradeIndex: 0,
     },
@@ -99,7 +53,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [BUSD.address, riskFund.address, MIN_POOL_BAD_DEBT, accessControl.address],
+        args: [riskFund.address, MIN_POOL_BAD_DEBT, accessControlManagerAddress],
       },
       upgradeIndex: 0,
     },
@@ -108,13 +62,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const shortfall = await ethers.getContract("Shortfall");
-  const tx1 = await shortfall.connect(deployerSigner).updatePoolRegistry(poolRegistry.address);
-  await tx1.wait();
+  if ((await shortfall.poolRegistry()) !== poolRegistry.address) {
+    console.log("Setting PoolRegistry address in Shortfall contract");
+    const tx = await shortfall.connect(deployerSigner).updatePoolRegistry(poolRegistry.address);
+    await tx.wait();
+  }
 
-  const tx2 = await riskFund.setShortfallContractAddress(shortfallDeployment.address);
-  await tx2.wait(1);
+  if ((await riskFund.shortfall()) !== shortfall.address) {
+    console.log("Setting Shortfall contract address in RiskFund");
+    const tx = await riskFund.setShortfallContractAddress(shortfallDeployment.address);
+    await tx.wait(1);
+  }
 
-  const protocolShareReserveDeployment = await deploy("ProtocolShareReserve", {
+  const protocolIncomeReceiver = await toAddress(preconfiguredAddresses.VTreasury, hre);
+  await deploy("ProtocolShareReserve", {
     from: deployer,
     contract: "ProtocolShareReserve",
     proxy: {
@@ -122,7 +83,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [deployer, riskFund.address],
+        args: [protocolIncomeReceiver, riskFund.address],
       },
       upgradeIndex: 0,
     },
@@ -130,9 +91,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
   });
 
-  const allMarkets = await getAllMarkets(poolRegistry);
-  for (const market of allMarkets) {
-    await configureVToken(market, shortfallDeployment.address, protocolShareReserveDeployment.address);
+  for (const contractName of ["ProtocolShareReserve", "RiskFund"]) {
+    const contract = await ethers.getContract(contractName);
+    if ((await contract.poolRegistry()) !== poolRegistry.address) {
+      console.log(`Setting PoolRegistry address in ${contractName} contract`);
+      const tx = await contract.setPoolRegistry(poolRegistry.address);
+      await tx.wait();
+    }
+  }
+
+  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
+  for (const contractName of ["RiskFund", "Shortfall", "ProtocolShareReserve"]) {
+    const contract = await ethers.getContract(contractName);
+    if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
+      console.log(`Transferring ownership of ${contractName} to ${targetOwner}`);
+      const tx = await contract.transferOwnership(targetOwner);
+      await tx.wait();
+    }
   }
 };
 func.tags = ["RiskFund", "il"];

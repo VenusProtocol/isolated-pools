@@ -396,11 +396,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @param supplySpeed New supply-side REWARD TOKEN speed for market
      * @param borrowSpeed New borrow-side REWARD TOKEN speed for market
      */
-    function _setRewardTokenSpeed(
-        VToken vToken,
-        uint256 supplySpeed,
-        uint256 borrowSpeed
-    ) internal {
+    function _setRewardTokenSpeed(VToken vToken, uint256 supplySpeed, uint256 borrowSpeed) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
         if (rewardTokenSupplySpeeds[address(vToken)] != supplySpeed) {
@@ -467,11 +463,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      * @param borrower The address of the borrower to distribute REWARD TOKEN to
      * @param marketBorrowIndex The current global borrow index of vToken
      */
-    function _distributeBorrowerRewardToken(
-        address vToken,
-        address borrower,
-        Exp memory marketBorrowIndex
-    ) internal {
+    function _distributeBorrowerRewardToken(address vToken, address borrower, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
         uint256 borrowIndex = borrowState.index;
         uint256 borrowerIndex = rewardTokenBorrowerIndex[vToken][borrower];

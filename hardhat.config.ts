@@ -72,13 +72,12 @@ task("addMarket", "Add a market to an existing pool")
 task("deployComptroller", "Deploys a Comptroller Implementation")
   .addParam("contractName", "Contract name, later we can load contracts by name")
   .addParam("poolRegistry", "Address of PoolRegistry Contract")
-  .addParam("accessControl", "Address of AccessControlManager contract")
   .setAction(async (taskArgs, hre) => {
     const { deployer } = await hre.getNamedAccounts();
     const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
       contract: "Comptroller",
       from: deployer,
-      args: [taskArgs.poolRegistry, taskArgs.accessControl],
+      args: [taskArgs.poolRegistry],
       log: true,
     });
 
@@ -167,9 +166,12 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    bscmainnet: {
+      url: "http://127.0.0.1:1248",
+      chainId: 56,
+      timeout: 1200000,
     },
   },
   gasReporter: {
@@ -186,7 +188,19 @@ const config: HardhatUserConfig = {
           browserURL: "https://testnet.bscscan.com",
         },
       },
+      {
+        network: "bscmainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
+        },
+      },
     ],
+    apiKey: {
+      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+    },
   },
   paths: {
     tests: "./tests",
@@ -214,7 +228,10 @@ const config: HardhatUserConfig = {
       },
     ],
     deployments: {
-      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
+      bsctestnet: [
+        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+      ],
     },
   },
 };

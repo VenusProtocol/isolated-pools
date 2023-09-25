@@ -27,7 +27,7 @@ export async function setForkBlock(blockNumber: number) {
     params: [
       {
         forking: {
-          jsonRpcUrl: process.env[getArchieveNode(process.env.NETWORK_NAME as string)],
+          jsonRpcUrl: process.env[getArchieveNode(process.env.NETWORK_NAME || ("bsc" as string))],
           blockNumber: blockNumber,
         },
       },

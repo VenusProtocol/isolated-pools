@@ -133,7 +133,6 @@ const setupRiskManagementContracts = async () => {
 
   const shortfallFactory = await ethers.getContractFactory<Shortfall__factory>("Shortfall");
   shortfall = (await upgrades.deployProxy(shortfallFactory, [
-    TOKEN2, // convertibleBaseAsset
     riskFund.address,
     MINIMUM_POOL_BAD_DEBT,
     ACM,

@@ -20,23 +20,11 @@ interface ComptrollerInterface {
 
     /*** Policy Hooks ***/
 
-    function preMintHook(
-        address vToken,
-        address minter,
-        uint256 mintAmount
-    ) external;
+    function preMintHook(address vToken, address minter, uint256 mintAmount) external;
 
-    function preRedeemHook(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) external;
+    function preRedeemHook(address vToken, address redeemer, uint256 redeemTokens) external;
 
-    function preBorrowHook(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external;
+    function preBorrowHook(address vToken, address borrower, uint256 borrowAmount) external;
 
     function preRepayHook(address vToken, address borrower) external;
 
@@ -55,12 +43,7 @@ interface ComptrollerInterface {
         address borrower
     ) external;
 
-    function preTransferHook(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external;
+    function preTransferHook(address vToken, address src, address dst, uint256 transferTokens) external;
 
     function isComptroller() external view returns (bool);
 
