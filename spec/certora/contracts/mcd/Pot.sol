@@ -39,17 +39,9 @@ import "./lib.sol";
 */
 
 contract VatLike {
-    function move(
-        address,
-        address,
-        uint256
-    ) external;
+    function move(address, address, uint256) external;
 
-    function suck(
-        address,
-        address,
-        uint256
-    ) external;
+    function suck(address, address, uint256) external;
 }
 
 contract Pot is LibNote {
@@ -93,13 +85,9 @@ contract Pot is LibNote {
     }
 
     // --- Math ---
-    uint256 constant ONE = 10**27;
+    uint256 constant ONE = 10 ** 27;
 
-    function rpow(
-        uint256 x,
-        uint256 n,
-        uint256 base
-    ) internal pure returns (uint256 z) {
+    function rpow(uint256 x, uint256 n, uint256 base) internal pure returns (uint256 z) {
         assembly {
             switch x
             case 0 {

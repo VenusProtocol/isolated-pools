@@ -88,11 +88,7 @@ contract VBep20ImmutableCertora is VBep20Immutable {
         return borrowFresh(borrower, borrowAmount);
     }
 
-    function repayBorrowFreshPub(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) public returns (uint256) {
+    function repayBorrowFreshPub(address payer, address borrower, uint256 repayAmount) public returns (uint256) {
         (uint256 error, ) = repayBorrowFresh(payer, borrower, repayAmount);
         return error;
     }

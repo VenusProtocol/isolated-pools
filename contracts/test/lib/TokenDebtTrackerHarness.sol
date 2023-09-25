@@ -10,20 +10,12 @@ contract TokenDebtTrackerHarness is TokenDebtTracker {
         __TokenDebtTracker_init();
     }
 
-    function addTokenDebt(
-        IERC20Upgradeable token,
-        address user,
-        uint256 amount
-    ) external {
+    function addTokenDebt(IERC20Upgradeable token, address user, uint256 amount) external {
         tokenDebt[token][user] += amount;
         totalTokenDebt[token] += amount;
     }
 
-    function transferOutOrTrackDebt(
-        IERC20Upgradeable token,
-        address user,
-        uint256 amount
-    ) external {
+    function transferOutOrTrackDebt(IERC20Upgradeable token, address user, uint256 amount) external {
         _transferOutOrTrackDebt(token, user, amount);
     }
 

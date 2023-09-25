@@ -144,11 +144,7 @@ contract VToken is
      * @custom:error TransferNotAllowed is thrown if trying to transfer to self
      * @custom:access Not restricted
      */
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override nonReentrant returns (bool) {
+    function transferFrom(address src, address dst, uint256 amount) external override nonReentrant returns (bool) {
         _transferTokens(msg.sender, src, dst, amount);
         return true;
     }
@@ -472,11 +468,7 @@ contract VToken is
      * @custom:error HealBorrowUnauthorized is thrown when the request does not come from Comptroller
      * @custom:access Only Comptroller
      */
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external override nonReentrant {
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external override nonReentrant {
         if (repayAmount != 0) {
             comptroller.preRepayHook(address(this), borrower);
         }
@@ -565,11 +557,7 @@ contract VToken is
      * @custom:error LiquidateSeizeLiquidatorIsBorrower is thrown when trying to liquidate self
      * @custom:access Not restricted
      */
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external override nonReentrant {
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external override nonReentrant {
         _seize(msg.sender, liquidator, borrower, seizeTokens);
     }
 
@@ -665,16 +653,13 @@ contract VToken is
      * @return borrowBalance Amount owed in terms of underlying
      * @return exchangeRate Stored exchange rate
      */
-    function getAccountSnapshot(address account)
+    function getAccountSnapshot(
+        address account
+    )
         external
         view
         override
-        returns (
-            uint256 error,
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRate
-        )
+        returns (uint256 error, uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRate)
     {
         return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
     }
@@ -817,11 +802,7 @@ contract VToken is
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
      */
-    function _mintFresh(
-        address payer,
-        address minter,
-        uint256 mintAmount
-    ) internal {
+    function _mintFresh(address payer, address minter, uint256 mintAmount) internal {
         /* Fail if mint not allowed */
         comptroller.preMintHook(address(this), minter, mintAmount);
 
@@ -874,11 +855,7 @@ contract VToken is
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
-    function _redeemFresh(
-        address redeemer,
-        uint256 redeemTokensIn,
-        uint256 redeemAmountIn
-    ) internal {
+    function _redeemFresh(address redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
         /* Verify market's block number equals current block number */
@@ -1008,11 +985,7 @@ contract VToken is
      * @param repayAmount the amount of underlying tokens being returned, or type(uint256).max for the full outstanding amount
      * @return (uint) the actual repayment amount.
      */
-    function _repayBorrowFresh(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) internal returns (uint256) {
+    function _repayBorrowFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), borrower);
 
@@ -1175,12 +1148,7 @@ contract VToken is
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
      */
-    function _seize(
-        address seizerContract,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) internal {
+    function _seize(address seizerContract, address liquidator, address borrower, uint256 seizeTokens) internal {
         /* Fail if seize not allowed */
         comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower);
 
@@ -1195,7 +1163,7 @@ contract VToken is
          *  liquidatorTokensNew = accountTokens[liquidator] + seizeTokens
          */
         uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller))
-        .liquidationIncentiveMantissa();
+            .liquidationIncentiveMantissa();
         uint256 numerator = mul_(seizeTokens, Exp({ mantissa: protocolSeizeShareMantissa }));
         uint256 protocolSeizeTokens = div_(numerator, Exp({ mantissa: liquidationIncentiveMantissa }));
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
@@ -1398,12 +1366,7 @@ contract VToken is
      * @param dst The address of the destination account
      * @param tokens The number of tokens to transfer
      */
-    function _transferTokens(
-        address spender,
-        address src,
-        address dst,
-        uint256 tokens
-    ) internal {
+    function _transferTokens(address spender, address src, address dst, uint256 tokens) internal {
         /* Fail if transfer not allowed */
         comptroller.preTransferHook(address(this), src, dst, tokens);
 
