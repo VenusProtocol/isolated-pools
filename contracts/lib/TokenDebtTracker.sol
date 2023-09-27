@@ -110,11 +110,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param amount The amount to transfer
      * @custom:error InsufficientBalance The contract doesn't have enough balance to transfer
      */
-    function _transferOutOrTrackDebt(
-        IERC20Upgradeable token,
-        address to,
-        uint256 amount
-    ) internal {
+    function _transferOutOrTrackDebt(IERC20Upgradeable token, address to, uint256 amount) internal {
         uint256 balance = token.balanceOf(address(this));
         if (balance < amount) {
             revert InsufficientBalance(address(token), address(this), amount, balance);
@@ -129,11 +125,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param to The recipient of the transfer
      * @param amount The amount to transfer
      */
-    function _transferOutOrTrackDebtSkippingBalanceCheck(
-        IERC20Upgradeable token,
-        address to,
-        uint256 amount
-    ) internal {
+    function _transferOutOrTrackDebtSkippingBalanceCheck(IERC20Upgradeable token, address to, uint256 amount) internal {
         // We can't use safeTransfer here because we can't try-catch internal calls
         bool success = _tryTransferOut(token, to, amount);
         if (!success) {
@@ -152,11 +144,7 @@ abstract contract TokenDebtTracker is Initializable {
      * @param amount The amount to transfer
      * @return true if the transfer succeeded, false otherwise
      */
-    function _tryTransferOut(
-        IERC20Upgradeable token,
-        address to,
-        uint256 amount
-    ) private returns (bool) {
+    function _tryTransferOut(IERC20Upgradeable token, address to, uint256 amount) private returns (bool) {
         bytes memory callData = abi.encodeCall(token.transfer, (to, amount));
 
         // solhint-disable-next-line avoid-low-level-calls

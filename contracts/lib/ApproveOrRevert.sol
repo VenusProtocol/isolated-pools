@@ -17,11 +17,7 @@ library ApproveOrRevert {
     /// @param token The contract address of the token which will be transferred
     /// @param spender The spender contract address
     /// @param amount The value of the transfer
-    function approveOrRevert(
-        IERC20Upgradeable token,
-        address spender,
-        uint256 amount
-    ) internal {
+    function approveOrRevert(IERC20Upgradeable token, address spender, uint256 amount) internal {
         bytes memory callData = abi.encodeCall(token.approve, (spender, amount));
 
         // solhint-disable-next-line avoid-low-level-calls

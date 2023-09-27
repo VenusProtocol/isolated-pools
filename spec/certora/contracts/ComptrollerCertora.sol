@@ -11,16 +11,7 @@ contract ComptrollerCertora is Comptroller {
         VToken vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount
-    )
-        internal
-        view
-        override
-        returns (
-            Error,
-            uint256,
-            uint256
-        )
-    {
+    ) internal view override returns (Error, uint256, uint256) {
         if (switcher == 0) return (Error.NO_ERROR, liquidityOrShortfall, 0);
         if (switcher == 1) return (Error.NO_ERROR, 0, liquidityOrShortfall);
         if (switcher == 2) return (Error.SNAPSHOT_ERROR, 0, 0);

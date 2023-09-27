@@ -9,27 +9,15 @@ contract TimelockCertora is Timelock {
         return GRACE_PERIOD;
     }
 
-    function queueTransactionStatic(
-        address target,
-        uint256 value,
-        uint256 eta
-    ) public returns (bytes32) {
+    function queueTransactionStatic(address target, uint256 value, uint256 eta) public returns (bytes32) {
         return queueTransaction(target, value, "setCounter()", "", eta);
     }
 
-    function cancelTransactionStatic(
-        address target,
-        uint256 value,
-        uint256 eta
-    ) public {
+    function cancelTransactionStatic(address target, uint256 value, uint256 eta) public {
         return cancelTransaction(target, value, "setCounter()", "", eta);
     }
 
-    function executeTransactionStatic(
-        address target,
-        uint256 value,
-        uint256 eta
-    ) public {
+    function executeTransactionStatic(address target, uint256 value, uint256 eta) public {
         executeTransaction(target, value, "setCounter()", "", eta); // NB: cannot return dynamic types (will hang solver)
     }
 }

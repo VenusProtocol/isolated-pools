@@ -82,8 +82,8 @@ const configureRewards = async (
     unregisteredRewardDistributors.map(async (pool: PoolConfig) => {
       const rewards = pool.rewards || [];
       const poolCommands = await Promise.all(
-        rewards.map(async (rewardConfig: RewardConfig) => {
-          const contractName = `RewardsDistributor_${rewardConfig.asset}_${pool.id}`;
+        rewards.map(async (rewardConfig: RewardConfig, idx: number) => {
+          const contractName = `RewardsDistributor_${pool.id}_${idx}`;
           const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
           return [
             ...(await acceptOwnership(contractName, owner, hre)),
