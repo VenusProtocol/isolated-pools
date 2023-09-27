@@ -221,22 +221,22 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
     }
 
-    function _isEligibleToReceive(uint16 srcChainId, uint256 receivedAmount) internal {
+    function _isEligibleToReceive(uint16 srcChainId_, uint256 receivedAmount_) internal {
         // Check if the sender's address is whitelisted
         bool isWhiteListedUser = whitelist[msg.sender];
 
         // Calculate the received amount in USD using the oracle price
         uint256 receivedAmountInUsd;
         Exp memory oraclePrice = Exp({ mantissa: oracle.getPrice(address(token())) });
-        receivedAmountInUsd = mul_ScalarTruncate(oraclePrice, receivedAmount);
+        receivedAmountInUsd = mul_ScalarTruncate(oraclePrice, receivedAmount_);
 
         uint256 currentBlockTimestamp = block.timestamp;
 
         // Load values for the 24-hour window checks for receiving
-        uint256 lastDayReceiveWindowStart = chainIdToLast24HourReceiveWindowStart[srcChainId];
-        uint256 receivedInWindow = chainIdToLast24HourReceived[srcChainId];
-        uint256 maxSingleReceiveTransactionLimit = chainIdToMaxSingleReceiveTransactionLimit[srcChainId];
-        uint256 maxDailyReceiveLimit = chainIdToMaxDailyReceiveLimit[srcChainId];
+        uint256 lastDayReceiveWindowStart = chainIdToLast24HourReceiveWindowStart[srcChainId_];
+        uint256 receivedInWindow = chainIdToLast24HourReceived[srcChainId_];
+        uint256 maxSingleReceiveTransactionLimit = chainIdToMaxSingleReceiveTransactionLimit[srcChainId_];
+        uint256 maxDailyReceiveLimit = chainIdToMaxDailyReceiveLimit[srcChainId_];
 
         // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
         require(
@@ -247,7 +247,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlockTimestamp - lastDayReceiveWindowStart > 1 days) {
             receivedInWindow = receivedAmountInUsd;
-            chainIdToLast24HourReceiveWindowStart[srcChainId] = currentBlockTimestamp;
+            chainIdToLast24HourReceiveWindowStart[srcChainId_] = currentBlockTimestamp;
         } else {
             receivedInWindow += receivedAmountInUsd;
         }
@@ -256,7 +256,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         require(receivedInWindow <= maxDailyReceiveLimit || isWhiteListedUser, "Daily Transaction Limit Exceed");
 
         // Update the received amount for the 24-hour window
-        chainIdToLast24HourReceived[srcChainId] = receivedInWindow;
+        chainIdToLast24HourReceived[srcChainId_] = receivedInWindow;
     }
 
     function _transferFrom(address from_, address to_, uint256 amount_) internal override returns (uint256) {

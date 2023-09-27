@@ -41,17 +41,17 @@ contract XVSBridgeAdmin is AccessControlledV8 {
         __AccessControlled_init(accessControlManager_);
     }
 
-    function upsertSignature(string[] calldata signatures, bool[] calldata remove) external onlyOwner {
-        uint256 signatureLength = signatures.length;
-        require(signatureLength == remove.length, "Input arrays must have the same length");
+    function upsertSignature(string[] calldata signatures_, bool[] calldata remove_) external onlyOwner {
+        uint256 signatureLength = signatures_.length;
+        require(signatureLength == remove_.length, "Input arrays must have the same length");
         for (uint256 i; i < signatureLength; i++) {
-            bytes4 sigHash = bytes4(keccak256(bytes(signatures[i])));
-            if (remove[i]) {
+            bytes4 sigHash = bytes4(keccak256(bytes(signatures_[i])));
+            if (remove_[i]) {
                 delete functionRegistry[sigHash];
-                emit FunctionRegistryChanged(signatures[i], true);
+                emit FunctionRegistryChanged(signatures_[i], true);
             } else {
-                functionRegistry[sigHash] = signatures[i];
-                emit FunctionRegistryChanged(signatures[i], false);
+                functionRegistry[sigHash] = signatures_[i];
+                emit FunctionRegistryChanged(signatures_[i], false);
             }
         }
     }
