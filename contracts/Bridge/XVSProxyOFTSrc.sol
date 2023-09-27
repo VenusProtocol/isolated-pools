@@ -45,11 +45,7 @@ contract XVSProxyOFTSrc is BaseXVSProxyOFT {
         return amount;
     }
 
-    function _creditTo(
-        uint16 srcChainId_,
-        address _toAddress,
-        uint256 amount_
-    ) internal override returns (uint256) {
+    function _creditTo(uint16 srcChainId_, address _toAddress, uint256 amount_) internal override returns (uint256) {
         _isEligibleToReceive(srcChainId_, amount_);
         outboundAmount -= amount_;
         // tokens are already in this contract, so no need to transfer

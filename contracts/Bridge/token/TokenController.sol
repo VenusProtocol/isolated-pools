@@ -76,11 +76,7 @@ contract TokenController is Ownable, Pausable {
      * @param to_  Receiver address.
      * @param amount_  Amount to be mint.
      */
-    function _isEligibleToMint(
-        address from_,
-        address to_,
-        uint256 amount_
-    ) internal {
+    function _isEligibleToMint(address from_, address to_, uint256 amount_) internal {
         if (_blacklist[to_]) {
             revert MintNotAllowed(from_, to_);
         }

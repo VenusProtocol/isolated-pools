@@ -92,7 +92,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         uint8 decimals = abi.decode(data, (uint8));
 
         require(sharedDecimals_ <= decimals, "ProxyOFT: sharedDecimals must be <= decimals");
-        ld2sdRate = 10**(decimals - sharedDecimals_);
+        ld2sdRate = 10 ** (decimals - sharedDecimals_);
 
         ensureNonzeroAddress(oracle_);
         oracle = ResilientOracleInterface(oracle_);
@@ -187,11 +187,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         return address(innerToken);
     }
 
-    function _isEligibleToSend(
-        address from_,
-        uint16 dstChainId_,
-        uint256 amount_
-    ) internal {
+    function _isEligibleToSend(address from_, uint16 dstChainId_, uint256 amount_) internal {
         // Check if the recipient's address is whitelisted
         bool isWhiteListedUser = whitelist[from_];
 
@@ -263,11 +259,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         chainIdToLast24HourReceived[srcChainId] = receivedInWindow;
     }
 
-    function _transferFrom(
-        address from_,
-        address to_,
-        uint256 amount_
-    ) internal override returns (uint256) {
+    function _transferFrom(address from_, address to_, uint256 amount_) internal override returns (uint256) {
         uint256 before = innerToken.balanceOf(to_);
         if (from_ == address(this)) {
             innerToken.safeTransfer(to_, amount_);
