@@ -667,6 +667,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x63061de4A25f24279AAab80400040684F92Ee319",
       },
+      {
+        isMock: false,
+        name: "ANGLE_bsc",
+        symbol: "ANGLE",
+        decimals: 18,
+        tokenAddress: "0xD1Bc731d188ACc3f52a6226B328a89056B0Ec71a",
+      },
     ],
     poolConfig: [
       {
@@ -757,6 +764,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["HAY"],
             supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
+          {
+            asset: "ANGLE",
+            markets: ["agEUR"],
+            supplySpeeds: ["0"],
+            borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
         ],
       },
@@ -1394,6 +1407,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
       },
+      {
+        isMock: false,
+        name: "ANGLE_bsc",
+        symbol: "ANGLE",
+        decimals: 18,
+        tokenAddress: "0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f",
+      },
     ],
     poolConfig: [
       {
@@ -1484,6 +1504,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["HAY"],
             supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
+          {
+            asset: "ANGLE",
+            markets: ["agEUR"],
+            supplySpeeds: ["0"],
+            borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
         ],
       },
