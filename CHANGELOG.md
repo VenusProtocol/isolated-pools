@@ -1,3 +1,10 @@
+## [2.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.2...v2.1.0-dev.3) (2023-09-29)
+
+
+### Features
+
+* add SnBNB market deployments ([add6956](https://github.com/VenusProtocol/isolated-pools/commit/add695693f9e835835e8e53a83dce81aaddfe29e))
+
 ## [2.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.1...v2.1.0-dev.2) (2023-09-18)
 
 ## [2.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.1-dev.1...v2.1.0-dev.1) (2023-09-15)
