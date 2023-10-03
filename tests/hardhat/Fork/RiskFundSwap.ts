@@ -201,9 +201,6 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
-    baseRatePerBlockForStable: 0,
-    stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await BUSD.faucet(initialSupply);
@@ -216,9 +213,6 @@ const riskFundFixture = async (): Promise<void> => {
     vTokenReceiver: admin.address,
     supplyCap: initialSupply,
     borrowCap: initialSupply,
-    baseRatePerBlockForStable: 0,
-    stableRatePremium: convertToUnit(2, 12),
-    optimalStableLoanRatio: convertToUnit(5, 17),
   });
 
   await riskFund.setPoolRegistry(poolRegistry.address);

@@ -13,17 +13,9 @@ chai.use(smock.matchers);
 
 const borrowAmount = convertToUnit("1000", 18);
 
-async function preBorrow(
-  contracts: VTokenTestFixture,
-  borrower: Signer,
-  borrowAmount: BigNumberish,
-  stableRateMantissa: BigNumberish = 0,
-) {
-  const { comptroller, interestRateModel, underlying, vToken, stableInterestRateModel } = contracts;
+async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowAmount: BigNumberish) {
+  const { comptroller, underlying, vToken } = contracts;
   comptroller.preBorrowHook.reset();
-
-  interestRateModel.getBorrowRate.reset();
-  stableInterestRateModel.getBorrowRate.returns(stableRateMantissa);
 
   const borrowerAddress = await borrower.getAddress();
   await underlying.harnessSetBalance(vToken.address, borrowAmount);
@@ -42,14 +34,16 @@ describe("VToken", function () {
   let contracts: VTokenTestFixture;
   let vToken: MockContract<VTokenHarness>;
   let interestRateModel: FakeContract<InterestRateModel>;
-  let stableInterestRateModel: FakeContract<StableRateModel>;
+  let stableRateModel: FakeContract<StableRateModel>;
   let _root: Signer;
   let borrower: Signer;
 
   beforeEach(async () => {
     [_root, borrower] = await ethers.getSigners();
     contracts = await loadFixture(vTokenTestFixture);
-    ({ vToken, interestRateModel, stableInterestRateModel } = contracts);
+    ({ vToken, interestRateModel, stableRateModel } = contracts);
+    await stableRateModel.getBorrowRate.returns(convertToUnit(1, 6));
+    await interestRateModel.getBorrowRate.returns(convertToUnit(1, 12));
   });
 
   describe("Rebalance Stable rate", () => {
@@ -101,25 +95,22 @@ describe("VToken", function () {
       await vToken.setRebalanceRateFractionThreshold(convertToUnit(50, 17));
       await preBorrow(contracts, borrower, borrowAmount);
       await borrowStable(vToken, borrower, convertToUnit(900, 18));
-      await interestRateModel.getBorrowRate.returns(convertToUnit(5, 8));
       await vToken.validateRebalanceStableBorrowRate();
     });
 
     it("Rebalacing the stable rate for a user", async () => {
       await vToken.setRebalanceUtilizationRateThreshold(convertToUnit(7, 17));
       await vToken.setRebalanceRateFractionThreshold(convertToUnit(50, 17));
-      await preBorrow(contracts, borrower, borrowAmount, convertToUnit(5, 6));
+      await preBorrow(contracts, borrower, borrowAmount);
       await borrowStable(vToken, borrower, convertToUnit(900, 18));
 
       let accountBorrows = await vToken.harnessAccountStableBorrows(borrower.getAddress());
-      expect(accountBorrows.stableRateMantissa).to.equal(convertToUnit(5, 6));
+      expect(accountBorrows.stableRateMantissa).to.equal(convertToUnit(1, 6));
 
-      interestRateModel.getBorrowRate.returns(convertToUnit(5, 8));
-      stableInterestRateModel.getBorrowRate.returns(convertToUnit(8, 8));
-      await vToken.rebalanceStableBorrowRate(borrower.getAddress());
+      await vToken.rebalanceStableBorrowRate(borrower.address);
 
       accountBorrows = await vToken.harnessAccountStableBorrows(borrower.getAddress());
-      expect(accountBorrows.stableRateMantissa).to.equal(convertToUnit(8, 8));
+      expect(accountBorrows.stableRateMantissa).to.equal(convertToUnit(1, 8));
     });
   });
 });

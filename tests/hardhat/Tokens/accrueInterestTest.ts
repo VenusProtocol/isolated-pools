@@ -5,15 +5,16 @@ import chai from "chai";
 import { BigNumber, BigNumberish, constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 
+import { convertToUnit } from "../../../helpers/utils";
 import { InterestRateModel, StableRateModel, VTokenHarness } from "../../../typechain";
 import { vTokenTestFixture } from "../util/TokenTestHelpers";
-import { convertToUnit } from "../../../helpers/utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
 const blockNumber = 2e7;
 const borrowIndex = parseUnits("1", 18).toBigInt();
+const stableBorrowIndex = parseUnits("1", 18).toBigInt();
 const borrowRate = parseUnits("0.000001", 18).toBigInt();
 
 async function pretendBlock(
@@ -30,31 +31,31 @@ async function pretendBlock(
 async function preAccrue({
   vToken,
   interestRateModel,
-  stableInterestRateModel,
+  stableRateModel,
 }: {
   vToken: VTokenHarness;
   interestRateModel: FakeContract<InterestRateModel>;
-  stableInterestRateModel: FakeContract<StableRateModel>;
+  stableRateModel: FakeContract<StableRateModel>;
 }) {
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getBorrowRate.returns(borrowRate);
-  stableInterestRateModel.getBorrowRate.reset();
-  stableInterestRateModel.getBorrowRate.returns(borrowRate);
+  stableRateModel.getBorrowRate.reset();
+  stableRateModel.getBorrowRate.returns(borrowRate);
   await vToken.harnessExchangeRateDetails(0, 0, 0);
 }
 
 describe("VToken", () => {
   let vToken: VTokenHarness;
   let interestRateModel: FakeContract<InterestRateModel>;
-  let stableInterestRateModel: FakeContract<StableRateModel>;
+  let stableRateModel: FakeContract<StableRateModel>;
 
   beforeEach(async () => {
     const contracts = await loadFixture(vTokenTestFixture);
-    ({ vToken, interestRateModel, stableInterestRateModel } = contracts);
+    ({ vToken, interestRateModel, stableRateModel } = contracts);
   });
 
   beforeEach(async () => {
-    await preAccrue({ vToken, interestRateModel, stableInterestRateModel });
+    await preAccrue({ vToken, interestRateModel, stableRateModel });
   });
 
   describe("accrueInterest", () => {
@@ -68,7 +69,7 @@ describe("VToken", () => {
     it("reverts if the stable interest rate is absurdly high", async () => {
       await pretendBlock(vToken, blockNumber, 1);
       expect(await vToken.getStableBorrowRateMaxMantissa()).to.equal(convertToUnit("0.000005", 18)); // 0.0005% per block
-      stableInterestRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
+      stableRateModel.getBorrowRate.returns(convertToUnit("0.00001", 18)); // 0.0010% per block
       await expect(vToken.accrueInterest()).to.be.revertedWith("vToken: stable borrow rate is absurdly high");
     });
 
@@ -80,7 +81,7 @@ describe("VToken", () => {
 
     it("fails if new borrow rate calculation fails", async () => {
       await pretendBlock(vToken, blockNumber, 1);
-      stableInterestRateModel.getBorrowRate.reverts("Oups");
+      stableRateModel.getBorrowRate.reverts("Oups");
       await expect(vToken.accrueInterest()).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
@@ -157,10 +158,11 @@ describe("VToken", () => {
 
       const receipt = await vToken.accrueInterest();
       const expectedInterestAccumulated = expectedTotalBorrows.sub(startingTotalBorrows);
+      const stableBorrowIndex = 0;
 
       await expect(receipt)
         .to.emit(vToken, "AccrueInterest")
-        .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows);
+        .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows, stableBorrowIndex);
 
       expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
       expect(await vToken.borrowIndex()).to.equal(expectedBorrowIndex);

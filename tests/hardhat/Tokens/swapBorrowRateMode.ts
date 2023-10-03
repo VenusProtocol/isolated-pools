@@ -14,11 +14,8 @@ chai.use(smock.matchers);
 const borrowAmount = convertToUnit("1000", 18);
 
 async function preBorrow(contracts: VTokenTestFixture, borrower: Signer, borrowAmount: BigNumberish) {
-  const { comptroller, interestRateModel, underlying, vToken, stableInterestRateModel } = contracts;
+  const { comptroller, underlying, vToken } = contracts;
   comptroller.preBorrowHook.reset();
-
-  interestRateModel.getBorrowRate.reset();
-  stableInterestRateModel.getBorrowRate.reset();
 
   const borrowerAddress = await borrower.getAddress();
   await underlying.harnessSetBalance(vToken.address, borrowAmount);
