@@ -30,6 +30,6 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
      * @return The borrow rate percentage per block as a mantissa (scaled by 1e18)
      */
     function getBorrowRate(uint256 utilizationRate) external view override returns (uint256) {
-        return getBorrowRateInternal(utilizationRate);
+        return _getBorrowRate(utilizationRate);
     }
 }

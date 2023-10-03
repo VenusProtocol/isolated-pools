@@ -23,6 +23,22 @@ contract VTokenStorage {
         uint256 interestIndex;
     }
 
+    struct InitializeParams {
+        address underlying_;
+        ComptrollerInterface comptroller_;
+        InterestRateModel interestRateModel_;
+        uint256 initialExchangeRateMantissa_;
+        string name_;
+        string symbol_;
+        uint8 decimals_;
+        address admin_;
+        address accessControlManager_;
+        address shortfall_;
+        address payable protocolShareReserve_;
+        uint256 reserveFactorMantissa_;
+        StableRateModel stableRateModel_;
+    }
+
     /**
      * @dev Guard variable for re-entrancy checks
      */
@@ -188,11 +204,6 @@ contract VTokenStorage {
  * @notice Interface implemented by the `VToken` contract
  */
 abstract contract VTokenInterface is VTokenStorage {
-    struct RiskManagementInit {
-        address shortfall;
-        address payable protocolShareReserve;
-    }
-
     /*** Market Events ***/
 
     /**
@@ -333,7 +344,7 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when tokens are swept
      */
     event SweepToken(address indexed token);
-    
+
     /**
      * @notice Event emitted after updating stable borrow balance for borrower
      */
@@ -423,14 +434,11 @@ abstract contract VTokenInterface is VTokenStorage {
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves
+        uint256 reserves,
+        uint256 badDebt
     ) public pure virtual returns (uint256);
 
-    function borrowRatePerBlock() external view virtual returns (uint256);
-
     function stableBorrowRatePerBlock() public view virtual returns (uint256);
-
-    function supplyRatePerBlock() external view virtual returns (uint256);
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 

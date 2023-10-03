@@ -51,6 +51,4 @@ contract TokenErrorReporter {
 
     error SwapBorrowRateModeFreshnessCheck();
     error SetRebalanceUtilizationRateThresholdAdminCheck();
-
-    error Unauthorized(address sender, address calledContract, string methodSignature);
 }

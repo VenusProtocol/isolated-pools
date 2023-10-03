@@ -10,7 +10,6 @@ import { PoolRegistryInterface } from "./PoolRegistryInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { VToken } from "../VToken.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
-import {StableRateModel} from "../InterestRate/StableRateModel.sol";
 
 /**
  * @title PoolRegistry
@@ -45,9 +44,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         address vTokenReceiver;
         uint256 supplyCap;
         uint256 borrowCap;
-        uint256 baseRatePerBlockForStable;
-        uint256 stableRatePremium;
-        uint256 optimalStableLoanRatio;
     }
 
     uint256 internal constant MAX_POOL_NAME_LENGTH = 100;

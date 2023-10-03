@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-
 import { VToken } from "../VToken.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
-import {StableRateModel} from "../InterestRate/StableRateModel.sol";
+import { ComptrollerScenario } from "../test/ComptrollerScenario.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -14,33 +12,10 @@ contract VTokenHarness is VToken {
 
     mapping(address => bool) public failTransferToAddresses;
 
-    function initializeHarness(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        StableRateModel stableRateModel_
-    ) external initializer {
+    function initializeHarness(InitializeParams memory params) external initializer {
         blockNumber = 100000;
-        super._initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement,
-            stableRateModel_
-        );
+
+        super._initialize(params);
     }
 
     function _exchangeRateStored() internal view override returns (uint256) {
@@ -52,10 +27,6 @@ contract VTokenHarness is VToken {
 
     function _getBlockNumber() internal view override returns (uint256) {
         return blockNumber;
-    }
-
-    function getBorrowRateMaxMantissa() external pure returns (uint256) {
-        return borrowRateMaxMantissa;
     }
 
     function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
@@ -117,30 +88,18 @@ contract VTokenHarness is VToken {
         super._redeemFresh(account, vTokenAmount, underlyingAmount);
     }
 
-    function harnessAccountBorrows(address account) external view returns (uint256 principal, uint256 interestIndex) {
-        BorrowSnapshot memory snapshot = accountBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex);
-    }
-
-    function harnessAccountStableBorrows(address account)
+    function harnessAccountStableBorrows(
+        address account
+    )
         external
         view
-        returns (
-            uint256 principal,
-            uint256 interestIndex,
-            uint256 lastBlockAccrued,
-            uint256 stableRateMantissa
-        )
+        returns (uint256 principal, uint256 interestIndex, uint256 lastBlockAccrued, uint256 stableRateMantissa)
     {
         StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
         return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued, snapshot.stableRateMantissa);
     }
 
-    function harnessSetAccountBorrows(
-        address account,
-        uint256 principal,
-        uint256 interestIndex
-    ) external {
+    function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) external {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
@@ -175,19 +134,11 @@ contract VTokenHarness is VToken {
         _borrowFresh(account, borrowAmount, InterestRateMode.STABLE);
     }
 
-    function harnessRepayBorrowFresh(
-        address payer,
-        address account,
-        uint256 repayAmount
-    ) external {
+    function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) external {
         _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.VARIABLE);
     }
 
-    function harnessRepayBorrowStableFresh(
-        address payer,
-        address account,
-        uint256 repayAmount
-    ) external {
+    function harnessRepayBorrowStableFresh(address payer, address account, uint256 repayAmount) external {
         _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.STABLE);
     }
 
@@ -253,32 +204,8 @@ contract VTokenHarness is VToken {
 }
 
 contract VTokenScenario is VToken {
-    constructor(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement,
-        StableRateModel stableRateModel_
-    ) {
-        initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement,
-            stableRateModel_
-        );
+    constructor(InitializeParams memory params) {
+        _initialize(params);
     }
 
     function setTotalBorrows(uint256 totalBorrows_) public {
@@ -286,9 +213,6 @@ contract VTokenScenario is VToken {
     }
 
     function _exchangeRateStored() internal view override returns (uint256) {
-        if (harnessExchangeRateStored) {
-            return harnessExchangeRate;
-        }
         return super._exchangeRateStored();
     }
 
@@ -299,40 +223,9 @@ contract VTokenScenario is VToken {
 }
 
 contract VEvil is VTokenScenario {
-    constructor(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        AccessControlManager accessControlManager_,
-        VTokenInterface.RiskManagementInit memory riskManagement,
-        StableRateModel stableRateModel_
-    )
-        VTokenScenario(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement,
-            stableRateModel_
-        )
-    {}
+    constructor(InitializeParams memory params) VTokenScenario(params) {}
 
-    function evilSeize(
-        VToken treasure,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) public {
+    function evilSeize(VToken treasure, address liquidator, address borrower, uint256 seizeTokens) public {
         treasure.seize(liquidator, borrower, seizeTokens);
     }
 }

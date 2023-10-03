@@ -42,32 +42,4 @@ contract WhitePaperInterestRateModel is InterestRateModel {
     function getBorrowRate(uint256 utRate) public view override returns (uint256) {
         return ((utRate * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
     }
-
-    /**
-     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market (currently unused)
-     * @param badDebt The amount of badDebt in the market
-     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
-     */
-    function utilizationRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 badDebt
-    ) public pure returns (uint256) {
-        // Utilization rate is 0 when there are no borrows and badDebt
-        if ((borrows + badDebt) == 0) {
-            return 0;
-        }
-
-        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
-
-        if (rate > EXP_SCALE) {
-            rate = EXP_SCALE;
-        }
-
-        return rate;
-    }
 }

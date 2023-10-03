@@ -35,12 +35,7 @@ contract StableRateModel {
      * @param optimalStableLoanRatio_ Optimal stable loan rate percentage.
      * @param owner_ Address of the owner for this model(Governance)
      */
-    constructor(
-        uint256 baseRatePerYear_,
-        uint256 stableRatePremium_,
-        uint256 optimalStableLoanRatio_,
-        address owner_
-    ) {
+    constructor(uint256 baseRatePerYear_, uint256 stableRatePremium_, uint256 optimalStableLoanRatio_, address owner_) {
         owner = owner_;
 
         updateStableRateModelInternal(baseRatePerYear_, stableRatePremium_, optimalStableLoanRatio_);

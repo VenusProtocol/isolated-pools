@@ -2,9 +2,6 @@
 pragma solidity ^0.8.10;
 
 import { VToken } from "../VToken.sol";
-import { ComptrollerInterface } from "../ComptrollerInterface.sol";
-import { InterestRateModel } from "../InterestRateModel.sol";
-import {StableRateModel} from "../InterestRate/StableRateModel.sol";
 
 /**
  * @title Venus's VToken Contract
@@ -31,34 +28,8 @@ contract UpgradedVToken is VToken {
         return 2;
     }
 
-    function initializeV2(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address payable admin_,
-        address accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        StableRateModel stableRateModel_,
-        uint256 reserveFactorMantissa_
-    ) public reinitializer(2) {
-        super._initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement,
-            stableRateModel_,
-            reserveFactorMantissa_
-        );
+    function initializeV2(InitializeParams memory params) public reinitializer(2) {
+        super._initialize(params);
     }
 
     function getTokenUnderlying() public view returns (address) {

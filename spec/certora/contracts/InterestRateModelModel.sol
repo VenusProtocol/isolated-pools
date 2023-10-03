@@ -10,20 +10,7 @@ contract InterestRateModelModel is InterestRateModel {
         return true;
     }
 
-    function getBorrowRate(
-        uint256 _cash,
-        uint256 _borrows,
-        uint256 _reserves
-    ) external view override returns (uint256) {
+    function getBorrowRate(uint256 utRate) external view override returns (uint256) {
         return borrowDummy;
-    }
-
-    function getSupplyRate(
-        uint256 _cash,
-        uint256 _borrows,
-        uint256 _reserves,
-        uint256 _reserveFactorMantissa
-    ) external view override returns (uint256) {
-        return supplyDummy;
     }
 }

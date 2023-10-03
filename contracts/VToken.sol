@@ -73,53 +73,16 @@ contract VToken is
 
     /**
      * @notice Construct a new money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ ERC-20 name of this token
-     * @param symbol_ ERC-20 symbol of this token
-     * @param decimals_ ERC-20 decimal precision of this token
-     * @param admin_ Address of the administrator of this token
-     * @param accessControlManager_ AccessControlManager contract address
-     * @param riskManagement Addresses of risk & income related contracts
-     * @param stableRateModel_ Address of the stable interest rate model
-     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
+     * @param params InitializeParams
      * @custom:error ZeroAddressNotAllowed is thrown when admin address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
      */
-    function initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        address accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        uint256 reserveFactorMantissa_,
-        StableRateModel stableRateModel_
-    ) external initializer {
-        ensureNonzeroAddress(admin_);
+    function initialize(InitializeParams memory params) external initializer {
+        ensureNonzeroAddress(params.admin_);
 
         // Initialize the market
-        _initialize(
-            underlying_,
-            comptroller_,
-            interestRateModel_,
-            initialExchangeRateMantissa_,
-            name_,
-            symbol_,
-            decimals_,
-            admin_,
-            accessControlManager_,
-            riskManagement,
-            reserveFactorMantissa_,
-            stableRateModel_
-        );
+        _initialize(params);
     }
 
     /**
@@ -229,25 +192,6 @@ contract VToken is
     }
 
     /**
-     * @notice Returns the current total borrows plus accrued interest
-     * @return totalBorrows The total borrows with interest
-     */
-    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
-        accrueInterest();
-        return totalBorrows;
-    }
-
-    /**
-     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
-     * @param account The address whose balance should be calculated after updating borrowIndex
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        return _borrowBalanceStored(account);
-    }
-
-    /**
      * @notice Sender supplies assets into the market and receives vTokens in exchange
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param mintAmount The amount of the underlying asset to supply
@@ -282,33 +226,6 @@ contract VToken is
     }
 
     /**
-     * @notice Returns the current per-block borrow interest rate for this vToken
-     * @return rate The borrow interest rate per block, scaled by 1e18
-     */
-    function stableBorrowRatePerBlock() public view override returns (uint256) {
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-        return stableRateModel.getBorrowRate(stableBorrows, totalBorrows, variableBorrowRate);
-    }
-
-    /**
-     * @notice Returns the current per-block supply interest rate for this v
-     * @return rate The supply interest rate per block, scaled by 1e18
-     */
-    function supplyRatePerBlock() external view override returns (uint256) {
-        if (totalBorrows == 0) {
-            return 0;
-        }
-        uint256 utilizationRate = interestRateModel.utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrowRate = interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves);
-        uint256 variableBorrows = totalBorrows - stableBorrows;
-        uint256 averageMarketBorrowRate = ((variableBorrows * variableBorrowRate) +
-            (stableBorrows * averageStableBorrowRate)) / totalBorrows;
-        return
-            (averageMarketBorrowRate * utilizationRate * (mantissaOne - reserveFactorMantissa)) /
-            (mantissaOne * mantissaOne);
-    }
-
-    /**
      * @notice Sender redeems vTokens in exchange for the underlying asset
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemTokens The number of vTokens to redeem into underlying
@@ -338,50 +255,6 @@ contract VToken is
     }
 
     /**
-     * @notice Sender borrows assets from the protocol to their own address
-     * @param borrowAmount The amount of the underlying asset to borrow
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits Borrow event; may emit AccrueInterest
-     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
-     * @custom:access Not restricted
-     */
-    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(msg.sender, borrowAmount);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays their own borrow
-     * @param repayAmount The amount to repay, or type(uint256).max for the full outstanding amount
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays a borrow belonging to borrower
-     * @param borrower the account with the debt being payed off
-     * @param repayAmount The amount to repay, or type(uint256).max for the full outstanding amount
-     * @return error Always NO_ERROR for compatibility with Venus core tooling
-     * @custom:event Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount);
-        return NO_ERROR;
-    }
-
-    /**
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this vToken to be liquidated
@@ -403,27 +276,6 @@ contract VToken is
     ) external override returns (uint256) {
         _liquidateBorrow(msg.sender, borrower, repayAmount, vTokenCollateral, false);
         return NO_ERROR;
-    }
-
-    /**
-     * @notice sets protocol share accumulated from liquidations
-     * @dev must be equal or less than liquidation incentive - 1
-     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
-     * @custom:event Emits NewProtocolSeizeShare event on success
-     * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
-     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
-        _checkAccessAllowed("setProtocolSeizeShare(uint256)");
-        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
-        if (newProtocolSeizeShareMantissa_ + MANTISSA_ONE > liquidationIncentive) {
-            revert ProtocolSeizeShareTooBig();
-        }
-
-        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
-        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
-        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
     }
 
     /**
@@ -464,21 +316,6 @@ contract VToken is
     function addReserves(uint256 addAmount) external override nonReentrant {
         accrueInterest();
         _addReservesFresh(addAmount);
-    }
-
-    /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:event Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error Unauthorized error is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
-        _checkAccessAllowed("setInterestRateModel(address)");
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
     }
 
     /**
@@ -764,16 +601,13 @@ contract VToken is
      * @return borrowBalance Amount owed in terms of underlying
      * @return exchangeRate Stored exchange rate
      */
-    function getAccountSnapshot(address account)
+    function getAccountSnapshot(
+        address account
+    )
         external
         view
         override
-        returns (
-            uint256 error,
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRate
-        )
+        returns (uint256 error, uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRate)
     {
         (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
         uint256 borrowAmount = _borrowBalanceStored(account) + stableBorrowAmount;
@@ -793,7 +627,7 @@ contract VToken is
      * @return rate The borrow interest rate per block, scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getBorrowRate(utilizationRate(_getCashPrior(), totalBorrows, totalReserves));
+        return interestRateModel.getBorrowRate(utilizationRate(_getCashPrior(), totalBorrows, totalReserves, badDebt));
     }
 
     /**
@@ -804,10 +638,11 @@ contract VToken is
         if (totalBorrows == 0) {
             return 0;
         }
-        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves, badDebt);
         uint256 averageMarketBorrowRate = _averageMarketBorrowRate();
         return
-            (averageMarketBorrowRate * utilRate * (mantissaOne - reserveFactorMantissa)) / (mantissaOne * mantissaOne);
+            (averageMarketBorrowRate * utilRate * (MANTISSA_ONE - reserveFactorMantissa)) /
+            (MANTISSA_ONE * MANTISSA_ONE);
     }
 
     /**
@@ -827,49 +662,6 @@ contract VToken is
      */
     function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
         accrueInterest();
-        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
-        return _borrowBalanceStored(account) + stableBorrowAmount;
-    }
-
-    /**
-     * @notice Return the borrow balance of account based on stored data
-     * @param account The address whose balance should be calculated
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceStored(address account) public view override returns (uint256) {
-        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
-        return _borrowBalanceStored(account) + stableBorrowAmount;
-    }
-
-    /**
-     * @notice Return the borrow balance of account based on stored data
-     * @param account The address whose balance should be calculated
-     * @return borrowBalance the calculated balance
-     */
-    function _borrowBalanceStored(address account) internal view returns (uint256) {
-        /* Get borrowBalance and borrowIndex */
-        BorrowSnapshot storage borrowSnapshot = accountBorrows[account];
-
-        /* If borrowBalance = 0 then borrowIndex is likely also 0.
-         * Rather than failing the calculation with a division by 0, we immediately return 0 in this case.
-         */
-        if (borrowSnapshot.principal == 0) {
-            return 0;
-        }
-
-        /* Calculate new borrow balance using the interest index:
-         *  recentBorrowBalance = borrower.borrowBalance * market.borrowIndex / borrower.borrowIndex
-         */
-        uint256 principalTimesIndex = borrowSnapshot.principal * borrowIndex;
-
-        return principalTimesIndex / borrowSnapshot.interestIndex;
-    }
-
-    /**
-     * @notice Accrue interest then return the up-to-date exchange rate
-     * @return exchangeRate Calculated exchange rate scaled by 1e18
-
-    function borrowBalanceStored(address account) public view override returns (uint256) {
         (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
         return _borrowBalanceStored(account) + stableBorrowAmount;
     }
@@ -918,9 +710,9 @@ contract VToken is
 
         /* Calculate the current borrow interest rate */
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(
-            utilizationRate(cashPrior, borrowsPrior, reservesPrior)
+            utilizationRate(cashPrior, borrowsPrior, reservesPrior, badDebt)
         );
-        require(borrowRateMantissa <= borrowRateMaxMantissa, "vToken: borrow rate is absurdly high");
+        require(borrowRateMantissa <= MAX_BORROW_RATE_MANTISSA, "vToken: borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
@@ -1003,13 +795,12 @@ contract VToken is
         require(rebalanceUtilizationRateThreshold > 0, "vToken: rebalanceUtilizationRateThreshold is not set.");
         require(rebalanceRateFractionThreshold > 0, "vToken: rebalanceRateFractionThreshold is not set.");
 
-        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves);
+        uint256 utilRate = utilizationRate(_getCashPrior(), totalBorrows, totalReserves, badDebt);
 
         /// Utilization rate is above rebalanceUtilizationRateThreshold.
         require(utilRate >= rebalanceUtilizationRateThreshold, "vToken: low utilization rate for rebalacing.");
 
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(rebalanceUtilizationRateThreshold);
-
         /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of
         /// variable borrow rate when utilization rate is rebalanceUtilizationRateThreshold
         require(
@@ -1024,7 +815,7 @@ contract VToken is
      */
     function stableBorrowRatePerBlock() public view override returns (uint256) {
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(
-            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves, badDebt)
         );
         return stableRateModel.getBorrowRate(stableBorrows, totalBorrows, variableBorrowRate);
     }
@@ -1040,23 +831,31 @@ contract VToken is
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `borrows / (cash + borrows - reserves)`
+     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market (currently unused)
-     * @return The utilization rate as a mantissa between [0, BASE]
+     * @param badDebt The amount of badDebt in the market
+     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
      */
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
-        uint256 reserves
+        uint256 reserves,
+        uint256 badDebt
     ) public pure override returns (uint256) {
-        // Utilization rate is 0 when there are no borrows
-        if (borrows == 0) {
+        // Utilization rate is 0 when there are no borrows and badDebt
+        if ((borrows + badDebt) == 0) {
             return 0;
         }
 
-        return (borrows * mantissaOne) / (cash + borrows - reserves);
+        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
+
+        if (rate > EXP_SCALE) {
+            rate = EXP_SCALE;
+        }
+
+        return rate;
     }
 
     /**
@@ -1290,11 +1089,7 @@ contract VToken is
      * @param borrowAmount The amount of the underlying asset to borrow
      * @param interestRateMode The interest rate mode at which the user wants to borrow: 1 for Stable, 2 for Variable
      */
-    function _borrowFresh(
-        address payable borrower,
-        uint256 borrowAmount,
-        InterestRateMode interestRateMode
-    ) internal {
+    function _borrowFresh(address payable borrower, uint256 borrowAmount, InterestRateMode interestRateMode) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
@@ -1431,12 +1226,10 @@ contract VToken is
      * @custom:events Emits RepayBorrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function repayBorrowStableBehalf(address borrower, uint256 repayAmount)
-        external
-        override
-        nonReentrant
-        returns (uint256)
-    {
+    function repayBorrowStableBehalf(
+        address borrower,
+        uint256 repayAmount
+    ) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.STABLE);
@@ -1793,18 +1586,6 @@ contract VToken is
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
     }
 
-    function _setComptroller(ComptrollerInterface newComptroller) internal {
-        ComptrollerInterface oldComptroller = comptroller;
-        // Ensure invoke comptroller.isComptroller() returns true
-        require(newComptroller.isComptroller(), "marker method returned false");
-
-        // Set market's comptroller to newComptroller
-        comptroller = newComptroller;
-
-        // Emit NewComptroller(oldComptroller, newComptroller)
-        emit NewComptroller(oldComptroller, newComptroller);
-    }
-
     /**
      * @notice sets protocol share accumulated from liquidations
      * @dev must be less than liquidation incentive - 1
@@ -2075,68 +1856,45 @@ contract VToken is
 
     /**
      * @notice Initialize the money market
-     * @param underlying_ The address of the underlying asset
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ ERC-20 name of this token
-     * @param symbol_ ERC-20 symbol of this token
-     * @param decimals_ ERC-20 decimal precision of this token
-     * @param admin_ Address of the administrator of this token
-     * @param accessControlManager_ AccessControlManager contract address
-     * @param riskManagement Addresses of risk & income related contracts
-     * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
+     * @param params InitializeParams contains the required arguments to initialize
      */
-    function _initialize(
-        address underlying_,
-        ComptrollerInterface comptroller_,
-        InterestRateModel interestRateModel_,
-        uint256 initialExchangeRateMantissa_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        address admin_,
-        address accessControlManager_,
-        RiskManagementInit memory riskManagement,
-        uint256 reserveFactorMantissa_,
-        StableRateModel stableRateModel_
-    ) internal onlyInitializing {
+    function _initialize(InitializeParams memory params) internal onlyInitializing {
         __Ownable2Step_init();
-        __AccessControlled_init_unchained(accessControlManager_);
+        __AccessControlled_init_unchained(params.accessControlManager_);
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
         // Set initial exchange rate
-        initialExchangeRateMantissa = initialExchangeRateMantissa_;
+        initialExchangeRateMantissa = params.initialExchangeRateMantissa_;
         require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
 
-        _setComptroller(comptroller_);
+        _setComptroller(params.comptroller_);
 
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
         accrualBlockNumber = _getBlockNumber();
         borrowIndex = MANTISSA_ONE;
 
         // Set the interest rate model (depends on block number / borrow index)
-        _setInterestRateModelFresh(interestRateModel_);
+        _setInterestRateModelFresh(params.interestRateModel_);
 
         // Set the interest rate model (depends on block number / borrow index)
-        _setStableInterestRateModelFresh(stableRateModel_);
+        _setStableInterestRateModelFresh(params.stableRateModel_);
 
-        _setReserveFactorFresh(reserveFactorMantissa_);
+        _setReserveFactorFresh(params.reserveFactorMantissa_);
 
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-        _setShortfallContract(riskManagement.shortfall);
-        _setProtocolShareReserve(riskManagement.protocolShareReserve);
+        name = params.name_;
+        symbol = params.symbol_;
+        decimals = params.decimals_;
+        _setShortfallContract(params.shortfall_);
+        _setProtocolShareReserve(params.protocolShareReserve_);
         protocolSeizeShareMantissa = DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA;
 
         // Set underlying and sanity check it
-        underlying = underlying_;
+        underlying = params.underlying_;
         IERC20Upgradeable(underlying).totalSupply();
 
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
-        _transferOwnership(admin_);
+        _transferOwnership(params.admin_);
     }
 
     function _setShortfallContract(address shortfall_) internal {
@@ -2221,35 +1979,14 @@ contract VToken is
         return exchangeRate;
     }
 
-    /// @notice Reverts if the call is not allowed by AccessControlManager
-    /// @param signature Method signature
-    function _checkAccessAllowed(string memory signature) internal view {
-        bool isAllowedToCall = AccessControlManager(accessControlManager).isAllowedToCall(msg.sender, signature);
-
-        if (!isAllowedToCall) {
-            revert Unauthorized(msg.sender, address(this), signature);
-        }
-    }
-
-    /**
-     * @notice Reverts if the call is not allowed by AccessControlManager
-     * @param signature Method signature
-     */
-    function _checkAccessAllowed(string memory signature) internal view {
-        bool isAllowedToCall = AccessControlManager(accessControlManager).isAllowedToCall(msg.sender, signature);
-
-        if (!isAllowedToCall) {
-            revert Unauthorized(msg.sender, address(this), signature);
-        }
-    }
-
     /**
      * @notice Calculate the average market borrow rate with respect to variable and stable borrows
      */
     function _averageMarketBorrowRate() internal view returns (uint256) {
         uint256 variableBorrowRate = interestRateModel.getBorrowRate(
-            utilizationRate(_getCashPrior(), totalBorrows, totalReserves)
+            utilizationRate(_getCashPrior(), totalBorrows, totalReserves, badDebt)
         );
+
         uint256 variableBorrows = totalBorrows - stableBorrows;
         return ((variableBorrows * variableBorrowRate) + (stableBorrows * averageStableBorrowRate)) / totalBorrows;
     }
@@ -2259,15 +1996,7 @@ contract VToken is
      * @param account The address whose balance should be calculated
      * @return borrowBalance the calculated balance
      */
-    function _stableBorrowBalanceStored(address account)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            Exp memory
-        )
-    {
+    function _stableBorrowBalanceStored(address account) internal view returns (uint256, uint256, Exp memory) {
         /* Get borrowBalance and borrowIndex */
         StableBorrowSnapshot storage borrowSnapshot = accountStableBorrows[account];
         Exp memory simpleStableInterestFactor;
