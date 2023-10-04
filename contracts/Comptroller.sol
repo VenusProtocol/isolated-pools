@@ -580,10 +580,6 @@ contract Comptroller is
         }
     }
 
-    function preSwapBorrowRateModeHook(address vToken) external view override {
-        _checkActionPauseState(vToken, Action.SWAP_RATE_MODE);
-    }
-
     /*** Pool-level operations ***/
 
     /**
@@ -985,6 +981,10 @@ contract Comptroller is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
+    }
+
+    function preSwapBorrowRateModeHook(address vToken) external view override {
+        _checkActionPauseState(vToken, Action.SWAP_RATE_MODE);
     }
 
     /**

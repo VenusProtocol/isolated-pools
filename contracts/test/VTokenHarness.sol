@@ -18,21 +18,6 @@ contract VTokenHarness is VToken {
         super._initialize(params);
     }
 
-    function _exchangeRateStored() internal view override returns (uint256) {
-        if (harnessExchangeRateStored) {
-            return harnessExchangeRate;
-        }
-        return super._exchangeRateStored();
-    }
-
-    function _getBlockNumber() internal view override returns (uint256) {
-        return blockNumber;
-    }
-
-    function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
-        return stableBorrowRateMaxMantissa;
-    }
-
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -86,17 +71,6 @@ contract VTokenHarness is VToken {
 
     function harnessRedeemFresh(address payable account, uint256 vTokenAmount, uint256 underlyingAmount) external {
         super._redeemFresh(account, vTokenAmount, underlyingAmount);
-    }
-
-    function harnessAccountStableBorrows(
-        address account
-    )
-        external
-        view
-        returns (uint256 principal, uint256 interestIndex, uint256 lastBlockAccrued, uint256 stableRateMantissa)
-    {
-        StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued, snapshot.stableRateMantissa);
     }
 
     function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) external {
@@ -169,8 +143,23 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
+    function harnessAccountStableBorrows(
+        address account
+    )
+        external
+        view
+        returns (uint256 principal, uint256 interestIndex, uint256 lastBlockAccrued, uint256 stableRateMantissa)
+    {
+        StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued, snapshot.stableRateMantissa);
+    }
+
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
         return MAX_BORROW_RATE_MANTISSA;
+    }
+
+    function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
+        return MAX_STABLE_BORROW_RATE_MANTISSA;
     }
 
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {
@@ -179,11 +168,6 @@ contract VTokenHarness is VToken {
 
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
-    }
-
-    function _doTransferOut(address to, uint256 amount) internal override {
-        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
-        return super._doTransferOut(to, amount);
     }
 
     function harnessSetAvgStableBorrowRate(uint256 averageStableBorrowRate_) public {
@@ -200,6 +184,22 @@ contract VTokenHarness is VToken {
 
     function harnessUpdateUserStableBorrowBalance(address account) public returns (uint256) {
         return _updateUserStableBorrowBalance(account);
+    }
+
+    function _doTransferOut(address to, uint256 amount) internal override {
+        require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
+        return super._doTransferOut(to, amount);
+    }
+
+    function _exchangeRateStored() internal view override returns (uint256) {
+        if (harnessExchangeRateStored) {
+            return harnessExchangeRate;
+        }
+        return super._exchangeRateStored();
+    }
+
+    function _getBlockNumber() internal view override returns (uint256) {
+        return blockNumber;
     }
 }
 

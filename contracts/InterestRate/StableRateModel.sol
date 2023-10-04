@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.13;
 
-import "hardhat/console.sol";
-
 /**
  * @title Logic for Venus stable rate.
  */
 contract StableRateModel {
-    /// @notice Indicator that this is an InterestRateModel contract (for inspection)
-    bool public constant isInterestRateModel = true;
-
     uint256 private constant BASE = 1e18;
 
     /// @notice The approximate number of blocks per year that is assumed by the interest rate model
-    uint256 public constant blocksPerYear = 2102400;
+    uint256 public constant BLOCK_PER_YEAR = 2102400;
 
     /// @notice The stable base interest rate which is the y-intercept when utilization rate is 0(also known by base_premium)
     uint256 public baseRatePerBlock;
@@ -78,6 +73,14 @@ contract StableRateModel {
     }
 
     /**
+     * @notice Indicator that this is an InterestRateModel contract (for inspection)
+     * @return Always true
+     */
+    function isStableRateModel() external pure virtual returns (bool) {
+        return true;
+    }
+
+    /**
      * @notice Calculates the ratio of the stable borrows to total borrows
      * @param stableBorrows The amount of stable borrows in the market
      * @param totalBorrows The amount of total borrows in the market
@@ -103,7 +106,7 @@ contract StableRateModel {
         uint256 stableRatePremium_,
         uint256 optimalStableLoanRatio_
     ) internal {
-        baseRatePerBlock = baseRatePerYear_ / blocksPerYear;
+        baseRatePerBlock = baseRatePerYear_ / BLOCK_PER_YEAR;
         stableRatePremium = stableRatePremium_;
         optimalStableLoanRatio = optimalStableLoanRatio_;
 

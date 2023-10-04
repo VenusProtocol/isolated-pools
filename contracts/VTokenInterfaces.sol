@@ -39,6 +39,22 @@ contract VTokenStorage {
         StableRateModel stableRateModel_;
     }
 
+    struct StableBorrowSnapshot {
+        uint256 principal;
+        uint256 stableRateMantissa;
+        uint256 interestIndex;
+        uint256 lastBlockAccrued;
+    }
+
+    /**
+     * @notice Types of the Interest rate model
+     */
+    enum InterestRateMode {
+        NONE,
+        STABLE,
+        VARIABLE
+    }
+
     /**
      * @dev Guard variable for re-entrancy checks
      */
@@ -76,7 +92,7 @@ contract VTokenStorage {
     uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
 
     // Maximum stable borrow rate that can ever be applied (.0005% / block)
-    uint256 internal constant stableBorrowRateMaxMantissa = 0.0005e16;
+    uint256 internal constant MAX_STABLE_BORROW_RATE_MANTISSA = 0.0005e16;
 
     /**
      * @notice Contract which oversees inter-vToken operations
@@ -165,24 +181,8 @@ contract VTokenStorage {
      */
     uint256 public averageStableBorrowRate;
 
-    struct StableBorrowSnapshot {
-        uint256 principal;
-        uint256 stableRateMantissa;
-        uint256 interestIndex;
-        uint256 lastBlockAccrued;
-    }
-
     // Mapping of account addresses to outstanding stable borrow balances
     mapping(address => StableBorrowSnapshot) internal accountStableBorrows;
-
-    /**
-     * @notice Types of the Interest rate model
-     */
-    enum InterestRateMode {
-        NONE,
-        STABLE,
-        VARIABLE
-    }
 
     /// @notice Utilization rate threshold for rebalancing stable borrowing rate
     uint256 internal rebalanceUtilizationRateThreshold;
@@ -431,15 +431,6 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function addReserves(uint256 addAmount) external virtual;
 
-    function utilizationRate(
-        uint256 cash,
-        uint256 borrows,
-        uint256 reserves,
-        uint256 badDebt
-    ) public pure virtual returns (uint256);
-
-    function stableBorrowRatePerBlock() public view virtual returns (uint256);
-
     function totalBorrowsCurrent() external virtual returns (uint256);
 
     function balanceOfUnderlying(address owner) external virtual returns (uint256);
@@ -477,4 +468,13 @@ abstract contract VTokenInterface is VTokenStorage {
     }
 
     function setStableInterestRateModel(StableRateModel newStableInterestRateModel) public virtual;
+
+    function stableBorrowRatePerBlock() public view virtual returns (uint256);
+
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 badDebt
+    ) public pure virtual returns (uint256);
 }

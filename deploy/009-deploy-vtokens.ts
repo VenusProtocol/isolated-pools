@@ -59,6 +59,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         jumpMultiplierPerYear,
         kink_,
         reserveFactor,
+        baseRatePerYearForStable,
+        stableRatePremium,
+        optimalStableLoanRatio,
       } = vtoken;
 
       const token = getTokenConfig(asset, tokensConfig);
@@ -99,32 +102,45 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         rateModelAddress = result.address;
       }
 
+      const [b, p, o] = [baseRatePerYearForStable, stableRatePremium, optimalStableLoanRatio].map(mantissaToBps);
+      const stableRateModelName = `JumpRateModelV2_base${b}st_premium${p}st_loan_ratio${o}`;
+      console.log(`Deploying stable rate model ${stableRateModelName}`);
+      const result: DeployResult = await deploy(stableRateModelName, {
+        from: deployer,
+        contract: "StableRateModel",
+        args: [baseRatePerYearForStable, stableRatePremium, optimalStableLoanRatio, accessControlManagerAddress],
+        log: true,
+        autoMine: true,
+      });
+      const stableRateModelAddress = result.address;
+
       console.log(`Deploying VToken proxy for ${symbol}`);
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
       const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
-      const args = [
-        tokenContract.address,
-        comptrollerProxy.address,
-        rateModelAddress,
-        parseUnits("1", underlyingDecimals + 18 - vTokenDecimals),
-        name,
-        symbol,
-        vTokenDecimals,
-        preconfiguredAddresses.NormalTimelock || deployer, // admin
-        accessControlManagerAddress,
-        [ADDRESS_ONE, treasuryAddress],
-        reserveFactor,
-      ];
+      const args = {
+        underlying_: tokenContract.address,
+        comptroller_: comptrollerProxy.address,
+        interestRateModel_: rateModelAddress,
+        initialExchangeRateMantissa_: parseUnits("1", underlyingDecimals + 18 - vTokenDecimals),
+        name_: name,
+        symbol_: symbol,
+        decimals_: vTokenDecimals,
+        admin_: preconfiguredAddresses.NormalTimelock || deployer, // admin
+        accessControlManager_: accessControlManagerAddress,
+        shortfall_: ADDRESS_ONE,
+        protocolShareReserve_: treasuryAddress,
+        reserveFactorMantissa_: reserveFactor,
+        stableRateModel_: stableRateModelAddress,
+      };
       await deploy(`VToken_${symbol}`, {
         from: deployer,
         contract: "BeaconProxy",
-        args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
+        args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", [args])],
         log: true,
         autoMine: true,
       });
-      console.log(`-----------------------------------------`);
     }
   }
 };

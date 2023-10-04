@@ -574,6 +574,155 @@ contract VToken is
     }
 
     /**
+     * @notice Calculates the exchange rate from the underlying to the VToken
+     * @dev This function does not accrue interest before calculating the exchange rate
+     * @return exchangeRate Calculated exchange rate scaled by 1e18
+     */
+    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
+        accrueInterest();
+        return totalBorrows;
+    }
+
+    /**
+     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
+     * @param account The address whose balance should be calculated after updating borrowIndex
+     * @return borrowBalance The calculated balance
+     */
+    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
+        return _borrowBalanceStored(account) + stableBorrowAmount;
+    }
+
+    /**
+     * @notice Sender borrows assets from the protocol to their own address
+     * @param borrowAmount The amount of the underlying asset to borrow
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Borrow event; may emit AccrueInterest
+     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
+     */
+    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // borrowFresh emits borrow-specific logs on errors, so we don't need to
+        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender borrows assets from the protocol to their own address
+     * @param borrowAmount The amount of the underlying asset to borrow at stable borrow rate
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits Borrow event; may emit AccrueInterest
+     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
+     * @custom:access Not restricted
+     */
+    function borrowStable(uint256 borrowAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // borrowFresh emits borrow-specific logs on errors, so we don't need to
+        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.STABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays their own borrow
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays their own borrow
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowStable(uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.STABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays a borrow belonging to borrower
+     * @param borrower the account with the debt being payed off
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.VARIABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender repays a borrow belonging to borrower
+     * @param borrower the account with the debt being payed off
+     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
+     * @return error Always NO_ERROR for compatilibily with Venus core tooling
+     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function repayBorrowStableBehalf(
+        address borrower,
+        uint256 repayAmount
+    ) external override nonReentrant returns (uint256) {
+        accrueInterest();
+        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.STABLE);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice sets protocol share accumulated from liquidations
+     * @dev must be less than liquidation incentive - 1
+     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
+     * @custom:events Emits NewProtocolSeizeShare event on success
+     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
+        _checkAccessAllowed("setProtocolSeizeShare(uint256)");
+
+        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
+        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
+            revert ProtocolSeizeShareTooBig();
+        }
+
+        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
+        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
+        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
+    }
+
+    /**
+     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
+     * @dev Admin function to accrue interest and update the interest rate model
+     * @param newInterestRateModel the new interest rate model to use
+     * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
+     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setInterestRateModel(InterestRateModel newInterestRateModel) external override {
+        _checkAccessAllowed("setInterestRateModel(address)");
+
+        accrueInterest();
+        _setInterestRateModelFresh(newInterestRateModel);
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
@@ -643,27 +792,6 @@ contract VToken is
         return
             (averageMarketBorrowRate * utilRate * (MANTISSA_ONE - reserveFactorMantissa)) /
             (MANTISSA_ONE * MANTISSA_ONE);
-    }
-
-    /**
-     * @notice Calculates the exchange rate from the underlying to the VToken
-     * @dev This function does not accrue interest before calculating the exchange rate
-     * @return exchangeRate Calculated exchange rate scaled by 1e18
-     */
-    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
-        accrueInterest();
-        return totalBorrows;
-    }
-
-    /**
-     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
-     * @param account The address whose balance should be calculated after updating borrowIndex
-     * @return borrowBalance The calculated balance
-     */
-    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        (uint256 stableBorrowAmount, , ) = _stableBorrowBalanceStored(account);
-        return _borrowBalanceStored(account) + stableBorrowAmount;
     }
 
     /**
@@ -804,7 +932,7 @@ contract VToken is
         /// Average market borrow rate should be less than the rebalanceRateFractionThreshold fraction of
         /// variable borrow rate when utilization rate is rebalanceUtilizationRateThreshold
         require(
-            _averageMarketBorrowRate() < (variableBorrowRate * rebalanceRateFractionThreshold),
+            _averageMarketBorrowRate() < ((variableBorrowRate * rebalanceRateFractionThreshold) / EXP_SCALE),
             "vToken: average borrow rate higher than variable rate threshold."
         );
     }
@@ -909,7 +1037,10 @@ contract VToken is
         uint256 stableIndexPrior = stableBorrowIndex;
 
         uint256 stableBorrowRateMantissa = stableBorrowRatePerBlock();
-        require(stableBorrowRateMantissa <= stableBorrowRateMaxMantissa, "vToken: stable borrow rate is absurdly high");
+        require(
+            stableBorrowRateMantissa <= MAX_STABLE_BORROW_RATE_MANTISSA,
+            "vToken: stable borrow rate is absurdly high"
+        );
 
         Exp memory simpleStableInterestFactor = mul_(Exp({ mantissa: stableBorrowRateMantissa }), blockDelta);
 
@@ -1062,28 +1193,6 @@ contract VToken is
     }
 
     /**
-     * @notice Sender borrows assets from the protocol to their own address
-     * @param borrowAmount The amount of the underlying asset to borrow
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
-     * @custom:events Emits Borrow event; may emit AccrueInterest
-     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
-     * @custom:access Not restricted
-     */
-    function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.VARIABLE);
-        return NO_ERROR;
-    }
-
-    function borrowStable(uint256 borrowAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(payable(msg.sender), borrowAmount, InterestRateMode.STABLE);
-        return NO_ERROR;
-    }
-
-    /**
      * @notice Users borrow assets from the protocol to their own address
      * @param borrower User who borrows the assets
      * @param borrowAmount The amount of the underlying asset to borrow
@@ -1173,67 +1282,6 @@ contract VToken is
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, accountBorrowsNew, totalBorrowsNew);
-    }
-
-    /**
-     * @notice Sender repays their own borrow
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
-     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.VARIABLE);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays their own borrow
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
-     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrowStable(uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, msg.sender, repayAmount, InterestRateMode.STABLE);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays a borrow belonging to borrower
-     * @param borrower the account with the debt being payed off
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
-     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.VARIABLE);
-        return NO_ERROR;
-    }
-
-    /**
-     * @notice Sender repays a borrow belonging to borrower
-     * @param borrower the account with the debt being payed off
-     * @param repayAmount The amount to repay, or -1 for the full outstanding amount
-     * @return error Always NO_ERROR for compatilibily with Venus core tooling
-     * @custom:events Emits RepayBorrow event; may emit AccrueInterest
-     * @custom:access Not restricted
-     */
-    function repayBorrowStableBehalf(
-        address borrower,
-        uint256 repayAmount
-    ) external override nonReentrant returns (uint256) {
-        accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
-        _repayBorrowFresh(msg.sender, borrower, repayAmount, InterestRateMode.STABLE);
-        return NO_ERROR;
     }
 
     /**
@@ -1586,28 +1634,6 @@ contract VToken is
         emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
     }
 
-    /**
-     * @notice sets protocol share accumulated from liquidations
-     * @dev must be less than liquidation incentive - 1
-     * @param newProtocolSeizeShareMantissa_ new protocol share mantissa
-     * @custom:events Emits NewProtocolSeizeShare event on success
-     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
-     * @custom:error ProtocolSeizeShareTooBig is thrown when the new seize share is too high
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
-        _checkAccessAllowed("setProtocolSeizeShare(uint256)");
-
-        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
-        if (newProtocolSeizeShareMantissa_ + 1e18 > liquidationIncentive) {
-            revert ProtocolSeizeShareTooBig();
-        }
-
-        uint256 oldProtocolSeizeShareMantissa = protocolSeizeShareMantissa;
-        protocolSeizeShareMantissa = newProtocolSeizeShareMantissa_;
-        emit NewProtocolSeizeShare(oldProtocolSeizeShareMantissa, newProtocolSeizeShareMantissa_);
-    }
-
     function _setComptroller(ComptrollerInterface newComptroller) internal {
         ComptrollerInterface oldComptroller = comptroller;
         // Ensure invoke comptroller.isComptroller() returns true
@@ -1710,21 +1736,6 @@ contract VToken is
     }
 
     /**
-     * @notice accrues interest and updates the interest rate model using _setInterestRateModelFresh
-     * @dev Admin function to accrue interest and update the interest rate model
-     * @param newInterestRateModel the new interest rate model to use
-     * @custom:events Emits NewMarketInterestRateModel event; may emit AccrueInterest
-     * @custom:error Unauthorized is thrown when the call is not authorized by AccessControlManager
-     * @custom:access Controlled by AccessControlManager
-     */
-    function setInterestRateModel(InterestRateModel newInterestRateModel) public override {
-        _checkAccessAllowed("setInterestRateModel(address)");
-
-        accrueInterest();
-        _setInterestRateModelFresh(newInterestRateModel);
-    }
-
-    /**
      * @notice updates the interest rate model (*requires fresh interest accrual)
      * @dev Admin function to update the interest rate model
      * @param newInterestRateModel the new interest rate model to use
@@ -1771,7 +1782,7 @@ contract VToken is
         oldStableInterestRateModel = stableRateModel;
 
         // Ensure invoke newInterestRateModel.isInterestRateModel() returns true
-        require(newStableInterestRateModel.isInterestRateModel(), "marker method returned false");
+        require(newStableInterestRateModel.isStableRateModel(), "marker method returned false");
 
         // Set the interest rate model to newStableInterestRateModel
         stableRateModel = newStableInterestRateModel;
@@ -1872,6 +1883,7 @@ contract VToken is
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
         accrualBlockNumber = _getBlockNumber();
         borrowIndex = MANTISSA_ONE;
+        stableBorrowIndex = MANTISSA_ONE;
 
         // Set the interest rate model (depends on block number / borrow index)
         _setInterestRateModelFresh(params.interestRateModel_);
