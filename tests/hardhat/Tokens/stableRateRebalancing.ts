@@ -43,7 +43,7 @@ describe("VToken", function () {
     contracts = await loadFixture(vTokenTestFixture);
     ({ vToken, interestRateModel, stableRateModel } = contracts);
     await stableRateModel.getBorrowRate.returns(convertToUnit(1, 6));
-    await interestRateModel.getBorrowRate.returns(convertToUnit(1, 12));
+    await interestRateModel.getBorrowRate.returns(convertToUnit(1, 8));
   });
 
   describe("Rebalance Stable rate", () => {
@@ -81,8 +81,9 @@ describe("VToken", function () {
     });
 
     it("Revert on average borrow rate higher than variable rate threshold", async () => {
-      await vToken.setRebalanceUtilizationRateThreshold(convertToUnit(7, 17));
-      await vToken.setRebalanceRateFractionThreshold(convertToUnit(50, 17));
+      await stableRateModel.getBorrowRate.returns(convertToUnit(1, 10));
+      await vToken.setRebalanceUtilizationRateThreshold(convertToUnit(5, 17));
+      await vToken.setRebalanceRateFractionThreshold(convertToUnit(5, 17));
       await preBorrow(contracts, borrower, borrowAmount);
       await borrowStable(vToken, borrower, convertToUnit(900, 18));
       await expect(vToken.validateRebalanceStableBorrowRate()).to.be.revertedWith(
@@ -99,6 +100,8 @@ describe("VToken", function () {
     });
 
     it("Rebalacing the stable rate for a user", async () => {
+      await stableRateModel.getBorrowRate.returns(convertToUnit(1, 6));
+
       await vToken.setRebalanceUtilizationRateThreshold(convertToUnit(7, 17));
       await vToken.setRebalanceRateFractionThreshold(convertToUnit(50, 17));
       await preBorrow(contracts, borrower, borrowAmount);
@@ -107,6 +110,7 @@ describe("VToken", function () {
       let accountBorrows = await vToken.harnessAccountStableBorrows(borrower.getAddress());
       expect(accountBorrows.stableRateMantissa).to.equal(convertToUnit(1, 6));
 
+      await stableRateModel.getBorrowRate.returns(convertToUnit(1, 8));
       await vToken.rebalanceStableBorrowRate(borrower.address);
 
       accountBorrows = await vToken.harnessAccountStableBorrows(borrower.getAddress());

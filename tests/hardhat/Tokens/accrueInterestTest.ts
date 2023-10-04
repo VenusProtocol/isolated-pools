@@ -25,7 +25,7 @@ async function pretendBlock(
   await vToken.harnessSetAccrualBlockNumber(accrualBlock);
   await vToken.harnessSetBlockNumber(BigNumber.from(accrualBlock).add(deltaBlocks));
   await vToken.harnessSetBorrowIndex(borrowIndex);
-  await vToken.harnessSetStableBorrowIndex(borrowIndex);
+  await vToken.harnessSetStableBorrowIndex(stableBorrowIndex);
 }
 
 async function preAccrue({
@@ -158,11 +158,10 @@ describe("VToken", () => {
 
       const receipt = await vToken.accrueInterest();
       const expectedInterestAccumulated = expectedTotalBorrows.sub(startingTotalBorrows);
-      const stableBorrowIndex = 0;
 
       await expect(receipt)
         .to.emit(vToken, "AccrueInterest")
-        .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows, stableBorrowIndex);
+        .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows, "1000001000000000000");
 
       expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
       expect(await vToken.borrowIndex()).to.equal(expectedBorrowIndex);

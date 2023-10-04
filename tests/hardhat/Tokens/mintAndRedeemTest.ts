@@ -260,11 +260,11 @@ describe("VToken", function () {
     it("emits an AccrueInterest event", async () => {
       await expect(await quickMint(underlying, vToken, minter, mintAmount))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("0", "0", "1000000000000000000", "0");
+        .withArgs("0", "0", "1000000000000000000", "0", "1000000000000000000");
 
       await expect(await quickMint(underlying, vToken, minter, mintAmount))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("10000000000000000000000", "0", "1000000000000000000", "0");
+        .withArgs("10000000000000000000000", "0", "1000000000000000000", "0", "1000000000000000000");
     });
   });
 
@@ -402,7 +402,7 @@ describe("VToken", function () {
     it("emits an AccrueInterest event", async () => {
       await expect(await quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate }))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0");
+        .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0", "1000000000000000000");
     });
   });
 });
