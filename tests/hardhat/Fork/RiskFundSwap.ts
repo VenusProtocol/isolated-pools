@@ -114,34 +114,25 @@ const riskFundFixture = async (): Promise<void> => {
   const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
 
   const RiskFund = await ethers.getContractFactory("RiskFund");
-  riskFund = (await upgrades.deployProxy(RiskFund, [
-    pancakeSwapRouter.address,
-    parseUnits("10", 18),
-    BUSD.address,
-    fakeAccessControlManager.address,
-    maxLoopsLimit,
-  ], {
-    constructorArgs: [
-      fakeCorePoolComptroller.address,
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-    ],
-  })) as RiskFund;
+  riskFund = (await upgrades.deployProxy(
+    RiskFund,
+    [pancakeSwapRouter.address, parseUnits("10", 18), BUSD.address, fakeAccessControlManager.address, maxLoopsLimit],
+    {
+      constructorArgs: [fakeCorePoolComptroller.address, ethers.constants.AddressZero, ethers.constants.AddressZero],
+    },
+  )) as RiskFund;
 
   await riskFund.setShortfallContractAddress(shortfall.address);
 
   const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = (await upgrades.deployProxy(ProtocolShareReserve, [
-    fakeProtocolIncome.address,
-    riskFund.address,
-  ], {
-    constructorArgs: [
-      fakeCorePoolComptroller.address,
-      ethers.constants.AddressZero,
-      ethers.constants.AddressZero,
-    ],
-  })) as ProtocolShareReserve;
+  protocolShareReserve = (await upgrades.deployProxy(
+    ProtocolShareReserve,
+    [fakeProtocolIncome.address, riskFund.address],
+    {
+      constructorArgs: [fakeCorePoolComptroller.address, ethers.constants.AddressZero, ethers.constants.AddressZero],
+    },
+  )) as ProtocolShareReserve;
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
   poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;

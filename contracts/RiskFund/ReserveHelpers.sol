@@ -71,11 +71,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address corePoolComptroller_,
-        address vbnb_,
-        address nativeWrapped_
-    ) {
+    constructor(address corePoolComptroller_, address vbnb_, address nativeWrapped_) {
         CORE_POOL_COMPTROLLER = corePoolComptroller_;
         VBNB = vbnb_;
         NATIVE_WRAPPED = nativeWrapped_;
@@ -115,31 +111,6 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         return _poolsAssetsReserves[comptroller][asset];
     }
 
-    function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
-        VToken[] memory coreMarkets = ComptrollerInterface(CORE_POOL_COMPTROLLER).getAllMarkets();
-
-        for (uint256 i; i < coreMarkets.length; ++i) {
-            isAssetListed = (VBNB == address(coreMarkets[i]))
-                ? (tokenAddress == NATIVE_WRAPPED)
-                : (coreMarkets[i].underlying() == tokenAddress);
-
-            if (isAssetListed) {
-                break;
-            }
-        }
-    }
-
-    /// @notice This function checks for the given asset is listed or not
-    /// @param comptroller Address of the comptroller
-    /// @param asset Address of the asset
-    function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
-        if (comptroller == CORE_POOL_COMPTROLLER) {
-            return isAssetListedInCore(asset);
-        }
-
-        return PoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
-    }
-
     /**
      * @notice Update the reserve of the asset for the specific pool after transferring to risk fund
      * and transferring funds to the protocol share reserve
@@ -165,5 +136,30 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
             _poolsAssetsReserves[comptroller][asset] += balanceDifference;
             emit AssetsReservesUpdated(comptroller, asset, balanceDifference);
         }
+    }
+
+    function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
+        VToken[] memory coreMarkets = ComptrollerInterface(CORE_POOL_COMPTROLLER).getAllMarkets();
+
+        for (uint256 i; i < coreMarkets.length; ++i) {
+            isAssetListed = (VBNB == address(coreMarkets[i]))
+                ? (tokenAddress == NATIVE_WRAPPED)
+                : (coreMarkets[i].underlying() == tokenAddress);
+
+            if (isAssetListed) {
+                break;
+            }
+        }
+    }
+
+    /// @notice This function checks for the given asset is listed or not
+    /// @param comptroller Address of the comptroller
+    /// @param asset Address of the asset
+    function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
+        if (comptroller == CORE_POOL_COMPTROLLER) {
+            return isAssetListedInCore(asset);
+        }
+
+        return PoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 }

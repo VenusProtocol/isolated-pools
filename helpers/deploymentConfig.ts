@@ -96,7 +96,7 @@ const preconfiguredAddresses = {
     WBNB: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
     SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
-    Unitroller: "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D"
+    Unitroller: "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",

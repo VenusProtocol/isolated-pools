@@ -1,7 +1,7 @@
+import { smock } from "@defi-wonderland/smock";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { smock } from "@defi-wonderland/smock";
 
 import { getConfig } from "../helpers/deploymentConfig";
 import { getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
