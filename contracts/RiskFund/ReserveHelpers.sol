@@ -72,6 +72,10 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_, address vbnb_, address nativeWrapped_) {
+        ensureNonzeroAddress(corePoolComptroller_);
+        ensureNonzeroAddress(vbnb_);
+        ensureNonzeroAddress(nativeWrapped_);
+        
         CORE_POOL_COMPTROLLER = corePoolComptroller_;
         VBNB = vbnb_;
         NATIVE_WRAPPED = nativeWrapped_;

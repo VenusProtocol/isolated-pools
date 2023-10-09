@@ -50,8 +50,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     args: [
       corePoolComptrollerAddress,
-      preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
-      preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
+      preconfiguredAddresses.VBNB_CorePool || "0x0000000000000000000000000000000000000001",
+      preconfiguredAddresses.WBNB || "0x0000000000000000000000000000000000000002",
     ],
   });
 
@@ -103,8 +103,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     args: [
       corePoolComptrollerAddress,
-      preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
-      preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
+      preconfiguredAddresses.VBNB_CorePool || "0x0000000000000000000000000000000000000001",
+      preconfiguredAddresses.WBNB || "0x0000000000000000000000000000000000000002",
     ],
   });
 
