@@ -29,7 +29,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
-  const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+  let corePoolComptrollerAddress = preconfiguredAddresses.Unitroller;
+  if (!hre.network.live) {
+    corePoolComptrollerAddress = (await smock.fake<Comptroller>("Comptroller")).address;
+  }
 
   await deploy("RiskFund", {
     from: deployer,
@@ -46,7 +49,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
     args: [
-      preconfiguredAddresses.Unitroller || fakeCorePoolComptroller.address,
+      corePoolComptrollerAddress,
       preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
       preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
     ],
@@ -99,7 +102,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
     args: [
-      preconfiguredAddresses.Unitroller || fakeCorePoolComptroller.address,
+      corePoolComptrollerAddress,
       preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
       preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
     ],
