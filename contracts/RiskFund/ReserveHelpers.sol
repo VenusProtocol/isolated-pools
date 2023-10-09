@@ -9,7 +9,6 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { VToken } from "../VToken.sol";
-import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -164,6 +163,6 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
             return isAssetListedInCore(asset);
         }
 
-        return PoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
+        return PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 }
