@@ -135,7 +135,11 @@ const riskFundFixture = async (): Promise<void> => {
     RiskFund,
     [pancakeSwapRouter.address, convertToUnit(10, 18), BUSD.address, accessControlManager.address, 150],
     {
-      constructorArgs: [fakeCorePoolComptroller.address, "0x0000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000002"],
+      constructorArgs: [
+        fakeCorePoolComptroller.address,
+        "0x0000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000002",
+      ],
     },
   )) as RiskFund;
   await riskFund.setShortfallContractAddress(shortfall.address);
@@ -146,7 +150,11 @@ const riskFundFixture = async (): Promise<void> => {
     ProtocolShareReserve,
     [fakeProtocolIncome.address, riskFund.address],
     {
-      constructorArgs: [fakeCorePoolComptroller.address, "0x0000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000002"],
+      constructorArgs: [
+        fakeCorePoolComptroller.address,
+        "0x0000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000002",
+      ],
     },
   )) as ProtocolShareReserve;
 

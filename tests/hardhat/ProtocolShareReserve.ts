@@ -38,7 +38,11 @@ const fixture = async (): Promise<void> => {
     ProtocolShareReserve,
     [fakeProtocolIncome.address, fakeRiskFund.address],
     {
-      constructorArgs: [fakeCorePoolComptroller.address, "0x0000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000002"],
+      constructorArgs: [
+        fakeCorePoolComptroller.address,
+        "0x0000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000002",
+      ],
     },
   );
 

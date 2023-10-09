@@ -75,7 +75,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         ensureNonzeroAddress(corePoolComptroller_);
         ensureNonzeroAddress(vbnb_);
         ensureNonzeroAddress(nativeWrapped_);
-        
+
         CORE_POOL_COMPTROLLER = corePoolComptroller_;
         VBNB = vbnb_;
         NATIVE_WRAPPED = nativeWrapped_;
