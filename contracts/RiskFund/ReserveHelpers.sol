@@ -8,6 +8,8 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { VToken } from "../VToken.sol";
+import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -15,6 +17,18 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
     uint256 private constant NOT_ENTERED = 1;
 
     uint256 private constant ENTERED = 2;
+
+    // Address of the core pool's comptroller
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable CORE_POOL_COMPTROLLER;
+
+    // Address of the VBNB
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable VBNB;
+
+    // Address of the native wrapped token
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address public immutable NATIVE_WRAPPED;
 
     // Store the previous state for the asset transferred to ProtocolShareReserve combined(for all pools).
     mapping(address => uint256) public assetsReserves;
@@ -56,6 +70,17 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         status = NOT_ENTERED;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(
+        address corePoolComptroller_,
+        address vbnb_,
+        address nativeWrapped_
+    ) {
+        CORE_POOL_COMPTROLLER = corePoolComptroller_;
+        VBNB = vbnb_;
+        NATIVE_WRAPPED = nativeWrapped_;
+    }
+
     /**
      * @notice A public function to sweep accidental BEP-20 transfers to this contract. Tokens are sent to the address `to`, provided in input
      * @param _token The address of the BEP-20 token to sweep
@@ -90,6 +115,31 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         return _poolsAssetsReserves[comptroller][asset];
     }
 
+    function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
+        VToken[] memory coreMarkets = ComptrollerInterface(CORE_POOL_COMPTROLLER).getAllMarkets();
+
+        for (uint256 i; i < coreMarkets.length; ++i) {
+            isAssetListed = (VBNB == address(coreMarkets[i]))
+                ? (tokenAddress == NATIVE_WRAPPED)
+                : (coreMarkets[i].underlying() == tokenAddress);
+
+            if (isAssetListed) {
+                break;
+            }
+        }
+    }
+
+    /// @notice This function checks for the given asset is listed or not
+    /// @param comptroller Address of the comptroller
+    /// @param asset Address of the asset
+    function ensureAssetListed(address comptroller, address asset) internal view returns (bool) {
+        if (comptroller == CORE_POOL_COMPTROLLER) {
+            return isAssetListedInCore(asset);
+        }
+
+        return PoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
+    }
+
     /**
      * @notice Update the reserve of the asset for the specific pool after transferring to risk fund
      * and transferring funds to the protocol share reserve
@@ -102,10 +152,7 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         require(ComptrollerInterface(comptroller).isComptroller(), "ReserveHelpers: Comptroller address invalid");
         address poolRegistry_ = poolRegistry;
         require(poolRegistry_ != address(0), "ReserveHelpers: Pool Registry address is not set");
-        require(
-            PoolRegistryInterface(poolRegistry_).getVTokenForAsset(comptroller, asset) != address(0),
-            "ReserveHelpers: The pool doesn't support the asset"
-        );
+        require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
 
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];

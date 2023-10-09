@@ -26,9 +26,11 @@ contract ProtocolShareReserve is ExponentialNoError, ReserveHelpers, IProtocolSh
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        // Note that the contract is upgradeable. Use initialize() or reinitializers
-        // to set the state variables.
+    constructor(
+        address corePoolComptroller_,
+        address vbnb_,
+        address nativeWrapped_
+    ) ReserveHelpers(corePoolComptroller_, vbnb_, nativeWrapped_) {
         _disableInitializers();
     }
 

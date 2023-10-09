@@ -111,6 +111,8 @@ const riskFundFixture = async (): Promise<void> => {
     fakeAccessControlManager.address,
   ]);
 
+  const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+
   const RiskFund = await ethers.getContractFactory("RiskFund");
   riskFund = (await upgrades.deployProxy(RiskFund, [
     pancakeSwapRouter.address,
@@ -118,7 +120,13 @@ const riskFundFixture = async (): Promise<void> => {
     BUSD.address,
     fakeAccessControlManager.address,
     maxLoopsLimit,
-  ])) as RiskFund;
+  ], {
+    constructorArgs: [
+      fakeCorePoolComptroller.address,
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+    ],
+  })) as RiskFund;
 
   await riskFund.setShortfallContractAddress(shortfall.address);
 
@@ -127,7 +135,13 @@ const riskFundFixture = async (): Promise<void> => {
   protocolShareReserve = (await upgrades.deployProxy(ProtocolShareReserve, [
     fakeProtocolIncome.address,
     riskFund.address,
-  ])) as ProtocolShareReserve;
+  ], {
+    constructorArgs: [
+      fakeCorePoolComptroller.address,
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+    ],
+  })) as ProtocolShareReserve;
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
   poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;

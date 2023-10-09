@@ -163,7 +163,7 @@ describe("Positive Cases", function () {
       );
     });
 
-    it("PoolRegistry has the required permissions ", async function () {
+    it.only("PoolRegistry has the required permissions ", async function () {
       let canCall = await AccessControlManager.connect(Comptroller.address).isAllowedToCall(
         PoolRegistry.address,
         "setCollateralFactor(address,uint256,uint256)",

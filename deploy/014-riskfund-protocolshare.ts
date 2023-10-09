@@ -1,10 +1,12 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { smock } from "@defi-wonderland/smock";
 
 import { getConfig } from "../helpers/deploymentConfig";
 import { getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
+import { Comptroller } from "../typechain";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
@@ -27,6 +29,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
+  const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+
   await deploy("RiskFund", {
     from: deployer,
     contract: "RiskFund",
@@ -41,6 +45,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
     autoMine: true,
     log: true,
+    args: [
+      preconfiguredAddresses.Unitroller || fakeCorePoolComptroller.address,
+      preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
+      preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
+    ],
   });
 
   const riskFund = await ethers.getContract("RiskFund");
@@ -89,6 +98,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
     autoMine: true,
     log: true,
+    args: [
+      preconfiguredAddresses.Unitroller || fakeCorePoolComptroller.address,
+      preconfiguredAddresses.VBNB_CorePool || ethers.constants.AddressZero,
+      preconfiguredAddresses.WBNB || ethers.constants.AddressZero,
+    ],
   });
 
   for (const contractName of ["ProtocolShareReserve", "RiskFund"]) {

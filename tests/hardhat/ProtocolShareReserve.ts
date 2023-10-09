@@ -14,6 +14,7 @@ let poolRegistry: FakeContract<PoolRegistry>;
 let fakeProtocolIncome: FakeContract<RiskFund>;
 let fakeComptroller: FakeContract<Comptroller>;
 let protocolShareReserve: ProtocolShareReserve;
+let fakeCorePoolComptroller: FakeContract<Comptroller>;
 
 const fixture = async (): Promise<void> => {
   const MockDAI = await ethers.getContractFactory("MockToken");
@@ -29,13 +30,20 @@ const fixture = async (): Promise<void> => {
 
   fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   fakeComptroller = await smock.fake<Comptroller>("Comptroller");
+  fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
 
   // ProtocolShareReserve contract deployment
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
   protocolShareReserve = await upgrades.deployProxy(ProtocolShareReserve, [
     fakeProtocolIncome.address,
     fakeRiskFund.address,
-  ]);
+  ], {
+    constructorArgs: [
+      fakeCorePoolComptroller.address,
+      ethers.constants.AddressZero,
+      ethers.constants.AddressZero,
+    ],
+  });
 
   await protocolShareReserve.setPoolRegistry(poolRegistry.address);
 };
