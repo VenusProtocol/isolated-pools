@@ -678,6 +678,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xD1Bc731d188ACc3f52a6226B328a89056B0Ec71a",
       },
+      {
+        isMock: false,
+        name: "Synclub Staked BNB",
+        symbol: "SnBNB",
+        decimals: 18,
+        tokenAddress: "0xd2aF6A916Bc77764dc63742BC30f71AF4cF423F4",
+      },
     ],
     poolConfig: [
       {
@@ -1102,6 +1109,23 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
+          {
+            name: "Venus SnBNB (Liquid Staked BNB)",
+            asset: "SnBNB",
+            symbol: "vSnBNB_LiquidStakedBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.87", 18),
+            liquidationThreshold: convertToUnit("0.9", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("47", 18),
+            supplyCap: convertToUnit("1000", 18),
+            borrowCap: convertToUnit("100", 18),
+            vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+          },
         ],
         rewards: [
           {
@@ -1127,6 +1151,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["BNBx"],
             supplySpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
+          },
+          {
+            asset: "HAY",
+            markets: ["SnBNB"],
+            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
           },
         ],
       },
@@ -1417,6 +1447,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "ANGLE",
         decimals: 18,
         tokenAddress: "0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f",
+      },
+      {
+        isMock: false,
+        name: "Synclub Staked BNB",
+        symbol: "SnBNB",
+        decimals: 18,
+        tokenAddress: "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
       },
     ],
     poolConfig: [
@@ -1844,6 +1881,23 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
+          {
+            name: "Venus SnBNB (Liquid Staked BNB)",
+            asset: "SnBNB",
+            symbol: "vSnBNB_LiquidStakedBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.87", 18),
+            liquidationThreshold: convertToUnit("0.9", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("47", 18),
+            supplyCap: convertToUnit("1000", 18),
+            borrowCap: convertToUnit("100", 18),
+            vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+          },
         ],
         rewards: [
           {
@@ -1869,6 +1923,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["BNBx"],
             supplySpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
+          },
+          {
+            asset: "HAY",
+            markets: ["SnBNB"],
+            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
           },
         ],
       },
