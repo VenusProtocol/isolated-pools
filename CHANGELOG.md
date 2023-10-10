@@ -1,3 +1,11 @@
+## [2.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.3...v2.1.0-dev.4) (2023-10-10)
+
+
+### Features
+
+* add deployments of agEUR market ([667ac5f](https://github.com/VenusProtocol/isolated-pools/commit/667ac5feeedf0a7337258389f16110df864948cb))
+* add reward distributor in agEUR market ([072714d](https://github.com/VenusProtocol/isolated-pools/commit/072714ded3dc712e9ed99748ff6a2da2adb94a02))
+
 ## [2.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.2...v2.1.0-dev.3) (2023-09-29)
 
 
