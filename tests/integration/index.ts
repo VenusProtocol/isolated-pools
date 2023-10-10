@@ -157,7 +157,7 @@ describe("Positive Cases", function () {
     } = fixture);
   });
   describe("Setup", () => {
-    it.only("PoolRegistry should be initialized properly", async function () {
+    it("PoolRegistry should be initialized properly", async function () {
       await expect(PoolRegistry.initialize(ethers.constants.AddressZero)).to.be.revertedWith(
         "Initializable: contract is already initialized",
       );
