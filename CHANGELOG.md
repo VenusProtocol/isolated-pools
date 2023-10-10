@@ -1,3 +1,10 @@
+## [2.1.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.4...v2.1.0-dev.5) (2023-10-10)
+
+
+### Features
+
+* add info about the DefaultProxyAdmin used in testnet ([80f7a58](https://github.com/VenusProtocol/isolated-pools/commit/80f7a58f68ab0e949dcb8c5248123bf2ec4d9ba9))
+
 ## [2.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.3...v2.1.0-dev.4) (2023-10-10)
 
 
