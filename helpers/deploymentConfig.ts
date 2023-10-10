@@ -96,6 +96,8 @@ const preconfiguredAddresses = {
     WBNB: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
     SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
+    ProtocolShareReserve: "0xc987a03ab6C2A5891Fc0919f021cc693B5E55278",
+    Shortfall: "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
@@ -108,6 +110,8 @@ const preconfiguredAddresses = {
     WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
     VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
     SwapRouter_CorePool: "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4",
+    ProtocolShareReserve: "0xfB5bE09a1FA6CFDA075aB1E69FE83ce8324682e4",
+    Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
 };
 
@@ -662,6 +666,20 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "agEUR",
+        symbol: "agEUR",
+        decimals: 18,
+        tokenAddress: "0x63061de4A25f24279AAab80400040684F92Ee319",
+      },
+      {
+        isMock: false,
+        name: "ANGLE_bsc",
+        symbol: "ANGLE",
+        decimals: 18,
+        tokenAddress: "0xD1Bc731d188ACc3f52a6226B328a89056B0Ec71a",
+      },
+      {
+        isMock: false,
         name: "Synclub Staked BNB",
         symbol: "SnBNB",
         decimals: 18,
@@ -727,6 +745,23 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
+          {
+            name: "Venus agEUR (Stablecoins)",
+            asset: "agEUR",
+            symbol: "vagEUR_Stablecoins",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.8", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(9000, 18),
+            supplyCap: convertToUnit(100000, 18),
+            borrowCap: convertToUnit(50000, 18),
+            vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
+          },
         ],
         rewards: [
           {
@@ -740,6 +775,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["HAY"],
             supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
+          {
+            asset: "ANGLE",
+            markets: ["agEUR"],
+            supplySpeeds: ["0"],
+            borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
         ],
       },
@@ -1395,6 +1436,20 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "agEUR",
+        symbol: "agEUR",
+        decimals: 18,
+        tokenAddress: "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
+      },
+      {
+        isMock: false,
+        name: "ANGLE_bsc",
+        symbol: "ANGLE",
+        decimals: 18,
+        tokenAddress: "0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f",
+      },
+      {
+        isMock: false,
         name: "Synclub Staked BNB",
         symbol: "SnBNB",
         decimals: 18,
@@ -1460,6 +1515,23 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
           },
+          {
+            name: "Venus agEUR (Stablecoins)",
+            asset: "agEUR",
+            symbol: "vagEUR_Stablecoins",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.1", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.8", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(9000, 18),
+            supplyCap: convertToUnit(100000, 18),
+            borrowCap: convertToUnit(50000, 18),
+            vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
+          },
         ],
         rewards: [
           {
@@ -1473,6 +1545,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["HAY"],
             supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
             borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+          },
+          {
+            asset: "ANGLE",
+            markets: ["agEUR"],
+            supplySpeeds: ["0"],
+            borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
         ],
       },

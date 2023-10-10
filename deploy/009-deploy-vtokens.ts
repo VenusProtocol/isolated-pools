@@ -114,7 +114,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [ADDRESS_ONE, treasuryAddress],
+        [
+          preconfiguredAddresses.Shortfall || ADDRESS_ONE,
+          preconfiguredAddresses.ProtocolShareReserve || treasuryAddress,
+        ],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {
