@@ -12,31 +12,6 @@ const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
 const maxLoopsLimit = 100;
 
-const getAllMarkets = async (poolRegistry: Contract): Promise<Contract[]> => {
-  const pools = await poolRegistry.getAllPools();
-  const markets = await Promise.all(
-    pools.map(async ({ comptroller }: { comptroller: string }): Promise<Contract[]> => {
-      const poolComptroller = await ethers.getContractAt("Comptroller", comptroller);
-      const vTokenAddresses = await poolComptroller.getAllMarkets();
-      const vTokens = await Promise.all(
-        vTokenAddresses.map((vTokenAddress: string) => ethers.getContractAt("VToken", vTokenAddress)),
-      );
-      return vTokens;
-    }),
-  );
-  return markets.flat();
-};
-
-const configureVToken = async (vToken: Contract, shortfallAddress: string, protocolShareReserveAddress: string) => {
-  console.log("Setting shortfall contract for vToken: ", vToken.address);
-  const tx1 = await vToken.setShortfallContract(shortfallAddress);
-  await tx1.wait();
-  console.log("Setting protocol share reserve for vToken: ", vToken.address);
-  const tx2 = await vToken.setProtocolShareReserve(protocolShareReserveAddress);
-  await tx2.wait();
-  console.log("Finished configuring vToken: ", vToken.address);
-};
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -46,13 +21,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
-  const swapRouter = await ethers.getContract("SwapRouter");
-  let accessControl;
-  if (hre.network.live) {
-    accessControl = await ethers.getContractAt("AccessControlManager", preconfiguredAddresses.AccessControlManager);
-  } else {
-    accessControl = await ethers.getContract("AccessControlManager");
-  }
+  const swapRouterAddress = await toAddress(preconfiguredAddresses.SwapRouter_CorePool || "SwapRouter", hre);
+  const accessControlManagerAddress = await toAddress(
+    preconfiguredAddresses.AccessControlManager || "AccessControlManager",
+    hre,
+  );
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
