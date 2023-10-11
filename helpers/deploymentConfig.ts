@@ -2296,7 +2296,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(1, 8), // 1 WBTC
             supplyCap: convertToUnit(100, 8),
             borrowCap: convertToUnit(50, 8),
-            vTokenReceiver: SEPOLIA_MULTISIG, // TODO: replace with VTreasury when deployed
+            vTokenReceiver: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0", 
           },
           {
             name: "Venus WETH (Core)",
@@ -2313,7 +2313,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10, 18), // 10 WETH
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(500, 18),
-            vTokenReceiver: SEPOLIA_MULTISIG, // TODO: replace with VTreasury when deployed
+            vTokenReceiver: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0",
           },
           {
             name: "Venus USDT (Core)",
@@ -2330,7 +2330,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 6), // 10,000 USDT
             supplyCap: convertToUnit(1_000_000, 6),
             borrowCap: convertToUnit(500_000, 6),
-            vTokenReceiver: SEPOLIA_MULTISIG, // TODO: replace with VTreasury when deployed
+            vTokenReceiver: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0"
           },
           {
             name: "Venus USDC (Core)",
@@ -2347,7 +2347,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 6), // 10,000 USDC
             supplyCap: convertToUnit(1_000_000, 6),
             borrowCap: convertToUnit(500_000, 6),
-            vTokenReceiver: SEPOLIA_MULTISIG, // TODO: replace with VTreasury when deployed
+            vTokenReceiver: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0"
           },
         ],
         rewards: [],
