@@ -181,7 +181,11 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlock) external nonReentrant {
+    function placeBid(
+        address comptroller,
+        uint256 bidBps,
+        uint256 auctionStartBlock
+    ) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock == auctionStartBlock, "auction has been restarted");

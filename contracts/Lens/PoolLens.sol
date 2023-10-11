@@ -177,10 +177,11 @@ contract PoolLens is ExponentialNoError {
      * @param comptroller The Comptroller implementation address
      * @return PoolData structure containing the details of the pool
      */
-    function getPoolByComptroller(
-        address poolRegistryAddress,
-        address comptroller
-    ) external view returns (PoolData memory) {
+    function getPoolByComptroller(address poolRegistryAddress, address comptroller)
+        external
+        view
+        returns (PoolData memory)
+    {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return getPoolDataFromVenusPool(poolRegistryAddress, poolRegistryInterface.getPoolByComptroller(comptroller));
     }
@@ -207,10 +208,11 @@ contract PoolLens is ExponentialNoError {
      * @param asset The underlying asset of vToken
      * @return A list of Comptroller contracts
      */
-    function getPoolsSupportedByAsset(
-        address poolRegistryAddress,
-        address asset
-    ) external view returns (address[] memory) {
+    function getPoolsSupportedByAsset(address poolRegistryAddress, address asset)
+        external
+        view
+        returns (address[] memory)
+    {
         PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
         return poolRegistryInterface.getPoolsSupportedByAsset(asset);
     }
@@ -220,9 +222,11 @@ contract PoolLens is ExponentialNoError {
      * @param vTokens The list of vToken addresses
      * @return An array containing the price data for each asset
      */
-    function vTokenUnderlyingPriceAll(
-        VToken[] calldata vTokens
-    ) external view returns (VTokenUnderlyingPrice[] memory) {
+    function vTokenUnderlyingPriceAll(VToken[] calldata vTokens)
+        external
+        view
+        returns (VTokenUnderlyingPrice[] memory)
+    {
         uint256 vTokenCount = vTokens.length;
         VTokenUnderlyingPrice[] memory res = new VTokenUnderlyingPrice[](vTokenCount);
         for (uint256 i; i < vTokenCount; ++i) {
@@ -237,13 +241,14 @@ contract PoolLens is ExponentialNoError {
      * @param comptrollerAddress address
      * @return Pending rewards array
      */
-    function getPendingRewards(
-        address account,
-        address comptrollerAddress
-    ) external view returns (RewardSummary[] memory) {
+    function getPendingRewards(address account, address comptrollerAddress)
+        external
+        view
+        returns (RewardSummary[] memory)
+    {
         VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
-            .getRewardDistributors();
+        .getRewardDistributors();
         RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
         for (uint256 i; i < rewardsDistributors.length; ++i) {
             RewardSummary memory reward;
@@ -328,10 +333,11 @@ contract PoolLens is ExponentialNoError {
      * @param venusPool The VenusPool Object from PoolRegistry
      * @return Enriched PoolData
      */
-    function getPoolDataFromVenusPool(
-        address poolRegistryAddress,
-        PoolRegistry.VenusPool memory venusPool
-    ) public view returns (PoolData memory) {
+    function getPoolDataFromVenusPool(address poolRegistryAddress, PoolRegistry.VenusPool memory venusPool)
+        public
+        view
+        returns (PoolData memory)
+    {
         // Get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
@@ -441,10 +447,10 @@ contract PoolLens is ExponentialNoError {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
             (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenBorrowState(address(markets[i]));
+            .rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
             (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenSupplyState(address(markets[i]));
+            .rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             // Update market supply and borrow index in-memory

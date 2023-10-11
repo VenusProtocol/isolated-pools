@@ -135,7 +135,7 @@ const preconfiguredAddresses = {
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
   sepolia: {
-    VTreasury: preconfiguredAddresses.sepolia.VTreasury,
+    VTreasury: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0",
     NormalTimelock: SEPOLIA_MULTISIG,
     FastTrackTimelock: SEPOLIA_MULTISIG,
     CriticalTimelock: SEPOLIA_MULTISIG,
@@ -2296,7 +2296,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(1, 8), // 1 WBTC
             supplyCap: convertToUnit(100, 8),
             borrowCap: convertToUnit(50, 8),
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, 
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
           {
             name: "Venus WETH (Core)",
@@ -2330,7 +2330,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 6), // 10,000 USDT
             supplyCap: convertToUnit(1_000_000, 6),
             borrowCap: convertToUnit(500_000, 6),
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
           {
             name: "Venus USDC (Core)",
@@ -2347,7 +2347,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 6), // 10,000 USDC
             supplyCap: convertToUnit(1_000_000, 6),
             borrowCap: convertToUnit(500_000, 6),
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
         rewards: [],
