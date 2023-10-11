@@ -91,7 +91,6 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
 
     /**
-     *
      * @param tokenAddress_ Address of the inner token.
      * @param sharedDecimals_ No of shared decimals.
      * @param lzEndpoint_ Address of the layer zero endpoint contract.

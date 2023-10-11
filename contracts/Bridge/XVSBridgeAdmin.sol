@@ -45,7 +45,6 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     }
 
     /**
-     *
      * @param accessControlManager_ Address of access control manager contract.
      * @custom:error ZeroAddressNotAllowed is thrown when accessControlManager contract address is zero.
      */
