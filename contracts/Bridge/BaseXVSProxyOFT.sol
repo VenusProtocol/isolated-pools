@@ -76,20 +76,30 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Emitted when the maximum daily limit of transactions from local chain is modified.
      */
-    event SetMaxDailyLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    event SetMaxDailyLimit(uint16 chainId, uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Emitted when the maximum limit for a single receive transaction from remote chain is modified.
      */
-    event SetMaxSingleReceiveTransactionLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    event SetMaxSingleReceiveTransactionLimit(uint16 chainId, uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Emitted when the maximum daily limit for receiving transactions from remote chain is modified.
      */
-    event SetMaxDailyReceiveLimit(uint256 oldMaxLimit, uint256 newMaxLimit);
+    event SetMaxDailyReceiveLimit(uint16 chainId, uint256 oldMaxLimit, uint256 newMaxLimit);
     /**
      * @notice Event emitted when oracle is modified.
      */
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
 
+    /**
+     *
+     * @param tokenAddress_ Address of the inner token.
+     * @param sharedDecimals_ No of shared decimals.
+     * @param lzEndpoint_ Address of the layer zero endpoint contract.
+     * @param oracle_ Address of the price oracle.
+     * @custom:error ZeroAddressNotAllowed is thrown when token contract address is zero.
+     * @custom:error ZeroAddressNotAllowed is thrown when lzEndpoint contract address is zero.
+     * @custom:error ZeroAddressNotAllowed is thrown when oracle contract address is zero.
+     */
     constructor(
         address tokenAddress_,
         uint8 sharedDecimals_,
@@ -116,6 +126,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Set the address of the ResilientOracle contract.
      * @dev Reverts if the new address is zero.
      * @param oracleAddress_ The new address of the ResilientOracle contract.
+     * @custom:access Only owner.
+     * @custom:event Emits OracleChanged with old and new oracle address.
      */
     function setOracle(address oracleAddress_) external onlyOwner {
         ensureNonzeroAddress(oracleAddress_);
@@ -127,6 +139,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Sets the limit of single transaction amount.
      * @param chainId_ Destination chain id.
      * @param limit_ Amount in USD(scaled with 18 decimals).
+     * @custom:access Only owner.
+     * @custom:event Emits SetMaxSingleTransactionLimit with old and new limit associated with chain id.
      */
     function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         emit SetMaxSingleTransactionLimit(chainId_, chainIdToMaxSingleTransactionLimit[chainId_], limit_);
@@ -137,10 +151,12 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Sets the limit of daily (24 Hour) transactions amount.
      * @param chainId_ Destination chain id.
      * @param limit_ Amount in USD(scaled with 18 decimals).
+     * @custom:access Only owner.
+     * @custom:event Emits setMaxDailyLimit with old and new limit associated with chain id.
      */
     function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(limit_ >= chainIdToMaxSingleTransactionLimit[chainId_], "Daily limit < single transaction limit");
-        emit SetMaxDailyLimit(chainIdToMaxDailyLimit[chainId_], limit_);
+        emit SetMaxDailyLimit(chainId_, chainIdToMaxDailyLimit[chainId_], limit_);
         chainIdToMaxDailyLimit[chainId_] = limit_;
     }
 
@@ -148,9 +164,11 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Sets the maximum limit for a single receive transaction.
      * @param chainId_ The destination chain ID.
      * @param limit_ The new maximum limit in USD(scaled with 18 decimals).
+     * @custom:access Only owner.
+     * @custom:event Emits setMaxSingleReceiveTransactionLimit with old and new limit associated with chain id.
      */
     function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
-        emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
+        emit SetMaxSingleReceiveTransactionLimit(chainId_, chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleReceiveTransactionLimit[chainId_] = limit_;
     }
 
@@ -158,13 +176,15 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Sets the maximum daily limit for receiving transactions.
      * @param chainId_ The destination chain ID.
      * @param limit_ The new maximum daily limit in USD(scaled with 18 decimals).
+     * @custom:access Only owner.
+     * @custom:event Emits setMaxDailyReceiveLimit with old and new limit associated with chain id.
      */
     function setMaxDailyReceiveLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(
             limit_ >= chainIdToMaxSingleReceiveTransactionLimit[chainId_],
             "Daily limit < single receive transaction limit"
         );
-        emit SetMaxDailyReceiveLimit(chainIdToMaxDailyReceiveLimit[chainId_], limit_);
+        emit SetMaxDailyReceiveLimit(chainId_, chainIdToMaxDailyReceiveLimit[chainId_], limit_);
         chainIdToMaxDailyReceiveLimit[chainId_] = limit_;
     }
 
@@ -172,6 +192,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Sets the whitelist address to skip checks on transaction limit.
      * @param user_ Adress to be add in whitelist.
      * @param val_ Boolean to be set (true for user_ address is whitelisted).
+     * @custom:access Only owner.
+     * @custom:event Emits setWhitelist.
      */
     function setWhitelist(address user_, bool val_) external onlyOwner {
         emit SetWhitelist(user_, val_);
@@ -180,6 +202,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
 
     /**
      * @notice Triggers stopped state of the bridge.
+     * @custom:access Only owner.
      */
     function pause() external onlyOwner {
         _pause();
@@ -187,6 +210,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
 
     /**
      * @notice Triggers resume state of the bridge.
+     * @custom:access Only owner.
      */
     function unpause() external onlyOwner {
         _unpause();
@@ -197,6 +221,9 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      */
     function renounceOwnership() public override {}
 
+    /**
+     * @notice Return's the address of the inner token of this bridge.
+     */
     function token() public view override returns (address) {
         return address(innerToken);
     }

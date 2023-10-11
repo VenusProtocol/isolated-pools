@@ -20,6 +20,10 @@ contract XVS is ERC20, TokenController {
      * the total supply. Checks access and eligibility.
      * @param account_ Address to which tokens be assigned.
      * @param amount_ Amount of tokens to be assigned.
+     * @custom:access Controlled by AccessControlManager.
+     * @custom:event Emits MintLimitDecreased with new available limit.
+     * @custom:error MintNotAllowed is thrown when minting is not allowed to from_ address.
+     * @custom:error MintLimitExceed is thrown when minting amount exceed the maximum cap.
      */
     function mint(address account_, uint256 amount_) external whenNotPaused {
         _ensureAllowed("mint(address,uint256)");
@@ -32,6 +36,8 @@ contract XVS is ERC20, TokenController {
      * total supply. Checks access and eligibility.
      * @param account_ Address from which tokens be destroyed.
      * @param amount_ Amount of tokens to be destroyed.
+     * @custom:access Controlled by AccessControlManager.
+     * @custom:event Emits MintLimitIncreased with new available limit.
      */
     function burn(address account_, uint256 amount_) external whenNotPaused {
         _ensureAllowed("burn(address,uint256)");

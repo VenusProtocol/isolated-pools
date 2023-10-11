@@ -16,7 +16,9 @@ import { IXVSProxyOFT } from "./interfaces/IXVSProxyOFT.sol";
 contract XVSBridgeAdmin is AccessControlledV8 {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IXVSProxyOFT public immutable XVSBridge;
-
+    /**
+     * @notice A mapping keeps track of function signature associated with function name string.
+     */
     mapping(bytes4 => string) public functionRegistry;
 
     // Event emitted when function registry updated
@@ -31,6 +33,7 @@ contract XVSBridgeAdmin is AccessControlledV8 {
 
     /**
      * @notice Invoked when called function does not exist in the contract
+     * @custom:access Controlled by AccessControlManager.
      */
     fallback(bytes calldata data) external payable returns (bytes memory) {
         string memory fun = _getFunctionName(msg.sig);
@@ -41,11 +44,22 @@ contract XVSBridgeAdmin is AccessControlledV8 {
         return res;
     }
 
+    /**
+     *
+     * @param accessControlManager_ Address of access control manager contract.
+     * @custom:error ZeroAddressNotAllowed is thrown when accessControlManager contract address is zero.
+     */
     function initialize(address accessControlManager_) external initializer {
-        require(address(accessControlManager_) != address(0), "Address must not be zero");
+        ensureNonzeroAddress(accessControlManager_);
         __AccessControlled_init(accessControlManager_);
     }
 
+    /**
+     * @notice Function to update the function registry.
+     * @param signatures_ Array of function names string.
+     * @param remove_  Boolean to specify whether to remove the function from registry mapping.
+     * @custom:access Only owner.
+     */
     function upsertSignature(string[] calldata signatures_, bool[] calldata remove_) external onlyOwner {
         uint256 signatureLength = signatures_.length;
         require(signatureLength == remove_.length, "Input arrays must have the same length");
@@ -64,6 +78,7 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     /**
      * @notice This function transfer the ownership of the bridge from this contract to new owner.
      * @param newOwner_ New owner of the XVS Bridge.
+     * @custom:access Controlled by AccessControlManager.
      */
     function transferBridgeOwnership(address newOwner_) external {
         _checkAccessAllowed("transferBridgeOwnership(address)");

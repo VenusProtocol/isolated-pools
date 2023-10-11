@@ -63,6 +63,7 @@ contract TokenController is Ownable, Pausable {
 
     /**
      * @param accessControlManager_ Address of access control manager contract.
+     * @custom:error ZeroAddressNotAllowed is thrown when accessControlManager contract address is zero.
      */
     constructor(address accessControlManager_) {
         ensureNonzeroAddress(accessControlManager_);
@@ -71,6 +72,7 @@ contract TokenController is Ownable, Pausable {
 
     /**
      * @notice Pauses Token
+     * @custom:access Controlled by AccessControlManager.
      */
     function pause() external {
         _ensureAllowed("pause()");
@@ -79,6 +81,7 @@ contract TokenController is Ownable, Pausable {
 
     /**
      * @notice Resumes Token
+     * @custom:access Controlled by AccessControlManager.
      */
     function unpause() external {
         _ensureAllowed("unpause()");
@@ -86,9 +89,11 @@ contract TokenController is Ownable, Pausable {
     }
 
     /**
-     * @notice Function to update blacklist
-     * @param user_ User address to be affected
-     * @param value_ Boolean to toggle value
+     * @notice Function to update blacklist.
+     * @param user_ User address to be affected.
+     * @param value_ Boolean to toggle value.
+     * @custom:access Controlled by AccessControlManager.
+     * @custom:event Emits BlacklistUpdated event.
      */
     function updateBlacklist(address user_, bool value_) external {
         _ensureAllowed("updateBlacklist(address,bool)");
@@ -100,6 +105,8 @@ contract TokenController is Ownable, Pausable {
      * @notice Sets the minitng cap for minter.
      * @param minter_ Minter address.
      * @param amount_ Cap for the minter.
+     * @custom:access Controlled by AccessControlManager.
+     * @custom:event Emits MintCapChanged.
      */
     function setMintCap(address minter_, uint256 amount_) external {
         _ensureAllowed("setMintCap(address,uint256)");
@@ -111,6 +118,9 @@ contract TokenController is Ownable, Pausable {
      * @notice Sets the address of the access control manager of this contract.
      * @dev Admin function to set the access control address.
      * @param newAccessControlAddress_ New address for the access control.
+     * @custom:access Only owner.
+     * @custom:event Emits NewAccessControlManager.
+     * @custom:error ZeroAddressNotAllowed is thrown when newAccessControlAddress_ contract address is zero.
      */
     function setAccessControlManager(address newAccessControlAddress_) external onlyOwner {
         ensureNonzeroAddress(newAccessControlAddress_);
@@ -118,6 +128,11 @@ contract TokenController is Ownable, Pausable {
         accessControlManager = newAccessControlAddress_;
     }
 
+    /**
+     * @notice Returns the blacklist status of the address.
+     * @param user_ Address of user to check blacklist status.
+     * @return bool status of blacklist.
+     */
     function isBlackListed(address user_) external view returns (bool) {
         return _blacklist[user_];
     }
