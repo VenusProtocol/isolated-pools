@@ -1235,17 +1235,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@layerzerolabs/solidity-examples@npm:^0.0.13":
-  version: 0.0.13
-  resolution: "@layerzerolabs/solidity-examples@npm:0.0.13"
+"@layerzerolabs/solidity-examples@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@layerzerolabs/solidity-examples@npm:1.0.0"
   dependencies:
     "@layerzerolabs/lz-evm-sdk-v1-0.7": ^1.5.14
     "@openzeppelin-3/contracts": "npm:@openzeppelin/contracts@^3.4.2-solc-0.7"
     "@openzeppelin/contracts": ^4.4.1
     "@openzeppelin/contracts-upgradeable": ^4.6.0
     "@openzeppelin/hardhat-upgrades": ^1.18.3
-    "@uniswap/v2-core": ^1.0.1
-    "@uniswap/v2-periphery": ^1.1.0-beta.0
     dotenv: ^10.0.0
     erc721a: ^4.2.3
     hardhat: ^2.8.0
@@ -1253,7 +1251,7 @@ __metadata:
     hardhat-deploy: ^0.10.5
     hardhat-deploy-ethers: ^0.3.0-beta.13
     hardhat-gas-reporter: ^1.0.6
-  checksum: effb227d6468635ec55fa59a6bf93cd99ee1d2ac8f41e2348e6903f79400e5fa6c158743664fb4028d43b4661e7ae6325dd66335af6c4f2b70e64be6f563f572
+  checksum: d48d3e93e3e408f153ee880c957b36928b42c12a8cb0d49b0aa7daaa1ab75fd77d5bcaf1094b4e59684a7b54d0afa20c77e7632e095d233194e87823464f2ff8
   languageName: node
   linkType: hard
 
@@ -2984,37 +2982,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@uniswap/lib@npm:1.1.1":
-  version: 1.1.1
-  resolution: "@uniswap/lib@npm:1.1.1"
-  checksum: 2ec6689f606a0cf7dc7acd8b7471997638b2c89202c52743dcb4dfc0df182f6e058ec1a5e4d94a872c81bb85cbcde9e4a46b6de45eea0d34582627d97e743c7b
-  languageName: node
-  linkType: hard
-
-"@uniswap/v2-core@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@uniswap/v2-core@npm:1.0.0"
-  checksum: 41e42ad801dbc058ebf0ab38a8ce3195990e21eff4b2d49cd0a8c8fd25ac067feed55c379f2be22d915a7601d94966ae66127b748b2d3acde20eeb2351e51703
-  languageName: node
-  linkType: hard
-
-"@uniswap/v2-core@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "@uniswap/v2-core@npm:1.0.1"
-  checksum: eaa118fe45eac2e80b7468547ce2cde12bd3c8157555d2e40e0462a788c9506c6295247b511382da85e44a89ad92aff7bb3433b23bfbd2eeea23942ecd46e979
-  languageName: node
-  linkType: hard
-
-"@uniswap/v2-periphery@npm:^1.1.0-beta.0":
-  version: 1.1.0-beta.0
-  resolution: "@uniswap/v2-periphery@npm:1.1.0-beta.0"
-  dependencies:
-    "@uniswap/lib": 1.1.1
-    "@uniswap/v2-core": 1.0.0
-  checksum: af13224c9f28f817be6e5794a7590b8433788e5387912343a8d61227a42b494b431fe6e549505e87d96a6896e96e289f80d92c68788eea4917596ec7fd94734e
-  languageName: node
-  linkType: hard
-
 "@venusprotocol/governance-contracts@npm:^0.0.2":
   version: 0.0.2
   resolution: "@venusprotocol/governance-contracts@npm:0.0.2"
@@ -3036,7 +3003,7 @@ __metadata:
     "@commitlint/cli": ^17.0.3
     "@commitlint/config-conventional": ^17.0.3
     "@defi-wonderland/smock": ^2.2.0
-    "@layerzerolabs/solidity-examples": ^0.0.13
+    "@layerzerolabs/solidity-examples": ^1.0.0
     "@nomicfoundation/hardhat-chai-matchers": ^1.0.3
     "@nomicfoundation/hardhat-network-helpers": ^1.0.4
     "@nomicfoundation/hardhat-toolbox": ^2.0.0

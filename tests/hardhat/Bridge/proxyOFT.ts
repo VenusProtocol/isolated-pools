@@ -52,7 +52,8 @@ describe("Proxy OFTV2: ", function () {
     accessControlManager: FakeContract<AccessControlManager>,
     oracle: FakeContract<ResilientOracleInterface>,
     initialAmount: BigNumber,
-    amount: BigNumber;
+    amount: BigNumber,
+    defaultAdapterParams: any;
 
   before(async function () {
     LZEndpointMock = await ethers.getContractFactory("LZEndpointMock");
@@ -67,6 +68,7 @@ describe("Proxy OFTV2: ", function () {
     bob = (await ethers.getSigners())[2];
     oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
     oracle.getPrice.returns(convertToUnit(1, 18));
+    defaultAdapterParams = ethers.utils.solidityPack(["uint16", "uint256"], [1, 200000]);
   });
 
   beforeEach(async function () {
@@ -146,6 +148,12 @@ describe("Proxy OFTV2: ", function () {
       data: data,
     });
 
+    data = localOFT.interface.encodeFunctionData("setMinDstGas", [remoteChainId, 0, 200000]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
+
     data = localOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
       remoteChainId,
       singleTransactionLimit,
@@ -179,6 +187,12 @@ describe("Proxy OFTV2: ", function () {
     // Setting remote chain
 
     data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, localPath]);
+    await deployer.sendTransaction({
+      to: bridgeAdminRemote.address,
+      data: data,
+    });
+
+    data = remoteOFT.interface.encodeFunctionData("setMinDstGas", [localChainId, 0, 200000]);
     await deployer.sendTransaction({
       to: bridgeAdminRemote.address,
       data: data,
@@ -228,8 +242,10 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
     // swaps token to remote chain
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    let nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, initialAmount, false, "0x"))
-      .nativeFee;
+    let nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, initialAmount, false, defaultAdapterParams)
+    ).nativeFee;
+
     await localOFT
       .connect(alice)
       .sendFrom(
@@ -237,7 +253,7 @@ describe("Proxy OFTV2: ", function () {
         remoteChainId,
         bobAddressBytes32,
         initialAmount,
-        [alice.address, ethers.constants.AddressZero, "0x"],
+        [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
         { value: nativeFee },
       );
 
@@ -251,7 +267,10 @@ describe("Proxy OFTV2: ", function () {
     // bob send tokens back to alice from remote chain
     const aliceAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [alice.address]);
     const halfAmount = amount.div(2);
-    nativeFee = (await remoteOFT.estimateSendFee(localChainId, aliceAddressBytes32, halfAmount, false, "0x")).nativeFee;
+    nativeFee = (
+      await remoteOFT.estimateSendFee(localChainId, aliceAddressBytes32, halfAmount, false, defaultAdapterParams)
+    ).nativeFee;
+
     await remoteOFT
       .connect(bob)
       .sendFrom(
@@ -259,7 +278,7 @@ describe("Proxy OFTV2: ", function () {
         localChainId,
         aliceAddressBytes32,
         halfAmount,
-        [bob.address, ethers.constants.AddressZero, "0x"],
+        [bob.address, ethers.constants.AddressZero, defaultAdapterParams],
         { value: nativeFee },
       );
     // half tokens are burned on the remote chain
@@ -276,7 +295,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
     await expect(
       localOFT
         .connect(alice)
@@ -285,7 +306,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).to.be.revertedWith("Single Transaction Limit Exceed");
@@ -306,7 +327,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
     await expect(
       localOFT
         .connect(alice)
@@ -315,7 +338,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -328,7 +351,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     // After 10 transaction it should fail as limit of max daily transaction is 100 USD and price per full token in USD is 1
     for (let i = 0; i < 10; i++) {
@@ -339,7 +364,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         );
     }
@@ -353,7 +378,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).to.be.revertedWith("Daily Transaction Limit Exceed");
@@ -373,7 +398,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     // After 10 transaction it should fail as limit of max daily transaction is 100 USD and price per full token in USD is 1
     for (let i = 0; i < 9; i++) {
@@ -384,7 +411,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         );
     }
@@ -396,7 +423,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -411,7 +438,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     // After 10 transaction it should fail as limit of max daily transaction is 100 USD and price per full token in USD is 1
     for (let i = 0; i < 10; i++) {
@@ -422,7 +451,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         );
     }
@@ -438,7 +467,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).to.be.revertedWith("Daily Transaction Limit Exceed");
@@ -453,7 +482,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     )
@@ -469,7 +498,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     await expect(
       localOFT
@@ -479,7 +510,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -498,7 +529,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     await localOFT
       .connect(alice)
@@ -507,7 +540,7 @@ describe("Proxy OFTV2: ", function () {
         remoteChainId,
         bobAddressBytes32,
         amount,
-        [alice.address, ethers.constants.AddressZero, "0x"],
+        [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
         { value: nativeFee },
       ),
       // Msg should reach remote chain
@@ -521,7 +554,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -537,7 +570,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, initialAmount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
     // Blocking next message
     await remoteEndpoint.blockNextMsg();
     await localOFT
@@ -547,7 +582,7 @@ describe("Proxy OFTV2: ", function () {
         remoteChainId,
         bobAddressBytes32,
         amount,
-        [alice.address, ethers.constants.AddressZero, "0x"],
+        [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
         { value: nativeFee },
       );
     expect(await remoteEndpoint.hasStoredPayload(localChainId, localPath)).equals(true);
@@ -580,7 +615,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     await expect(
       localOFT
@@ -590,7 +627,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -604,7 +641,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     await expect(
       localOFT
@@ -614,7 +653,7 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).not.to.emit(remoteOFT, "ReceiveFromChain");
@@ -626,7 +665,9 @@ describe("Proxy OFTV2: ", function () {
     await localToken.connect(alice).approve(localOFT.address, amount);
 
     const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    const nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
 
     await expect(
       localOFT
@@ -636,62 +677,9 @@ describe("Proxy OFTV2: ", function () {
           remoteChainId,
           bobAddressBytes32,
           amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
+          [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
           { value: nativeFee },
         ),
     ).to.be.revertedWith("OFTCore: amount too small");
-  });
-
-  it("total outbound amount overflow", async function () {
-    let data = localOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
-      remoteChainId,
-      ethers.constants.MaxUint256,
-    ]);
-    await deployer.sendTransaction({
-      to: bridgeAdminLocal.address,
-      data: data,
-    });
-
-    data = localOFT.interface.encodeFunctionData("setMaxDailyLimit", [remoteChainId, ethers.constants.MaxUint256]);
-    await deployer.sendTransaction({
-      to: bridgeAdminLocal.address,
-      data: data,
-    });
-
-    await localToken.connect(alice).faucet(ethers.constants.MaxUint256);
-    const maxUint64 = BigNumber.from(2).pow(64).sub(1);
-    let amount = maxUint64.mul(BigNumber.from(10).pow(18 - sharedDecimals)); // sd to ld
-    await localToken.connect(alice).approve(localOFT.address, ethers.constants.MaxUint256);
-
-    const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
-    let nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
-    await localOFT
-      .connect(alice)
-      .sendFrom(
-        alice.address,
-        remoteChainId,
-        bobAddressBytes32,
-        amount,
-        [alice.address, ethers.constants.AddressZero, "0x"],
-        { value: nativeFee },
-      );
-
-    amount = BigNumber.from(10).pow(18 - sharedDecimals); // min amount without dust
-
-    // fails to send more for cap overflow
-    nativeFee = (await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, "0x")).nativeFee;
-
-    await expect(
-      localOFT
-        .connect(alice)
-        .sendFrom(
-          alice.address,
-          remoteChainId,
-          bobAddressBytes32,
-          amount,
-          [alice.address, ethers.constants.AddressZero, "0x"],
-          { value: nativeFee },
-        ),
-    ).to.be.revertedWith("ProxyOFT: outboundAmount overflow");
   });
 });

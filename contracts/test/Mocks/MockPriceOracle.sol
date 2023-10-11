@@ -6,7 +6,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 // Mock imports for testing
 import { BinanceOracle } from "@venusprotocol/oracle/contracts/oracles/BinanceOracle.sol";
 import { ChainlinkOracle } from "@venusprotocol/oracle/contracts/oracles/ChainlinkOracle.sol";
-import { LZEndpointMock } from "@layerzerolabs/solidity-examples/contracts/mocks/LZEndpointMock.sol";
+import { LZEndpointMock } from "@layerzerolabs/solidity-examples/contracts/lzApp/mocks/LZEndpointMock.sol";
 
 import { VToken } from "../../VToken.sol";
 

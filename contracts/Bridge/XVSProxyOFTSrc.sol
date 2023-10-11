@@ -16,7 +16,7 @@ import { BaseXVSProxyOFT } from "./BaseXVSProxyOFT.sol";
 contract XVSProxyOFTSrc is BaseXVSProxyOFT {
     using SafeERC20 for IERC20;
     /**
-     * @notice total amount is transferred from this chain to other chains, ensuring the total is less than uint64.max in sd.
+     * @notice total amount is transferred from this chain to other chains.
      */
     uint256 public outboundAmount;
 
@@ -43,17 +43,8 @@ contract XVSProxyOFTSrc is BaseXVSProxyOFT {
         require(from_ == _msgSender(), "ProxyOFT: owner is not send caller");
         _isEligibleToSend(from_, dstChainId_, amount_);
 
-        amount_ = _transferFrom(from_, address(this), amount_);
-
-        // amount_ still may have dust if the token has transfer fee, then give the dust back to the sender
-        (uint256 amount, uint256 dust) = _removeDust(amount_);
-        if (dust > 0) innerToken.safeTransfer(from_, dust);
-
-        // check total outbound amount
+        uint256 amount = _transferFrom(from_, address(this), amount_);
         outboundAmount += amount;
-        uint256 cap = _sd2ld(type(uint64).max);
-        require(cap >= outboundAmount, "ProxyOFT: outboundAmount overflow");
-
         return amount;
     }
 
