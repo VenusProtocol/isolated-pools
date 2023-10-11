@@ -135,7 +135,7 @@ const preconfiguredAddresses = {
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
   sepolia: {
-    VTreasury: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0",
+    VTreasury: preconfiguredAddresses.sepolia.VTreasury,
     NormalTimelock: SEPOLIA_MULTISIG,
     FastTrackTimelock: SEPOLIA_MULTISIG,
     CriticalTimelock: SEPOLIA_MULTISIG,
