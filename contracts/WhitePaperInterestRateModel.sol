@@ -31,11 +31,7 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
      */
-    constructor(
-        uint256 blocksPerYear_,
-        uint256 baseRatePerYear,
-        uint256 multiplierPerYear
-    ) {
+    constructor(uint256 blocksPerYear_, uint256 baseRatePerYear, uint256 multiplierPerYear) {
         require(blocksPerYear_ != 0, "Invalid blocks per year");
         baseRatePerBlock = baseRatePerYear / blocksPerYear_;
         multiplierPerBlock = multiplierPerYear / blocksPerYear_;

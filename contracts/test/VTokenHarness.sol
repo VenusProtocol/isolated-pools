@@ -41,11 +41,7 @@ contract VTokenHarness is VToken {
         totalReserves = totalReserves_;
     }
 
-    function harnessExchangeRateDetails(
-        uint256 totalSupply_,
-        uint256 totalBorrows_,
-        uint256 totalReserves_
-    ) external {
+    function harnessExchangeRateDetails(uint256 totalSupply_, uint256 totalBorrows_, uint256 totalReserves_) external {
         totalSupply = totalSupply_;
         totalBorrows = totalBorrows_;
         totalReserves = totalReserves_;
@@ -64,19 +60,11 @@ contract VTokenHarness is VToken {
         super._mintFresh(account, account, mintAmount);
     }
 
-    function harnessRedeemFresh(
-        address payable account,
-        uint256 vTokenAmount,
-        uint256 underlyingAmount
-    ) external {
+    function harnessRedeemFresh(address payable account, uint256 vTokenAmount, uint256 underlyingAmount) external {
         super._redeemFresh(account, vTokenAmount, underlyingAmount);
     }
 
-    function harnessSetAccountBorrows(
-        address account,
-        uint256 principal,
-        uint256 interestIndex
-    ) external {
+    function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) external {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
@@ -88,11 +76,7 @@ contract VTokenHarness is VToken {
         _borrowFresh(account, borrowAmount);
     }
 
-    function harnessRepayBorrowFresh(
-        address payer,
-        address account,
-        uint256 repayAmount
-    ) external {
+    function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) external {
         _repayBorrowFresh(payer, account, repayAmount);
     }
 

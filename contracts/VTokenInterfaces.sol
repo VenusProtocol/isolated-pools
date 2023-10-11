@@ -313,11 +313,7 @@ abstract contract VTokenInterface is VTokenStorage {
         VTokenInterface vTokenCollateral
     ) external virtual returns (uint256);
 
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
 
     function forceLiquidateBorrow(
         address liquidator,
@@ -327,19 +323,11 @@ abstract contract VTokenInterface is VTokenStorage {
         bool skipCloseFactorCheck
     ) external virtual;
 
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external virtual;
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external virtual;
 
     function transfer(address dst, uint256 amount) external virtual returns (bool);
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external virtual returns (bool);
+    function transferFrom(address src, address dst, uint256 amount) external virtual returns (bool);
 
     function accrueInterest() external virtual returns (uint256);
 
@@ -373,16 +361,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function balanceOf(address owner) external view virtual returns (uint256);
 
-    function getAccountSnapshot(address account)
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
+    function getAccountSnapshot(address account) external view virtual returns (uint256, uint256, uint256, uint256);
 
     function borrowRatePerBlock() external view virtual returns (uint256);
 
