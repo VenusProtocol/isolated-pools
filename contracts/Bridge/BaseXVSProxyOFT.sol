@@ -8,6 +8,17 @@ import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 
+/**
+ * @title BaseXVSProxyOFT
+ * @author Venus
+ * @notice The BaseXVSProxyOFT contract is tailored for facilitating cross-chain transactions with an ERC20 token.
+ * It manages transaction limits of a single and daily transactions.
+ * This contract inherits key functionalities from other contracts, including pausing capabilities and error handling.
+ * It holds state variables for the inner token and maps for tracking transaction limits and statistics across various chains and addresses.
+ * The contract allows the owner to configure limits, set whitelists, and control pausing.
+ * Internal functions conduct eligibility check of transactions, making the contract a fundamental component for cross-chain token management.
+ */
+
 abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     using SafeERC20 for IERC20;
     IERC20 internal immutable innerToken;
@@ -18,15 +29,15 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      */
     ResilientOracleInterface public oracle;
     /**
-     * @notice Maximum limit for a single transaction in USD from local chain.
+     * @notice Maximum limit for a single transaction in USD(scaled with 18 decimals) from local chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxSingleTransactionLimit;
     /**
-     * @notice Maximum daily limit for transactions in USD from local chain.
+     * @notice Maximum daily limit for transactions in USD(scaled with 18 decimals) from local chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxDailyLimit;
     /**
-     * @notice Total sent amount in USD within the last 24-hour window from local chain.
+     * @notice Total sent amount in USD(scaled with 18 decimals) within the last 24-hour window from local chain.
      */
     mapping(uint16 => uint256) public chainIdToLast24HourTransferred;
     /**
@@ -34,15 +45,15 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      */
     mapping(uint16 => uint256) public chainIdToLast24HourWindowStart;
     /**
-     * @notice Maximum limit for a single receive transaction in USD from remote chain.
+     * @notice Maximum limit for a single receive transaction in USD(scaled with 18 decimals) from remote chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxSingleReceiveTransactionLimit;
     /**
-     * @notice Maximum daily limit for receiving transactions in USD from remote chain.
+     * @notice Maximum daily limit for receiving transactions in USD(scaled with 18 decimals) from remote chain.
      */
     mapping(uint16 => uint256) public chainIdToMaxDailyReceiveLimit;
     /**
-     * @notice Total received amount in USD within the last 24-hour window from remote chain.
+     * @notice Total received amount in USD(scaled with 18 decimals) within the last 24-hour window from remote chain.
      */
     mapping(uint16 => uint256) public chainIdToLast24HourReceived;
     /**
@@ -85,6 +96,9 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         address lzEndpoint_,
         address oracle_
     ) BaseOFTV2(sharedDecimals_, lzEndpoint_) {
+        ensureNonzeroAddress(tokenAddress_);
+        ensureNonzeroAddress(lzEndpoint_);
+
         innerToken = IERC20(tokenAddress_);
 
         (bool success, bytes memory data) = tokenAddress_.staticcall(abi.encodeWithSignature("decimals()"));
@@ -112,7 +126,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Sets the limit of single transaction amount.
      * @param chainId_ Destination chain id.
-     * @param limit_ Amount in USD.
+     * @param limit_ Amount in USD(scaled with 18 decimals).
      */
     function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         emit SetMaxSingleTransactionLimit(chainId_, chainIdToMaxSingleTransactionLimit[chainId_], limit_);
@@ -122,7 +136,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Sets the limit of daily (24 Hour) transactions amount.
      * @param chainId_ Destination chain id.
-     * @param limit_ Amount in USD.
+     * @param limit_ Amount in USD(scaled with 18 decimals).
      */
     function setMaxDailyLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(limit_ >= chainIdToMaxSingleTransactionLimit[chainId_], "Daily limit < single transaction limit");
@@ -133,7 +147,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Sets the maximum limit for a single receive transaction.
      * @param chainId_ The destination chain ID.
-     * @param limit_ The new maximum limit in USD.
+     * @param limit_ The new maximum limit in USD(scaled with 18 decimals).
      */
     function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         emit SetMaxSingleReceiveTransactionLimit(chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
@@ -143,7 +157,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Sets the maximum daily limit for receiving transactions.
      * @param chainId_ The destination chain ID.
-     * @param limit_ The new maximum daily limit in USD.
+     * @param limit_ The new maximum daily limit in USD(scaled with 18 decimals).
      */
     function setMaxDailyReceiveLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
         require(
@@ -157,7 +171,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     /**
      * @notice Sets the whitelist address to skip checks on transaction limit.
      * @param user_ Adress to be add in whitelist.
-     * @param val_ Boolean to be set (true for isWhitelisted address)
+     * @param val_ Boolean to be set (true for user_ address is whitelisted).
      */
     function setWhitelist(address user_, bool val_) external onlyOwner {
         emit SetWhitelist(user_, val_);
@@ -221,9 +235,9 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
     }
 
-    function _isEligibleToReceive(uint16 srcChainId_, uint256 receivedAmount_) internal {
+    function _isEligibleToReceive(address toAddress_, uint16 srcChainId_, uint256 receivedAmount_) internal {
         // Check if the sender's address is whitelisted
-        bool isWhiteListedUser = whitelist[msg.sender];
+        bool isWhiteListedUser = whitelist[toAddress_];
 
         // Calculate the received amount in USD using the oracle price
         uint256 receivedAmountInUsd;

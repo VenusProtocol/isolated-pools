@@ -5,29 +5,81 @@ import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 
-contract TokenController is Ownable, Pausable {
-    address public accessControlManager;
-    mapping(address => bool) internal _blacklist;
-    mapping(address => uint256) internal minterToCap;
-    mapping(address => uint256) internal minterToMintedAmount;
+/**
+ * @title TokenController
+ * @author Venus
+ * @notice TokenController contract acts as a governance and access control mechanism,
+ * allowing the owner to manage minting restrictions and blacklist certain addresses to maintain control and security within the token ecosystem.
+ * It provides a flexible framework for token-related operations.
+ */
 
+contract TokenController is Ownable, Pausable {
+    /**
+     * @notice Access control manager contract address.
+     */
+    address public accessControlManager;
+    /**
+     * @notice A Mapping used to keep track of the blacklist status of addresses.
+     */
+    mapping(address => bool) public _blacklist;
+    /**
+     * @notice A mapping is used to keep track of the maximum amount a minter is permitted to miny..
+     */
+    mapping(address => uint256) public minterToCap;
+    /**
+     * @notice A Mapping used to keep track of the amount i.e already m inted by minter.
+     */
+    mapping(address => uint256) public minterToMintedAmount;
+
+    /**
+     * @notice Emitted when the blacklist status of a user is updated.
+     */
     event BlacklistUpdated(address indexed user, bool value);
+    /**
+     * @notice Emitted when the minting limit for a minter is increased.
+     */
     event MintLimitIncreased(address indexed minter, uint256 newLimit);
+    /**
+     * @notice Emitted when the minting limit for a minter is decreased.
+     */
+    event MintLimitDecreased(address indexed minter, uint256 newLimit);
+    /**
+     * @notice Emitted when the minting cap for a minter is changed.
+     */
     event MintCapChanged(address indexed minter, uint256 amount);
+    /**
+     * @notice Emitted when the address of the access control manager of the contract is updated.
+     */
     event NewAccessControlManager(address indexed oldAccessControlManager, address indexed newAccessControlManager);
 
+    /**
+     * @notice This error is used to indicate that the minting limit has been exceeded. It is typically thrown when a minting operation would surpass the defined cap.
+     */
     error MintLimitExceed();
+    /**
+     * @notice This error is used to indicate that minting is not allowed for the specified addresses.
+     */
     error MintNotAllowed(address from, address to);
 
+    /**
+     * @param accessControlManager_ Address of access control manager contract.
+     */
     constructor(address accessControlManager_) {
+        ensureNonzeroAddress(accessControlManager_);
         accessControlManager = accessControlManager_;
     }
 
+    /**
+     * @notice Pauses Token
+     */
     function pause() external {
         _ensureAllowed("pause()");
         _pause();
     }
 
+    /**
+     * @notice Resumes Token
+     */
     function unpause() external {
         _ensureAllowed("unpause()");
         _unpause();
@@ -88,6 +140,8 @@ contract TokenController is Ownable, Pausable {
             revert MintLimitExceed();
         }
         minterToMintedAmount[from_] = totalMintedNew;
+        uint256 availableLimit = minterToCap[from_] - totalMintedNew;
+        emit MintLimitDecreased(from_, availableLimit);
     }
 
     /**

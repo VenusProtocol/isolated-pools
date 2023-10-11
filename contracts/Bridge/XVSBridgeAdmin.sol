@@ -3,14 +3,19 @@
 pragma solidity 0.8.13;
 
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { IXVSProxyOFT } from "./interfaces/IXVSProxyOFT.sol";
 
-interface IXVSBridge {
-    function transferOwnership(address addr) external;
-}
-
+/**
+ * @title XVSBridgeAdmin
+ * @author Venus
+ * @notice The XVSBridgeAdmin contract extends a parent contract AccessControlledV8 for access control, and it manages an external contract called XVSProxyOFT.
+ * It maintains a registry of function signatures and names,
+ * allowing for dynamic function handling i.e checking of access control of interaction with only owner functions.
+ */
 contract XVSBridgeAdmin is AccessControlledV8 {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IXVSBridge public immutable XVSBridge;
+    IXVSProxyOFT public immutable XVSBridge;
 
     mapping(bytes4 => string) public functionRegistry;
 
@@ -19,8 +24,8 @@ contract XVSBridgeAdmin is AccessControlledV8 {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address XVSBridge_) {
-        require(XVSBridge_ != address(0), "Address must not be zero");
-        XVSBridge = IXVSBridge(XVSBridge_);
+        ensureNonzeroAddress(XVSBridge_);
+        XVSBridge = IXVSProxyOFT(XVSBridge_);
         _disableInitializers();
     }
 
@@ -62,12 +67,18 @@ contract XVSBridgeAdmin is AccessControlledV8 {
      */
     function transferBridgeOwnership(address newOwner_) external {
         _checkAccessAllowed("transferBridgeOwnership(address)");
-        require(address(newOwner_) != address(0), "Address must not be zero");
+        ensureNonzeroAddress(newOwner_);
         XVSBridge.transferOwnership(newOwner_);
     }
 
+    /**
+     * @notice Empty implementation of renounce ownership to avoid any mishappening.
+     */
     function renounceOwnership() public override {}
 
+    /**
+     * @dev Returns function name string associated with function signature.
+     */
     function _getFunctionName(bytes4 signature_) internal view returns (string memory) {
         return functionRegistry[signature_];
     }
