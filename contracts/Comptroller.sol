@@ -1021,7 +1021,7 @@ contract Comptroller is
             revert MarketNotListed(vTokenBorrowed);
         }
 
-        isForcedLiquidationEnabled[address(vTokenBorrowed)] = enable;
+        isForcedLiquidationEnabled[vTokenBorrowed] = enable;
         emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
     }
 
