@@ -477,7 +477,7 @@ contract Comptroller is
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
-        /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
+        /* Allow accounts to be liquidated if it is a forced liquidation */
         if (skipLiquidityCheck || isForcedLiquidationEnabled[vTokenBorrowed]) {
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
@@ -1021,7 +1021,7 @@ contract Comptroller is
             revert MarketNotListed(vTokenBorrowed);
         }
 
-        isForcedLiquidationEnabled[address(vTokenBorrowed)] = enable;
+        isForcedLiquidationEnabled[vTokenBorrowed] = enable;
         emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
     }
 
