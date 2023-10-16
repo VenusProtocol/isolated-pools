@@ -7,6 +7,7 @@ export type NetworkConfig = {
   hardhat: DeploymentConfig;
   bsctestnet: DeploymentConfig;
   bscmainnet: DeploymentConfig;
+  sepolia: RemoteDeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -15,6 +16,10 @@ export type DeploymentConfig = {
   tokensConfig: TokenConfig[];
   poolConfig: PoolConfig[];
   accessControlConfig: AccessControlEntry[];
+  preconfiguredAddresses: PreconfiguredAddresses;
+};
+
+export type RemoteDeploymentConfig = {
   preconfiguredAddresses: PreconfiguredAddresses;
 };
 
@@ -77,6 +82,12 @@ export type AccessControlEntry = {
 export enum InterestRateModels {
   WhitePaper,
   JumpRate,
+}
+
+interface BridgeConfig {
+  [networkName: string]: {
+    methods: { method: string; args: any[] }[];
+  };
 }
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
@@ -157,20 +168,7 @@ export const xvsBridgeAdminMethods = [
   "setConfig(uint16,uint16,uint256,bytes)",
 ];
 
-export const xvsTokenPermissions = (bridge: string, xvs: string): AccessControlEntry[] => {
-  const methods = ["setMintCap(address,uint256)", "mint(address,uint256)", "burn(address,uint256)"];
-  return methods.map(method => ({
-    caller: bridge,
-    target: xvs,
-    method,
-  }));
-};
-
-interface BridgeConfig {
-  [networkName: string]: {
-    methods: { method: string; args: any[] }[];
-  };
-}
+export const xvsTokenPermissions = ["mint(address,uint256)", "burn(address,uint256)"];
 
 export const bridgeConfig: BridgeConfig = {
   bsctestnet: {
@@ -196,7 +194,7 @@ export const bridgeConfig: BridgeConfig = {
   sepolia: {
     methods: [
       { method: "setTrustedRemote(uint16,bytes)", args: [10102, ANY_CONTRACT] },
-      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
+      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10102, 0, "200000"] },
       { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [10102, "500000000000000000000"] },
       { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
@@ -2034,6 +2032,9 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.bscmainnet,
   },
+  sepolia: {
+    preconfiguredAddresses: preconfiguredAddresses.sepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -2044,6 +2045,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.bsctestnet;
     case "bscmainnet":
       return globalConfig.bscmainnet;
+    case "sepolia":
+      return globalConfig.sepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:

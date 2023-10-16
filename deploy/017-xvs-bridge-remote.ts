@@ -3,10 +3,9 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { bridgeConfig, getConfig, xvsBridgeAdminMethods } from "../helpers/deploymentConfig";
+import { bridgeConfig, getConfig, xvsBridgeAdminMethods, xvsTokenPermissions } from "../helpers/deploymentConfig";
 import { toAddress } from "../helpers/deploymentUtils";
-import { getArgTypesFromSignature } from "../helpers/utils";
-import { XVSBridgeAdmin, XVSProxyOFTSrc } from "../typechain";
+import { XVSBridgeAdmin, XVSProxyOFTDest } from "../typechain";
 
 interface GovernanceCommand {
   contract: string;
@@ -40,24 +39,38 @@ const configureAccessControls = async (
   );
   return commands.flat();
 };
-
-const configureBridgeCommands = async (
-  target: string,
+const configureXVSTokenMintCapCommands = async (
+  xvsToken: string,
+  minterAddress: string,
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  const commands = await Promise.all(
-    bridgeConfig[hre.network.name].methods.map(async (entry: { method: string; args: any[] }) => {
-      const { method, args } = entry;
-      return {
-        contract: target,
-        signature: method,
-        argTypes: getArgTypesFromSignature(method),
-        parameters: args,
-        value: 0,
-      };
-    }),
-  );
-  return commands.flat();
+  const command = [
+    {
+      contract: xvsToken,
+      signature: "setMintCap(address,uint256)",
+      argTypes: ["address", "uint256"],
+      parameters: [minterAddress, "100000000000000000000"],
+      value: 0,
+    },
+  ];
+  return command.flat();
+};
+
+const executeBridgeCommands = async (target: XVSProxyOFTDest, hre: HardhatRuntimeEnvironment, deployer: string) => {
+  const signer = await ethers.getSigner(deployer);
+  console.log("Executing Bridge commands");
+  const methods = bridgeConfig[hre.network.name].methods;
+
+  for (let i = 0; i < methods.length; i++) {
+    const entry = methods[i];
+    const { method, args } = entry;
+    const data = target.interface.encodeFunctionData(method, args);
+    console.log(data);
+    await signer.sendTransaction({
+      to: target.address,
+      data: data,
+    });
+  }
 };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -67,12 +80,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deploymentConfig = await getConfig(hre.network.name);
   const { preconfiguredAddresses } = deploymentConfig;
 
-  const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
-  const owner = await proxyAdmin.owner();
+  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock, hre);
 
-  const XVSProxyOFTSrc = await deploy("XVSProxyOFTSrc", {
+  const XVSProxyOFTDest = await deploy("XVSProxyOFTDest", {
     from: deployer,
-    contract: "XVSProxyOFTSrc",
+    contract: "XVSProxyOFTDest",
     args: [preconfiguredAddresses.XVS, 8, preconfiguredAddresses.LzEndpoint, preconfiguredAddresses.ResilientOracle],
     autoMine: true,
     log: true,
@@ -80,10 +92,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const XVSBridgeAdmin = await deploy("XVSBridgeAdmin", {
     from: deployer,
-    args: [XVSProxyOFTSrc.address],
+    args: [XVSProxyOFTDest.address],
     contract: "XVSBridgeAdmin",
     proxy: {
-      owner: owner,
+      owner: proxyOwnerAddress,
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
@@ -95,8 +107,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
 
-  const bridge = await ethers.getContractAt<XVSProxyOFTSrc>("XVSProxyOFTSrc", XVSProxyOFTSrc.address, deployer);
+  const bridge = await ethers.getContractAt<XVSProxyOFTDest>("XVSProxyOFTDest", XVSProxyOFTDest.address, deployer);
   const bridgeAdmin = await ethers.getContractAt<XVSBridgeAdmin>("XVSBridgeAdmin", XVSBridgeAdmin.address, deployer);
+
+  await executeBridgeCommands(bridge, hre, deployer);
 
   const removeArray = new Array(xvsBridgeAdminMethods.length).fill(false);
   let tx = await bridgeAdmin.upsertSignature(xvsBridgeAdminMethods, removeArray);
@@ -119,18 +133,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       XVSBridgeAdmin.address,
       hre,
     )),
+
     ...(await configureAccessControls(
-      xvsBridgeAdminMethods,
+      xvsTokenPermissions,
       preconfiguredAddresses.AccessControlManager,
-      preconfiguredAddresses.FastTrackTimelock,
-      XVSBridgeAdmin.address,
+      XVSProxyOFTDest.address,
+      preconfiguredAddresses.XVS,
       hre,
     )),
+
     ...(await configureAccessControls(
-      xvsBridgeAdminMethods,
+      ["setMintCap(address,uint256"],
       preconfiguredAddresses.AccessControlManager,
-      preconfiguredAddresses.CriticalTimelock,
-      XVSBridgeAdmin.address,
+      preconfiguredAddresses.NormalTimelock,
+      preconfiguredAddresses.XVS,
       hre,
     )),
 
@@ -141,17 +157,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       value: 0,
     },
 
-    ...(await configureBridgeCommands(XVSBridgeAdmin.address, hre)),
+    {
+      contract: XVSBridgeAdmin.address,
+      signature: "setTrustedRemote(uint16,bytes)",
+      parameters: [preconfiguredAddresses.LzVirtualChainIdL, "0xDestAddressSrcAddress"],
+      value: 0,
+    },
+
+    ...(await configureXVSTokenMintCapCommands(preconfiguredAddresses.XVS, XVSProxyOFTDest.address, hre)),
   ];
-  console.log("Please propose a VIP with the following commands:");
+  console.log("Please propose a Multisig tx with the following commands:");
   console.log(
     JSON.stringify(
       commands.map(c => ({ target: c.contract, signature: c.signature, params: c.parameters, value: c.value })),
     ),
   );
 };
-func.tags = ["XVSBridgeSrc"];
+func.tags = ["XVSBridgeDest"];
 
 func.skip = async (hre: HardhatRuntimeEnvironment) =>
-  !(hre.network.name === "bsctestnet" || hre.network.name === "bscmainnet");
+  !(hre.network.name === "sepolia" || hre.network.name === "ethereum");
 export default func;
