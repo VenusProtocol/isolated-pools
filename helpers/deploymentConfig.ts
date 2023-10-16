@@ -80,6 +80,7 @@ export enum InterestRateModels {
 }
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
+const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 
 const preconfiguredAddresses = {
   hardhat: {
@@ -96,6 +97,10 @@ const preconfiguredAddresses = {
     WBNB: "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
     SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
+    XVS: "0xB9e0E753630434d7863528cc73CB7AC638a7c8ff",
+    ResilientOracle: "0x3cD69251D04A28d887Ac14cbe2E14c52F3D57823",
+    LzEndpoint: "0x6Fcb97553D41516Cb228ac03FdC8B9a0a9df04A1",
+    LzVirtualChainIdL: "10102",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
@@ -108,6 +113,95 @@ const preconfiguredAddresses = {
     WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
     VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
     SwapRouter_CorePool: "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4",
+    XVS: "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
+    ResilientOracle: "0x6592b5DE802159F3E74B2486b091D11a8256ab8A",
+    LzEndpoint: "0x6592b5DE802159F3E74B2486b091D11a8256ab8A",
+    LzVirtualChainIdL: "102",
+  },
+  sepolia: {
+    VTreasury: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0",
+    NormalTimelock: SEPOLIA_MULTISIG,
+    FastTrackTimelock: SEPOLIA_MULTISIG,
+    CriticalTimelock: SEPOLIA_MULTISIG,
+    GovernorBravo: SEPOLIA_MULTISIG,
+    AccessControlManager: "0x799700ea540f002134C371fB955e2392FD94DbCD",
+    XVS: "0xD657eB80daA42c334B1c70Cb274E83E4163A3dDc",
+    ResilientOracle: "0x1B85FAbE5c0846662F5FB0E3598fC48eF587e9f0",
+    LzEndpoint: "0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1",
+    LzVirtualChainIdL: "10161",
+  },
+  ethereum: {
+    // TODO
+  },
+};
+
+export const xvsBridgeAdminMethods = [
+  "setSendVersion(uint16)",
+  "setReceiveVersion(uint16)",
+  "forceResumeReceive(uint16,bytes)",
+  "setOracle(address)",
+  "setMaxSingleTransactionLimit(uint16,uint256)",
+  "setMaxDailyLimit(uint16,uint256)",
+  "setMaxSingleReceiveTransactionLimit(uint16,uint256)",
+  "setMaxDailyReceiveLimit(uint16,uint256)",
+  "pause()",
+  "unpause()",
+  "setUseCustomAdapterParams(bool)",
+  "setTrustedRemote(uint16,bytes)",
+  "setTrustedRemoteAddress(uint16,bytes)",
+  "getTrustedRemoteAddress(uint16)",
+  "setPrecrime(address)",
+  "setMinDstGas(uint16,uint16,uint256)",
+  "setPayloadSizeLimit(uint16,uint256)",
+  "setWhitelist(address,bool)",
+  "setConfig(uint16,uint16,uint256,bytes)",
+];
+
+export const xvsTokenPermissions = (bridge: string, xvs: string): AccessControlEntry[] => {
+  const methods = ["setMintCap(address,uint256)", "mint(address,uint256)", "burn(address,uint256)"];
+  return methods.map(method => ({
+    caller: bridge,
+    target: xvs,
+    method,
+  }));
+};
+
+interface BridgeConfig {
+  [networkName: string]: {
+    methods: { method: string; args: any[] }[];
+  };
+}
+
+export const bridgeConfig: BridgeConfig = {
+  bsctestnet: {
+    methods: [
+      { method: "setTrustedRemote(uint16,bytes)", args: [10161, ANY_CONTRACT] },
+      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
+      { method: "setMaxDailyLimit(uint16,uint256)", args: [10161, "500000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
+      { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [10161, "50000000000000000000"] },
+    ],
+  },
+  bscmainnet: {
+    methods: [
+      { method: "setTrustedRemote(uint16,bytes)", args: [101, ANY_CONTRACT] },
+      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
+      { method: "setMaxDailyLimit(uint16,uint256)", args: [101, "500000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
+      { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [101, "50000000000000000000"] },
+    ],
+  },
+  sepolia: {
+    methods: [
+      { method: "setTrustedRemote(uint16,bytes)", args: [10102, ANY_CONTRACT] },
+      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
+      { method: "setMaxDailyLimit(uint16,uint256)", args: [10102, "500000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
+      { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [10102, "50000000000000000000"] },
+    ],
   },
 };
 

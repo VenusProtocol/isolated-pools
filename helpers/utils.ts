@@ -22,3 +22,9 @@ export const scaleDownBy = (amount: string | number, decimals: number) => {
 };
 
 export const AddressOne = "0x0000000000000000000000000000000000000001";
+
+// Function to get argument types from method signature
+export const getArgTypesFromSignature = (methodSignature: string): string[] => {
+  const [, argumentString] = methodSignature.split("(")[1].split(")");
+  return argumentString.split(",").map(arg => arg.trim());
+};
