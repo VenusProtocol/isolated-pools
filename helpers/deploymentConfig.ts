@@ -157,7 +157,6 @@ export const xvsBridgeAdminMethods = [
   "setMaxDailyReceiveLimit(uint16,uint256)",
   "pause()",
   "unpause()",
-  "setUseCustomAdapterParams(bool)",
   "setTrustedRemote(uint16,bytes)",
   "setTrustedRemoteAddress(uint16,bytes)",
   "getTrustedRemoteAddress(uint16)",
