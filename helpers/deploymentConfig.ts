@@ -111,7 +111,7 @@ const preconfiguredAddresses = {
     XVS: "0xB9e0E753630434d7863528cc73CB7AC638a7c8ff",
     ResilientOracle: "0x3cD69251D04A28d887Ac14cbe2E14c52F3D57823",
     LzEndpoint: "0x6Fcb97553D41516Cb228ac03FdC8B9a0a9df04A1",
-    LzVirtualChainIdL: "10102",
+    LzVirtualChainId: "10102",
   },
   bscmainnet: {
     VTreasury: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
@@ -127,7 +127,7 @@ const preconfiguredAddresses = {
     XVS: "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
     ResilientOracle: "0x6592b5DE802159F3E74B2486b091D11a8256ab8A",
     LzEndpoint: "0x6592b5DE802159F3E74B2486b091D11a8256ab8A",
-    LzVirtualChainIdL: "102",
+    LzVirtualChainId: "102",
   },
   sepolia: {
     VTreasury: "0xFc43c055B9be2Ec3BEe6f8C291Af862d764016a0",
@@ -139,7 +139,7 @@ const preconfiguredAddresses = {
     XVS: "0xD657eB80daA42c334B1c70Cb274E83E4163A3dDc",
     ResilientOracle: "0x1B85FAbE5c0846662F5FB0E3598fC48eF587e9f0",
     LzEndpoint: "0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1",
-    LzVirtualChainIdL: "10161",
+    LzVirtualChainId: "10161",
   },
   ethereum: {
     // TODO
@@ -159,7 +159,6 @@ export const xvsBridgeAdminMethods = [
   "unpause()",
   "setTrustedRemote(uint16,bytes)",
   "setTrustedRemoteAddress(uint16,bytes)",
-  "getTrustedRemoteAddress(uint16)",
   "setPrecrime(address)",
   "setMinDstGas(uint16,uint16,uint256)",
   "setPayloadSizeLimit(uint16,uint256)",
@@ -183,7 +182,7 @@ export const bridgeConfig: BridgeConfig = {
   bscmainnet: {
     methods: [
       { method: "setTrustedRemote(uint16,bytes)", args: [101, ANY_CONTRACT] },
-      { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
+      { method: "setMinDstGas(uint16,uint16,uint256)", args: [101, 0, "200000"] },
       { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [101, "500000000000000000000"] },
       { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
