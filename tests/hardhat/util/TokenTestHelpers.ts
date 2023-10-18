@@ -73,7 +73,7 @@ export const fakeInterestRateModel = async (): Promise<FakeContract<InterestRate
 
 export const fakeStableRateModel = async (): Promise<FakeContract<StableRateModel>> => {
   const stableRateModel = await smock.fake<StableRateModel>("StableRateModel");
-  stableRateModel.isInterestRateModel.returns(true);
+  stableRateModel.isStableRateModel.returns(true);
   return stableRateModel;
 };
 
