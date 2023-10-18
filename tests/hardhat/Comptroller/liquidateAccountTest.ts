@@ -53,6 +53,7 @@ describe("liquidateAccount", () => {
   let OMG: FakeContract<VToken>;
   let ZRX: FakeContract<VToken>;
   let BAT: FakeContract<VToken>;
+  let accessControl: FakeContract<AccessControlManager>;
   const maxLoopsLimit = 150;
 
   type LiquidateAccountFixture = {
@@ -113,7 +114,7 @@ describe("liquidateAccount", () => {
     [, liquidator, user] = await ethers.getSigners();
     const contracts = await loadFixture(liquidateAccountFixture);
     configure(contracts);
-    ({ comptroller, OMG, ZRX, BAT } = contracts);
+    ({ comptroller, OMG, ZRX, BAT, accessControl } = contracts);
   });
 
   describe("collateral to borrows ratio requirements", async () => {
@@ -340,6 +341,111 @@ describe("liquidateAccount", () => {
       await expect(comptroller.connect(liquidator).liquidateAccount(user.address, [])).to.be.revertedWith(
         "Nonzero borrow balance after liquidation",
       );
+    });
+  });
+
+  describe("setForcedLiquidation", async () => {
+    it("fails if asset is not listed", async () => {
+      const someVToken = await smock.fake<VToken>("VToken");
+      await expect(comptroller.setForcedLiquidation(someVToken.address, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "MarketNotListed",
+      );
+    });
+
+    it("fails if ACM does not allow the call", async () => {
+      accessControl.isAllowedToCall.returns(false);
+      await expect(comptroller.setForcedLiquidation(OMG.address, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "Unauthorized",
+      );
+      accessControl.isAllowedToCall.returns(true);
+    });
+
+    it("sets forced liquidation", async () => {
+      await comptroller.setForcedLiquidation(OMG.address, true);
+      expect(await comptroller.isForcedLiquidationEnabled(OMG.address)).to.be.true;
+
+      await comptroller.setForcedLiquidation(OMG.address, false);
+      expect(await comptroller.isForcedLiquidationEnabled(OMG.address)).to.be.false;
+    });
+
+    it("emits IsForcedLiquidationEnabledUpdated event", async () => {
+      const tx1 = await comptroller.setForcedLiquidation(OMG.address, true);
+      await expect(tx1).to.emit(comptroller, "IsForcedLiquidationEnabledUpdated").withArgs(OMG.address, true);
+
+      const tx2 = await comptroller.setForcedLiquidation(OMG.address, false);
+      await expect(tx2).to.emit(comptroller, "IsForcedLiquidationEnabledUpdated").withArgs(OMG.address, false);
+    });
+  });
+
+  describe("preLiquidateHook", async () => {
+    let accounts: SignerWithAddress[];
+
+    beforeEach(async () => {
+      accounts = await ethers.getSigners();
+      await comptroller.setForcedLiquidation(OMG.address, true);
+    });
+
+    it("reverts if borrowed market is not listed", async () => {
+      const someVToken = await smock.fake<VToken>("VToken");
+      await expect(
+        comptroller.preLiquidateHook(someVToken.address, OMG.address, accounts[0].address, parseUnits("1", 18), false),
+      ).to.be.revertedWithCustomError(comptroller, "MarketNotListed");
+    });
+
+    it("reverts if collateral market is not listed", async () => {
+      const someVToken = await smock.fake<VToken>("VToken");
+      await expect(
+        comptroller.preLiquidateHook(OMG.address, someVToken.address, accounts[0].address, parseUnits("1", 18), false),
+      ).to.be.revertedWithCustomError(comptroller, "MarketNotListed");
+    });
+
+    it("allows liquidations without shortfall", async () => {
+      OMG.borrowBalanceStored.returns(parseUnits("100", 18));
+      await comptroller.callStatic.preLiquidateHook(
+        OMG.address,
+        OMG.address,
+        accounts[0].address,
+        parseUnits("1", 18),
+        true,
+      );
+    });
+
+    it("allows to repay 100% of the borrow", async () => {
+      OMG.borrowBalanceStored.returns(parseUnits("1", 18));
+      await comptroller.callStatic.preLiquidateHook(
+        OMG.address,
+        OMG.address,
+        accounts[0].address,
+        parseUnits("1", 18),
+        false,
+      );
+    });
+
+    it("fails with TOO_MUCH_REPAY if trying to repay > borrowed amount", async () => {
+      OMG.borrowBalanceStored.returns(parseUnits("0.99", 18));
+      const tx = comptroller.callStatic.preLiquidateHook(
+        OMG.address,
+        OMG.address,
+        accounts[0].address,
+        parseUnits("1", 18),
+        false,
+      );
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "TooMuchRepay");
+    });
+
+    it("checks the shortfall if isForcedLiquidationEnabled is set back to false", async () => {
+      await comptroller.setForcedLiquidation(OMG.address, false);
+      OMG.borrowBalanceStored.returns(parseUnits("100", 18));
+      const tx = comptroller.callStatic.preLiquidateHook(
+        OMG.address,
+        OMG.address,
+        accounts[0].address,
+        parseUnits("1", 18),
+        false,
+      );
+      await expect(tx).to.be.revertedWithCustomError(comptroller, "MinimalCollateralViolated");
     });
   });
 });
