@@ -1,3 +1,17 @@
+## [2.1.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.7...v2.1.0-dev.8) (2023-10-18)
+
+
+### Features
+
+* ven-1930 force liquidation ([b871eab](https://github.com/VenusProtocol/isolated-pools/commit/b871eabaf65322e54507c7c8e3aae1db3aa9aa66))
+
+
+### Bug Fixes
+
+* CVP-03 ([ebc9a9b](https://github.com/VenusProtocol/isolated-pools/commit/ebc9a9b043064e6fe4af2ac48fdc24e24eddba58))
+* CVP-04 ([f4e8d2b](https://github.com/VenusProtocol/isolated-pools/commit/f4e8d2b5517ad6b104cffcdbe03c9eb2fd94ddbc))
+* pr comments ([cbd9b18](https://github.com/VenusProtocol/isolated-pools/commit/cbd9b18a99c4e1f92bf9404e88fceb8ebc36d55f))
+
 ## [2.1.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.6...v2.1.0-dev.7) (2023-10-18)
 
 
