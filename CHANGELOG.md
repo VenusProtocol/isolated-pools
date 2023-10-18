@@ -1,3 +1,27 @@
+## [2.1.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.5...v2.1.0-dev.6) (2023-10-10)
+
+## [2.1.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.4...v2.1.0-dev.5) (2023-10-10)
+
+
+### Features
+
+* add info about the DefaultProxyAdmin used in testnet ([80f7a58](https://github.com/VenusProtocol/isolated-pools/commit/80f7a58f68ab0e949dcb8c5248123bf2ec4d9ba9))
+
+## [2.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.3...v2.1.0-dev.4) (2023-10-10)
+
+
+### Features
+
+* add deployments of agEUR market ([667ac5f](https://github.com/VenusProtocol/isolated-pools/commit/667ac5feeedf0a7337258389f16110df864948cb))
+* add reward distributor in agEUR market ([072714d](https://github.com/VenusProtocol/isolated-pools/commit/072714ded3dc712e9ed99748ff6a2da2adb94a02))
+
+## [2.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.2...v2.1.0-dev.3) (2023-09-29)
+
+
+### Features
+
+* add SnBNB market deployments ([add6956](https://github.com/VenusProtocol/isolated-pools/commit/add695693f9e835835e8e53a83dce81aaddfe29e))
+
 ## [2.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.1...v2.1.0-dev.2) (2023-09-18)
 
 ## [2.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.0.1-dev.1...v2.1.0-dev.1) (2023-09-15)
