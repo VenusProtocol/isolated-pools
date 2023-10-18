@@ -1,3 +1,17 @@
+## [2.1.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.6...v2.1.0-dev.7) (2023-10-18)
+
+
+### Bug Fixes
+
+* added support for core pool assets in risk fund ([e161438](https://github.com/VenusProtocol/isolated-pools/commit/e1614383fe6a24b098c98ff509ce2f7e84e4e2bc))
+* fixed build ([82166e5](https://github.com/VenusProtocol/isolated-pools/commit/82166e505b87c90d602a1eaff78253fe55376aaa))
+* fixed integration tests ([31a4c44](https://github.com/VenusProtocol/isolated-pools/commit/31a4c449a1386f8bb222a3263cc0b39aeec4b85a))
+* fixed tests ([635e206](https://github.com/VenusProtocol/isolated-pools/commit/635e2062bb972e5fa1949b2879d657d715b412d5))
+* redeployed risk fund implementation ([35d7139](https://github.com/VenusProtocol/isolated-pools/commit/35d7139b1de2c29815f5d4c691cb316b3a1a7c0c))
+* removed only ([133ccd1](https://github.com/VenusProtocol/isolated-pools/commit/133ccd1dca4c020e6a8c773408ca278aac7e3536))
+* resolved conflict ([b712134](https://github.com/VenusProtocol/isolated-pools/commit/b7121344c344a11c2a06eb4a17e53e73d847a7d1))
+* use PoolRegistry interface ([761b0e1](https://github.com/VenusProtocol/isolated-pools/commit/761b0e1386ea27db1a410c29be7ad2bc3e5109aa))
+
 ## [2.1.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.5...v2.1.0-dev.6) (2023-10-10)
 
 ## [2.1.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0-dev.4...v2.1.0-dev.5) (2023-10-10)
