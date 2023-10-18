@@ -57,7 +57,11 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(
+        address corePoolComptroller_,
+        address vbnb_,
+        address nativeWrapped_
+    ) ReserveHelpers(corePoolComptroller_, vbnb_, nativeWrapped_) {
         _disableInitializers();
     }
 
