@@ -169,7 +169,7 @@ const config: HardhatUserConfig = {
     bscmainnet: {
       url: "https://bsc-dataseed.binance.org/",
       chainId: 56,
-      live: true,
+      timeout: 1200000,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
@@ -229,7 +229,10 @@ const config: HardhatUserConfig = {
       },
     ],
     deployments: {
-      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
+      bsctestnet: [
+        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+      ],
     },
   },
 };

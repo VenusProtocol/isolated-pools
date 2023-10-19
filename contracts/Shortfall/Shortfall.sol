@@ -181,11 +181,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(
-        address comptroller,
-        uint256 bidBps,
-        uint256 auctionStartBlock
-    ) external nonReentrant {
+    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlock) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock == auctionStartBlock, "auction has been restarted");
@@ -345,7 +341,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
     /**
      * @notice Update minimum pool bad debt to start auction
-     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     * @param _minimumPoolBadDebt Minimum bad debt in the base asset for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted by ACM
      */

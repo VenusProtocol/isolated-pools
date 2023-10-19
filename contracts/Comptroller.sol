@@ -91,6 +91,9 @@ contract Comptroller is
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
 
+    /// @notice Emitted when forced liquidation is enabled or disabled for a market
+    event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -269,11 +272,7 @@ contract Comptroller is
      * @custom:error SupplyCapExceeded error is thrown if the total supply exceeds the cap after minting
      * @custom:access Not restricted
      */
-    function preMintHook(
-        address vToken,
-        address minter,
-        uint256 mintAmount
-    ) external override {
+    function preMintHook(address vToken, address minter, uint256 mintAmount) external override {
         _checkActionPauseState(vToken, Action.MINT);
 
         if (!markets[vToken].isListed) {
@@ -313,11 +312,7 @@ contract Comptroller is
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
      * @custom:access Not restricted
      */
-    function preRedeemHook(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) external override {
+    function preRedeemHook(address vToken, address redeemer, uint256 redeemTokens) external override {
         _checkActionPauseState(vToken, Action.REDEEM);
 
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
@@ -346,11 +341,7 @@ contract Comptroller is
      * @custom:access Not restricted if vToken is enabled as collateral, otherwise only vToken
      */
     /// disable-eslint
-    function preBorrowHook(
-        address vToken,
-        address borrower,
-        uint256 borrowAmount
-    ) external override {
+    function preBorrowHook(address vToken, address borrower, uint256 borrowAmount) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
         if (!markets[vToken].isListed) {
@@ -474,8 +465,8 @@ contract Comptroller is
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
-        /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
-        if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed))) {
+        /* Allow accounts to be liquidated if it is a forced liquidation */
+        if (skipLiquidityCheck || isForcedLiquidationEnabled[vTokenBorrowed]) {
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
             }
@@ -574,12 +565,7 @@ contract Comptroller is
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
      * @custom:access Not restricted
      */
-    function preTransferHook(
-        address vToken,
-        address src,
-        address dst,
-        uint256 transferTokens
-    ) external override {
+    function preTransferHook(address vToken, address src, address dst, uint256 transferTokens) external override {
         _checkActionPauseState(vToken, Action.TRANSFER);
 
         // Currently the only consideration is whether or not
@@ -920,11 +906,7 @@ contract Comptroller is
      * @param paused The new paused state (true=paused, false=unpaused)
      * @custom:access Controlled by AccessControlManager
      */
-    function setActionsPaused(
-        VToken[] calldata marketsList,
-        Action[] calldata actionsList,
-        bool paused
-    ) external {
+    function setActionsPaused(VToken[] calldata marketsList, Action[] calldata actionsList, bool paused) external {
         _checkAccessAllowed("setActionsPaused(address[],uint256[],bool)");
 
         uint256 marketsCount = marketsList.length;
@@ -1005,6 +987,24 @@ contract Comptroller is
     }
 
     /**
+     * @notice Enables forced liquidations for a market. If forced liquidation is enabled,
+     * borrows in the market may be liquidated regardless of the account liquidity
+     * @param vTokenBorrowed Borrowed vToken
+     * @param enable Whether to enable forced liquidations
+     */
+    function setForcedLiquidation(address vTokenBorrowed, bool enable) external {
+        _checkAccessAllowed("setForcedLiquidation(address,bool)");
+        ensureNonzeroAddress(vTokenBorrowed);
+
+        if (!markets[vTokenBorrowed].isListed) {
+            revert MarketNotListed(vTokenBorrowed);
+        }
+
+        isForcedLiquidationEnabled[vTokenBorrowed] = enable;
+        emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to liquidation threshold requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -1012,15 +1012,9 @@ contract Comptroller is
      * @return liquidity Account liquidity in excess of liquidation threshold requirements,
      * @return shortfall Account shortfall below liquidation threshold requirements
      */
-    function getAccountLiquidity(address account)
-        external
-        view
-        returns (
-            uint256 error,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
+    function getAccountLiquidity(
+        address account
+    ) external view returns (uint256 error, uint256 liquidity, uint256 shortfall) {
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getLiquidationThreshold);
         return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
@@ -1033,15 +1027,9 @@ contract Comptroller is
      * @return liquidity Account liquidity in excess of collateral requirements,
      * @return shortfall Account shortfall below collateral requirements
      */
-    function getBorrowingPower(address account)
-        external
-        view
-        returns (
-            uint256 error,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
+    function getBorrowingPower(
+        address account
+    ) external view returns (uint256 error, uint256 liquidity, uint256 shortfall) {
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getCollateralFactor);
         return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
@@ -1062,15 +1050,7 @@ contract Comptroller is
         address vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount
-    )
-        external
-        view
-        returns (
-            uint256 error,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
+    ) external view returns (uint256 error, uint256 liquidity, uint256 shortfall) {
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
             account,
             VToken(vTokenModify),
@@ -1224,19 +1204,6 @@ contract Comptroller is
     }
 
     /**
-     * @notice Check if a vToken market has been deprecated
-     * @dev All borrows in a deprecated vToken market can be immediately liquidated
-     * @param vToken The market to check if deprecated
-     * @return deprecated True if the given vToken market has been deprecated
-     */
-    function isDeprecated(VToken vToken) public view returns (bool) {
-        return
-            markets[address(vToken)].collateralFactorMantissa == 0 &&
-            actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == MANTISSA_ONE;
-    }
-
-    /**
      * @notice Add the market to the borrower's "assets in" for liquidity calculations
      * @param vToken The market to enter
      * @param borrower The address of the account to modify
@@ -1289,11 +1256,7 @@ contract Comptroller is
      * @param action Action id to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
      */
-    function _setActionPaused(
-        address market,
-        Action action,
-        bool paused
-    ) internal {
+    function _setActionPaused(address market, Action action, bool paused) internal {
         require(markets[market].isListed, "cannot pause a market that is not listed");
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
@@ -1305,11 +1268,7 @@ contract Comptroller is
      * @param redeemer Account redeeming the tokens
      * @param redeemTokens The number of tokens to redeem
      */
-    function _checkRedeemAllowed(
-        address vToken,
-        address redeemer,
-        uint256 redeemTokens
-    ) internal {
+    function _checkRedeemAllowed(address vToken, address redeemer, uint256 redeemTokens) internal {
         Market storage market = markets[vToken];
 
         if (!market.isListed) {
@@ -1346,11 +1305,10 @@ contract Comptroller is
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
      */
-    function _getCurrentLiquiditySnapshot(address account, function(VToken) internal view returns (Exp memory) weight)
-        internal
-        view
-        returns (AccountLiquiditySnapshot memory snapshot)
-    {
+    function _getCurrentLiquiditySnapshot(
+        address account,
+        function(VToken) internal view returns (Exp memory) weight
+    ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         return _getHypotheticalLiquiditySnapshot(account, VToken(address(0)), 0, 0, weight);
     }
 
@@ -1472,15 +1430,10 @@ contract Comptroller is
      * @return borrowBalance Borrowed amount, including the interest
      * @return exchangeRateMantissa Stored exchange rate
      */
-    function _safeGetAccountSnapshot(VToken vToken, address user)
-        internal
-        view
-        returns (
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRateMantissa
-        )
-    {
+    function _safeGetAccountSnapshot(
+        VToken vToken,
+        address user
+    ) internal view returns (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) {
         uint256 err;
         (err, vTokenBalance, borrowBalance, exchangeRateMantissa) = vToken.getAccountSnapshot(user);
         if (err != 0) {

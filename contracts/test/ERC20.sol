@@ -19,21 +19,13 @@ interface ERC20Base {
 abstract contract ERC20 is ERC20Base {
     function transfer(address to, uint256 value) external virtual returns (bool);
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external virtual returns (bool);
+    function transferFrom(address from, address to, uint256 value) external virtual returns (bool);
 }
 
 abstract contract ERC20NS is ERC20Base {
     function transfer(address to, uint256 value) external virtual;
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external virtual;
+    function transferFrom(address from, address to, uint256 value) external virtual;
 }
 
 /**
@@ -51,12 +43,7 @@ contract StandardToken is ERC20 {
     mapping(address => mapping(address => uint256)) public override allowance;
     mapping(address => uint256) public override balanceOf;
 
-    constructor(
-        uint256 _initialAmount,
-        string memory _tokenName,
-        uint8 _decimalUnits,
-        string memory _tokenSymbol
-    ) {
+    constructor(uint256 _initialAmount, string memory _tokenName, uint8 _decimalUnits, string memory _tokenSymbol) {
         totalSupply = _initialAmount;
         balanceOf[msg.sender] = _initialAmount;
         name = _tokenName;
@@ -71,11 +58,7 @@ contract StandardToken is ERC20 {
         return true;
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external virtual override returns (bool) {
+    function transferFrom(address src, address dst, uint256 amount) external virtual override returns (bool) {
         allowance[src][msg.sender] = allowance[src][msg.sender].sub(amount, "Insufficient allowance");
         balanceOf[src] = balanceOf[src].sub(amount, "Insufficient balance");
         balanceOf[dst] = balanceOf[dst].add(amount, "Balance overflow");
@@ -105,12 +88,7 @@ contract NonStandardToken is ERC20NS {
     mapping(address => mapping(address => uint256)) public override allowance;
     mapping(address => uint256) public override balanceOf;
 
-    constructor(
-        uint256 _initialAmount,
-        string memory _tokenName,
-        uint8 _decimalUnits,
-        string memory _tokenSymbol
-    ) {
+    constructor(uint256 _initialAmount, string memory _tokenName, uint8 _decimalUnits, string memory _tokenSymbol) {
         totalSupply = _initialAmount;
         balanceOf[msg.sender] = _initialAmount;
         name = _tokenName;
@@ -124,11 +102,7 @@ contract NonStandardToken is ERC20NS {
         emit Transfer(msg.sender, dst, amount);
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override {
+    function transferFrom(address src, address dst, uint256 amount) external override {
         allowance[src][msg.sender] = allowance[src][msg.sender].sub(amount, "Insufficient allowance");
         balanceOf[src] = balanceOf[src].sub(amount, "Insufficient balance");
         balanceOf[dst] = balanceOf[dst].add(amount, "Balance overflow");
@@ -173,11 +147,7 @@ contract ERC20Harness is StandardToken {
         return true;
     }
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override returns (bool success) {
+    function transferFrom(address src, address dst, uint256 amount) external override returns (bool success) {
         // Added for testing purposes
         if (failTransferFromAddresses[src]) {
             return false;
