@@ -155,7 +155,7 @@ contract TokenController is Ownable, Pausable {
             revert MintLimitExceed();
         }
         minterToMintedAmount[from_] = totalMintedNew;
-        uint256 availableLimit = minterToCap[from_] - totalMintedNew;
+        uint256 availableLimit = mintingCap - totalMintedNew;
         emit MintLimitDecreased(from_, availableLimit);
     }
 
