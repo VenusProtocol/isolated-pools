@@ -228,7 +228,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     }
 
     function _isEligibleToSend(address from_, uint16 dstChainId_, uint256 amount_) internal {
-        // Check if the recipient's address is whitelisted
+        // Check if the sender's address is whitelisted
         bool isWhiteListedUser = whitelist[from_];
 
         // Calculate the amount in USD using the oracle price
@@ -262,7 +262,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     }
 
     function _isEligibleToReceive(address toAddress_, uint16 srcChainId_, uint256 receivedAmount_) internal {
-        // Check if the sender's address is whitelisted
+        // Check if the recipient's address is whitelisted
         bool isWhiteListedUser = whitelist[toAddress_];
 
         // Calculate the received amount in USD using the oracle price
