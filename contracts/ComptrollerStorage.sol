@@ -107,6 +107,9 @@ contract ComptrollerStorage {
     // Used to check if rewards distributor is added
     mapping(address => bool) internal rewardsDistributorExists;
 
+    /// @notice Flag indicating whether forced liquidation enabled for a market
+    mapping(address => bool) public isForcedLiquidationEnabled;
+
     uint256 internal constant NO_ERROR = 0;
 
     // closeFactorMantissa must be strictly greater than this value
@@ -123,5 +126,5 @@ contract ComptrollerStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }
