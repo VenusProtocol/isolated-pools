@@ -46,7 +46,6 @@
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "@solidity-parser/parser": "^0.13.2",
-    "@venusprotocol/protocol-reserve": "^1.0.0",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14",
     "module-alias": "^2.2.2"
@@ -72,6 +71,7 @@
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "^1.0.0",
     "@venusprotocol/oracle": "1.7.2",
+    "@venusprotocol/protocol-reserve": "^1.0.1-dev.1",
     "@venusprotocol/venus-protocol": "3.0.0-dev.18",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",

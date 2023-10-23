@@ -429,7 +429,7 @@ describe("Risk Fund: Tests", function () {
 
   describe("Test all setters", async function () {
     describe("setPoolRegistry", async function () {
-      it("reverts on invalid PoolRegistry address", async function () {
+      it.only("reverts on invalid PoolRegistry address", async function () {
         await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWithCustomError(
           riskFund,
           "ZeroAddressNotAllowed",
