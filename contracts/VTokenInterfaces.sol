@@ -281,6 +281,9 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event SweepToken(address indexed token);
 
+    /**
+     * @notice Event emitted when reduce reserves block delta is changed
+     */
     event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
 
     /**

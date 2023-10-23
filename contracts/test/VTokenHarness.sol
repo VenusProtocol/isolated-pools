@@ -5,7 +5,6 @@ import { AccessControlManager } from "@venusprotocol/governance-contracts/contra
 
 import { VToken } from "../VToken.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
-import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts/Interfaces/IProtocolShareReserve.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -91,8 +90,8 @@ contract VTokenHarness is VToken {
         _liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
     }
 
-    function harnessReduceReservesFresh(uint256 spreadAmount, IProtocolShareReserve.IncomeType kind) external {
-        return _reduceReservesFresh(spreadAmount, kind);
+    function harnessReduceReservesFresh(uint256 spreadAmount) external {
+        return _reduceReservesFresh(spreadAmount);
     }
 
     function harnessSetReserveFactorFresh(uint256 newReserveFactorMantissa) external {

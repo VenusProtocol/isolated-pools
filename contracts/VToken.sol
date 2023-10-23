@@ -425,7 +425,7 @@ contract VToken is
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
         if (reduceReservesBlockNumber == _getBlockNumber()) return;
-        _reduceReservesFresh(reduceAmount, IProtocolShareReserve.IncomeType.SPREAD);
+        _reduceReservesFresh(reduceAmount);
     }
 
     /**
@@ -786,7 +786,7 @@ contract VToken is
 
         if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
             reduceReservesBlockNumber = currentBlockNumber;
-            _reduceReservesFresh(totalReservesNew, IProtocolShareReserve.IncomeType.SPREAD);
+            _reduceReservesFresh(totalReservesNew);
         }
 
         /* We emit an AccrueInterest event */
@@ -1257,9 +1257,8 @@ contract VToken is
      * @notice Reduces reserves by transferring to the protocol reserve contract
      * @dev Requires fresh interest accrual
      * @param reduceAmount Amount of reduction to reserves
-     * @param kind kind of reserve
      */
-    function _reduceReservesFresh(uint256 reduceAmount, IProtocolShareReserve.IncomeType kind) internal {
+    function _reduceReservesFresh(uint256 reduceAmount) internal {
         if (reduceAmount == 0) {
             return;
         }
@@ -1295,7 +1294,11 @@ contract VToken is
         _doTransferOut(protocolShareReserve, reduceAmount);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying, kind);
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.SPREAD
+        );
 
         emit SpreadReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
