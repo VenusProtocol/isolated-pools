@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
-
 import { VToken } from "../VToken.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
+import { ComptrollerScenario } from "../test/ComptrollerScenario.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;
@@ -12,6 +11,12 @@ contract VTokenHarness is VToken {
     bool public harnessExchangeRateStored;
 
     mapping(address => bool) public failTransferToAddresses;
+
+    function initializeHarness(InitializeParams memory params) external initializer {
+        blockNumber = 100000;
+
+        super._initialize(params);
+    }
 
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
@@ -35,6 +40,10 @@ contract VTokenHarness is VToken {
 
     function harnessSetTotalBorrows(uint256 totalBorrows_) external {
         totalBorrows = totalBorrows_;
+    }
+
+    function harnessSetStableBorrows(uint256 stableBorrows_) external {
+        stableBorrows = stableBorrows_;
     }
 
     function harnessSetTotalReserves(uint256 totalReserves_) external {
@@ -68,16 +77,43 @@ contract VTokenHarness is VToken {
         accountBorrows[account] = BorrowSnapshot({ principal: principal, interestIndex: interestIndex });
     }
 
+    function harnessSetAccountStableBorrows(
+        address account,
+        uint256 principal,
+        uint256 interestIndex,
+        uint256 stableRateMantissa,
+        uint256 lastBlock
+    ) external {
+        accountStableBorrows[account] = StableBorrowSnapshot({
+            principal: principal,
+            interestIndex: interestIndex,
+            stableRateMantissa: stableRateMantissa,
+            lastBlockAccrued: lastBlock
+        });
+    }
+
     function harnessSetBorrowIndex(uint256 borrowIndex_) external {
         borrowIndex = borrowIndex_;
     }
 
+    function harnessSetStableBorrowIndex(uint256 stableBorrowIndex_) external {
+        stableBorrowIndex = stableBorrowIndex_;
+    }
+
     function harnessBorrowFresh(address payable account, uint256 borrowAmount) external {
-        _borrowFresh(account, borrowAmount);
+        _borrowFresh(account, borrowAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessBorrowStableFresh(address payable account, uint256 borrowAmount) external {
+        _borrowFresh(account, borrowAmount, InterestRateMode.STABLE);
     }
 
     function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) external {
-        _repayBorrowFresh(payer, account, repayAmount);
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.VARIABLE);
+    }
+
+    function harnessRepayBorrowStableFresh(address payer, address account, uint256 repayAmount) external {
+        _repayBorrowFresh(payer, account, repayAmount, InterestRateMode.STABLE);
     }
 
     function harnessLiquidateBorrowFresh(
@@ -107,8 +143,23 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
+    function harnessAccountStableBorrows(
+        address account
+    )
+        external
+        view
+        returns (uint256 principal, uint256 interestIndex, uint256 lastBlockAccrued, uint256 stableRateMantissa)
+    {
+        StableBorrowSnapshot memory snapshot = accountStableBorrows[account];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.lastBlockAccrued, snapshot.stableRateMantissa);
+    }
+
     function getBorrowRateMaxMantissa() external pure returns (uint256) {
         return MAX_BORROW_RATE_MANTISSA;
+    }
+
+    function getStableBorrowRateMaxMantissa() external pure returns (uint256) {
+        return MAX_STABLE_BORROW_RATE_MANTISSA;
     }
 
     function harnessSetInterestRateModel(address newInterestRateModelAddress) public {
@@ -117,6 +168,22 @@ contract VTokenHarness is VToken {
 
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
+    }
+
+    function harnessSetAvgStableBorrowRate(uint256 averageStableBorrowRate_) public {
+        averageStableBorrowRate = averageStableBorrowRate_;
+    }
+
+    function harnessStableBorrows(uint256 stableBorrows_) public {
+        stableBorrows = stableBorrows_;
+    }
+
+    function accrueStableInterest(uint256 blockDelta) public returns (uint256) {
+        return _accrueStableInterest(blockDelta);
+    }
+
+    function harnessUpdateUserStableBorrowBalance(address account) public returns (uint256) {
+        return _updateUserStableBorrowBalance(account);
     }
 
     function _doTransferOut(address to, uint256 amount) internal override {
@@ -133,5 +200,32 @@ contract VTokenHarness is VToken {
 
     function _getBlockNumber() internal view override returns (uint256) {
         return blockNumber;
+    }
+}
+
+contract VTokenScenario is VToken {
+    constructor(InitializeParams memory params) {
+        _initialize(params);
+    }
+
+    function setTotalBorrows(uint256 totalBorrows_) public {
+        totalBorrows = totalBorrows_;
+    }
+
+    function _exchangeRateStored() internal view override returns (uint256) {
+        return super._exchangeRateStored();
+    }
+
+    function _getBlockNumber() internal view override returns (uint256) {
+        ComptrollerScenario comptrollerScenario = ComptrollerScenario(address(comptroller));
+        return comptrollerScenario.blockNumber();
+    }
+}
+
+contract VEvil is VTokenScenario {
+    constructor(InitializeParams memory params) VTokenScenario(params) {}
+
+    function evilSeize(VToken treasure, address liquidator, address borrower, uint256 seizeTokens) public {
+        treasure.seize(liquidator, borrower, seizeTokens);
     }
 }

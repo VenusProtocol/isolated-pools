@@ -37,7 +37,6 @@ async function preMint(
   comptroller.preMintHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
 
   const minterAddress = minter.address;
   await underlying.harnessSetFailTransferFromAddress(minterAddress, false);
@@ -74,7 +73,6 @@ async function preRedeem(
   comptroller.preRedeemHook.reset();
 
   interestRateModel.getBorrowRate.reset();
-  interestRateModel.getSupplyRate.reset();
   await underlying.harnessSetBalance(vToken.address, redeemAmount);
   await underlying.harnessSetBalance(redeemer.address, 0);
   await underlying.harnessSetFailTransferToAddress(redeemer.address, false);
@@ -262,11 +260,7 @@ describe("VToken", function () {
     it("emits an AccrueInterest event", async () => {
       await expect(await quickMint(underlying, vToken, minter, mintAmount))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("0", "0", "1000000000000000000", "0");
-
-      await expect(await quickMint(underlying, vToken, minter, mintAmount))
-        .to.emit(vToken, "AccrueInterest")
-        .withArgs("10000000000000000000000", "0", "1000000000000000000", "0");
+        .withArgs("0", "0", "1000000000000000000", "0", "1000000000001000000");
     });
   });
 
@@ -404,7 +398,7 @@ describe("VToken", function () {
     it("emits an AccrueInterest event", async () => {
       await expect(await quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate }))
         .to.emit(vToken, "AccrueInterest")
-        .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0");
+        .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0", "1000000000001000000");
     });
   });
 });

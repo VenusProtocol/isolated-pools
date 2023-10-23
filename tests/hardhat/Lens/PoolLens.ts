@@ -16,6 +16,7 @@ import {
   PoolLens,
   PoolLens__factory,
   PoolRegistry,
+  StableRateModel__factory,
   VToken,
   WhitePaperInterestRateModel__factory,
 } from "../../../typechain";
@@ -155,7 +156,10 @@ describe("PoolLens", async function () {
     const RateModel = await ethers.getContractFactory<WhitePaperInterestRateModel__factory>(
       "WhitePaperInterestRateModel",
     );
+    const StableRateModel = await ethers.getContractFactory<StableRateModel__factory>("StableRateModel");
     const whitePaperInterestRateModel = await RateModel.deploy(0, parseUnits("0.04", 18));
+    const stableRateModel = await StableRateModel.deploy(0, parseUnits("2", 12), parseUnits("5", 17), owner.address);
+
     vWBTC = await makeVToken({
       underlying: mockWBTC,
       comptroller: comptroller1Proxy,
@@ -165,11 +169,12 @@ describe("PoolLens", async function () {
       admin: owner,
       interestRateModel: whitePaperInterestRateModel,
       beacon: vTokenBeacon,
+      stableRateModel: stableRateModel,
     });
 
     await mockWBTC.faucet(initialSupply);
     await mockWBTC.approve(poolRegistry.address, initialSupply);
-    await poolRegistry.addMarket({
+    const addMarketParams = {
       vToken: vWBTC.address,
       collateralFactor: parseUnits("0.7", 18),
       liquidationThreshold: parseUnits("0.7", 18),
@@ -177,7 +182,9 @@ describe("PoolLens", async function () {
       vTokenReceiver: owner.address,
       supplyCap: parseUnits("4000", 18),
       borrowCap: parseUnits("2000", 18),
-    });
+    };
+
+    await poolRegistry.addMarket(addMarketParams);
 
     vDAI = await makeVToken({
       underlying: mockDAI,
@@ -188,11 +195,12 @@ describe("PoolLens", async function () {
       admin: owner,
       interestRateModel: whitePaperInterestRateModel,
       beacon: vTokenBeacon,
+      stableRateModel: stableRateModel,
     });
 
     await mockDAI.faucet(initialSupply);
     await mockDAI.approve(poolRegistry.address, initialSupply);
-    await poolRegistry.addMarket({
+    const addMarketParamsDAI = {
       vToken: vDAI.address,
       collateralFactor: parseUnits("0.7", 18),
       liquidationThreshold: parseUnits("0.7", 18),
@@ -200,7 +208,8 @@ describe("PoolLens", async function () {
       vTokenReceiver: owner.address,
       supplyCap: initialSupply,
       borrowCap: initialSupply,
-    });
+    };
+    await poolRegistry.addMarket(addMarketParamsDAI);
 
     await poolRegistry.updatePoolMetadata(comptroller1Proxy.address, {
       category: "High market cap",

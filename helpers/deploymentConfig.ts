@@ -66,6 +66,9 @@ export type VTokenConfig = {
   supplyCap: string;
   borrowCap: string;
   vTokenReceiver: string;
+  baseRatePerYearForStable: string;
+  stableRatePremium: string;
+  optimalStableLoanRatio: string;
 };
 
 export type AccessControlEntry = {
@@ -309,6 +312,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(932019, 18),
             borrowCap: convertToUnit(478980, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus BTCB",
@@ -326,6 +332,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(1000, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
         ],
         rewards: [
@@ -366,6 +375,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(3000000, 18),
             borrowCap: convertToUnit(3000000, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus ankrBNB",
@@ -383,6 +395,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100, 18),
             borrowCap: convertToUnit(100, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus MBOX",
@@ -400,6 +415,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(7000000, 18),
             borrowCap: convertToUnit(3184294, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus NFT",
@@ -417,6 +435,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(84985800573, 18),
             borrowCap: convertToUnit(24654278679, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus RACA",
@@ -434,6 +455,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(23758811062, 18),
             borrowCap: convertToUnit(3805812642, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus stkBNB",
@@ -451,6 +475,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1963, 18),
             borrowCap: convertToUnit(324, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
           {
             name: "Venus USDD",
@@ -468,6 +495,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(10601805, 18),
             borrowCap: convertToUnit(1698253, 18),
             vTokenReceiver: "account:deployer",
+            baseRatePerYearForStable: convertToUnit(2, 16),
+            stableRatePremium: convertToUnit(0.25, 18),
+            optimalStableLoanRatio: convertToUnit(4, 18),
           },
         ],
         rewards: [
@@ -712,6 +742,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(500_000, 18),
             borrowCap: convertToUnit(200_000, 18),
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Stable Coins)",
@@ -729,6 +762,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit(400_000, 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Stable Coins)",
@@ -746,6 +782,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -763,6 +802,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100000, 18),
             borrowCap: convertToUnit(50000, 18),
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -809,6 +851,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("15000000", 18),
             borrowCap: convertToUnit("10500000", 18),
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -826,6 +871,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2500000", 18),
             borrowCap: convertToUnit("1750000", 18),
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -843,6 +891,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -860,6 +911,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -877,6 +931,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("9508802", 18),
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus ankrBNB (DeFi)",
@@ -894,6 +951,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -934,6 +994,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18),
             borrowCap: convertToUnit("2800000000", 18),
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -951,6 +1014,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("40000000000", 18), // FLOKI has 18 decimals on testnet
             borrowCap: convertToUnit("28000000000", 18), // FLOKI has 18 decimals on testnet
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -968,6 +1034,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -985,6 +1054,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1025,6 +1097,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("8000", 18),
             borrowCap: convertToUnit("5600", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -1042,6 +1117,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1818", 18),
             borrowCap: convertToUnit("1272", 18),
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -1059,6 +1137,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("540", 18),
             borrowCap: convertToUnit("378", 18),
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -1076,6 +1157,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -1093,6 +1177,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -1110,6 +1197,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -1127,6 +1217,29 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1000", 18),
             borrowCap: convertToUnit("100", 18),
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
+          },
+          {
+            name: "Venus SnBNB (Liquid Staked BNB)",
+            asset: "SnBNB",
+            symbol: "vSnBNB_LiquidStakedBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.87", 18),
+            liquidationThreshold: convertToUnit("0.9", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("47", 18),
+            supplyCap: convertToUnit("1000", 18),
+            borrowCap: convertToUnit("100", 18),
+            vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1185,6 +1298,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1500000000000", 18),
             borrowCap: convertToUnit("1050000000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus NFT (Tron)",
@@ -1202,6 +1318,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18), // NFT has 18 decimals on testnet
             borrowCap: convertToUnit("2800000000", 18), // NFT has 18 decimals on testnet
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus WIN (Tron)",
@@ -1219,6 +1338,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("3000000000", 18),
             borrowCap: convertToUnit("2100000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus TRX (Tron)",
@@ -1236,6 +1358,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("11000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("7700000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Tron)",
@@ -1253,6 +1378,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Tron)",
@@ -1270,6 +1398,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1482,6 +1613,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(500_000, 18),
             borrowCap: convertToUnit(200_000, 18),
             vTokenReceiver: "0x09702Ea135d9D707DD51f530864f2B9220aAD87B",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Stablecoins)",
@@ -1499,6 +1633,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Stablecoins)",
@@ -1516,6 +1653,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -1533,6 +1673,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100000, 18),
             borrowCap: convertToUnit(50000, 18),
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1579,6 +1722,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("15000000", 18),
             borrowCap: convertToUnit("10500000", 18),
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -1596,6 +1742,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2500000", 18),
             borrowCap: convertToUnit("1750000", 18),
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -1613,6 +1762,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -1630,6 +1782,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -1647,6 +1802,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("9508802", 18),
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
 
           {
@@ -1665,6 +1823,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1706,6 +1867,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18),
             borrowCap: convertToUnit("2800000000", 18),
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -1723,6 +1887,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("40000000000", 9), // Note 9 decimals
             borrowCap: convertToUnit("28000000000", 9), // Note 9 decimals
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -1740,6 +1907,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -1757,6 +1927,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1797,6 +1970,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("8000", 18),
             borrowCap: convertToUnit("5600", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -1814,6 +1990,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1818", 18),
             borrowCap: convertToUnit("1272", 18),
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -1831,6 +2010,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("540", 18),
             borrowCap: convertToUnit("378", 18),
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -1848,6 +2030,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -1865,6 +2050,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -1882,6 +2070,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -1899,6 +2090,29 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1000", 18),
             borrowCap: convertToUnit("100", 18),
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
+          },
+          {
+            name: "Venus SnBNB (Liquid Staked BNB)",
+            asset: "SnBNB",
+            symbol: "vSnBNB_LiquidStakedBNB",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.5", 18),
+            collateralFactor: convertToUnit("0.87", 18),
+            liquidationThreshold: convertToUnit("0.9", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("47", 18),
+            supplyCap: convertToUnit("1000", 18),
+            borrowCap: convertToUnit("100", 18),
+            vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [
@@ -1957,6 +2171,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1500000000000", 18),
             borrowCap: convertToUnit("1050000000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus NFT (Tron)",
@@ -1974,6 +2191,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("2800000000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus WIN (Tron)",
@@ -1991,6 +2211,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("3000000000", 18),
             borrowCap: convertToUnit("2100000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus TRX (Tron)",
@@ -2008,6 +2231,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("11000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("7700000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDT (Tron)",
@@ -2025,6 +2251,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
           {
             name: "Venus USDD (Tron)",
@@ -2042,6 +2271,9 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            baseRatePerYearForStable: "",
+            stableRatePremium: "",
+            optimalStableLoanRatio: "",
           },
         ],
         rewards: [

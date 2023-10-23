@@ -4,12 +4,14 @@ import { BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
   ERC20Harness,
   ERC20Harness__factory,
   InterestRateModel,
+  StableRateModel,
   UpgradeableBeacon,
   VTokenHarness,
   VTokenHarness__factory,
@@ -34,6 +36,7 @@ interface VTokenParameters {
   protocolShareReserve: AddressOrContract;
   reserveFactorMantissa: BigNumberish;
   beacon: UpgradeableBeacon;
+  stableRateModel: AddressOrContract;
 }
 
 const getNameAndSymbol = async (underlying: AddressOrContract): Promise<[string, string]> => {
@@ -41,6 +44,13 @@ const getNameAndSymbol = async (underlying: AddressOrContract): Promise<[string,
   const name = await underlying_.name();
   const symbol = await underlying_.symbol();
   return [name, symbol];
+};
+
+export type VTokenContracts = {
+  vToken: MockContract<VTokenHarness>;
+  underlying: MockContract<ERC20Harness>;
+  interestRateModel: FakeContract<InterestRateModel>;
+  stableInterestRateModel: FakeContract<StableRateModel>;
 };
 
 export const fakeComptroller = async (): Promise<FakeContract<Comptroller>> => {
@@ -59,6 +69,12 @@ export const fakeInterestRateModel = async (): Promise<FakeContract<InterestRate
   const interestRateModel = await smock.fake<InterestRateModel>("InterestRateModel");
   interestRateModel.isInterestRateModel.returns(true);
   return interestRateModel;
+};
+
+export const fakeStableRateModel = async (): Promise<FakeContract<StableRateModel>> => {
+  const stableRateModel = await smock.fake<StableRateModel>("StableRateModel");
+  stableRateModel.isStableRateModel.returns(true);
+  return stableRateModel;
 };
 
 export const fakeAccessControlManager = async (): Promise<string> => {
@@ -100,6 +116,7 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
     protocolShareReserve: params.protocolShareReserve || (await smock.fake("ProtocolShareReserve")),
     reserveFactorMantissa: params.reserveFactorMantissa || parseUnits("0.3", 18),
     beacon: params.beacon || (await deployVTokenBeacon<VTokenFactory>({ kind })),
+    stableRateModel: params.stableRateModel || (await fakeStableRateModel()),
   };
 };
 
@@ -110,21 +127,24 @@ export const makeVToken = async <VTokenFactory extends AnyVTokenFactory = VToken
   const params_ = await deployVTokenDependencies<VTokenFactory>(params, { kind });
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
 
+  const remainingParams = {
+    underlying_: getAddress(params_.underlying),
+    comptroller_: getAddress(params_.comptroller),
+    interestRateModel_: getAddress(params_.interestRateModel),
+    initialExchangeRateMantissa_: params_.initialExchangeRateMantissa,
+    name_: params_.name,
+    symbol_: params_.symbol,
+    decimals_: params_.decimals,
+    admin_: getAddress(params_.admin),
+    accessControlManager_: getAddress(params_.accessControlManager),
+    shortfall_: getAddress(params_.shortfall),
+    protocolShareReserve_: getAddress(params_.protocolShareReserve),
+    reserveFactorMantissa_: params_.reserveFactorMantissa,
+    stableRateModel_: getAddress(params_.stableRateModel),
+  };
+
   const vToken = (await upgrades.deployBeaconProxy(params_.beacon, VToken, [
-    getAddress(params_.underlying),
-    getAddress(params_.comptroller),
-    getAddress(params_.interestRateModel),
-    params_.initialExchangeRateMantissa,
-    params_.name,
-    params_.symbol,
-    params_.decimals,
-    getAddress(params_.admin),
-    getAddress(params_.accessControlManager),
-    {
-      shortfall: getAddress(params_.shortfall),
-      protocolShareReserve: getAddress(params_.protocolShareReserve),
-    },
-    params_.reserveFactorMantissa,
+    remainingParams,
   ])) as DeployedContract<VTokenFactory>;
   return vToken;
 };
@@ -135,6 +155,7 @@ export type VTokenTestFixture = {
   vToken: VTokenHarness;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
+  stableRateModel: FakeContract<StableRateModel>;
 };
 
 export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
@@ -145,6 +166,7 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
   const [admin] = await ethers.getSigners();
   const underlying = await mockUnderlying("BAT", "BAT");
   const interestRateModel = await fakeInterestRateModel();
+  const stableRateModel = await fakeStableRateModel();
   const vToken = await makeVToken<VTokenHarness__factory>(
     {
       underlying,
@@ -152,11 +174,12 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
       accessControlManager,
       admin,
       interestRateModel,
+      stableRateModel,
     },
     { kind: "VTokenHarness" },
   );
 
-  return { accessControlManager, comptroller, vToken, interestRateModel, underlying };
+  return { accessControlManager, comptroller, vToken, interestRateModel, underlying, stableRateModel };
 }
 
 type BalancesSnapshot = {
@@ -245,6 +268,29 @@ export async function pretendBorrow(
   await vToken.harnessSetTotalBorrows(principalRaw);
   await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, accountIndexRaw);
   await vToken.harnessSetBorrowIndex(marketIndexRaw);
+  await vToken.harnessSetAccrualBlockNumber(blockNumber);
+  await vToken.harnessSetBlockNumber(blockNumber);
+}
+
+export async function pretendStableBorrow(
+  vToken: MockContract<VTokenHarness>,
+  borrower: Signer,
+  accountIndex: number,
+  marketIndex: number,
+  principalRaw: BigNumberish,
+  stableRateMantissa: BigNumberish,
+  blockNumber: number = 2e7,
+) {
+  await vToken.harnessSetTotalBorrows(principalRaw);
+  await vToken.harnessSetStableBorrows(principalRaw);
+  await vToken.harnessSetAccountStableBorrows(
+    await borrower.getAddress(),
+    principalRaw,
+    convertToUnit(accountIndex, 18),
+    stableRateMantissa,
+    blockNumber,
+  );
+  await vToken.harnessSetStableBorrowIndex(convertToUnit(marketIndex, 18));
   await vToken.harnessSetAccrualBlockNumber(blockNumber);
   await vToken.harnessSetBlockNumber(blockNumber);
 }

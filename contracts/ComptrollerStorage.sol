@@ -57,7 +57,8 @@ contract ComptrollerStorage {
         LIQUIDATE,
         TRANSFER,
         ENTER_MARKET,
-        EXIT_MARKET
+        EXIT_MARKET,
+        SWAP_RATE_MODE
     }
 
     /**

@@ -986,6 +986,10 @@ contract Comptroller is
         _setMaxLoopsLimit(limit);
     }
 
+    function preSwapBorrowRateModeHook(address vToken) external view override {
+        _checkActionPauseState(vToken, Action.SWAP_RATE_MODE);
+    }
+
     /**
      * @notice Enables forced liquidations for a market. If forced liquidation is enabled,
      * borrows in the market may be liquidated regardless of the account liquidity

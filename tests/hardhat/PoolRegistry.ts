@@ -525,5 +525,22 @@ describe("PoolRegistry: Tests", function () {
         ),
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
+
+    it("Revert on addMarket by non owner user", async () => {
+      const [, user, fakeVToken] = await ethers.getSigners();
+      await fakeAccessControlManager.isAllowedToCall.returns(false);
+
+      await expect(
+        poolRegistry.connect(user).addMarket({
+          vToken: fakeVToken.address,
+          collateralFactor: parseUnits("0.7", 18),
+          liquidationThreshold: parseUnits("0.7", 18),
+          initialSupply: INITIAL_SUPPLY,
+          vTokenReceiver: owner.address,
+          supplyCap: INITIAL_SUPPLY,
+          borrowCap: INITIAL_SUPPLY,
+        }),
+      ).to.be.rejectedWith("Unauthorized");
+    });
   });
 });
