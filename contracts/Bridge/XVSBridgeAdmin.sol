@@ -35,7 +35,7 @@ contract XVSBridgeAdmin is AccessControlledV8 {
      * @notice Invoked when called function does not exist in the contract
      * @custom:access Controlled by AccessControlManager.
      */
-    fallback(bytes calldata data) external payable returns (bytes memory) {
+    fallback(bytes calldata data) external returns (bytes memory) {
         string memory fun = _getFunctionName(msg.sig);
         require(bytes(fun).length != 0, "Function not found");
         _checkAccessAllowed(fun);
