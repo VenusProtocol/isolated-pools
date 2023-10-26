@@ -2948,7 +2948,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@^2.0.0, @venusprotocol/isolated-pools@workspace:.":
+"@venusprotocol/isolated-pools@workspace:.":
   version: 0.0.0-use.local
   resolution: "@venusprotocol/isolated-pools@workspace:."
   dependencies:
@@ -2977,7 +2977,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": ^1.0.0
     "@venusprotocol/oracle": 1.7.2
-    "@venusprotocol/protocol-reserve": ^1.0.1-dev.1
+    "@venusprotocol/protocol-reserve": ^1.1.0-dev.1
     "@venusprotocol/venus-protocol": 3.0.0-dev.18
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3028,20 +3028,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:^1.0.1-dev.1":
-  version: 1.0.1-dev.1
-  resolution: "@venusprotocol/protocol-reserve@npm:1.0.1-dev.1"
+"@venusprotocol/protocol-reserve@npm:^1.1.0-dev.1":
+  version: 1.1.0-dev.1
+  resolution: "@venusprotocol/protocol-reserve@npm:1.1.0-dev.1"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
     "@openzeppelin/contracts-upgradeable": ^4.8.3
     "@openzeppelin/hardhat-upgrades": ^1.21.0
     "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/isolated-pools": ^2.0.0
+    "@venusprotocol/solidity-utilities": ^1.0.1
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: 4d2f9a181076c4d338ea8958f9a679edd392d512cc50dbfabdda9f4e9cb19d5b08b610caa2b678c68bec36149fcfc5e12af2cd9679b1bcb3824e1e12f671c761
+  checksum: 3d50f13cbfc0314924178454a59bb991b41c7c402eb9b6befdf68efe94d0e5124373f786f2cb50dc083b45daa895487d74062bddebbe2d772e19a0e1eb58a77a
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/solidity-utilities@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "@venusprotocol/solidity-utilities@npm:1.0.1"
+  checksum: bba7e09c732c1364980e73d22ea3ce2d5b1fc3e20ddbfdcb318bfa480cb258e55c1df7de5622f060399424adbd8155c148553cbe1b6e1cbeba45d64b48758e07
   languageName: node
   linkType: hard
 
