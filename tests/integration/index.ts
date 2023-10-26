@@ -90,6 +90,12 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "addOrUpdateDistributionConfigs(DistributionConfig[])",
+    deployer,
+  );
+
   // Set supply caps
   const supply = convertToUnit(10, 36);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBTCB.address], [supply, supply]);
@@ -810,6 +816,31 @@ describe("Risk Fund and Auction related scenarios", function () {
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
       await RiskFund.setPoolRegistry(PoolRegistry.address);
+
+      const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
+
+      await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
+        {
+          schema: 0,
+          percentage: 50,
+          destination: RiskFund.address,
+        },
+        {
+          schema: 0,
+          percentage: 50,
+          destination: fakeProtocolIncome.address,
+        },
+        {
+          schema: 1,
+          percentage: 50,
+          destination: RiskFund.address,
+        },
+        {
+          schema: 1,
+          percentage: 50,
+          destination: fakeProtocolIncome.address,
+        },
+      ]);
     });
 
     it("generate bad Debt, reduce reserves if blockDelta < last reduce", async function () {
@@ -829,14 +860,7 @@ describe("Risk Fund and Auction related scenarios", function () {
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
       // Reduce reserves, transfer 50% to protocol income and rest 50% to riskFund
-      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(
-        Comptroller.address,
-        BNX.address,
-        expectedTotalReserves,
-        0,
-      );
-
-      expect(await BNX.balanceOf(deployer)).to.be.equal(expectedTotalReserves * 0.5);
+      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, [BNX.address]);
       expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.5);
     });
   });
