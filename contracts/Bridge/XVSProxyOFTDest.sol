@@ -25,8 +25,7 @@ contract XVSProxyOFTDest is BaseXVSProxyOFT {
         address oracle_
     ) BaseXVSProxyOFT(tokenAddress_, sharedDecimals_, lzEndpoint_, oracle_) {}
 
-    /** @notice Only call it when there is no way to recover the failed message.
-     * `dropFailedMessage` must be called first to avoid double spending.
+    /** @notice Clear failed messages from the storage.
      * @param srcChainId_ Chain id of source
      * @param srcAddress_ Address of source followed by current bridge address
      * @param nonce_ Nonce_ of the transaction
