@@ -44,7 +44,6 @@ describe("Proxy OFTV2: ", function () {
     bridgeAdminRemote: XVSBridgeAdmin,
     bridgeAdminLocal: XVSBridgeAdmin,
     remoteToken: XVS,
-    remotePath: string,
     localPath: string,
     alice: SignerWithAddress,
     bob: SignerWithAddress,
@@ -107,13 +106,17 @@ describe("Proxy OFTV2: ", function () {
     await remoteEndpoint.setDestLzEndpoint(localOFT.address, localEndpoint.address);
 
     // set each contracts source address so it can send to each other
-    remotePath = ethers.utils.solidityPack(["address", "address"], [remoteOFT.address, localOFT.address]);
     localPath = ethers.utils.solidityPack(["address", "address"], [localOFT.address, remoteOFT.address]);
 
     // Should revert admin of remoteOFT is BridgeAdmin contract
     await expect(remoteOFT.setTrustedRemote(localChainId, localPath)).to.be.revertedWith(
       "Ownable: caller is not the owner",
     );
+
+    // Should revertif provided address is 0
+    await expect(
+      bridgeAdminLocal.setTrustedRemoteAddress(localChainId, ethers.constants.AddressZero),
+    ).to.be.revertedWithCustomError(bridgeAdminLocal, "ZeroAddressNotAllowed");
 
     await remoteToken.setMintCap(remoteOFT.address, convertToUnit("100000", 18));
 
@@ -130,7 +133,6 @@ describe("Proxy OFTV2: ", function () {
       "setSendVersion(uint16)",
       "setReceiveVersion(uint16)",
       "forceResumeReceive(uint16,bytes)",
-      "setTrustedRemote(uint16,bytes)",
       "setTrustedRemoteAddress(uint16,bytes)",
       "setPrecrime(address)",
       "setMinDstGas(uint16,uint16,uint256)",
@@ -143,13 +145,9 @@ describe("Proxy OFTV2: ", function () {
     await bridgeAdminLocal.upsertSignature(functionregistry, removeArray);
 
     // Setting local chain
-    let data = localOFT.interface.encodeFunctionData("setTrustedRemote", [remoteChainId, remotePath]);
-    await deployer.sendTransaction({
-      to: bridgeAdminLocal.address,
-      data: data,
-    });
+    await bridgeAdminLocal.setTrustedRemoteAddress(remoteChainId, remoteOFT.address);
 
-    data = localOFT.interface.encodeFunctionData("setMinDstGas", [remoteChainId, 0, 200000]);
+    let data = localOFT.interface.encodeFunctionData("setMinDstGas", [remoteChainId, 0, 200000]);
     await deployer.sendTransaction({
       to: bridgeAdminLocal.address,
       data: data,
@@ -187,11 +185,7 @@ describe("Proxy OFTV2: ", function () {
 
     // Setting remote chain
 
-    data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, localPath]);
-    await deployer.sendTransaction({
-      to: bridgeAdminRemote.address,
-      data: data,
-    });
+    await bridgeAdminRemote.setTrustedRemoteAddress(localChainId, localOFT.address);
 
     data = remoteOFT.interface.encodeFunctionData("setMinDstGas", [localChainId, 0, 200000]);
     await deployer.sendTransaction({
@@ -631,11 +625,7 @@ describe("Proxy OFTV2: ", function () {
     expect(await remoteOFT.circulatingSupply()).to.equal(0);
     expect(await remoteToken.balanceOf(bob.address)).to.be.equal(0);
 
-    const data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, remotePath]);
-    await deployer.sendTransaction({
-      to: bridgeAdminRemote.address,
-      data: data,
-    });
+    await bridgeAdminRemote.setTrustedRemoteAddress(localChainId, remoteOFT.address);
 
     const ld2sdAmount = convertToUnit(10, 8);
     const ptSend = await localOFT.PT_SEND();

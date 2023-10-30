@@ -8,4 +8,8 @@ pragma solidity 0.8.13;
  */
 interface IXVSProxyOFT {
     function transferOwnership(address addr) external;
+
+    function setTrustedRemoteAddress(uint16 remoteChainId, bytes calldata srcAddress) external;
+
+    function isTrustedRemote(uint16 remoteChainId, bytes calldata srcAddress) external returns (bool);
 }

@@ -54,6 +54,18 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     }
 
     /**
+     * @param remoteChainId_ Chain Id of the destination chain.
+     * @param remoteAddress_ Address of the destination bridge.
+     * @custom:error ZeroAddressNotAllowed is thrown when remoteAddress_ contract address is zero.
+     */
+    function setTrustedRemoteAddress(uint16 remoteChainId_, bytes calldata remoteAddress_) external {
+        _checkAccessAllowed("setTrustedRemoteAddress(uint16,bytes)");
+        require(remoteChainId_ != 0, "ChainId must not be zero");
+        ensureNonzeroAddress(bytesToAddress(remoteAddress_));
+        XVSBridge.setTrustedRemoteAddress(remoteChainId_, remoteAddress_);
+    }
+
+    /**
      * @notice Function to update the function registry.
      * @param signatures_ Array of function names string.
      * @param remove_  Boolean to specify whether to remove the function from registry mapping.
@@ -86,6 +98,18 @@ contract XVSBridgeAdmin is AccessControlledV8 {
     }
 
     /**
+     * @notice Returns bool = true if srcAddress_ is trustedRemote corresponds to chainId_.
+     * @param remoteChainId_ Chain Id of the destination chain.
+     * @param remoteAddress_ Address of the destination bridge.
+     * @custom:error ZeroAddressNotAllowed is thrown when remoteAddress_ contract address is zero.
+     */
+    function isTrustedRemote(uint16 remoteChainId_, bytes calldata remoteAddress_) external returns (bool) {
+        require(remoteChainId_ != 0, "ChainId must not be zero");
+        ensureNonzeroAddress(bytesToAddress(remoteAddress_));
+        return XVSBridge.isTrustedRemote(remoteChainId_, remoteAddress_);
+    }
+
+    /**
      * @notice Empty implementation of renounce ownership to avoid any mishappening.
      */
     function renounceOwnership() public override {}
@@ -95,5 +119,9 @@ contract XVSBridgeAdmin is AccessControlledV8 {
      */
     function _getFunctionName(bytes4 signature_) internal view returns (string memory) {
         return functionRegistry[signature_];
+    }
+
+    function bytesToAddress(bytes calldata b) private pure returns (address) {
+        return address(uint160(bytes20(b)));
     }
 }
