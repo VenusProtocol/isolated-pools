@@ -7,6 +7,7 @@ import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { BytesLib } from "@layerzerolabs/solidity-examples/contracts/libraries/BytesLib.sol";
 
 /**
  * @title BaseXVSProxyOFT
@@ -21,6 +22,7 @@ import { ExponentialNoError } from "../ExponentialNoError.sol";
 
 abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     using SafeERC20 for IERC20;
+    using BytesLib for bytes;
     IERC20 internal immutable innerToken;
     uint256 internal immutable ld2sdRate;
 
@@ -307,6 +309,31 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
             innerToken.safeTransferFrom(from_, to_, amount_);
         }
         return innerToken.balanceOf(to_) - before;
+    }
+
+    function _nonblockingLzReceive(
+        uint16 _srcChainId,
+        bytes memory _srcAddress,
+        uint64 _nonce,
+        bytes memory _payload
+    ) internal override {
+        bytes memory trustedRemote = trustedRemoteLookup[_srcChainId];
+        // if will still block the message pathway from (srcChainId, srcAddress). should not receive message from untrusted remote.
+        require(
+            _srcAddress.length == trustedRemote.length &&
+                trustedRemote.length > 0 &&
+                keccak256(_srcAddress) == keccak256(trustedRemote),
+            "LzApp: invalid source sending contract"
+        );
+        uint8 packetType = _payload.toUint8(0);
+
+        if (packetType == PT_SEND) {
+            _sendAck(_srcChainId, _srcAddress, _nonce, _payload);
+        } else if (packetType == PT_SEND_AND_CALL) {
+            _sendAndCallAck(_srcChainId, _srcAddress, _nonce, _payload);
+        } else {
+            revert("OFTCore: unknown packet type");
+        }
     }
 
     function _ld2sdRate() internal view override returns (uint256) {

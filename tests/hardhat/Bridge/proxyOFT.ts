@@ -603,6 +603,50 @@ describe("Proxy OFTV2: ", function () {
     expect(await remoteToken.balanceOf(bob.address)).to.be.equal(amount);
   });
 
+  it("Reverts initialy and should fail on retry if trusted remote changed", async function () {
+    initialAmount = ethers.utils.parseEther("20", 18);
+    amount = ethers.utils.parseEther("10", 18);
+    await localToken.connect(alice).faucet(initialAmount);
+    await localToken.connect(alice).approve(localOFT.address, initialAmount);
+
+    const bobAddressBytes32 = ethers.utils.defaultAbiCoder.encode(["address"], [bob.address]);
+    const nativeFee = (
+      await localOFT.estimateSendFee(remoteChainId, bobAddressBytes32, amount, false, defaultAdapterParams)
+    ).nativeFee;
+    // Blocking next message
+    await remoteEndpoint.blockNextMsg();
+    await localOFT
+      .connect(alice)
+      .sendFrom(
+        alice.address,
+        remoteChainId,
+        bobAddressBytes32,
+        amount,
+        [alice.address, ethers.constants.AddressZero, defaultAdapterParams],
+        { value: nativeFee },
+      );
+    expect(await remoteEndpoint.hasStoredPayload(localChainId, localPath)).equals(true);
+    // Initial state
+    expect(await remoteOFT.circulatingSupply()).to.equal(0);
+    expect(await remoteToken.balanceOf(bob.address)).to.be.equal(0);
+
+    const data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, remotePath]);
+    await deployer.sendTransaction({
+      to: bridgeAdminRemote.address,
+      data: data,
+    });
+
+    const ld2sdAmount = convertToUnit(10, 8);
+    const ptSend = await localOFT.PT_SEND();
+    const payload = await ethers.utils.solidityPack(
+      ["uint8", "bytes", "uint64"],
+      [ptSend, bobAddressBytes32, ld2sdAmount],
+    );
+    await expect(remoteEndpoint.retryPayload(localChainId, localPath, payload)).to.be.revertedWith(
+      "LzApp: invalid source sending contract",
+    );
+  });
+
   it("Reverts on remote chain if bridge is paused", async function () {
     const data = remoteOFT.interface.encodeFunctionData("pause");
     await deployer.sendTransaction({
