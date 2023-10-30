@@ -42,7 +42,6 @@ const configureAccessControls = async (
 const configureXVSTokenMintCapCommands = async (
   xvsToken: string,
   minterAddress: string,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const command = [
     {
@@ -159,12 +158,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     {
       contract: XVSBridgeAdmin.address,
-      signature: "setTrustedRemote(uint16,bytes)",
-      parameters: [preconfiguredAddresses.LzVirtualChainIdL, "0xDestAddressSrcAddress"],
+      signature: "setTrustedRemoteAddress(uint16,bytes)",
+      parameters: [preconfiguredAddresses.LzVirtualChainIdL, "0xDestAddress"],
       value: 0,
     },
 
-    ...(await configureXVSTokenMintCapCommands(preconfiguredAddresses.XVS, XVSProxyOFTDest.address, hre)),
+    ...(await configureXVSTokenMintCapCommands(preconfiguredAddresses.XVS, XVSProxyOFTDest.address)),
   ];
   console.log("Please propose a Multisig tx with the following commands:");
   console.log(

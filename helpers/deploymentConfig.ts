@@ -157,7 +157,6 @@ export const xvsBridgeAdminMethods = [
   "setMaxDailyReceiveLimit(uint16,uint256)",
   "pause()",
   "unpause()",
-  "setTrustedRemote(uint16,bytes)",
   "setTrustedRemoteAddress(uint16,bytes)",
   "setPrecrime(address)",
   "setMinDstGas(uint16,uint16,uint256)",
@@ -171,7 +170,7 @@ export const xvsTokenPermissions = ["mint(address,uint256)", "burn(address,uint2
 export const bridgeConfig: BridgeConfig = {
   bsctestnet: {
     methods: [
-      { method: "setTrustedRemote(uint16,bytes)", args: [10161, ANY_CONTRACT] },
+      { method: "setTrustedRemoteAddress(uint16,bytes)", args: [10161, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
       { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [10161, "500000000000000000000"] },
@@ -181,7 +180,7 @@ export const bridgeConfig: BridgeConfig = {
   },
   bscmainnet: {
     methods: [
-      { method: "setTrustedRemote(uint16,bytes)", args: [101, ANY_CONTRACT] },
+      { method: "setTrustedRemoteAddress(uint16,bytes)", args: [101, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [101, 0, "200000"] },
       { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [101, "500000000000000000000"] },
@@ -191,7 +190,7 @@ export const bridgeConfig: BridgeConfig = {
   },
   sepolia: {
     methods: [
-      { method: "setTrustedRemote(uint16,bytes)", args: [10102, ANY_CONTRACT] },
+      { method: "setTrustedRemoteAddress(uint16,bytes)", args: [10102, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [10102, 0, "200000"] },
       { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [10102, "500000000000000000000"] },
