@@ -148,6 +148,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @custom:event Emits SetMaxSingleTransactionLimit with old and new limit associated with chain id.
      */
     function setMaxSingleTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
+        require(limit_ <= chainIdToMaxDailyLimit[chainId_], "Single transaction limit > Daily limit");
         emit SetMaxSingleTransactionLimit(chainId_, chainIdToMaxSingleTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleTransactionLimit[chainId_] = limit_;
     }
@@ -173,6 +174,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @custom:event Emits setMaxSingleReceiveTransactionLimit with old and new limit associated with chain id.
      */
     function setMaxSingleReceiveTransactionLimit(uint16 chainId_, uint256 limit_) external onlyOwner {
+        require(limit_ <= chainIdToMaxDailyReceiveLimit[chainId_], "single receive transaction limit > Daily limit");
         emit SetMaxSingleReceiveTransactionLimit(chainId_, chainIdToMaxSingleReceiveTransactionLimit[chainId_], limit_);
         chainIdToMaxSingleReceiveTransactionLimit[chainId_] = limit_;
     }

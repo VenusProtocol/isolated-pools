@@ -152,6 +152,11 @@ describe("Proxy OFTV2: ", function () {
       to: bridgeAdminLocal.address,
       data: data,
     });
+    data = localOFT.interface.encodeFunctionData("setMaxDailyLimit", [remoteChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
 
     data = localOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
       remoteChainId,
@@ -162,22 +167,15 @@ describe("Proxy OFTV2: ", function () {
       data: data,
     });
 
-    data = localOFT.interface.encodeFunctionData("setMaxDailyLimit", [remoteChainId, maxDailyTransactionLimit]);
+    data = localOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [remoteChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
       to: bridgeAdminLocal.address,
       data: data,
     });
-
     data = localOFT.interface.encodeFunctionData("setMaxSingleReceiveTransactionLimit", [
       remoteChainId,
       singleTransactionLimit,
     ]);
-    await deployer.sendTransaction({
-      to: bridgeAdminLocal.address,
-      data: data,
-    });
-
-    data = localOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [remoteChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
       to: bridgeAdminLocal.address,
       data: data,
@@ -193,6 +191,11 @@ describe("Proxy OFTV2: ", function () {
       data: data,
     });
 
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
+    await deployer.sendTransaction({
+      to: bridgeAdminRemote.address,
+      data: data,
+    });
     data = remoteOFT.interface.encodeFunctionData("setMaxSingleTransactionLimit", [
       localChainId,
       singleTransactionLimit,
@@ -202,22 +205,15 @@ describe("Proxy OFTV2: ", function () {
       data: data,
     });
 
-    data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
       to: bridgeAdminRemote.address,
       data: data,
     });
-
     data = remoteOFT.interface.encodeFunctionData("setMaxSingleReceiveTransactionLimit", [
       localChainId,
       singleTransactionLimit,
     ]);
-    await deployer.sendTransaction({
-      to: bridgeAdminRemote.address,
-      data: data,
-    });
-
-    data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
     await deployer.sendTransaction({
       to: bridgeAdminRemote.address,
       data: data,
