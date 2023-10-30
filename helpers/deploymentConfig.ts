@@ -157,13 +157,17 @@ export const xvsBridgeAdminMethods = [
   "setMaxDailyReceiveLimit(uint16,uint256)",
   "pause()",
   "unpause()",
-  "setTrustedRemoteAddress(uint16,bytes)",
+  "removeTrustedRemote(uint16)",
+  "dropFailedMessage(uint16,bytes)",
+  "fallbackWithdraw(address,uint256)",
   "setPrecrime(address)",
   "setMinDstGas(uint16,uint16,uint256)",
   "setPayloadSizeLimit(uint16,uint256)",
   "setWhitelist(address,bool)",
   "setConfig(uint16,uint16,uint256,bytes)",
 ];
+
+export const bridgeAdminMethods = ["setTrustedRemoteAddress(uint16,bytes)", "transferBridgeOwnership(address)"];
 
 export const xvsTokenPermissions = ["mint(address,uint256)", "burn(address,uint256)"];
 
@@ -172,30 +176,30 @@ export const bridgeConfig: BridgeConfig = {
     methods: [
       { method: "setTrustedRemoteAddress(uint16,bytes)", args: [10161, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [10161, 0, "200000"] },
-      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [10161, "500000000000000000000"] },
-      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
       { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [10161, "50000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10161, "10000000000000000000"] },
     ],
   },
   bscmainnet: {
     methods: [
       { method: "setTrustedRemoteAddress(uint16,bytes)", args: [101, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [101, 0, "200000"] },
-      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [101, "500000000000000000000"] },
-      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
       { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [101, "50000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [101, "10000000000000000000"] },
     ],
   },
   sepolia: {
     methods: [
       { method: "setTrustedRemoteAddress(uint16,bytes)", args: [10102, ANY_CONTRACT] },
       { method: "setMinDstGas(uint16,uint16,uint256)", args: [10102, 0, "200000"] },
-      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
       { method: "setMaxDailyLimit(uint16,uint256)", args: [10102, "500000000000000000000"] },
-      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
+      { method: "setMaxSingleTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
       { method: "setMaxDailyReceiveLimit(uint16,uint256)", args: [10102, "50000000000000000000"] },
+      { method: "setMaxSingleReceiveTransactionLimit(uint16,uint256)", args: [10102, "10000000000000000000"] },
     ],
   },
 };

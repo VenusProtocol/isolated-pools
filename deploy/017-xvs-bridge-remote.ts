@@ -3,7 +3,13 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { bridgeConfig, getConfig, xvsBridgeAdminMethods, xvsTokenPermissions } from "../helpers/deploymentConfig";
+import {
+  bridgeAdminMethods,
+  bridgeConfig,
+  getConfig,
+  xvsBridgeAdminMethods,
+  xvsTokenPermissions,
+} from "../helpers/deploymentConfig";
 import { toAddress } from "../helpers/deploymentUtils";
 import { XVSBridgeAdmin, XVSProxyOFTDest } from "../typechain";
 
@@ -146,6 +152,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       preconfiguredAddresses.AccessControlManager,
       preconfiguredAddresses.NormalTimelock,
       preconfiguredAddresses.XVS,
+      hre,
+    )),
+
+    ...(await configureAccessControls(
+      bridgeAdminMethods,
+      preconfiguredAddresses.AccessControlManager,
+      preconfiguredAddresses.NormalTimelock,
+      XVSBridgeAdmin.address,
       hre,
     )),
 
