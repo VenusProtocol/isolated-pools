@@ -13,7 +13,7 @@ import { TokenController } from "./TokenController.sol";
  */
 
 contract XVS is ERC20, TokenController {
-    constructor(address accessControlManager_) ERC20("XVS", "Venus XVS") TokenController(accessControlManager_) {}
+    constructor(address accessControlManager_) ERC20("Venus XVS", "XVS") TokenController(accessControlManager_) {}
 
     /**
      * @notice Creates `amount_` tokens and assigns them to `account_`, increasing
