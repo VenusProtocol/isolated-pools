@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "2.1.0-dev.2",
+  "version": "2.1.0",
   "description": "",
   "files": [
     "artifacts",
@@ -41,6 +41,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",

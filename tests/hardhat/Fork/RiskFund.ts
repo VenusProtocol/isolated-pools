@@ -131,22 +131,36 @@ const riskFundFixture = async (): Promise<void> => {
     to: shortfall.address,
     value: ethers.utils.parseEther("1"), // 1 ether
   });
+
+  const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+
   const RiskFund = await ethers.getContractFactory("RiskFund");
-  riskFund = (await upgrades.deployProxy(RiskFund, [
-    pancakeSwapRouter.address,
-    convertToUnit(10, 18),
-    BUSD.address,
-    accessControlManager.address,
-    150,
-  ])) as RiskFund;
+  riskFund = (await upgrades.deployProxy(
+    RiskFund,
+    [pancakeSwapRouter.address, convertToUnit(10, 18), BUSD.address, accessControlManager.address, 150],
+    {
+      constructorArgs: [
+        fakeCorePoolComptroller.address,
+        "0x0000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000002",
+      ],
+    },
+  )) as RiskFund;
   await riskFund.setShortfallContractAddress(shortfall.address);
 
   const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = (await upgrades.deployProxy(ProtocolShareReserve, [
-    fakeProtocolIncome.address,
-    riskFund.address,
-  ])) as ProtocolShareReserve;
+  protocolShareReserve = (await upgrades.deployProxy(
+    ProtocolShareReserve,
+    [fakeProtocolIncome.address, riskFund.address],
+    {
+      constructorArgs: [
+        fakeCorePoolComptroller.address,
+        "0x0000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000002",
+      ],
+    },
+  )) as ProtocolShareReserve;
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
   poolRegistry = (await upgrades.deployProxy(PoolRegistry, [accessControlManager.address])) as PoolRegistry;
@@ -526,13 +540,18 @@ if (FORKING) {
         it("fails if pool registry is not configured", async function () {
           const [admin] = await ethers.getSigners();
           const RiskFund = await ethers.getContractFactory("RiskFund");
-          const misconfiguredRiskFund = await upgrades.deployProxy(RiskFund, [
-            pancakeSwapRouter.address,
-            convertToUnit(10, 18),
-            BUSD.address,
-            accessControlManager.address,
-            150,
-          ]);
+          const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+          const misconfiguredRiskFund = await upgrades.deployProxy(
+            RiskFund,
+            [pancakeSwapRouter.address, convertToUnit(10, 18), BUSD.address, accessControlManager.address, 150],
+            {
+              constructorArgs: [
+                fakeCorePoolComptroller.address,
+                "0x0000000000000000000000000000000000000001",
+                "0x0000000000000000000000000000000000000002",
+              ],
+            },
+          );
           await accessControlManager.giveCallPermission(
             misconfiguredRiskFund.address,
             "swapPoolsAssets(address[],uint256[],address[][],uint256)",

@@ -91,6 +91,9 @@ contract Comptroller is
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
 
+    /// @notice Emitted when forced liquidation is enabled or disabled for a market
+    event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -462,8 +465,8 @@ contract Comptroller is
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
-        /* Allow accounts to be liquidated if the market is deprecated or it is a forced liquidation */
-        if (skipLiquidityCheck || isDeprecated(VToken(vTokenBorrowed))) {
+        /* Allow accounts to be liquidated if it is a forced liquidation */
+        if (skipLiquidityCheck || isForcedLiquidationEnabled[vTokenBorrowed]) {
             if (repayAmount > borrowBalance) {
                 revert TooMuchRepay();
             }
@@ -984,6 +987,24 @@ contract Comptroller is
     }
 
     /**
+     * @notice Enables forced liquidations for a market. If forced liquidation is enabled,
+     * borrows in the market may be liquidated regardless of the account liquidity
+     * @param vTokenBorrowed Borrowed vToken
+     * @param enable Whether to enable forced liquidations
+     */
+    function setForcedLiquidation(address vTokenBorrowed, bool enable) external {
+        _checkAccessAllowed("setForcedLiquidation(address,bool)");
+        ensureNonzeroAddress(vTokenBorrowed);
+
+        if (!markets[vTokenBorrowed].isListed) {
+            revert MarketNotListed(vTokenBorrowed);
+        }
+
+        isForcedLiquidationEnabled[vTokenBorrowed] = enable;
+        emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to liquidation threshold requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -1180,19 +1201,6 @@ contract Comptroller is
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
-    }
-
-    /**
-     * @notice Check if a vToken market has been deprecated
-     * @dev All borrows in a deprecated vToken market can be immediately liquidated
-     * @param vToken The market to check if deprecated
-     * @return deprecated True if the given vToken market has been deprecated
-     */
-    function isDeprecated(VToken vToken) public view returns (bool) {
-        return
-            markets[address(vToken)].collateralFactorMantissa == 0 &&
-            actionPaused(address(vToken), Action.BORROW) &&
-            vToken.reserveFactorMantissa() == MANTISSA_ONE;
     }
 
     /**
