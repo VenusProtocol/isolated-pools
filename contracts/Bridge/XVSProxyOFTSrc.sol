@@ -20,12 +20,43 @@ contract XVSProxyOFTSrc is BaseXVSProxyOFT {
      */
     uint256 public outboundAmount;
 
+    /**
+     * @notice Emits when locked token released manually by owner.
+     */
+    event FallbackWithdraw(address indexed to, uint256 amount);
+    /**
+     * @notice Emits when stored message dropped without successfull retrying.
+     */
+    event DropFailedMessage(uint16 srcChainId, bytes srcAddress, uint64 nonce);
+
     constructor(
         address tokenAddress_,
         uint8 sharedDecimals_,
         address lzEndpoint_,
         address oracle_
     ) BaseXVSProxyOFT(tokenAddress_, sharedDecimals_, lzEndpoint_, oracle_) {}
+
+    /** @notice Only call it when there is no way to recover the failed message.
+     * `dropFailedMessage` must be called first if transaction is from remote->local chain to avoid double spending.
+     * @param to_ The address to withdraw to
+     * @param amount_ The amount of withdrawal
+     */
+    function fallbackWithdraw(address to_, uint256 amount_) external onlyOwner {
+        outboundAmount -= amount_;
+        _transferFrom(address(this), to_, amount_);
+        emit FallbackWithdraw(to_, amount_);
+    }
+
+    /** @notice Only call it when there is no way to recover the failed message.
+     * `dropFailedMessage` must be called first to avoid double spending.
+     * @param srcChainId_ Chain id of source
+     * @param srcAddress_ Address of source followed by current bridge address
+     * @param nonce_ Nonce_ of the transaction
+     */
+    function dropFailedMessage(uint16 srcChainId_, bytes memory srcAddress_, uint64 nonce_) external onlyOwner {
+        failedMessages[srcChainId_][srcAddress_][nonce_] = bytes32(0);
+        emit DropFailedMessage(srcChainId_, srcAddress_, nonce_);
+    }
 
     /**
      * @notice Returns the total circulating supply of the token on the source chain i.e (total supply - locked in this contract).

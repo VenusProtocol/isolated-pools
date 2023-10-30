@@ -13,12 +13,28 @@ import { BaseXVSProxyOFT } from "./BaseXVSProxyOFT.sol";
  */
 
 contract XVSProxyOFTDest is BaseXVSProxyOFT {
+    /**
+     * @notice Emits when stored message dropped without successfull retrying.
+     */
+    event DropFailedMessage(uint16 srcChainId, bytes srcAddress, uint64 nonce);
+
     constructor(
         address tokenAddress_,
         uint8 sharedDecimals_,
         address lzEndpoint_,
         address oracle_
     ) BaseXVSProxyOFT(tokenAddress_, sharedDecimals_, lzEndpoint_, oracle_) {}
+
+    /** @notice Only call it when there is no way to recover the failed message.
+     * `dropFailedMessage` must be called first to avoid double spending.
+     * @param srcChainId_ Chain id of source
+     * @param srcAddress_ Address of source followed by current bridge address
+     * @param nonce_ Nonce_ of the transaction
+     */
+    function dropFailedMessage(uint16 srcChainId_, bytes memory srcAddress_, uint64 nonce_) external onlyOwner {
+        failedMessages[srcChainId_][srcAddress_][nonce_] = bytes32(0);
+        emit DropFailedMessage(srcChainId_, srcAddress_, nonce_);
+    }
 
     /**
      * @notice Returns the total circulating supply of the token on the destination chain i.e (total supply).
