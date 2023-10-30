@@ -136,6 +136,7 @@ describe("Proxy OFTV2: ", function () {
       "setMinDstGas(uint16,uint16,uint256)",
       "setPayloadSizeLimit(uint16,uint256)",
       "setUseCustomAdapterParams(bool)",
+      "removeTrustedRemote(uint16)",
     ];
     const removeArray = new Array(functionregistry.length).fill(false);
     await bridgeAdminRemote.upsertSignature(functionregistry, removeArray);
@@ -725,5 +726,13 @@ describe("Proxy OFTV2: ", function () {
           { value: nativeFee },
         ),
     ).to.be.revertedWith("OFTCore: amount too small");
+  });
+  it("Successs on removal of trusted remote", async function () {
+    const data = localOFT.interface.encodeFunctionData("removeTrustedRemote", [remoteChainId]);
+    await deployer.sendTransaction({
+      to: bridgeAdminLocal.address,
+      data: data,
+    });
+    expect(await localOFT.trustedRemoteLookup(remoteChainId)).equals("0x");
   });
 });

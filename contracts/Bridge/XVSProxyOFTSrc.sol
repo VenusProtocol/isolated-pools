@@ -27,7 +27,7 @@ contract XVSProxyOFTSrc is BaseXVSProxyOFT {
     /**
      * @notice Emits when stored message dropped without successfull retrying.
      */
-    event DropFailedMessage(uint16 srcChainId, bytes srcAddress, uint64 nonce);
+    event DropFailedMessage(uint16 srcChainId, bytes indexed srcAddress, uint64 nonce);
 
     constructor(
         address tokenAddress_,

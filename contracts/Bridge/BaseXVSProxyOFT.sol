@@ -91,6 +91,10 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      * @notice Event emitted when oracle is modified.
      */
     event OracleChanged(address indexed oldOracle, address indexed newOracle);
+    /**
+     * @notice Event emitted when trusted remote sets to empty.
+     */
+    event TrustedRemoteRemoved(uint16 chainId);
 
     /**
      * @param tokenAddress_ Address of the inner token.
@@ -215,6 +219,15 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
      */
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @notice Remove trusted remote from storage.
+     * @param remoteChainId_ The chain's id corresponds to setting the trusted remote to empty.
+     */
+    function removeTrustedRemote(uint16 remoteChainId_) external onlyOwner {
+        delete trustedRemoteLookup[remoteChainId_];
+        emit TrustedRemoteRemoved(remoteChainId_);
     }
 
     /**
