@@ -7,7 +7,7 @@ import {
   bridgeAdminMethods,
   bridgeConfig,
   getConfig,
-  xvsBridgeAdminMethods,
+  xvsBridgeMethods,
   xvsTokenPermissions,
 } from "../helpers/deploymentConfig";
 import { toAddress } from "../helpers/deploymentUtils";
@@ -117,8 +117,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await executeBridgeCommands(bridge, hre, deployer);
 
-  const removeArray = new Array(xvsBridgeAdminMethods.length).fill(false);
-  let tx = await bridgeAdmin.upsertSignature(xvsBridgeAdminMethods, removeArray);
+  const removeArray = new Array(xvsBridgeMethods.length).fill(false);
+  let tx = await bridgeAdmin.upsertSignature(xvsBridgeMethods, removeArray);
   await tx.wait();
 
   tx = await bridge.transferOwnership(XVSBridgeAdmin.address);
@@ -132,7 +132,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const commands = [
     ...(await configureAccessControls(
-      xvsBridgeAdminMethods,
+      xvsBridgeMethods,
       preconfiguredAddresses.AccessControlManager,
       preconfiguredAddresses.NormalTimelock,
       XVSBridgeAdmin.address,
