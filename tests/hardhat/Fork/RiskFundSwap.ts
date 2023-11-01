@@ -1,7 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { parseUnits, parseEther } from "ethers/lib/utils";
+import { parseEther, parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
@@ -40,7 +40,6 @@ const {
   ADMIN,
   TOKEN1,
   RISKFUND,
-  VTOKEN1,
   TOKEN2,
   VTOKEN2,
   TOKEN1_HOLDER,
@@ -49,7 +48,7 @@ const {
   ACM,
   PSR,
   BLOCK_NUMBER,
-  PANCAKE_SWAP_ROUTER
+  PANCAKE_SWAP_ROUTER,
 } = getContractAddresses(network as string);
 
 // // Disable a warning about mixing beacons and transparent proxies
@@ -88,18 +87,17 @@ const initPancakeSwapRouter = async (
     const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
     pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(PANCAKE_SWAP_ROUTER, admin.address);
     await pancakeSwapRouter.deployed();
-    console.log(SWAP_ROUTER_CORE_POOL, pancakeSwapRouter.address)
+    console.log(SWAP_ROUTER_CORE_POOL, pancakeSwapRouter.address);
     await token1.connect(token1Holder).transfer(pancakeSwapRouter.address, parseUnits("10000", 18));
     await token2.connect(token2Holder).transfer(pancakeSwapRouter.address, parseUnits("10000", 18));
   }
   return pancakeSwapRouter;
 };
 
-
 const riskFundFixture = async (): Promise<void> => {
   await setForkBlock(BLOCK_NUMBER);
   await configureTimelock();
-  const [admin, user, ...signers] = await ethers.getSigners();
+  const [, user] = await ethers.getSigners();
 
   token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
   token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
@@ -108,7 +106,9 @@ const riskFundFixture = async (): Promise<void> => {
   pancakeSwapRouter = await initPancakeSwapRouter(impersonatedTimelock);
   console.log(1);
   accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-  await accessControlManager.connect(impersonatedTimelock).giveCallPermission(RISKFUND, "swapPoolsAssets(address[],uint256[],address[][],uint256)", ADMIN);
+  await accessControlManager
+    .connect(impersonatedTimelock)
+    .giveCallPermission(RISKFUND, "swapPoolsAssets(address[],uint256[],address[][],uint256)", ADMIN);
   await accessControlManager.giveCallPermission(RISKFUND, "setConvertibleBaseAsset(address)", ADMIN);
 
   riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
@@ -157,19 +157,19 @@ if (FORKING) {
   describe.only("Risk Fund Fork: Swap Tests", () => {
     beforeEach(async () => {
       await loadFixture(riskFundFixture);
-      console.log(33)
+      console.log(33);
     });
 
     it("Swap All Pool Assets", async () => {
       await token2.connect(token2Holder).approve(vToken2.address, ADD_RESERVE_AMOUNT);
-      console.log(2)
+      console.log(2);
 
       await vToken2.connect(token2Holder).addReserves(ADD_RESERVE_AMOUNT);
-      console.log(2)
+      console.log(2);
 
       await vToken2.reduceReserves(REDUCE_RESERVE_AMOUNT);
       console.log((await token2.balanceOf(riskFund.address)).toString());
-console.log(2)
+      console.log(2);
       if (network == "bsctestnet") {
         await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
       } else {
@@ -177,7 +177,7 @@ console.log(2)
       }
       console.log((await token2.balanceOf(riskFund.address)).toString());
 
-console.log(376233)
+      console.log(376233);
       const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
       console.log(await riskFund.pancakeSwapRouter());
       // await vToken2.update
@@ -194,7 +194,7 @@ console.log(376233)
         [[token2.address, token1.address]],
         deadline,
       );
-      console.log(376233)
+      console.log(376233);
 
       expect(Number(await riskFund.getPoolsBaseAssetReserves(comptroller.address))).to.be.closeTo(
         Number("24931282761361385504"),

@@ -128,19 +128,14 @@ const riskFundFixture = async (): Promise<void> => {
 
   await riskFund.setShortfallContractAddress(shortfall.address);
 
-  const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
   const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = (await upgrades.deployProxy(
-    ProtocolShareReserve,
-    [fakeProtocolIncome.address, riskFund.address],
-    {
-      constructorArgs: [
-        fakeCorePoolComptroller.address,
-        "0x0000000000000000000000000000000000000001",
-        "0x0000000000000000000000000000000000000002",
-      ],
-    },
-  )) as ProtocolShareReserve;
+  protocolShareReserve = (await upgrades.deployProxy(ProtocolShareReserve, [fakeAccessControlManager.address, 10], {
+    constructorArgs: [
+      fakeCorePoolComptroller.address,
+      "0x0000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000002",
+    ],
+  })) as ProtocolShareReserve;
 
   const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
   poolRegistry = (await upgrades.deployProxy(PoolRegistry, [fakeAccessControlManager.address])) as PoolRegistry;
@@ -234,6 +229,21 @@ const riskFundFixture = async (): Promise<void> => {
 describe("Risk Fund: Swap Tests", () => {
   beforeEach(async () => {
     await loadFixture(riskFundFixture);
+    const [admin] = await ethers.getSigners();
+    const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
+
+    await protocolShareReserve.connect(admin).addOrUpdateDistributionConfigs([
+      {
+        schema: 0,
+        percentage: 30,
+        destination: riskFund.address,
+      },
+      {
+        schema: 0,
+        percentage: 70,
+        destination: fakeProtocolIncome.address,
+      },
+    ]);
   });
 
   it("Swap All Pool Assets", async () => {
@@ -241,13 +251,13 @@ describe("Risk Fund: Swap Tests", () => {
     await vUSDT.connect(usdtUser).addReserves(ADD_RESERVE_AMOUNT);
     await vUSDT.connect(usdtUser).reduceReserves(REDUCE_RESERVE_AMOUNT);
 
-    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, USDT.address, REDUCE_RESERVE_AMOUNT);
+    await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDT.address]);
 
     const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
     await riskFund.swapPoolsAssets([vUSDT.address], [parseUnits("10", 18)], [[USDT.address, BUSD.address]], deadline);
-    expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("24931282761361385504");
+    expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("29916047622748892393");
 
     const balance = await BUSD.balanceOf(riskFund.address);
-    expect(Number(balance)).to.be.closeTo(Number(parseUnits("25", 18)), Number(parseUnits("1", 17)));
+    expect(Number(balance)).to.be.closeTo(Number(parseUnits("29", 18)), Number(parseUnits("1", 18)));
   });
 });
