@@ -86,7 +86,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await tx.wait(1);
   }
 
-  const protocolIncomeReceiver = await toAddress(preconfiguredAddresses.VTreasury, hre);
   await deploy("ProtocolShareReserve", {
     from: deployer,
     contract: "ProtocolShareReserve",
@@ -95,7 +94,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       proxyContract: "OpenZeppelinTransparentProxy",
       execute: {
         methodName: "initialize",
-        args: [protocolIncomeReceiver, riskFund.address],
+        args: [accessControlManagerAddress, 10],
       },
       upgradeIndex: 0,
     },

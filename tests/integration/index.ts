@@ -78,6 +78,24 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setReduceReservesBlockDelta(uint256)",
+    deployer,
+  );
+
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setReduceReservesThreshold(uint256)",
+    deployer,
+  );
+
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "addOrUpdateDistributionConfigs(DistributionConfig[])",
+    deployer,
+  );
+
   // Set supply caps
   const supply = convertToUnit(10, 36);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBTCB.address], [supply, supply]);
@@ -391,12 +409,13 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
   let acc1: string;
   let acc2: string;
   let vBNXPrice: BigNumber;
+  let ProtocolShareReserve: ProtocolShareReserve;
   const EXPONENT_SCALE = 1e18;
   let rewardDistributor: FakeContract<RewardsDistributor>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, vBNXPrice } = fixture);
+    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, vBNXPrice, ProtocolShareReserve } = fixture);
     rewardDistributor = await smock.fake<RewardsDistributor>("RewardsDistributor");
     await Comptroller.addRewardsDistributor(rewardDistributor.address);
   });
@@ -491,7 +510,9 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
       const seizeTokens = seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE;
-
+      const protocolSeizeToken = seizeTokensOverall - seizeTokens;
+      const protocolSeizeAmount = (exchangeRateStored * protocolSeizeToken.toFixed(0)) / EXPONENT_SCALE;
+      expect(Math.ceil(protocolSeizeAmount)).equal(await BNX.balanceOf(ProtocolShareReserve.address));
       await expect(result)
         .to.emit(vBTCB, "LiquidateBorrow")
         .withArgs(acc1, acc2, repayAmount, vBNX.address, seizeTokensOverall.toFixed(0));
@@ -638,9 +659,13 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       const seizeTokensOverall = seizeAmount / exchangeRateStored;
       const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
       const seizeTokens = (seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE).toFixed(0);
+      const protocolSeizeToken = seizeTokensOverall - seizeTokens;
+      const protocolSeizeAmount = (exchangeRateStored * protocolSeizeToken) / EXPONENT_SCALE;
+
       await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, maxClose.toString(), vBNX.address))
         .to.emit(vBTCB, "LiquidateBorrow")
         .withArgs(acc1, acc2, maxClose.toString(), vBNX.address, seizeTokensOverall.toFixed(0));
+      expect(protocolSeizeAmount).equal(await BNX.balanceOf(ProtocolShareReserve.address));
       const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1);
       expect(liquidatorBalance).to.equal(seizeTokens);
     });
@@ -774,6 +799,9 @@ describe("Risk Fund and Auction related scenarios", function () {
       acc1Signer = await ethers.getSigner(acc1);
       acc2Signer = await ethers.getSigner(acc2);
       deployerSigner = await ethers.getSigner(deployer);
+      await expect(vBNX.connect(deployerSigner).setReduceReservesBlockDelta(0)).to.be.revertedWith("Invalid Input");
+      await vBNX.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
+      await vBTCB.connect(deployerSigner).setReduceReservesBlockDelta(convertToUnit(1, 18));
 
       await BNX.connect(acc2Signer).faucet(mintAmount);
       await BNX.connect(acc2Signer).approve(vBNX.address, mintAmount);
@@ -788,26 +816,52 @@ describe("Risk Fund and Auction related scenarios", function () {
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
       await RiskFund.setPoolRegistry(PoolRegistry.address);
+
+      const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
+
+      await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
+        {
+          schema: 0,
+          percentage: 50,
+          destination: RiskFund.address,
+        },
+        {
+          schema: 0,
+          percentage: 50,
+          destination: fakeProtocolIncome.address,
+        },
+        {
+          schema: 1,
+          percentage: 50,
+          destination: RiskFund.address,
+        },
+        {
+          schema: 1,
+          percentage: 50,
+          destination: fakeProtocolIncome.address,
+        },
+      ]);
     });
 
-    it("generate bad Debt, reserves transfer to protocol share reserves, start auction", async function () {
+    it("generate bad Debt, reduce reserves if blockDelta < last reduce", async function () {
       // Increase price of borrowed underlying tokens to surpass available collateral
       const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 25));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("1", 15));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
+      const seizeTokens = (await vBNX.getAccountSnapshot(acc2)).vTokenBalance;
+      const exchangeRateStored = await vBNX.exchangeRateStored();
+      const protocolSeizeShareMantissa = await vBNX.protocolSeizeShareMantissa();
+
+      const protocolSeizeTokens = seizeTokens.mul(protocolSeizeShareMantissa).div(convertToUnit(1, 18));
+      const expectedTotalReserves = protocolSeizeTokens.mul(exchangeRateStored).div(convertToUnit(1, 18));
+
       await Comptroller.connect(acc1Signer).healAccount(acc2);
-      // At this point market contain bad debt
-      const totalReserves = await vBNX.totalReserves();
-      // Reserves of the market are being transferred to protocol share reserves
-      await vBNX.reduceReserves(totalReserves);
-      // Check the balance of protocol share reserve
-      expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(totalReserves);
+      expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
       // Reduce reserves, transfer 50% to protocol income and rest 50% to riskFund
-      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, BNX.address, totalReserves);
-      expect(await BNX.balanceOf(deployer)).to.be.equal(totalReserves * 0.5);
-      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(totalReserves * 0.5);
+      await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, [BNX.address]);
+      expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.5);
     });
   });
 });

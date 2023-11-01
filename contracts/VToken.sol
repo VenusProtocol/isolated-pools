@@ -5,13 +5,13 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts/Interfaces/IProtocolShareReserve.sol";
 
 import { VTokenInterface } from "./VTokenInterfaces.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInterface.sol";
 import { TokenErrorReporter } from "./ErrorReporter.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
-import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
@@ -51,7 +51,9 @@ contract VToken is
 
     uint256 internal constant DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA = 5e16; // 5%
 
-    /*** Reentrancy Guard ***/
+    /**
+     * Reentrancy Guard **
+     */
 
     /**
      * @dev Prevents a contract from calling itself, directly or indirectly.
@@ -413,6 +415,7 @@ contract VToken is
 
     /**
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
+     * @dev Gracefully return if reserves already reduced in accrueInterest
      * @param reduceAmount Amount of reduction to reserves
      * @custom:event Emits ReservesReduced event; may emit AccrueInterest
      * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
@@ -421,6 +424,7 @@ contract VToken is
      */
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
+        if (reduceReservesBlockNumber == _getBlockNumber()) return;
         _reduceReservesFresh(reduceAmount);
     }
 
@@ -610,6 +614,18 @@ contract VToken is
     }
 
     /**
+     * @notice A public function to set new threshold of block difference after which funds will be sent to the protocol share reserve
+     * @param _newReduceReservesBlockDelta block difference value
+     * @custom:access Only Governance
+     */
+    function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
+        _checkAccessAllowed("setReduceReservesBlockDelta(uint256)");
+        require(_newReduceReservesBlockDelta > 0, "Invalid Input");
+        emit NewReduceReservesBlockDelta(reduceReservesBlockDelta, _newReduceReservesBlockDelta);
+        reduceReservesBlockDelta = _newReduceReservesBlockDelta;
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
@@ -709,7 +725,9 @@ contract VToken is
     /**
      * @notice Applies accrued interest to total borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
-     *   up to the current block and writes new checkpoint to storage.
+     *  up to the current block and writes new checkpoint to storage and
+     *  reduce spread reserves to protocol share reserve
+     *  if currentBlock - reduceReservesBlockNumber >= blockDelta
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
@@ -765,6 +783,11 @@ contract VToken is
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
+
+        if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
+            reduceReservesBlockNumber = currentBlockNumber;
+            _reduceReservesFresh(totalReservesNew);
+        }
 
         /* We emit an AccrueInterest event */
         emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
@@ -1146,22 +1169,30 @@ contract VToken is
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
         uint256 protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
-        uint256 totalReservesNew = totalReserves + protocolSeizeAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
         /* We write the calculated values into storage */
-        totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
+        // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
+        _doTransferOut(protocolShareReserve, protocolSeizeAmount);
+
+        // Update the pool asset's state in the protocol share reserve for the above transfer.
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.LIQUIDATION
+        );
+
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
-        emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+        emit ProtocolSeize(borrower, protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
@@ -1228,6 +1259,9 @@ contract VToken is
      * @param reduceAmount Amount of reduction to reserves
      */
     function _reduceReservesFresh(uint256 reduceAmount) internal {
+        if (reduceAmount == 0) {
+            return;
+        }
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
@@ -1260,9 +1294,13 @@ contract VToken is
         _doTransferOut(protocolShareReserve, reduceAmount);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying);
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.SPREAD
+        );
 
-        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
+        emit SpreadReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**
@@ -1292,7 +1330,9 @@ contract VToken is
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
     }
 
-    /*** Safe Token ***/
+    /**
+     * Safe Token **
+     */
 
     /**
      * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
@@ -1448,8 +1488,7 @@ contract VToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
-        return token.balanceOf(address(this));
+        return IERC20Upgradeable(underlying).balanceOf(address(this));
     }
 
     /**
