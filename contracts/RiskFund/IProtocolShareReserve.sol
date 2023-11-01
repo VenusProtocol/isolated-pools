@@ -9,3 +9,22 @@ pragma solidity 0.8.13;
 interface IProtocolShareReserve {
     function updateAssetsState(address comptroller, address asset) external;
 }
+
+// interface IMockProtocolShareReserve {
+//     enum Schema {
+//         PROTOCOL_RESERVES,
+//         ADDITIONAL_REVENUE
+//     }
+
+//     struct DistributionConfig {
+//         Schema schema;
+//         /// @dev percenatge is represented without any scale
+//         uint8 percentage;
+//         address destination;
+//     }
+//     function updateAssetsState(address comptroller, address asset) external;
+//     function addOrUpdateDistributionConfigs(DistributionConfig[] calldata configs) external;
+//     function acceptOwnership() external;
+//     function releaseFunds(address comptroller, address asset, uint256 amount) external;
+//     function distributionTargets(uint256 index) external view returns (DistributionConfig memory);
+// }
