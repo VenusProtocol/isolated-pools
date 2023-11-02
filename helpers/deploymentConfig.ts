@@ -698,6 +698,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xd2aF6A916Bc77764dc63742BC30f71AF4cF423F4",
       },
+      {
+        isMock: false,
+        name: "PLANET",
+        symbol: "PLANET",
+        decimals: 18,
+        tokenAddress: "0x52b4E1A2ba407813F829B4b3943A1e57768669A9",
+      },
     ],
     poolConfig: [
       {
@@ -916,6 +923,24 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "10512000",
           },
+          {
+            name: "Venus PLANET (DeFi)",
+            asset: "PLANET",
+            symbol: "vPLANET_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.2", 18),
+            liquidationThreshold: convertToUnit("0.3", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("174983000", 18),
+            supplyCap: convertToUnit("500000000", 18),
+            borrowCap: convertToUnit("500000000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", //To be revised
+            reduceReservesBlockDelta: "100",
+          },
         ],
         rewards: [
           {
@@ -929,6 +954,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["ankrBNB"],
             supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
             borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDT",
+            markets: ["PLANET"],
+            supplySpeeds: ["1860"], // 1500 USDT over 28 days (806400 blocks)
+            borrowSpeeds: ["1860"], // 1500 USDT over 28 days (806400 blocks)
           },
         ],
       },
@@ -1495,6 +1526,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
       },
+      {
+        isMock: false,
+        name: "PLANET",
+        symbol: "PLANET",
+        decimals: 18,
+        tokenAddress: "0xca6d678e74f553f0e59cccc03ae644a3c2c5ee7d",
+      },
     ],
     poolConfig: [
       {
@@ -1714,6 +1752,24 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "10512000",
           },
+          {
+            name: "Venus PLANET (DeFi)",
+            asset: "PLANET",
+            symbol: "vPLANET_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.2", 18),
+            liquidationThreshold: convertToUnit("0.3", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("174983000", 18),
+            supplyCap: convertToUnit("500000000", 18),
+            borrowCap: convertToUnit("500000000", 18),
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", //To be revised
+            reduceReservesBlockDelta: "100",
+          },
         ],
         rewards: [
           {
@@ -1728,6 +1784,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["ankrBNB"],
             supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
             borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDT",
+            markets: ["PLANET"],
+            supplySpeeds: ["1860119047619047"], // 1500 USDT over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 USDT over 28 days (806400 blocks)
           },
         ],
       },
