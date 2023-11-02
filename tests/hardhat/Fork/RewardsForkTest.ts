@@ -35,28 +35,28 @@ const {
   ADMIN,
   TOKEN2,
   VTOKEN2,
-  TOKEN2_HOLDER,
   COMPTROLLER,
-  BLOCK_NUMBER,
-  REWARD_DISTRIBUTOR1,
+  TOKEN2_HOLDER,
   BINANCE_ORACLE,
+  REWARD_DISTRIBUTOR1,
+  BLOCK_NUMBER,
 } = getContractAddresses(network as string);
 
 const MANTISSA_ONE = convertToUnit(1, 18);
 
-let impersonatedTimelock: Signer;
-let accessControlManager: AccessControlManager;
-let comptroller: Comptroller;
-let vTOKEN2: VToken;
 let token2: IERC20;
-let rewardDistributor1: RewardsDistributor;
+let vTOKEN2: VToken;
+let comptroller: Comptroller;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let token2Holder: Signer;
 let comptrollerSigner: Signer;
+let impersonatedTimelock: Signer;
+let binanceOracle: BinanceOracle;
 let mintAmount: BigNumberish;
 let bswBorrowAmount: BigNumberish;
-let binanceOracle: BinanceOracle;
+let rewardDistributor1: RewardsDistributor;
+let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));

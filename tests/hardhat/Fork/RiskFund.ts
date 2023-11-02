@@ -1,1097 +1,270 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber, constants } from "ethers";
-import { parseUnits } from "ethers/lib/utils";
-import { ethers, upgrades } from "hardhat";
+import { parseEther, parseUnits } from "ethers/lib/utils";
+import { ethers } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
-import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
   AccessControlManager__factory,
   Comptroller,
-  MockPriceOracle,
-  MockPriceOracle__factory,
-  MockToken,
-  MockToken__factory,
+  Comptroller__factory,
+  IERC20,
+  IERC20__factory,
+  IMockProtocolShareReserve,
+  IMockProtocolShareReserve__factory,
   PancakeRouter,
   PancakeRouter__factory,
-  PoolRegistry,
   ProtocolShareReserve,
+  ProtocolShareReserve__factory,
   RiskFund,
+  RiskFund__factory,
   Shortfall,
+  Shortfall__factory,
   VToken,
+  VToken__factory,
 } from "../../../typechain";
-import { deployVTokenBeacon, makeVToken } from "../util/TokenTestHelpers";
-import { getContractAddresses, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const FORKING = process.env.FORKING === "true";
 const network = process.env.NETWORK_NAME || "bsc";
 
-const { PANCAKE_SWAP_ROUTER, BUSD_HOLDER, USDC_HOLDER, USDT_HOLDER, BLOCK_NUMBER } = getContractAddresses(
-  network as string,
-);
+const {
+  ACM,
+  PSR,
+  ADMIN,
+  USDT,
+  VUSDT,
+  TOKEN1,
+  TOKEN2,
+  VTOKEN1,
+  VTOKEN2,
+  COMPTROLLER,
+  RISKFUND,
+  TREASURY,
+  SHORTFALL,
+  USDT_HOLDER,
+  TOKEN1_HOLDER,
+  TOKEN2_HOLDER,
+  SWAP_ROUTER_CORE_POOL,
+  BLOCK_NUMBER,
+} = getContractAddresses(network as string);
 
-// Disable a warning about mixing beacons and transparent proxies
-upgrades.silenceWarnings();
-
-let poolRegistry: PoolRegistry;
-let USDC: MockToken;
-let BUSD: MockToken;
-let USDT: MockToken;
-let vUSDC: VToken;
-let vUSDT: VToken;
-let vUSDC2: VToken;
-let vUSDT2: VToken;
-let vUSDT3: VToken;
-let vBUSD3: VToken;
-let priceOracle: MockPriceOracle;
-let comptroller1Proxy: Comptroller;
-let comptroller2Proxy: Comptroller;
-let comptroller3Proxy: Comptroller;
-let accessControlManager: AccessControlManager;
-let protocolShareReserve: ProtocolShareReserve;
-let shortfall: FakeContract<Shortfall>;
+let token1: IERC20;
+let token2: IERC20;
+let vToken1: VToken;
+let vToken2: VToken;
+let comptroller: Comptroller;
 let riskFund: RiskFund;
+let shortfall: Shortfall;
+let token1Holder: SignerWithAddress;
+let token2Holder: SignerWithAddress;
+let impersonatedTimelock: SignerWithAddress;
+let accessControlManager: AccessControlManager;
 let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-let busdUser: SignerWithAddress;
-let usdcUser: SignerWithAddress;
-let usdtUser: SignerWithAddress;
-const maxLoopsLimit = 150;
-const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
+let protocolShareReserve: ProtocolShareReserve | IMockProtocolShareReserve;
+let TOKEN1_ADDRESS: string = TOKEN1;
+let VTOKEN1_ADDRESS: string = VTOKEN1;
+
+let token1Reserve = parseUnits("100", 18);
+const token2Reserve = parseUnits("100", 18);
+let minAmountOut = parseUnits("10", 18);
+
+if (network != "sepolia") {
+  TOKEN1_ADDRESS = USDT;
+  VTOKEN1_ADDRESS = VUSDT;
+}
+const configureTimelock = async () => {
+  impersonatedTimelock = await initMainnetUser(ADMIN, parseEther("2"));
+};
 
 const initPancakeSwapRouter = async (
   admin: SignerWithAddress,
 ): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
   let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-  if (network == "bsc") {
-    pancakeSwapRouter = PancakeRouter__factory.connect(PANCAKE_SWAP_ROUTER, admin);
+  if (network == "bsc" || network == "bsctestnet") {
+    pancakeSwapRouter = PancakeRouter__factory.connect(SWAP_ROUTER_CORE_POOL, admin);
   } else {
     const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
-    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(PANCAKE_SWAP_ROUTER, admin.address);
+    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(SWAP_ROUTER_CORE_POOL, admin.address);
     await pancakeSwapRouter.deployed();
-    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
-    // Send some BNB to account so it can faucet money from mock tokens
-    const tx = await admin.sendTransaction({
-      to: pancakeSwapRouter.address,
-      value: ethers.utils.parseEther("10"),
-    });
-    await tx.wait();
-    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
-    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
-    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(10000, 18));
   }
+
+  await token1.connect(token1Holder).transfer(pancakeSwapRouter.address, parseUnits("1000", 18));
+  await token2.connect(token2Holder).transfer(pancakeSwapRouter.address, parseUnits("1000", 18));
+
   return pancakeSwapRouter;
-};
-
-const initMainnetUser = async (user: string): Promise<SignerWithAddress> => {
-  await impersonateAccount(user);
-  return ethers.getSigner(user);
-};
-
-const initMockToken = async (name: string, symbol: string, user: SignerWithAddress): Promise<MockToken> => {
-  const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
-  const token = await MockToken.deploy(name, symbol, 18);
-  await token.deployed();
-  await token.faucet(convertToUnit(10000000, 18));
-  await token.transfer(user.address, convertToUnit(10000000, 18));
-  return token;
 };
 
 const riskFundFixture = async (): Promise<void> => {
   await setForkBlock(BLOCK_NUMBER);
-  const [admin, user, ...signers] = await ethers.getSigners();
+  await configureTimelock();
 
-  if (network == "bsc") {
-    busdUser = await initMainnetUser(BUSD_HOLDER);
-    usdcUser = await initMainnetUser(USDC_HOLDER);
-    usdtUser = await initMainnetUser(USDT_HOLDER);
+  token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
+  token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
+  if (network != "sepolia") token1Holder = await initMainnetUser(USDT_HOLDER, ethers.utils.parseUnits("2"));
 
-    USDC = MockToken__factory.connect(getContractAddresses(network as string).USDC, admin);
-    BUSD = MockToken__factory.connect(getContractAddresses(network as string).BUSD, admin);
-    USDT = MockToken__factory.connect(getContractAddresses(network as string).USDT, admin);
-  } else {
-    [busdUser, usdcUser, usdtUser] = signers;
+  token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
+  token1 = IERC20__factory.connect(TOKEN1_ADDRESS, impersonatedTimelock);
 
-    USDC = await initMockToken("Mock USDC", "USDC", usdcUser);
-    BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
-    USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
+  pancakeSwapRouter = await initPancakeSwapRouter(impersonatedTimelock);
+
+  accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
+  await accessControlManager
+    .connect(impersonatedTimelock)
+    .giveCallPermission(RISKFUND, "swapPoolsAssets(address[],uint256[],address[][],uint256)", ADMIN);
+
+  riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
+  shortfall = Shortfall__factory.connect(SHORTFALL, impersonatedTimelock);
+  protocolShareReserve = IMockProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
+
+  if (network == "bsctestnet") {
+    protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
+    const distributionConfig1 = {
+      schema: 0,
+      percentage: 50,
+      destination: TREASURY,
+    };
+
+    const distributionConfig2 = {
+      schema: 0,
+      percentage: 50,
+      destination: RISKFUND,
+    };
+
+    await protocolShareReserve
+      .connect(impersonatedTimelock)
+      .addOrUpdateDistributionConfigs([distributionConfig1, distributionConfig2]);
+    token1Reserve = parseUnits("100", 6);
+    minAmountOut = parseUnits("10", 6);
   }
 
-  pancakeSwapRouter = await initPancakeSwapRouter(admin);
-  const AccessControlManagerFactory = await ethers.getContractFactory<AccessControlManager__factory>(
-    "AccessControlManager",
-  );
-  accessControlManager = await AccessControlManagerFactory.deploy();
-  await accessControlManager.deployed();
+  comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
+  vToken1 = VToken__factory.connect(VTOKEN1_ADDRESS, impersonatedTimelock);
+  vToken2 = VToken__factory.connect(VTOKEN2, impersonatedTimelock);
 
-  shortfall = await smock.fake<Shortfall>("Shortfall");
-  await admin.sendTransaction({
-    to: shortfall.address,
-    value: ethers.utils.parseEther("1"), // 1 ether
-  });
+  await vToken1.connect(impersonatedTimelock).setShortfallContract(SHORTFALL);
+  await vToken1.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
 
-  const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
+  await vToken2.connect(impersonatedTimelock).setShortfallContract(SHORTFALL);
+  await vToken2.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
 
-  const RiskFund = await ethers.getContractFactory("RiskFund");
-  riskFund = (await upgrades.deployProxy(
-    RiskFund,
-    [pancakeSwapRouter.address, convertToUnit(10, 18), BUSD.address, accessControlManager.address, 150],
-    {
-      constructorArgs: [
-        fakeCorePoolComptroller.address,
-        "0x0000000000000000000000000000000000000001",
-        "0x0000000000000000000000000000000000000002",
-      ],
-    },
-  )) as RiskFund;
-  await riskFund.setShortfallContractAddress(shortfall.address);
-
-  const ProtocolShareReserve = await ethers.getContractFactory("ProtocolShareReserve");
-  protocolShareReserve = (await upgrades.deployProxy(ProtocolShareReserve, [accessControlManager.address, 10], {
-    constructorArgs: [
-      fakeCorePoolComptroller.address,
-      "0x0000000000000000000000000000000000000001",
-      "0x0000000000000000000000000000000000000002",
-    ],
-  })) as ProtocolShareReserve;
-
-  const PoolRegistry = await ethers.getContractFactory("PoolRegistry");
-  poolRegistry = (await upgrades.deployProxy(PoolRegistry, [accessControlManager.address])) as PoolRegistry;
-
-  await protocolShareReserve.setPoolRegistry(poolRegistry.address);
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setCollateralFactor(address,uint256,uint256)",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setMarketSupplyCaps(address[],uint256[])",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setMarketBorrowCaps(address[],uint256[])",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setLiquidationIncentive(uint256)",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setMinLiquidatableCollateral(uint256)",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "supportMarket(address)",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setCloseFactor(uint256)",
-    poolRegistry.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    poolRegistry.address,
-    "addPool(string,address,uint256,uint256,uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "setReduceReservesBlockDelta(uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(poolRegistry.address, "addMarket(AddMarketInput)", admin.address);
-
-  await accessControlManager.giveCallPermission(riskFund.address, "setMinAmountToConvert(uint256)", admin.address);
-
-  await accessControlManager.giveCallPermission(
-    riskFund.address,
-    "swapPoolsAssets(address[],uint256[],address[][],uint256)",
-    admin.address,
-  );
-
-  await accessControlManager.giveCallPermission(riskFund.address, "setConvertibleBaseAsset(address)", admin.address);
-
-  await shortfall.connect(shortfall.wallet).updatePoolRegistry(poolRegistry.address);
-
-  const _closeFactor = convertToUnit(0.05, 18);
-  const _liquidationIncentive = convertToUnit(1, 18);
-  const _minLiquidatableCollateral = convertToUnit(100, 18);
-
-  // Deploy Price Oracle
-  const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
-  priceOracle = await MockPriceOracle.deploy();
-
-  const usdtPrice = ".75";
-  const usdcPrice = "1";
-  const busdPrice = "1.1";
-
-  await priceOracle.setPrice(USDC.address, convertToUnit(usdcPrice, 18));
-  await priceOracle.setPrice(USDT.address, convertToUnit(usdtPrice, 18));
-  await priceOracle.setPrice(BUSD.address, convertToUnit(busdPrice, 18));
-
-  const Comptroller = await ethers.getContractFactory("Comptroller");
-  const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
-
-  [comptroller1Proxy, comptroller2Proxy, comptroller3Proxy] = await Promise.all(
-    [...Array(3)].map(async () => {
-      const comptroller = (await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
-        maxLoopsLimit,
-        accessControlManager.address,
-      ])) as Comptroller;
-      await comptroller.setPriceOracle(priceOracle.address);
-      return comptroller;
-    }),
-  );
-
-  // Registering the first pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptroller1Proxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
-
-  // Registering the second pool
-  await poolRegistry.addPool(
-    "Pool 2",
-    comptroller2Proxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
-
-  // Registering the third pool
-  await poolRegistry.addPool(
-    "Pool 3",
-    comptroller3Proxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
-
-  await accessControlManager.giveCallPermission(
-    ethers.constants.AddressZero,
-    "transferReserveForAuction(address,uint256)",
-    admin.address,
-  );
-
-  const initialSupply = parseUnits("1000", 18);
-
-  // Deploy VTokens
-  const vTokenBeacon = await deployVTokenBeacon();
-
-  const commonVTokenParams = {
-    accessControlManager,
-    admin,
-    protocolShareReserve,
-    beacon: vTokenBeacon,
-  };
-
-  const commonMarketParams = {
-    collateralFactor: parseUnits("0.7", 18),
-    liquidationThreshold: parseUnits("0.7", 18),
-    initialSupply,
-    vTokenReceiver: admin.address,
-    supplyCap: initialSupply,
-    borrowCap: initialSupply,
-  };
-
-  vUSDT = await makeVToken({
-    underlying: USDT,
-    comptroller: comptroller1Proxy,
-    decimals: 8,
-    ...commonVTokenParams,
-  });
-
-  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
-  await USDT.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vUSDT.address,
-    ...commonMarketParams,
-  });
-
-  vUSDC = await makeVToken({
-    underlying: USDC,
-    comptroller: comptroller1Proxy,
-    decimals: 18,
-    ...commonVTokenParams,
-  });
-
-  await USDC.connect(usdcUser).transfer(admin.address, initialSupply);
-  await USDC.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vUSDC.address,
-    ...commonMarketParams,
-  });
-
-  vUSDT2 = await makeVToken({
-    underlying: USDT,
-    comptroller: comptroller2Proxy,
-    decimals: 8,
-    ...commonVTokenParams,
-  });
-
-  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
-  await USDT.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vUSDT2.address,
-    ...commonMarketParams,
-  });
-
-  vUSDC2 = await makeVToken({
-    underlying: USDC,
-    comptroller: comptroller2Proxy,
-    decimals: 18,
-    ...commonVTokenParams,
-  });
-
-  await USDC.connect(usdcUser).transfer(admin.address, initialSupply);
-  await USDC.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vUSDC2.address,
-    ...commonMarketParams,
-  });
-
-  vUSDT3 = await makeVToken({
-    underlying: USDT,
-    comptroller: comptroller3Proxy,
-    decimals: 8,
-    ...commonVTokenParams,
-  });
-
-  await USDT.connect(usdtUser).transfer(admin.address, initialSupply);
-  await USDT.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vUSDT3.address,
-    ...commonMarketParams,
-  });
-
-  vBUSD3 = await makeVToken({
-    underlying: BUSD,
-    comptroller: comptroller3Proxy,
-    decimals: 18,
-    ...commonVTokenParams,
-  });
-
-  await BUSD.connect(busdUser).transfer(admin.address, initialSupply);
-  await BUSD.approve(poolRegistry.address, initialSupply);
-  await poolRegistry.addMarket({
-    vToken: vBUSD3.address,
-    ...commonMarketParams,
-  });
-
-  // Enter Markets
-  await comptroller1Proxy.connect(user).enterMarkets([vUSDC.address, vUSDT.address]);
-  await comptroller2Proxy.connect(user).enterMarkets([vUSDC2.address, vUSDT2.address]);
-  await comptroller3Proxy.connect(user).enterMarkets([vUSDT3.address, vBUSD3.address]);
-
-  await riskFund.setPoolRegistry(poolRegistry.address);
+  if (network == "sepolia") {
+    await riskFund.connect(impersonatedTimelock).setPancakeSwapRouter(pancakeSwapRouter.address);
+  }
 };
 
 if (FORKING) {
   describe("Risk Fund Fork: Tests", function () {
     beforeEach(async function () {
       await loadFixture(riskFundFixture);
-      await vUSDC.setReduceReservesBlockDelta(convertToUnit(1, 5));
 
-      await vUSDT.setReduceReservesBlockDelta(convertToUnit(1, 5));
+      await token1.connect(token1Holder).approve(vToken1.address, token1Reserve);
+      await vToken1.connect(token1Holder).addReserves(token1Reserve);
 
-      await vUSDC2.setReduceReservesBlockDelta(convertToUnit(1, 5));
+      await token2.connect(token2Holder).approve(vToken2.address, token2Reserve);
+      await vToken2.connect(token2Holder).addReserves(token2Reserve);
 
-      await vUSDT2.setReduceReservesBlockDelta(convertToUnit(1, 5));
-
-      await vUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
-
-      await vUSDT3.setReduceReservesBlockDelta(convertToUnit(1, 5));
-
-      const [admin] = await ethers.getSigners();
-      const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
-
-      await accessControlManager.giveCallPermission(
-        protocolShareReserve.address,
-        "addOrUpdateDistributionConfigs(DistributionConfig[])",
-        admin.address,
-      );
-
-      await protocolShareReserve.connect(admin).addOrUpdateDistributionConfigs([
-        {
-          schema: 0,
-          percentage: 30,
-          destination: riskFund.address,
-        },
-        {
-          schema: 0,
-          percentage: 70,
-          destination: fakeProtocolIncome.address,
-        },
-      ]);
+      await vToken1.reduceReserves(token1Reserve);
+      await vToken2.reduceReserves(token2Reserve);
     });
 
-    describe("Test all setters", async function () {
-      describe("setPoolRegistry", async function () {
-        it("reverts on invalid PoolRegistry address", async function () {
-          await expect(riskFund.setPoolRegistry(constants.AddressZero)).to.be.revertedWithCustomError(
-            riskFund,
-            "ZeroAddressNotAllowed",
-          );
-        });
+    describe("Assets transfer to riskfund", async function () {
+      it("Transfer assets from different markets to riskFund", async function () {
+        let token1ReservesInPSR;
+        let token2ReservesInPSR;
+        const token1PreviousBalanceForRiskFund = await token1.balanceOf(riskFund.address);
+        const token2PreviousBalanceForRiskFund = await token2.balanceOf(riskFund.address);
 
-        it("fails if called by a non-owner", async function () {
-          await expect(riskFund.connect(usdcUser).setPoolRegistry(poolRegistry.address)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-          );
-        });
+        const poolAssetReservesPreviousForToken1 = await riskFund.getPoolAssetReserve(
+          comptroller.address,
+          token1.address,
+        );
+        const poolAssetReservesPreviousForToken2 = await riskFund.getPoolAssetReserve(
+          comptroller.address,
+          token2.address,
+        );
 
-        it("emits PoolRegistryUpdated event", async function () {
-          const newPoolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
-          const tx = riskFund.setPoolRegistry(newPoolRegistry.address);
-          await expect(tx)
-            .to.emit(riskFund, "PoolRegistryUpdated")
-            .withArgs(poolRegistry.address, newPoolRegistry.address);
-        });
+        if (network == "bsctestnet") {
+          token1ReservesInPSR = (await protocolShareReserve.assetsReserves(comptroller.address, token1.address, 0)).add(
+            await protocolShareReserve.assetsReserves(comptroller.address, token1.address, 1),
+          );
+          token2ReservesInPSR = (await protocolShareReserve.assetsReserves(comptroller.address, token2.address, 0)).add(
+            await protocolShareReserve.assetsReserves(comptroller.address, token2.address, 1),
+          );
+
+          await protocolShareReserve.releaseFunds(comptroller.address, [token1.address]);
+          await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
+        } else {
+          token1ReservesInPSR = await protocolShareReserve.assetsReserves(token1.address);
+          token2ReservesInPSR = await protocolShareReserve.assetsReserves(token2.address);
+
+          await protocolShareReserve.releaseFunds(comptroller.address, token1.address, token1Reserve);
+          await protocolShareReserve.releaseFunds(comptroller.address, token2.address, token2Reserve);
+        }
+
+        const token1NewBalanceForRiskFund = await token1.balanceOf(riskFund.address);
+        const token2NewBalanceForRiskFund = await token2.balanceOf(riskFund.address);
+
+        const poolAssetReservesNewForToken1 = await riskFund.getPoolAssetReserve(comptroller.address, token1.address);
+        const poolAssetReservesNewForToken2 = await riskFund.getPoolAssetReserve(comptroller.address, token2.address);
+
+        expect(token1NewBalanceForRiskFund).to.equal(token1PreviousBalanceForRiskFund.add(token1ReservesInPSR.div(2)));
+        expect(token2NewBalanceForRiskFund).to.equal(token2PreviousBalanceForRiskFund.add(token2ReservesInPSR.div(2)));
+
+        expect(poolAssetReservesNewForToken1).to.equal(
+          poolAssetReservesPreviousForToken1.add(token1ReservesInPSR.div(2)),
+        );
+        expect(poolAssetReservesNewForToken2).to.equal(
+          poolAssetReservesPreviousForToken2.add(token2ReservesInPSR.div(2)),
+        );
       });
 
-      describe("setShortfallContractAddress", async function () {
-        it("Reverts on invalid Auction contract address", async function () {
-          await expect(riskFund.setShortfallContractAddress(constants.AddressZero)).to.be.revertedWithCustomError(
-            riskFund,
-            "ZeroAddressNotAllowed",
-          );
-        });
+      it("Transfer reserves from riskFund to auction contract", async () => {
+        let auctionTransferAmount = parseUnits("25", 18);
+        if (network == "bsctestnet") {
+          await protocolShareReserve.releaseFunds(comptroller.address, [token1.address]);
+          await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
+          auctionTransferAmount = parseUnits("25", 6);
+        } else {
+          await protocolShareReserve.releaseFunds(comptroller.address, token1.address, token1Reserve);
+          await protocolShareReserve.releaseFunds(comptroller.address, token2.address, token2Reserve);
+        }
 
-        it("fails if called by a non-owner", async function () {
-          await expect(riskFund.connect(usdcUser).setShortfallContractAddress(someNonzeroAddress)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-          );
-        });
+        const shortfallSigner = await initMainnetUser(shortfall.address, parseEther("2"));
+        await riskFund.connect(shortfallSigner).transferReserveForAuction(comptroller.address, auctionTransferAmount);
 
-        it("emits ShortfallContractUpdated event", async function () {
-          const newShortfall = await smock.fake<Shortfall>("Shortfall");
-          const tx = riskFund.setShortfallContractAddress(newShortfall.address);
-          await expect(tx)
-            .to.emit(riskFund, "ShortfallContractUpdated")
-            .withArgs(shortfall.address, newShortfall.address);
-        });
-      });
-
-      describe("setPancakeSwapRouter", async function () {
-        it("Reverts on invalid PancakeSwap router contract address", async function () {
-          await expect(riskFund.setPancakeSwapRouter(constants.AddressZero)).to.be.revertedWithCustomError(
-            riskFund,
-            "ZeroAddressNotAllowed",
-          );
-        });
-
-        it("fails if called by a non-owner", async function () {
-          await expect(riskFund.connect(usdcUser).setPancakeSwapRouter(someNonzeroAddress)).to.be.revertedWith(
-            "Ownable: caller is not the owner",
-          );
-        });
-
-        it("emits PancakeSwapRouterUpdated event", async function () {
-          const tx = riskFund.setPancakeSwapRouter(someNonzeroAddress);
-          await expect(tx)
-            .to.emit(riskFund, "PancakeSwapRouterUpdated")
-            .withArgs(pancakeSwapRouter.address, someNonzeroAddress);
-        });
-      });
-
-      describe("swapPoolsAssets", async function () {
-        let deadline: number;
-
-        beforeEach(async function () {
-          deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
-        });
-
-        it("fails if called with incorrect arguments", async function () {
-          await expect(
-            riskFund.swapPoolsAssets([vUSDT.address, vUSDC.address], [convertToUnit(10, 18)], [], deadline),
-          ).to.be.revertedWith("Risk fund: markets and amountsOutMin are unequal lengths");
-        });
-
-        it("fails if called with incorrect path length", async function () {
-          await expect(
-            riskFund.swapPoolsAssets(
-              [vUSDT.address, vUSDC.address],
-              [convertToUnit(10, 18), convertToUnit(10, 18)],
-              [],
-              deadline,
-            ),
-          ).to.be.revertedWith("Risk fund: markets and paths are unequal lengths");
-        });
-
-        it("fails if start path is not market", async function () {
-          await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-          await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-          await vUSDC.reduceReserves(convertToUnit(100, 18));
-          await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-
-          await expect(
-            riskFund.swapPoolsAssets(
-              [vUSDC.address],
-              [convertToUnit(10, 18)],
-              [[USDT.address, BUSD.address]],
-              deadline,
-            ),
-          ).to.be.revertedWith("RiskFund: swap path must start with the underlying asset");
-        });
-
-        it("fails if final path is not base convertible asset", async function () {
-          await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-          await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-          await vUSDC.reduceReserves(convertToUnit(100, 18));
-          await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-          await expect(
-            riskFund.swapPoolsAssets(
-              [vUSDC.address],
-              [convertToUnit(10, 18)],
-              [[USDC.address, USDT.address]],
-              deadline,
-            ),
-          ).to.be.revertedWith("RiskFund: finally path must be convertible base asset");
-        });
-
-        it("fails if pool registry is not configured", async function () {
-          const [admin] = await ethers.getSigners();
-          const RiskFund = await ethers.getContractFactory("RiskFund");
-          const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
-          const misconfiguredRiskFund = await upgrades.deployProxy(
-            RiskFund,
-            [pancakeSwapRouter.address, convertToUnit(10, 18), BUSD.address, accessControlManager.address, 150],
-            {
-              constructorArgs: [
-                fakeCorePoolComptroller.address,
-                "0x0000000000000000000000000000000000000001",
-                "0x0000000000000000000000000000000000000002",
-              ],
-            },
-          );
-          await accessControlManager.giveCallPermission(
-            misconfiguredRiskFund.address,
-            "swapPoolsAssets(address[],uint256[],address[][],uint256)",
-            admin.address,
-          );
-          await expect(
-            misconfiguredRiskFund.swapPoolsAssets(
-              [vUSDT.address, vUSDC.address],
-              [convertToUnit(10, 18), convertToUnit(10, 18)],
-              [
-                [USDT.address, BUSD.address],
-                [USDC.address, BUSD.address],
-              ],
-              deadline,
-            ),
-          ).to.be.revertedWithCustomError(misconfiguredRiskFund, "ZeroAddressNotAllowed");
-        });
-      });
-
-      describe("setMinAmountToConvert", async function () {
-        it("reverts on invalid min amount to convert", async function () {
-          await expect(riskFund.setMinAmountToConvert(0)).to.be.revertedWith(
-            "Risk Fund: Invalid min amount to convert",
-          );
-        });
-
-        it("fails if the call is not allowed by ACM", async function () {
-          const [admin] = await ethers.getSigners();
-          await accessControlManager.revokeCallPermission(
-            riskFund.address,
-            "setMinAmountToConvert(uint256)",
-            admin.address,
-          );
-          await expect(riskFund.setMinAmountToConvert(1)).to.be.revertedWithCustomError(riskFund, "Unauthorized");
-        });
-
-        it("emits MinAmountToConvertUpdated event", async function () {
-          const tx = riskFund.setMinAmountToConvert(1);
-          await expect(tx).to.emit(riskFund, "MinAmountToConvertUpdated").withArgs(convertToUnit(10, 18), 1);
-        });
-      });
-
-      describe("setConvertibleBaseAsset", async function () {
-        it("only callable by allowed accounts", async function () {
-          await expect(riskFund.connect(busdUser).setConvertibleBaseAsset(USDT.address)).to.be.revertedWithCustomError(
-            riskFund,
-            "Unauthorized",
-          );
-        });
-
-        it("reverts on invalid convertible base asset", async function () {
-          const [admin] = await ethers.getSigners();
-          await expect(
-            riskFund.connect(admin).setConvertibleBaseAsset("0x0000000000000000000000000000000000000000"),
-          ).to.be.revertedWith("Risk Fund: new convertible base asset address invalid");
-        });
-
-        it("should emit events on success", async function () {
-          const [admin] = await ethers.getSigners();
-          const tx = riskFund.connect(admin).setConvertibleBaseAsset(USDT.address);
-          await expect(tx).to.emit(riskFund, "ConvertibleBaseAssetUpdated").withArgs(BUSD.address, USDT.address);
-        });
+        const shortfallBalance = await token1.balanceOf(shortfall.address);
+        expect(shortfallBalance).to.equal(auctionTransferAmount);
       });
     });
 
-    describe("Risk fund transfers", async function () {
-      let deadline: number;
-
-      beforeEach(async function () {
-        deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
-      });
-
-      it("Checks access control", async function () {
-        const [admin] = await ethers.getSigners();
-        // Revoke
-        await accessControlManager.revokeCallPermission(
-          riskFund.address,
-          "swapPoolsAssets(address[],uint256[],address[][],uint256)",
-          admin.address,
-        );
-        // Fails
-        await expect(riskFund.swapPoolsAssets([], [], [], deadline)).to.be.revertedWithCustomError(
-          riskFund,
-          "Unauthorized",
-        );
-
-        // Reset
-        await accessControlManager.giveCallPermission(
-          riskFund.address,
-          "swapPoolsAssets(address[],uint256[],address[][],uint256)",
-          admin.address,
-        );
-        // Succeeds
-        await riskFund.swapPoolsAssets([], [], [], deadline);
-      });
-
-      it("Convert to BUSD without funds", async function () {
-        const amount = await riskFund.callStatic.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-        expect(amount).equal("0");
-      });
-
-      it("Below min threshold amount", async function () {
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await vUSDC.reduceReserves(convertToUnit(50, 18));
-
-        const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDCBal).equal(convertToUnit(50, 18));
-        await protocolShareReserve.updateAssetsState(comptroller1Proxy.address, USDC.address, 0);
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-        const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
-        expect(riskFundUSDCBal).equal(convertToUnit(15, 18));
-
-        await expect(
-          riskFund.swapPoolsAssets(
-            [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-            [
-              convertToUnit(9, 18),
-              convertToUnit(9, 18),
-              convertToUnit(9, 18),
-              convertToUnit(9, 18),
-              convertToUnit(9, 18),
-            ],
-            [
-              [USDT.address, BUSD.address],
-              [USDC.address, BUSD.address],
-              [USDT.address, BUSD.address],
-              [USDC.address, BUSD.address],
-              [USDT.address, BUSD.address],
-            ],
-            deadline,
-          ),
-        ).to.be.revertedWith("RiskFund: minAmountToConvert violated");
-      });
-
-      it("Above min threshold amount", async function () {
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18));
-
-        const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
-
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-        const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
-        expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
-
-        await riskFund.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-        const expectedValue = BigNumber.from("29916047622748892393");
-        const actualValue = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
-        const tolerance = convertToUnit(3, 17);
-
-        const diff = actualValue.sub(expectedValue).abs(); // Calculate the absolute difference
-        expect(diff.lte(tolerance)).to.be.true;
-
-        const balanceAfter = await USDC.balanceOf(riskFund.address);
-        expect(balanceAfter).equal("0");
-
-        const balanceBUSD = await BUSD.balanceOf(riskFund.address);
-        expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(30, 18)), Number(convertToUnit(3, 17)));
-      });
-
-      it("Add two assets to riskFund", async function () {
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT.address, convertToUnit(1000, 18));
-
-        await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await vUSDT.reduceReserves(convertToUnit(100, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18));
-
-        const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
-
-        const protocolReserveUSDTBal = await USDT.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
-
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDT.address]);
-        const riskFundUSDCBal = await USDC.balanceOf(riskFund.address);
-        expect(riskFundUSDCBal).equal(convertToUnit(30, 18));
-
-        const riskFundUSDTBal = await USDT.balanceOf(riskFund.address);
-        expect(riskFundUSDTBal).equal(convertToUnit(30, 18));
-
-        await riskFund.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-
-        const expectedValue = BigNumber.from("59832095245497784786");
-        const actualValue = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
-        const tolerance = convertToUnit(5, 17);
-
-        const diff = actualValue.sub(expectedValue).abs(); // Calculate the absolute difference
-        expect(diff.lte(tolerance)).to.be.true;
-
-        const balanceBUSD = await BUSD.balanceOf(riskFund.address);
-        expect(Number(balanceBUSD)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
-
-        const pool1Reserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
-        expect(Number(pool1Reserve)).to.be.closeTo(Number(convertToUnit(60, 18)), Number(convertToUnit(3, 17)));
-      });
-    });
-
-    describe("Transfer to Auction contract", async function () {
-      let deadline: number;
-
-      beforeEach(async function () {
-        deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
-      });
-
-      it("Revert while transfering funds to Auction contract", async function () {
-        await expect(
-          riskFund.connect(busdUser).transferReserveForAuction(comptroller1Proxy.address, convertToUnit(30, 18)),
-        ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
-
-        const auctionContract = shortfall.address;
-        await riskFund.setShortfallContractAddress(auctionContract);
-
-        await expect(
-          riskFund
-            .connect(shortfall.wallet)
-            .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(100, 18)),
-        ).to.be.revertedWith("Risk Fund: Insufficient pool reserve.");
-      });
-
-      it("Transfer funds to auction contact", async function () {
-        await riskFund.setShortfallContractAddress(shortfall.address);
-
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT.address, convertToUnit(1000, 18));
-
-        await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await vUSDT.reduceReserves(convertToUnit(100, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18));
-        const protocolReserveUSDCBal = await USDC.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDCBal).equal(convertToUnit(100, 18));
-
-        const protocolReserveUSDTBal = await USDT.balanceOf(protocolShareReserve.address);
-        expect(protocolReserveUSDTBal).equal(convertToUnit(100, 18));
-
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDT.address]);
-
-        await riskFund.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-
-        await riskFund
-          .connect(shortfall.wallet)
-          .transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18));
-        const remainingBalance = await BUSD.balanceOf(riskFund.address);
-        const poolReserve = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
-
-        expect(remainingBalance).equal(poolReserve);
-      });
-
-      it("Should revert the transfer to auction transaction", async function () {
-        const [admin] = await ethers.getSigners();
-        const auctionContract = await smock.fake<Shortfall>("Shortfall");
-
-        await riskFund.setShortfallContractAddress(auctionContract.address);
-
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT.address, convertToUnit(1000, 18));
-
-        await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await vUSDT.reduceReserves(convertToUnit(100, 18));
-        await vUSDC.reduceReserves(convertToUnit(100, 18));
-        await riskFund.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-
-        expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal(0);
-
-        // revoke
-        await accessControlManager.revokeCallPermission(
-          ethers.constants.AddressZero,
-          "transferReserveForAuction(address,uint256)",
-          admin.address,
-        );
-
-        await expect(
-          riskFund.transferReserveForAuction(comptroller1Proxy.address, convertToUnit(20, 18)),
-        ).to.be.revertedWith("Risk fund: Only callable by Shortfall contract");
-
-        // reset
-        await accessControlManager.giveCallPermission(
-          ethers.constants.AddressZero,
-          "transferReserveForAuction(address,uint256)",
-          admin.address,
-        );
-      });
-
-      it("Transfer single asset from multiple pools to riskFund", async function () {
-        const auctionContract = await smock.fake<Shortfall>("Shortfall");
-
-        await riskFund.setShortfallContractAddress(auctionContract.address);
-
-        await USDC.connect(usdcUser).approve(vUSDC.address, convertToUnit(1000, 18));
-
-        await vUSDC.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT.address, convertToUnit(1000, 18));
-
-        await vUSDT.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await USDC.connect(usdcUser).approve(vUSDC2.address, convertToUnit(1000, 18));
-
-        await vUSDC2.connect(usdcUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT2.address, convertToUnit(1000, 18));
-
-        await vUSDT2.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await USDT.connect(usdtUser).approve(vUSDT3.address, convertToUnit(1000, 18));
-
-        await vUSDT3.connect(usdtUser).addReserves(convertToUnit(200, 18));
-
-        await BUSD.connect(busdUser).approve(vBUSD3.address, convertToUnit(1000, 18));
-
-        await vBUSD3.connect(busdUser).addReserves(convertToUnit(50, 18));
-
-        await vUSDT.reduceReserves(convertToUnit(110, 18));
-        await vUSDC.reduceReserves(convertToUnit(120, 18));
-        await vUSDT2.reduceReserves(convertToUnit(150, 18));
-        await vUSDC2.reduceReserves(convertToUnit(160, 18));
-        await vUSDT3.reduceReserves(convertToUnit(175, 18));
-        await vBUSD3.reduceReserves(convertToUnit(50, 18));
-
-        const protocolUSDT = await protocolShareReserve.totalAssetReserve(USDT.address);
-        const protocolUSDC = await protocolShareReserve.totalAssetReserve(USDC.address);
-        const protocolBUSD = await protocolShareReserve.totalAssetReserve(BUSD.address);
-
-        expect(protocolUSDT).equal(convertToUnit(435, 18));
-        expect(protocolUSDC).equal(convertToUnit(280, 18));
-        expect(protocolBUSD).equal(convertToUnit(50, 18));
-
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDT.address]);
-
-        await protocolShareReserve.releaseFunds(comptroller2Proxy.address, [USDT.address]);
-
-        await protocolShareReserve.releaseFunds(comptroller3Proxy.address, [USDT.address]);
-
-        await protocolShareReserve.releaseFunds(comptroller1Proxy.address, [USDC.address]);
-
-        await protocolShareReserve.releaseFunds(comptroller2Proxy.address, [USDC.address]);
-
-        await protocolShareReserve.releaseFunds(comptroller3Proxy.address, [BUSD.address]);
-
-        let riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
-        let riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
-        let riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
-        let riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
-        let riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
-        let riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
-
-        // 30% transferred to risk fund
-        expect(riskUSDTFor1).equal(convertToUnit(33, 18));
-        expect(riskUSDCFor1).equal(convertToUnit(36, 18));
-        expect(riskUSDTFor2).equal(convertToUnit(45, 18));
-        expect(riskUSDCFor2).equal(convertToUnit(48, 18));
-        expect(riskUSDTFor3).equal(convertToUnit("52.5", 18));
-        expect(riskBUSDTFor3).equal(convertToUnit(15, 18));
-
-        await riskFund.swapPoolsAssets(
-          [vUSDT.address, vUSDC.address, vUSDT2.address, vUSDC2.address, vUSDT3.address, vBUSD3.address],
-          [
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-            convertToUnit(10, 18),
-          ],
-          [
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDC.address, BUSD.address],
-            [USDT.address, BUSD.address],
-            [USDT.address, BUSD.address],
-          ],
-          deadline,
-        );
-
-        expect(await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address)).to.be.equal("68803777295611477200");
-
-        riskUSDTFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDT.address);
-        riskUSDCFor1 = await riskFund.getPoolAssetReserve(comptroller1Proxy.address, USDC.address);
-        riskUSDTFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDT.address);
-        riskUSDCFor2 = await riskFund.getPoolAssetReserve(comptroller2Proxy.address, USDC.address);
-        riskUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, USDT.address);
-        riskBUSDTFor3 = await riskFund.getPoolAssetReserve(comptroller3Proxy.address, BUSD.address);
-
-        expect(riskUSDTFor1).equal(0);
-        expect(riskUSDCFor1).equal(0);
-        expect(riskUSDTFor2).equal(0);
-        expect(riskUSDCFor2).equal(0);
-        expect(riskUSDTFor3).equal(0);
-
-        // As BUSD is base asset so PoolAssetReserves should be present.
-        expect(riskBUSDTFor3).to.be.closeTo(convertToUnit(67, 18), convertToUnit(9, 17));
-
-        const poolReserve1 = await riskFund.getPoolsBaseAssetReserves(comptroller1Proxy.address);
-
-        const poolReserve2 = await riskFund.getPoolsBaseAssetReserves(comptroller2Proxy.address);
-
-        const poolReserve3 = await riskFund.getPoolsBaseAssetReserves(comptroller3Proxy.address);
-
-        expect(poolReserve1).to.be.closeTo(convertToUnit(68, 18), convertToUnit(9, 17));
-        expect(poolReserve2).to.be.closeTo(convertToUnit(92, 18), convertToUnit(9, 17));
-        expect(poolReserve3).to.be.closeTo(convertToUnit(67, 18), convertToUnit(9, 17));
+    describe("Swap Assets", () => {
+      it("Swap all pool assets and transferring them to auction contract", async () => {
+        if (network == "bsctestnet") {
+          await protocolShareReserve.releaseFunds(comptroller.address, [token1.address]);
+          await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
+        } else {
+          await protocolShareReserve.releaseFunds(comptroller.address, token1.address, token1Reserve);
+          await protocolShareReserve.releaseFunds(comptroller.address, token2.address, token2Reserve);
+        }
+
+        const riskFundReservesBefore = await riskFund.getPoolsBaseAssetReserves(comptroller.address);
+        const riskFundBalanceBefore = await token1.balanceOf(riskFund.address);
+
+        const [, amountout] = await pancakeSwapRouter
+          .connect(impersonatedTimelock)
+          .getAmountsOut(await token2.balanceOf(riskFund.address), [token2.address, token1.address]);
+
+        const deadline = (await ethers.provider.getBlock("latest")).timestamp + 100;
+        await riskFund.swapPoolsAssets([vToken2.address], [minAmountOut], [[token2.address, token1.address]], deadline);
+
+        const riskFundReservesAfter = await riskFund.getPoolsBaseAssetReserves(comptroller.address);
+        const riskFundBalanceAfter = await token1.balanceOf(riskFund.address);
+
+        expect(riskFundReservesAfter.sub(riskFundReservesBefore)).to.equal(amountout);
+        expect(riskFundBalanceAfter.sub(riskFundBalanceBefore)).to.equal(amountout);
       });
     });
   });

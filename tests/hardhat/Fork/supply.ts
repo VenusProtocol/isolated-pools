@@ -34,41 +34,39 @@ const {
   ACC3,
   ADMIN,
   TOKEN1,
-  VTOKEN1,
   TOKEN2,
+  VTOKEN1,
   VTOKEN2,
+  COMPTROLLER,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
-  COMPTROLLER,
-  BLOCK_NUMBER,
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
+  BLOCK_NUMBER,
 } = getContractAddresses(network as string);
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 
-let impersonatedTimelock: Signer;
-let impersonatedOracleOwner: Signer;
-let accessControlManager: AccessControlManager;
-let priceOracle: ChainlinkOracle;
-let comptroller: Comptroller;
-let vTOKEN1: VToken;
-let vTOKEN2: VToken;
 let token1: IERC20;
 let token2: IERC20;
+let vTOKEN1: VToken;
+let vTOKEN2: VToken;
+let comptroller: Comptroller;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let acc3Signer: Signer;
-let token1Holder: string;
-let token2Holder: string;
+let token1Holder: Signer;
+let token2Holder: Signer;
+let impersonatedTimelock: Signer;
 let resilientOracle: MockPriceOracle;
+let priceOracle: ChainlinkOracle;
+let accessControlManager: AccessControlManager;
 
 const blocksToMine: number = 300000;
 const TOKEN2BorrowAmount = convertToUnit("1", 17);
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
-  impersonatedOracleOwner = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
@@ -118,7 +116,7 @@ if (FORKING) {
       vTOKEN1 = await configureVToken(VTOKEN1);
 
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedOracleOwner);
+      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
 
       const tupleForToken2 = {
         asset: TOKEN2,

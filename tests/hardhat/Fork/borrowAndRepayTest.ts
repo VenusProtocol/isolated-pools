@@ -26,40 +26,42 @@ chai.use(smock.matchers);
 
 const FORKING = process.env.FORKING === "true";
 const network = process.env.NETWORK_NAME || "bsc";
-console.log(network);
+
+console.log("fork tests are running on network:", network);
+
 const {
-  ACM,
   ACC1,
   ACC2,
   ACC3,
   ADMIN,
-  COMPTROLLER,
-  BLOCK_NUMBER,
-  BINANCE_ORACLE,
+  ACM,
   TOKEN1,
   TOKEN2,
   VTOKEN1,
   VTOKEN2,
+  COMPTROLLER,
+  BINANCE_ORACLE,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
+  BLOCK_NUMBER,
 } = getContractAddresses(network as string);
 
-let impersonatedTimelock: Signer;
-let accessControlManager: AccessControlManager;
-let comptroller: Comptroller;
-let vTOKEN1: VToken;
-let vTOKEN2: VToken;
 let token1: IERC20;
 let token2: IERC20;
-let priceOracle: ResilientOracleInterface;
+let vTOKEN1: VToken;
+let vTOKEN2: VToken;
+let comptroller: Comptroller;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let acc3Signer: Signer;
 let token2Holder: Signer;
 let token1Holder: Signer;
+let impersonatedTimelock: Signer;
 let mintAmount: BigNumber;
 let TOKEN2BorrowAmount: BigNumberish;
 let binanceOracle: BinanceOracle;
+let priceOracle: ResilientOracleInterface;
+let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));

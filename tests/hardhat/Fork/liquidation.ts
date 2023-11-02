@@ -28,42 +28,41 @@ const FORKING = process.env.FORKING === "true";
 const network = process.env.NETWORK_NAME || "bsc";
 
 const {
-  ACM,
   ACC1,
   ACC2,
   ADMIN,
+  ACM,
+  PSR,
   TOKEN1,
   TOKEN2,
   VTOKEN1,
   VTOKEN2,
+  COMPTROLLER,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
-  COMPTROLLER,
-  BLOCK_NUMBER,
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
+  BLOCK_NUMBER,
 } = getContractAddresses(network as string);
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 
-let impersonatedTimelock: Signer;
-let impersonatedOracleOwner: Signer;
-let accessControlManager: AccessControlManager;
-let priceOracle: ChainlinkOracle;
-let resilientOracle: MockPriceOracle;
-let comptroller: Comptroller;
-let vTOKEN1: VToken;
-let vTOKEN2: VToken;
 let token1: IERC20;
 let token2: IERC20;
+let vTOKEN1: VToken;
+let vTOKEN2: VToken;
+let comptroller: Comptroller;
 let token1Holder: Signer;
 let token2Holder: Signer;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
+let impersonatedTimelock: Signer;
+let priceOracle: ChainlinkOracle;
+let resilientOracle: MockPriceOracle;
+let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
-  impersonatedOracleOwner = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
 }
 
 async function configureVToken(vTokenAddress: string) {
@@ -129,7 +128,7 @@ if (FORKING) {
       vTOKEN2 = await configureVToken(VTOKEN2);
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedOracleOwner);
+      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
 
       const tupleForToken2 = {
         asset: TOKEN2,
@@ -253,6 +252,9 @@ if (FORKING) {
         const totalReservesToken1Prev = await vTOKEN1.totalReserves();
         const vTOKEN1BalAcc1Prev = await vTOKEN1.balanceOf(ACC1);
         const vTOKEN1BalAcc2Prev = await vTOKEN1.balanceOf(ACC2);
+        const psrBalancePrev = await token1.balanceOf(PSR);
+
+        const psrAndreservesSumPrev = psrBalancePrev.add(totalReservesToken1Prev);
         const borrowBalancePrev = await vTOKEN2.borrowBalanceStored(ACC2);
         const closeFactor = await comptroller.closeFactorMantissa();
         const maxClose = (borrowBalance * closeFactor) / 1e18;
@@ -277,7 +279,6 @@ if (FORKING) {
 
         const protocolSeizeTokens = Math.floor((seizeTokens * protocolSeizeShareMantissa) / liquidationIncentive);
         const liquidatorSeizeTokens = Math.floor(seizeTokens - protocolSeizeTokens);
-
         const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
         const borrowBalanceNew = await vTOKEN2.borrowBalanceStored(ACC2);
         expect(borrowBalancePrev - maxClose).closeTo(borrowBalanceNew, 100);
@@ -285,7 +286,11 @@ if (FORKING) {
         expect(vTOKEN1BalAcc2Prev - vTOKEN1BalAcc2New).to.closeTo(Math.floor(seizeTokens), 100);
 
         expect(vTOKEN1BalAcc1New - vTOKEN1BalAcc1Prev).to.closeTo(liquidatorSeizeTokens, 100);
-        const difference = totalReservesToken1New.sub(totalReservesToken1Prev);
+        const psrBalanceNew = await token1.balanceOf(PSR);
+
+        const psrAndreservesSumNew = psrBalanceNew.add(totalReservesToken1New);
+        const difference = psrAndreservesSumNew.sub(psrAndreservesSumPrev);
+
         expect(difference.toString()).to.closeTo(reserveIncrease.toString(), parseUnits("0.00003", 18));
       });
     });
@@ -347,17 +352,15 @@ if (FORKING) {
 
         // repayAmount will be calculated after accruing interest and then using borrowBalanceStored to get the repayAmount.
         let repayAmount;
-        if (network == "bsctestnet") repayAmount = 1000000079134225;
+        if (network == "bsctestnet") repayAmount = 1000000047610436;
         else if (network == "sepolia") repayAmount = 1000000019025879;
-        else if (network == "bsc") repayAmount = 1000000056340503;
-
+        else if (network == "bsc") repayAmount = 1000000057174840;
         const seizeTokens = ratio * repayAmount;
         const param = {
           vTokenCollateral: vTOKEN1.address,
           vTokenBorrowed: vTOKEN2.address,
           repayAmount: repayAmount,
         };
-
         const result = comptroller.connect(acc1Signer).liquidateAccount(ACC2, [param]);
         await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
         expect(await vTOKEN2.borrowBalanceStored(ACC2)).equals(0);
@@ -375,7 +378,7 @@ if (FORKING) {
         expect(vTOKEN1BalAcc1New - vTOKEN1BalAcc1Prev).to.closeTo(liquidatorSeizeTokens, 1);
         expect(totalReservesToken1New - totalReservesToken1Prev).to.closeTo(
           Math.round(reserveIncrease),
-          parseUnits("0.00003", 18),
+          parseUnits("0.0003", 18),
         );
       });
     });

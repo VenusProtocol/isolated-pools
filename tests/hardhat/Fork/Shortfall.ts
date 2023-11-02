@@ -14,10 +14,10 @@ import {
   Comptroller__factory,
   IERC20,
   IERC20__factory,
+  IMockProtocolShareReserve,
+  IMockProtocolShareReserve__factory,
   MockPriceOracle,
   MockPriceOracle__factory,
-  MockProtocolShareReserve,
-  MockProtocolShareReserve__factory,
   ProtocolShareReserve,
   ProtocolShareReserve__factory,
   RiskFund,
@@ -33,14 +33,9 @@ const FORKING = process.env.FORKING === "true";
 const network = process.env.NETWORK_NAME || "bsc";
 
 const {
-  ADMIN,
   ACM,
-  RESILIENT_ORACLE,
-  CHAINLINK_ORACLE,
-  COMPTROLLER,
-  BLOCK_NUMBER,
-  TOKEN1_HOLDER,
-  TOKEN2_HOLDER,
+  PSR,
+  ADMIN,
   TOKEN1,
   TOKEN2,
   VTOKEN1,
@@ -48,31 +43,32 @@ const {
   RISKFUND,
   SHORTFALL,
   TREASURY,
-  PSR,
+  COMPTROLLER,
+  TOKEN1_HOLDER,
+  TOKEN2_HOLDER,
+  RESILIENT_ORACLE,
+  CHAINLINK_ORACLE,
+  BLOCK_NUMBER,
 } = getContractAddresses(network as string);
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-let impersonatedTimelock: SignerWithAddress;
-let accessControlManager: AccessControlManager;
-let resilientOracle: MockPriceOracle;
-let chainlinkOracle: ChainlinkOracle;
-
-let manager: SignerWithAddress;
-let user1: SignerWithAddress;
-let liquidator: SignerWithAddress;
-
-let comptroller: Comptroller;
-let vTOKEN2: VToken;
-let vTOKEN1: VToken;
-
 let token2: IERC20;
 let token1: IERC20;
-
+let vTOKEN2: VToken;
+let vTOKEN1: VToken;
+let comptroller: Comptroller;
 let shortfall: Shortfall;
-let protocolShareReserve: ProtocolShareReserve | MockProtocolShareReserve;
 let riskFund: RiskFund;
+let user1: SignerWithAddress;
+let manager: SignerWithAddress;
+let liquidator: SignerWithAddress;
+let impersonatedTimelock: SignerWithAddress;
+let resilientOracle: MockPriceOracle;
+let chainlinkOracle: ChainlinkOracle;
+let accessControlManager: AccessControlManager;
+let protocolShareReserve: ProtocolShareReserve | IMockProtocolShareReserve;
 
 const configureTimelock = async () => {
   impersonatedTimelock = await initMainnetUser(ADMIN, parseEther("2"));
@@ -93,13 +89,10 @@ const setupRiskManagementContracts = async () => {
 
   riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
   await riskFund.connect(impersonatedTimelock).setConvertibleBaseAsset(TOKEN1);
-  protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
+  protocolShareReserve = IMockProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
   if (network == "bsctestnet") {
-    protocolShareReserve = MockProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
-  }
-
-  if (network == "bsctestnet") {
+    protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
     const distributionConfig1 = {
       schema: 0,
       percentage: 50,
@@ -119,12 +112,6 @@ const setupRiskManagementContracts = async () => {
 
   shortfall = Shortfall__factory.connect(SHORTFALL, impersonatedTimelock);
   await shortfall.updateMinimumPoolBadDebt(parseUnits("50", 18));
-
-  if (network == "sepolia") {
-    await protocolShareReserve.connect(impersonatedTimelock).acceptOwnership();
-    await riskFund.connect(impersonatedTimelock).acceptOwnership();
-    await shortfall.connect(impersonatedTimelock).acceptOwnership();
-  }
 };
 
 const setupTokens = async () => {
@@ -193,7 +180,6 @@ const pretendRiskFundAccumulatedBaseAsset = async amount => {
   await token1.approve(vTOKEN1.address, token1Reserve);
 
   await vTOKEN1.addReserves(token1Reserve);
-
   await vTOKEN1.reduceReserves(token1Reserve);
 
   if (network == "bsctestnet") {
@@ -209,7 +195,6 @@ const setup = async () => {
   await setForkBlock(BLOCK_NUMBER);
 
   await configureTimelock();
-
   await setupRiskManagementContracts();
   await setupTokens();
   await chainlinkOracle.setDirectPrice(token2.address, parseUnits("100", 18));
