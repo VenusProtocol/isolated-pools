@@ -938,7 +938,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("174983000", 18),
             supplyCap: convertToUnit("500000000", 18),
             borrowCap: convertToUnit("500000000", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", //To be revised
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // To be revised
             reduceReservesBlockDelta: "100",
           },
         ],
@@ -1767,7 +1767,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("174983000", 18),
             supplyCap: convertToUnit("500000000", 18),
             borrowCap: convertToUnit("500000000", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", //To be revised
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // To be revised
             reduceReservesBlockDelta: "100",
           },
         ],
