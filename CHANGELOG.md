@@ -1,3 +1,10 @@
+## [2.2.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.2.0...v2.2.1-dev.1) (2023-11-03)
+
+
+### Bug Fixes
+
+* remove package-lock.json because we use yarn ([47ad4ea](https://github.com/VenusProtocol/isolated-pools/commit/47ad4ea5d1a6cc9e8968b3d4174ed64091137254))
+
 ## [2.2.0](https://github.com/VenusProtocol/isolated-pools/compare/v2.1.0...v2.2.0) (2023-11-01)
 
 
