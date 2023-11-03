@@ -232,7 +232,9 @@ const config: HardhatUserConfig = {
       bsctestnet: [
         "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
         "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+        "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
       ],
+      bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
     },
   },
 };
