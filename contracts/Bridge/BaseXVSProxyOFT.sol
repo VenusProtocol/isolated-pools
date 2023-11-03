@@ -245,6 +245,10 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     function _isEligibleToSend(address from_, uint16 dstChainId_, uint256 amount_) internal {
         // Check if the sender's address is whitelisted
         bool isWhiteListedUser = whitelist[from_];
+        // Check if the user is whitelisted and return if true
+        if (isWhiteListedUser) {
+            return;
+        }
 
         // Calculate the amount in USD using the oracle price
         uint256 amountInUsd;
@@ -258,8 +262,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         uint256 maxSingleTransactionLimit = chainIdToMaxSingleTransactionLimit[dstChainId_];
         uint256 maxDailyLimit = chainIdToMaxDailyLimit[dstChainId_];
 
-        // Revert if the amount exceeds the single transaction limit and the recipient is not whitelisted
-        require(amountInUsd <= maxSingleTransactionLimit || isWhiteListedUser, "Single Transaction Limit Exceed");
+        // Revert if the amount exceeds the single transaction limit
+        require(amountInUsd <= maxSingleTransactionLimit, "Single Transaction Limit Exceed");
 
         // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlockTimestamp - lastDayWindowStart > 1 days) {
@@ -269,8 +273,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
             transferredInWindow += amountInUsd;
         }
 
-        // Revert if the amount exceeds the daily limit and the recipient is not whitelisted
-        require(transferredInWindow <= maxDailyLimit || isWhiteListedUser, "Daily Transaction Limit Exceed");
+        // Revert if the amount exceeds the daily limit
+        require(transferredInWindow <= maxDailyLimit, "Daily Transaction Limit Exceed");
 
         // Update the amount for the 24-hour window
         chainIdToLast24HourTransferred[dstChainId_] = transferredInWindow;
@@ -279,6 +283,10 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     function _isEligibleToReceive(address toAddress_, uint16 srcChainId_, uint256 receivedAmount_) internal {
         // Check if the recipient's address is whitelisted
         bool isWhiteListedUser = whitelist[toAddress_];
+        // Check if the user is whitelisted and return if true
+        if (isWhiteListedUser) {
+            return;
+        }
 
         // Calculate the received amount in USD using the oracle price
         uint256 receivedAmountInUsd;
@@ -293,11 +301,8 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         uint256 maxSingleReceiveTransactionLimit = chainIdToMaxSingleReceiveTransactionLimit[srcChainId_];
         uint256 maxDailyReceiveLimit = chainIdToMaxDailyReceiveLimit[srcChainId_];
 
-        // Check if the received amount exceeds the single transaction limit and the recipient is not whitelisted
-        require(
-            receivedAmountInUsd <= maxSingleReceiveTransactionLimit || isWhiteListedUser,
-            "Single Transaction Limit Exceed"
-        );
+        // Check if the received amount exceeds the single transaction limit
+        require(receivedAmountInUsd <= maxSingleReceiveTransactionLimit, "Single Transaction Limit Exceed");
 
         // Check if the time window has changed (more than 24 hours have passed)
         if (currentBlockTimestamp - lastDayReceiveWindowStart > 1 days) {
@@ -307,14 +312,18 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
             receivedInWindow += receivedAmountInUsd;
         }
 
-        // Revert if the received amount exceeds the daily limit and the recipient is not whitelisted
-        require(receivedInWindow <= maxDailyReceiveLimit || isWhiteListedUser, "Daily Transaction Limit Exceed");
+        // Revert if the received amount exceeds the daily limit
+        require(receivedInWindow <= maxDailyReceiveLimit, "Daily Transaction Limit Exceed");
 
         // Update the received amount for the 24-hour window
         chainIdToLast24HourReceived[srcChainId_] = receivedInWindow;
     }
 
-    function _transferFrom(address from_, address to_, uint256 amount_) internal override  whenNotPaused returns (uint256) {
+    function _transferFrom(
+        address from_,
+        address to_,
+        uint256 amount_
+    ) internal override whenNotPaused returns (uint256) {
         uint256 before = innerToken.balanceOf(to_);
         if (from_ == address(this)) {
             innerToken.safeTransfer(to_, amount_);
