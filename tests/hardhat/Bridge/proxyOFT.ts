@@ -113,7 +113,7 @@ describe("Proxy OFTV2: ", function () {
       "Ownable: caller is not the owner",
     );
 
-    // Should revertif provided address is 0
+    // Should revert if provided address is 0
     await expect(
       bridgeAdminLocal.setTrustedRemoteAddress(localChainId, ethers.constants.AddressZero),
     ).to.be.revertedWithCustomError(bridgeAdminLocal, "ZeroAddressNotAllowed");

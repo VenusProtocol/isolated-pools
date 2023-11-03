@@ -7,7 +7,6 @@ import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { BaseOFTV2 } from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/BaseOFTV2.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ExponentialNoError } from "../ExponentialNoError.sol";
-import { BytesLib } from "@layerzerolabs/solidity-examples/contracts/libraries/BytesLib.sol";
 
 /**
  * @title BaseXVSProxyOFT
@@ -22,7 +21,6 @@ import { BytesLib } from "@layerzerolabs/solidity-examples/contracts/libraries/B
 
 abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
     using SafeERC20 for IERC20;
-    using BytesLib for bytes;
     IERC20 internal immutable innerToken;
     uint256 internal immutable ld2sdRate;
 
@@ -340,15 +338,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
                 keccak256(_srcAddress) == keccak256(trustedRemote),
             "LzApp: invalid source sending contract"
         );
-        uint8 packetType = _payload.toUint8(0);
-
-        if (packetType == PT_SEND) {
-            _sendAck(_srcChainId, _srcAddress, _nonce, _payload);
-        } else if (packetType == PT_SEND_AND_CALL) {
-            _sendAndCallAck(_srcChainId, _srcAddress, _nonce, _payload);
-        } else {
-            revert("OFTCore: unknown packet type");
-        }
+        super._nonblockingLzReceive(_srcChainId, _srcAddress, _nonce, _payload);
     }
 
     function _ld2sdRate() internal view override returns (uint256) {
