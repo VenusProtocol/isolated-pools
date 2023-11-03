@@ -98,7 +98,6 @@ const preconfiguredAddresses = {
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
     SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
     Unitroller: "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D",
-    ProtocolShareReserve: "0xc987a03ab6C2A5891Fc0919f021cc693B5E55278",
     Shortfall: "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
   },
   bscmainnet: {
@@ -113,7 +112,6 @@ const preconfiguredAddresses = {
     VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
     SwapRouter_CorePool: "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4",
     Unitroller: "0xfD36E2c2a6789Db23113685031d7F16329158384",
-    ProtocolShareReserve: "0xfB5bE09a1FA6CFDA075aB1E69FE83ce8324682e4",
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
 };
@@ -936,9 +934,9 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.3", 18),
             reserveFactor: convertToUnit("0.25", 18),
             initialSupply: convertToUnit("174983000", 18),
-            supplyCap: convertToUnit("500000000", 18),
+            supplyCap: convertToUnit(" 1000000000 ", 18),
             borrowCap: convertToUnit("500000000", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // To be revised
+            vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
             reduceReservesBlockDelta: "100",
           },
         ],
@@ -1765,9 +1763,9 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.3", 18),
             reserveFactor: convertToUnit("0.25", 18),
             initialSupply: convertToUnit("174983000", 18),
-            supplyCap: convertToUnit("500000000", 18),
+            supplyCap: convertToUnit(" 1000000000 ", 18),
             borrowCap: convertToUnit("500000000", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // To be revised
+            vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
             reduceReservesBlockDelta: "28800",
           },
         ],
