@@ -314,7 +314,7 @@ abstract contract BaseXVSProxyOFT is Pausable, ExponentialNoError, BaseOFTV2 {
         chainIdToLast24HourReceived[srcChainId_] = receivedInWindow;
     }
 
-    function _transferFrom(address from_, address to_, uint256 amount_) internal override returns (uint256) {
+    function _transferFrom(address from_, address to_, uint256 amount_) internal override  whenNotPaused returns (uint256) {
         uint256 before = innerToken.balanceOf(to_);
         if (from_ == address(this)) {
             innerToken.safeTransfer(to_, amount_);
