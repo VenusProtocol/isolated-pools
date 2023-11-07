@@ -11,17 +11,17 @@ import { vTokenTestFixture } from "../util/TokenTestHelpers";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const blockNumber = 2e7;
+const blockTimestamp = 2e10;
 const borrowIndex = parseUnits("1", 18).toBigInt();
 const borrowRate = parseUnits("0.000001", 18).toBigInt();
 
 async function pretendBlock(
   vToken: VTokenHarness,
-  accrualBlock: BigNumberish = blockNumber,
-  deltaBlocks: BigNumberish = 1,
+  accrualBlockTimestamp: BigNumberish = blockTimestamp,
+  deltaTime: BigNumberish = 1,
 ) {
-  await vToken.harnessSetAccrualBlockNumber(accrualBlock);
-  await vToken.harnessSetBlockNumber(BigNumber.from(accrualBlock).add(deltaBlocks));
+  await vToken.harnessSetAccrualBlockTimestamp(accrualBlockTimestamp);
+  await vToken.harnessSetBlockTimestamp(BigNumber.from(accrualBlockTimestamp).add(deltaTime));
   await vToken.harnessSetBorrowIndex(borrowIndex);
 }
 
@@ -53,25 +53,25 @@ describe("VToken", () => {
 
   describe("accrueInterest", () => {
     it("reverts if the interest rate is absurdly high", async () => {
-      await pretendBlock(vToken, blockNumber, 1);
+      await pretendBlock(vToken, blockTimestamp, 1);
       expect(await vToken.getBorrowRateMaxMantissa()).to.equal(parseUnits("0.000005", 18)); // 0.0005% per block
       interestRateModel.getBorrowRate.returns(parseUnits("0.00001", 18)); // 0.0010% per block
       await expect(vToken.accrueInterest()).to.be.revertedWith("borrow rate is absurdly high");
     });
 
     it("fails if new borrow rate calculation fails", async () => {
-      await pretendBlock(vToken, blockNumber, 1);
+      await pretendBlock(vToken, blockTimestamp, 1);
       interestRateModel.getBorrowRate.reverts("Oups");
       await expect(vToken.accrueInterest()).to.be.reverted; // With("INTEREST_RATE_MODEL_ERROR");
     });
 
     it("fails if simple interest factor calculation fails", async () => {
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 70));
+      await pretendBlock(vToken, blockTimestamp, parseUnits("5", 70));
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
     it("fails if new borrow index calculation fails", async () => {
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 60));
+      await pretendBlock(vToken, blockTimestamp, parseUnits("5", 60));
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
@@ -98,7 +98,7 @@ describe("VToken", () => {
       interestRateModel.getBorrowRate.returns(parseUnits("0.000001", 18));
       await vToken.harnessExchangeRateDetails(0, parseUnits("1", 30), constants.MaxUint256);
       await vToken.harnessSetReserveFactorFresh(parseUnits("1", 10));
-      await pretendBlock(vToken, blockNumber, parseUnits("5", 20));
+      await pretendBlock(vToken, blockTimestamp, parseUnits("5", 20));
       await expect(vToken.accrueInterest()).to.be.revertedWithPanic(PANIC_CODES.ARITHMETIC_UNDER_OR_OVERFLOW);
     });
 
@@ -119,7 +119,7 @@ describe("VToken", () => {
       await vToken.harnessSetReserveFactorFresh(reserveFactor);
       await pretendBlock(vToken);
 
-      const expectedAccrualBlockNumber = blockNumber + 1;
+      const expectedAccrualBlockTimestamp = blockTimestamp + 1;
       const expectedBorrowIndex = BigNumber.from(borrowIndex).add(
         BigNumber.from(borrowIndex).mul(borrowRate).div(parseUnits("1", 18)),
       );
@@ -137,7 +137,7 @@ describe("VToken", () => {
         .to.emit(vToken, "AccrueInterest")
         .withArgs(0, expectedInterestAccumulated, expectedBorrowIndex, expectedTotalBorrows);
 
-      expect(await vToken.accrualBlockNumber()).to.equal(expectedAccrualBlockNumber);
+      expect(await vToken.accrualBlockTimestamp()).to.equal(expectedAccrualBlockTimestamp);
       expect(await vToken.borrowIndex()).to.equal(expectedBorrowIndex);
       expect(await vToken.totalBorrows()).to.equal(expectedTotalBorrows);
       expect(await vToken.totalReserves()).to.equal(expectedTotalReserves);

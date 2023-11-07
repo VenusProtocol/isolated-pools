@@ -168,7 +168,14 @@ describe("Bridge Admin: ", function () {
 
   it("Success if permisssions are granted to call owner functions of bridge", async function () {
     await grantPermissions();
+
     let data = remoteOFT.interface.encodeFunctionData("setTrustedRemote", [localChainId, remotePath]);
+    await alice.sendTransaction({
+      to: bridgeAdmin.address,
+      data: data,
+    });
+
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
     await alice.sendTransaction({
       to: bridgeAdmin.address,
       data: data,
@@ -183,7 +190,7 @@ describe("Bridge Admin: ", function () {
       data: data,
     });
 
-    data = remoteOFT.interface.encodeFunctionData("setMaxDailyLimit", [localChainId, maxDailyTransactionLimit]);
+    data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
     await alice.sendTransaction({
       to: bridgeAdmin.address,
       data: data,
@@ -193,12 +200,6 @@ describe("Bridge Admin: ", function () {
       localChainId,
       singleTransactionLimit,
     ]);
-    await alice.sendTransaction({
-      to: bridgeAdmin.address,
-      data: data,
-    });
-
-    data = remoteOFT.interface.encodeFunctionData("setMaxDailyReceiveLimit", [localChainId, maxDailyTransactionLimit]);
     await alice.sendTransaction({
       to: bridgeAdmin.address,
       data: data,

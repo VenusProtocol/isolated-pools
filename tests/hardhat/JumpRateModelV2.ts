@@ -20,7 +20,7 @@ describe("Jump rate model tests", () => {
   const reserves = convertToUnit(2, 19);
   const badDebt = convertToUnit(1, 19);
   const expScale = convertToUnit(1, 18);
-  const blocksPerYear = 10512000;
+  const secondsPerYear = 31536000;
   const baseRatePerYear = convertToUnit(2, 12);
   const multiplierPerYear = convertToUnit(4, 14);
   const jumpMultiplierPerYear = convertToUnit(2, 18);
@@ -45,24 +45,24 @@ describe("Jump rate model tests", () => {
   });
 
   it("Update jump rate model", async () => {
-    let baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(blocksPerYear).toFixed(0);
-    let multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(new BigNumber(blocksPerYear)).toFixed(0);
-    let jumpMultiplierPerBlock = new BigNumber(jumpMultiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
+    let baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(secondsPerYear).toFixed(0);
+    let multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(new BigNumber(secondsPerYear)).toFixed(0);
+    let jumpMultiplierPerBlock = new BigNumber(jumpMultiplierPerYear).dividedBy(secondsPerYear).toFixed(0);
 
-    expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
-    expect(await jumpRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
-    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal(jumpMultiplierPerBlock);
+    expect(await jumpRateModel.baseRatePerSecond()).equal(baseRatePerBlock);
+    expect(await jumpRateModel.multiplierPerSecond()).equal(multiplierPerBlock);
+    expect(await jumpRateModel.jumpMultiplierPerSecond()).equal(jumpMultiplierPerBlock);
     expect(await jumpRateModel.kink()).equal(kink);
 
     await jumpRateModel.updateJumpRateModel(convertToUnit(3, 12), convertToUnit(5, 14), convertToUnit(2.2, 18), kink);
 
-    baseRatePerBlock = new BigNumber(convertToUnit(3, 12)).dividedBy(blocksPerYear).toFixed(0);
-    multiplierPerBlock = new BigNumber(convertToUnit(5, 14)).dividedBy(new BigNumber(blocksPerYear)).toFixed(0);
-    jumpMultiplierPerBlock = new BigNumber(convertToUnit(2.2, 18)).dividedBy(blocksPerYear).toFixed(0);
+    baseRatePerBlock = new BigNumber(convertToUnit(3, 12)).dividedBy(secondsPerYear).toFixed(0);
+    multiplierPerBlock = new BigNumber(convertToUnit(5, 14)).dividedBy(new BigNumber(secondsPerYear)).toFixed(0);
+    jumpMultiplierPerBlock = new BigNumber(convertToUnit(2.2, 18)).dividedBy(secondsPerYear).toFixed(0);
 
-    expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
-    expect(await jumpRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
-    expect(await jumpRateModel.jumpMultiplierPerBlock()).equal(jumpMultiplierPerBlock);
+    expect(await jumpRateModel.baseRatePerSecond()).equal(baseRatePerBlock);
+    expect(await jumpRateModel.multiplierPerSecond()).equal(multiplierPerBlock);
+    expect(await jumpRateModel.jumpMultiplierPerSecond()).equal(jumpMultiplierPerBlock);
     expect(await jumpRateModel.kink()).equal(kink);
   });
 
@@ -80,8 +80,8 @@ describe("Jump rate model tests", () => {
   });
 
   it("Borrow Rate: below kink utilization", async () => {
-    const multiplierPerBlock = (await jumpRateModel.multiplierPerBlock()).toString();
-    const baseRatePerBlock = (await jumpRateModel.baseRatePerBlock()).toString();
+    const multiplierPerBlock = (await jumpRateModel.multiplierPerSecond()).toString();
+    const baseRatePerBlock = (await jumpRateModel.baseRatePerSecond()).toString();
     const utilizationRate = (await jumpRateModel.utilizationRate(cash, borrows, reserves, badDebt)).toString();
 
     const value = new BigNumber(utilizationRate).multipliedBy(multiplierPerBlock).dividedBy(expScale).toFixed(0);
@@ -92,9 +92,9 @@ describe("Jump rate model tests", () => {
   });
 
   it("Borrow Rate: above kink utilization", async () => {
-    const multiplierPerBlock = (await jumpRateModel.multiplierPerBlock()).toString();
-    const jumpMultiplierPerBlock = (await jumpRateModel.jumpMultiplierPerBlock()).toString();
-    const baseRatePerBlock = (await jumpRateModel.baseRatePerBlock()).toString();
+    const multiplierPerBlock = (await jumpRateModel.multiplierPerSecond()).toString();
+    const jumpMultiplierPerBlock = (await jumpRateModel.jumpMultiplierPerSecond()).toString();
+    const baseRatePerBlock = (await jumpRateModel.baseRatePerSecond()).toString();
     const utilizationRate = (
       await jumpRateModel.utilizationRate(convertToUnit(6, 19), convertToUnit(16, 19), reserves, badDebt)
     ).toString();

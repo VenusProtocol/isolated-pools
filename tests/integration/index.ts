@@ -359,8 +359,9 @@ describe("Positive Cases", function () {
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
 
       // Mining blocks
-      await mine(300000000);
+      await mine(400000000);
 
+      // await Comptroller.setMinLiquidatableCollateral();
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
       await Comptroller.connect(acc1Signer).healAccount(acc2);
 

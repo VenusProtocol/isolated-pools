@@ -44,14 +44,14 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
     /// @notice Auction metadata
     struct Auction {
-        uint256 startBlock;
+        uint256 startBlockTimestamp;
         AuctionType auctionType;
         AuctionStatus status;
         VToken[] markets;
         uint256 seizedRiskFund;
         address highestBidder;
         uint256 highestBidBps;
-        uint256 highestBidBlock;
+        uint256 highestBidBlockTimestamp;
         uint256 startBidBps;
         mapping(VToken => uint256) marketDebt;
         mapping(VToken => uint256) bidAmount;
@@ -60,9 +60,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
+    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_TIMESTAMP_LIMIT = 300;
 
-    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
+    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 300;
 
     uint256 private constant DEFAULT_INCENTIVE_BPS = 1000; // 10%
 
@@ -78,13 +78,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
     uint256 public incentiveBps;
 
-    /// @notice Time to wait for next bidder. Initially waits for 100 blocks
-    uint256 public nextBidderBlockLimit;
+    /// @notice Time to wait for next bidder. Initially waits for 300 seconds
+    uint256 public nextBidderBlockTimestampLimit;
 
     /// @notice Boolean of if auctions are paused
     bool public auctionsPaused;
 
-    /// @notice Time to wait for first bidder. Initially waits for 100 blocks
+    /// @notice Time to wait for first bidder. Initially waits for 300 seconds
     uint256 public waitForFirstBidder;
 
     /// @notice Auctions for each pool
@@ -93,7 +93,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when a auction starts
     event AuctionStarted(
         address indexed comptroller,
-        uint256 auctionStartBlock,
+        uint256 auctionStartBlockTimestamp,
         AuctionType auctionType,
         VToken[] markets,
         uint256[] marketsDebt,
@@ -102,12 +102,17 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a bid is placed
-    event BidPlaced(address indexed comptroller, uint256 auctionStartBlock, uint256 bidBps, address indexed bidder);
+    event BidPlaced(
+        address indexed comptroller,
+        uint256 auctionStartBlockTimestamp,
+        uint256 bidBps,
+        address indexed bidder
+    );
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
         address indexed comptroller,
-        uint256 auctionStartBlock,
+        uint256 auctionStartBlockTimestamp,
         address indexed highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
@@ -116,7 +121,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a auction is restarted
-    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlock);
+    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlockTimestamp);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -124,11 +129,14 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
-    /// @notice Emitted when wait for first bidder block count is updated
+    /// @notice Emitted when wait for first bidder block timestamp is updated
     event WaitForFirstBidderUpdated(uint256 oldWaitForFirstBidder, uint256 newWaitForFirstBidder);
 
-    /// @notice Emitted when next bidder block limit is updated
-    event NextBidderBlockLimitUpdated(uint256 oldNextBidderBlockLimit, uint256 newNextBidderBlockLimit);
+    /// @notice Emitted when next bidder block timestamp limit is updated
+    event NextBidderBlockTimestampLimitUpdated(
+        uint256 oldNextBidderBlockTimestampLimit,
+        uint256 newNextBidderBlockTimestampLimit
+    );
 
     /// @notice Emitted when incentiveBps is updated
     event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
@@ -169,7 +177,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         minimumPoolBadDebt = minimumPoolBadDebt_;
         riskFund = riskFund_;
         waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
-        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
+        nextBidderBlockTimestampLimit = DEFAULT_NEXT_BIDDER_BLOCK_TIMESTAMP_LIMIT;
         incentiveBps = DEFAULT_INCENTIVE_BPS;
         auctionsPaused = false;
     }
@@ -178,13 +186,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
-     * @param auctionStartBlock The block number when auction started
+     * @param auctionStartBlockTimestamp The block timestamp when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlock) external nonReentrant {
+    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlockTimestamp) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock == auctionStartBlock, "auction has been restarted");
+        require(auction.startBlockTimestamp == auctionStartBlockTimestamp, "auction has been restarted");
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
         require(bidBps > 0, "basis points cannot be zero");
@@ -222,9 +230,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         auction.highestBidder = msg.sender;
         auction.highestBidBps = bidBps;
-        auction.highestBidBlock = block.number;
+        auction.highestBidBlockTimestamp = block.timestamp;
 
-        emit BidPlaced(comptroller, auction.startBlock, bidBps, msg.sender);
+        emit BidPlaced(comptroller, auction.startBlockTimestamp, bidBps, msg.sender);
     }
 
     /**
@@ -237,7 +245,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(_isStarted(auction), "no on-going auction");
         require(
-            block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0),
+            block.timestamp > auction.highestBidBlockTimestamp + nextBidderBlockTimestampLimit &&
+                auction.highestBidder != address(0),
             "waiting for next bidder. cannot close auction"
         );
 
@@ -273,7 +282,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         emit AuctionClosed(
             comptroller,
-            auction.startBlock,
+            auction.startBlockTimestamp,
             auction.highestBidder,
             auction.highestBidBps,
             transferredAmount,
@@ -307,22 +316,22 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         auction.status = AuctionStatus.ENDED;
 
-        emit AuctionRestarted(comptroller, auction.startBlock);
+        emit AuctionRestarted(comptroller, auction.startBlockTimestamp);
         _startAuction(comptroller);
     }
 
     /**
-     * @notice Update next bidder block limit which is used determine when an auction can be closed
-     * @param _nextBidderBlockLimit  New next bidder block limit
-     * @custom:event Emits NextBidderBlockLimitUpdated on success
+     * @notice Update next bidder block timestamp limit which is used determine when an auction can be closed
+     * @param _nextBidderBlockTimestampLimit  New next bidder block timestamp limit
+     * @custom:event Emits NextBidderBlockTimestampLimitUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
-        _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
-        require(_nextBidderBlockLimit != 0, "_nextBidderBlockLimit must not be 0");
-        uint256 oldNextBidderBlockLimit = nextBidderBlockLimit;
-        nextBidderBlockLimit = _nextBidderBlockLimit;
-        emit NextBidderBlockLimitUpdated(oldNextBidderBlockLimit, _nextBidderBlockLimit);
+    function updateNextBidderBlockTimestampLimit(uint256 _nextBidderBlockTimestampLimit) external {
+        _checkAccessAllowed("updateNextBidderBlockTimestampLimit(uint256)");
+        require(_nextBidderBlockTimestampLimit != 0, "_nextBidderBlockTimestampLimit must not be 0");
+        uint256 oldNextBidderBlockTimestampLimit = nextBidderBlockTimestampLimit;
+        nextBidderBlockTimestampLimit = _nextBidderBlockTimestampLimit;
+        emit NextBidderBlockTimestampLimitUpdated(oldNextBidderBlockTimestampLimit, _nextBidderBlockTimestampLimit);
     }
 
     /**
@@ -353,8 +362,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     }
 
     /**
-     * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
-     * @param _waitForFirstBidder  New wait for first bidder block count
+     * @notice Update wait for first bidder block timestampcount. If the first bid is not made within this limit, the auction is closed and needs to be restarted
+     * @param _waitForFirstBidder  New wait for first bidder block timestamp count
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted by ACM
      */
@@ -421,7 +430,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         );
 
         auction.highestBidBps = 0;
-        auction.highestBidBlock = 0;
+        auction.highestBidBlockTimestamp = 0;
 
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
@@ -473,13 +482,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         }
 
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
-        auction.startBlock = block.number;
+        auction.startBlockTimestamp = block.timestamp;
         auction.status = AuctionStatus.STARTED;
         auction.highestBidder = address(0);
 
         emit AuctionStarted(
             comptroller,
-            auction.startBlock,
+            auction.startBlockTimestamp,
             auction.auctionType,
             auction.markets,
             marketsDebt,
@@ -517,12 +526,12 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
     /**
      * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
-     *   was started more than waitForFirstBidder blocks ago.
+     *   was started more than waitForFirstBidder block timestamp ago.
      * @param auction The auction to query the status for
      * @return True if the auction is stale
      */
     function _isStale(Auction storage auction) internal view returns (bool) {
         bool noBidder = auction.highestBidder == address(0);
-        return noBidder && (block.number > auction.startBlock + waitForFirstBidder);
+        return noBidder && (block.timestamp > auction.startBlockTimestamp + waitForFirstBidder);
     }
 }
