@@ -11,6 +11,7 @@ import {
   AccessControlManager,
   Comptroller,
   MockPriceOracle,
+  MockPriceOracle__factory,
   MockToken,
   PoolRegistry,
   ProtocolShareReserve,
@@ -359,12 +360,10 @@ describe("Positive Cases", function () {
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
 
       // Mining blocks
-      await mine(400000000);
+      await mine(700000000);
 
-      // await Comptroller.setMinLiquidatableCollateral();
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
       await Comptroller.connect(acc1Signer).healAccount(acc2);
-
       // Now another user should not be able to borrow equal to borrowCap - totalBorrows as there is badDebt also
       await expect(vBTCB.connect(acc1Signer).borrow(borrowCap)).to.be.revertedWithCustomError(
         Comptroller,
@@ -479,7 +478,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const repayAmount = convertToUnit("1000000000007133", 0);
+      const repayAmount = convertToUnit("1000000000002377", 0);
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,
