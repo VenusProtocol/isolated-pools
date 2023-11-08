@@ -54,7 +54,7 @@ contract VTokenStorage {
      */
     address payable public protocolShareReserve;
 
-    // Maximum borrow rate that can ever be applied (.0005% / second)
+    // Maximum borrow rate that can ever be applied (.0005% / block)
     uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
 
     // Maximum fraction of interest that can be set aside for reserves
@@ -79,9 +79,9 @@ contract VTokenStorage {
     uint256 public reserveFactorMantissa;
 
     /**
-     * @notice Block timestamp that interest was last accrued at
+     * @notice Block number that interest was last accrued at
      */
-    uint256 public accrualBlockTimestamp;
+    uint256 public accrualBlockNumber;
 
     /**
      * @notice Accumulator of the total earned interest rate since the opening of the market
@@ -343,9 +343,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function getAccountSnapshot(address account) external view virtual returns (uint256, uint256, uint256, uint256);
 
-    function borrowRatePerSecond() external view virtual returns (uint256);
+    function borrowRatePerBlock() external view virtual returns (uint256);
 
-    function supplyRatePerSecond() external view virtual returns (uint256);
+    function supplyRatePerBlock() external view virtual returns (uint256);
 
     function borrowBalanceStored(address account) external view virtual returns (uint256);
 

@@ -657,18 +657,18 @@ contract VToken is
     }
 
     /**
-     * @notice Returns the current per-second borrow interest rate for this vToken
-     * @return rate The borrow interest rate per second, scaled by 1e18
+     * @notice Returns the current per-block borrow interest rate for this vToken
+     * @return rate The borrow interest rate per block, scaled by 1e18
      */
-    function borrowRatePerSecond() external view override returns (uint256) {
+    function borrowRatePerBlock() external view override returns (uint256) {
         return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves, badDebt);
     }
 
     /**
-     * @notice Returns the current per-second supply interest rate for this v
-     * @return rate The supply interest rate per second, scaled by 1e18
+     * @notice Returns the current per-block supply interest rate for this v
+     * @return rate The supply interest rate per block, scaled by 1e18
      */
-    function supplyRatePerSecond() external view override returns (uint256) {
+    function supplyRatePerBlock() external view override returns (uint256) {
         return
             interestRateModel.getSupplyRate(
                 _getCashPrior(),
@@ -708,19 +708,19 @@ contract VToken is
 
     /**
      * @notice Applies accrued interest to total borrows and reserves
-     * @dev This calculates interest accrued from the last checkpointed timestamp
-     *   up to the current timestamp and writes new checkpoint to storage.
+     * @dev This calculates interest accrued from the last checkpointed block
+     *   up to the current block and writes new checkpoint to storage.
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
      */
     function accrueInterest() public virtual override returns (uint256) {
-        /* Remember the initial timestamp */
-        uint256 currentBlockTimestamp = _getBlockTimestamp();
-        uint256 accrualBlockTimestampPrior = accrualBlockTimestamp;
+        /* Remember the initial block number */
+        uint256 currentBlockNumber = _getBlockNumber();
+        uint256 accrualBlockNumberPrior = accrualBlockNumber;
 
         /* Short-circuit accumulating 0 interest */
-        if (accrualBlockTimestampPrior == currentBlockTimestamp) {
+        if (accrualBlockNumberPrior == currentBlockNumber) {
             return NO_ERROR;
         }
 
@@ -734,19 +734,19 @@ contract VToken is
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior, badDebt);
         require(borrowRateMantissa <= MAX_BORROW_RATE_MANTISSA, "borrow rate is absurdly high");
 
-        /* Calculate the time elapsed since the last accrual */
-        uint256 timestampDelta = currentBlockTimestamp - accrualBlockTimestampPrior;
+        /* Calculate the number of blocks elapsed since the last accrual */
+        uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
 
         /*
          * Calculate the interest accumulated into borrows and reserves and the new index:
-         *  simpleInterestFactor = borrowRate * timestampDelta
+         *  simpleInterestFactor = borrowRate * blockDelta
          *  interestAccumulated = simpleInterestFactor * totalBorrows
          *  totalBorrowsNew = interestAccumulated + totalBorrows
          *  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
          *  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
          */
 
-        Exp memory simpleInterestFactor = mul_(Exp({ mantissa: borrowRateMantissa }), timestampDelta);
+        Exp memory simpleInterestFactor = mul_(Exp({ mantissa: borrowRateMantissa }), blockDelta);
         uint256 interestAccumulated = mul_ScalarTruncate(simpleInterestFactor, borrowsPrior);
         uint256 totalBorrowsNew = interestAccumulated + borrowsPrior;
         uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
@@ -761,7 +761,7 @@ contract VToken is
         // (No safe failures beyond this point)
 
         /* We write the previously calculated values into storage */
-        accrualBlockTimestamp = currentBlockTimestamp;
+        accrualBlockNumber = currentBlockNumber;
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
@@ -774,7 +774,7 @@ contract VToken is
 
     /**
      * @notice User supplies assets into the market and receives vTokens in exchange
-     * @dev Assumes interest has already been accrued up to the current time
+     * @dev Assumes interest has already been accrued up to the current block
      * @param payer The address of the account which is sending the assets for supply
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
@@ -783,8 +783,8 @@ contract VToken is
         /* Fail if mint not allowed */
         comptroller.preMintHook(address(this), minter, mintAmount);
 
-        /* Verify market's timestamp number equals current timestamp */
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert MintFreshnessCheck();
         }
 
@@ -827,7 +827,7 @@ contract VToken is
 
     /**
      * @notice User redeems vTokens in exchange for the underlying asset
-     * @dev Assumes interest has already been accrued up to the current time
+     * @dev Assumes interest has already been accrued up to the current block
      * @param redeemer The address of the account which is redeeming the tokens
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
@@ -835,8 +835,8 @@ contract VToken is
     function _redeemFresh(address redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
-        /* Verify market's block timestamp equals current block timestamp */
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert RedeemFreshnessCheck();
         }
 
@@ -913,8 +913,8 @@ contract VToken is
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
-        /* Verify market's block timestamp equals current block timestamp */
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert BorrowFreshnessCheck();
         }
 
@@ -966,8 +966,8 @@ contract VToken is
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), borrower);
 
-        /* Verify market's block timestamp equals current block timestamp */
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert RepayBorrowFreshnessCheck();
         }
 
@@ -1062,13 +1062,13 @@ contract VToken is
             skipLiquidityCheck
         );
 
-        /* Verify market's block timestamp equals current block timestamp */
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        /* Verify market's block number equals current block number */
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert LiquidateFreshnessCheck();
         }
 
-        /* Verify vTokenCollateral market's timestamp equals current timestamp */
-        if (vTokenCollateral.accrualBlockTimestamp() != _getBlockTimestamp()) {
+        /* Verify vTokenCollateral market's block number equals current block number */
+        if (vTokenCollateral.accrualBlockNumber() != _getBlockNumber()) {
             revert LiquidateCollateralFreshnessCheck();
         }
 
@@ -1182,8 +1182,8 @@ contract VToken is
      * @param newReserveFactorMantissa New reserve factor (from 0 to 1e18)
      */
     function _setReserveFactorFresh(uint256 newReserveFactorMantissa) internal {
-        // Verify market's block timestamp equals current block timestamp
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        // Verify market's block number equals current block number
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert SetReserveFactorFreshCheck();
         }
 
@@ -1209,8 +1209,8 @@ contract VToken is
         uint256 totalReservesNew;
         uint256 actualAddAmount;
 
-        // We fail gracefully unless market's block timestamp equals current block timestamp
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        // We fail gracefully unless market's block number equals current block number
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert AddReservesFactorFreshCheck(actualAddAmount);
         }
 
@@ -1231,8 +1231,8 @@ contract VToken is
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
-        // We fail gracefully unless market's block timestamp equals current block timestamp
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        // We fail gracefully unless market's block number equals current block number
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert ReduceReservesFreshCheck();
         }
 
@@ -1274,8 +1274,8 @@ contract VToken is
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-        // We fail gracefully unless market's block timestamp equals current block timestamp
-        if (accrualBlockTimestamp != _getBlockTimestamp()) {
+        // We fail gracefully unless market's block number equals current block number
+        if (accrualBlockNumber != _getBlockNumber()) {
             revert SetInterestRateModelFreshCheck();
         }
 
@@ -1395,7 +1395,7 @@ contract VToken is
     ) internal onlyInitializing {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
-        require(accrualBlockTimestamp == 0 && borrowIndex == 0, "market may only be initialized once");
+        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
 
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
@@ -1403,8 +1403,8 @@ contract VToken is
 
         _setComptroller(comptroller_);
 
-        // Initialize block timestamp and borrow index (block timestamp mocks depend on comptroller being set)
-        accrualBlockTimestamp = _getBlockTimestamp();
+        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
+        accrualBlockNumber = _getBlockNumber();
         borrowIndex = MANTISSA_ONE;
 
         // Set the interest rate model (depends on block number / borrow index)
@@ -1453,12 +1453,12 @@ contract VToken is
     }
 
     /**
-     * @dev Function to simply retrieve block timestamp
+     * @dev Function to simply retrieve block number
      *  This exists mainly for inheriting test contracts to stub this result.
-     * @return Current block timestamp
+     * @return Current block number
      */
-    function _getBlockTimestamp() internal view virtual returns (uint256) {
-        return block.timestamp;
+    function _getBlockNumber() internal view virtual returns (uint256) {
+        return block.number;
     }
 
     /**

@@ -25,12 +25,12 @@ contract JumpRateModelV2 is BaseJumpRateModelV2 {
     }
 
     /**
-     * @notice Calculates the current borrow rate per second
+     * @notice Calculates the current borrow rate per block
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per second as a mantissa (scaled by 1e18)
+     * @return The borrow rate percentage per block as a mantissa (scaled by 1e18)
      */
     function getBorrowRate(
         uint256 cash,

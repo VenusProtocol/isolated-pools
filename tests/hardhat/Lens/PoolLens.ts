@@ -348,8 +348,8 @@ describe("PoolLens", async function () {
       const vTokenMetadataActualParsed = cullTuple(vTokenMetadataActual);
       expect(vTokenMetadataActualParsed["vToken"]).equal(vTokenAddressWBTC);
       expect(vTokenMetadataActualParsed["exchangeRateCurrent"]).equal(parseUnits("1", 18));
-      expect(vTokenMetadataActualParsed["borrowRatePerSecond"]).equal("0");
-      expect(vTokenMetadataActualParsed["supplyRatePerSecond"]).equal("0");
+      expect(vTokenMetadataActualParsed["supplyRatePerBlock"]).equal("0");
+      expect(vTokenMetadataActualParsed["borrowRatePerBlock"]).equal("0");
       expect(vTokenMetadataActualParsed["reserveFactorMantissa"]).equal(parseUnits("0.3", 18));
       expect(vTokenMetadataActualParsed["supplyCaps"]).equal("4000000000000000000000");
       expect(vTokenMetadataActualParsed["borrowCaps"]).equal("2000000000000000000000");

@@ -7,22 +7,22 @@ import { VToken } from "../VToken.sol";
 import { InterestRateModel } from "../InterestRateModel.sol";
 
 contract VTokenHarness is VToken {
-    uint256 public blockTimestamp;
+    uint256 public blockNumber;
     uint256 public harnessExchangeRate;
     bool public harnessExchangeRateStored;
 
     mapping(address => bool) public failTransferToAddresses;
 
-    function harnessSetAccrualBlockTimestamp(uint256 accrualBlockTimestamp_) external {
-        accrualBlockTimestamp = accrualBlockTimestamp_;
+    function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
+        accrualBlockNumber = accrualBlockNumber_;
     }
 
-    function harnessSetBlockTimestamp(uint256 newBlockTimestamp) external {
-        blockTimestamp = newBlockTimestamp;
+    function harnessSetBlockNumber(uint256 newBlockNumber) external {
+        blockNumber = newBlockNumber;
     }
 
-    function harnessFastForward(uint256 timestamp) external {
-        blockTimestamp += timestamp;
+    function harnessFastForward(uint256 blocks) external {
+        blockNumber += blocks;
     }
 
     function harnessSetBalance(address account, uint256 amount) external {
@@ -131,7 +131,7 @@ contract VTokenHarness is VToken {
         return super._exchangeRateStored();
     }
 
-    function _getBlockTimestamp() internal view override returns (uint256) {
-        return blockTimestamp;
+    function _getBlockNumber() internal view override returns (uint256) {
+        return blockNumber;
     }
 }

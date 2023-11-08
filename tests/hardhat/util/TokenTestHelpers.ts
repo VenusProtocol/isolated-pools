@@ -240,11 +240,11 @@ export async function pretendBorrow(
   accountIndexRaw: BigNumberish,
   marketIndexRaw: BigNumberish,
   principalRaw: BigNumberish,
-  blockNumber: number = 2e10,
+  blockNumber: number = 2e7,
 ) {
   await vToken.harnessSetTotalBorrows(principalRaw);
   await vToken.harnessSetAccountBorrows(await borrower.getAddress(), principalRaw, accountIndexRaw);
   await vToken.harnessSetBorrowIndex(marketIndexRaw);
-  await vToken.harnessSetAccrualBlockTimestamp(blockNumber);
-  await vToken.harnessSetBlockTimestamp(blockNumber);
+  await vToken.harnessSetAccrualBlockNumber(blockNumber);
+  await vToken.harnessSetBlockNumber(blockNumber);
 }

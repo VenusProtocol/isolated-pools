@@ -24,7 +24,7 @@ let rewardDistributor3: FakeContract<RewardsDistributor>;
 let rewardToken3: FakeContract<MockToken>;
 let poolLens: MockContract<PoolLens>;
 let account: Signer;
-let startBlockTimestamp: number;
+let startBlock: number;
 
 type RewardsFixtire = {
   comptroller: FakeContract<Comptroller>;
@@ -37,7 +37,7 @@ type RewardsFixtire = {
   rewardDistributor3: FakeContract<RewardsDistributor>;
   rewardToken3: FakeContract<MockToken>;
   poolLens: MockContract<PoolLens>;
-  startBlockTimestamp: number;
+  startBlock: number;
 };
 
 const rewardsFixture = async (): Promise<RewardsFixtire> => {
@@ -53,7 +53,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   const poolLensFactory = await smock.mock<PoolLens__factory>("PoolLens");
   poolLens = await poolLensFactory.deploy();
 
-  startBlockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+  const startBlock = await ethers.provider.getBlockNumber();
 
   // Fake return values
   comptroller.getAllMarkets.returns([vBUSD.address, vWBTC.address]);
@@ -73,13 +73,13 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor1.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor1.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor1.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   rewardDistributor2.rewardToken.returns(rewardToken2.address);
@@ -92,13 +92,13 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor2.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor2.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor2.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   rewardDistributor3.rewardToken.returns(rewardToken3.address);
@@ -111,13 +111,13 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor3.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor3.rewardTokenBorrowState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
   rewardDistributor3.rewardTokenSupplyState.returns({
     index: convertToUnit(1, 18),
-    blockTimestamp: startBlockTimestamp,
-    lastRewardingBlockTimestamp: 0,
+    block: startBlock,
+    lastRewardingBlock: 0,
   });
 
   vBUSD.borrowIndex.returns(convertToUnit(1, 18));
@@ -143,7 +143,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardDistributor3,
     rewardToken3,
     poolLens,
-    startBlockTimestamp,
+    startBlock,
   };
 };
 
@@ -161,13 +161,13 @@ describe("PoolLens: Rewards Summary", () => {
       rewardDistributor3,
       rewardToken3,
       poolLens,
-      startBlockTimestamp,
+      startBlock,
     } = await loadFixture(rewardsFixture));
   });
 
   it("Should get summary for all markets", async () => {
     // Mine some blocks so deltaBlocks != 0
-    await mineUpTo((await ethers.provider.getBlockNumber()) + 1000);
+    await mineUpTo(startBlock + 1000);
 
     const accountAddress = await account.getAddress();
 
@@ -237,8 +237,8 @@ describe("PoolLens: Rewards Summary", () => {
     rewardDistributor3.rewardTokenBorrowerIndex.returns(0); // Borrower borrowed before initialization, so they have no index
     rewardDistributor3.rewardTokenBorrowState.returns({
       index: convertToUnit(1, 36), // Current index is 1.0, double scale
-      blockTimestamp: (await ethers.provider.getBlock("latest")).timestamp,
-      lastRewardingBlockTimestamp: 0,
+      block: await ethers.provider.getBlockNumber(),
+      lastRewardingBlock: 0,
     });
     rewardDistributor3.INITIAL_INDEX.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
 

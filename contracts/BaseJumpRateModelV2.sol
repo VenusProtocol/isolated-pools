@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { SECONDS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
+import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title Logic for Compound's JumpRateModel Contract V2.
@@ -21,17 +21,17 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
      */
-    uint256 public multiplierPerSecond;
+    uint256 public multiplierPerBlock;
 
     /**
      * @notice The base interest rate which is the y-intercept when utilization rate is 0
      */
-    uint256 public baseRatePerSecond;
+    uint256 public baseRatePerBlock;
 
     /**
-     * @notice The multiplier per second after hitting a specified utilization point
+     * @notice The multiplier per block after hitting a specified utilization point
      */
-    uint256 public jumpMultiplierPerSecond;
+    uint256 public jumpMultiplierPerBlock;
 
     /**
      * @notice The utilization point at which the jump multiplier is applied
@@ -39,9 +39,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     uint256 public kink;
 
     event NewInterestParams(
-        uint256 baseRatePerSecond,
-        uint256 multiplierPerSecond,
-        uint256 jumpMultiplierPerSecond,
+        uint256 baseRatePerBlock,
+        uint256 multiplierPerBlock,
+        uint256 jumpMultiplierPerBlock,
         uint256 kink
     );
 
@@ -54,7 +54,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @notice Construct an interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
-     * @param jumpMultiplierPerYear The multiplierPerSecond after hitting a specified utilization point
+     * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      * @param accessControlManager_ The address of the AccessControlManager contract
      */
@@ -76,7 +76,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @notice Update the parameters of the interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
-     * @param jumpMultiplierPerYear The multiplierPerSecond after hitting a specified utilization point
+     * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      * @custom:error Unauthorized if the sender is not allowed to call this function
      * @custom:access Controlled by AccessControlManager
@@ -98,13 +98,13 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
     }
 
     /**
-     * @notice Calculates the current supply rate per second
+     * @notice Calculates the current supply rate per block
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param reserveFactorMantissa The current reserve factor for the market
      * @param badDebt The amount of badDebt in the market
-     * @return The supply rate percentage per second as a mantissa (scaled by EXP_SCALE)
+     * @return The supply rate percentage per block as a mantissa (scaled by EXP_SCALE)
      */
     function getSupplyRate(
         uint256 cash,
@@ -153,7 +153,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @notice Internal function to update the parameters of the interest rate model
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
-     * @param jumpMultiplierPerYear The multiplierPerSecond after hitting a specified utilization point
+     * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
      * @param kink_ The utilization point at which the jump multiplier is applied
      */
     function _updateJumpRateModel(
@@ -162,21 +162,21 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_
     ) internal {
-        baseRatePerSecond = baseRatePerYear / SECONDS_PER_YEAR;
-        multiplierPerSecond = multiplierPerYear / SECONDS_PER_YEAR;
-        jumpMultiplierPerSecond = jumpMultiplierPerYear / SECONDS_PER_YEAR;
+        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
+        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
+        jumpMultiplierPerBlock = jumpMultiplierPerYear / BLOCKS_PER_YEAR;
         kink = kink_;
 
-        emit NewInterestParams(baseRatePerSecond, multiplierPerSecond, jumpMultiplierPerSecond, kink);
+        emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);
     }
 
     /**
-     * @notice Calculates the current borrow rate per second, with the error code expected by the market
+     * @notice Calculates the current borrow rate per block, with the error code expected by the market
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per second as a mantissa (scaled by EXP_SCALE)
+     * @return The borrow rate percentage per block as a mantissa (scaled by EXP_SCALE)
      */
     function _getBorrowRate(
         uint256 cash,
@@ -188,13 +188,13 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 kink_ = kink;
 
         if (util <= kink_) {
-            return ((util * multiplierPerSecond) / EXP_SCALE) + baseRatePerSecond;
+            return ((util * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
         }
-        uint256 normalRate = ((kink_ * multiplierPerSecond) / EXP_SCALE) + baseRatePerSecond;
+        uint256 normalRate = ((kink_ * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
         uint256 excessUtil;
         unchecked {
             excessUtil = util - kink_;
         }
-        return ((excessUtil * jumpMultiplierPerSecond) / EXP_SCALE) + normalRate;
+        return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;
     }
 }

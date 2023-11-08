@@ -17,7 +17,7 @@ describe("White paper interest rate model tests", () => {
   const reserves = convertToUnit(2, 19);
   const badDebt = convertToUnit(1, 19);
   const expScale = convertToUnit(1, 18);
-  const secondsPerYear = 31536000;
+  const blocksPerYear = 10512000;
   const baseRatePerYear = convertToUnit(2, 12);
   const multiplierPerYear = convertToUnit(4, 14);
 
@@ -32,11 +32,11 @@ describe("White paper interest rate model tests", () => {
   });
 
   it("Model getters", async () => {
-    const baseRatePerSecond = new BigNumber(baseRatePerYear).dividedBy(secondsPerYear).toFixed(0);
-    const multiplierPerSecond = new BigNumber(multiplierPerYear).dividedBy(secondsPerYear).toFixed(0);
+    const baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(blocksPerYear).toFixed(0);
+    const multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
 
-    expect(await whitePaperInterestRateModel.baseRatePerSecond()).equal(baseRatePerSecond);
-    expect(await whitePaperInterestRateModel.multiplierPerSecond()).equal(multiplierPerSecond);
+    expect(await whitePaperInterestRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
+    expect(await whitePaperInterestRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
   });
 
   it("Utilization rate: borrows and badDebt is zero", async () => {
@@ -53,16 +53,16 @@ describe("White paper interest rate model tests", () => {
   });
 
   it("Borrow Rate", async () => {
-    const multiplierPerSecond = (await whitePaperInterestRateModel.multiplierPerSecond()).toString();
-    const baseRatePerSecond = (await whitePaperInterestRateModel.baseRatePerSecond()).toString();
+    const multiplierPerBlock = (await whitePaperInterestRateModel.multiplierPerBlock()).toString();
+    const baseRatePerBlock = (await whitePaperInterestRateModel.baseRatePerBlock()).toString();
     const utilizationRate = (
       await whitePaperInterestRateModel.utilizationRate(cash, borrows, reserves, badDebt)
     ).toString();
 
-    const value = new BigNumber(utilizationRate).multipliedBy(multiplierPerSecond).dividedBy(expScale).toFixed(0);
+    const value = new BigNumber(utilizationRate).multipliedBy(multiplierPerBlock).dividedBy(expScale).toFixed(0);
 
     expect(await whitePaperInterestRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).equal(
-      Number(value) + Number(baseRatePerSecond),
+      Number(value) + Number(baseRatePerBlock),
     );
   });
 

@@ -373,12 +373,12 @@ describe("Rewards: Tests", async function () {
     await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
     await vWBTC.connect(user1).mint(convertToUnit(10, 8));
 
-    let lastRewardingBlockTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 2;
+    let lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
 
-    await rewardsDistributor.setLastRewardingBlockTimestamps(
+    await rewardsDistributor.setLastRewardingBlocks(
       [vWBTC.address, vDAI.address],
-      [lastRewardingBlockTimestamp, lastRewardingBlockTimestamp],
-      [lastRewardingBlockTimestamp, lastRewardingBlockTimestamp],
+      [lastRewardingBlock, lastRewardingBlock],
+      [lastRewardingBlock, lastRewardingBlock],
     );
 
     await mine(100);
@@ -391,20 +391,20 @@ describe("Rewards: Tests", async function () {
     expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.5, 18));
 
     await expect(
-      rewardsDistributor.setLastRewardingBlockTimestamps(
+      rewardsDistributor.setLastRewardingBlocks(
         [vWBTC.address, vDAI.address],
-        [lastRewardingBlockTimestamp - 10, lastRewardingBlockTimestamp - 10],
-        [lastRewardingBlockTimestamp - 10, lastRewardingBlockTimestamp - 10],
+        [lastRewardingBlock - 10, lastRewardingBlock - 10],
+        [lastRewardingBlock - 10, lastRewardingBlock - 10],
       ),
-    ).to.be.revertedWith("setting last rewarding block timestamp in the past is not allowed");
+    ).to.be.revertedWith("setting last rewarding block in the past is not allowed");
 
-    lastRewardingBlockTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 2;
+    lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
 
     await expect(
-      rewardsDistributor.setLastRewardingBlockTimestamps(
+      rewardsDistributor.setLastRewardingBlocks(
         [vWBTC.address, vDAI.address],
-        [lastRewardingBlockTimestamp, lastRewardingBlockTimestamp],
-        [lastRewardingBlockTimestamp, lastRewardingBlockTimestamp],
+        [lastRewardingBlock, lastRewardingBlock],
+        [lastRewardingBlock, lastRewardingBlock],
       ),
     ).to.be.revertedWith("this RewardsDistributor is already locked");
   });
