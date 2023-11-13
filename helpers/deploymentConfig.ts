@@ -98,7 +98,6 @@ const preconfiguredAddresses = {
     VBNB_CorePool: "0x2E7222e51c0f6e98610A1543Aa3836E092CDe62c",
     SwapRouter_CorePool: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0",
     Unitroller: "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D",
-    ProtocolShareReserve: "0xc987a03ab6C2A5891Fc0919f021cc693B5E55278",
     Shortfall: "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
   },
   bscmainnet: {
@@ -113,7 +112,6 @@ const preconfiguredAddresses = {
     VBNB_CorePool: "0xA07c5b74C9B40447a954e1466938b865b6BBea36",
     SwapRouter_CorePool: "0x8938E6dA30b59c1E27d5f70a94688A89F7c815a4",
     Unitroller: "0xfD36E2c2a6789Db23113685031d7F16329158384",
-    ProtocolShareReserve: "0xfB5bE09a1FA6CFDA075aB1E69FE83ce8324682e4",
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
   },
 };
@@ -311,7 +309,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(932019, 18),
             borrowCap: convertToUnit(478980, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus BTCB",
@@ -329,7 +327,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1000, 18),
             borrowCap: convertToUnit(1000, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -370,7 +368,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(3000000, 18),
             borrowCap: convertToUnit(3000000, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus ankrBNB",
@@ -388,7 +386,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100, 18),
             borrowCap: convertToUnit(100, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus MBOX",
@@ -406,7 +404,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(7000000, 18),
             borrowCap: convertToUnit(3184294, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus NFT",
@@ -424,7 +422,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(84985800573, 18),
             borrowCap: convertToUnit(24654278679, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus RACA",
@@ -442,7 +440,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(23758811062, 18),
             borrowCap: convertToUnit(3805812642, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus stkBNB",
@@ -460,7 +458,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1963, 18),
             borrowCap: convertToUnit(324, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD",
@@ -478,7 +476,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(10601805, 18),
             borrowCap: convertToUnit(1698253, 18),
             vTokenReceiver: "account:deployer",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -698,6 +696,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xd2aF6A916Bc77764dc63742BC30f71AF4cF423F4",
       },
+      {
+        isMock: false,
+        name: "PLANET",
+        symbol: "PLANET",
+        decimals: 18,
+        tokenAddress: "0x52b4E1A2ba407813F829B4b3943A1e57768669A9",
+      },
     ],
     poolConfig: [
       {
@@ -723,7 +728,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(500_000, 18),
             borrowCap: convertToUnit(200_000, 18),
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDT (Stable Coins)",
@@ -741,7 +746,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit(400_000, 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD (Stable Coins)",
@@ -759,7 +764,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -777,7 +782,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100000, 18),
             borrowCap: convertToUnit(50000, 18),
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -824,7 +829,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("15000000", 18),
             borrowCap: convertToUnit("10500000", 18),
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -842,7 +847,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2500000", 18),
             borrowCap: convertToUnit("1750000", 18),
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -860,7 +865,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -878,7 +883,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -896,7 +901,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("9508802", 18),
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus ankrBNB (DeFi)",
@@ -914,7 +919,25 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
+          },
+          {
+            name: "Venus PLANET (DeFi)",
+            asset: "PLANET",
+            symbol: "vPLANET_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.2", 18),
+            liquidationThreshold: convertToUnit("0.3", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("174983000", 18),
+            supplyCap: convertToUnit("1000000000", 18),
+            borrowCap: convertToUnit("500000000", 18),
+            vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -929,6 +952,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["ankrBNB"],
             supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
             borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDT",
+            markets: ["PLANET"],
+            supplySpeeds: ["1860"], // 1500 USDT over 28 days (806400 blocks)
+            borrowSpeeds: ["1860"], // 1500 USDT over 28 days (806400 blocks)
           },
         ],
       },
@@ -955,7 +984,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18),
             borrowCap: convertToUnit("2800000000", 18),
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -973,7 +1002,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("40000000000", 18), // FLOKI has 18 decimals on testnet
             borrowCap: convertToUnit("28000000000", 18), // FLOKI has 18 decimals on testnet
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -991,7 +1020,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -1009,7 +1038,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -1050,7 +1079,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("8000", 18),
             borrowCap: convertToUnit("5600", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -1068,7 +1097,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1818", 18),
             borrowCap: convertToUnit("1272", 18),
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -1086,7 +1115,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("540", 18),
             borrowCap: convertToUnit("378", 18),
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -1104,7 +1133,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -1122,7 +1151,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -1140,7 +1169,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -1158,7 +1187,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1000", 18),
             borrowCap: convertToUnit("100", 18),
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -1217,7 +1246,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1500000000000", 18),
             borrowCap: convertToUnit("1050000000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus NFT (Tron)",
@@ -1235,7 +1264,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18), // NFT has 18 decimals on testnet
             borrowCap: convertToUnit("2800000000", 18), // NFT has 18 decimals on testnet
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus WIN (Tron)",
@@ -1253,7 +1282,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("3000000000", 18),
             borrowCap: convertToUnit("2100000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus TRX (Tron)",
@@ -1271,7 +1300,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("11000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("7700000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDT (Tron)",
@@ -1289,7 +1318,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
           {
             name: "Venus USDD (Tron)",
@@ -1307,7 +1336,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "100",
           },
         ],
         rewards: [
@@ -1495,6 +1524,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
       },
+      {
+        isMock: false,
+        name: "PLANET",
+        symbol: "PLANET",
+        decimals: 18,
+        tokenAddress: "0xca6d678e74f553f0e59cccc03ae644a3c2c5ee7d",
+      },
     ],
     poolConfig: [
       {
@@ -1520,7 +1556,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(500_000, 18),
             borrowCap: convertToUnit(200_000, 18),
             vTokenReceiver: "0x09702Ea135d9D707DD51f530864f2B9220aAD87B",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDT (Stablecoins)",
@@ -1538,7 +1574,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDD (Stablecoins)",
@@ -1556,7 +1592,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -1574,7 +1610,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(100000, 18),
             borrowCap: convertToUnit(50000, 18),
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
         ],
         rewards: [
@@ -1621,7 +1657,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("15000000", 18),
             borrowCap: convertToUnit("10500000", 18),
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -1639,7 +1675,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2500000", 18),
             borrowCap: convertToUnit("1750000", 18),
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -1657,7 +1693,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -1675,7 +1711,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -1693,7 +1729,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("9508802", 18),
             borrowCap: convertToUnit("6656161", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
 
           {
@@ -1712,7 +1748,25 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
+          },
+          {
+            name: "Venus PLANET (DeFi)",
+            asset: "PLANET",
+            symbol: "vPLANET_DeFi",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.2", 18),
+            liquidationThreshold: convertToUnit("0.3", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("174983000", 18),
+            supplyCap: convertToUnit("1000000000", 18),
+            borrowCap: convertToUnit("500000000", 18),
+            vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
+            reduceReservesBlockDelta: "28800",
           },
         ],
         rewards: [
@@ -1728,6 +1782,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["ankrBNB"],
             supplySpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
             borrowSpeeds: ["289351851851851851"], // 250000 ANKR over 30 days (864000 blocks)
+          },
+          {
+            asset: "USDT",
+            markets: ["PLANET"],
+            supplySpeeds: ["1860119047619047"], // 1500 USDT over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 USDT over 28 days (806400 blocks)
           },
         ],
       },
@@ -1754,7 +1814,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 18),
             borrowCap: convertToUnit("2800000000", 18),
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -1772,7 +1832,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("40000000000", 9), // Note 9 decimals
             borrowCap: convertToUnit("28000000000", 9), // Note 9 decimals
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -1790,7 +1850,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -1808,7 +1868,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
         ],
         rewards: [
@@ -1849,7 +1909,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("8000", 18),
             borrowCap: convertToUnit("5600", 18),
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -1867,7 +1927,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1818", 18),
             borrowCap: convertToUnit("1272", 18),
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -1885,7 +1945,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("540", 18),
             borrowCap: convertToUnit("378", 18),
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -1903,7 +1963,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -1921,7 +1981,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -1939,7 +1999,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -1957,7 +2017,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1000", 18),
             borrowCap: convertToUnit("100", 18),
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
         ],
         rewards: [
@@ -2016,7 +2076,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("1500000000000", 18),
             borrowCap: convertToUnit("1050000000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus NFT (Tron)",
@@ -2034,7 +2094,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("4000000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("2800000000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus WIN (Tron)",
@@ -2052,7 +2112,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("3000000000", 18),
             borrowCap: convertToUnit("2100000000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus TRX (Tron)",
@@ -2070,7 +2130,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("11000000", 6), // Note 6 decimals
             borrowCap: convertToUnit("7700000", 6), // Note 6 decimals
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDT (Tron)",
@@ -2088,7 +2148,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
             vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
           {
             name: "Venus USDD (Tron)",
@@ -2106,7 +2166,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
-            reduceReservesBlockDelta: "10512000",
+            reduceReservesBlockDelta: "28800",
           },
         ],
         rewards: [
