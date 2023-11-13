@@ -1,3 +1,18 @@
+## [2.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.2.1-dev.1...v2.3.0-dev.1) (2023-11-13)
+
+
+### Features
+
+* add PLANET market deployments ([fa21a3d](https://github.com/VenusProtocol/isolated-pools/commit/fa21a3d769046c7cc67de918e1b6b505db5f5141))
+* export PLANET market deployment ([fc1c874](https://github.com/VenusProtocol/isolated-pools/commit/fc1c874f7ec28910d63ae77a8c3347cf00bb269b))
+* update script to use psr addresses from protocol-reserve package ([a63cdd9](https://github.com/VenusProtocol/isolated-pools/commit/a63cdd929329c8844207ac9e6717d8d8332c885c))
+
+
+### Bug Fixes
+
+* reduce reserves block delta in deployment configs ([9def1eb](https://github.com/VenusProtocol/isolated-pools/commit/9def1eb75d047c7f3bb043b938dc84c7330631fd))
+* whitespaces ([7ea26e4](https://github.com/VenusProtocol/isolated-pools/commit/7ea26e405ebe2c584fa4a3ec74a27bf047e20883))
+
 ## [2.2.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.2.0...v2.2.1-dev.1) (2023-11-03)
 
 
