@@ -1,3 +1,12 @@
+## [2.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.1...v2.3.0-dev.2) (2023-11-17)
+
+
+### Features
+
+* add github job to export and commit deployment by network ([33f92fc](https://github.com/VenusProtocol/isolated-pools/commit/33f92fc23ff11cbd75138a18b31bc6ffb262281a))
+* support exporting sepolia and ethereum deployments ([db0ef9c](https://github.com/VenusProtocol/isolated-pools/commit/db0ef9cd1c7df3ed05174203b8a4b0f19075b749))
+* updating deployment files ([4950a26](https://github.com/VenusProtocol/isolated-pools/commit/4950a269f7c616e22502eebbd955bdb3ceb4e2fe))
+
 ## [2.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.2.1-dev.1...v2.3.0-dev.1) (2023-11-13)
 
 
