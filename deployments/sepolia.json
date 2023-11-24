@@ -1,5 +1,123 @@
 {
   "name": "sepolia",
   "chainId": "11155111",
-  "contracts": {}
+  "contracts": {
+    "VenusLens": {
+      "address": "0x5d7dB52e4d571FACf61207A34B112e6Ce046270A",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "contract VToken",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "vTokenBalances",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "vToken",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "balanceOf",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "borrowBalanceCurrent",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "balanceOfUnderlying",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "tokenBalance",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "tokenAllowance",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct VenusLens.VTokenBalances",
+              "name": "",
+              "type": "tuple"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract VToken[]",
+              "name": "vTokens",
+              "type": "address[]"
+            },
+            {
+              "internalType": "address payable",
+              "name": "account",
+              "type": "address"
+            }
+          ],
+          "name": "vTokenBalancesAll",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "vToken",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "balanceOf",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "borrowBalanceCurrent",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "balanceOfUnderlying",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "tokenBalance",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "tokenAllowance",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct VenusLens.VTokenBalances[]",
+              "name": "",
+              "type": "tuple[]"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ]
+    }
+  }
 }
