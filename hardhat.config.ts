@@ -158,22 +158,15 @@ const config: HardhatUserConfig = {
       live: false,
     },
     bsctestnet: {
-      url: "https://bsc-testnet.public.blastapi.io",
+      url: process.env.RPC_URL || "https://bsc-testnet.public.blastapi.io",
       chainId: 97,
-      live: true,
-      gasPrice: 20000000000,
-      accounts: process.env.TESTNET_PRIVATE_KEY ? [process.env.TESTNET_PRIVATE_KEY] : [],
-    },
-    sepolia: {
-      url: "https://rpc.notadegen.com/eth/sepolia",
-      chainId: 11155111,
       live: true,
       gasPrice: 20000000000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     // Mainnet deployments are done through Frame wallet RPC
     bscmainnet: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: "http://127.0.0.1:1248",
       chainId: 56,
       live: true,
       timeout: 1200000, // 20 minutes
@@ -188,13 +181,7 @@ const config: HardhatUserConfig = {
       url: process.env.RPC_URL || "https://rpc.notadegen.com/eth/sepolia",
       chainId: 11155111,
       live: true,
-      gasPrice: 20000000000, // 20 gwei
-    },
-    ethereum: {
-      url: process.env.ETHEREUM_ARCHIVE_NODE_URL || "https://eth-mainnet.public.blastapi.io",
-      chainId: 1,
-      live: true,
-      timeout: 1200000, // 20 minutes
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
   },
   gasReporter: {
