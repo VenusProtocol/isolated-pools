@@ -101,6 +101,7 @@ export const blocksPerYear: BlocksPerYear = {
 
 const SIGNER_TESTNET_MNEMONIC = "0xFA747c4a62c4D168276329F822d004026A1c05E9"; // signer[1] from testnet mnemonic
 const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
+const ETHEREUM_MULTISIG = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
 
 const preconfiguredAddresses = {
   hardhat: {
