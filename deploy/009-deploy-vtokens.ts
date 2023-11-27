@@ -19,7 +19,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
-  const protocolShareReserve = await deployments.getOrNull("ProtocolShareReserve");
 
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
