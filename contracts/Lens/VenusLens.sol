@@ -7,11 +7,11 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract VenusLens {
     struct VTokenBalances {
         address vToken;
-        uint balanceOf;
-        uint borrowBalanceCurrent;
-        uint balanceOfUnderlying;
-        uint tokenBalance;
-        uint tokenAllowance;
+        uint256 balanceOf;
+        uint256 borrowBalanceCurrent;
+        uint256 balanceOfUnderlying;
+        uint256 tokenBalance;
+        uint256 tokenAllowance;
     }
 
     /**
@@ -24,9 +24,9 @@ contract VenusLens {
         VToken[] calldata vTokens,
         address payable account
     ) external returns (VTokenBalances[] memory) {
-        uint vTokenCount = vTokens.length;
+        uint256 vTokenCount = vTokens.length;
         VTokenBalances[] memory res = new VTokenBalances[](vTokenCount);
-        for (uint i = 0; i < vTokenCount; i++) {
+        for (uint256 i; i < vTokenCount; ++i) {
             res[i] = vTokenBalances(vTokens[i], account);
         }
         return res;
@@ -39,15 +39,13 @@ contract VenusLens {
      * @return VTokenBalances with token balance information
      */
     function vTokenBalances(VToken vToken, address payable account) public returns (VTokenBalances memory) {
-        uint balanceOf = vToken.balanceOf(account);
-        uint borrowBalanceCurrent = vToken.borrowBalanceCurrent(account);
-        uint balanceOfUnderlying = vToken.balanceOfUnderlying(account);
-        uint tokenBalance;
-        uint tokenAllowance;
+        uint256 balanceOf = vToken.balanceOf(account);
+        uint256 borrowBalanceCurrent = vToken.borrowBalanceCurrent(account);
+        uint256 balanceOfUnderlying = vToken.balanceOfUnderlying(account);
 
         IERC20 underlying = IERC20(vToken.underlying());
-        tokenBalance = underlying.balanceOf(account);
-        tokenAllowance = underlying.allowance(account, address(vToken));
+        uint256 tokenBalance = underlying.balanceOf(account);
+        uint256 tokenAllowance = underlying.allowance(account, address(vToken));
         return
             VTokenBalances({
                 vToken: address(vToken),
