@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
@@ -90,6 +91,9 @@ contract Comptroller is
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
+
+    /// @notice Emitted when prime token contract address is changed
+    event NewPrimeToken(IPrime oldPrimeToken, IPrime newPrimeToken);
 
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
@@ -298,6 +302,10 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
         }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(minter, vToken);
+        }
     }
 
     /**
@@ -324,6 +332,10 @@ contract Comptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
+        }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(redeemer, vToken);
         }
     }
 
@@ -396,6 +408,10 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vToken);
+        }
     }
 
     /**
@@ -423,6 +439,10 @@ contract Comptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+        }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vToken);
         }
     }
 
@@ -490,6 +510,10 @@ contract Comptroller is
         if (repayAmount > maxClose) {
             revert TooMuchRepay();
         }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenBorrowed);
+        }
     }
 
     /**
@@ -550,6 +574,11 @@ contract Comptroller is
             rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
             rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenCollateral);
+            prime.accrueInterestAndUpdateScore(liquidator, vTokenCollateral);
+        }
     }
 
     /**
@@ -580,6 +609,11 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, src);
             rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
+        }
+
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(src, vToken);
+            prime.accrueInterestAndUpdateScore(dst, vToken);
         }
     }
 
@@ -984,6 +1018,18 @@ contract Comptroller is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
+    }
+
+    /**
+     * @notice Sets the prime token contract for the comptroller
+     * @param _prime Address of the Prime contract
+     */
+    function setPrimeToken(IPrime _prime) external onlyOwner {
+        ensureNonzeroAddress(address(_prime));
+
+        IPrime oldPrime = prime;
+        prime = _prime;
+        emit NewPrimeToken(oldPrime, _prime);
     }
 
     /**

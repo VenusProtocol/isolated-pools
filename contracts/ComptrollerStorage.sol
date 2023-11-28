@@ -5,6 +5,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
+import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
 /**
  * @title ComptrollerStorage
@@ -121,10 +122,13 @@ contract ComptrollerStorage {
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.9e18; // 0.9
 
+    /// Prime token address
+    IPrime public prime;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 }
