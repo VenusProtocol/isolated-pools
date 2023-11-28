@@ -272,7 +272,7 @@ const addMarkets = async (
 
           console.log("Adding market " + name + " to pool " + pool.name);
           return [
-            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
+            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
             await setReduceReservesBlockDelta(vToken.address, vTokenConfig),
             await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
