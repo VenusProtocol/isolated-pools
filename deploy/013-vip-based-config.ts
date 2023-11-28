@@ -175,38 +175,21 @@ const addPools = async (
 const transferInitialLiquidity = async (
   vTokenConfig: VTokenConfig,
   deploymentConfig: DeploymentConfig,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  const { deployer } = await hre.getNamedAccounts();
   const { preconfiguredAddresses, tokensConfig } = deploymentConfig;
   const { asset, initialSupply } = vTokenConfig;
   const token = getTokenConfig(asset, tokensConfig);
   const tokenContract = await getUnderlyingToken(token.symbol, tokensConfig);
-
-  if (hre.network.name === "bsctestnet") {
-    console.log(`Adding a command to transfer ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: tokenContract.address,
-        signature: "transferFrom(address,address,uint256)",
-        argTypes: ["address", "address", "uint256"],
-        parameters: [deployer, preconfiguredAddresses.NormalTimelock, initialSupply],
-        value: 0,
-      },
-    ];
-  } else if (hre.network.name === "bscmainnet") {
-    console.log(`Adding a command to withdraw ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: preconfiguredAddresses.VTreasury,
-        signature: "withdrawTreasuryBEP20(address,uint256,address)",
-        argTypes: ["address", "uint256", "address"],
-        parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
-        value: 0,
-      },
-    ];
-  }
-  return [];
+  console.log(`Adding a command to withdraw ${initialSupply} ${token.symbol} to Timelock from Treasury`);
+  return [
+    {
+      contract: preconfiguredAddresses.VTreasury,
+      signature: "withdrawTreasuryToken(address,uint256,address)",
+      argTypes: ["address", "uint256", "address"],
+      parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
+      value: 0,
+    },
+  ];
 };
 
 const approvePoolRegistry = async (

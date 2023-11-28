@@ -196,6 +196,7 @@ const deployerPermissions = (): AccessControlEntry[] => {
 const normalTimelockPermissions = (timelock: string): AccessControlEntry[] => {
   const methods = [
     "setCloseFactor(uint256)",
+    "setReduceReservesBlockDelta(uint256)",
     "setCollateralFactor(address,uint256,uint256)",
     "setLiquidationIncentive(uint256)",
     "setMarketBorrowCaps(address[],uint256[])",
@@ -2535,7 +2536,6 @@ export const globalConfig: NetworkConfig = {
     accessControlConfig: [
       ...poolRegistryPermissions(),
       ...normalTimelockPermissions(preconfiguredAddresses.sepolia.NormalTimelock),
-      ...fastTrackTimelockPermissions(preconfiguredAddresses.sepolia.FastTrackTimelock),
     ],
     preconfiguredAddresses: preconfiguredAddresses.sepolia,
   },
@@ -2824,7 +2824,6 @@ export const globalConfig: NetworkConfig = {
     accessControlConfig: [
       ...poolRegistryPermissions(),
       ...normalTimelockPermissions(preconfiguredAddresses.ethereum.NormalTimelock),
-      ...fastTrackTimelockPermissions(preconfiguredAddresses.ethereum.FastTrackTimelock),
     ],
     preconfiguredAddresses: preconfiguredAddresses.ethereum,
   },
