@@ -10,7 +10,7 @@ import {
   getConfig,
   getTokenConfig,
 } from "../helpers/deploymentConfig";
-import { getUnderlyingMock, getUnderlyingToken, getUnregisteredVTokens } from "../helpers/deploymentUtils";
+import { getUnderlyingMock, getUnderlyingToken, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 
 const sumAmounts = async (tokens: { symbol: string; amount: BigNumber }[]) => {
   const amounts: { [symbol: string]: BigNumber } = {};
@@ -60,7 +60,12 @@ const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig
   for (const [symbol, amount] of Object.entries(totalAmounts)) {
     const tokenContract = await getUnderlyingToken(symbol, tokensConfig);
     console.log(`Sending ${amount} ${symbol} to VTreasury`);
-    const tx = await tokenContract.transfer(preconfiguredAddresses.VTreasury, amount, { gasLimit: 5000000 });
+    console.log(`Token Contract: ${tokenContract.address}`);
+    console.log(`Token Contract: ${amount.toString()}`);
+    const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+    console.log(`Token Contract: ${treasuryAddress}`);
+
+    const tx = await tokenContract.transfer(treasuryAddress, amount, { gasLimit: 5000000 });
     await tx.wait(1);
   }
 };

@@ -211,6 +211,7 @@ const normalTimelockPermissions = (timelock: string): AccessControlEntry[] => {
     "setReserveFactor(uint256)",
     "setInterestRateModel(address)",
     "setRewardTokenSpeeds(address[],uint256[],uint256[])",
+    "setLastRewardingBlock(address[],uint32[],uint32[])",
     "updateJumpRateModel(uint256,uint256,uint256,uint256)",
   ];
   return methods.map(method => ({

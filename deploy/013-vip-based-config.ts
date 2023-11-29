@@ -175,7 +175,11 @@ const addPools = async (
 const transferInitialLiquidity = async (
   vTokenConfig: VTokenConfig,
   deploymentConfig: DeploymentConfig,
+  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
+  if (!hre.network.live) {
+    return [];
+  }
   const { preconfiguredAddresses, tokensConfig } = deploymentConfig;
   const { asset, initialSupply } = vTokenConfig;
   const token = getTokenConfig(asset, tokensConfig);
@@ -272,7 +276,7 @@ const addMarkets = async (
 
           console.log("Adding market " + name + " to pool " + pool.name);
           return [
-            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig)),
+            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
             await setReduceReservesBlockDelta(vToken.address, vTokenConfig),
             await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
@@ -301,7 +305,7 @@ const hasPermission = async (
   caller: string,
   hre: HardhatRuntimeEnvironment,
 ): Promise<boolean> => {
-  const role = makeRole(hre.network.name === "bscmainnet", targetContract, method);
+  const role = makeRole(hre.network.live, targetContract, method);
   return accessControl.hasRole(role, caller);
 };
 
