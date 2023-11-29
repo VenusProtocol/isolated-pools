@@ -37,8 +37,8 @@ type SetupProtocolFixture = {
   comptroller: Comptroller;
   usdt: MockToken;
   vusdt: VToken;
-  eth: MockToken;
-  veth: VToken;
+  link: MockToken;
+  vlink: VToken;
   xvsVault: XVSVaultScenario;
   xvs: MockToken;
   xvsStore: XVSStoreScenario;
@@ -50,7 +50,6 @@ type SetupProtocolFixture = {
 async function deployProtocol(): Promise<SetupProtocolFixture> {
   const [wallet, user1, user2, user3] = await ethers.getSigners();
 
-  const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
   const accessControl = await smock.fake<IAccessControlManagerV8>("IAccessControlManagerV8");
   accessControl.isAllowedToCall.returns(true);
 
@@ -61,8 +60,8 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const usdt = await MockToken.deploy("USDT", "USDT", 18);
   await usdt.faucet(convertToUnit(1000000, 18));
 
-  const eth = await MockToken.deploy("ETH", "ETH", 18);
-  await eth.faucet(convertToUnit(1000, 18));
+  const link = await MockToken.deploy("LINK", "LINK", 18);
+  await link.faucet(convertToUnit(1000, 18));
 
   const weth = await MockToken.deploy("WETH", "WETH", 18);
   await weth.faucet(convertToUnit(1000, 18));
@@ -100,8 +99,15 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     admin: wallet,
     beacon: vTokenBeacon,
   });
+  const vLINK = await makeVToken({
+    underlying: link,
+    comptroller: comptrollerProxy,
+    accessControlManager: accessControl,
+    admin: wallet,
+    beacon: vTokenBeacon,
+  });
   const vETH = await makeVToken({
-    underlying: eth,
+    underlying: weth,
     comptroller: comptrollerProxy,
     accessControlManager: accessControl,
     admin: wallet,
@@ -111,7 +117,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   fakePriceOracle.getUnderlyingPrice.returns((vToken: string) => {
     if (vToken == vUSDT.address) {
       return convertToUnit(1, 18);
-    } else if (vToken == vETH.address) {
+    } else if (vToken == vLINK.address) {
       return convertToUnit(1200, 18);
     }
   });
@@ -128,23 +134,29 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     borrowCap: parseUnits("10000", 18),
   });
 
-  const ethInitialSupply = parseUnits("1000", 18);
-  await eth.faucet(ethInitialSupply);
-  await eth.approve(poolRegistry.address, ethInitialSupply);
+  const linkInitialSupply = parseUnits("1000", 18);
+  await link.faucet(linkInitialSupply);
+  await link.approve(poolRegistry.address, linkInitialSupply);
   await poolRegistry.addMarket({
-    vToken: vETH.address,
+    vToken: vLINK.address,
     collateralFactor: parseUnits("0.7", 18),
     liquidationThreshold: parseUnits("0.7", 18),
-    initialSupply: ethInitialSupply,
+    initialSupply: linkInitialSupply,
     vTokenReceiver: wallet.address,
     supplyCap: parseUnits("10000", 18),
     borrowCap: parseUnits("10000", 18),
   });
 
-  await comptrollerProxy.enterMarkets([vETH.address, vUSDT.address]);
+  await comptrollerProxy.enterMarkets([vLINK.address, vUSDT.address]);
 
   const xvs = await MockToken.deploy("XVS", "XVS", 18);
   await xvs.faucet(convertToUnit(100000000, 18));
+
+  fakePriceOracle.getPrice.returns((token: string) => {
+    if (token == xvs.address) {
+      return convertToUnit(3, 18);
+    }
+  });
 
   const xvsStoreScenarioFactory = await ethers.getContractFactory("XVSStoreScenario");
   const xvsStoreScenario: XVSStoreScenario = (await xvsStoreScenarioFactory.deploy()) as XVSStoreScenario;
@@ -174,7 +186,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     primeLiquidityProviderScenarioFactory,
     [
       accessControl.address,
-      [xvs.address, usdt.address, eth.address],
+      [xvs.address, usdt.address, link.address],
       [10, 10, 10],
       [convertToUnit(1, 18), convertToUnit(1, 18), convertToUnit(1, 18)],
       10,
@@ -201,7 +213,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
       2,
       accessControl.address,
       primeLiquidityProviderScenario.address,
-      oracle.address,
+      fakePriceOracle.address,
       10,
     ],
     {
@@ -210,18 +222,25 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     },
   );
 
-  await eth.transfer(user1.address, bigNumber18.mul(100));
+  await link.transfer(user1.address, bigNumber18.mul(100));
   await usdt.transfer(user2.address, bigNumber18.mul(10000));
 
+  await xvsVaultScenario.setPrimeToken(primeScenario.address, xvs.address, poolId);
+  await primeScenario.setLimit(1000, 1000);
+  await primeScenario.addMarket(comptrollerProxy.address, vUSDT.address, bigNumber18.mul("1"), bigNumber18.mul("1"));
+  await primeScenario.addMarket(comptrollerProxy.address, vLINK.address, bigNumber18.mul("1"), bigNumber18.mul("1"));
+  await comptrollerProxy.setPrimeToken(primeScenario.address);
+  await primeScenario.togglePause();
+
   return {
-    oracle,
+    oracle: fakePriceOracle,
     accessControl,
     // comptrollerLens,
     comptroller: comptrollerProxy,
     usdt,
     vusdt: vUSDT,
-    eth,
-    veth: vETH,
+    link,
+    vlink: vLINK,
     xvs,
     xvsStore: xvsStoreScenario,
     xvsVault: xvsVaultScenario,
@@ -244,35 +263,158 @@ describe("Prime Token", () => {
   describe("protocol setup", () => {
     let comptroller: Comptroller;
     let prime: PrimeScenario;
-    let vusdt: VBep20Harness;
-    let veth: VBep20Harness;
-    let usdt: BEP20Harness;
-    let eth: BEP20Harness;
+    let vusdt: VToken;
+    let vlink: VToken;
+    let usdt: MockToken;
+    let link: MockToken;
 
     beforeEach(async () => {
-      ({ comptroller, vusdt, veth, usdt, eth, prime } = await loadFixture(deployProtocol));
+      ({ comptroller, vusdt, vlink, usdt, link, prime } = await loadFixture(deployProtocol));
 
-      await eth.connect(user1).approve(veth.address, bigNumber18.mul(90));
-      await veth.connect(user1).mint(bigNumber18.mul(90));
+      await link.connect(user1).approve(vlink.address, bigNumber18.mul(90));
+      await vlink.connect(user1).mint(bigNumber18.mul(90));
 
       await usdt.connect(user2).approve(vusdt.address, bigNumber18.mul(9000));
       await vusdt.connect(user2).mint(bigNumber18.mul(9000));
 
-      await comptroller.connect(user1).enterMarkets([vusdt.address, veth.address]);
-      await comptroller.connect(user2).enterMarkets([vusdt.address, veth.address]);
+      await comptroller.connect(user1).enterMarkets([vusdt.address, vlink.address]);
+      await comptroller.connect(user2).enterMarkets([vusdt.address, vlink.address]);
 
       await vusdt.connect(user1).borrow(bigNumber18.mul(5));
-      await veth.connect(user2).borrow(bigNumber18.mul(1));
+      await vlink.connect(user2).borrow(bigNumber18.mul(1));
     });
 
     it("markets added", async () => {
       expect(await comptroller.allMarkets(0)).to.be.equal(vusdt.address);
-      expect(await comptroller.allMarkets(1)).to.be.equal(veth.address);
+      expect(await comptroller.allMarkets(1)).to.be.equal(vlink.address);
     });
 
     it("borrow balance", async () => {
-      expect(await usdt.balanceOf(user1.getAddress())).to.be.gt(0);
-      expect(await eth.balanceOf(user2.getAddress())).to.be.gt(0);
+      expect(await usdt.balanceOf(await await user1.getAddress())).to.be.gt(0);
+      expect(await link.balanceOf(await user2.getAddress())).to.be.gt(0);
+    });
+  });
+
+  describe("boosted yield", () => {
+    let comptroller: Comptroller
+    let prime: PrimeScenario;
+    let vusdt: VToken;
+    let vlink: VToken;
+    let usdt: MockToken;
+    let link: MockToken;
+    let xvsVault: XVSVaultScenario;
+    let xvs: MockToken;
+    let oracle: FakeContract<ResilientOracleInterface>;
+    let primeLiquidityProvider: FakeContract<PrimeLiquidityProviderScenario>;
+
+    beforeEach(async () => {
+      ({ comptroller, prime, vusdt, vlink, usdt, link, xvsVault, xvs, oracle, primeLiquidityProvider } =
+        await loadFixture(deployProtocol));
+
+      await primeLiquidityProvider.tokenAmountAccrued.returns("0");
+
+      await xvs.connect(user1).approve(xvsVault.address, bigNumber18.mul(10000));
+      await xvsVault.connect(user1).deposit(xvs.address, 0, bigNumber18.mul(10000));
+      await mine(90 * 24 * 60 * 60);
+      await prime.connect(user1).claim();
+
+      await xvs.connect(user2).approve(xvsVault.address, bigNumber18.mul(100));
+      await xvsVault.connect(user2).deposit(xvs.address, 0, bigNumber18.mul(100));
+
+      await link.connect(user1).approve(vlink.address, bigNumber18.mul(90));
+      await vlink.connect(user1).mint(bigNumber18.mul(90));
+
+      await usdt.connect(user2).approve(vusdt.address, bigNumber18.mul(9000));
+      await vusdt.connect(user2).mint(bigNumber18.mul(9000));
+
+      await comptroller.connect(user1).enterMarkets([vusdt.address, vlink.address]);
+
+      await comptroller.connect(user2).enterMarkets([vusdt.address, vlink.address]);
+
+      await vusdt.connect(user1).borrow(bigNumber18.mul(5));
+      await vlink.connect(user2).borrow(bigNumber18.mul(1));
+    });
+
+    it("calculate score", async () => {
+      const xvsBalance = bigNumber18.mul(5000);
+      const capital = bigNumber18.mul(120);
+
+      // 5000^0.5 * 120^1-0.5 = 774.5966692
+      expect((await prime.calculateScore(xvsBalance, capital)).toString()).to.be.equal("774596669241483420144");
+
+      await prime.updateAlpha(4, 5); //0.80
+
+      //  5000^0.8 * 120^1-0.8 = 2371.44061
+      expect((await prime.calculateScore(xvsBalance, capital)).toString()).to.be.equal("2371440609779311958519");
+    });
+
+    it("accrue interest - prime token minted after market is added", async () => {
+      // await prime.accrueInterestAndUpdateScore(await user1.getAddress(),vusdt.address)
+      // await prime.accrueInterestAndUpdateScore(await user1.getAddress(),vlink.address)
+
+      let interest = await prime.interests(vusdt.address, await user1.getAddress());
+      /**
+       * score = 10000^0.5 * 5^0.5 = 223.6067977
+       */ 
+      expect(interest.score).to.be.equal("223606797749979014552");
+      expect(interest.accrued).to.be.equal(0);
+      expect(interest.rewardIndex).to.be.equal(0);
+
+      let market = await prime.markets(vusdt.address);
+      expect(market.sumOfMembersScore).to.be.equal("223606797749979014552");
+      expect(market.rewardIndex).to.be.equal(0);
+
+      await primeLiquidityProvider.tokenAmountAccrued.returns("518436");
+      await prime.accrueInterest(vusdt.address);
+      market = await prime.markets(vusdt.address);
+      expect(market.sumOfMembersScore).to.be.equal("223606797749979014552");
+      /**
+       * IncomeToDistribute = 518436
+       * IndexDelta = IncomeToDistribute/MarketScore = 518436 / 223606797749979014552 = 0.000000000000002318
+       * NewIndex += IndexDelta = 2318
+       */
+      expect(market.rewardIndex).to.be.equal("2318");
+
+      /**
+       * index = 2318 - 0
+       * score = 223606797749979014552 (223.606797749979014552)
+       * interest = index * score = 2318 * 223.606797749979014552 = 518320
+       */
+      expect(await prime.callStatic.getInterestAccrued(vusdt.address, await user1.getAddress())).to.be.equal(518320);
+
+      const interestsAccrued = await prime.callStatic.getPendingRewards(await user1.getAddress());
+      expect(interestsAccrued[0].rewardToken).to.be.equal(usdt.address);
+      expect(interestsAccrued[1].rewardToken).to.be.equal(link.address);
+      expect(interestsAccrued[0].amount).to.be.equal(518320);
+      expect(interestsAccrued[1].amount).to.be.equal(518000);
+
+      await prime.issue(false, [await user2.getAddress()]);
+
+      interest = await prime.interests(vusdt.address, await user2.getAddress());
+      /**
+       * score = 100^0.5 * 300^0.5 = 173.2050808
+       */
+      expect(interest.score).to.be.equal("173205080756887726446");
+      expect(interest.accrued).to.be.equal(0);
+      expect(interest.rewardIndex).to.be.equal("2318");
+    });
+
+    it("claim interest", async () => {
+      await primeLiquidityProvider.tokenAmountAccrued.returns("518436");
+      await prime.accrueInterest(vusdt.address);
+      expect(await prime.callStatic.getInterestAccrued(vusdt.address, await user1.getAddress())).to.be.equal(518320);
+
+      await expect(prime.connect(user1)["claimInterest(address)"](vusdt.address)).to.be.reverted;
+
+      const interest = await prime.callStatic.getInterestAccrued(vusdt.address, await user1.getAddress());
+      await usdt.transfer(prime.address, interest);
+      const previousBalance = await usdt.balanceOf(await user1.getAddress());
+      expect(await prime.callStatic["claimInterest(address,address)"](vusdt.address, await user1.getAddress())).to.be.equal(
+        interest,
+      );
+      await expect(prime["claimInterest(address,address)"](vusdt.address, await user1.getAddress())).to.be.not.reverted;
+      const newBalance = await usdt.balanceOf(await user1.getAddress());
+      expect(newBalance).to.be.equal(previousBalance.add(interest));
     });
   });
 });

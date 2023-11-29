@@ -14,6 +14,8 @@ import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Comptroller
  * @author Venus
@@ -302,7 +304,17 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
         }
+    }
 
+    /**
+     * @notice Validates mint, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being minted
+     * @param minter The address minting the tokens
+     * @param actualMintAmount The amount of the underlying asset being minted
+     * @param mintTokens The number of tokens being minted
+     */
+    // solhint-disable-next-line no-unused-vars
+    function mintVerify(address vToken, address minter, uint256 actualMintAmount, uint256 mintTokens) external {
         if (address(prime) != address(0)) {
             prime.accrueInterestAndUpdateScore(minter, vToken);
         }
@@ -333,9 +345,97 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
         }
+    }
 
+    /**
+     * @notice Validates redeem, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being redeemed
+     * @param redeemer The address redeeming the tokens
+     * @param redeemAmount The amount of the underlying asset being redeemed
+     * @param redeemTokens The number of tokens being redeemed
+     */
+    function redeemVerify(address vToken, address redeemer, uint256 redeemAmount, uint256 redeemTokens) external {
+        require(redeemTokens != 0 || redeemAmount == 0, "redeemTokens zero");
         if (address(prime) != address(0)) {
             prime.accrueInterestAndUpdateScore(redeemer, vToken);
+        }
+    }
+
+    /**
+     * @notice Validates repayBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being repaid
+     * @param payer The address repaying the borrow
+     * @param borrower The address of the borrower
+     * @param actualRepayAmount The amount of underlying being repaid
+     */
+    function repayBorrowVerify(
+        address vToken,
+        address payer, // solhint-disable-line no-unused-vars
+        address borrower,
+        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
+        uint256 borrowerIndex // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vToken);
+        }
+    }
+
+     /**
+     * @notice Validates liquidateBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param liquidator The address repaying the borrow and seizing the collateral
+     * @param borrower The address of the borrower
+     * @param actualRepayAmount The amount of underlying being repaid
+     * @param seizeTokens The amount of collateral token that will be seized
+     */
+    function liquidateBorrowVerify(
+        address vTokenBorrowed,
+        address vTokenCollateral, // solhint-disable-line no-unused-vars
+        address liquidator,
+        address borrower,
+        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
+        uint256 seizeTokens // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenBorrowed);
+            prime.accrueInterestAndUpdateScore(liquidator, vTokenBorrowed);
+        }
+    }
+
+    /**
+     * @notice Validates seize, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param liquidator The address repaying the borrow and seizing the collateral
+     * @param borrower The address of the borrower
+     * @param seizeTokens The number of collateral tokens to seize
+     */
+    function seizeVerify(
+        address vTokenCollateral,
+        address vTokenBorrowed, // solhint-disable-line no-unused-vars
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenCollateral);
+            prime.accrueInterestAndUpdateScore(liquidator, vTokenCollateral);
+        }
+    }
+
+     /**
+     * @notice Validates transfer, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being transferred
+     * @param src The account which sources the tokens
+     * @param dst The account which receives the tokens
+     * @param transferTokens The number of vTokens to transfer
+     */
+    // solhint-disable-next-line no-unused-vars
+    function transferVerify(address vToken, address src, address dst, uint256 transferTokens) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(src, vToken);
+            prime.accrueInterestAndUpdateScore(dst, vToken);
         }
     }
 
@@ -408,7 +508,16 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
         }
+    }
 
+    /**
+     * @notice Validates borrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset whose underlying is being borrowed
+     * @param borrower The address borrowing the underlying
+     * @param borrowAmount The amount of the underlying asset requested to borrow
+     */
+    // solhint-disable-next-line no-unused-vars
+    function borrowVerify(address vToken, address borrower, uint256 borrowAmount) external {
         if (address(prime) != address(0)) {
             prime.accrueInterestAndUpdateScore(borrower, vToken);
         }
@@ -439,10 +548,6 @@ contract Comptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
-
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vToken);
         }
     }
 
@@ -510,10 +615,6 @@ contract Comptroller is
         if (repayAmount > maxClose) {
             revert TooMuchRepay();
         }
-
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vTokenBorrowed);
-        }
     }
 
     /**
@@ -574,11 +675,6 @@ contract Comptroller is
             rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
             rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
         }
-
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vTokenCollateral);
-            prime.accrueInterestAndUpdateScore(liquidator, vTokenCollateral);
-        }
     }
 
     /**
@@ -609,11 +705,6 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, src);
             rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
-        }
-
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(src, vToken);
-            prime.accrueInterestAndUpdateScore(dst, vToken);
         }
     }
 

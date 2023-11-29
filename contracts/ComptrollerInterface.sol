@@ -56,6 +56,34 @@ interface ComptrollerInterface {
     ) external view returns (uint256, uint256);
 
     function getAllMarkets() external view returns (VToken[] memory);
+
+    function borrowVerify(address vToken, address borrower, uint borrowAmount) external;
+    function mintVerify(address vToken, address minter, uint mintAmount, uint mintTokens) external;
+    function redeemVerify(address vToken, address redeemer, uint redeemAmount, uint redeemTokens) external;
+    function repayBorrowVerify(
+        address vToken,
+        address payer,
+        address borrower,
+        uint repayAmount,
+        uint borrowerIndex
+    ) external;
+    function liquidateBorrowVerify(
+        address vTokenBorrowed,
+        address vTokenCollateral,
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        uint seizeTokens
+    ) external;
+    function seizeVerify(
+        address vTokenCollateral,
+        address vTokenBorrowed,
+        address liquidator,
+        address borrower,
+        uint seizeTokens
+    ) external;
+    function transferVerify(address vToken, address src, address dst, uint transferTokens) external;
+
 }
 
 /**
