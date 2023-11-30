@@ -259,7 +259,7 @@ describe("Prime Token", () => {
   let user2: Signer;
 
   before(async () => {
-    [user1, user2] = await ethers.getSigners();
+    [, user1, user2] = await ethers.getSigners();
   });
 
   describe("protocol setup", () => {
