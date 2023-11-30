@@ -4,6 +4,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
+import { blocksPerYear as blocksPerYearConfig } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import { AccessControlManager, JumpRateModelV2 } from "../../typechain";
 
@@ -20,7 +21,7 @@ describe("Jump rate model tests", () => {
   const reserves = convertToUnit(2, 19);
   const badDebt = convertToUnit(1, 19);
   const expScale = convertToUnit(1, 18);
-  const blocksPerYear = 10512000;
+  const blocksPerYear = blocksPerYearConfig.hardhat;
   const baseRatePerYear = convertToUnit(2, 12);
   const multiplierPerYear = convertToUnit(4, 14);
   const jumpMultiplierPerYear = convertToUnit(2, 18);
@@ -31,6 +32,7 @@ describe("Jump rate model tests", () => {
 
     const JumpRateModelFactory = await ethers.getContractFactory("JumpRateModelV2");
     jumpRateModel = await JumpRateModelFactory.deploy(
+      blocksPerYear,
       baseRatePerYear,
       multiplierPerYear,
       jumpMultiplierPerYear,
@@ -49,6 +51,7 @@ describe("Jump rate model tests", () => {
     let multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(new BigNumber(blocksPerYear)).toFixed(0);
     let jumpMultiplierPerBlock = new BigNumber(jumpMultiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
 
+    expect(await jumpRateModel.blocksPerYear()).equal(blocksPerYear);
     expect(await jumpRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
     expect(await jumpRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
     expect(await jumpRateModel.jumpMultiplierPerBlock()).equal(jumpMultiplierPerBlock);

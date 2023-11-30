@@ -52,7 +52,7 @@ let usdcUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
 
 const initPancakeSwapRouter = async (
