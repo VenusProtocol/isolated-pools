@@ -1,3 +1,29 @@
+## [2.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.2...v2.3.0-dev.3) (2023-11-30)
+
+
+### Features
+
+* updating deployment files ([f1e3083](https://github.com/VenusProtocol/isolated-pools/commit/f1e3083c56a6bca47752928016fb26517cb9c880))
+* updating deployment files ([d2b7cdb](https://github.com/VenusProtocol/isolated-pools/commit/d2b7cdb02d284e0582b5edef3e36df7332e12143))
+* updating deployment files ([b957327](https://github.com/VenusProtocol/isolated-pools/commit/b957327247f2d5d6c50591fa8dc31a0d97e60a9b))
+* updating deployment files ([386581f](https://github.com/VenusProtocol/isolated-pools/commit/386581fd775994ba6bf469e99c0c0f31c71654a7))
+
+
+### Bug Fixes
+
+* bump protocol package version ([7bad19c](https://github.com/VenusProtocol/isolated-pools/commit/7bad19ceffacebda66270216d74b1a786d49e594))
+* compilation error ([b78e110](https://github.com/VenusProtocol/isolated-pools/commit/b78e1100557ce5723c2302ca28265165a24a0c55))
+* config of usdt_core ([f63346a](https://github.com/VenusProtocol/isolated-pools/commit/f63346a58644fbb1bc3f51edbfbbdbead25d40f4))
+* delete unused contract for this repo ([e3f1625](https://github.com/VenusProtocol/isolated-pools/commit/e3f1625654a24a2e71a8cddff3924d98c8f44198))
+* deployment scripts for local deployment and update oracle package version fixing oracle deployments locally ([efdf4c0](https://github.com/VenusProtocol/isolated-pools/commit/efdf4c0584b62020eea3c4f3f4b92877e44b9414))
+* format code ([bfaacdd](https://github.com/VenusProtocol/isolated-pools/commit/bfaacdded66adec803d9be0877733610055c9d21))
+* hardhat config file ([0939e0a](https://github.com/VenusProtocol/isolated-pools/commit/0939e0af70db867d8350af8f8fc586ed6dd33409))
+* lint and preconfiguredAddress decaration of Vtreasury wrong reference ([8469906](https://github.com/VenusProtocol/isolated-pools/commit/8469906743f1b9b7e2ea527fe71c7d25236d35ad))
+* riskfund deploy script fix (wrong resolution of merge conflict) ([4244f64](https://github.com/VenusProtocol/isolated-pools/commit/4244f649deb9400df55419634f0baef1874b0390))
+* tests ([b8c14c0](https://github.com/VenusProtocol/isolated-pools/commit/b8c14c0fd912b7d466fa71ef86a6018734f3b4f4))
+* update venus-protocol version ([46e1327](https://github.com/VenusProtocol/isolated-pools/commit/46e132714bab723863fd13baeec23c01ceab8a00))
+* yarn build ([8234296](https://github.com/VenusProtocol/isolated-pools/commit/823429638d7a6d3b237a7ec6cf011865ae81c878))
+
 ## [2.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.1...v2.3.0-dev.2) (2023-11-17)
 
 

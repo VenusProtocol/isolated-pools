@@ -2195,10 +2195,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:4.9.3, @openzeppelin/contracts@npm:^4.3.3, @openzeppelin/contracts@npm:^4.6.0, @openzeppelin/contracts@npm:^4.8.3":
+"@openzeppelin/contracts@npm:4.9.3":
   version: 4.9.3
   resolution: "@openzeppelin/contracts@npm:4.9.3"
   checksum: 4932063e733b35fa7669b9fe2053f69b062366c5c208b0c6cfa1ac451712100c78acff98120c3a4b88d94154c802be05d160d71f37e7d74cadbe150964458838
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts@npm:^4.3.3, @openzeppelin/contracts@npm:^4.6.0, @openzeppelin/contracts@npm:^4.8.3":
+  version: 4.9.2
+  resolution: "@openzeppelin/contracts@npm:4.9.2"
+  checksum: 0538b18fe222e5414a5a539c240b155e0bef2a23c5182fb8e137d71a0c390fe899160f2d55701f75b127f54cc61aee4375370acc832475f19829368ac65c1fc6
   languageName: node
   linkType: hard
 
@@ -3021,26 +3028,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@npm:^0.0.2":
-  version: 0.0.2
-  resolution: "@venusprotocol/governance-contracts@npm:0.0.2"
-  checksum: 101ade6013fe3963968d37ff839a4c62aeaedd9f26d8c5ae47bdc413e6c61732b4048a1b026e4281ade5676fb1545a49ecac299f6b669a9f0c7e73723666d7e1
+"@venusprotocol/governance-contracts@npm:1.4.0-dev.2, @venusprotocol/governance-contracts@npm:^1.4.0-dev.1":
+  version: 1.4.0-dev.2
+  resolution: "@venusprotocol/governance-contracts@npm:1.4.0-dev.2"
+  checksum: eea8efe2ef9bf1165d4f639049015d2acd8a1d98f643bb50c59f5b4c93762833709411c2d32b82e9be662f64a61605b4186fcacad44bd227c934f4b55f801880
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@npm:^1.0.0":
+"@venusprotocol/governance-contracts@npm:^1.3.0":
   version: 1.3.0
   resolution: "@venusprotocol/governance-contracts@npm:1.3.0"
   checksum: 9cbc44e5fffd2f33e273c96e3f77b2d9afe254b3f8c22533eecb96f79011715afafd72f2a716bab5509164fa4f3e0629b94450f16619bba221d8d5a9e632b610
-  languageName: node
-  linkType: hard
-
-"@venusprotocol/governance-contracts@npm:^1.4.0-dev.2":
-  version: 1.4.0-dev.3
-  resolution: "@venusprotocol/governance-contracts@npm:1.4.0-dev.3"
-  dependencies:
-    "@venusprotocol/solidity-utilities": ^1.1.0
-  checksum: 18d808bfad41dd4c57a8eabdd59c464253866b6aede9326483490be3f781c3fd5e1e6640789f047dbdcb3d01d875aebde4ec1e25509cd26968be913d82069a50
   languageName: node
   linkType: hard
 
@@ -3071,10 +3069,10 @@ __metadata:
     "@types/node": ^12.20.50
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
-    "@venusprotocol/governance-contracts": ^1.0.0
-    "@venusprotocol/oracle": 1.7.2
-    "@venusprotocol/protocol-reserve": ^1.1.0
-    "@venusprotocol/venus-protocol": 6.1.0-dev.4
+    "@venusprotocol/governance-contracts": 1.4.0-dev.2
+    "@venusprotocol/oracle": 1.8.0-dev.3
+    "@venusprotocol/protocol-reserve": 1.2.0-dev.2
+    "@venusprotocol/venus-protocol": 6.0.1-dev.2
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3104,23 +3102,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@venusprotocol/oracle@npm:1.7.2":
-  version: 1.7.2
-  resolution: "@venusprotocol/oracle@npm:1.7.2"
+"@venusprotocol/oracle@npm:1.8.0-dev.3":
+  version: 1.8.0-dev.3
+  resolution: "@venusprotocol/oracle@npm:1.8.0-dev.3"
   dependencies:
     "@chainlink/contracts": ^0.5.1
     "@defi-wonderland/smock": ^2.3.4
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@openzeppelin/contracts": ^4.6.0
     "@openzeppelin/contracts-upgradeable": ^4.7.3
-    "@venusprotocol/governance-contracts": ^0.0.2
+    "@venusprotocol/governance-contracts": ^1.3.0
     "@venusprotocol/venus-protocol": 0.7.0
     ethers: ^5.6.8
     hardhat: ^2.16.1
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
     solidity-docgen: ^0.6.0-beta.29
-  checksum: 71dc7faf761e110cda526dabbe2ac7bdda40849cccb6473647cf80edd6940e1cbe02528c270f83e9d14c7815cdfaf736a1acef3c8896cf04926f72a8c53ff9df
+  checksum: 2cdb3a96c5566e317636bb240d61356edbb19534be3c7f745920e2d4737aa2ccb21ad5ea35cd0d2668d2d64b28b789d8b5801e0102ae55a7e4b70ab5db1de6eb
   languageName: node
   linkType: hard
 
@@ -3138,23 +3136,6 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
   checksum: e644bc58b6b4646ce6b262e9e34646d65285dee97cb38a34ac99d35330b3f4bea4c9075d87ee6e6d1e813563c622a01e12eba82014e6d7952e17ea798673bac3
-  languageName: node
-  linkType: hard
-
-"@venusprotocol/protocol-reserve@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "@venusprotocol/protocol-reserve@npm:1.1.0"
-  dependencies:
-    "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/solidity-utilities": ^1.0.1
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: 86e2da20ddb3824603c1f5e0931cc4715cd442624a03cc0fed7633ecbb5f2cab9a04ca5dcec805a4d9b0e04904799286210299f39935034f9fe85155f7b56da3
   languageName: node
   linkType: hard
 
@@ -3177,19 +3158,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:6.1.0-dev.4":
-  version: 6.1.0-dev.4
-  resolution: "@venusprotocol/venus-protocol@npm:6.1.0-dev.4"
+"@venusprotocol/venus-protocol@npm:6.0.1-dev.2":
+  version: 6.0.1-dev.2
+  resolution: "@venusprotocol/venus-protocol@npm:6.0.1-dev.2"
   dependencies:
     "@openzeppelin/contracts": 4.9.3
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-    "@venusprotocol/governance-contracts": ^1.4.0-dev.2
+    "@venusprotocol/governance-contracts": ^1.4.0-dev.1
     "@venusprotocol/protocol-reserve": 1.2.0-dev.2
-    "@venusprotocol/solidity-utilities": ^1.1.0
     bignumber.js: ^9.1.2
     dotenv: ^16.0.1
     module-alias: ^2.2.2
-  checksum: c7c7470be9f06aa2b5067b35ddb8b99c026ec810689c3341283de3bc6928b5f00d51ce263f6a181105ae8682714148e159a85b4f228a9a03cdf824b611adbd8b
+  checksum: 0b1da169b6ddd1799f2d2d9667d61ced50244acdad68588cb84b051e89ebeb8940a28db9fc890d9b499bd8fc6f774c4163b3bcd0a2a8d2a75080c9c0af80d2e9
   languageName: node
   linkType: hard
 

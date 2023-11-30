@@ -39,7 +39,7 @@ let busdUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
 const REDUCE_RESERVE_AMOUNT = parseUnits("50", 18);
 

@@ -4,7 +4,7 @@ pragma solidity 0.8.13;
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
+import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title Logic for Compound's JumpRateModel Contract V2.
@@ -13,6 +13,10 @@ import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters.
  */
 abstract contract BaseJumpRateModelV2 is InterestRateModel {
+    /**
+     * @notice The approximate number of blocks per year that is assumed by the interest rate model
+     */
+    uint256 public immutable blocksPerYear;
     /**
      * @notice The address of the AccessControlManager contract
      */
@@ -52,6 +56,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
 
     /**
      * @notice Construct an interest rate model
+     * @param blocksPerYear_  The approximate number of blocks per year that is assumed by the interest rate model.
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
      * @param jumpMultiplierPerYear The multiplierPerBlock after hitting a specified utilization point
@@ -59,6 +64,7 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
      * @param accessControlManager_ The address of the AccessControlManager contract
      */
     constructor(
+        uint256 blocksPerYear_,
         uint256 baseRatePerYear,
         uint256 multiplierPerYear,
         uint256 jumpMultiplierPerYear,
@@ -66,8 +72,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         IAccessControlManagerV8 accessControlManager_
     ) {
         require(address(accessControlManager_) != address(0), "invalid ACM address");
-
+        require(blocksPerYear_ != 0, "Invalid blocks per year");
         accessControlManager = accessControlManager_;
+        blocksPerYear = blocksPerYear_;
 
         _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);
     }
@@ -162,9 +169,9 @@ abstract contract BaseJumpRateModelV2 is InterestRateModel {
         uint256 jumpMultiplierPerYear,
         uint256 kink_
     ) internal {
-        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
-        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
-        jumpMultiplierPerBlock = jumpMultiplierPerYear / BLOCKS_PER_YEAR;
+        baseRatePerBlock = baseRatePerYear / blocksPerYear;
+        multiplierPerBlock = multiplierPerYear / blocksPerYear;
+        jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksPerYear;
         kink = kink_;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);
