@@ -3035,7 +3035,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@npm:^1.4.0-dev.1":
+"@venusprotocol/governance-contracts@npm:^1.4.0-dev.2":
   version: 1.4.0-dev.3
   resolution: "@venusprotocol/governance-contracts@npm:1.4.0-dev.3"
   dependencies:
@@ -3074,7 +3074,7 @@ __metadata:
     "@venusprotocol/governance-contracts": ^1.0.0
     "@venusprotocol/oracle": 1.7.2
     "@venusprotocol/protocol-reserve": ^1.1.0
-    "@venusprotocol/venus-protocol": 6.1.0-dev.2
+    "@venusprotocol/venus-protocol": 6.1.0-dev.4
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3177,19 +3177,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:6.1.0-dev.2":
-  version: 6.1.0-dev.2
-  resolution: "@venusprotocol/venus-protocol@npm:6.1.0-dev.2"
+"@venusprotocol/venus-protocol@npm:6.1.0-dev.4":
+  version: 6.1.0-dev.4
+  resolution: "@venusprotocol/venus-protocol@npm:6.1.0-dev.4"
   dependencies:
     "@openzeppelin/contracts": 4.9.3
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-    "@venusprotocol/governance-contracts": ^1.4.0-dev.1
+    "@venusprotocol/governance-contracts": ^1.4.0-dev.2
     "@venusprotocol/protocol-reserve": 1.2.0-dev.2
     "@venusprotocol/solidity-utilities": ^1.1.0
     bignumber.js: ^9.1.2
     dotenv: ^16.0.1
     module-alias: ^2.2.2
-  checksum: 1aee307bbeae16d552dcc985514f22fe784af1b9345f47e3b26b5d62fdf334f06bc07d4c4ca98b86f3b083f0ac2b5402a1f980f1a813cb565d9bee2010461407
+  checksum: c7c7470be9f06aa2b5067b35ddb8b99c026ec810689c3341283de3bc6928b5f00d51ce263f6a181105ae8682714148e159a85b4f228a9a03cdf824b611adbd8b
   languageName: node
   linkType: hard
 

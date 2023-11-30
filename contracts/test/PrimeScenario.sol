@@ -14,24 +14,11 @@ contract PrimeScenario is Prime {
         uint256 _maximumXVSCap
     ) Prime(_wbnb, _vbnb, _blocksPerYear, _stakingPeriod, _minimumStakedXVS, _maximumXVSCap) {}
 
-    function calculateScore(uint256 xvs, uint256 capital) external view returns (uint256) {
-        return Scores._calculateScore(xvs, capital, alphaNumerator, alphaDenominator);
-    }
-
     function setPLP(address plp) external {
         primeLiquidityProvider = plp;
     }
 
-    function xvsBalanceForScore_(address user) view external returns (uint256) {
-        return _xvsBalanceForScore(_xvsBalanceOfUser(user));
-    }
-
-    function capitalForScore_(
-        uint256 xvs,
-        uint256 borrow,
-        uint256 supply,
-        address market
-    ) view external returns (uint256, uint256, uint256) {
-        return _capitalForScore(xvs,borrow,supply,market);
+    function calculateScore(uint256 xvs, uint256 capital) external view returns (uint256) {
+        return Scores._calculateScore(xvs, capital, alphaNumerator, alphaDenominator);
     }
 }

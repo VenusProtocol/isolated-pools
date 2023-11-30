@@ -14,8 +14,6 @@ import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Comptroller
  * @author Venus
@@ -380,7 +378,7 @@ contract Comptroller is
         }
     }
 
-     /**
+    /**
      * @notice Validates liquidateBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
      * @param vTokenBorrowed Asset which was borrowed by the borrower
      * @param vTokenCollateral Asset which was used as collateral and will be seized
@@ -424,7 +422,7 @@ contract Comptroller is
         }
     }
 
-     /**
+    /**
      * @notice Validates transfer, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
      * @param vToken Asset being transferred
      * @param src The account which sources the tokens

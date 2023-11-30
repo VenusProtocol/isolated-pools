@@ -1218,7 +1218,6 @@ contract VToken is
 
         /* We call the defense and prime accrue interest hook */
         comptroller.seizeVerify(address(this), seizerContract, liquidator, borrower, seizeTokens);
-
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
