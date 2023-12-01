@@ -511,9 +511,6 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
 
       const repayAmount = convertToUnit("1000000000007133", 0);
-      // if (timeBasedIntegrationTests) {
-      //   repayAmount = convertToUnit("1000000000002377", 0);
-      // }
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,

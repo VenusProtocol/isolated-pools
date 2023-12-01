@@ -17,6 +17,8 @@ export type NetworkConfig = {
   bscmainnet: DeploymentConfig;
   sepolia: DeploymentConfig;
   ethereum: DeploymentConfig;
+  sepolia: DeploymentConfig;
+  ethereum: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
