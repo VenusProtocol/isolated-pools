@@ -1,3 +1,11 @@
+## [2.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2023-12-01)
+
+
+### Features
+
+* generate file only with addresses of deployed contracts ([2302942](https://github.com/VenusProtocol/isolated-pools/commit/23029424d07d3c08aba42f9a08d39b4a3907db8b))
+* updating deployment files ([8fc14cf](https://github.com/VenusProtocol/isolated-pools/commit/8fc14cf3da582ddaf3d3fd89bef8e8998a4ea8ea))
+
 ## [2.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.2...v2.3.0-dev.3) (2023-11-30)
 
 
