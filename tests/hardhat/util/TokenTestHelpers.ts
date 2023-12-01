@@ -4,6 +4,7 @@ import { BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { BSC_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import {
   AccessControlManager,
   Comptroller,
@@ -34,6 +35,8 @@ interface VTokenParameters {
   protocolShareReserve: AddressOrContract;
   reserveFactorMantissa: BigNumberish;
   beacon: UpgradeableBeacon;
+  isTimeBased: boolean;
+  blocksPerYear: BigNumberish;
 }
 
 const getNameAndSymbol = async (underlying: AddressOrContract): Promise<[string, string]> => {
@@ -71,9 +74,13 @@ export type AnyVTokenFactory = VTokenHarness__factory | VToken__factory;
 
 export const deployVTokenBeacon = async <VTokenFactory extends AnyVTokenFactory = VToken__factory>(
   { kind }: { kind: string } = { kind: "VToken" },
+  isTimeBased: boolean = false,
+  blocksPerYear: BigNumberish = BSC_BLOCKS_PER_YEAR,
 ): Promise<UpgradeableBeacon> => {
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
-  const vTokenBeacon = (await upgrades.deployBeacon(VToken)) as UpgradeableBeacon;
+  const vTokenBeacon = (await upgrades.deployBeacon(VToken, {
+    constructorArgs: [isTimeBased, blocksPerYear],
+  })) as UpgradeableBeacon;
   return vTokenBeacon;
 };
 
@@ -99,7 +106,15 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
     shortfall: params.shortfall || (await smock.fake("Shortfall")),
     protocolShareReserve: params.protocolShareReserve || (await smock.fake("ProtocolShareReserve")),
     reserveFactorMantissa: params.reserveFactorMantissa || parseUnits("0.3", 18),
-    beacon: params.beacon || (await deployVTokenBeacon<VTokenFactory>({ kind })),
+    beacon:
+      params.beacon ||
+      (await deployVTokenBeacon<VTokenFactory>(
+        { kind },
+        params.isTimeBased || false,
+        params.blocksPerYear || BSC_BLOCKS_PER_YEAR,
+      )),
+    isTimeBased: params.isTimeBased || false,
+    blocksPerYear: params.blocksPerYear || BSC_BLOCKS_PER_YEAR,
   };
 };
 

@@ -79,7 +79,7 @@ contract VTokenStorage {
     uint256 public reserveFactorMantissa;
 
     /**
-     * @notice Block number that interest was last accrued at
+     * @notice Slot(block/second) number that interest was last accrued at
      */
     uint256 public accrualBlockNumber;
 

@@ -12,6 +12,7 @@ import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInt
 import { TokenErrorReporter } from "./ErrorReporter.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
+import { TimeManager } from "./TimeManager.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
@@ -41,6 +42,7 @@ import { ensureNonzeroAddress } from "./lib/validators.sol";
  * `healAccount()` and `liquidateAccount()` in the `Comptroller` summary section below.
  */
 contract VToken is
+    TimeManager,
     Ownable2StepUpgradeable,
     AccessControlledV8,
     VTokenInterface,
@@ -65,8 +67,12 @@ contract VToken is
         _notEntered = true; // get a gas-refund post-Istanbul
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
@@ -424,7 +430,7 @@ contract VToken is
      */
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
-        if (reduceReservesBlockNumber == _getBlockNumber()) return;
+        if (reduceReservesBlockNumber == getBlockNumberOrTimestamp()) return;
         _reduceReservesFresh(reduceAmount);
     }
 
@@ -614,8 +620,8 @@ contract VToken is
     }
 
     /**
-     * @notice A public function to set new threshold of block difference after which funds will be sent to the protocol share reserve
-     * @param _newReduceReservesBlockDelta block difference value
+     * @notice A public function to set new threshold of slot(block/second) difference after which funds will be sent to the protocol share reserve
+     * @param _newReduceReservesBlockDelta slot(block/second) difference value
      * @custom:access Only Governance
      */
     function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
@@ -673,16 +679,16 @@ contract VToken is
     }
 
     /**
-     * @notice Returns the current per-block borrow interest rate for this vToken
-     * @return rate The borrow interest rate per block, scaled by 1e18
+     * @notice Returns the current per-slot(block/second) borrow interest rate for this vToken
+     * @return rate The borrow interest rate per slot(block/second), scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
         return interestRateModel.getBorrowRate(_getCashPrior(), totalBorrows, totalReserves, badDebt);
     }
 
     /**
-     * @notice Returns the current per-block supply interest rate for this v
-     * @return rate The supply interest rate per block, scaled by 1e18
+     * @notice Returns the current per-slot(block/second) supply interest rate for this v
+     * @return rate The supply interest rate per slot(block/second), scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
         return
@@ -724,21 +730,21 @@ contract VToken is
 
     /**
      * @notice Applies accrued interest to total borrows and reserves
-     * @dev This calculates interest accrued from the last checkpointed block
-     *  up to the current block and writes new checkpoint to storage and
+     * @dev This calculates interest accrued from the last checkpointed slot(block/second)
+     *  up to the current slot(block/second) and writes new checkpoint to storage and
      *  reduce spread reserves to protocol share reserve
-     *  if currentBlock - reduceReservesBlockNumber >= blockDelta
+     *  if currentSlot - reduceReservesBlockNumber >= slotDelta
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
      */
     function accrueInterest() public virtual override returns (uint256) {
         /* Remember the initial block number */
-        uint256 currentBlockNumber = _getBlockNumber();
-        uint256 accrualBlockNumberPrior = accrualBlockNumber;
+        uint256 currentSlotNumber = getBlockNumberOrTimestamp();
+        uint256 accrualSlotNumberPrior = accrualBlockNumber;
 
         /* Short-circuit accumulating 0 interest */
-        if (accrualBlockNumberPrior == currentBlockNumber) {
+        if (accrualSlotNumberPrior == currentSlotNumber) {
             return NO_ERROR;
         }
 
@@ -752,19 +758,19 @@ contract VToken is
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior, badDebt);
         require(borrowRateMantissa <= MAX_BORROW_RATE_MANTISSA, "borrow rate is absurdly high");
 
-        /* Calculate the number of blocks elapsed since the last accrual */
-        uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
+        /* Calculate the number of slots elapsed since the last accrual */
+        uint256 slotDelta = currentSlotNumber - accrualSlotNumberPrior;
 
         /*
          * Calculate the interest accumulated into borrows and reserves and the new index:
-         *  simpleInterestFactor = borrowRate * blockDelta
+         *  simpleInterestFactor = borrowRate * slotDelta
          *  interestAccumulated = simpleInterestFactor * totalBorrows
          *  totalBorrowsNew = interestAccumulated + totalBorrows
          *  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
          *  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
          */
 
-        Exp memory simpleInterestFactor = mul_(Exp({ mantissa: borrowRateMantissa }), blockDelta);
+        Exp memory simpleInterestFactor = mul_(Exp({ mantissa: borrowRateMantissa }), slotDelta);
         uint256 interestAccumulated = mul_ScalarTruncate(simpleInterestFactor, borrowsPrior);
         uint256 totalBorrowsNew = interestAccumulated + borrowsPrior;
         uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
@@ -779,13 +785,13 @@ contract VToken is
         // (No safe failures beyond this point)
 
         /* We write the previously calculated values into storage */
-        accrualBlockNumber = currentBlockNumber;
+        accrualBlockNumber = currentSlotNumber;
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
-        if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
-            reduceReservesBlockNumber = currentBlockNumber;
+        if (currentSlotNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
+            reduceReservesBlockNumber = currentSlotNumber;
             _reduceReservesFresh(totalReservesNew);
         }
 
@@ -806,8 +812,8 @@ contract VToken is
         /* Fail if mint not allowed */
         comptroller.preMintHook(address(this), minter, mintAmount);
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        /* Verify market's slot(block/second) number equals current slot(block/second) number */
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert MintFreshnessCheck();
         }
 
@@ -850,7 +856,7 @@ contract VToken is
 
     /**
      * @notice User redeems vTokens in exchange for the underlying asset
-     * @dev Assumes interest has already been accrued up to the current block
+     * @dev Assumes interest has already been accrued up to the current slot(block/second)
      * @param redeemer The address of the account which is redeeming the tokens
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
@@ -858,8 +864,8 @@ contract VToken is
     function _redeemFresh(address redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        /* Verify market's slot(block/second) number equals current slot(block/second) number */
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert RedeemFreshnessCheck();
         }
 
@@ -936,8 +942,8 @@ contract VToken is
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        /* Verify market's slot(block/second) number equals current slot(block/second) number */
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert BorrowFreshnessCheck();
         }
 
@@ -989,8 +995,8 @@ contract VToken is
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), borrower);
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        /* Verify market's slot(block/second) number equals current slot(block/second) number */
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert RepayBorrowFreshnessCheck();
         }
 
@@ -1085,13 +1091,13 @@ contract VToken is
             skipLiquidityCheck
         );
 
-        /* Verify market's block number equals current block number */
-        if (accrualBlockNumber != _getBlockNumber()) {
+        /* Verify market's slot(block/second) number equals current slot(block/second) number */
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert LiquidateFreshnessCheck();
         }
 
-        /* Verify vTokenCollateral market's block number equals current block number */
-        if (vTokenCollateral.accrualBlockNumber() != _getBlockNumber()) {
+        /* Verify vTokenCollateral market's slot(block/second) number equals current slot(block/second) number */
+        if (vTokenCollateral.accrualBlockNumber() != getBlockNumberOrTimestamp()) {
             revert LiquidateCollateralFreshnessCheck();
         }
 
@@ -1213,8 +1219,8 @@ contract VToken is
      * @param newReserveFactorMantissa New reserve factor (from 0 to 1e18)
      */
     function _setReserveFactorFresh(uint256 newReserveFactorMantissa) internal {
-        // Verify market's block number equals current block number
-        if (accrualBlockNumber != _getBlockNumber()) {
+        // Verify market's slot(block/second) number equals current slot(block/second) number
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert SetReserveFactorFreshCheck();
         }
 
@@ -1240,8 +1246,8 @@ contract VToken is
         uint256 totalReservesNew;
         uint256 actualAddAmount;
 
-        // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != _getBlockNumber()) {
+        // We fail gracefully unless market's slot(block/second) number equals current slot(block/second) number
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert AddReservesFactorFreshCheck(actualAddAmount);
         }
 
@@ -1265,8 +1271,8 @@ contract VToken is
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
-        // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != _getBlockNumber()) {
+        // We fail gracefully unless market's slot(block/second) number equals current slot(block/second) number
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert ReduceReservesFreshCheck();
         }
 
@@ -1312,8 +1318,8 @@ contract VToken is
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
-        // We fail gracefully unless market's block number equals current block number
-        if (accrualBlockNumber != _getBlockNumber()) {
+        // We fail gracefully unless market's slot(block/second) number equals current slot(block/second) number
+        if (accrualBlockNumber != getBlockNumberOrTimestamp()) {
             revert SetInterestRateModelFreshCheck();
         }
 
@@ -1443,11 +1449,11 @@ contract VToken is
 
         _setComptroller(comptroller_);
 
-        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
-        accrualBlockNumber = _getBlockNumber();
+        // Initialize slot(block/second) number and borrow index (slot(block/second) number mocks depend on comptroller being set)
+        accrualBlockNumber = getBlockNumberOrTimestamp();
         borrowIndex = MANTISSA_ONE;
 
-        // Set the interest rate model (depends on block number / borrow index)
+        // Set the interest rate model (depends on slot(block/second) number / borrow index)
         _setInterestRateModelFresh(interestRateModel_);
 
         _setReserveFactorFresh(reserveFactorMantissa_);
@@ -1489,15 +1495,6 @@ contract VToken is
      */
     function _getCashPrior() internal view virtual returns (uint256) {
         return IERC20Upgradeable(underlying).balanceOf(address(this));
-    }
-
-    /**
-     * @dev Function to simply retrieve block number
-     *  This exists mainly for inheriting test contracts to stub this result.
-     * @return Current block number
-     */
-    function _getBlockNumber() internal view virtual returns (uint256) {
-        return block.number;
     }
 
     /**

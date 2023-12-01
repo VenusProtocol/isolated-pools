@@ -13,6 +13,17 @@ contract VTokenHarness is VToken {
 
     mapping(address => bool) public failTransferToAddresses;
 
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) VToken(timeBased_, blocksPerYear_) {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -119,6 +130,10 @@ contract VTokenHarness is VToken {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
     }
 
+    function getBlockNumberOrTimestamp() public view override returns (uint256) {
+        return blockNumber;
+    }
+
     function _doTransferOut(address to, uint256 amount) internal override {
         require(failTransferToAddresses[to] == false, "HARNESS_TOKEN_TRANSFER_OUT_FAILED");
         return super._doTransferOut(to, amount);
@@ -129,9 +144,5 @@ contract VTokenHarness is VToken {
             return harnessExchangeRate;
         }
         return super._exchangeRateStored();
-    }
-
-    function _getBlockNumber() internal view override returns (uint256) {
-        return blockNumber;
     }
 }

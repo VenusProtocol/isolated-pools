@@ -11,6 +11,7 @@ import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerIn
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
+import { TimeManager } from "../TimeManager.sol";
 
 /**
  * @title PoolLens
@@ -25,7 +26,7 @@ import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 - the underlying asset price of a vToken;
 - the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
  */
-contract PoolLens is ExponentialNoError {
+contract PoolLens is TimeManager, ExponentialNoError {
     /**
      * @dev Struct for PoolDetails.
      */
@@ -111,10 +112,10 @@ contract PoolLens is ExponentialNoError {
     struct RewardTokenState {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
         uint224 index;
-        // The block number the index was last updated at
-        uint32 block;
-        // The block number at which to stop rewards
-        uint32 lastRewardingBlock;
+        // The block number or timestamp the index was last updated at
+        uint256 blockOrTimestamp;
+        // The block number or timestamp at which to stop rewards
+        uint256 lastRewardingBlockOrTimestamp;
     }
 
     /**
@@ -133,6 +134,13 @@ contract PoolLens is ExponentialNoError {
         uint256 totalBadDebtUsd;
         BadDebt[] badDebts;
     }
+
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {}
 
     /**
      * @notice Queries the user's supply/borrow balances in vTokens
@@ -440,11 +448,17 @@ contract PoolLens is ExponentialNoError {
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenBorrowState(address(markets[i]));
+            (
+                borrowState.index,
+                borrowState.blockOrTimestamp,
+                borrowState.lastRewardingBlockOrTimestamp
+            ) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenSupplyState(address(markets[i]));
+            (
+                supplyState.index,
+                supplyState.blockOrTimestamp,
+                supplyState.lastRewardingBlockOrTimestamp
+            ) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             // Update market supply and borrow index in-memory
@@ -481,13 +495,16 @@ contract PoolLens is ExponentialNoError {
         Exp memory marketBorrowIndex
     ) internal view {
         uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
-        uint256 blockNumber = block.number;
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
 
-        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
-            blockNumber = borrowState.lastRewardingBlock;
+        if (
+            borrowState.lastRewardingBlockOrTimestamp > 0 &&
+            blockNumberOrTimestamp > borrowState.lastRewardingBlockOrTimestamp
+        ) {
+            blockNumberOrTimestamp = borrowState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
+        uint256 deltaBlocks = sub_(blockNumberOrTimestamp, borrowState.blockOrTimestamp);
         if (deltaBlocks > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
@@ -495,9 +512,9 @@ contract PoolLens is ExponentialNoError {
             Double memory ratio = borrowAmount > 0 ? fraction(tokensAccrued, borrowAmount) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: borrowState.index }), ratio);
             borrowState.index = safe224(index.mantissa, "new index overflows");
-            borrowState.block = safe32(blockNumber, "block number overflows");
+            borrowState.blockOrTimestamp = blockNumberOrTimestamp;
         } else if (deltaBlocks > 0) {
-            borrowState.block = safe32(blockNumber, "block number overflows");
+            borrowState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }
 
@@ -507,22 +524,25 @@ contract PoolLens is ExponentialNoError {
         RewardTokenState memory supplyState
     ) internal view {
         uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
-        uint256 blockNumber = block.number;
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
 
-        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
-            blockNumber = supplyState.lastRewardingBlock;
+        if (
+            supplyState.lastRewardingBlockOrTimestamp > 0 &&
+            blockNumberOrTimestamp > supplyState.lastRewardingBlockOrTimestamp
+        ) {
+            blockNumberOrTimestamp = supplyState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
+        uint256 deltaBlocks = sub_(blockNumberOrTimestamp, supplyState.blockOrTimestamp);
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
             uint256 tokensAccrued = mul_(deltaBlocks, supplySpeed);
             Double memory ratio = supplyTokens > 0 ? fraction(tokensAccrued, supplyTokens) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: supplyState.index }), ratio);
             supplyState.index = safe224(index.mantissa, "new index overflows");
-            supplyState.block = safe32(blockNumber, "block number overflows");
+            supplyState.blockOrTimestamp = blockNumberOrTimestamp;
         } else if (deltaBlocks > 0) {
-            supplyState.block = safe32(blockNumber, "block number overflows");
+            supplyState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }
 

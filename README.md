@@ -110,7 +110,7 @@ REPORT_GAS=true npx hardhat test
 
 ```
 
-- To run fork tests add FORK_MAINNET=true and QUICK_NODE_KEY in the .env file.
+- To run fork tests add FORK=true, FORKED_NETWORK and one ARCHIVE_NODE var in the .env file.
 
 ## Deployment
 
@@ -126,6 +126,14 @@ npx hardhat deploy
 - Execution of single or custom set of scripts is possible, if:
   - In the deployment scripts you have added `tags` for example: - `func.tags = ["MockTokens"];`
   - Once this is done, adding `--tags "<tag_name>,<tag_name>..."` to the deployment command will execute only the scripts containing the tags.
+
+### Deployed Contracts
+
+Deployed contract abis and addresses are exported in the `deployments` directory. To create a summary export of all contracts deployed to a network run
+
+```
+$ yarn hardhat export --network <network-name> --export ./deployments/<network-name>.json
+```
 
 ## Source Code Verification
 

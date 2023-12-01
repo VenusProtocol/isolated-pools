@@ -23,6 +23,14 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
+const timeBasedIntegrationTests = network.config.isTimeBased;
+let description: string = "block-based contracts";
+
+if (timeBasedIntegrationTests) {
+  description = "time-based contracts";
+}
+console.log(`integration tests are running for ${description}`);
+
 const toggleMining = async (status: boolean) => {
   if (!status) {
     await network.provider.send("evm_setAutomine", [false]);
@@ -31,7 +39,7 @@ const toggleMining = async (status: boolean) => {
   }
 };
 
-const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
+const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }) => {
   await deployments.fixture();
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
@@ -377,7 +385,11 @@ describe("Positive Cases", function () {
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
 
       // Mining blocks
-      await mine(300000000);
+      if (timeBasedIntegrationTests) {
+        await mine(700000000);
+      } else {
+        await mine(300000000);
+      }
 
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
       await Comptroller.connect(acc1Signer).healAccount(acc2);
@@ -497,7 +509,11 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
+
       const repayAmount = convertToUnit("1000000000007133", 0);
+      // if (timeBasedIntegrationTests) {
+      //   repayAmount = convertToUnit("1000000000002377", 0);
+      // }
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,

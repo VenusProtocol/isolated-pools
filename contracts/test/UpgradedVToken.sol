@@ -14,6 +14,17 @@ import { InterestRateModel } from "../InterestRateModel.sol";
  */
 contract UpgradedVToken is VToken {
     /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) VToken(timeBased_, blocksPerYear_) {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
+    /**
      * @notice Construct a new money market
      * @param underlying_ The address of the underlying asset
      * @param comptroller_ The address of the Comptroller

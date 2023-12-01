@@ -10,6 +10,7 @@ import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
+import { TimeManager } from "../TimeManager.sol";
 
 /**
  * @title `RewardsDistributor`
@@ -26,7 +27,13 @@ import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
  * automatically and must be claimed by a user calling `claimRewardToken()`. Users should be aware that it is up to the owner and other centralized
  * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
  */
-contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, AccessControlledV8, MaxLoopsLimitHelper {
+contract RewardsDistributor is
+    TimeManager,
+    ExponentialNoError,
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    MaxLoopsLimitHelper
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct RewardToken {
@@ -36,6 +43,15 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint32 block;
         // The block number at which to stop rewards
         uint32 lastRewardingBlock;
+    }
+
+    struct TimeBasedRewardToken {
+        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
+        uint224 index;
+        // The block timestamp the index was last updated at
+        uint256 timestamp;
+        // The block timestamp at which to stop rewards
+        uint256 lastRewardingTimestamp;
     }
 
     /// @notice The initial REWARD TOKEN index for a market
@@ -71,6 +87,12 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     Comptroller private comptroller;
 
     IERC20Upgradeable public rewardToken;
+
+    /// @notice The REWARD TOKEN market supply state for each market
+    mapping(address => TimeBasedRewardToken) public rewardTokenSupplyStateTimeBased;
+
+    /// @notice The REWARD TOKEN market borrow state for each market
+    mapping(address => TimeBasedRewardToken) public rewardTokenBorrowStateTimeBased;
 
     /// @notice Emitted when REWARD TOKEN is distributed to a supplier
     event DistributedSupplierRewardToken(
@@ -120,13 +142,25 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     /// @notice Emitted when a reward token last rewarding block for borrow is updated
     event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
 
+    /// @notice Emitted when a reward token last rewarding block timestamp for supply is updated
+    event SupplyLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlock);
+
+    /// @notice Emitted when a reward token last rewarding block timestamp for borrow is updated
+    event BorrowLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlock);
+
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
         _disableInitializers();
     }
 
@@ -152,29 +186,18 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         _setMaxLoopsLimit(loopsLimit_);
     }
 
+    /**
+     * @notice Initializes the market state for a specific vToken
+     * @param vToken The address of the vToken to be initialized
+     * @custom:event MarketInitialized emits on success
+     * @custom:access Only Comptroller
+     */
     function initializeMarket(address vToken) external onlyComptroller {
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
 
-        RewardToken storage supplyState = rewardTokenSupplyState[vToken];
-        RewardToken storage borrowState = rewardTokenBorrowState[vToken];
-
-        /*
-         * Update market state indices
-         */
-        if (supplyState.index == 0) {
-            // Initialize supply state index with default value
-            supplyState.index = INITIAL_INDEX;
-        }
-
-        if (borrowState.index == 0) {
-            // Initialize borrow state index with default value
-            borrowState.index = INITIAL_INDEX;
-        }
-
-        /*
-         * Update market state block numbers
-         */
-        supplyState.block = borrowState.block = blockNumber;
+        isTimeBased
+            ? _initializeMarketTimestampBased(vToken, blockNumberOrTimestamp)
+            : _initializeMarketBlockBased(vToken, safe32(blockNumberOrTimestamp, "block number exceeds 32 bits"));
 
         emit MarketInitialized(vToken);
     }
@@ -240,7 +263,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     }
 
     /**
-     * @notice Set REWARD TOKEN last rewarding block for the specified markets
+     * @notice Set REWARD TOKEN last rewarding block for the specified markets, used when contract is block based
      * @param vTokens The markets whose REWARD TOKEN last rewarding block to update
      * @param supplyLastRewardingBlocks New supply-side REWARD TOKEN last rewarding block for the corresponding market
      * @param borrowLastRewardingBlocks New borrow-side REWARD TOKEN last rewarding block for the corresponding market
@@ -251,6 +274,8 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         uint32[] calldata borrowLastRewardingBlocks
     ) external {
         _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
+        require(!isTimeBased, "Block-based operation only");
+
         uint256 numTokens = vTokens.length;
         require(
             numTokens == supplyLastRewardingBlocks.length && numTokens == borrowLastRewardingBlocks.length,
@@ -259,6 +284,39 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
 
         for (uint256 i; i < numTokens; ) {
             _setLastRewardingBlock(vTokens[i], supplyLastRewardingBlocks[i], borrowLastRewardingBlocks[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @notice Set REWARD TOKEN last rewarding block timestamp for the specified markets, used when contract is time based
+     * @param vTokens The markets whose REWARD TOKEN last rewarding block to update
+     * @param supplyLastRewardingBlockTimestamps New supply-side REWARD TOKEN last rewarding block timestamp for the corresponding market
+     * @param borrowLastRewardingBlockTimestamps New borrow-side REWARD TOKEN last rewarding block timestamp for the corresponding market
+     */
+    function setLastRewardingBlockTimestamps(
+        VToken[] calldata vTokens,
+        uint256[] calldata supplyLastRewardingBlockTimestamps,
+        uint256[] calldata borrowLastRewardingBlockTimestamps
+    ) external {
+        _checkAccessAllowed("setLastRewardingBlockTimestamps(address[],uint256[],uint256[])");
+        require(isTimeBased, "Time-based operation only");
+
+        uint256 numTokens = vTokens.length;
+        require(
+            numTokens == supplyLastRewardingBlockTimestamps.length &&
+                numTokens == borrowLastRewardingBlockTimestamps.length,
+            "RewardsDistributor::setLastRewardingBlockTimestamps invalid input"
+        );
+
+        for (uint256 i; i < numTokens; ) {
+            _setLastRewardingBlockTimestamp(
+                vTokens[i],
+                supplyLastRewardingBlockTimestamps[i],
+                borrowLastRewardingBlockTimestamps[i]
+            );
             unchecked {
                 ++i;
             }
@@ -277,7 +335,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
             // release storage
             delete lastContributorBlock[contributor];
         } else {
-            lastContributorBlock[contributor] = getBlockNumber();
+            lastContributorBlock[contributor] = getBlockNumberOrTimestamp();
         }
         rewardTokenContributorSpeeds[contributor] = rewardTokenSpeed;
 
@@ -310,14 +368,14 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function updateContributorRewards(address contributor) public {
         uint256 rewardTokenSpeed = rewardTokenContributorSpeeds[contributor];
-        uint256 blockNumber = getBlockNumber();
-        uint256 deltaBlocks = sub_(blockNumber, lastContributorBlock[contributor]);
-        if (deltaBlocks > 0 && rewardTokenSpeed > 0) {
-            uint256 newAccrued = mul_(deltaBlocks, rewardTokenSpeed);
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
+        uint256 deltaBlocksOrTimestamp = sub_(blockNumberOrTimestamp, lastContributorBlock[contributor]);
+        if (deltaBlocksOrTimestamp > 0 && rewardTokenSpeed > 0) {
+            uint256 newAccrued = mul_(deltaBlocksOrTimestamp, rewardTokenSpeed);
             uint256 contributorAccrued = add_(rewardTokenAccrued[contributor], newAccrued);
 
             rewardTokenAccrued[contributor] = contributorAccrued;
-            lastContributorBlock[contributor] = blockNumber;
+            lastContributorBlock[contributor] = blockNumberOrTimestamp;
 
             emit ContributorRewardsUpdated(contributor, rewardTokenAccrued[contributor]);
         }
@@ -345,10 +403,6 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         rewardTokenAccrued[holder] = _grantRewardToken(holder, rewardTokenAccrued[holder]);
     }
 
-    function getBlockNumber() public view virtual returns (uint256) {
-        return block.number;
-    }
-
     /**
      * @notice Set REWARD TOKEN last rewarding block for a single market.
      * @param vToken market's whose reward token last rewarding block to be updated
@@ -362,7 +416,7 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
     ) internal {
         require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
 
-        uint256 blockNumber = getBlockNumber();
+        uint256 blockNumber = getBlockNumberOrTimestamp();
 
         require(supplyLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
         require(borrowLastRewardingBlock > blockNumber, "setting last rewarding block in the past is not allowed");
@@ -387,6 +441,55 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
         if (currentBorrowLastRewardingBlock != borrowLastRewardingBlock) {
             rewardTokenBorrowState[address(vToken)].lastRewardingBlock = borrowLastRewardingBlock;
             emit BorrowLastRewardingBlockUpdated(address(vToken), borrowLastRewardingBlock);
+        }
+    }
+
+    /**
+     * @notice Set REWARD TOKEN last rewarding block for a single market.
+     * @param vToken market's whose reward token last rewarding block to be updated
+     * @param supplyLastRewardingBlockTimestamp New supply-side REWARD TOKEN last rewarding block for market
+     * @param borrowLastRewardingBlockTimestamp New borrow-side REWARD TOKEN last rewarding block for market
+     */
+    function _setLastRewardingBlockTimestamp(
+        VToken vToken,
+        uint256 supplyLastRewardingBlockTimestamp,
+        uint256 borrowLastRewardingBlockTimestamp
+    ) internal {
+        require(comptroller.isMarketListed(vToken), "rewardToken market is not listed");
+
+        uint256 blockTimestamp = getBlockNumberOrTimestamp();
+
+        require(
+            supplyLastRewardingBlockTimestamp > blockTimestamp,
+            "setting last rewarding timestamp in the past is not allowed"
+        );
+        require(
+            borrowLastRewardingBlockTimestamp > blockTimestamp,
+            "setting last rewarding timestamp in the past is not allowed"
+        );
+
+        uint256 currentSupplyLastRewardingBlockTimestamp = rewardTokenSupplyStateTimeBased[address(vToken)]
+            .lastRewardingTimestamp;
+        uint256 currentBorrowLastRewardingBlockTimestamp = rewardTokenBorrowStateTimeBased[address(vToken)]
+            .lastRewardingTimestamp;
+
+        require(
+            currentSupplyLastRewardingBlockTimestamp == 0 || currentSupplyLastRewardingBlockTimestamp > blockTimestamp,
+            "this RewardsDistributor is already locked"
+        );
+        require(
+            currentBorrowLastRewardingBlockTimestamp == 0 || currentBorrowLastRewardingBlockTimestamp > blockTimestamp,
+            "this RewardsDistributor is already locked"
+        );
+
+        if (currentSupplyLastRewardingBlockTimestamp != supplyLastRewardingBlockTimestamp) {
+            rewardTokenSupplyStateTimeBased[address(vToken)].lastRewardingTimestamp = supplyLastRewardingBlockTimestamp;
+            emit SupplyLastRewardingBlockTimestampUpdated(address(vToken), supplyLastRewardingBlockTimestamp);
+        }
+
+        if (currentBorrowLastRewardingBlockTimestamp != borrowLastRewardingBlockTimestamp) {
+            rewardTokenBorrowStateTimeBased[address(vToken)].lastRewardingTimestamp = borrowLastRewardingBlockTimestamp;
+            emit BorrowLastRewardingBlockTimestampUpdated(address(vToken), borrowLastRewardingBlockTimestamp);
         }
     }
 
@@ -430,7 +533,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function _distributeSupplierRewardToken(address vToken, address supplier) internal {
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
-        uint256 supplyIndex = supplyState.index;
+        TimeBasedRewardToken storage supplyStateTimeBased = rewardTokenSupplyStateTimeBased[vToken];
+
+        uint256 supplyIndex = isTimeBased ? supplyStateTimeBased.index : supplyState.index;
         uint256 supplierIndex = rewardTokenSupplierIndex[vToken][supplier];
 
         // Update supplier's index to the current index since we are distributing accrued REWARD TOKEN
@@ -465,7 +570,9 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function _distributeBorrowerRewardToken(address vToken, address borrower, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
-        uint256 borrowIndex = borrowState.index;
+        TimeBasedRewardToken storage borrowStateTimeBased = rewardTokenBorrowStateTimeBased[vToken];
+
+        uint256 borrowIndex = isTimeBased ? borrowStateTimeBased.index : borrowState.index;
         uint256 borrowerIndex = rewardTokenBorrowerIndex[vToken][borrower];
 
         // Update borrowers's index to the current index since we are distributing accrued REWARD TOKEN
@@ -517,28 +624,50 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function _updateRewardTokenSupplyIndex(address vToken) internal {
         RewardToken storage supplyState = rewardTokenSupplyState[vToken];
-        uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        TimeBasedRewardToken storage supplyStateTimeBased = rewardTokenSupplyStateTimeBased[vToken];
 
-        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
-            blockNumber = supplyState.lastRewardingBlock;
+        uint256 supplySpeed = rewardTokenSupplySpeeds[vToken];
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
+
+        if (!isTimeBased) {
+            safe32(blockNumberOrTimestamp, "block number exceeds 32 bits");
         }
 
-        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(supplyState.block));
+        uint256 lastRewardingBlockOrTimestamp = isTimeBased
+            ? supplyStateTimeBased.lastRewardingTimestamp
+            : uint256(supplyState.lastRewardingBlock);
 
-        if (deltaBlocks > 0 && supplySpeed > 0) {
+        if (lastRewardingBlockOrTimestamp > 0 && blockNumberOrTimestamp > lastRewardingBlockOrTimestamp) {
+            blockNumberOrTimestamp = lastRewardingBlockOrTimestamp;
+        }
+
+        uint256 deltaBlocksOrTimestamp = sub_(
+            blockNumberOrTimestamp,
+            (isTimeBased ? supplyStateTimeBased.timestamp : uint256(supplyState.block))
+        );
+        if (deltaBlocksOrTimestamp > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
-            uint256 accruedSinceUpdate = mul_(deltaBlocks, supplySpeed);
+            uint256 accruedSinceUpdate = mul_(deltaBlocksOrTimestamp, supplySpeed);
             Double memory ratio = supplyTokens > 0
                 ? fraction(accruedSinceUpdate, supplyTokens)
                 : Double({ mantissa: 0 });
-            supplyState.index = safe224(
-                add_(Double({ mantissa: supplyState.index }), ratio).mantissa,
+            uint224 supplyIndex = isTimeBased ? supplyStateTimeBased.index : supplyState.index;
+            uint224 index = safe224(
+                add_(Double({ mantissa: supplyIndex }), ratio).mantissa,
                 "new index exceeds 224 bits"
             );
-            supplyState.block = blockNumber;
-        } else if (deltaBlocks > 0) {
-            supplyState.block = blockNumber;
+
+            if (isTimeBased) {
+                supplyStateTimeBased.index = index;
+                supplyStateTimeBased.timestamp = blockNumberOrTimestamp;
+            } else {
+                supplyState.index = index;
+                supplyState.block = uint32(blockNumberOrTimestamp);
+            }
+        } else if (deltaBlocksOrTimestamp > 0) {
+            isTimeBased ? supplyStateTimeBased.timestamp = blockNumberOrTimestamp : supplyState.block = uint32(
+                blockNumberOrTimestamp
+            );
         }
 
         emit RewardTokenSupplyIndexUpdated(vToken);
@@ -552,29 +681,110 @@ contract RewardsDistributor is ExponentialNoError, Ownable2StepUpgradeable, Acce
      */
     function _updateRewardTokenBorrowIndex(address vToken, Exp memory marketBorrowIndex) internal {
         RewardToken storage borrowState = rewardTokenBorrowState[vToken];
-        uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        TimeBasedRewardToken storage borrowStateTimeBased = rewardTokenBorrowStateTimeBased[vToken];
 
-        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
-            blockNumber = borrowState.lastRewardingBlock;
+        uint256 borrowSpeed = rewardTokenBorrowSpeeds[vToken];
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
+
+        if (!isTimeBased) {
+            safe32(blockNumberOrTimestamp, "block number exceeds 32 bits");
         }
 
-        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(borrowState.block));
-        if (deltaBlocks > 0 && borrowSpeed > 0) {
+        uint256 lastRewardingBlockOrTimestamp = isTimeBased
+            ? borrowStateTimeBased.lastRewardingTimestamp
+            : uint256(borrowState.lastRewardingBlock);
+
+        if (lastRewardingBlockOrTimestamp > 0 && blockNumberOrTimestamp > lastRewardingBlockOrTimestamp) {
+            blockNumberOrTimestamp = lastRewardingBlockOrTimestamp;
+        }
+
+        uint256 deltaBlocksOrTimestamp = sub_(
+            blockNumberOrTimestamp,
+            (isTimeBased ? borrowStateTimeBased.timestamp : uint256(borrowState.block))
+        );
+        if (deltaBlocksOrTimestamp > 0 && borrowSpeed > 0) {
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
-            uint256 accruedSinceUpdate = mul_(deltaBlocks, borrowSpeed);
+            uint256 accruedSinceUpdate = mul_(deltaBlocksOrTimestamp, borrowSpeed);
             Double memory ratio = borrowAmount > 0
                 ? fraction(accruedSinceUpdate, borrowAmount)
                 : Double({ mantissa: 0 });
-            borrowState.index = safe224(
-                add_(Double({ mantissa: borrowState.index }), ratio).mantissa,
+            uint224 borrowIndex = isTimeBased ? borrowStateTimeBased.index : borrowState.index;
+            uint224 index = safe224(
+                add_(Double({ mantissa: borrowIndex }), ratio).mantissa,
                 "new index exceeds 224 bits"
             );
-            borrowState.block = blockNumber;
-        } else if (deltaBlocks > 0) {
-            borrowState.block = blockNumber;
+
+            if (isTimeBased) {
+                borrowStateTimeBased.index = index;
+                borrowStateTimeBased.timestamp = blockNumberOrTimestamp;
+            } else {
+                borrowState.index = index;
+                borrowState.block = uint32(blockNumberOrTimestamp);
+            }
+        } else if (deltaBlocksOrTimestamp > 0) {
+            if (isTimeBased) {
+                borrowStateTimeBased.timestamp = blockNumberOrTimestamp;
+            } else {
+                borrowState.block = uint32(blockNumberOrTimestamp);
+            }
         }
 
         emit RewardTokenBorrowIndexUpdated(vToken, marketBorrowIndex);
+    }
+
+    /**
+     * @notice Initializes the market state for a specific vToken called when contract is block-based
+     * @param vToken The address of the vToken to be initialized
+     * @param blockNumber current block number
+     */
+    function _initializeMarketBlockBased(address vToken, uint32 blockNumber) internal {
+        RewardToken storage supplyState = rewardTokenSupplyState[vToken];
+        RewardToken storage borrowState = rewardTokenBorrowState[vToken];
+
+        /*
+         * Update market state indices
+         */
+        if (supplyState.index == 0) {
+            // Initialize supply state index with default value
+            supplyState.index = INITIAL_INDEX;
+        }
+
+        if (borrowState.index == 0) {
+            // Initialize borrow state index with default value
+            borrowState.index = INITIAL_INDEX;
+        }
+
+        /*
+         * Update market state block numbers
+         */
+        supplyState.block = borrowState.block = blockNumber;
+    }
+
+    /**
+     * @notice Initializes the market state for a specific vToken called when contract is time-based
+     * @param vToken The address of the vToken to be initialized
+     * @param blockTimestamp current block timestamp
+     */
+    function _initializeMarketTimestampBased(address vToken, uint256 blockTimestamp) internal {
+        TimeBasedRewardToken storage supplyState = rewardTokenSupplyStateTimeBased[vToken];
+        TimeBasedRewardToken storage borrowState = rewardTokenBorrowStateTimeBased[vToken];
+
+        /*
+         * Update market state indices
+         */
+        if (supplyState.index == 0) {
+            // Initialize supply state index with default value
+            supplyState.index = INITIAL_INDEX;
+        }
+
+        if (borrowState.index == 0) {
+            // Initialize borrow state index with default value
+            borrowState.index = INITIAL_INDEX;
+        }
+
+        /*
+         * Update market state block timestamp
+         */
+        supplyState.timestamp = borrowState.timestamp = blockTimestamp;
     }
 }

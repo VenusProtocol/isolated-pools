@@ -7,9 +7,8 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
-import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
-
-const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
+import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
+import { AddressOne } from "../helpers/utils";
 
 const mantissaToBps = (num: BigNumberish) => {
   return BigNumber.from(num).div(parseUnits("1", 14)).toString();
@@ -21,6 +20,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
 
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre);
+
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
@@ -30,7 +31,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [],
+    args: [isTimeBased, blocksPerYear],
     log: true,
     autoMine: true,
   });
@@ -80,7 +81,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
-          args: [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_, accessControlManagerAddress],
+          args: [
+            baseRatePerYear,
+            multiplierPerYear,
+            jumpMultiplierPerYear,
+            kink_,
+            accessControlManagerAddress,
+            isTimeBased,
+            blocksPerYear,
+          ],
           log: true,
           autoMine: true,
         });
@@ -92,7 +101,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
-          args: [baseRatePerYear, multiplierPerYear],
+          args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
           log: true,
           autoMine: true,
         });
@@ -114,10 +123,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [
-          preconfiguredAddresses.Shortfall || ADDRESS_ONE,
-          preconfiguredAddresses.ProtocolShareReserve || treasuryAddress,
-        ],
+        [AddressOne, treasuryAddress],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {

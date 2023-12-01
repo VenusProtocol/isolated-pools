@@ -3,7 +3,11 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getTokenAddress, getTokenConfig } from "../helpers/deploymentConfig";
-import { getUnregisteredRewardsDistributors, toAddress } from "../helpers/deploymentUtils";
+import {
+  getBlockOrTimestampBasedDeploymentInfo,
+  getUnregisteredRewardsDistributors,
+  toAddress,
+} from "../helpers/deploymentUtils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -12,6 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const maxLoopsLimit = 100;
 
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre);
 
   const accessControlAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
@@ -25,6 +30,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     contract: "RewardsDistributor",
     from: deployer,
     autoMine: true,
+    args: [isTimeBased, blocksPerYear],
     log: true,
     skipIfAlreadyDeployed: true,
   });
@@ -52,6 +58,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           },
           upgradeIndex: 0,
         },
+        args: [isTimeBased, blocksPerYear],
         autoMine: true,
         log: true,
         skipIfAlreadyDeployed: true,

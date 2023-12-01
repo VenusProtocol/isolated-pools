@@ -39,7 +39,7 @@ let busdUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
+const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
 const REDUCE_RESERVE_AMOUNT = parseUnits("50", 18);
 
@@ -105,11 +105,11 @@ const riskFundFixture = async (): Promise<void> => {
   fakeAccessControlManager.isAllowedToCall.returns(true);
 
   const Shortfall = await ethers.getContractFactory("Shortfall");
-  const shortfall = await upgrades.deployProxy(Shortfall, [
-    AddressOne,
-    parseUnits("10000", 18),
-    fakeAccessControlManager.address,
-  ]);
+  const shortfall = await upgrades.deployProxy(
+    Shortfall,
+    [AddressOne, parseUnits("10000", 18), fakeAccessControlManager.address],
+    { constructorArgs: [false, 10512000] },
+  );
 
   const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");
 

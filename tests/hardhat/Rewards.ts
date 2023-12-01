@@ -5,6 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
@@ -19,6 +20,7 @@ import {
   VToken,
 } from "../../typechain";
 import { deployVTokenBeacon, makeVToken } from "./util/TokenTestHelpers";
+import { getDescription } from "./util/descriptionHelpers";
 
 // Disable a warning about mixing beacons and transparent proxies
 upgrades.silenceWarnings();
@@ -35,8 +37,9 @@ let xvs: MockToken;
 let fakePriceOracle: FakeContract<ResilientOracleInterface>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
+let blocksPerYear = BSC_BLOCKS_PER_YEAR; // for block based contracts
 
-async function rewardsFixture() {
+async function rewardsFixture(isTimeBased: boolean) {
   [root] = await ethers.getSigners();
 
   fakeAccessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
@@ -95,14 +98,31 @@ async function rewardsFixture() {
     _minLiquidatableCollateral,
   );
 
+  if (isTimeBased) {
+    blocksPerYear = SECONDS_PER_YEAR;
+  }
+
   // Deploy VTokens
-  const vTokenBeacon = await deployVTokenBeacon();
+  const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+  const vTokenBeacon = await deployVTokenBeacon(undefined, isTimeBased, blocksPerYear);
   vWBTC = await makeVToken({
     underlying: mockWBTC,
     comptroller: comptrollerProxy,
     accessControlManager: fakeAccessControlManager,
     admin: root,
     beacon: vTokenBeacon,
+    isTimeBased: isTimeBased,
+    blocksPerYear: blocksPerYear,
+  });
+
+  vDAI = await makeVToken({
+    underlying: mockDAI,
+    comptroller: comptrollerProxy,
+    accessControlManager: fakeAccessControlManager,
+    admin: root,
+    beacon: vTokenBeacon,
+    isTimeBased: isTimeBased,
+    blocksPerYear: blocksPerYear,
   });
 
   const wbtcInitialSupply = parseUnits("10", 8);
@@ -149,21 +169,17 @@ async function rewardsFixture() {
   xvs = await MockToken.deploy("Venus Token", "XVS", 18);
 
   // Configure rewards for pool
-  const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-  rewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
-    comptrollerProxy.address,
-    xvs.address,
-    maxLoopsLimit,
-    fakeAccessControlManager.address,
-  ])) as RewardsDistributor;
+  rewardsDistributor = (await upgrades.deployProxy(
+    RewardsDistributor,
+    [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
+    { constructorArgs: [isTimeBased, blocksPerYear] },
+  )) as RewardsDistributor;
 
-  const rewardsDistributor2 = await upgrades.deployProxy(RewardsDistributor, [
-    comptrollerProxy.address,
-    mockDAI.address,
-    maxLoopsLimit,
-    fakeAccessControlManager.address,
-  ]);
-
+  const rewardsDistributor2 = await upgrades.deployProxy(
+    RewardsDistributor,
+    [comptrollerProxy.address, mockDAI.address, maxLoopsLimit, fakeAccessControlManager.address],
+    { constructorArgs: [isTimeBased, blocksPerYear] },
+  );
   const initialXvs = convertToUnit(1000000, 18);
   await xvs.faucet(initialXvs);
   await xvs.transfer(rewardsDistributor.address, initialXvs);
@@ -186,226 +202,283 @@ async function rewardsFixture() {
   );
 }
 
-describe("Rewards: Tests", async function () {
-  /**
-   * Deploying required contracts along with the poolRegistry.
-   */
-  beforeEach(async function () {
-    await rewardsFixture();
-    fakeAccessControlManager.isAllowedToCall.reset();
-    fakeAccessControlManager.isAllowedToCall.returns(true);
+for (const isTimeBased of [false, true]) {
+  const description: string = getDescription(isTimeBased);
+
+  describe(`${description}Rewards: Tests`, async function () {
+    /**
+     * Deploying required contracts along with the poolRegistry.
+     */
+    beforeEach(async function () {
+      await rewardsFixture(isTimeBased);
+      fakeAccessControlManager.isAllowedToCall.reset();
+      fakeAccessControlManager.isAllowedToCall.returns(true);
+    });
+
+    it("should revert when setting LastRewarding block or timestamp on invalid operation", async () => {
+      let lastRewardingBlockOrTimestamp;
+      if (!isTimeBased) {
+        lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 2;
+
+        await expect(
+          rewardsDistributor.setLastRewardingBlockTimestamps(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+          ),
+        ).to.be.revertedWith("Time-based operation only");
+      } else {
+        lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).number + 2;
+
+        await expect(
+          rewardsDistributor.setLastRewardingBlocks(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+          ),
+        ).to.be.revertedWith("Block-based operation only");
+      }
+    });
+
+    it("Reverts if setting the speed is prohibited by ACM", async () => {
+      fakeAccessControlManager.isAllowedToCall
+        .whenCalledWith(root.address, "setRewardTokenSpeeds(address[],uint256[],uint256[])")
+        .returns(false);
+      await expect(
+        rewardsDistributor.setRewardTokenSpeeds(
+          [vWBTC.address, vDAI.address],
+          [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+          [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
+        ),
+      ).to.be.revertedWithCustomError(rewardsDistributor, "Unauthorized");
+    });
+
+    it("Should have correct btc balance", async function () {
+      const [owner] = await ethers.getSigners();
+
+      const btcBalance = await mockWBTC.balanceOf(owner.address);
+
+      expect(btcBalance).equal(convertToUnit(1000, 8));
+    });
+
+    it("Pool should have correct name", async function () {
+      // Get all pools list.
+      const pools = await poolRegistry.callStatic.getAllPools();
+      expect(pools[0].name).equal("Pool 1");
+    });
+
+    it("Rewards distributor should have correct balance", async function () {
+      expect(await xvs.balanceOf(rewardsDistributor.address)).equal(convertToUnit(1000000, 18));
+    });
+
+    it("Should have correct market addresses", async function () {
+      const [owner] = await ethers.getSigners();
+
+      const res = await comptrollerProxy.getAssetsIn(owner.address);
+      expect(res[0]).equal(vDAI.address);
+      expect(res[1]).equal(vWBTC.address);
+    });
+
+    it("Comptroller returns correct reward speeds", async function () {
+      const res = await comptrollerProxy.getRewardsByMarket(vDAI.address);
+      expect(res[0][0]).equal(xvs.address);
+      expect(res[0][1].toString()).equal(convertToUnit(0.5, 18));
+      expect(res[0][2].toString()).equal(convertToUnit(0.5, 18));
+      expect(res[1][0]).equal(mockDAI.address);
+      expect(res[1][1].toString()).equal(convertToUnit(0.3, 18));
+      expect(res[1][2].toString()).equal(convertToUnit(0.1, 18));
+    });
+
+    it("Can add reward distributors with duplicate reward tokens", async function () {
+      const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+      rewardsDistributor = (await upgrades.deployProxy(
+        RewardsDistributor,
+        [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
+        { constructorArgs: [isTimeBased, blocksPerYear] },
+      )) as RewardsDistributor;
+
+      await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
+        .to.emit(comptrollerProxy, "NewRewardsDistributor")
+        .withArgs(rewardsDistributor.address, xvs.address);
+    });
+
+    it("Emits event correctly", async () => {
+      const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+      rewardsDistributor = (await upgrades.deployProxy(
+        RewardsDistributor,
+        [comptrollerProxy.address, mockWBTC.address, maxLoopsLimit, fakeAccessControlManager.address],
+        { constructorArgs: [isTimeBased, blocksPerYear] },
+      )) as RewardsDistributor;
+
+      await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
+        .to.emit(comptrollerProxy, "NewRewardsDistributor")
+        .withArgs(rewardsDistributor.address, mockWBTC.address);
+    });
+
+    it("Claim XVS", async () => {
+      const [, user1, user2] = await ethers.getSigners();
+
+      await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
+      await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
+
+      await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
+      await vWBTC.connect(user1).mint(convertToUnit(10, 8));
+
+      await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
+        vWBTC.address,
+        vDAI.address,
+      ]);
+
+      /*
+        Formula: (supplyIndex * supplyTokens * blocksDelta) + (borrowIndex * borrowTokens * blocksDelta)
+        0.5 * 10 * 5 = 25
+      */
+      expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.25, 18));
+
+      await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
+      await vDAI.connect(user2).mint(convertToUnit(10000, 18));
+      await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
+
+      await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
+
+      expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
+    });
+
+    it("Contributor Rewards", async () => {
+      const [, user1] = await ethers.getSigners();
+
+      expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
+
+      await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
+
+      await mine(1000);
+      await rewardsDistributor.updateContributorRewards(user1.address);
+
+      await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+
+      /*
+        Formula: speed * blocks
+        0.5 * 1001 = 500.5
+      */
+      expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(500.5, 18));
+    });
+
+    it("Multiple reward distributors with same reward token", async () => {
+      const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
+      const newRewardsDistributor = (await upgrades.deployProxy(
+        RewardsDistributor,
+        [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
+        { constructorArgs: [isTimeBased, blocksPerYear] },
+      )) as RewardsDistributor;
+
+      await comptrollerProxy.addRewardsDistributor(newRewardsDistributor.address);
+
+      const initialXvs = convertToUnit(1000000, 18);
+      await xvs.faucet(initialXvs);
+      await xvs.transfer(newRewardsDistributor.address, initialXvs);
+
+      const [, user1] = await ethers.getSigners();
+
+      expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
+
+      await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
+      await newRewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
+
+      await mine(1000);
+      await rewardsDistributor.updateContributorRewards(user1.address);
+      await newRewardsDistributor.updateContributorRewards(user1.address);
+
+      await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+      await newRewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
+
+      /*
+        Reward Distributor 1
+        Formula: speed * blocks
+        0.5 * 1001 = 500.5
+  
+        Reward Distributor 2
+        Formula: speed * blocks
+        0.5 * 1003 = 501.5
+  
+        Total xvs reward = 500.5 + 501.5 = 1002
+      */
+      expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(1002, 18));
+    });
+
+    it("pause rewards", async () => {
+      const [, user1, user2] = await ethers.getSigners();
+
+      await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
+      await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
+
+      await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
+      await vWBTC.connect(user1).mint(convertToUnit(10, 8));
+
+      let lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).number + 2;
+      if (isTimeBased) {
+        lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 2;
+      }
+
+      if (!isTimeBased) {
+        await rewardsDistributor.setLastRewardingBlocks(
+          [vWBTC.address, vDAI.address],
+          [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+          [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+        );
+      } else {
+        await rewardsDistributor.setLastRewardingBlockTimestamps(
+          [vWBTC.address, vDAI.address],
+          [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+          [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+        );
+      }
+
+      await mine(100);
+
+      await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
+        vWBTC.address,
+        vDAI.address,
+      ]);
+
+      expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.5, 18));
+
+      if (!isTimeBased) {
+        await expect(
+          rewardsDistributor.setLastRewardingBlocks(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+          ),
+        ).to.be.revertedWith("setting last rewarding block in the past is not allowed");
+      } else {
+        await expect(
+          rewardsDistributor.setLastRewardingBlockTimestamps(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+            [lastRewardingBlockOrTimestamp - 10, lastRewardingBlockOrTimestamp - 10],
+          ),
+        ).to.be.revertedWith("setting last rewarding timestamp in the past is not allowed");
+      }
+
+      if (!isTimeBased) {
+        lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).number + 2;
+        await expect(
+          rewardsDistributor.setLastRewardingBlocks(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+            [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+          ),
+        ).to.be.revertedWith("this RewardsDistributor is already locked");
+      } else {
+        lastRewardingBlockOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 2;
+        await expect(
+          rewardsDistributor.setLastRewardingBlockTimestamps(
+            [vWBTC.address, vDAI.address],
+            [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+            [lastRewardingBlockOrTimestamp, lastRewardingBlockOrTimestamp],
+          ),
+        ).to.be.revertedWith("this RewardsDistributor is already locked");
+      }
+    });
   });
-
-  it("Reverts if setting the speed is prohibited by ACM", async () => {
-    fakeAccessControlManager.isAllowedToCall
-      .whenCalledWith(root.address, "setRewardTokenSpeeds(address[],uint256[],uint256[])")
-      .returns(false);
-    await expect(
-      rewardsDistributor.setRewardTokenSpeeds(
-        [vWBTC.address, vDAI.address],
-        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
-        [convertToUnit(0.5, 18), convertToUnit(0.5, 18)],
-      ),
-    ).to.be.revertedWithCustomError(rewardsDistributor, "Unauthorized");
-  });
-
-  it("Should have correct btc balance", async function () {
-    const [owner] = await ethers.getSigners();
-
-    const btcBalance = await mockWBTC.balanceOf(owner.address);
-
-    expect(btcBalance).equal(convertToUnit(1000, 8));
-  });
-
-  it("Pool should have correct name", async function () {
-    // Get all pools list.
-    const pools = await poolRegistry.callStatic.getAllPools();
-    expect(pools[0].name).equal("Pool 1");
-  });
-
-  it("Rewards distributor should have correct balance", async function () {
-    expect(await xvs.balanceOf(rewardsDistributor.address)).equal(convertToUnit(1000000, 18));
-  });
-
-  it("Should have correct market addresses", async function () {
-    const [owner] = await ethers.getSigners();
-
-    const res = await comptrollerProxy.getAssetsIn(owner.address);
-    expect(res[0]).equal(vDAI.address);
-    expect(res[1]).equal(vWBTC.address);
-  });
-
-  it("Comptroller returns correct reward speeds", async function () {
-    const res = await comptrollerProxy.getRewardsByMarket(vDAI.address);
-    expect(res[0][0]).equal(xvs.address);
-    expect(res[0][1].toString()).equal(convertToUnit(0.5, 18));
-    expect(res[0][2].toString()).equal(convertToUnit(0.5, 18));
-    expect(res[1][0]).equal(mockDAI.address);
-    expect(res[1][1].toString()).equal(convertToUnit(0.3, 18));
-    expect(res[1][2].toString()).equal(convertToUnit(0.1, 18));
-  });
-
-  it("Can add reward distributors with duplicate reward tokens", async function () {
-    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
-      comptrollerProxy.address,
-      xvs.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
-    ])) as RewardsDistributor;
-
-    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
-      .to.emit(comptrollerProxy, "NewRewardsDistributor")
-      .withArgs(rewardsDistributor.address, xvs.address);
-  });
-
-  it("Emits event correctly", async () => {
-    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    rewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
-      comptrollerProxy.address,
-      mockWBTC.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
-    ])) as RewardsDistributor;
-
-    await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
-      .to.emit(comptrollerProxy, "NewRewardsDistributor")
-      .withArgs(rewardsDistributor.address, mockWBTC.address);
-  });
-
-  it("Claim XVS", async () => {
-    const [, user1, user2] = await ethers.getSigners();
-
-    await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
-    await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
-
-    await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
-    await vWBTC.connect(user1).mint(convertToUnit(10, 8));
-
-    await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
-      vWBTC.address,
-      vDAI.address,
-    ]);
-
-    /*
-      Formula: (supplyIndex * supplyTokens * blocksDelta) + (borrowIndex * borrowTokens * blocksDelta)
-      0.5 * 10 * 5 = 25
-    */
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.25, 18));
-
-    await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
-    await vDAI.connect(user2).mint(convertToUnit(10000, 18));
-    await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
-
-    await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
-
-    expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
-  });
-
-  it("Contributor Rewards", async () => {
-    const [, user1] = await ethers.getSigners();
-
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
-
-    await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
-
-    await mine(1000);
-    await rewardsDistributor.updateContributorRewards(user1.address);
-
-    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
-
-    /*
-      Formula: speed * blocks
-      0.5 * 1001 = 500.5
-    */
-    expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(500.5, 18));
-  });
-
-  it("Multiple reward distributors with same reward token", async () => {
-    const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-    const newRewardsDistributor = (await upgrades.deployProxy(RewardsDistributor, [
-      comptrollerProxy.address,
-      xvs.address,
-      maxLoopsLimit,
-      fakeAccessControlManager.address,
-    ])) as RewardsDistributor;
-
-    await comptrollerProxy.addRewardsDistributor(newRewardsDistributor.address);
-
-    const initialXvs = convertToUnit(1000000, 18);
-    await xvs.faucet(initialXvs);
-    await xvs.transfer(newRewardsDistributor.address, initialXvs);
-
-    const [, user1] = await ethers.getSigners();
-
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal("0");
-
-    await rewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
-    await newRewardsDistributor.setContributorRewardTokenSpeed(user1.address, convertToUnit(0.5, 18));
-
-    await mine(1000);
-    await rewardsDistributor.updateContributorRewards(user1.address);
-    await newRewardsDistributor.updateContributorRewards(user1.address);
-
-    await rewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
-    await newRewardsDistributor["claimRewardToken(address,address[])"](user1.address, [vWBTC.address, vDAI.address]);
-
-    /*
-      Reward Distributor 1
-      Formula: speed * blocks
-      0.5 * 1001 = 500.5
-
-      Reward Distributor 2
-      Formula: speed * blocks
-      0.5 * 1003 = 501.5
-
-      Total xvs reward = 500.5 + 501.5 = 1002
-    */
-    expect((await xvs.balanceOf(user1.address)).toString()).be.equal(convertToUnit(1002, 18));
-  });
-
-  it("pause rewards", async () => {
-    const [, user1, user2] = await ethers.getSigners();
-
-    await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
-    await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
-
-    await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
-    await vWBTC.connect(user1).mint(convertToUnit(10, 8));
-
-    let lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
-
-    await rewardsDistributor.setLastRewardingBlocks(
-      [vWBTC.address, vDAI.address],
-      [lastRewardingBlock, lastRewardingBlock],
-      [lastRewardingBlock, lastRewardingBlock],
-    );
-
-    await mine(100);
-
-    await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
-      vWBTC.address,
-      vDAI.address,
-    ]);
-
-    expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.5, 18));
-
-    await expect(
-      rewardsDistributor.setLastRewardingBlocks(
-        [vWBTC.address, vDAI.address],
-        [lastRewardingBlock - 10, lastRewardingBlock - 10],
-        [lastRewardingBlock - 10, lastRewardingBlock - 10],
-      ),
-    ).to.be.revertedWith("setting last rewarding block in the past is not allowed");
-
-    lastRewardingBlock = (await ethers.provider.getBlockNumber()) + 2;
-
-    await expect(
-      rewardsDistributor.setLastRewardingBlocks(
-        [vWBTC.address, vDAI.address],
-        [lastRewardingBlock, lastRewardingBlock],
-        [lastRewardingBlock, lastRewardingBlock],
-      ),
-    ).to.be.revertedWith("this RewardsDistributor is already locked");
-  });
-});
+}
