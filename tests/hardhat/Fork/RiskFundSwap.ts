@@ -12,8 +12,6 @@ import {
   Comptroller__factory,
   IERC20,
   IERC20__factory,
-  IMockProtocolShareReserve,
-  IMockProtocolShareReserve__factory,
   PancakeRouter,
   PancakeRouter__factory,
   ProtocolShareReserve,
@@ -25,8 +23,8 @@ import {
 } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
   ACM,
@@ -44,7 +42,7 @@ const {
   TOKEN2_HOLDER,
   SWAP_ROUTER_CORE_POOL,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 let token1: IERC20;
 let token2: IERC20;
@@ -56,13 +54,13 @@ let token2Holder: SignerWithAddress;
 let impersonatedTimelock: SignerWithAddress;
 let accessControlManager: AccessControlManager;
 let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-let protocolShareReserve: ProtocolShareReserve | IMockProtocolShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 let TOKEN1_ADDRESS: string = TOKEN1;
 
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
 const REDUCE_RESERVE_AMOUNT = parseUnits("50", 18);
 
-if (network != "sepolia") {
+if (FORKED_NETWORK != "sepolia") {
   TOKEN1_ADDRESS = USDT;
 }
 
@@ -74,12 +72,12 @@ const initPancakeSwapRouter = async (
   admin: SignerWithAddress,
 ): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
   let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-  if (network == "bsc" || network == "bsctestnet") {
-    pancakeSwapRouter = PancakeRouter__factory.connect(SWAP_ROUTER_CORE_POOL, admin);
-  } else {
+  if (FORKED_NETWORK == "sepolia") {
     const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
     pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(SWAP_ROUTER_CORE_POOL, admin.address);
     await pancakeSwapRouter.deployed();
+  } else {
+    pancakeSwapRouter = PancakeRouter__factory.connect(SWAP_ROUTER_CORE_POOL, admin);
   }
 
   await token1.connect(token1Holder).transfer(pancakeSwapRouter.address, parseUnits("1000", 18));
@@ -95,7 +93,7 @@ const riskFundFixture = async (): Promise<void> => {
 
   token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
   token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
-  if (network != "sepolia") token1Holder = await initMainnetUser(USDT_HOLDER, ethers.utils.parseUnits("2"));
+  if (FORKED_NETWORK != "sepolia") token1Holder = await initMainnetUser(USDT_HOLDER, ethers.utils.parseUnits("2"));
 
   token2 = IERC20__factory.connect(TOKEN2, user);
   token1 = IERC20__factory.connect(TOKEN1_ADDRESS, user);
@@ -106,27 +104,24 @@ const riskFundFixture = async (): Promise<void> => {
     .giveCallPermission(RISKFUND, "swapPoolsAssets(address[],uint256[],address[][],uint256)", ADMIN);
 
   riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
-  protocolShareReserve = IMockProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
-  if (network == "bsctestnet") {
-    protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
-  }
+  protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
   comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
   vToken2 = VToken__factory.connect(VTOKEN2, impersonatedTimelock);
   await vToken2.connect(impersonatedTimelock).setShortfallContract(SHORTFALL);
   await vToken2.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
 
-  if (network == "sepolia") {
+  if (FORKED_NETWORK == "sepolia") {
     await riskFund.connect(impersonatedTimelock).setPancakeSwapRouter(pancakeSwapRouter.address);
   }
 };
 
-if (FORKING) {
+if (FORK) {
   describe("Risk Fund Fork: Swap Tests", () => {
     let minAmount = parseUnits("10", 18);
 
-    if (network == "bsctestnet") {
+    if (FORKED_NETWORK == "bsctestnet") {
       minAmount = parseUnits("10", 6);
     }
 
@@ -139,12 +134,7 @@ if (FORKING) {
       await vToken2.connect(token2Holder).addReserves(ADD_RESERVE_AMOUNT);
 
       await vToken2.reduceReserves(REDUCE_RESERVE_AMOUNT);
-
-      if (network == "bsctestnet") {
-        await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
-      } else {
-        await protocolShareReserve.releaseFunds(comptroller.address, token2.address, REDUCE_RESERVE_AMOUNT);
-      }
+      await protocolShareReserve.releaseFunds(comptroller.address, [token2.address]);
 
       const riskFundReservesBefore = await riskFund.getPoolsBaseAssetReserves(comptroller.address);
       const riskFundBalanceBefore = await token1.balanceOf(riskFund.address);

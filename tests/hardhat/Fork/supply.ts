@@ -24,8 +24,8 @@ import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
   ACM,
@@ -43,7 +43,7 @@ const {
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 
@@ -100,7 +100,7 @@ async function grantPermissions() {
     .giveCallPermission(comptroller.address, "setCollateralFactor(address,uint256,uint256)", ADMIN);
 }
 
-if (FORKING) {
+if (FORK) {
   describe("Supply fork tests", async () => {
     async function setup() {
       await setForkBlock(BLOCK_NUMBER);
@@ -130,13 +130,11 @@ if (FORKING) {
         enableFlagsForOracles: [true, false, false],
       };
 
-      if (network == "bsctestnet") {
-        resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
-        await resilientOracle.setTokenConfig(tupleForToken2);
-      } else if (network == "bsc") {
-        resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
-        await resilientOracle.setTokenConfig(tupleForToken2);
-        await resilientOracle.setTokenConfig(tupleForToken1);
+      resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
+      await resilientOracle.setTokenConfig(tupleForToken2);
+      await resilientOracle.setTokenConfig(tupleForToken1);
+
+      if (FORKED_NETWORK == "bscmainnet") {
         await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 18));
       }
 

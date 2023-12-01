@@ -1,5 +1,5 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
@@ -39,39 +39,26 @@ let busdUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const ADD_RESERVE_AMOUNT = parseUnits("100", 18);
 const REDUCE_RESERVE_AMOUNT = parseUnits("50", 18);
 
-const initPancakeSwapRouter = async (
-  admin: SignerWithAddress,
-): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
-  let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-  if (FORK_MAINNET) {
-    pancakeSwapRouter = PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
-  } else {
-    const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
-    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
-      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-      admin.address,
-    );
-    await pancakeSwapRouter.deployed();
-    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
-    // Send some BNB to account so it can faucet money from mock tokens
-    const tx = await admin.sendTransaction({
-      to: pancakeSwapRouter.address,
-      value: ethers.utils.parseEther("10"),
-    });
-    await tx.wait();
-    await USDT.connect(pancakeRouterSigner).faucet(parseUnits("1000000", 18));
-    await BUSD.connect(pancakeRouterSigner).faucet(parseUnits("1000000", 18));
-  }
+const initPancakeSwapRouter = async (admin: SignerWithAddress): Promise<FakeContract<PancakeRouter>> => {
+  const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
+  const pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
+    "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+    admin.address,
+  );
+  await pancakeSwapRouter.deployed();
+  const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
+  // Send some BNB to account so it can faucet money from mock tokens
+  const tx = await admin.sendTransaction({
+    to: pancakeSwapRouter.address,
+    value: ethers.utils.parseEther("10"),
+  });
+  await tx.wait();
+  await USDT.connect(pancakeRouterSigner).faucet(parseUnits("1000000", 18));
+  await BUSD.connect(pancakeRouterSigner).faucet(parseUnits("1000000", 18));
   return pancakeSwapRouter;
-};
-
-const initMainnetUser = async (user: string): Promise<SignerWithAddress> => {
-  await impersonateAccount(user);
-  return ethers.getSigner(user);
 };
 
 const initMockToken = async (name: string, symbol: string, user: SignerWithAddress): Promise<MockToken> => {
@@ -84,20 +71,12 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 };
 
 const riskFundFixture = async (): Promise<void> => {
-  const [admin, user, ...signers] = await ethers.getSigners();
-  if (FORK_MAINNET) {
-    // MAINNET USER WITH BALANCE
-    busdUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
-    usdtUser = await initMainnetUser("0xf977814e90da44bfa03b6295a0616a897441acec");
+  const [admin, , ...signers] = await ethers.getSigners();
 
-    BUSD = MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
-    USDT = MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
-  } else {
-    [busdUser, usdtUser] = signers;
+  [busdUser, usdtUser] = signers;
 
-    BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
-    USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
-  }
+  BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
+  USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
 
   pancakeSwapRouter = await initPancakeSwapRouter(admin);
 

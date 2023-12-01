@@ -14,8 +14,6 @@ import {
   Comptroller__factory,
   IERC20,
   IERC20__factory,
-  IMockProtocolShareReserve,
-  IMockProtocolShareReserve__factory,
   MockPriceOracle,
   MockPriceOracle__factory,
   ProtocolShareReserve,
@@ -29,8 +27,8 @@ import {
 } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
   ACM,
@@ -42,14 +40,13 @@ const {
   VTOKEN2,
   RISKFUND,
   SHORTFALL,
-  TREASURY,
   COMPTROLLER,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -68,7 +65,7 @@ let impersonatedTimelock: SignerWithAddress;
 let resilientOracle: MockPriceOracle;
 let chainlinkOracle: ChainlinkOracle;
 let accessControlManager: AccessControlManager;
-let protocolShareReserve: ProtocolShareReserve | IMockProtocolShareReserve;
+let protocolShareReserve: ProtocolShareReserve;
 
 const configureTimelock = async () => {
   impersonatedTimelock = await initMainnetUser(ADMIN, parseEther("2"));
@@ -89,26 +86,8 @@ const setupRiskManagementContracts = async () => {
 
   riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
   await riskFund.connect(impersonatedTimelock).setConvertibleBaseAsset(TOKEN1);
-  protocolShareReserve = IMockProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
-  if (network == "bsctestnet") {
-    protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
-    const distributionConfig1 = {
-      schema: 0,
-      percentage: 50,
-      destination: TREASURY,
-    };
-
-    const distributionConfig2 = {
-      schema: 0,
-      percentage: 50,
-      destination: RISKFUND,
-    };
-
-    await protocolShareReserve
-      .connect(impersonatedTimelock)
-      .addOrUpdateDistributionConfigs([distributionConfig1, distributionConfig2]);
-  }
+  protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
   shortfall = Shortfall__factory.connect(SHORTFALL, impersonatedTimelock);
   await shortfall.updateMinimumPoolBadDebt(parseUnits("50", 18));
@@ -182,11 +161,7 @@ const pretendRiskFundAccumulatedBaseAsset = async amount => {
   await vTOKEN1.addReserves(token1Reserve);
   await vTOKEN1.reduceReserves(token1Reserve);
 
-  if (network == "bsctestnet") {
-    await protocolShareReserve.releaseFunds(comptroller.address, [token1.address]);
-  } else {
-    await protocolShareReserve.releaseFunds(comptroller.address, token1.address, token1Reserve);
-  }
+  await protocolShareReserve.releaseFunds(comptroller.address, [token1.address]);
 };
 
 const setup = async () => {
@@ -209,10 +184,10 @@ enum AuctionType {
   LARGE_RISK_FUND = 1,
 }
 
-if (FORKING) {
+if (FORK) {
   describe("Shortfall fork tests", async () => {
     const token1BadDebt = parseUnits("100", 18);
-    const token2RiskFund = parseUnits("50", 18);
+    const token2RiskFund = parseUnits("40", 18);
 
     beforeEach(async () => {
       await loadFixture(setup);
@@ -257,7 +232,7 @@ if (FORKING) {
         const riskFundReserve = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER);
         const riskFundReserveInUsd = riskFundReserve.mul(token2Price).div(parseUnits("1", 18));
 
-        expect(riskFundReserveInUsd).to.closeTo(parseUnits("50", 18), parseUnits("2", 18));
+        expect(riskFundReserveInUsd).to.closeTo(parseUnits("40", 18), parseUnits("2", 18));
 
         await shortfall.startAuction(COMPTROLLER);
 

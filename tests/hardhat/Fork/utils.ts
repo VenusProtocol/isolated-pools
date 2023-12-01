@@ -2,17 +2,13 @@ import { impersonateAccount, setBalance } from "@nomicfoundation/hardhat-network
 import { NumberLike } from "@nomicfoundation/hardhat-network-helpers/dist/src/types";
 import { ethers, network } from "hardhat";
 
-import { archiveNodes, contractAddreseses } from "./constants";
-
-function getArchieveNode(name: string) {
-  return archiveNodes[name];
-}
+import { contractAddreseses } from "./constants";
 
 export function getContractAddresses(name: string) {
   return contractAddreseses[name];
 }
 
-export const forking = (blockNumber: number, fn: () => void) => {
+export const FORK = (blockNumber: number, fn: () => void) => {
   describe(`At block #${blockNumber}`, () => {
     before(async () => {
       await setForkBlock(blockNumber);
@@ -27,7 +23,7 @@ export async function setForkBlock(blockNumber: number) {
     params: [
       {
         forking: {
-          jsonRpcUrl: process.env[getArchieveNode(process.env.NETWORK_NAME || ("bsc" as string))],
+          jsonRpcUrl: process.env[`ARCHIVE_NODE_${process.env.FORKED_NETWORK || "bscmainnet"}`],
           blockNumber: blockNumber,
         },
       },

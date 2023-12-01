@@ -21,11 +21,11 @@ import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const { ACC1, ACC2, ACM, ADMIN, PSR, TOKEN1_HOLDER, TOKEN1, VTOKEN1, COMPTROLLER, BLOCK_NUMBER } = getContractAddresses(
-  network as string,
+  FORKED_NETWORK as string,
 );
 
 let token1Holder: string;
@@ -63,7 +63,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORKING) {
+if (FORK) {
   describe("Reduce Reserves", async () => {
     mintAmount = convertToUnit("1000", 18);
     TOKEN1BorrowAmount = convertToUnit("100", 18);
@@ -165,7 +165,6 @@ if (FORKING) {
 
       await vTOKEN1.reduceReserves(reduceAmount);
       totalReservesCurrent = await vTOKEN1.totalReserves();
-
       expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.0000002", 19));
 
       const protocolShareBalanceNew = await token1.balanceOf(PSR);

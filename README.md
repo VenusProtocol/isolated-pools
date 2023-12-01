@@ -110,7 +110,7 @@ REPORT_GAS=true npx hardhat test
 
 ```
 
-- To run fork tests add FORK_MAINNET=true and QUICK_NODE_KEY in the .env file.
+- To run fork tests add FORK=true, FORKED_NETWORK and one ARCHIVE_NODE var in the .env file.
 
 ## Deployment
 

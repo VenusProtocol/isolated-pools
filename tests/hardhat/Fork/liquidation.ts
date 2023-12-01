@@ -24,8 +24,8 @@ import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
   ACC1,
@@ -43,7 +43,7 @@ const {
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 
@@ -93,7 +93,7 @@ async function grantPermissions() {
     .giveCallPermission(comptroller.address, "setMinLiquidatableCollateral(uint256)", ADMIN);
   await tx.wait();
 }
-if (FORKING) {
+if (FORK) {
   describe("Liquidation", async () => {
     async function setupBeforeEach(mintAmount: BigNumberish, token2BorrowAmount: BigNumberish) {
       await setup();
@@ -352,9 +352,9 @@ if (FORKING) {
 
         // repayAmount will be calculated after accruing interest and then using borrowBalanceStored to get the repayAmount.
         let repayAmount;
-        if (network == "bsctestnet") repayAmount = 1000000047610436;
-        else if (network == "sepolia") repayAmount = 1000000019025879;
-        else if (network == "bsc") repayAmount = 1000000057174840;
+        if (FORKED_NETWORK == "bsctestnet") repayAmount = 1000000047610436;
+        else if (FORKED_NETWORK == "sepolia") repayAmount = 1000000019818620;
+        else if (FORKED_NETWORK == "bscmainnet") repayAmount = 1000000034788981;
         const seizeTokens = ratio * repayAmount;
         const param = {
           vTokenCollateral: vTOKEN1.address,

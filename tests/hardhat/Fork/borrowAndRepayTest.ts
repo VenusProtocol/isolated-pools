@@ -24,10 +24,10 @@ import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
-console.log("fork tests are running on network:", network);
+console.log("fork tests are running on network: ", FORKED_NETWORK);
 
 const {
   ACC1,
@@ -44,7 +44,7 @@ const {
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 let token1: IERC20;
 let token2: IERC20;
@@ -85,7 +85,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORKING) {
+if (FORK) {
   describe("Borrow and Repay", async () => {
     mintAmount = BigNumber.from(convertToUnit(1, 21));
     TOKEN2BorrowAmount = convertToUnit("3", 20);
@@ -100,7 +100,7 @@ if (FORKING) {
       token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
 
-      if (network == "bsc") {
+      if (FORKED_NETWORK == "bscmainnet") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
         await binanceOracle.setMaxStalePeriod("HAY", BigInt(150000000000000000));
         await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));

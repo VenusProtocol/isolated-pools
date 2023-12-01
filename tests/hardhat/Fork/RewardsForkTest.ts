@@ -25,8 +25,8 @@ import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORKING = process.env.FORKING === "true";
-const network = process.env.NETWORK_NAME || "bsc";
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
   ACM,
@@ -40,7 +40,7 @@ const {
   BINANCE_ORACLE,
   REWARD_DISTRIBUTOR1,
   BLOCK_NUMBER,
-} = getContractAddresses(network as string);
+} = getContractAddresses(FORKED_NETWORK as string);
 
 const MANTISSA_ONE = convertToUnit(1, 18);
 
@@ -80,7 +80,7 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORKING) {
+if (FORK) {
   describe("Rewards distributions", async () => {
     mintAmount = convertToUnit("10000", 18);
     bswBorrowAmount = convertToUnit("100", 18);
@@ -107,7 +107,7 @@ if (FORKING) {
       await comptroller.setMarketSupplyCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
 
-      if (network != "sepolia") {
+      if (FORKED_NETWORK != "sepolia") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
         await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
       }

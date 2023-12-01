@@ -1,5 +1,5 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { impersonateAccount, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
@@ -52,39 +52,27 @@ let usdcUser: SignerWithAddress;
 let usdtUser: SignerWithAddress;
 const maxLoopsLimit = 150;
 
-const FORK_MAINNET = process.env.FORK_MAINNET === "true";
 const someNonzeroAddress = "0x0000000000000000000000000000000000000001";
 
-const initPancakeSwapRouter = async (
-  admin: SignerWithAddress,
-): Promise<PancakeRouter | FakeContract<PancakeRouter>> => {
-  let pancakeSwapRouter: PancakeRouter | FakeContract<PancakeRouter>;
-  if (FORK_MAINNET) {
-    pancakeSwapRouter = PancakeRouter__factory.connect("0x10ED43C718714eb63d5aA57B78B54704E256024E", admin);
-  } else {
-    const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
-    pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
-      "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-      admin.address,
-    );
-    await pancakeSwapRouter.deployed();
-    const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
-    // Send some BNB to account so it can faucet money from mock tokens
-    const tx = await admin.sendTransaction({
-      to: pancakeSwapRouter.address,
-      value: ethers.utils.parseEther("10"),
-    });
-    await tx.wait();
-    await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-    await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
-  }
-  return pancakeSwapRouter;
-};
+const initPancakeSwapRouter = async (admin: SignerWithAddress): Promise<FakeContract<PancakeRouter>> => {
+  const pancakeSwapRouterFactory = await smock.mock<PancakeRouter__factory>("PancakeRouter");
+  const pancakeSwapRouter = await pancakeSwapRouterFactory.deploy(
+    "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+    admin.address,
+  );
+  await pancakeSwapRouter.deployed();
+  const pancakeRouterSigner = await ethers.getSigner(pancakeSwapRouter.address);
+  // Send some BNB to account so it can faucet money from mock tokens
+  const tx = await admin.sendTransaction({
+    to: pancakeSwapRouter.address,
+    value: ethers.utils.parseEther("10"),
+  });
+  await tx.wait();
+  await USDC.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+  await USDT.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
+  await BUSD.connect(pancakeRouterSigner).faucet(convertToUnit(1000000, 18));
 
-const initMainnetUser = async (user: string): Promise<SignerWithAddress> => {
-  await impersonateAccount(user);
-  return ethers.getSigner(user);
+  return pancakeSwapRouter;
 };
 
 const initMockToken = async (name: string, symbol: string, user: SignerWithAddress): Promise<MockToken> => {
@@ -98,21 +86,12 @@ const initMockToken = async (name: string, symbol: string, user: SignerWithAddre
 
 const riskFundFixture = async (): Promise<void> => {
   const [admin, user, ...signers] = await ethers.getSigners();
-  if (FORK_MAINNET) {
-    busdUser = await initMainnetUser("0xFd2FB1D2f41347527492656aD76E86820e5735F2");
-    usdcUser = await initMainnetUser("0x64f87BCa71227b97D2762907871E8188b4B1DddF");
-    usdtUser = await initMainnetUser("0xE4FEb3e94B4128d973A366dc4814167a90629A08");
 
-    USDC = MockToken__factory.connect("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", user);
-    BUSD = MockToken__factory.connect("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", user);
-    USDT = MockToken__factory.connect("0x55d398326f99059fF775485246999027B3197955", user);
-  } else {
-    [busdUser, usdcUser, usdtUser] = signers;
+  [busdUser, usdcUser, usdtUser] = signers;
 
-    USDC = await initMockToken("Mock USDC", "USDC", usdcUser);
-    BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
-    USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
-  }
+  USDC = await initMockToken("Mock USDC", "USDC", usdcUser);
+  BUSD = await initMockToken("Mock BUSD", "BUSD", busdUser);
+  USDT = await initMockToken("Mock USDT", "USDT", usdtUser);
 
   pancakeSwapRouter = await initPancakeSwapRouter(admin);
 

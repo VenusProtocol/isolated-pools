@@ -162,7 +162,7 @@ const config: HardhatUserConfig = {
       live: false,
     },
     bsctestnet: {
-      url: "https://bsc-testnet.public.blastapi.io",
+      url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
@@ -171,7 +171,7 @@ const config: HardhatUserConfig = {
       },
     },
     bscmainnet: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
       timeout: 1200000,
       accounts: {
@@ -179,13 +179,13 @@ const config: HardhatUserConfig = {
       },
     },
     sepolia: {
-      url: process.env.RPC_URL || "https://rpc.notadegen.com/eth/sepolia",
+      url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
       chainId: 11155111,
       live: true,
       gasPrice: 20000000000, // 20 gwei
     },
     ethereum: {
-      url: process.env.ETHEREUM_ARCHIVE_NODE_URL || "https://eth-mainnet.public.blastapi.io",
+      url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
       chainId: 1,
       live: true,
       timeout: 1200000, // 20 minutes
@@ -213,10 +213,28 @@ const config: HardhatUserConfig = {
           browserURL: "https://bscscan.com",
         },
       },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "ethereum",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
@@ -250,7 +268,11 @@ const config: HardhatUserConfig = {
         "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
         "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
       ],
-      bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+      bscmainnet: [
+        "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
+        "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+        "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+      ],
     },
   },
 };
