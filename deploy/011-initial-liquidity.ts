@@ -10,7 +10,7 @@ import {
   getConfig,
   getTokenConfig,
 } from "../helpers/deploymentConfig";
-import { getUnderlyingMock, getUnderlyingToken, getUnregisteredVTokens } from "../helpers/deploymentUtils";
+import { getUnderlyingMock, getUnderlyingToken, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 
 const sumAmounts = async (tokens: { symbol: string; amount: BigNumber }[]) => {
   const amounts: { [symbol: string]: BigNumber } = {};
@@ -44,8 +44,8 @@ const faucetTokens = async (deploymentConfig: DeploymentConfig, hre: HardhatRunt
   }
 };
 
-const approveTimelock = async (deploymentConfig: DeploymentConfig, hre: HardhatRuntimeEnvironment) => {
-  if (hre.network.name !== "bsctestnet") {
+const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig, hre: HardhatRuntimeEnvironment) => {
+  if (hre.network.name == "bscmainnet" || hre.network.name == "ethereum") {
     return;
   }
   const { poolConfig, tokensConfig, preconfiguredAddresses } = deploymentConfig;
@@ -59,8 +59,13 @@ const approveTimelock = async (deploymentConfig: DeploymentConfig, hre: HardhatR
   const totalAmounts = await sumAmounts(amounts);
   for (const [symbol, amount] of Object.entries(totalAmounts)) {
     const tokenContract = await getUnderlyingToken(symbol, tokensConfig);
-    console.log(`Approving ${amount} ${symbol} to Timelock`);
-    const tx = await tokenContract.approve(preconfiguredAddresses.NormalTimelock, amount, { gasLimit: 5000000 });
+    console.log(`Sending ${amount} ${symbol} to VTreasury`);
+    console.log(`Token Contract: ${tokenContract.address}`);
+    console.log(`Token Contract: ${amount.toString()}`);
+    const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+    console.log(`Token Contract: ${treasuryAddress}`);
+
+    const tx = await tokenContract.transfer(treasuryAddress, amount, { gasLimit: 5000000 });
     await tx.wait(1);
   }
 };
@@ -68,7 +73,7 @@ const approveTimelock = async (deploymentConfig: DeploymentConfig, hre: HardhatR
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deploymentConfig = await getConfig(hre.network.name);
   await faucetTokens(deploymentConfig, hre);
-  await approveTimelock(deploymentConfig, hre);
+  await sendInitialLiquidityToTreasury(deploymentConfig, hre);
 };
 
 func.tags = ["InitialLiquidity", "il"];

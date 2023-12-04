@@ -4,6 +4,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
+import { blocksPerYear as blocksPerYearConfig } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import { WhitePaperInterestRateModel } from "../../typechain";
 
@@ -17,13 +18,17 @@ describe("White paper interest rate model tests", () => {
   const reserves = convertToUnit(2, 19);
   const badDebt = convertToUnit(1, 19);
   const expScale = convertToUnit(1, 18);
-  const blocksPerYear = 10512000;
+  const blocksPerYear = blocksPerYearConfig.hardhat;
   const baseRatePerYear = convertToUnit(2, 12);
   const multiplierPerYear = convertToUnit(4, 14);
 
   const fixture = async () => {
     const WhitePaperInterestRateModelFactory = await ethers.getContractFactory("WhitePaperInterestRateModel");
-    whitePaperInterestRateModel = await WhitePaperInterestRateModelFactory.deploy(baseRatePerYear, multiplierPerYear);
+    whitePaperInterestRateModel = await WhitePaperInterestRateModelFactory.deploy(
+      blocksPerYear,
+      baseRatePerYear,
+      multiplierPerYear,
+    );
     await whitePaperInterestRateModel.deployed();
   };
 
@@ -35,6 +40,7 @@ describe("White paper interest rate model tests", () => {
     const baseRatePerBlock = new BigNumber(baseRatePerYear).dividedBy(blocksPerYear).toFixed(0);
     const multiplierPerBlock = new BigNumber(multiplierPerYear).dividedBy(blocksPerYear).toFixed(0);
 
+    expect(await whitePaperInterestRateModel.blocksPerYear()).equal(blocksPerYear);
     expect(await whitePaperInterestRateModel.baseRatePerBlock()).equal(baseRatePerBlock);
     expect(await whitePaperInterestRateModel.multiplierPerBlock()).equal(multiplierPerBlock);
   });
