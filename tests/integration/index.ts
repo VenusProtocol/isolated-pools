@@ -23,7 +23,7 @@ import { Error } from "../hardhat/util/Errors";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const timeBasedIntegrationTests = network.config.isTimeBased;
+const timeBasedIntegrationTests = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
 let description: string = "block-based contracts";
 
 if (timeBasedIntegrationTests) {
@@ -510,7 +510,8 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
 
-      const repayAmount = convertToUnit("1000000000007133", 0);
+      let repayAmount = 1000000000007133;
+      if (timeBasedIntegrationTests) repayAmount = 1000000000002377;
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,

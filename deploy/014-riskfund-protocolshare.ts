@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { tokensConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
   const usdt = await getUnderlyingToken("USDT", tokensConfig);
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);

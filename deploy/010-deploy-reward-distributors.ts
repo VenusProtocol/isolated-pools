@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const maxLoopsLimit = 100;
 
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
 
   const accessControlAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",

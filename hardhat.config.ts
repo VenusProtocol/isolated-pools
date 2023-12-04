@@ -162,7 +162,6 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      isTimeBased: false,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     // Mainnet deployments are done through Frame wallet RPC
@@ -170,7 +169,6 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
       timeout: 1200000,
-      isTimeBased: false,
       accounts: {
         mnemonic: process.env.MNEMONIC || "",
       },
@@ -180,7 +178,6 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       live: true,
       timeout: 1200000, // 20 minutes,
-      isTimeBased: false,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     ethereum: {
@@ -188,7 +185,6 @@ const config: HardhatUserConfig = {
       chainId: 1,
       live: true,
       timeout: 1200000, // 20 minutes,
-      isTimeBased: false,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
   },
@@ -299,7 +295,6 @@ function isFork() {
         allowUnlimitedContractSize: true,
         loggingEnabled: false,
         live: false,
-        isTimeBased: false,
       };
 }
 export default config;
