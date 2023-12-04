@@ -17,6 +17,7 @@ export type NetworkConfig = {
   bscmainnet: DeploymentConfig;
   sepolia: DeploymentConfig;
   ethereum: DeploymentConfig;
+  opbnbtestnet: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -109,6 +110,7 @@ export const blocksPerYear: BlocksPerYear = {
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 export const ETHEREUM_MULTISIG = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
+export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "6171";
 const preconfiguredAddresses = {
@@ -158,6 +160,13 @@ const preconfiguredAddresses = {
     CriticalTimelock: ETHEREUM_MULTISIG,
     GovernorBravo: ETHEREUM_MULTISIG,
     AccessControlManager: governanceEthereum.AccessControlManager.address,
+  },
+  opbnbtestnet: {
+    VTreasury: "0x3370915301E8a6A6baAe6f461af703e2498409F3",
+    NormalTimelock: OPBNBTESTNET_MULTISIG,
+    FastTrackTimelock: OPBNBTESTNET_MULTISIG,
+    CriticalTimelock: OPBNBTESTNET_MULTISIG,
+    AccessControlManager: "0x049f77F7046266d27C3bC96376f53C17Ef09c986",
   },
 };
 
@@ -2828,6 +2837,41 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.ethereum,
   },
+  opbnbtestnet: {
+    tokensConfig: [
+      {
+        isMock: true,
+        name: "BTCB Token",
+        symbol: "BTCB",
+        decimals: 18,
+        tokenAddress: "0x7Af23F9eA698E9b953D2BD70671173AaD0347f19",
+      },
+      {
+        isMock: true,
+        name: "Ethereum Token",
+        symbol: "ETH",
+        decimals: 18,
+        tokenAddress: "0x94680e003861D43C6c0cf18333972312B6956FF1",
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 18,
+        tokenAddress: "0x8ac9B3801D0a8f5055428ae0bF301CA1Da976855",
+      },
+      {
+        isMock: true,
+        name: "Wrapped BNB",
+        symbol: "WBNB",
+        decimals: 18,
+        tokenAddress: "0xF9ce72611a1BE9797FdD2c995dB6fB61FD20E4eB",
+      },
+    ],
+    poolConfig: [], // TODO
+    accessControlConfig: [], // TODO
+    preconfiguredAddresses: preconfiguredAddresses.sepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -2842,6 +2886,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.sepolia;
     case "ethereum":
       return globalConfig.ethereum;
+    case "opbnbtestnet":
+      return globalConfig.opbnbtestnet;
     case "development":
       return globalConfig.bsctestnet;
     default:
