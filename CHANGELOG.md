@@ -1,3 +1,10 @@
+## [2.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.4...v2.3.0-dev.5) (2023-12-06)
+
+
+### Bug Fixes
+
+* adjust  BLOCK_PER_YEAR for ethereum assuming a block is mined every 12 seconds (instead of every 14) ([b782529](https://github.com/VenusProtocol/isolated-pools/commit/b7825299a0611a423c3abd90f7f1fe32274b259f))
+
 ## [2.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2023-12-01)
 
 
