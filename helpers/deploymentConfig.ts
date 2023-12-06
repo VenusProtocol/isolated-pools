@@ -2303,6 +2303,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Venus XVS",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0xDb633C11D3F9E6B8D17aC2c972C9e3B05DA59bF9",
+      },
     ],
     poolConfig: [
       {
@@ -2421,7 +2428,32 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["WBTC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["WETH"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDT"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+        ],
       },
       {
         id: "Stablecoins",
