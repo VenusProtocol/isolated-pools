@@ -225,16 +225,16 @@ const config: HardhatUserConfig = {
         network: "opbnbtestnet",
         chainId: 5611,
         urls: {
-          apiURL: "https://api-opbnb-testnet.bscscan.com/api",
-          browserURL: "https://opbnb-testnet.bscscan.com/",
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
+          browserURL: "https://testnet.opbnbscan.com/",
         },
       },
       {
         network: "opbnbmainnet",
         chainId: 204,
         urls: {
-          apiURL: `https://api-opbnb.bscscan.com/api`,
-          browserURL: "https://opbnb.bscscan.com/",
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
+          browserURL: "https://opbnbscan.com/",
         },
       },
     ],
