@@ -2303,13 +2303,6 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
-      {
-        isMock: true,
-        name: "Venus XVS",
-        symbol: "XVS",
-        decimals: 18,
-        tokenAddress: "0xDb633C11D3F9E6B8D17aC2c972C9e3B05DA59bF9",
-      },
     ],
     poolConfig: [
       {
