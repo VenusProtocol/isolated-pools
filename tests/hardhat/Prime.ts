@@ -23,7 +23,6 @@ import {
 } from "../../typechain";
 import { deployVTokenBeacon, makeVToken } from "./util/TokenTestHelpers";
 
-// import { convertToUnit } from "../../../helpers/utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -237,7 +236,6 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   return {
     oracle: fakePriceOracle,
     accessControl,
-    // comptrollerLens,
     comptroller: comptrollerProxy,
     usdt,
     vusdt: vUSDT,
