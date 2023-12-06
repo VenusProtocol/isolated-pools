@@ -1116,9 +1116,8 @@ contract Comptroller is
     function setPrimeToken(IPrime _prime) external onlyOwner {
         ensureNonzeroAddress(address(_prime));
 
-        IPrime oldPrime = prime;
+        emit NewPrimeToken(prime, _prime);
         prime = _prime;
-        emit NewPrimeToken(oldPrime, _prime);
     }
 
     /**
