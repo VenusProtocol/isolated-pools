@@ -93,7 +93,7 @@ export enum InterestRateModels {
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
 const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
-const ETH_BLOCKS_PER_YEAR = 2_252_571; // assuming a block is mined every 14 seconds
+const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
 
 export type BlocksPerYear = {
   [key: string]: number;
