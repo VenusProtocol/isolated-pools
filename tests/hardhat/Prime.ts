@@ -236,7 +236,6 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   return {
     oracle: fakePriceOracle,
     accessControl,
-    // comptrollerLens,
     comptroller: comptrollerProxy,
     usdt,
     vusdt: vUSDT,
