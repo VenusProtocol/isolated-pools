@@ -2421,7 +2421,32 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["WBTC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["WETH"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDT"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+        ],
       },
       {
         id: "Stablecoins",
