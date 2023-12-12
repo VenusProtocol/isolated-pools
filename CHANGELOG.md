@@ -1,3 +1,15 @@
+## [2.3.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.6...v2.3.0-dev.7) (2023-12-12)
+
+
+### Features
+
+* updating deployment files ([a66d5d2](https://github.com/VenusProtocol/isolated-pools/commit/a66d5d2d8b4fbd292820582fd2b8bd5ae057afad))
+
+
+### Bug Fixes
+
+* exclude external deployments when exporting ([2bcf316](https://github.com/VenusProtocol/isolated-pools/commit/2bcf316f8c8394588ff9a0b72e5fc854a9db28f1))
+
 ## [2.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.5...v2.3.0-dev.6) (2023-12-07)
 
 
