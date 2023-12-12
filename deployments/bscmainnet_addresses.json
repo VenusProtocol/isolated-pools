@@ -96,9 +96,6 @@
     "VToken_vagEUR_Stablecoins": "0x795DE779Be00Ea46eA97a28BDD38d9ED570BCF0F",
     "VToken_vankrBNB_DeFi": "0x53728FD51060a85ac41974C6C3Eb1DaE42776723",
     "VToken_vankrBNB_LiquidStakedBNB": "0xBfe25459BA784e70E2D7a718Be99a1f3521cA17f",
-    "VToken_vstkBNB_LiquidStakedBNB": "0xcc5D9e502574cda17215E70bC0B4546663785227",
-    "ProtocolShareReserve": "0xCa01D5A9A248a830E9D93231e791B1afFed7c446",
-    "ProtocolShareReserve_Implementation": "0x5108E5F903Ecc5e3a2dA20171527aCe96CB3c7f8",
-    "ProtocolShareReserve_Proxy": "0xCa01D5A9A248a830E9D93231e791B1afFed7c446"
+    "VToken_vstkBNB_LiquidStakedBNB": "0xcc5D9e502574cda17215E70bC0B4546663785227"
   }
 }
