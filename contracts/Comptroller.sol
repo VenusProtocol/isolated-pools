@@ -155,6 +155,9 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    /// @notice Thrown if the user is trying to redeem when tokens and amount is zero
+    error NoRedeemTokensOrAmount();
+
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
@@ -353,7 +356,8 @@ contract Comptroller is
      * @param redeemTokens The number of tokens being redeemed
      */
     function redeemVerify(address vToken, address redeemer, uint256 redeemAmount, uint256 redeemTokens) external {
-        require(redeemTokens != 0 || redeemAmount == 0, "redeemTokens zero");
+        if (redeemAmount == 0 && redeemTokens == 0) revert NoRedeemTokensOrAmount();
+
         if (address(prime) != address(0)) {
             prime.accrueInterestAndUpdateScore(redeemer, vToken);
         }
