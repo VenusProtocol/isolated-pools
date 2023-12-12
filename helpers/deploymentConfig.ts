@@ -96,7 +96,7 @@ export enum InterestRateModels {
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
 const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
-const ETH_BLOCKS_PER_YEAR = 2_252_571; // assuming a block is mined every 14 seconds
+const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
 const OPBNB_BLOCKS_PER_YEAR = 31_536_000; // assuming a block is mined every 1 seconds
 
 export type BlocksPerYear = {
@@ -2436,7 +2436,32 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["WBTC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["WETH"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDC"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["USDT"],
+            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+          },
+        ],
       },
       {
         id: "Stablecoins",
