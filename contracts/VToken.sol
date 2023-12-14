@@ -5,13 +5,13 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts/Interfaces/IProtocolShareReserve.sol";
 
 import { VTokenInterface } from "./VTokenInterfaces.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInterface.sol";
 import { TokenErrorReporter } from "./ErrorReporter.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
-import { IProtocolShareReserve } from "./RiskFund/IProtocolShareReserve.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
@@ -51,7 +51,9 @@ contract VToken is
 
     uint256 internal constant DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA = 5e16; // 5%
 
-    /*** Reentrancy Guard ***/
+    /**
+     * Reentrancy Guard **
+     */
 
     /**
      * @dev Prevents a contract from calling itself, directly or indirectly.
@@ -142,11 +144,7 @@ contract VToken is
      * @custom:error TransferNotAllowed is thrown if trying to transfer to self
      * @custom:access Not restricted
      */
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external override nonReentrant returns (bool) {
+    function transferFrom(address src, address dst, uint256 amount) external override nonReentrant returns (bool) {
         _transferTokens(msg.sender, src, dst, amount);
         return true;
     }
@@ -417,6 +415,7 @@ contract VToken is
 
     /**
      * @notice Accrues interest and reduces reserves by transferring to the protocol reserve contract
+     * @dev Gracefully return if reserves already reduced in accrueInterest
      * @param reduceAmount Amount of reduction to reserves
      * @custom:event Emits ReservesReduced event; may emit AccrueInterest
      * @custom:error ReduceReservesCashNotAvailable is thrown when the vToken does not have sufficient cash
@@ -425,6 +424,7 @@ contract VToken is
      */
     function reduceReserves(uint256 reduceAmount) external override nonReentrant {
         accrueInterest();
+        if (reduceReservesBlockNumber == _getBlockNumber()) return;
         _reduceReservesFresh(reduceAmount);
     }
 
@@ -468,11 +468,7 @@ contract VToken is
      * @custom:error HealBorrowUnauthorized is thrown when the request does not come from Comptroller
      * @custom:access Only Comptroller
      */
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external override nonReentrant {
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external override nonReentrant {
         if (repayAmount != 0) {
             comptroller.preRepayHook(address(this), borrower);
         }
@@ -561,11 +557,7 @@ contract VToken is
      * @custom:error LiquidateSeizeLiquidatorIsBorrower is thrown when trying to liquidate self
      * @custom:access Not restricted
      */
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external override nonReentrant {
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external override nonReentrant {
         _seize(msg.sender, liquidator, borrower, seizeTokens);
     }
 
@@ -622,6 +614,18 @@ contract VToken is
     }
 
     /**
+     * @notice A public function to set new threshold of block difference after which funds will be sent to the protocol share reserve
+     * @param _newReduceReservesBlockDelta block difference value
+     * @custom:access Only Governance
+     */
+    function setReduceReservesBlockDelta(uint256 _newReduceReservesBlockDelta) external {
+        _checkAccessAllowed("setReduceReservesBlockDelta(uint256)");
+        require(_newReduceReservesBlockDelta > 0, "Invalid Input");
+        emit NewReduceReservesBlockDelta(reduceReservesBlockDelta, _newReduceReservesBlockDelta);
+        reduceReservesBlockDelta = _newReduceReservesBlockDelta;
+    }
+
+    /**
      * @notice Get the current allowance from `owner` for `spender`
      * @param owner The address of the account which owns the tokens to be spent
      * @param spender The address of the account which may transfer tokens
@@ -649,16 +653,13 @@ contract VToken is
      * @return borrowBalance Amount owed in terms of underlying
      * @return exchangeRate Stored exchange rate
      */
-    function getAccountSnapshot(address account)
+    function getAccountSnapshot(
+        address account
+    )
         external
         view
         override
-        returns (
-            uint256 error,
-            uint256 vTokenBalance,
-            uint256 borrowBalance,
-            uint256 exchangeRate
-        )
+        returns (uint256 error, uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRate)
     {
         return (NO_ERROR, accountTokens[account], _borrowBalanceStored(account), _exchangeRateStored());
     }
@@ -724,7 +725,9 @@ contract VToken is
     /**
      * @notice Applies accrued interest to total borrows and reserves
      * @dev This calculates interest accrued from the last checkpointed block
-     *   up to the current block and writes new checkpoint to storage.
+     *  up to the current block and writes new checkpoint to storage and
+     *  reduce spread reserves to protocol share reserve
+     *  if currentBlock - reduceReservesBlockNumber >= blockDelta
      * @return Always NO_ERROR
      * @custom:event Emits AccrueInterest event on success
      * @custom:access Not restricted
@@ -781,6 +784,11 @@ contract VToken is
         totalBorrows = totalBorrowsNew;
         totalReserves = totalReservesNew;
 
+        if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
+            reduceReservesBlockNumber = currentBlockNumber;
+            _reduceReservesFresh(totalReservesNew);
+        }
+
         /* We emit an AccrueInterest event */
         emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
 
@@ -794,11 +802,7 @@ contract VToken is
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
      */
-    function _mintFresh(
-        address payer,
-        address minter,
-        uint256 mintAmount
-    ) internal {
+    function _mintFresh(address payer, address minter, uint256 mintAmount) internal {
         /* Fail if mint not allowed */
         comptroller.preMintHook(address(this), minter, mintAmount);
 
@@ -851,11 +855,7 @@ contract VToken is
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
-    function _redeemFresh(
-        address redeemer,
-        uint256 redeemTokensIn,
-        uint256 redeemAmountIn
-    ) internal {
+    function _redeemFresh(address redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
         /* Verify market's block number equals current block number */
@@ -985,11 +985,7 @@ contract VToken is
      * @param repayAmount the amount of underlying tokens being returned, or type(uint256).max for the full outstanding amount
      * @return (uint) the actual repayment amount.
      */
-    function _repayBorrowFresh(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) internal returns (uint256) {
+    function _repayBorrowFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
         comptroller.preRepayHook(address(this), borrower);
 
@@ -1152,12 +1148,7 @@ contract VToken is
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of vTokens to seize
      */
-    function _seize(
-        address seizerContract,
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) internal {
+    function _seize(address seizerContract, address liquidator, address borrower, uint256 seizeTokens) internal {
         /* Fail if seize not allowed */
         comptroller.preSeizeHook(address(this), seizerContract, liquidator, borrower);
 
@@ -1172,28 +1163,36 @@ contract VToken is
          *  liquidatorTokensNew = accountTokens[liquidator] + seizeTokens
          */
         uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller))
-        .liquidationIncentiveMantissa();
+            .liquidationIncentiveMantissa();
         uint256 numerator = mul_(seizeTokens, Exp({ mantissa: protocolSeizeShareMantissa }));
         uint256 protocolSeizeTokens = div_(numerator, Exp({ mantissa: liquidationIncentiveMantissa }));
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
         uint256 protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
-        uint256 totalReservesNew = totalReserves + protocolSeizeAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
         /* We write the calculated values into storage */
-        totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
         accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
 
+        // _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        // Transferring an underlying asset to the protocolShareReserve contract to channel the funds for different use.
+        _doTransferOut(protocolShareReserve, protocolSeizeAmount);
+
+        // Update the pool asset's state in the protocol share reserve for the above transfer.
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.LIQUIDATION
+        );
+
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
-        emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+        emit ProtocolSeize(borrower, protocolShareReserve, protocolSeizeAmount);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
@@ -1260,6 +1259,9 @@ contract VToken is
      * @param reduceAmount Amount of reduction to reserves
      */
     function _reduceReservesFresh(uint256 reduceAmount) internal {
+        if (reduceAmount == 0) {
+            return;
+        }
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
@@ -1292,9 +1294,13 @@ contract VToken is
         _doTransferOut(protocolShareReserve, reduceAmount);
 
         // Update the pool asset's state in the protocol share reserve for the above transfer.
-        IProtocolShareReserve(protocolShareReserve).updateAssetsState(address(comptroller), underlying);
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.SPREAD
+        );
 
-        emit ReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
+        emit SpreadReservesReduced(protocolShareReserve, reduceAmount, totalReservesNew);
     }
 
     /**
@@ -1324,7 +1330,9 @@ contract VToken is
         emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
     }
 
-    /*** Safe Token ***/
+    /**
+     * Safe Token **
+     */
 
     /**
      * @dev Similar to ERC-20 transfer, but handles tokens that have transfer fees.
@@ -1361,12 +1369,7 @@ contract VToken is
      * @param dst The address of the destination account
      * @param tokens The number of tokens to transfer
      */
-    function _transferTokens(
-        address spender,
-        address src,
-        address dst,
-        uint256 tokens
-    ) internal {
+    function _transferTokens(address spender, address src, address dst, uint256 tokens) internal {
         /* Fail if transfer not allowed */
         comptroller.preTransferHook(address(this), src, dst, tokens);
 
@@ -1485,8 +1488,7 @@ contract VToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(underlying);
-        return token.balanceOf(address(this));
+        return IERC20Upgradeable(underlying).balanceOf(address(this));
     }
 
     /**

@@ -2,14 +2,20 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { ETHEREUM_MULTISIG, SEPOLIA_MULTISIG } from "../helpers/deploymentConfig";
+
 interface Config {
   [key: string]: string;
 }
 
+const TESTNET_MNEMONIC_SIGNER = "0xFA747c4a62c4D168276329F822d004026A1c05E9"; // signer[1] from testnet mnemonic
+
 const targetOwners: Config = {
   hardhat: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // signer[1] from hardhat mnemonic
-  bsctestnet: "0xFA747c4a62c4D168276329F822d004026A1c05E9", // signer[1] from testnet mnemonic
-  mainnet: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396", // NORMAL VIP Timelock
+  bsctestnet: TESTNET_MNEMONIC_SIGNER,
+  bscmainnet: "0x939bD8d64c0A9583A7Dcea9933f7b21697ab6396", // NORMAL VIP Timelock
+  sepolia: SEPOLIA_MULTISIG,
+  ethereum: ETHEREUM_MULTISIG,
 };
 
 const contracts = ["RiskFund", "Shortfall", "ProtocolShareReserve"];

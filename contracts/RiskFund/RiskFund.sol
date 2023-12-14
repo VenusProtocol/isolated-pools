@@ -14,7 +14,6 @@ import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
-import { IShortfall } from "../Shortfall/IShortfall.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
@@ -40,6 +39,9 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @notice Emitted when shortfall contract address is updated
     event ShortfallContractUpdated(address indexed oldShortfallContract, address indexed newShortfallContract);
 
+    /// @notice Emitted when convertible base asset is updated
+    event ConvertibleBaseAssetUpdated(address indexed oldConvertibleBaseAsset, address indexed newConvertibleBaseAsset);
+
     /// @notice Emitted when PancakeSwap router contract address is updated
     event PancakeSwapRouterUpdated(address indexed oldPancakeSwapRouter, address indexed newPancakeSwapRouter);
 
@@ -55,7 +57,11 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
     /// @dev Note that the contract is upgradeable. Use initialize() or reinitializers
     ///      to set the state variables.
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(
+        address corePoolComptroller_,
+        address vbnb_,
+        address nativeWrapped_
+    ) ReserveHelpers(corePoolComptroller_, vbnb_, nativeWrapped_) {
         _disableInitializers();
     }
 
@@ -110,10 +116,6 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      */
     function setShortfallContractAddress(address shortfallContractAddress_) external onlyOwner {
         ensureNonzeroAddress(shortfallContractAddress_);
-        require(
-            IShortfall(shortfallContractAddress_).convertibleBaseAsset() == convertibleBaseAsset,
-            "Risk Fund: Base asset doesn't match"
-        );
 
         address oldShortfallContractAddress = shortfall;
         shortfall = shortfallContractAddress_;
@@ -142,6 +144,20 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         uint256 oldMinAmountToConvert = minAmountToConvert;
         minAmountToConvert = minAmountToConvert_;
         emit MinAmountToConvertUpdated(oldMinAmountToConvert, minAmountToConvert_);
+    }
+
+    /**
+     * @notice Sets a new convertible base asset
+     * @param _convertibleBaseAsset Address for new convertible base asset.
+     */
+    function setConvertibleBaseAsset(address _convertibleBaseAsset) external {
+        _checkAccessAllowed("setConvertibleBaseAsset(address)");
+        require(_convertibleBaseAsset != address(0), "Risk Fund: new convertible base asset address invalid");
+
+        address oldConvertibleBaseAsset = convertibleBaseAsset;
+        convertibleBaseAsset = _convertibleBaseAsset;
+
+        emit ConvertibleBaseAssetUpdated(oldConvertibleBaseAsset, _convertibleBaseAsset);
     }
 
     /**
@@ -195,12 +211,10 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param amount Amount to be transferred to auction contract.
      * @return Number reserved tokens.
      */
-    function transferReserveForAuction(address comptroller, uint256 amount)
-        external
-        override
-        nonReentrant
-        returns (uint256)
-    {
+    function transferReserveForAuction(
+        address comptroller,
+        uint256 amount
+    ) external override nonReentrant returns (uint256) {
         address shortfall_ = shortfall;
         require(msg.sender == shortfall_, "Risk fund: Only callable by Shortfall contract");
         require(

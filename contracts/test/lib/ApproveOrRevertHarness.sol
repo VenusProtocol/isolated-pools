@@ -8,11 +8,7 @@ import { ApproveOrRevert } from "../../lib/ApproveOrRevert.sol";
 contract ApproveOrRevertHarness {
     using ApproveOrRevert for IERC20Upgradeable;
 
-    function approve(
-        IERC20Upgradeable token,
-        address spender,
-        uint256 amount
-    ) external {
+    function approve(IERC20Upgradeable token, address spender, uint256 amount) external {
         token.approveOrRevert(spender, amount);
     }
 }

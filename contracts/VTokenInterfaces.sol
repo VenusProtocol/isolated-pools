@@ -128,11 +128,21 @@ contract VTokenStorage {
     address public shortfall;
 
     /**
+     * @notice delta block after which reserves will be reduced
+     */
+    uint256 public reduceReservesBlockDelta;
+
+    /**
+     * @notice last block number at which reserves were reduced
+     */
+    uint256 public reduceReservesBlockNumber;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[48] private __gap;
 }
 
 /**
@@ -247,9 +257,9 @@ abstract contract VTokenInterface is VTokenStorage {
     event ReservesAdded(address indexed benefactor, uint256 addAmount, uint256 newTotalReserves);
 
     /**
-     * @notice Event emitted when the reserves are reduced
+     * @notice Event emitted when the spread reserves are reduced
      */
-    event ReservesReduced(address indexed admin, uint256 reduceAmount, uint256 newTotalReserves);
+    event SpreadReservesReduced(address indexed protocolShareReserve, uint256 reduceAmount, uint256 newTotalReserves);
 
     /**
      * @notice EIP20 Transfer event
@@ -270,6 +280,16 @@ abstract contract VTokenInterface is VTokenStorage {
      * @notice Event emitted when tokens are swept
      */
     event SweepToken(address indexed token);
+
+    /**
+     * @notice Event emitted when reduce reserves block delta is changed
+     */
+    event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
+
+    /**
+     * @notice Event emitted when liquidation reserves are reduced
+     */
+    event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
     /*** User Interface ***/
 
@@ -293,11 +313,7 @@ abstract contract VTokenInterface is VTokenStorage {
         VTokenInterface vTokenCollateral
     ) external virtual returns (uint256);
 
-    function healBorrow(
-        address payer,
-        address borrower,
-        uint256 repayAmount
-    ) external virtual;
+    function healBorrow(address payer, address borrower, uint256 repayAmount) external virtual;
 
     function forceLiquidateBorrow(
         address liquidator,
@@ -307,19 +323,11 @@ abstract contract VTokenInterface is VTokenStorage {
         bool skipCloseFactorCheck
     ) external virtual;
 
-    function seize(
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens
-    ) external virtual;
+    function seize(address liquidator, address borrower, uint256 seizeTokens) external virtual;
 
     function transfer(address dst, uint256 amount) external virtual returns (bool);
 
-    function transferFrom(
-        address src,
-        address dst,
-        uint256 amount
-    ) external virtual returns (bool);
+    function transferFrom(address src, address dst, uint256 amount) external virtual returns (bool);
 
     function accrueInterest() external virtual returns (uint256);
 
@@ -353,16 +361,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function balanceOf(address owner) external view virtual returns (uint256);
 
-    function getAccountSnapshot(address account)
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
+    function getAccountSnapshot(address account) external view virtual returns (uint256, uint256, uint256, uint256);
 
     function borrowRatePerBlock() external view virtual returns (uint256);
 

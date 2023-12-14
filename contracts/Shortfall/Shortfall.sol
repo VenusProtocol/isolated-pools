@@ -7,11 +7,9 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
-import { IShortfall } from "./IShortfall.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
@@ -28,13 +26,7 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
  * risk fund in exchange for paying off all the pool's bad debt.
  */
-contract Shortfall is
-    Ownable2StepUpgradeable,
-    AccessControlledV8,
-    ReentrancyGuardUpgradeable,
-    TokenDebtTracker,
-    IShortfall
-{
+contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, TokenDebtTracker {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Type of auction
@@ -94,9 +86,6 @@ contract Shortfall is
 
     /// @notice Time to wait for first bidder. Initially waits for 100 blocks
     uint256 public waitForFirstBidder;
-
-    /// @notice base asset contract address
-    address public convertibleBaseAsset;
 
     /// @notice Auctions for each pool
     mapping(address => Auction) public auctions;
@@ -159,7 +148,6 @@ contract Shortfall is
 
     /**
      * @notice Initialize the shortfall contract
-     * @param convertibleBaseAsset_ Asset to swap the funds to
      * @param riskFund_ RiskFund contract address
      * @param minimumPoolBadDebt_ Minimum bad debt in base asset for a pool to start auction
      * @param accessControlManager_ AccessControlManager contract address
@@ -167,12 +155,10 @@ contract Shortfall is
      * @custom:error ZeroAddressNotAllowed is thrown when risk fund address is zero
      */
     function initialize(
-        address convertibleBaseAsset_,
         IRiskFund riskFund_,
         uint256 minimumPoolBadDebt_,
         address accessControlManager_
     ) external initializer {
-        ensureNonzeroAddress(convertibleBaseAsset_);
         ensureNonzeroAddress(address(riskFund_));
         require(minimumPoolBadDebt_ != 0, "invalid minimum pool bad debt");
 
@@ -181,7 +167,6 @@ contract Shortfall is
         __ReentrancyGuard_init();
         __TokenDebtTracker_init();
         minimumPoolBadDebt = minimumPoolBadDebt_;
-        convertibleBaseAsset = convertibleBaseAsset_;
         riskFund = riskFund_;
         waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
         nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
@@ -196,11 +181,7 @@ contract Shortfall is
      * @param auctionStartBlock The block number when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(
-        address comptroller,
-        uint256 bidBps,
-        uint256 auctionStartBlock
-    ) external nonReentrant {
+    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlock) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
         require(auction.startBlock == auctionStartBlock, "auction has been restarted");
@@ -285,6 +266,8 @@ contract Shortfall is
             riskFundBidAmount = (auction.seizedRiskFund * auction.highestBidBps) / MAX_BPS;
         }
 
+        address convertibleBaseAsset = riskFund.convertibleBaseAsset();
+
         uint256 transferredAmount = riskFund.transferReserveForAuction(comptroller, riskFundBidAmount);
         _transferOutOrTrackDebt(IERC20Upgradeable(convertibleBaseAsset), auction.highestBidder, riskFundBidAmount);
 
@@ -358,7 +341,7 @@ contract Shortfall is
 
     /**
      * @notice Update minimum pool bad debt to start auction
-     * @param _minimumPoolBadDebt Minimum bad debt in BUSD for a pool to start auction
+     * @param _minimumPoolBadDebt Minimum bad debt in the base asset for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted by ACM
      */

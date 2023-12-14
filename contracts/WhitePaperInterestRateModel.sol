@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
+import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title Compound's WhitePaperInterestRateModel Contract
@@ -10,6 +10,10 @@ import { BLOCKS_PER_YEAR, EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
 contract WhitePaperInterestRateModel is InterestRateModel {
+    /**
+     * @notice The approximate number of blocks per year that is assumed by the interest rate model
+     */
+    uint256 public immutable blocksPerYear;
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
      */
@@ -27,9 +31,11 @@ contract WhitePaperInterestRateModel is InterestRateModel {
      * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
      */
-    constructor(uint256 baseRatePerYear, uint256 multiplierPerYear) {
-        baseRatePerBlock = baseRatePerYear / BLOCKS_PER_YEAR;
-        multiplierPerBlock = multiplierPerYear / BLOCKS_PER_YEAR;
+    constructor(uint256 blocksPerYear_, uint256 baseRatePerYear, uint256 multiplierPerYear) {
+        require(blocksPerYear_ != 0, "Invalid blocks per year");
+        baseRatePerBlock = baseRatePerYear / blocksPerYear_;
+        multiplierPerBlock = multiplierPerYear / blocksPerYear_;
+        blocksPerYear = blocksPerYear_;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
     }

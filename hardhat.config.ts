@@ -10,13 +10,35 @@ import * as dotenv from "dotenv";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
-import { HardhatUserConfig, task, types } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, task, types } from "hardhat/config";
+import { HardhatConfig } from "hardhat/types";
 import "solidity-coverage";
 import "solidity-docgen";
 
 import { convertToUnit } from "./helpers/utils";
 
 dotenv.config();
+
+extendConfig((config: HardhatConfig) => {
+  if (process.env.EXPORT !== "true") {
+    config.external = {
+      ...config.external,
+      deployments: {
+        bsctestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
+        ],
+        sepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/sepolia",
+          "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
+        ],
+        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+      },
+    };
+  }
+});
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -72,13 +94,12 @@ task("addMarket", "Add a market to an existing pool")
 task("deployComptroller", "Deploys a Comptroller Implementation")
   .addParam("contractName", "Contract name, later we can load contracts by name")
   .addParam("poolRegistry", "Address of PoolRegistry Contract")
-  .addParam("accessControl", "Address of AccessControlManager contract")
   .setAction(async (taskArgs, hre) => {
     const { deployer } = await hre.getNamedAccounts();
     const Comptroller: DeployResult = await hre.deployments.deploy(taskArgs.contractName, {
       contract: "Comptroller",
       from: deployer,
-      args: [taskArgs.poolRegistry, taskArgs.accessControl],
+      args: [taskArgs.poolRegistry],
       log: true,
     });
 
@@ -159,13 +180,32 @@ const config: HardhatUserConfig = {
       live: false,
     },
     bsctestnet: {
-      url: "https://bsc-testnet.public.blastapi.io",
+      url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    // Mainnet deployments are done through Frame wallet RPC
+    bscmainnet: {
+      url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      live: true,
+      timeout: 1200000, // 20 minutes
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    ethereum: {
+      url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
+      chainId: 1,
+      live: true,
+      timeout: 1200000, // 20 minutes
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    sepolia: {
+      url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
+      chainId: 11155111,
+      live: true,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
   },
   gasReporter: {
@@ -182,7 +222,19 @@ const config: HardhatUserConfig = {
           browserURL: "https://testnet.bscscan.com",
         },
       },
+      {
+        network: "bscmainnet",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com",
+        },
+      },
     ],
+    apiKey: {
+      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+    },
   },
   paths: {
     tests: "./tests",
@@ -209,20 +261,19 @@ const config: HardhatUserConfig = {
         artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
       },
     ],
-    deployments: {
-      bsctestnet: ["node_modules/@venusprotocol/oracle/deployments/bsctestnet"],
-    },
   },
 };
 
 function isFork() {
-  return process.env.FORK_MAINNET === "true"
+  return process.env.FORK === "true"
     ? {
         allowUnlimitedContractSize: false,
         loggingEnabled: false,
         forking: {
-          url: `https://white-ultra-silence.bsc.discover.quiknode.pro/${process.env.QUICK_NODE_KEY}/`,
-          blockNumber: 21068448,
+          url:
+            process.env[`ARCHIVE_NODE_${process.env.FORKED_NETWORK}`] ||
+            "https://data-seed-prebsc-1-s1.binance.org:8545",
+          blockNumber: 26349263,
         },
         accounts: {
           accountsBalance: "1000000000000000000",
@@ -235,5 +286,4 @@ function isFork() {
         live: false,
       };
 }
-
 export default config;

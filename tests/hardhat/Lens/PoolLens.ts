@@ -5,6 +5,7 @@ import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { blocksPerYear } from "../../../helpers/deploymentConfig";
 import {
   AccessControlManager,
   Beacon,
@@ -155,7 +156,7 @@ describe("PoolLens", async function () {
     const RateModel = await ethers.getContractFactory<WhitePaperInterestRateModel__factory>(
       "WhitePaperInterestRateModel",
     );
-    const whitePaperInterestRateModel = await RateModel.deploy(0, parseUnits("0.04", 18));
+    const whitePaperInterestRateModel = await RateModel.deploy(blocksPerYear.hardhat, 0, parseUnits("0.04", 18));
     vWBTC = await makeVToken({
       underlying: mockWBTC,
       comptroller: comptroller1Proxy,

@@ -20,15 +20,24 @@ The Isolated Pools architecture centers around the `PoolRegistry` contract. The 
 
 The risk fund concerns three main contracts:
 
-- ProtocolShareReserve
-- RiskFund
-- ReserveHelpers
+- `ProtocolShareReserve`
+- `RiskFund`
+- `ReserveHelpers`
 
-The three contracts are designed to hold fees that have been accumulated from liquidations and spread, send a portion to the protocol treasury, and send the remainder to the RiskFund. When `reduceReserves()` is called in a `vToken` contract, all accumulated liquidation fees and spread are sent to the `ProtocolShareReserve` contract. Once funds are transferred to the `ProtocolShareReserve`, anyone can call `releaseFunds()` to transfer 70% to the `protocolIncome` address and the other 30% to the `riskFund` contract. Once in the `riskFund` contract, the tokens can be swapped via `PancakeSwap` pairs to the convertible base asset, which can be updated by the owner of the contract. When tokens are converted to the `convertibleBaseAsset`, they can be used in the `Shortfall` contract to auction off the pool's bad debt. Note that just as each pool is isolated, the risk funds for each pool are also isolated: only the risk fund for the same pool can be used when auctioning off the bad debt of the pool.
+These three contracts are designed to hold funds that have been accumulated from interest reserves and liquidation incentives, send a portion to the protocol treasury, and send the remainder to the `RiskFund` contract. When `reduceReserves()` is called in a vToken contract, all accumulated liquidation fees and interests reserves are sent to the `ProtocolShareReserve` contract. Once funds are transferred to the `ProtocolShareReserve`, anyone can call `releaseFunds()` to transfer 50% to the `protocolIncome` address and the other 50% to the `riskFund` contract. Once in the `riskFund` contract, the tokens can be swapped via PancakeSwap pairs to the convertible base asset, which can be updated by the authorized accounts. When tokens are converted to the `convertibleBaseAsset`, they can be used in the `Shortfall` contract to auction off the pool's bad debt. Note that just as each pool is isolated, the risk funds for each pool are also isolated: only the associated risk fund for a pool can be used when auctioning off the bad debt of the pool.
 
 ### Shortfall
 
-`Shortfall` is an auction contract designed to auction off the `convertibleBaseAsset` accumulated in `RiskFund`. The `convertibleBaseAsset` is auctioned in exchange for users paying off the pool's bad debt. An auction can be started by anyone once a pool's bad debt has reached a minimum value. This value is set and can be changed by the authorized accounts. If the pool’s bad debt exceeds the risk fund plus a 10% incentive, then the auction winner is determined by who will pay off the largest percentage of the pool's bad debt. The auction winner then exchanges for the entire risk fund. Otherwise, if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the risk fund in exchange for paying off all the pool's bad debt.
+When a borrower's shortfall (total borrowed amount converted to USD is greater than the total supplied amount converted to USD) is detected in a market in the Isolated Pools, Venus halts the interest accrual, writes off the borrower's balance, and tracks the bad debt.
+
+`Shortfall` is an auction contract designed to auction off the `convertibleBaseAsset` accumulated in `RiskFund`. The `convertibleBaseAsset` is auctioned in exchange for users paying off the pool's bad debt. An auction can be started by anyone once a pool's bad debt has reached a minimum value (see `Shortfall.minimumPoolBadDebt()`). This value is set and can be changed by the authorized accounts. If the pool’s bad debt exceeds the risk fund plus a 10% incentive, then the auction winner is determined by who will pay off the largest percentage of the pool's bad debt. The auction winner repays the bid percentage of the bad debt in exchange for the entire risk fund. Otherwise, if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the risk fund in exchange for paying off all the pool's bad debt.
+
+The main configurable (via VIP) parameters in the `Shortfall` contract , and their initial values, are:
+
+- `minimumPoolBadDebt` - Minimum USD bad debt in the pool to allow the initiation of an auction. Initial value set to 1,000 USD
+- `waitForFirstBidder` - Blocks to wait for first bidder. Initial value sets to 100 blocks
+- `nextBidderBlockLimit` - Time to wait for next bidder. Initial value set to 100 blocks
+- `incentiveBps` - Incentive to auction participants. Initial value set to 1000 bps or 10%
 
 ### Rewards
 
@@ -117,6 +126,14 @@ npx hardhat deploy
 - Execution of single or custom set of scripts is possible, if:
   - In the deployment scripts you have added `tags` for example: - `func.tags = ["MockTokens"];`
   - Once this is done, adding `--tags "<tag_name>,<tag_name>..."` to the deployment command will execute only the scripts containing the tags.
+
+### Deployed Contracts
+
+Deployed contract abis and addresses are exported in the `deployments` directory. To create a summary export of all contracts deployed to a network run
+
+```
+$ yarn hardhat export --network <network-name> --export ./deployments/<network-name>.json
+```
 
 ## Source Code Verification
 

@@ -46,11 +46,7 @@ contract ExponentialNoError {
      * @dev Multiply an Exp by a scalar, truncate, then add an to an unsigned integer, returning an unsigned integer.
      */
     // solhint-disable-next-line func-name-mixedcase
-    function mul_ScalarTruncateAddUInt(
-        Exp memory a,
-        uint256 scalar,
-        uint256 addend
-    ) internal pure returns (uint256) {
+    function mul_ScalarTruncateAddUInt(Exp memory a, uint256 scalar, uint256 addend) internal pure returns (uint256) {
         Exp memory product = mul_(a, scalar);
         return add_(truncate(product), addend);
     }

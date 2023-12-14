@@ -82,8 +82,8 @@ const configureRewards = async (
     unregisteredRewardDistributors.map(async (pool: PoolConfig) => {
       const rewards = pool.rewards || [];
       const poolCommands = await Promise.all(
-        rewards.map(async (rewardConfig: RewardConfig) => {
-          const contractName = `RewardsDistributor_${rewardConfig.asset}_${pool.id}`;
+        rewards.map(async (rewardConfig: RewardConfig, idx: number) => {
+          const contractName = `RewardsDistributor_${pool.id}_${idx}`;
           const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
           return [
             ...(await acceptOwnership(contractName, owner, hre)),
@@ -177,36 +177,23 @@ const transferInitialLiquidity = async (
   deploymentConfig: DeploymentConfig,
   hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  const { deployer } = await hre.getNamedAccounts();
+  if (!hre.network.live) {
+    return [];
+  }
   const { preconfiguredAddresses, tokensConfig } = deploymentConfig;
   const { asset, initialSupply } = vTokenConfig;
   const token = getTokenConfig(asset, tokensConfig);
   const tokenContract = await getUnderlyingToken(token.symbol, tokensConfig);
-
-  if (hre.network.name === "bsctestnet") {
-    console.log(`Adding a command to transfer ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: tokenContract.address,
-        signature: "transferFrom(address,address,uint256)",
-        argTypes: ["address", "address", "uint256"],
-        parameters: [deployer, preconfiguredAddresses.NormalTimelock, initialSupply],
-        value: 0,
-      },
-    ];
-  } else if (hre.network.name === "bscmainnet") {
-    console.log(`Adding a command to withdraw ${initialSupply} ${token.symbol} to Timelock`);
-    return [
-      {
-        contract: preconfiguredAddresses.VTreasury,
-        signature: "withdrawTreasuryBEP20(address,uint256,address)",
-        argTypes: ["address", "uint256", "address"],
-        parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
-        value: 0,
-      },
-    ];
-  }
-  return [];
+  console.log(`Adding a command to withdraw ${initialSupply} ${token.symbol} to Timelock from Treasury`);
+  return [
+    {
+      contract: preconfiguredAddresses.VTreasury,
+      signature: "withdrawTreasuryToken(address,uint256,address)",
+      argTypes: ["address", "uint256", "address"],
+      parameters: [tokenContract.address, initialSupply, preconfiguredAddresses.NormalTimelock],
+      value: 0,
+    },
+  ];
 };
 
 const approvePoolRegistry = async (
@@ -258,6 +245,21 @@ const addMarket = async (
   };
 };
 
+const setReduceReservesBlockDelta = async (
+  vTokenAddress: string,
+  vTokenConfig: VTokenConfig,
+): Promise<GovernanceCommand> => {
+  const { name, reduceReservesBlockDelta } = vTokenConfig;
+  console.log("Adding a command to set reduce reserves blcok delta to " + name);
+  return {
+    contract: vTokenAddress,
+    signature: "setReduceReservesBlockDelta(uint256)",
+    argTypes: ["uint256"],
+    parameters: [reduceReservesBlockDelta],
+    value: 0,
+  };
+};
+
 const addMarkets = async (
   unregisteredVTokens: PoolConfig[],
   deploymentConfig: DeploymentConfig,
@@ -276,6 +278,7 @@ const addMarkets = async (
           return [
             ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
+            await setReduceReservesBlockDelta(vToken.address, vTokenConfig),
             await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
           ];
         }),
@@ -302,7 +305,7 @@ const hasPermission = async (
   caller: string,
   hre: HardhatRuntimeEnvironment,
 ): Promise<boolean> => {
-  const role = makeRole(hre.network.name === "bscmainnet", targetContract, method);
+  const role = makeRole(hre.network.live, targetContract, method);
   return accessControl.hasRole(role, caller);
 };
 
