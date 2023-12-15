@@ -7,7 +7,7 @@
     "Comptroller_Core": "0x7Aa39ab4BcA897F403425C9C6FDbd0f882Be0D70",
     "Comptroller_Curve": "0xD298182D3ACb43e98e32757FF09C91F203e9E67E",
     "Comptroller_Stablecoins": "0x18eF8D2bee415b731C25662568dc1035001cEB2c",
-    "DefaultProxyAdmin": "0x01435866babd91311b1355cf3af488cca36db68e",
+    "DefaultProxyAdmin": "0xe98a3110929c6650c73031756288Ec518f65e846",
     "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps": "0xe948BBE16a846988A501A33Fb6A82Af4E2f231aE",
     "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps": "0x1A9ca9032C7ee7335736fCaa5e8fb62b283538da",
     "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps": "0xA03205bC635A772E533E7BE36b5701E331a70ea3",

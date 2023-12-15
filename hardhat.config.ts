@@ -10,7 +10,8 @@ import * as dotenv from "dotenv";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
-import { HardhatUserConfig, task, types } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, task, types } from "hardhat/config";
+import { HardhatConfig } from "hardhat/types";
 import "solidity-coverage";
 import "solidity-docgen";
 
@@ -18,6 +19,27 @@ import { convertToUnit } from "./helpers/utils";
 
 dotenv.config();
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+
+extendConfig((config: HardhatConfig) => {
+  if (process.env.EXPORT !== "true") {
+    config.external = {
+      ...config.external,
+      deployments: {
+        bsctestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
+        ],
+        sepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/sepolia",
+          "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
+        ],
+        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+      },
+    };
+  }
+});
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -270,19 +292,6 @@ const config: HardhatUserConfig = {
         artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
       },
     ],
-    deployments: {
-      bsctestnet: [
-        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
-        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
-        "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
-      ],
-      sepolia: [
-        "node_modules/@venusprotocol/oracle/deployments/sepolia",
-        "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
-        "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
-      ],
-      bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
-    },
   },
 };
 
