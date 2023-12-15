@@ -1,3 +1,18 @@
+## [2.3.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.7...v2.3.0-dev.8) (2023-12-15)
+
+
+### Features
+
+* add IL market deployments to opbnbtestnet ([2de9fd8](https://github.com/VenusProtocol/isolated-pools/commit/2de9fd829824bbe91e576317c934aa54b3a8fdd0))
+* add mock token deployments for opbnbtestnet ([db810aa](https://github.com/VenusProtocol/isolated-pools/commit/db810aa04335ea6d05df81f3423338c2a3c6b291))
+* updating deployment files ([ed3dbdb](https://github.com/VenusProtocol/isolated-pools/commit/ed3dbdb9af1f6d9a6c48d1d1efbef497e980d4c2))
+* updating deployment files ([90c374e](https://github.com/VenusProtocol/isolated-pools/commit/90c374e379f33e89dbc35a826824251639f87d8f))
+
+
+### Bug Fixes
+
+* mainnet verify endpoint ([19f26f6](https://github.com/VenusProtocol/isolated-pools/commit/19f26f61131570829e9f4a828625caad5dda7862))
+
 ## [2.3.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.6...v2.3.0-dev.7) (2023-12-12)
 
 
