@@ -1,3 +1,50 @@
+## [2.3.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.7...v2.3.0-dev.8) (2023-12-15)
+
+
+### Features
+
+* add IL market deployments to opbnbtestnet ([2de9fd8](https://github.com/VenusProtocol/isolated-pools/commit/2de9fd829824bbe91e576317c934aa54b3a8fdd0))
+* add mock token deployments for opbnbtestnet ([db810aa](https://github.com/VenusProtocol/isolated-pools/commit/db810aa04335ea6d05df81f3423338c2a3c6b291))
+* updating deployment files ([ed3dbdb](https://github.com/VenusProtocol/isolated-pools/commit/ed3dbdb9af1f6d9a6c48d1d1efbef497e980d4c2))
+* updating deployment files ([90c374e](https://github.com/VenusProtocol/isolated-pools/commit/90c374e379f33e89dbc35a826824251639f87d8f))
+
+
+### Bug Fixes
+
+* mainnet verify endpoint ([19f26f6](https://github.com/VenusProtocol/isolated-pools/commit/19f26f61131570829e9f4a828625caad5dda7862))
+
+## [2.3.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.6...v2.3.0-dev.7) (2023-12-12)
+
+
+### Features
+
+* updating deployment files ([a66d5d2](https://github.com/VenusProtocol/isolated-pools/commit/a66d5d2d8b4fbd292820582fd2b8bd5ae057afad))
+
+
+### Bug Fixes
+
+* exclude external deployments when exporting ([2bcf316](https://github.com/VenusProtocol/isolated-pools/commit/2bcf316f8c8394588ff9a0b72e5fc854a9db28f1))
+
+## [2.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.5...v2.3.0-dev.6) (2023-12-07)
+
+
+### Features
+
+* add reward distributor for core pool ([6121c71](https://github.com/VenusProtocol/isolated-pools/commit/6121c71dcf1d79f6a17ec7ecc14dea5717158e25))
+* updating deployment files ([2834d40](https://github.com/VenusProtocol/isolated-pools/commit/2834d40a55b70bb206fef59a9c852ab4706d7484))
+
+
+### Bug Fixes
+
+* remove duplicate token config ([f77f40a](https://github.com/VenusProtocol/isolated-pools/commit/f77f40a81d4a1509a338e4ac624cf0fced787100))
+
+## [2.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.4...v2.3.0-dev.5) (2023-12-06)
+
+
+### Bug Fixes
+
+* adjust  BLOCK_PER_YEAR for ethereum assuming a block is mined every 12 seconds (instead of every 14) ([b782529](https://github.com/VenusProtocol/isolated-pools/commit/b7825299a0611a423c3abd90f7f1fe32274b259f))
+
 ## [2.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.3...v2.3.0-dev.4) (2023-12-01)
 
 

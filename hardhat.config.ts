@@ -10,13 +10,36 @@ import * as dotenv from "dotenv";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
-import { HardhatUserConfig, task, types } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, task, types } from "hardhat/config";
+import { HardhatConfig } from "hardhat/types";
 import "solidity-coverage";
 import "solidity-docgen";
 
 import { convertToUnit } from "./helpers/utils";
 
 dotenv.config();
+const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
+
+extendConfig((config: HardhatConfig) => {
+  if (process.env.EXPORT !== "true") {
+    config.external = {
+      ...config.external,
+      deployments: {
+        bsctestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
+        ],
+        sepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/sepolia",
+          "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
+        ],
+        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+      },
+    };
+  }
+});
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -201,6 +224,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    opbnbtestnet: {
+      url: process.env.ARCHIVE_NODE_opbnbtestnet || "https://opbnb-testnet-rpc.bnbchain.org",
+      chainId: 5611,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    opbnbmainnet: {
+      url: process.env.ARCHIVE_NODE_opbnbmainnet || "https://opbnb-mainnet-rpc.bnbchain.org",
+      chainId: 204,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -224,10 +259,28 @@ const config: HardhatUserConfig = {
           browserURL: "https://bscscan.com",
         },
       },
+      {
+        network: "opbnbtestnet",
+        chainId: 5611,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-testnet/contract/`,
+          browserURL: "https://testnet.opbnbscan.com/",
+        },
+      },
+      {
+        network: "opbnbmainnet",
+        chainId: 204,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.ETHERSCAN_API_KEY}/op-bnb-mainnet/contract/`,
+          browserURL: "https://opbnbscan.com/",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
@@ -255,19 +308,6 @@ const config: HardhatUserConfig = {
         artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
       },
     ],
-    deployments: {
-      bsctestnet: [
-        "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
-        "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
-        "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
-      ],
-      sepolia: [
-        "node_modules/@venusprotocol/oracle/deployments/sepolia",
-        "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
-        "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
-      ],
-      bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
-    },
   },
 };
 
