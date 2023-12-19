@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
@@ -90,6 +91,9 @@ contract Comptroller is
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
+
+    /// @notice Emitted when prime token contract address is changed
+    event NewPrimeToken(IPrime oldPrimeToken, IPrime newPrimeToken);
 
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
@@ -301,6 +305,20 @@ contract Comptroller is
     }
 
     /**
+     * @notice Validates mint, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being minted
+     * @param minter The address minting the tokens
+     * @param actualMintAmount The amount of the underlying asset being minted
+     * @param mintTokens The number of tokens being minted
+     */
+    // solhint-disable-next-line no-unused-vars
+    function mintVerify(address vToken, address minter, uint256 actualMintAmount, uint256 mintTokens) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(minter, vToken);
+        }
+    }
+
+    /**
      * @notice Checks if the account should be allowed to redeem tokens in the given market
      * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
@@ -324,6 +342,97 @@ contract Comptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
+        }
+    }
+
+    /**
+     * @notice Validates redeem, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being redeemed
+     * @param redeemer The address redeeming the tokens
+     * @param redeemAmount The amount of the underlying asset being redeemed
+     * @param redeemTokens The number of tokens being redeemed
+     */
+    function redeemVerify(address vToken, address redeemer, uint256 redeemAmount, uint256 redeemTokens) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(redeemer, vToken);
+        }
+    }
+
+    /**
+     * @notice Validates repayBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being repaid
+     * @param payer The address repaying the borrow
+     * @param borrower The address of the borrower
+     * @param actualRepayAmount The amount of underlying being repaid
+     */
+    function repayBorrowVerify(
+        address vToken,
+        address payer, // solhint-disable-line no-unused-vars
+        address borrower,
+        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
+        uint256 borrowerIndex // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vToken);
+        }
+    }
+
+    /**
+     * @notice Validates liquidateBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param liquidator The address repaying the borrow and seizing the collateral
+     * @param borrower The address of the borrower
+     * @param actualRepayAmount The amount of underlying being repaid
+     * @param seizeTokens The amount of collateral token that will be seized
+     */
+    function liquidateBorrowVerify(
+        address vTokenBorrowed,
+        address vTokenCollateral, // solhint-disable-line no-unused-vars
+        address liquidator,
+        address borrower,
+        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
+        uint256 seizeTokens // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenBorrowed);
+            prime.accrueInterestAndUpdateScore(liquidator, vTokenBorrowed);
+        }
+    }
+
+    /**
+     * @notice Validates seize, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vTokenCollateral Asset which was used as collateral and will be seized
+     * @param vTokenBorrowed Asset which was borrowed by the borrower
+     * @param liquidator The address repaying the borrow and seizing the collateral
+     * @param borrower The address of the borrower
+     * @param seizeTokens The number of collateral tokens to seize
+     */
+    function seizeVerify(
+        address vTokenCollateral,
+        address vTokenBorrowed, // solhint-disable-line no-unused-vars
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens // solhint-disable-line no-unused-vars
+    ) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vTokenCollateral);
+            prime.accrueInterestAndUpdateScore(liquidator, vTokenCollateral);
+        }
+    }
+
+    /**
+     * @notice Validates transfer, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset being transferred
+     * @param src The account which sources the tokens
+     * @param dst The account which receives the tokens
+     * @param transferTokens The number of vTokens to transfer
+     */
+    // solhint-disable-next-line no-unused-vars
+    function transferVerify(address vToken, address src, address dst, uint256 transferTokens) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(src, vToken);
+            prime.accrueInterestAndUpdateScore(dst, vToken);
         }
     }
 
@@ -395,6 +504,19 @@ contract Comptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
+        }
+    }
+
+    /**
+     * @notice Validates borrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
+     * @param vToken Asset whose underlying is being borrowed
+     * @param borrower The address borrowing the underlying
+     * @param borrowAmount The amount of the underlying asset requested to borrow
+     */
+    // solhint-disable-next-line no-unused-vars
+    function borrowVerify(address vToken, address borrower, uint256 borrowAmount) external {
+        if (address(prime) != address(0)) {
+            prime.accrueInterestAndUpdateScore(borrower, vToken);
         }
     }
 
@@ -984,6 +1106,17 @@ contract Comptroller is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
+    }
+
+    /**
+     * @notice Sets the prime token contract for the comptroller
+     * @param _prime Address of the Prime contract
+     */
+    function setPrimeToken(IPrime _prime) external onlyOwner {
+        ensureNonzeroAddress(address(_prime));
+
+        emit NewPrimeToken(prime, _prime);
+        prime = _prime;
     }
 
     /**
