@@ -1,3 +1,34 @@
+## [2.3.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.10...v2.3.0-dev.11) (2023-12-19)
+
+
+### Features
+
+* updating deployment files ([d3e16d4](https://github.com/VenusProtocol/isolated-pools/commit/d3e16d46aecc55ec7a9e812efb372a06b4c733b1))
+* updating deployment files ([20a588b](https://github.com/VenusProtocol/isolated-pools/commit/20a588b8d943e3d98afda274f085b08127ddf635))
+* updating deployment files ([46c3ee8](https://github.com/VenusProtocol/isolated-pools/commit/46c3ee8bd42ab5b1f26fcf304d1c296acb8eb94b))
+* updating deployment files ([0f3b760](https://github.com/VenusProtocol/isolated-pools/commit/0f3b7606050b49f3013a01237de6faa81678376a))
+* updating deployment files ([c93a6f6](https://github.com/VenusProtocol/isolated-pools/commit/c93a6f6366c3c4e0c7d7c31f3bb4b87154a93ebf))
+
+
+### Bug Fixes
+
+* add @types/debug ([40a73f1](https://github.com/VenusProtocol/isolated-pools/commit/40a73f1822d84508713a0c28f8277d24ac4fffbb))
+* added hooks and yield tests ([02778ff](https://github.com/VenusProtocol/isolated-pools/commit/02778ffdfa11b981ba880ac2b8ba8a028565e5c2))
+* added plp integration tests ([d77bf18](https://github.com/VenusProtocol/isolated-pools/commit/d77bf1841c51969d1e37a8902cce19c01aaf7fe8))
+* added prime hooks to comptroller ([63298f5](https://github.com/VenusProtocol/isolated-pools/commit/63298f5a0020a595fb6d85e18d69f4a0538a2750))
+* cvp-01 ([88de673](https://github.com/VenusProtocol/isolated-pools/commit/88de67386e849e5af26ea5e2a380dc90b007a2ad))
+* fixed lint ([60942d2](https://github.com/VenusProtocol/isolated-pools/commit/60942d24a023a2ef2a184fc79749bfe72ca372c5))
+* fixed tests ([67775b6](https://github.com/VenusProtocol/isolated-pools/commit/67775b650c7ba3ec71f964b1496a316ab7ffd056))
+* fixed yarn lock ([d5eca4a](https://github.com/VenusProtocol/isolated-pools/commit/d5eca4a5a251d99c3d73ecd4ed4f7fd5ff60a504))
+* optimised setPrime ([51188e0](https://github.com/VenusProtocol/isolated-pools/commit/51188e0667863ef1f6610e619b1fba467b1a8f88))
+* protocol setup done ([45f8913](https://github.com/VenusProtocol/isolated-pools/commit/45f8913d708b6c5efc07db65138167ce05837336))
+* remove comment ([ef80a90](https://github.com/VenusProtocol/isolated-pools/commit/ef80a90a4ab9b407889cd03bce0f1c3d81726492))
+* remove comment ([3f6ef95](https://github.com/VenusProtocol/isolated-pools/commit/3f6ef9506fe8eb3734604c2792db7e02dea06d45))
+* resolved conflict ([1933446](https://github.com/VenusProtocol/isolated-pools/commit/1933446513af6ea16966e622f5ccc8c551b224e8))
+* resolved conflict ([6858695](https://github.com/VenusProtocol/isolated-pools/commit/68586955b1f120182c619e041caea0838ce20590))
+* update version of core pool ([97eb8e1](https://github.com/VenusProtocol/isolated-pools/commit/97eb8e1e20c70a7cc8dee6b8603ec77925c3086d))
+* use custom error ([6b600e7](https://github.com/VenusProtocol/isolated-pools/commit/6b600e7caec67c34476da8cb62ee17c0b052f67f))
+
 ## [2.3.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.9...v2.3.0-dev.10) (2023-12-19)
 
 
