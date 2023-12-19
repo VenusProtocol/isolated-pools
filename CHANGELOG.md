@@ -1,3 +1,21 @@
+## [2.3.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.9...v2.3.0-dev.10) (2023-12-19)
+
+
+### Features
+
+* add mainnet config for new markets ([8782a78](https://github.com/VenusProtocol/isolated-pools/commit/8782a782da48ff75dad7214d51f0b1699a249bbf))
+* deployments of mainnet market ([24cdcd7](https://github.com/VenusProtocol/isolated-pools/commit/24cdcd70dd2bdfa7f88a25ec926b5f064f9c10bd))
+* deployments of THE and TWT market on testnet ([7870a1e](https://github.com/VenusProtocol/isolated-pools/commit/7870a1e4a693d5b44b9aada5e2e8a7e029c95ddc))
+* updating deployment files ([dc35475](https://github.com/VenusProtocol/isolated-pools/commit/dc35475a8ac5e03c4132c294154e9daf7c8d701e))
+
+
+### Bug Fixes
+
+* deployments after resolving comments ([9618118](https://github.com/VenusProtocol/isolated-pools/commit/961811811320e662f567efeb0c1a6bd9a9f09fe8))
+* fix caps and typo ([207d860](https://github.com/VenusProtocol/isolated-pools/commit/207d8605d457db12d1652980edce79692d9eb474))
+* minor ([21a52fe](https://github.com/VenusProtocol/isolated-pools/commit/21a52fef6e8dc1912b865b872c1213e29d8dd607))
+* supply and borrow speeds of THE market ([f2f0695](https://github.com/VenusProtocol/isolated-pools/commit/f2f069563029327a7674be20d319115773bc947c))
+
 ## [2.3.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.8...v2.3.0-dev.9) (2023-12-18)
 
 
