@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x069705246364d60c5503bF19b4A714ab412521a0",
+      "address": "0x329Bc34E6A46243d21955A4369cD66bdD52E6C22",
       "abi": [
         {
           "inputs": [
@@ -420,6 +420,25 @@
           "inputs": [
             {
               "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "enable",
+              "type": "bool"
+            }
+          ],
+          "name": "IsForcedLiquidationEnabledUpdated",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
               "internalType": "contract VToken",
               "name": "vToken",
               "type": "address"
@@ -653,9 +672,34 @@
           "anonymous": false,
           "inputs": [
             {
+              "indexed": false,
+              "internalType": "contract IPrime",
+              "name": "oldPrimeToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "contract IPrime",
+              "name": "newPrimeToken",
+              "type": "address"
+            }
+          ],
+          "name": "NewPrimeToken",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
               "indexed": true,
               "internalType": "address",
               "name": "rewardsDistributor",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "rewardToken",
               "type": "address"
             }
           ],
@@ -836,6 +880,29 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrowAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "borrowVerify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -1143,12 +1210,12 @@
         {
           "inputs": [
             {
-              "internalType": "contract VToken",
-              "name": "vToken",
+              "internalType": "address",
+              "name": "",
               "type": "address"
             }
           ],
-          "name": "isDeprecated",
+          "name": "isForcedLiquidationEnabled",
           "outputs": [
             {
               "internalType": "bool",
@@ -1209,6 +1276,44 @@
             }
           ],
           "name": "liquidateAccount",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vTokenBorrowed",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "vTokenCollateral",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "liquidator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "actualRepayAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "seizeTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "liquidateBorrowVerify",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -1313,6 +1418,34 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "minter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "actualMintAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "mintTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "mintVerify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -1545,7 +1678,114 @@
         },
         {
           "inputs": [],
+          "name": "prime",
+          "outputs": [
+            {
+              "internalType": "contract IPrime",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "redeemer",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemVerify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "renounceOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "payer",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "actualRepayAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrowerIndex",
+              "type": "uint256"
+            }
+          ],
+          "name": "repayBorrowVerify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vTokenCollateral",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "vTokenBorrowed",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "liquidator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "seizeTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "seizeVerify",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -1618,6 +1858,24 @@
             }
           ],
           "name": "setCollateralFactor",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vTokenBorrowed",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "enable",
+              "type": "bool"
+            }
+          ],
+          "name": "setForcedLiquidation",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -1713,6 +1971,19 @@
         {
           "inputs": [
             {
+              "internalType": "contract IPrime",
+              "name": "_prime",
+              "type": "address"
+            }
+          ],
+          "name": "setPrimeToken",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "address",
               "name": "",
               "type": "address"
@@ -1751,6 +2022,34 @@
             }
           ],
           "name": "transferOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "src",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "dst",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "transferTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferVerify",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -49633,7 +49932,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xcA408D716011169645Aa94ddc5665043C33df814",
+      "address": "0xE21251bC79Ee0abebA71FaABDC2Ad36762A0b82F",
       "abi": [
         {
           "inputs": [],
