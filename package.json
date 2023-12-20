@@ -55,7 +55,7 @@
     "@commitlint/config-conventional": "^17.0.3",
     "@defi-wonderland/smock": "^2.2.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
-    "@nomicfoundation/hardhat-network-helpers": "^1.0.4",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@semantic-release/changelog": "^6.0.1",

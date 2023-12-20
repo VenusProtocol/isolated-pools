@@ -311,6 +311,9 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/venus-protocol/artifacts",
       },
+      {
+        artifacts: "node_modules/@venusprotocol/protocol-reserve/artifacts",
+      },
     ],
   },
 };
