@@ -10,7 +10,7 @@ import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
-import { TimeManager } from "../TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
 /**
  * @title `RewardsDistributor`
@@ -28,7 +28,7 @@ import { TimeManager } from "../TimeManager.sol";
  * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
  */
 contract RewardsDistributor is
-    TimeManager,
+    TimeManagerV8,
     ExponentialNoError,
     Ownable2StepUpgradeable,
     AccessControlledV8,
@@ -158,7 +158,7 @@ contract RewardsDistributor is
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();

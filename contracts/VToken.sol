@@ -12,7 +12,7 @@ import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInt
 import { TokenErrorReporter } from "./ErrorReporter.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
-import { TimeManager } from "./TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 
 /**
@@ -42,7 +42,7 @@ import { ensureNonzeroAddress } from "./lib/validators.sol";
  * `healAccount()` and `liquidateAccount()` in the `Comptroller` summary section below.
  */
 contract VToken is
-    TimeManager,
+    TimeManagerV8,
     Ownable2StepUpgradeable,
     AccessControlledV8,
     VTokenInterface,
@@ -72,7 +72,7 @@ contract VToken is
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();

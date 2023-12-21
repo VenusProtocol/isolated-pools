@@ -22,7 +22,7 @@ for (const isTimeBased of [false, true]) {
   const baseRatePerYear = convertToUnit(2, 12);
   const multiplierPerYear = convertToUnit(4, 14);
   const description: string = getDescription(isTimeBased);
-  const slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
+  let slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
 
   describe(`${description}White Paper interest rate model tests`, () => {
     const fixture = async () => {
@@ -38,6 +38,7 @@ for (const isTimeBased of [false, true]) {
 
     before(async () => {
       await loadFixture(fixture);
+      slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
     });
 
     it("Model getters", async () => {

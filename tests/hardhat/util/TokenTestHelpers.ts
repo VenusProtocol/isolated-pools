@@ -111,10 +111,10 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
       (await deployVTokenBeacon<VTokenFactory>(
         { kind },
         params.isTimeBased || false,
-        params.blocksPerYear || BSC_BLOCKS_PER_YEAR,
+        params.blocksPerYear === 0 ? 0 : BSC_BLOCKS_PER_YEAR,
       )),
     isTimeBased: params.isTimeBased || false,
-    blocksPerYear: params.blocksPerYear || BSC_BLOCKS_PER_YEAR,
+    blocksPerYear: params.blocksPerYear === 0 ? 0 : BSC_BLOCKS_PER_YEAR,
   };
 };
 
@@ -123,6 +123,7 @@ export const makeVToken = async <VTokenFactory extends AnyVTokenFactory = VToken
   { kind }: { kind: string } = { kind: "VToken" },
 ): Promise<DeployedContract<VTokenFactory>> => {
   const params_ = await deployVTokenDependencies<VTokenFactory>(params, { kind });
+
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
 
   const vToken = (await upgrades.deployBeaconProxy(params_.beacon, VToken, [
@@ -141,6 +142,7 @@ export const makeVToken = async <VTokenFactory extends AnyVTokenFactory = VToken
     },
     params_.reserveFactorMantissa,
   ])) as DeployedContract<VTokenFactory>;
+
   return vToken;
 };
 

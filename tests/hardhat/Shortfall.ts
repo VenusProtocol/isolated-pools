@@ -7,7 +7,7 @@ import { constants } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { AddressOne, convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
@@ -183,7 +183,7 @@ async function shortfallFixture() {
 
 async function timeBasedhortfallFixture() {
   isTimeBased = true;
-  blocksPerYear = SECONDS_PER_YEAR;
+  blocksPerYear = 0;
   const MockBUSD = await ethers.getContractFactory("MockToken");
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));

@@ -27,7 +27,7 @@ for (const isTimeBased of [false, true]) {
   const jumpMultiplierPerYear = convertToUnit(2, 18);
 
   const description = getDescription(isTimeBased);
-  const slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
+  let slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
 
   describe(`${description}Jump rate model tests`, async () => {
     const fixture = async () => {
@@ -49,6 +49,7 @@ for (const isTimeBased of [false, true]) {
 
     before(async () => {
       await loadFixture(fixture);
+      slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
     });
 
     it("Update jump rate model", async () => {

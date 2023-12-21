@@ -4,7 +4,7 @@ import chai from "chai";
 import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../../helpers/deploymentConfig";
+import { BSC_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import { convertToUnit } from "../../../helpers/utils";
 import { Comptroller, MockToken, PoolLens, PoolLens__factory, RewardsDistributor, VToken } from "../../../typechain";
 import { getDescription } from "../util/descriptionHelpers";
@@ -164,7 +164,7 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
   const poolLensFactory = await smock.mock<PoolLens__factory>("PoolLens");
 
   isTimeBased = true;
-  blocksPerYear = SECONDS_PER_YEAR;
+  blocksPerYear = 0;
   poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear);
 
   const startBlock = (await ethers.provider.getBlock("latest")).number;

@@ -5,7 +5,7 @@ import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../../helpers/deploymentConfig";
+import { BSC_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import {
   AccessControlManager,
   Beacon,
@@ -48,7 +48,7 @@ const assertVTokenMetadata = (vTokenMetadataActual: any, vTokenMetadataExpected:
 
 for (const isTimeBased of [false, true]) {
   const description = getDescription(isTimeBased);
-  const slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
+  const slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
 
   describe(`${description}PoolLens`, async () => {
     let poolRegistry: PoolRegistry;
@@ -100,7 +100,6 @@ for (const isTimeBased of [false, true]) {
 
       ({ poolRegistry, fakeAccessControlManager } = await loadFixture(poolRegistryFixture));
       poolRegistryAddress = poolRegistry.address;
-
       const MockPriceOracle = await ethers.getContractFactory<MockPriceOracle__factory>("MockPriceOracle");
       priceOracle = await MockPriceOracle.deploy();
 
@@ -141,7 +140,6 @@ for (const isTimeBased of [false, true]) {
         liquidationIncentive2,
         minLiquidatableCollateral,
       );
-
       const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
       mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
       await mockDAI.faucet(parseUnits("1000", 18));
@@ -161,7 +159,6 @@ for (const isTimeBased of [false, true]) {
       const RateModel = await ethers.getContractFactory<WhitePaperInterestRateModel__factory>(
         "WhitePaperInterestRateModel",
       );
-
       const whitePaperInterestRateModel = await RateModel.deploy(0, parseUnits("0.04", 18), isTimeBased, slotsPerYear);
       vWBTC = await makeVToken({
         underlying: mockWBTC,
@@ -227,7 +224,6 @@ for (const isTimeBased of [false, true]) {
 
       const vWBTCAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
       const vDAIAddress = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockDAI.address);
-
       vWBTC = await ethers.getContractAt("VToken", vWBTCAddress);
       vDAI = await ethers.getContractAt("VToken", vDAIAddress);
 

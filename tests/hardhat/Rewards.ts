@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
@@ -99,7 +99,7 @@ async function rewardsFixture(isTimeBased: boolean) {
   );
 
   if (isTimeBased) {
-    blocksPerYear = SECONDS_PER_YEAR;
+    blocksPerYear = 0;
   }
 
   // Deploy VTokens

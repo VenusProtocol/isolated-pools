@@ -11,7 +11,7 @@ import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerIn
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
-import { TimeManager } from "../TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
 /**
  * @title PoolLens
@@ -26,7 +26,7 @@ import { TimeManager } from "../TimeManager.sol";
 - the underlying asset price of a vToken;
 - the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
  */
-contract PoolLens is TimeManager, ExponentialNoError {
+contract PoolLens is TimeManagerV8, ExponentialNoError {
     /**
      * @dev Struct for PoolDetails.
      */
@@ -140,7 +140,7 @@ contract PoolLens is TimeManager, ExponentialNoError {
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {}
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {}
 
     /**
      * @notice Queries the user's supply/borrow balances in vTokens

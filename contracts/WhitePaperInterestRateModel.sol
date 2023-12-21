@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { TimeManager } from "./TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
@@ -10,7 +10,7 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @author Compound
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
-contract WhitePaperInterestRateModel is TimeManager, InterestRateModel {
+contract WhitePaperInterestRateModel is TimeManagerV8, InterestRateModel {
     /**
      * @notice The multiplier of utilization rate per block or second that gives the slope of the interest rate
      */
@@ -35,7 +35,7 @@ contract WhitePaperInterestRateModel is TimeManager, InterestRateModel {
         uint256 multiplierPerYear_,
         bool timeBased_,
         uint256 blocksPerYear_
-    ) TimeManager(timeBased_, blocksPerYear_) {
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
         baseRatePerBlock = baseRatePerYear_ / blocksOrSecondsPerYear;
         multiplierPerBlock = multiplierPerYear_ / blocksOrSecondsPerYear;
 
