@@ -4,7 +4,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR, SECONDS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import { WhitePaperInterestRateModel } from "../../typechain";
 import { getDescription } from "./util/descriptionHelpers";
@@ -38,7 +38,7 @@ for (const isTimeBased of [false, true]) {
 
     before(async () => {
       await loadFixture(fixture);
-      slotsPerYear = isTimeBased ? SECONDS_PER_YEAR : BSC_BLOCKS_PER_YEAR;
+      slotsPerYear = (await interestRateModel.blocksOrSecondsPerYear()).toNumber();
     });
 
     it("Model getters", async () => {

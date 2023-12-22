@@ -111,10 +111,10 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
       (await deployVTokenBeacon<VTokenFactory>(
         { kind },
         params.isTimeBased || false,
-        params.blocksPerYear === 0 ? 0 : BSC_BLOCKS_PER_YEAR,
+        params.blocksPerYear === undefined ? BSC_BLOCKS_PER_YEAR : params.blocksPerYear,
       )),
     isTimeBased: params.isTimeBased || false,
-    blocksPerYear: params.blocksPerYear === 0 ? 0 : BSC_BLOCKS_PER_YEAR,
+    blocksPerYear: params.blocksPerYear === undefined ? BSC_BLOCKS_PER_YEAR : params.blocksPerYear,
   };
 };
 
