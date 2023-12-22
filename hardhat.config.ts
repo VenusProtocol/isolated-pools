@@ -244,7 +244,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     customChains: [
       {
-        network: "testnet",
+        network: "bsctestnet",
         chainId: 97,
         urls: {
           apiURL: "https://api-testnet.bscscan.com/api",
@@ -278,7 +278,7 @@ const config: HardhatUserConfig = {
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      testnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
