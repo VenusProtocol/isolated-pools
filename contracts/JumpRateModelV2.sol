@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
-import { TimeManager } from "./TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
@@ -12,7 +12,7 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @notice An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached.
  * The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters
  */
-contract JumpRateModelV2 is TimeManager, InterestRateModel {
+contract JumpRateModelV2 is TimeManagerV8, InterestRateModel {
     /**
      * @notice The address of the AccessControlManager contract
      */
@@ -68,7 +68,7 @@ contract JumpRateModelV2 is TimeManager, InterestRateModel {
         IAccessControlManagerV8 accessControlManager_,
         bool timeBased_,
         uint256 blocksPerYear_
-    ) TimeManager(timeBased_, blocksPerYear_) {
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
         require(address(accessControlManager_) != address(0), "invalid ACM address");
 
         accessControlManager = accessControlManager_;

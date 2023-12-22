@@ -8,7 +8,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { VToken } from "../VToken.sol";
-import { TimeManager } from "../TimeManager.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
@@ -28,7 +28,7 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * risk fund in exchange for paying off all the pool's bad debt.
  */
 contract Shortfall is
-    TimeManager,
+    TimeManagerV8,
     Ownable2StepUpgradeable,
     AccessControlledV8,
     ReentrancyGuardUpgradeable,
@@ -170,7 +170,7 @@ contract Shortfall is
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManager(timeBased_, blocksPerYear_) {
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
