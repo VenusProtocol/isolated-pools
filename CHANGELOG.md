@@ -1,3 +1,11 @@
+## [2.3.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.12...v2.3.0-dev.13) (2023-12-28)
+
+
+### Features
+
+* redeployment of reward distributors ([fd0047e](https://github.com/VenusProtocol/isolated-pools/commit/fd0047eb2fcbb37937268bab33b69c699c3e91cb))
+* updating deployment files ([4095248](https://github.com/VenusProtocol/isolated-pools/commit/4095248065b79c28708008407425fab574dee194))
+
 ## [2.3.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0-dev.11...v2.3.0-dev.12) (2023-12-22)
 
 
