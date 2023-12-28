@@ -3096,7 +3096,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": 1.4.0
     "@venusprotocol/oracle": 1.8.0
-    "@venusprotocol/protocol-reserve": 1.2.0
+    "@venusprotocol/protocol-reserve": 1.2.0-dev.2
     "@venusprotocol/venus-protocol": 6.1.0-dev.6
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3147,23 +3147,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:1.2.0, @venusprotocol/protocol-reserve@npm:^1.1.0":
-  version: 1.2.0
-  resolution: "@venusprotocol/protocol-reserve@npm:1.2.0"
-  dependencies:
-    "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/solidity-utilities": ^1.0.1
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: 9225fba3254a9a4f2ce6e004a43844db15771d1047e871e8ab306440df8bde6dcdab1e45a4ce1172e1119b04ed5f53242ef561cb26f9a411fa2178c246899fa9
-  languageName: node
-  linkType: hard
-
 "@venusprotocol/protocol-reserve@npm:1.2.0-dev.2":
   version: 1.2.0-dev.2
   resolution: "@venusprotocol/protocol-reserve@npm:1.2.0-dev.2"
@@ -3178,6 +3161,23 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
   checksum: e644bc58b6b4646ce6b262e9e34646d65285dee97cb38a34ac99d35330b3f4bea4c9075d87ee6e6d1e813563c622a01e12eba82014e6d7952e17ea798673bac3
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/protocol-reserve@npm:^1.1.0":
+  version: 1.2.0
+  resolution: "@venusprotocol/protocol-reserve@npm:1.2.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    "@venusprotocol/solidity-utilities": ^1.0.1
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: 9225fba3254a9a4f2ce6e004a43844db15771d1047e871e8ab306440df8bde6dcdab1e45a4ce1172e1119b04ed5f53242ef561cb26f9a411fa2178c246899fa9
   languageName: node
   linkType: hard
 
