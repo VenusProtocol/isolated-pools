@@ -2352,7 +2352,7 @@ export const globalConfig: NetworkConfig = {
         name: "Venus",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: "0xdb633c11d3f9e6b8d17ac2c972c9e3b05da59bf9",
+        tokenAddress: "0x66ebd019E86e0af5f228a0439EBB33f045CBe63E",
       },
       {
         isMock: true,
