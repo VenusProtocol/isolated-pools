@@ -25,7 +25,7 @@ import { initMainnetUser, setForkBlock } from "./utils";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK_TESTNET === "true";
+const FORK_TESTNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bsctestnet";
 
 const ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
 const ORACLE_ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
