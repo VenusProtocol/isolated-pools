@@ -1,3 +1,11 @@
+## [2.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.1...v2.4.0-dev.2) (2024-01-03)
+
+
+### Features
+
+* updating deployment files ([5ecb1ea](https://github.com/VenusProtocol/isolated-pools/commit/5ecb1ea7923a872fcdbbe65180480fbb37765f79))
+* upgrade the impl of vtokens and comptroller ([2c75fa2](https://github.com/VenusProtocol/isolated-pools/commit/2c75fa2ff8db0f4cfe8bc84dfa43a3bce331c8b4))
+
 ## [2.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0...v2.4.0-dev.1) (2024-01-02)
 
 
