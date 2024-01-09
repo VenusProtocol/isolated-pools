@@ -2662,10 +2662,10 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Venus",
+        name: "Venus XVS",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: "", // TODO: add address when XVS deployed on mainnet
+        tokenAddress: "0xd3CC9d8f3689B83c91b7B59cAB4946B063EB894A",
       },
       {
         isMock: false,
