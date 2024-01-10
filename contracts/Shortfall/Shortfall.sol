@@ -7,14 +7,15 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { VToken } from "../VToken.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
+
+import { VToken } from "../VToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
 /**
@@ -69,20 +70,16 @@ contract Shortfall is
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    // @notice Default block limit for the next bidder to place a bid
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
-
-    // @notice Default number of blocks to wait for the first bidder before starting the auction
-    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
-
-    // @notice Default block timestamp limit for the next bidder to place a bid
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_TIMESTAMP_LIMIT = 300;
-
-    // @notice Default time limit in seconds for the first bidder to place a bid before the auction starts
-    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER_IN_SECONDS = 300;
-
     // @notice Default incentive basis points (BPS) for the auction participants, set to 10%
     uint256 private constant DEFAULT_INCENTIVE_BPS = 1000;
+
+    // @notice Default block or timestamp limit for the next bidder to place a bid
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 private immutable DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT;
+
+    // @notice Default number of blocks or seconds to wait for the first bidder before starting the auction
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 private immutable DEFAULT_WAIT_FOR_FIRST_BIDDER;
 
     /// @notice Pool registry address
     address public poolRegistry;
@@ -170,7 +167,18 @@ contract Shortfall is
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 nextBidderBlockOrTimestampLimit_,
+        uint256 waitForFirstBidder_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        ensureNonzeroValue(nextBidderBlockOrTimestampLimit_);
+        ensureNonzeroValue(waitForFirstBidder_);
+
+        DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT = nextBidderBlockOrTimestampLimit_;
+        DEFAULT_WAIT_FOR_FIRST_BIDDER = waitForFirstBidder_;
+
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
@@ -201,13 +209,8 @@ contract Shortfall is
         incentiveBps = DEFAULT_INCENTIVE_BPS;
         auctionsPaused = false;
 
-        if (isTimeBased) {
-            waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER_IN_SECONDS;
-            nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_TIMESTAMP_LIMIT;
-        } else {
-            waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
-            nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
-        }
+        waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
+        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT;
     }
 
     /**

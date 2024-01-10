@@ -108,7 +108,7 @@ const riskFundFixture = async (): Promise<void> => {
   const shortfall = await upgrades.deployProxy(
     Shortfall,
     [AddressOne, parseUnits("10000", 18), fakeAccessControlManager.address],
-    { constructorArgs: [false, 10512000] },
+    { constructorArgs: [false, 10512000, 100, 100] },
   );
 
   const fakeCorePoolComptroller = await smock.fake<Comptroller>("Comptroller");

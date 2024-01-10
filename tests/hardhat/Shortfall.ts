@@ -50,6 +50,8 @@ const riskFundBalance = "10000";
 const minimumPoolBadDebt = "10000";
 let isTimeBased = false; // for block based contracts
 let blocksPerYear = BSC_BLOCKS_PER_YEAR; // for block based contracts
+let waitForFirstBidder = 100; // for block based contracts
+let nextBidderBlockOrTimestampLimit = 100; // for block based contracts
 let poolAddress;
 
 /**
@@ -68,7 +70,7 @@ async function shortfallFixture() {
   shortfall = await upgrades.deployProxy(
     Shortfall,
     [fakeRiskFund.address, parseUnits(minimumPoolBadDebt, "18"), accessControlManager.address],
-    { constructorArgs: [isTimeBased, blocksPerYear] },
+    { constructorArgs: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder] },
   );
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
@@ -184,6 +186,9 @@ async function shortfallFixture() {
 async function timeBasedhortfallFixture() {
   isTimeBased = true;
   blocksPerYear = 0;
+  waitForFirstBidder = 300;
+  nextBidderBlockOrTimestampLimit = 300;
+
   const MockBUSD = await ethers.getContractFactory("MockToken");
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
@@ -197,7 +202,7 @@ async function timeBasedhortfallFixture() {
     Shortfall,
     [fakeRiskFund.address, parseUnits(minimumPoolBadDebt, "18"), accessControlManager.address],
     {
-      constructorArgs: [isTimeBased, blocksPerYear],
+      constructorArgs: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
     },
   );
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
