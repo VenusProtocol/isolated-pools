@@ -1,5 +1,11 @@
 import GovernanceBscMainnet from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import GovernanceBscTestnet from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
+import OracleBscMainnet from "@venusprotocol/oracle/deployments/bscmainnet.json";
+import OracleBscTestnet from "@venusprotocol/oracle/deployments/bsctestnet.json";
+import PsrBscMainnet from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
+import PsrBscTestnet from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
+import CoreBscMainnet from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
+import CoreBscTestnet from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 
 // TESTNET DEPLOYED CONTRACTS
 import { contracts as MainnetContracts } from "../../../deployments/bscmainnet.json";
@@ -40,17 +46,17 @@ export const contractAddreseses = {
     VTOKEN2: TestnetContracts.VToken_vHAY_StableCoins.address,
     VUSDT: TestnetContracts.VToken_vUSDT_StableCoins.address,
     COMPTROLLER: TestnetContracts.Comptroller_StableCoins.address,
-    PSR: TestnetContracts.ProtocolShareReserve.address,
+    PSR: PsrBscTestnet.contracts.ProtocolShareReserve.address,
     SHORTFALL: TestnetContracts.Shortfall.address,
     RISKFUND: TestnetContracts.RiskFund.address,
     REWARD_DISTRIBUTOR1: TestnetContracts.RewardsDistributor_StableCoins_0.address,
     POOL_REGISTRY: TestnetContracts.PoolRegistry.address,
-    RESILIENT_ORACLE: TestnetContracts.ResilientOracle.address,
-    CHAINLINK_ORACLE: TestnetContracts.ChainlinkOracle.address,
-    BINANCE_ORACLE: TestnetContracts.BinanceOracle.address,
-    SWAP_ROUTER_CORE_POOL: TestnetContracts.SwapRouterCorePool.address,
-    USDT: TestnetContracts.USDT.address,
-    TREASURY: TestnetContracts.VTreasury.address,
+    RESILIENT_ORACLE: OracleBscTestnet.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: OracleBscTestnet.contracts.ChainlinkOracle.address,
+    BINANCE_ORACLE: OracleBscTestnet.contracts.BinanceOracle.address,
+    SWAP_ROUTER_CORE_POOL: CoreBscTestnet.contracts.SwapRouterCorePool.address,
+    USDT: CoreBscTestnet.contracts.USDT.address,
+    TREASURY: CoreBscTestnet.contracts.VTreasury.address,
     TOKEN1_HOLDER: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
     TOKEN2_HOLDER: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
     USDT_HOLDER: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
@@ -66,17 +72,17 @@ export const contractAddreseses = {
     VTOKEN2: MainnetContracts.VToken_vHAY_Stablecoins.address,
     VUSDT: MainnetContracts.VToken_vUSDT_Stablecoins.address,
     COMPTROLLER: MainnetContracts.Comptroller_Stablecoins.address,
-    PSR: MainnetContracts.ProtocolShareReserve.address,
+    PSR: PsrBscMainnet.contracts.ProtocolShareReserve.address,
     SHORTFALL: MainnetContracts.Shortfall.address,
     RISKFUND: MainnetContracts.RiskFund.address,
     REWARD_DISTRIBUTOR1: MainnetContracts.RewardsDistributor_Stablecoins_0.address,
     POOL_REGISTRY: MainnetContracts.PoolRegistry.address,
-    RESILIENT_ORACLE: MainnetContracts.ResilientOracle.address,
-    CHAINLINK_ORACLE: MainnetContracts.ChainlinkOracle.address,
-    BINANCE_ORACLE: MainnetContracts.BinanceOracle.address,
-    SWAP_ROUTER_CORE_POOL: MainnetContracts.SwapRouterCorePool.address,
-    USDT: MainnetContracts.USDT.address,
-    TREASURY: MainnetContracts.VTreasury.address,
+    RESILIENT_ORACLE: OracleBscMainnet.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: OracleBscMainnet.contracts.ChainlinkOracle.address,
+    BINANCE_ORACLE: OracleBscMainnet.contracts.BinanceOracle.address,
+    SWAP_ROUTER_CORE_POOL: CoreBscMainnet.contracts.SwapRouterCorePool.address,
+    USDT: CoreBscMainnet.contracts.USDT.address,
+    TREASURY: CoreBscMainnet.contracts.VTreasury.address,
     TOKEN1: "0xd17479997F34dd9156Deef8F95A52D81D265be9c", // USDD
     TOKEN2: "0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5", // HAY
     TOKEN1_HOLDER: "0x53f78A071d04224B8e254E243fFfc6D9f2f3Fa23",
