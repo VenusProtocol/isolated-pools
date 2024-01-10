@@ -1,3 +1,4 @@
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/1-deploy";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -33,15 +34,26 @@ const setProtocolShareReserveAddress = async (vToken: VToken, protocolShareReser
   }
 };
 
-const func: DeployFunction = async function (_: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const vTokens = await getAllMarkets(poolRegistry);
-  const protocolShareReserve = await ethers.getContract("ProtocolShareReserve");
+  let protocolShareReserveAddress;
+  try {
+    protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+  } catch (e) {
+    if (!hre.network.live) {
+      console.warn("ProtocolShareReserve contract not found. Deploying address");
+      await deployProtocolShareReserve(hre);
+      protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+    } else {
+      throw e;
+    }
+  }
   const shortfall = await ethers.getContract("Shortfall");
 
   for (const vToken of vTokens) {
     await setShortfallAddress(vToken, shortfall.address);
-    await setProtocolShareReserveAddress(vToken, protocolShareReserve.address);
+    await setProtocolShareReserveAddress(vToken, protocolShareReserveAddress);
   }
 };
 

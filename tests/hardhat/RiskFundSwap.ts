@@ -214,12 +214,12 @@ describe("Risk Fund: Swap Tests", () => {
     await protocolShareReserve.connect(admin).addOrUpdateDistributionConfigs([
       {
         schema: 0,
-        percentage: 30,
+        percentage: 3000,
         destination: riskFund.address,
       },
       {
         schema: 0,
-        percentage: 70,
+        percentage: 7000,
         destination: fakeProtocolIncome.address,
       },
     ]);
