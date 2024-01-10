@@ -62,6 +62,8 @@ async function shortfallFixture() {
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
 
+  const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
+
   const AccessControlManagerFactor = await ethers.getContractFactory("AccessControlManager");
   accessControlManager = await AccessControlManagerFactor.deploy();
   fakeRiskFund = await smock.fake<IRiskFund>("IRiskFund");
@@ -104,9 +106,9 @@ async function shortfallFixture() {
   });
 
   const VToken = await smock.mock<VToken__factory>("VToken");
-  vDAI = await VToken.deploy(isTimeBased, blocksPerYear);
-  vWBTC = await VToken.deploy(isTimeBased, blocksPerYear);
-  vFloki = await VToken.deploy(isTimeBased, blocksPerYear);
+  vDAI = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
+  vWBTC = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
+  vFloki = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
 
   await vWBTC.setVariable("decimals", 8);
   vDAI.decimals.returns(18);
@@ -189,6 +191,8 @@ async function timeBasedhortfallFixture() {
   waitForFirstBidder = 300;
   nextBidderBlockOrTimestampLimit = 300;
 
+  const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
+
   const MockBUSD = await ethers.getContractFactory("MockToken");
   mockBUSD = await MockBUSD.deploy("BUSD", "BUSD", 18);
   await mockBUSD.faucet(convertToUnit(100000, 18));
@@ -236,9 +240,9 @@ async function timeBasedhortfallFixture() {
   });
 
   const VToken = await smock.mock<VToken__factory>("VToken");
-  vDAI = await VToken.deploy(isTimeBased, blocksPerYear);
-  vWBTC = await VToken.deploy(isTimeBased, blocksPerYear);
-  vFloki = await VToken.deploy(isTimeBased, blocksPerYear);
+  vDAI = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
+  vWBTC = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
+  vFloki = await VToken.deploy(isTimeBased, blocksPerYear, maxBorrowRateMantissa);
 
   await vWBTC.setVariable("decimals", 8);
   vDAI.decimals.returns(18);

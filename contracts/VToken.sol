@@ -53,6 +53,13 @@ contract VToken is
 
     uint256 internal constant DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA = 5e16; // 5%
 
+    // Maximum fraction of interest that can be set aside for reserves
+    uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
+
+    // Maximum borrow rate that can ever be applied (.0005% / slot(block or second))
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 internal immutable MAX_BORROW_RATE_MANTISSA;
+
     /**
      * Reentrancy Guard **
      */
@@ -72,9 +79,14 @@ contract VToken is
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 maxBorrowRateMantissa_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
+        MAX_BORROW_RATE_MANTISSA = maxBorrowRateMantissa_;
         _disableInitializers();
     }
 

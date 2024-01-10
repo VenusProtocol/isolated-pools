@@ -18,7 +18,11 @@ contract UpgradedVToken is VToken {
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) VToken(timeBased_, blocksPerYear_) {
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 maxBorrowRateMantissa_
+    ) VToken(timeBased_, blocksPerYear_, maxBorrowRateMantissa_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();

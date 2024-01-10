@@ -63,6 +63,8 @@ async function rewardsFixture(isTimeBased: boolean) {
   const btcPrice = "21000.34";
   const daiPrice = "1";
 
+  const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
+
   fakePriceOracle.getUnderlyingPrice.returns((args: any) => {
     if (vDAI && vWBTC) {
       if (args[0] === vDAI.address) {
@@ -104,7 +106,7 @@ async function rewardsFixture(isTimeBased: boolean) {
 
   // Deploy VTokens
   const RewardsDistributor = await ethers.getContractFactory("RewardsDistributor");
-  const vTokenBeacon = await deployVTokenBeacon(undefined, isTimeBased, blocksPerYear);
+  const vTokenBeacon = await deployVTokenBeacon(undefined, maxBorrowRateMantissa, isTimeBased, blocksPerYear);
   vWBTC = await makeVToken({
     underlying: mockWBTC,
     comptroller: comptrollerProxy,

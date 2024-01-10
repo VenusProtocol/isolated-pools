@@ -106,8 +106,10 @@ for (const isTimeBased of [false, true]) {
     });
 
     it("Upgrade the vToken contract", async function () {
+      const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
+
       const vToken = await ethers.getContractFactory("UpgradedVToken");
-      const vTokenDeploy = await vToken.deploy(isTimeBased, slotsPerYear);
+      const vTokenDeploy = await vToken.deploy(isTimeBased, slotsPerYear, maxBorrowRateMantissa);
 
       await vTokenDeploy.deployed();
 

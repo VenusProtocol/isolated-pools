@@ -13,6 +13,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
+  const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
 
   // Comptroller Implementation
   await deploy("ComptrollerImpl", {
@@ -27,7 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [isTimeBased, blocksPerYear],
+    args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
   });

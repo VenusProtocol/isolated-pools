@@ -21,6 +21,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const maxBorrowRateMantissa = BigNumber.from(0.0005e16);
 
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
@@ -31,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [isTimeBased, blocksPerYear],
+    args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
   });

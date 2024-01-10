@@ -54,12 +54,6 @@ contract VTokenStorage {
      */
     address payable public protocolShareReserve;
 
-    // Maximum borrow rate that can ever be applied (.0005% / slot(block or second))
-    uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
-
-    // Maximum fraction of interest that can be set aside for reserves
-    uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
-
     /**
      * @notice Contract which oversees inter-vToken operations
      */

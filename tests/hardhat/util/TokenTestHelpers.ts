@@ -37,6 +37,7 @@ interface VTokenParameters {
   beacon: UpgradeableBeacon;
   isTimeBased: boolean;
   blocksPerYear: BigNumberish;
+  maxBorrowRateMantissa: BigNumberish;
 }
 
 const getNameAndSymbol = async (underlying: AddressOrContract): Promise<[string, string]> => {
@@ -74,12 +75,13 @@ export type AnyVTokenFactory = VTokenHarness__factory | VToken__factory;
 
 export const deployVTokenBeacon = async <VTokenFactory extends AnyVTokenFactory = VToken__factory>(
   { kind }: { kind: string } = { kind: "VToken" },
+  maxBorrowRateMantissa: BigNumberish = BigNumber.from(0.0005e16),
   isTimeBased: boolean = false,
   blocksPerYear: BigNumberish = BSC_BLOCKS_PER_YEAR,
 ): Promise<UpgradeableBeacon> => {
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
   const vTokenBeacon = (await upgrades.deployBeacon(VToken, {
-    constructorArgs: [isTimeBased, blocksPerYear],
+    constructorArgs: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
   })) as UpgradeableBeacon;
   return vTokenBeacon;
 };
@@ -106,10 +108,12 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
     shortfall: params.shortfall || (await smock.fake("Shortfall")),
     protocolShareReserve: params.protocolShareReserve || (await smock.fake("ProtocolShareReserve")),
     reserveFactorMantissa: params.reserveFactorMantissa || parseUnits("0.3", 18),
+    maxBorrowRateMantissa: params.maxBorrowRateMantissa || BigNumber.from(0.0005e16),
     beacon:
       params.beacon ||
       (await deployVTokenBeacon<VTokenFactory>(
         { kind },
+        params.maxBorrowRateMantissa || BigNumber.from(0.0005e16),
         params.isTimeBased || false,
         params.blocksPerYear === undefined ? BSC_BLOCKS_PER_YEAR : params.blocksPerYear,
       )),
