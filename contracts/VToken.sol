@@ -852,6 +852,9 @@ contract VToken is
         /* We emit a Mint event, and a Transfer event */
         emit Mint(minter, actualMintAmount, mintTokens, balanceAfter);
         emit Transfer(address(0), minter, mintTokens);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.mintVerify(address(this), minter, actualMintAmount, mintTokens);
     }
 
     /**
@@ -931,6 +934,9 @@ contract VToken is
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), redeemTokens);
         emit Redeem(redeemer, redeemAmount, redeemTokens, balanceAfter);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.redeemVerify(address(this), redeemer, redeemAmount, redeemTokens);
     }
 
     /**
@@ -982,6 +988,9 @@ contract VToken is
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, accountBorrowsNew, totalBorrowsNew);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.borrowVerify(address(this), borrower, borrowAmount);
     }
 
     /**
@@ -1032,6 +1041,9 @@ contract VToken is
 
         /* We emit a RepayBorrow event */
         emit RepayBorrow(payer, borrower, actualRepayAmount, accountBorrowsNew, totalBorrowsNew);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.repayBorrowVerify(address(this), payer, borrower, actualRepayAmount, borrowIndex);
 
         return actualRepayAmount;
     }
@@ -1143,6 +1155,16 @@ contract VToken is
 
         /* We emit a LiquidateBorrow event */
         emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, address(vTokenCollateral), seizeTokens);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.liquidateBorrowVerify(
+            address(this),
+            address(vTokenCollateral),
+            liquidator,
+            borrower,
+            actualRepayAmount,
+            seizeTokens
+        );
     }
 
     /**
@@ -1199,6 +1221,9 @@ contract VToken is
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit ProtocolSeize(borrower, protocolShareReserve, protocolSeizeAmount);
+
+        /* We call the defense and prime accrue interest hook */
+        comptroller.seizeVerify(address(this), seizerContract, liquidator, borrower, seizeTokens);
     }
 
     function _setComptroller(ComptrollerInterface newComptroller) internal {
@@ -1410,6 +1435,8 @@ contract VToken is
 
         /* We emit a Transfer event */
         emit Transfer(src, dst, tokens);
+
+        comptroller.transferVerify(address(this), src, dst, tokens);
     }
 
     /**

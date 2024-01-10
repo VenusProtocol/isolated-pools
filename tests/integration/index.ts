@@ -836,22 +836,22 @@ describe("Risk Fund and Auction related scenarios", function () {
       await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
         {
           schema: 0,
-          percentage: 50,
+          percentage: 5000,
           destination: RiskFund.address,
         },
         {
           schema: 0,
-          percentage: 50,
+          percentage: 5000,
           destination: fakeProtocolIncome.address,
         },
         {
           schema: 1,
-          percentage: 50,
+          percentage: 5000,
           destination: RiskFund.address,
         },
         {
           schema: 1,
-          percentage: 50,
+          percentage: 5000,
           destination: fakeProtocolIncome.address,
         },
       ]);
