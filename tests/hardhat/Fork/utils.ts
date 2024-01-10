@@ -8,7 +8,7 @@ export function getContractAddresses(name: string) {
   return contractAddreseses[name];
 }
 
-export const FORK = (blockNumber: number, fn: () => void) => {
+export const forking = (blockNumber: number, fn: () => void) => {
   describe(`At block #${blockNumber}`, () => {
     before(async () => {
       await setForkBlock(blockNumber);
