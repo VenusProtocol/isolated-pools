@@ -504,16 +504,16 @@ contract PoolLens is TimeManagerV8, ExponentialNoError {
             blockNumberOrTimestamp = borrowState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumberOrTimestamp, borrowState.blockOrTimestamp);
-        if (deltaBlocks > 0 && borrowSpeed > 0) {
+        uint256 deltaBlocksOrTimestamp = sub_(blockNumberOrTimestamp, borrowState.blockOrTimestamp);
+        if (deltaBlocksOrTimestamp > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
-            uint256 tokensAccrued = mul_(deltaBlocks, borrowSpeed);
+            uint256 tokensAccrued = mul_(deltaBlocksOrTimestamp, borrowSpeed);
             Double memory ratio = borrowAmount > 0 ? fraction(tokensAccrued, borrowAmount) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: borrowState.index }), ratio);
             borrowState.index = safe224(index.mantissa, "new index overflows");
             borrowState.blockOrTimestamp = blockNumberOrTimestamp;
-        } else if (deltaBlocks > 0) {
+        } else if (deltaBlocksOrTimestamp > 0) {
             borrowState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }
@@ -533,15 +533,15 @@ contract PoolLens is TimeManagerV8, ExponentialNoError {
             blockNumberOrTimestamp = supplyState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumberOrTimestamp, supplyState.blockOrTimestamp);
-        if (deltaBlocks > 0 && supplySpeed > 0) {
+        uint256 deltaBlocksOrTimestamp = sub_(blockNumberOrTimestamp, supplyState.blockOrTimestamp);
+        if (deltaBlocksOrTimestamp > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
-            uint256 tokensAccrued = mul_(deltaBlocks, supplySpeed);
+            uint256 tokensAccrued = mul_(deltaBlocksOrTimestamp, supplySpeed);
             Double memory ratio = supplyTokens > 0 ? fraction(tokensAccrued, supplyTokens) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: supplyState.index }), ratio);
             supplyState.index = safe224(index.mantissa, "new index overflows");
             supplyState.blockOrTimestamp = blockNumberOrTimestamp;
-        } else if (deltaBlocks > 0) {
+        } else if (deltaBlocksOrTimestamp > 0) {
             supplyState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }

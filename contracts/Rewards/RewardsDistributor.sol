@@ -19,9 +19,9 @@ import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeM
  * Users can receive additional rewards through a `RewardsDistributor`. Each `RewardsDistributor` proxy is initialized with a specific reward
  * token and `Comptroller`, which can then distribute the reward token to users that supply or borrow in the associated pool.
  * Authorized users can set the reward token borrow and supply speeds for each market in the pool. This sets a fixed amount of reward
- * token to be released each block for borrowers and suppliers, which is distributed based on a user’s percentage of the borrows or supplies
+ * token to be released each slot (block or second) for borrowers and suppliers, which is distributed based on a user’s percentage of the borrows or supplies
  * respectively. The owner can also set up reward distributions to contributor addresses (distinct from suppliers and borrowers) by setting
- * their contributor reward token speed, which similarly allocates a fixed amount of reward token per block.
+ * their contributor reward token speed, which similarly allocates a fixed amount of reward token per slot (block or second).
  *
  * The owner has the ability to transfer any amount of reward tokens held by the contract to any other address. Rewards are not distributed
  * automatically and must be claimed by a user calling `claimRewardToken()`. Users should be aware that it is up to the owner and other centralized
@@ -66,19 +66,19 @@ contract RewardsDistributor is
     /// @notice The REWARD TOKEN accrued but not yet transferred to each user
     mapping(address => uint256) public rewardTokenAccrued;
 
-    /// @notice The rate at which rewardToken is distributed to the corresponding borrow market (per block)
+    /// @notice The rate at which rewardToken is distributed to the corresponding borrow market per slot (block or second)
     mapping(address => uint256) public rewardTokenBorrowSpeeds;
 
-    /// @notice The rate at which rewardToken is distributed to the corresponding supply market (per block)
+    /// @notice The rate at which rewardToken is distributed to the corresponding supply market per slot (block or second)
     mapping(address => uint256) public rewardTokenSupplySpeeds;
 
     /// @notice The REWARD TOKEN market borrow state for each market
     mapping(address => RewardToken) public rewardTokenBorrowState;
 
-    /// @notice The portion of REWARD TOKEN that each contributor receives per block
+    /// @notice The portion of REWARD TOKEN that each contributor receives per slot (block or second)
     mapping(address => uint256) public rewardTokenContributorSpeeds;
 
-    /// @notice Last block at which a contributor's REWARD TOKEN rewards have been allocated
+    /// @notice Last slot (block or second) at which a contributor's REWARD TOKEN rewards have been allocated
     mapping(address => uint256) public lastContributorBlock;
 
     /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
@@ -136,17 +136,17 @@ contract RewardsDistributor is
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
-    /// @notice Emitted when a reward token last rewarding block for supply is updated
-    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+    /// @notice Emitted when a reward token last rewarding slot (block or second) for supply is updated
+    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlockNumberOrTimestamp);
 
-    /// @notice Emitted when a reward token last rewarding block for borrow is updated
-    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
+    /// @notice Emitted when a reward token last rewarding slot (block or second) for borrow is updated
+    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlockNumberOrTimestamp);
 
-    /// @notice Emitted when a reward token last rewarding block timestamp for supply is updated
-    event SupplyLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlock);
+    /// @notice Emitted when a reward token last rewarding slot (block or second) for supply is updated
+    event SupplyLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlockNumberOrTimestamp);
 
-    /// @notice Emitted when a reward token last rewarding block timestamp for borrow is updated
-    event BorrowLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlock);
+    /// @notice Emitted when a reward token last rewarding slot (block or second) for borrow is updated
+    event BorrowLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlockNumberOrTimestamp);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -445,10 +445,10 @@ contract RewardsDistributor is
     }
 
     /**
-     * @notice Set REWARD TOKEN last rewarding block for a single market.
-     * @param vToken market's whose reward token last rewarding block to be updated
-     * @param supplyLastRewardingBlockTimestamp New supply-side REWARD TOKEN last rewarding block for market
-     * @param borrowLastRewardingBlockTimestamp New borrow-side REWARD TOKEN last rewarding block for market
+     * @notice Set REWARD TOKEN last rewarding slot (block or second) for a single market.
+     * @param vToken market's whose reward token last rewarding slot (block or second) to be updated
+     * @param supplyLastRewardingBlockTimestamp New supply-side REWARD TOKEN last rewarding slot (block or second) for market
+     * @param borrowLastRewardingBlockTimestamp New borrow-side REWARD TOKEN last rewarding slot (block or second) for market
      */
     function _setLastRewardingBlockTimestamp(
         VToken vToken,

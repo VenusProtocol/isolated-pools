@@ -54,7 +54,7 @@ contract VTokenStorage {
      */
     address payable public protocolShareReserve;
 
-    // Maximum borrow rate that can ever be applied (.0005% / block)
+    // Maximum borrow rate that can ever be applied (.0005% / slot(block or second))
     uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
 
     // Maximum fraction of interest that can be set aside for reserves
@@ -128,12 +128,12 @@ contract VTokenStorage {
     address public shortfall;
 
     /**
-     * @notice delta block after which reserves will be reduced
+     * @notice delta slot (block or second) after which reserves will be reduced
      */
     uint256 public reduceReservesBlockDelta;
 
     /**
-     * @notice last block number at which reserves were reduced
+     * @notice last slot (block or second) number at which reserves were reduced
      */
     uint256 public reduceReservesBlockNumber;
 
@@ -282,9 +282,12 @@ abstract contract VTokenInterface is VTokenStorage {
     event SweepToken(address indexed token);
 
     /**
-     * @notice Event emitted when reduce reserves block delta is changed
+     * @notice Event emitted when reduce reserves slot (block or second) delta is changed
      */
-    event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
+    event NewReduceReservesBlockDelta(
+        uint256 oldReduceReservesBlockOrTimestampDelta,
+        uint256 newReduceReservesBlockOrTimestampDelta
+    );
 
     /**
      * @notice Event emitted when liquidation reserves are reduced

@@ -353,56 +353,56 @@ contract Shortfall is
 
     /**
      * @notice Update next bidder block or timestamp limit which is used determine when an auction can be closed
-     * @param _nextBidderBlockOrTimestampLimit  New next bidder block limit
+     * @param nextBidderBlockOrTimestampLimit_  New next bidder slot (block or second) limit
      * @custom:event Emits NextBidderBlockLimitUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateNextBidderBlockLimit(uint256 _nextBidderBlockOrTimestampLimit) external {
+    function updateNextBidderBlockLimit(uint256 nextBidderBlockOrTimestampLimit_) external {
         _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
-        require(_nextBidderBlockOrTimestampLimit != 0, "_nextBidderBlockOrTimestampLimit must not be 0");
+        require(nextBidderBlockOrTimestampLimit_ != 0, "nextBidderBlockOrTimestampLimit_ must not be 0");
 
-        emit NextBidderBlockLimitUpdated(nextBidderBlockLimit, _nextBidderBlockOrTimestampLimit);
-        nextBidderBlockLimit = _nextBidderBlockOrTimestampLimit;
+        emit NextBidderBlockLimitUpdated(nextBidderBlockLimit, nextBidderBlockOrTimestampLimit_);
+        nextBidderBlockLimit = nextBidderBlockOrTimestampLimit_;
     }
 
     /**
      * @notice Updates the incentive BPS
-     * @param _incentiveBps New incentive BPS
+     * @param incentiveBps_ New incentive BPS
      * @custom:event Emits IncentiveBpsUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateIncentiveBps(uint256 _incentiveBps) external {
+    function updateIncentiveBps(uint256 incentiveBps_) external {
         _checkAccessAllowed("updateIncentiveBps(uint256)");
-        require(_incentiveBps != 0, "incentiveBps must not be 0");
+        require(incentiveBps_ != 0, "incentiveBps must not be 0");
         uint256 oldIncentiveBps = incentiveBps;
-        incentiveBps = _incentiveBps;
-        emit IncentiveBpsUpdated(oldIncentiveBps, _incentiveBps);
+        incentiveBps = incentiveBps_;
+        emit IncentiveBpsUpdated(oldIncentiveBps, incentiveBps_);
     }
 
     /**
      * @notice Update minimum pool bad debt to start auction
-     * @param _minimumPoolBadDebt Minimum bad debt in the base asset for a pool to start auction
+     * @param minimumPoolBadDebt_ Minimum bad debt in the base asset for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
+    function updateMinimumPoolBadDebt(uint256 minimumPoolBadDebt_) external {
         _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
-        minimumPoolBadDebt = _minimumPoolBadDebt;
-        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
+        minimumPoolBadDebt = minimumPoolBadDebt_;
+        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, minimumPoolBadDebt_);
     }
 
     /**
      * @notice Update wait for first bidder block or timestamp count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
-     * @param _waitForFirstBidder  New wait for first bidder block or timestamp count
+     * @param waitForFirstBidder_  New wait for first bidder block or timestamp count
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
+    function updateWaitForFirstBidder(uint256 waitForFirstBidder_) external {
         _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
         uint256 oldWaitForFirstBidder = waitForFirstBidder;
-        waitForFirstBidder = _waitForFirstBidder;
-        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
+        waitForFirstBidder = waitForFirstBidder_;
+        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, waitForFirstBidder_);
     }
 
     /**
