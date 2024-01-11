@@ -42,12 +42,12 @@ import { ensureNonzeroAddress } from "./lib/validators.sol";
  * `healAccount()` and `liquidateAccount()` in the `Comptroller` summary section below.
  */
 contract VToken is
-    TimeManagerV8,
     Ownable2StepUpgradeable,
     AccessControlledV8,
     VTokenInterface,
     ExponentialNoError,
-    TokenErrorReporter
+    TokenErrorReporter,
+    TimeManagerV8
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

@@ -10,7 +10,7 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @author Compound
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
-contract WhitePaperInterestRateModel is TimeManagerV8, InterestRateModel {
+contract WhitePaperInterestRateModel is InterestRateModel, TimeManagerV8 {
     /**
      * @notice The multiplier of utilization rate per block or second that gives the slope of the interest rate
      */

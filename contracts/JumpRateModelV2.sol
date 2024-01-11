@@ -12,7 +12,7 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @notice An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached.
  * The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters
  */
-contract JumpRateModelV2 is TimeManagerV8, InterestRateModel {
+contract JumpRateModelV2 is InterestRateModel, TimeManagerV8 {
     /**
      * @notice The address of the AccessControlManager contract
      */

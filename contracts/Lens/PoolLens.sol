@@ -26,7 +26,7 @@ import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeM
 - the underlying asset price of a vToken;
 - the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
  */
-contract PoolLens is TimeManagerV8, ExponentialNoError {
+contract PoolLens is ExponentialNoError, TimeManagerV8 {
     /**
      * @dev Struct for PoolDetails.
      */
