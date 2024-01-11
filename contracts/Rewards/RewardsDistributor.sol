@@ -136,17 +136,17 @@ contract RewardsDistributor is
     /// @notice Emitted when a reward for contributor is updated
     event ContributorRewardsUpdated(address indexed contributor, uint256 rewardAccrued);
 
-    /// @notice Emitted when a reward token last rewarding slot (block or second) for supply is updated
-    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlockNumberOrTimestamp);
+    /// @notice Emitted when a reward token last rewarding block for supply is updated
+    event SupplyLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
 
-    /// @notice Emitted when a reward token last rewarding slot (block or second) for borrow is updated
-    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlockNumberOrTimestamp);
+    /// @notice Emitted when a reward token last rewarding block for borrow is updated
+    event BorrowLastRewardingBlockUpdated(address indexed vToken, uint32 newBlock);
 
-    /// @notice Emitted when a reward token last rewarding slot (block or second) for supply is updated
-    event SupplyLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlockNumberOrTimestamp);
+    /// @notice Emitted when a reward token last rewarding timestamp for supply is updated
+    event SupplyLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newTimestamp);
 
-    /// @notice Emitted when a reward token last rewarding slot (block or second) for borrow is updated
-    event BorrowLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newBlockNumberOrTimestamp);
+    /// @notice Emitted when a reward token last rewarding timestamp for borrow is updated
+    event BorrowLastRewardingBlockTimestampUpdated(address indexed vToken, uint256 newTimestamp);
 
     modifier onlyComptroller() {
         require(address(comptroller) == msg.sender, "Only comptroller can call this function");
@@ -445,10 +445,10 @@ contract RewardsDistributor is
     }
 
     /**
-     * @notice Set REWARD TOKEN last rewarding slot (block or second) for a single market.
-     * @param vToken market's whose reward token last rewarding slot (block or second) to be updated
-     * @param supplyLastRewardingBlockTimestamp New supply-side REWARD TOKEN last rewarding slot (block or second) for market
-     * @param borrowLastRewardingBlockTimestamp New borrow-side REWARD TOKEN last rewarding slot (block or second) for market
+     * @notice Set REWARD TOKEN last rewarding timestamp for a single market.
+     * @param vToken market's whose reward token last rewarding timestamp to be updated
+     * @param supplyLastRewardingBlockTimestamp New supply-side REWARD TOKEN last rewarding timestamp for market
+     * @param borrowLastRewardingBlockTimestamp New borrow-side REWARD TOKEN last rewarding timestamp for market
      */
     function _setLastRewardingBlockTimestamp(
         VToken vToken,
