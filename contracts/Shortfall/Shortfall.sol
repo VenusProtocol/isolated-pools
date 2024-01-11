@@ -165,6 +165,8 @@ contract Shortfall is
     /**
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
      * @param blocksPerYear_ The number of blocks per year
+     * @param nextBidderBlockOrTimestampLimit_ Default block or timestamp limit for the next bidder to place a bid
+     * @param waitForFirstBidder_ Default number of blocks or seconds to wait for the first bidder before starting the auction
      * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(

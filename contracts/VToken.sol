@@ -77,6 +77,7 @@ contract VToken is
     /**
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
      * @param blocksPerYear_ The number of blocks per year
+     * @param maxBorrowRateMantissa_ The maximum value of borrowing rate mantissa
      * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor(
