@@ -16,6 +16,7 @@ import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
+import { ShortfallStorage } from "./ShortfallStorage.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
 /**
@@ -29,43 +30,14 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * risk fund in exchange for paying off all the pool's bad debt.
  */
 contract Shortfall is
-    TimeManagerV8,
     Ownable2StepUpgradeable,
     AccessControlledV8,
     ReentrancyGuardUpgradeable,
-    TokenDebtTracker
+    TokenDebtTracker,
+    ShortfallStorage,
+    TimeManagerV8
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /// @notice Type of auction
-    enum AuctionType {
-        LARGE_POOL_DEBT,
-        LARGE_RISK_FUND
-    }
-
-    /// @notice Status of auction
-    enum AuctionStatus {
-        NOT_STARTED,
-        STARTED,
-        ENDED
-    }
-
-    /// @notice Auction metadata
-    struct Auction {
-        /// @notice It holds either the starting block number or timestamp
-        uint256 startBlockOrTimestamp;
-        AuctionType auctionType;
-        AuctionStatus status;
-        VToken[] markets;
-        uint256 seizedRiskFund;
-        address highestBidder;
-        uint256 highestBidBps;
-        /// @notice It holds either the highestBid block or timestamp
-        uint256 highestBidBlockOrTimestamp;
-        uint256 startBidBps;
-        mapping(VToken => uint256) marketDebt;
-        mapping(VToken => uint256) bidAmount;
-    }
 
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
@@ -80,30 +52,6 @@ contract Shortfall is
     // @notice Default number of blocks or seconds to wait for the first bidder before starting the auction
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 private immutable DEFAULT_WAIT_FOR_FIRST_BIDDER;
-
-    /// @notice Pool registry address
-    address public poolRegistry;
-
-    /// @notice Risk fund address
-    IRiskFund public riskFund;
-
-    /// @notice Minimum USD debt in pool for shortfall to trigger
-    uint256 public minimumPoolBadDebt;
-
-    /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 public incentiveBps;
-
-    /// @notice Time to wait for next bidder. Initially waits for 100 blocks or 300 seconds
-    uint256 public nextBidderBlockLimit;
-
-    /// @notice Boolean of if auctions are paused
-    bool public auctionsPaused;
-
-    /// @notice Time to wait for first bidder. Initially waits for 100 blocks or 300 seconds
-    uint256 public waitForFirstBidder;
-
-    /// @notice Auctions for each pool
-    mapping(address => Auction) public auctions;
 
     /// @notice Emitted when a auction starts
     event AuctionStarted(

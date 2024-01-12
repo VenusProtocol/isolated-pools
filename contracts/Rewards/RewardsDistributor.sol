@@ -5,12 +5,13 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
 import { Comptroller } from "../Comptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
-import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
+import { RewardsDistributorStorage } from "./RewardsDistributorStorage.sol";
 
 /**
  * @title `RewardsDistributor`
@@ -28,71 +29,17 @@ import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeM
  * entities to ensure that the `RewardsDistributor` holds enough tokens to distribute the accumulated rewards of users and contributors.
  */
 contract RewardsDistributor is
-    TimeManagerV8,
     ExponentialNoError,
     Ownable2StepUpgradeable,
     AccessControlledV8,
-    MaxLoopsLimitHelper
+    MaxLoopsLimitHelper,
+    RewardsDistributorStorage,
+    TimeManagerV8
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    struct RewardToken {
-        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
-        uint224 index;
-        // The block number the index was last updated at
-        uint32 block;
-        // The block number at which to stop rewards
-        uint32 lastRewardingBlock;
-    }
-
-    struct TimeBasedRewardToken {
-        // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
-        uint224 index;
-        // The block timestamp the index was last updated at
-        uint256 timestamp;
-        // The block timestamp at which to stop rewards
-        uint256 lastRewardingTimestamp;
-    }
-
     /// @notice The initial REWARD TOKEN index for a market
     uint224 public constant INITIAL_INDEX = 1e36;
-
-    /// @notice The REWARD TOKEN market supply state for each market
-    mapping(address => RewardToken) public rewardTokenSupplyState;
-
-    /// @notice The REWARD TOKEN borrow index for each market for each supplier as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256)) public rewardTokenSupplierIndex;
-
-    /// @notice The REWARD TOKEN accrued but not yet transferred to each user
-    mapping(address => uint256) public rewardTokenAccrued;
-
-    /// @notice The rate at which rewardToken is distributed to the corresponding borrow market per slot (block or second)
-    mapping(address => uint256) public rewardTokenBorrowSpeeds;
-
-    /// @notice The rate at which rewardToken is distributed to the corresponding supply market per slot (block or second)
-    mapping(address => uint256) public rewardTokenSupplySpeeds;
-
-    /// @notice The REWARD TOKEN market borrow state for each market
-    mapping(address => RewardToken) public rewardTokenBorrowState;
-
-    /// @notice The portion of REWARD TOKEN that each contributor receives per slot (block or second)
-    mapping(address => uint256) public rewardTokenContributorSpeeds;
-
-    /// @notice Last slot (block or second) at which a contributor's REWARD TOKEN rewards have been allocated
-    mapping(address => uint256) public lastContributorBlock;
-
-    /// @notice The REWARD TOKEN borrow index for each market for each borrower as of the last time they accrued REWARD TOKEN
-    mapping(address => mapping(address => uint256)) public rewardTokenBorrowerIndex;
-
-    Comptroller private comptroller;
-
-    IERC20Upgradeable public rewardToken;
-
-    /// @notice The REWARD TOKEN market supply state for each market
-    mapping(address => TimeBasedRewardToken) public rewardTokenSupplyStateTimeBased;
-
-    /// @notice The REWARD TOKEN market borrow state for each market
-    mapping(address => TimeBasedRewardToken) public rewardTokenBorrowStateTimeBased;
 
     /// @notice Emitted when REWARD TOKEN is distributed to a supplier
     event DistributedSupplierRewardToken(
