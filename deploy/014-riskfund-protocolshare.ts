@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig } from "../helpers/deploymentConfig";
+import { getBidderDeploymentValues, getConfig } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
 import { Comptroller } from "../typechain";
@@ -11,8 +11,6 @@ import { Comptroller } from "../typechain";
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
 const maxLoopsLimit = 100;
-const waitForFirstBidder = 100; // for block based contracts deployment
-const nextBidderBlockOrTimestampLimit = 100; // for block based contracts deployment
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -22,6 +20,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const usdt = await getUnderlyingToken("USDT", tokensConfig);
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+
+  const { waitForFirstBidder, nextBidderBlockOrTimestampLimit } = getBidderDeploymentValues(hre.network.name);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);

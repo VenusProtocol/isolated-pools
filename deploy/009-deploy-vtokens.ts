@@ -5,7 +5,7 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { getConfig, getMaxBorrowRateMantissa, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 import { AddressOne } from "../helpers/utils";
@@ -21,7 +21,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
-  const maxBorrowRateMantissa = BigNumber.from(0.0005e16);
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
 
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
