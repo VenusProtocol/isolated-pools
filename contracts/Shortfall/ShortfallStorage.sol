@@ -52,13 +52,13 @@ contract ShortfallStorage {
     /// @notice Incentive to auction participants, initial value set to 1000 or 10%
     uint256 public incentiveBps;
 
-    /// @notice Time to wait for next bidder. Initially waits for 100 blocks or 300 seconds
+    /// @notice Time to wait for next bidder. Initially waits for DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT
     uint256 public nextBidderBlockLimit;
 
     /// @notice Boolean of if auctions are paused
     bool public auctionsPaused;
 
-    /// @notice Time to wait for first bidder. Initially waits for 100 blocks or 300 seconds
+    /// @notice Time to wait for first bidder. Initially waits for DEFAULT_WAIT_FOR_FIRST_BIDDER
     uint256 public waitForFirstBidder;
 
     /// @notice Auctions for each pool
