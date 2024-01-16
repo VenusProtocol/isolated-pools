@@ -2854,7 +2854,20 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["vWBTC_Core", "vWETH_Core", "vUSDC_Core", "vUSDT_Core", "vcrvUSD_Core", "vCRV_Core"],
+            supplySpeeds: ["15432098765432098"], // 15432098765432098 XVS over 90 days (648,000 blocks)
+            borrowSpeeds: ["15432098765432098"], // 15432098765432098 XVS over 90 days (648,000 blocks)
+          },
+          {
+            asset: "CRV",
+            markets: ["vcrvUSD_Core"],
+            supplySpeeds: ["173611111111111111"],
+            borrowSpeeds: ["0"],
+          },
+        ],
       },
       {
         id: "Curve",
@@ -2900,7 +2913,20 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["vUSDC_Stablecoins", "vUSDT_Stablecoins", "vcrvUSD_Stablecoins"],
+            supplySpeeds: ["1543209876543209"],
+            borrowSpeeds: ["1543209876543209"],
+          },
+          {
+            asset: "CRV",
+            markets: ["vcrvUSD_Stablecoins"],
+            supplySpeeds: ["9645061728395061"],
+            borrowSpeeds: ["0"],
+          },
+        ],
       },
       {
         id: "Liquid Staked ETH",
@@ -2946,7 +2972,20 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "XVS",
+            markets: ["vCRV_Curve", "vcrvUSD_Curve"],
+            supplySpeeds: ["1543209876543209"],
+            borrowSpeeds: ["1543209876543209"],
+          },
+          {
+            asset: "CRV",
+            markets: ["vcrvUSD_Curve"],
+            supplySpeeds: ["9645061728395061"],
+            borrowSpeeds: ["0"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
