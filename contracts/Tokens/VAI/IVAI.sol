@@ -9,4 +9,6 @@ interface IVAI {
     function mint(address usr, uint wad) external;
 
     function burn(address usr, uint wad) external;
+
+    function totalSupply() external view returns (uint256);
 }

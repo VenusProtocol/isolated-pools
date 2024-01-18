@@ -6,6 +6,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
+import { IVAIController } from "./Tokens/VAI/IVAIController.sol";
 
 /**
  * @title ComptrollerStorage
@@ -125,10 +126,13 @@ contract ComptrollerStorage {
     /// Prime token address
     IPrime public prime;
 
+    // VaiController address
+    IVAIController public vaiController;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

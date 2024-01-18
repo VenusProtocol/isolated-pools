@@ -1,6 +1,7 @@
 pragma solidity 0.8.13;
 
-import { ComptrollerInterface } from "../ComptrollerInterface.sol";
+import { IComptroller } from "../../ComptrollerInterface.sol";
+import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 contract VAIControllerStorage {
     /// @notice Fee percent of accrued interest with decimal 18
@@ -25,7 +26,7 @@ contract VAIControllerStorage {
     uint256 public mintCap;
 
     /// @notice Comptroller address
-    ComptrollerInterface public comptroller;
+    IComptroller public comptroller;
 
     /// @notice The address of the VAI token
     address internal vai;
@@ -33,20 +34,17 @@ contract VAIControllerStorage {
     /// @notice Treasury address
     address public treasuryAddress;
 
+    // @notice Treasury Guardian address
+    address public treasuryGuardian;
+
     /// @notice The address for VAI interest receiver
     address public receiver;
 
     /// @notice The address of the prime contract. It can be a ZERO address
     address public prime;
 
-    /// @notice Oracle which gives the price of any given asset
-    ResilientOracleInterface public oracle;
-
     /// @notice Tracks if minting is enabled only for prime token holders. Only used if prime is set
     bool public mintEnabledOnlyForPrimeHolder;
-
-    /// @notice The Venus VAI state initialized
-    bool public isVenusVAIInitialized;
 
     /// @notice Global vaiMintIndex as of the most recent balance-changing action for user
     mapping(address => uint256) internal vaiMinterInterestIndex;

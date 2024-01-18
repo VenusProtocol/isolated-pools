@@ -585,7 +585,12 @@ contract Comptroller is
             revert MarketNotListed(address(vTokenCollateral));
         }
 
-        uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
+        uint256 borrowBalance;
+        if (address(vTokenBorrowed) != address(vaiController)) {
+            borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
+        } else {
+            borrowBalance = vaiController.getVAIRepayAmount(borrower);
+        }
 
         /* Allow accounts to be liquidated if it is a forced liquidation */
         if (skipLiquidityCheck || isForcedLiquidationEnabled[vTokenBorrowed]) {
@@ -1251,7 +1256,10 @@ contract Comptroller is
         uint256 actualRepayAmount
     ) external view override returns (uint256 error, uint256 tokensToSeize) {
         /* Read oracle prices for borrowed and collateral markets */
-        uint256 priceBorrowedMantissa = _safeGetUnderlyingPrice(VToken(vTokenBorrowed));
+        uint256 priceBorrowedMantissa = 1e18; // Note: this is VAI
+        if (address(vTokenBorrowed) != address(vaiController)) {
+            priceBorrowedMantissa = _safeGetUnderlyingPrice(VToken(vTokenBorrowed));
+        }
         uint256 priceCollateralMantissa = _safeGetUnderlyingPrice(VToken(vTokenCollateral));
 
         /*
@@ -1510,6 +1518,11 @@ contract Comptroller is
         }
 
         uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
+
+        if (address(vaiController) != address(0)) {
+            borrowPlusEffects = add_(borrowPlusEffects, vaiController.getVAIRepayAmount(account));
+        }
+
         // These are safe, as the underflow condition is checked first
         unchecked {
             if (snapshot.weightedCollateral > borrowPlusEffects) {
