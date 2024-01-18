@@ -16,9 +16,9 @@ import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { VAIControllerStorage } from "./VAIControllerStorage.sol";
 
 /**
- * @title VAI Comptroller
+ * @title VAIController
  * @author Venus
- * @notice This is the implementation contract for the VAIUnitroller proxy
+ * @notice This VAIController functions as market for VAI token
  */
 contract VAIController is
     Ownable2StepUpgradeable,
@@ -57,55 +57,61 @@ contract VAIController is
     uint256 public constant INITIAL_VAI_MINT_INDEX = 1e18;
 
     /// @notice Emitted when Comptroller is changed
-    event NewComptroller(IComptroller oldComptroller, IComptroller newComptroller);
+    event NewComptroller(IComptroller indexed oldComptroller, IComptroller indexed newComptroller);
 
     /// @notice Emitted when mint for prime holder is changed
-    event MintOnlyForPrimeHolder(bool previousMintEnabledOnlyForPrimeHolder, bool newMintEnabledOnlyForPrimeHolder);
+    event MintOnlyForPrimeHolder(
+        bool indexed previousMintEnabledOnlyForPrimeHolder,
+        bool indexed newMintEnabledOnlyForPrimeHolder
+    );
 
     /// @notice Emitted when Prime is changed
-    event NewPrime(address oldPrime, address newPrime);
+    event NewPrime(address indexed oldPrime, address indexed newPrime);
 
     /// @notice Event emitted when VAI is minted
-    event MintVAI(address minter, uint256 mintVAIAmount);
+    event MintVAI(address indexed minter, uint256 mintVAIAmount);
 
     /// @notice Event emitted when VAI is repaid
-    event RepayVAI(address payer, address borrower, uint256 repayVAIAmount);
+    event RepayVAI(address indexed payer, address indexed borrower, uint256 repayVAIAmount);
 
     /// @notice Event emitted when a borrow is liquidated
     event LiquidateVAI(
-        address liquidator,
-        address borrower,
+        address indexed liquidator,
+        address indexed borrower,
         uint256 repayAmount,
-        address vTokenCollateral,
+        address indexed vTokenCollateral,
         uint256 seizeTokens
     );
 
     /// @notice Emitted when treasury guardian is changed
-    event NewTreasuryGuardian(address oldTreasuryGuardian, address newTreasuryGuardian);
+    event NewTreasuryGuardian(address indexed oldTreasuryGuardian, address indexed newTreasuryGuardian);
 
     /// @notice Emitted when treasury address is changed
-    event NewTreasuryAddress(address oldTreasuryAddress, address newTreasuryAddress);
+    event NewTreasuryAddress(address indexed oldTreasuryAddress, address indexed newTreasuryAddress);
 
     /// @notice Emitted when treasury percent is changed
-    event NewTreasuryPercent(uint256 oldTreasuryPercent, uint256 newTreasuryPercent);
+    event NewTreasuryPercent(uint256 indexed oldTreasuryPercent, uint256 indexed newTreasuryPercent);
 
     /// @notice Event emitted when VAIs are minted and fee are transferred
-    event MintFee(address minter, uint256 feeAmount);
+    event MintFee(address indexed minter, uint256 indexed feeAmount);
 
     /// @notice Emitted when VAI base rate is changed
-    event NewVAIBaseRate(uint256 oldBaseRateMantissa, uint256 newBaseRateMantissa);
+    event NewVAIBaseRate(uint256 indexed oldBaseRateMantissa, uint256 indexed newBaseRateMantissa);
 
     /// @notice Emitted when VAI float rate is changed
-    event NewVAIFloatRate(uint256 oldFloatRateMantissa, uint256 newFlatRateMantissa);
+    event NewVAIFloatRate(uint256 indexed oldFloatRateMantissa, uint256 indexed newFlatRateMantissa);
 
     /// @notice Emitted when VAI receiver address is changed
-    event NewVAIReceiver(address oldReceiver, address newReceiver);
+    event NewVAIReceiver(address indexed oldReceiver, address indexed newReceiver);
 
     /// @notice Emitted when VAI mint cap is changed
-    event NewVAIMintCap(uint256 oldMintCap, uint256 newMintCap);
+    event NewVAIMintCap(uint256 indexed oldMintCap, uint256 indexed newMintCap);
 
     /// @notice Emitted when VAI token address is changed by admin
-    event NewVaiToken(address oldVaiToken, address newVaiToken);
+    event NewVaiToken(address indexed oldVaiToken, address indexed newVaiToken);
+
+    /// @notice Emitted when VAIMintRate is changed
+    event NewVAIMintRate(uint256 indexed oldVAIMintRate, uint256 indexed newVAIMintRate);
 
     /// @notice Thrown when action is restricted to the caller
     error CallerNotAuthorized();
@@ -125,19 +131,23 @@ contract VAIController is
     /// @notice Thrown when there is an insufficient balance of mintable VAI tokens
     error InsufficientMintableVAIBalance();
 
+    /**
+     * @notice Initializes the VAI Controller
+     *  @param accessControlManager_ Address of the AccessControlManager contract
+     */
     function initialize(address accessControlManager_) external initializer {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
 
-        vaiMintIndex = INITIAL_VAI_MINT_INDEX;
+        VAIMintIndex = INITIAL_VAI_MINT_INDEX;
         accrualBlockNumber = getBlockNumber();
         mintCap = type(uint256).max;
     }
 
     /**
      * @notice The mintVAI function mints and transfers VAI from the protocol to the user, and adds a borrow balance
-     * The amount minted must be less than the user's Account Liquidity and the mint vai limit
+     * The amount minted must be less than the user's Account Liquidity and the mint VAI limit
      * @param mintVAIAmount The amount of the VAI to be minted
      * @custom:event MintFee emits on success
      * @custom:event MintVAI emits on success
@@ -160,11 +170,11 @@ contract VAIController is
         MintLocalVars memory vars;
 
         address minter = msg.sender;
-        IVAI _vai = IVAI(vai);
-        uint256 vaiTotalSupply = _vai.totalSupply();
-        uint256 vaiNewTotalSupply = vaiTotalSupply + mintVAIAmount;
+        IVAI _VAI = IVAI(VAI);
+        uint256 VAITotalSupply = _VAI.totalSupply();
+        uint256 VAINewTotalSupply = VAITotalSupply + mintVAIAmount;
 
-        if (vaiNewTotalSupply <= mintCap) {
+        if (VAINewTotalSupply <= mintCap) {
             revert MintCapReached();
         }
 
@@ -197,14 +207,14 @@ contract VAIController is
             feeAmount = mul_(vars.mintAmount, treasuryPercent) / 1e18;
             remainedAmount = vars.mintAmount - feeAmount;
 
-            IVAI(_vai).mint(treasuryAddress, feeAmount);
+            IVAI(_VAI).mint(treasuryAddress, feeAmount);
             emit MintFee(minter, feeAmount);
         } else {
             remainedAmount = vars.mintAmount;
         }
 
-        IVAI(_vai).mint(minter, remainedAmount);
-        vaiMinterInterestIndex[minter] = vaiMintIndex;
+        IVAI(_VAI).mint(minter, remainedAmount);
+        VAIMinterInterestIndex[minter] = VAIMintIndex;
 
         emit MintVAI(minter, remainedAmount);
     }
@@ -234,9 +244,13 @@ contract VAIController is
     /**
      * @notice Sets a new comptroller
      * @param comptroller_ address of comptroller
+     * @custom:error ZeroAddressNotAllowed is thrown when new comptroller address is zero
+     * @custom:event NewComptroller emits on success
      * @custom:access Only Governance
      */
     function setComptroller(IComptroller comptroller_) external onlyOwner {
+        ensureNonzeroAddress(address(comptroller_));
+
         emit NewComptroller(comptroller, comptroller_);
         comptroller = comptroller_;
     }
@@ -244,9 +258,13 @@ contract VAIController is
     /**
      * @notice Set the prime token contract address
      * @param prime_ The new address of the prime token contract
+     * @custom:error ZeroAddressNotAllowed is thrown when new prime address is zero
+     * @custom:event NewPrime emits on success
      * @custom:access Only Governance
      */
     function setPrimeToken(address prime_) external onlyOwner {
+        ensureNonzeroAddress(prime_);
+
         emit NewPrime(prime, prime_);
         prime = prime_;
     }
@@ -294,8 +312,8 @@ contract VAIController is
     }
 
     /**
-     * @notice The sender liquidates the vai minters collateral. The collateral seized is transferred to the liquidator
-     * @param borrower The borrower of vai to be liquidated
+     * @notice The sender liquidates the VAI minters collateral. The collateral seized is transferred to the liquidator
+     * @param borrower The borrower of VAI to be liquidated
      * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
      * @return uint256 The actual repayment amount
@@ -407,9 +425,9 @@ contract VAIController is
      */
     function accrueVAIInterest() public {
         uint256 delta = getVAIRepayRatePerBlock() * (getBlockNumber() - accrualBlockNumber);
-        delta += vaiMintIndex;
+        delta += VAIMintIndex;
 
-        vaiMintIndex = delta;
+        VAIMintIndex = delta;
         accrualBlockNumber = getBlockNumber();
     }
 
@@ -448,14 +466,12 @@ contract VAIController is
 
             vars.oraclePrice = Exp({ mantissa: vars.oraclePriceMantissa });
 
-            // (vars.mErr, vars.tokensToDenom) = mulExp(vars.exchangeRate, vars.oraclePrice);
             vars.tokensToDenom = mulExp(vars.exchangeRate, vars.oraclePrice);
 
-            // marketSupply = tokensToDenom * vTokenBalance
             vars.marketSupply = mul_ScalarTruncate(vars.tokensToDenom, vars.vTokenBalance);
 
             (, uint256 collateralFactorMantissa) = comptroller.markets(address(enteredMarkets[i]));
-            // (vars.mErr, vars.marketSupply) = mulUInt(vars.marketSupply, collateralFactorMantissa);
+
             vars.marketSupply = vars.marketSupply * collateralFactorMantissa;
 
             vars.marketSupply = vars.marketSupply / 1e18;
@@ -483,7 +499,7 @@ contract VAIController is
 
         vars.sumBorrowPlusEffects = vars.sumBorrowPlusEffects + repayAmount;
 
-        accountMintableVAI = (vars.sumSupply * vaiMintRate) / 10000;
+        accountMintableVAI = (vars.sumSupply * VAIMintRate) / 10000;
         accountMintableVAI -= vars.sumBorrowPlusEffects;
         return accountMintableVAI;
     }
@@ -528,7 +544,7 @@ contract VAIController is
      * @return (uint256) Returns the interest index for the minter
      */
     function getVAIMinterInterestIndex(address minter) public view returns (uint256) {
-        uint256 storedIndex = vaiMinterInterestIndex[minter];
+        uint256 storedIndex = VAIMinterInterestIndex[minter];
 
         // If the user minted VAI before the stability fee was introduced, accrue
         // starting from stability fee launch
@@ -551,7 +567,7 @@ contract VAIController is
 
         uint256 totalMintedVAI = amount - interest;
 
-        delta = vaiMintIndex - getVAIMinterInterestIndex(account);
+        delta = VAIMintIndex - getVAIMinterInterestIndex(account);
 
         uint256 newInterest = (delta * totalMintedVAI) / 1e18;
         uint256 newAmount = amount + newInterest;
@@ -601,14 +617,14 @@ contract VAIController is
      * @return The address of VAI
      */
     function getVAIAddress() public view returns (address) {
-        return vai;
+        return VAI;
     }
 
     /**
      * @notice Return the number of blocks mined in a year
      * @return The number of blocks mined per year
      */
-    function getBlocksPerYear() public pure returns (uint256) {
+    function getBlocksPerYear() public view virtual returns (uint256) {
         return 10512000; //(24 * 60 * 60 * 365) / 3;
     }
 
@@ -627,14 +643,14 @@ contract VAIController is
             repayAmount
         );
 
-        IVAI _vai = IVAI(vai);
-        _vai.burn(payer, burn);
+        IVAI _VAI = IVAI(VAI);
+        _VAI.burn(payer, burn);
 
-        bool success = _vai.transferFrom(payer, receiver, partOfCurrentInterest);
+        bool success = _VAI.transferFrom(payer, receiver, partOfCurrentInterest);
         require(success, "Failed to transfer VAI fee");
 
-        uint256 vaiBalanceBorrower = mintedVAIs[borrower];
-        uint256 accountVAINew = vaiBalanceBorrower - burn - partOfPastInterest;
+        uint256 VAIBalanceBorrower = mintedVAIs[borrower];
+        uint256 accountVAINew = VAIBalanceBorrower - burn - partOfPastInterest;
 
         pastVAIInterest[borrower] -= partOfPastInterest;
 
@@ -729,7 +745,7 @@ contract VAIController is
      * @notice Gives current block number
      * @return Return the current block number
      */
-    function getBlockNumber() internal view returns (uint256) {
+    function getBlockNumber() internal view virtual returns (uint256) {
         return block.number;
     }
 
@@ -743,6 +759,7 @@ contract VAIController is
         if (comptroller.actionPaused(address(this), action)) {
             revert ActionPaused();
         }
+
         mintedVAIs[account] = amount;
     }
 }
