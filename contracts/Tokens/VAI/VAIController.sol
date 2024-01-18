@@ -253,12 +253,27 @@ contract VAIController is
 
     /**
      * @notice Set the VAI token contract address
-     * @param vai_ The new address of the VAI token contract
+     * @param VAI_ The new address of the VAI token contract
+     * @custom:error ZeroAddressNotAllowed is thrown when new VAI address is zero
+     * @custom:event NewVaiToken emits on success
      * @custom:access Only Governance
      */
-    function setVAIToken(address vai_) external onlyOwner {
-        emit NewVaiToken(vai, vai_);
-        vai = vai_;
+    function setVAIToken(address VAI_) external onlyOwner {
+        ensureNonzeroAddress(VAI_);
+
+        emit NewVaiToken(VAI, VAI_);
+        VAI = VAI_;
+    }
+
+    /**
+     * @notice Set the VAI mint rate
+     * @param newVAIMintRate The new VAI mint rate to be set
+     * @custom:event NewVAIMintRate emits on success
+     * @custom:access Only Governance
+     */
+    function setVAIMintRate(uint256 newVAIMintRate) external onlyOwner {
+        emit NewVAIMintRate(VAIMintRate, newVAIMintRate);
+        VAIMintRate = newVAIMintRate;
     }
 
     /**
