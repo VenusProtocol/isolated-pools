@@ -7,6 +7,8 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
+import { IVAIController } from "./Tokens/VAI/IVAIController.sol";
+
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { VToken } from "./VToken.sol";
@@ -94,6 +96,9 @@ contract Comptroller is
 
     /// @notice Emitted when prime token contract address is changed
     event NewPrimeToken(IPrime oldPrimeToken, IPrime newPrimeToken);
+
+    /// @notice Emitted when vaiController contract address is changed
+    event NewVaiController(IVAIController oldVaiController, IVAIController newVaiController);
 
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
@@ -1103,6 +1108,20 @@ contract Comptroller is
         ResilientOracleInterface oldOracle = oracle;
         oracle = newOracle;
         emit NewPriceOracle(oldOracle, newOracle);
+    }
+
+    /**
+     * @notice Sets VAI controller
+     * @dev Only callable by the admin
+     * @param newVaiController Address of the new vaiController
+     * @custom:event Emits NewVaiController on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the new vaiController address is zero
+     */
+    function setVaiController(IVAIController newVaiController) external onlyOwner {
+        ensureNonzeroAddress(address(newVaiController));
+
+        emit NewVaiController(vaiController, newVaiController);
+        vaiController = newVaiController;
     }
 
     /**
