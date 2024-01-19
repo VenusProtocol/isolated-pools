@@ -180,7 +180,6 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const poolId = 0;
   const rewardPerBlock = bigNumber18.mul(1);
   await xvsVaultScenario.add(xvs.address, allocPoint, xvs.address, rewardPerBlock, lockPeriod);
-
   const primeLiquidityProviderScenarioFactory = await ethers.getContractFactory("PrimeLiquidityProviderScenario");
   const _primeLiquidityProviderScenario = await upgrades.deployProxy(
     primeLiquidityProviderScenarioFactory,
@@ -191,7 +190,9 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
       [convertToUnit(1, 18), convertToUnit(1, 18), convertToUnit(1, 18)],
       10,
     ],
-    {},
+    {
+      constructorArgs: [false, 10512000],
+    },
   );
 
   const primeLiquidityProviderScenario = await smock.fake<PrimeLiquidityProviderScenario>(
@@ -213,11 +214,12 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
       2,
       accessControl.address,
       primeLiquidityProviderScenario.address,
+      comptrollerProxy.address,
       fakePriceOracle.address,
       10,
     ],
     {
-      constructorArgs: [weth.address, vETH.address, 10512000, stakingPeriod, minimumXVS, maximumXVSCap],
+      constructorArgs: [weth.address, vETH.address, 10512000, stakingPeriod, minimumXVS, maximumXVSCap, false],
       unsafeAllow: "constructor",
     },
   );
