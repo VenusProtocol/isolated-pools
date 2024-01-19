@@ -11,11 +11,20 @@ contract PrimeScenario is Prime {
         uint256 _blocksPerYear,
         uint256 _stakingPeriod,
         uint256 _minimumStakedXVS,
-        uint256 _maximumXVSCap
-    ) Prime(_wbnb, _vbnb, _blocksPerYear, _stakingPeriod, _minimumStakedXVS, _maximumXVSCap) {}
+        uint256 _maximumXVSCap,
+        bool _isTimeBased
+    ) Prime(_wbnb, _vbnb, _blocksPerYear, _stakingPeriod, _minimumStakedXVS, _maximumXVSCap, _isTimeBased) {}
 
     function setPLP(address plp) external {
         primeLiquidityProvider = plp;
+    }
+
+    function mintForUser(address user) external {
+        tokens[user] = Token(true, true);
+    }
+
+    function burnForUser(address user) external {
+        tokens[user] = Token(false, false);
     }
 
     function calculateScore(uint256 xvs, uint256 capital) external view returns (uint256) {

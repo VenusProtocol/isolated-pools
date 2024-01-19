@@ -108,7 +108,7 @@ contract VAIController is
     event NewVAIMintCap(uint256 indexed oldMintCap, uint256 indexed newMintCap);
 
     /// @notice Emitted when VAI token address is changed by admin
-    event NewVaiToken(address indexed oldVaiToken, address indexed newVaiToken);
+    event NewVAIToken(address indexed oldVaiToken, address indexed newVaiToken);
 
     /// @notice Emitted when VAIMintRate is changed
     event NewVAIMintRate(uint256 indexed oldVAIMintRate, uint256 indexed newVAIMintRate);
@@ -141,7 +141,7 @@ contract VAIController is
         __ReentrancyGuard_init();
 
         VAIMintIndex = INITIAL_VAI_MINT_INDEX;
-        accrualBlockNumber = getBlockNumber();
+        accrualBlockNumber = _getBlockNumber();
         mintCap = type(uint256).max;
     }
 
@@ -197,8 +197,7 @@ contract VAIController is
         }
 
         vars.accountMintVAINew = totalMintedVAI + mintVAIAmount;
-
-        setMintedVAIOf(minter, vars.accountMintVAINew, IComptroller.Action.MINT);
+        mintedVAIs[minter] = vars.accountMintVAINew;
 
         uint256 feeAmount;
         uint256 remainedAmount;
@@ -238,7 +237,7 @@ contract VAIController is
             revert ActionPaused();
         }
 
-        return repayVAIFresh(msg.sender, msg.sender, repayVAIAmount);
+        return _repayVAIFresh(msg.sender, msg.sender, repayVAIAmount);
     }
 
     /**
@@ -273,13 +272,13 @@ contract VAIController is
      * @notice Set the VAI token contract address
      * @param VAI_ The new address of the VAI token contract
      * @custom:error ZeroAddressNotAllowed is thrown when new VAI address is zero
-     * @custom:event NewVaiToken emits on success
+     * @custom:event NewVAIToken emits on success
      * @custom:access Only Governance
      */
     function setVAIToken(address VAI_) external onlyOwner {
         ensureNonzeroAddress(VAI_);
 
-        emit NewVaiToken(VAI, VAI_);
+        emit NewVAIToken(VAI, VAI_);
         VAI = VAI_;
     }
 
@@ -287,9 +286,11 @@ contract VAIController is
      * @notice Set the VAI mint rate
      * @param newVAIMintRate The new VAI mint rate to be set
      * @custom:event NewVAIMintRate emits on success
-     * @custom:access Only Governance
+     * @custom:access Controlled by AccessControlManager
      */
-    function setVAIMintRate(uint256 newVAIMintRate) external onlyOwner {
+    function setVAIMintRate(uint256 newVAIMintRate) external {
+        _checkAccessAllowed("setVAIMintRate(uint256)");
+
         emit NewVAIMintRate(VAIMintRate, newVAIMintRate);
         VAIMintRate = newVAIMintRate;
     }
@@ -330,8 +331,8 @@ contract VAIController is
 
         vTokenCollateral.accrueInterest();
 
-        // liquidateVAIFresh emits borrow-specific logs on errors, so we don't need to
-        return liquidateVAIFresh(msg.sender, borrower, repayAmount, vTokenCollateral);
+        // _liquidateVAIFresh emits borrow-specific logs on errors, so we don't need to
+        return _liquidateVAIFresh(msg.sender, borrower, repayAmount, vTokenCollateral);
     }
 
     /**
@@ -392,6 +393,10 @@ contract VAIController is
      * @param newTreasuryGuardian new TreasuryGuardian address
      * @param newTreasuryAddress new Treasury address
      * @param newTreasuryPercent new Treasury percentage
+     * @custom:error ZeroAddressNotAllowed is thrown if newTreasuryGuardian is zero address
+     * @custom:error ZeroAddressNotAllowed is thrown if newTreasuryAddress is zero address
+     * @custom:error CallerNotAuthorized is thrown if caller is not owner or treasury guardian
+     * @custom:error TreasuryPercentOverflow is thrown if newTreasuryPercent exceeds 1e18
      * @custom:event NewTreasuryGuardian emits on success
      * @custom:event NewTreasuryAddress emits on success
      * @custom:event NewTreasuryPercent emits on success
@@ -406,6 +411,9 @@ contract VAIController is
         if (!(msg.sender == owner() || msg.sender == treasuryGuardian)) {
             revert CallerNotAuthorized();
         }
+
+        ensureNonzeroAddress(newTreasuryGuardian);
+        ensureNonzeroAddress(newTreasuryAddress);
 
         if (newTreasuryPercent > 1e18) {
             revert TreasuryPercentOverflow();
@@ -424,11 +432,11 @@ contract VAIController is
      * @notice Accrues Vai Interest
      */
     function accrueVAIInterest() public {
-        uint256 delta = getVAIRepayRatePerBlock() * (getBlockNumber() - accrualBlockNumber);
+        uint256 delta = getVAIRepayRatePerBlock() * (_getBlockNumber() - accrualBlockNumber);
         delta += VAIMintIndex;
 
         VAIMintIndex = delta;
-        accrualBlockNumber = getBlockNumber();
+        accrualBlockNumber = _getBlockNumber();
     }
 
     /**
@@ -637,7 +645,7 @@ contract VAIController is
      * @return uint256 The actual repayment amount
      * @custom:event RepayVAI emits on success
      */
-    function repayVAIFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
+    function _repayVAIFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
         (uint256 burn, uint256 partOfCurrentInterest, uint256 partOfPastInterest) = getVAICalculateRepayAmount(
             borrower,
             repayAmount
@@ -654,7 +662,7 @@ contract VAIController is
 
         pastVAIInterest[borrower] -= partOfPastInterest;
 
-        setMintedVAIOf(borrower, accountVAINew, IComptroller.Action.REPAY);
+        mintedVAIs[borrower] = accountVAINew;
 
         emit RepayVAI(payer, borrower, burn);
         return burn;
@@ -675,7 +683,7 @@ contract VAIController is
      * @custom:error LiquidateCloseAmountIsUintMax is thrown when the liquidation amount is the maximum value of uint256
      * @custom:event Emits on success
      */
-    function liquidateVAIFresh(
+    function _liquidateVAIFresh(
         address liquidator,
         address borrower,
         uint256 repayAmount,
@@ -688,7 +696,7 @@ contract VAIController is
         comptroller.preLiquidateHook(address(this), address(vTokenCollateral), borrower, repayAmount, false);
 
         /* Verify vTokenCollateral market's block number equals current block number */
-        if (vTokenCollateral.accrualBlockNumber() != getBlockNumber()) {
+        if (vTokenCollateral.accrualBlockNumber() != _getBlockNumber()) {
             revert LiquidateCollateralFreshnessCheck();
         }
 
@@ -707,7 +715,7 @@ contract VAIController is
             revert LiquidateCloseAmountIsUintMax();
         }
 
-        uint256 actualRepayAmount = repayVAIFresh(liquidator, borrower, repayAmount);
+        uint256 actualRepayAmount = _repayVAIFresh(liquidator, borrower, repayAmount);
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -745,21 +753,7 @@ contract VAIController is
      * @notice Gives current block number
      * @return Return the current block number
      */
-    function getBlockNumber() internal view virtual returns (uint256) {
+    function _getBlockNumber() internal view virtual returns (uint256) {
         return block.number;
-    }
-
-    /**
-     * @notice Set the minted VAI amount of the `owner`
-     * @param account The address of the account to set
-     * @param amount The amount of VAI to set to the account
-     * @param action Action to check
-     */
-    function setMintedVAIOf(address account, uint256 amount, IComptroller.Action action) private {
-        if (comptroller.actionPaused(address(this), action)) {
-            revert ActionPaused();
-        }
-
-        mintedVAIs[account] = amount;
     }
 }
