@@ -665,8 +665,10 @@ contract Comptroller is
         } else {
             // If the seizer is not the Comptroller, check that the seizer is a
             // listed market, and that the markets' comptrollers match
-            if (!markets[seizerContract].isListed) {
-                revert MarketNotListed(seizerContract);
+            if (seizerContract != address(VAIController)) {
+                if (!markets[seizerContract].isListed) {
+                    revert MarketNotListed(seizerContract);
+                }
             }
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
                 revert ComptrollerMismatch();

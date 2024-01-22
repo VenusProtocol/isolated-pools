@@ -322,7 +322,45 @@ describe("VAIController", async () => {
     });
   });
 
-  // TODO: Have to write liquidation tests
+  describe("liquidateVAI", async () => {
+    beforeEach("user1 borrow", async () => {
+      await VAIController.connect(user1).mintVAI(convertToUnit(100, 18));
+      await vai.allocateTo(user2.address, convertToUnit(100, 18));
+      expect(await VAIController.mintedVAIs(user1.address)).to.eq(convertToUnit(100, 18));
+      expect(await vai.balanceOf(user1.address)).to.eq(convertToUnit(100, 18));
+      expect(await vai.balanceOf(user2.address)).to.eq(convertToUnit(100, 18));
+    });
+
+    it("liquidationIncentiveMantissa", async () => {
+      expect(await comptroller.liquidationIncentiveMantissa()).to.eq(convertToUnit(1, 18));
+    });
+
+    it("success for zero rate 0.2 vusdt collateralFactor", async () => {
+      await vai.connect(user2).approve(VAIController.address, ethers.constants.MaxUint256);
+      await comptroller.setCollateralFactor(vusdt.address, convertToUnit(1, 17), convertToUnit(1, 17));
+      await VAIController.connect(user2).liquidateVAI(user1.address, convertToUnit(60, 18), vusdt.address);
+      expect(await vai.balanceOf(user2.address)).to.eq(convertToUnit(40, 18));
+      expect(await vusdt.balanceOf(user2.address)).to.eq(convertToUnit(57, 18));
+    });
+
+    it("success for 0.2 rate 0.3 vusdt collateralFactor", async () => {
+      await vai.connect(user2).approve(VAIController.address, ethers.constants.MaxUint256);
+
+      const TEMP_BLOCKS_PER_YEAR = 100000000;
+      await VAIController.setBlocksPerYear(TEMP_BLOCKS_PER_YEAR);
+
+      await VAIController.setBaseRate(convertToUnit(2, 17));
+      await VAIController.harnessSetBlockNumber(BigNumber.from(TEMP_BLOCKS_PER_YEAR));
+      await vusdt.harnessSetBlockNumber(BigNumber.from(TEMP_BLOCKS_PER_YEAR));
+
+      await comptroller.setCollateralFactor(vusdt.address, convertToUnit(3, 17), convertToUnit(3, 17));
+      await VAIController.connect(user2).liquidateVAI(user1.address, convertToUnit(60, 18), vusdt.address);
+      expect(await vai.balanceOf(user2.address)).to.eq(convertToUnit(40, 18));
+      expect(await vusdt.balanceOf(user2.address)).to.eq(convertToUnit(47.5, 18));
+      expect(await vai.balanceOf(treasuryAddress.address)).to.eq(convertToUnit(10, 18));
+      expect(await VAIController.mintedVAIs(user1.address)).to.eq(convertToUnit(50, 18));
+    });
+  });
 
   describe("getVAIRepayRate", async () => {
     it("success for zero baseRate", async () => {
