@@ -98,6 +98,9 @@ contract Comptroller is
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
+    /// @notice Emitted when a market is unlisted
+    event MarketUnlisted(VToken vToken);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -197,6 +200,46 @@ contract Comptroller is
         }
 
         return results;
+    }
+
+    /**
+     * @notice Unlist an market by setting isListed to false
+     * @dev Pauses all actions, sets borrow/supply caps to 0 and sets collateral factor to 0.
+     * @param market The address of the market (token) to unlist
+     * @return uint256 Always NO_ERROR for compatibility with Venus core tooling
+     */
+    function unlistMarket(address market) external returns (uint256) {
+        _checkAccessAllowed("unlistMarket(address)");
+
+        Market storage _market = markets[market];
+
+        if (!_market.isListed) {
+            revert MarketNotListed(market);
+        }
+
+        _setActionPaused(market, Action.BORROW, true);
+        _setActionPaused(market, Action.MINT, true);
+        _setActionPaused(market, Action.REDEEM, true);
+        _setActionPaused(market, Action.REPAY, true);
+        _setActionPaused(market, Action.ENTER_MARKET, true);
+        _setActionPaused(market, Action.LIQUIDATE, true);
+
+        borrowCaps[market] = 0;
+        supplyCaps[market] = 0;
+
+        VToken vToken = VToken(market);
+
+        emit NewSupplyCap(vToken, 0);
+        emit NewBorrowCap(vToken, 0);
+
+        emit NewCollateralFactor(vToken, _market.collateralFactorMantissa, 0);
+        _market.collateralFactorMantissa = 0;
+
+        _market.isListed = false;
+
+        emit MarketUnlisted(vToken);
+
+        return NO_ERROR;
     }
 
     /**
