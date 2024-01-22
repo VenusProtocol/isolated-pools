@@ -762,7 +762,7 @@ contract Comptroller is
      * @custom:access Not restricted
      */
     function healAccount(address user) external {
-        VToken[] memory userAssets = accountAssets[user];
+        VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
 
         address liquidator = msg.sender;
@@ -873,7 +873,7 @@ contract Comptroller is
             );
         }
 
-        VToken[] memory borrowMarkets = accountAssets[borrower];
+        VToken[] memory borrowMarkets = getAssetsIn(borrow);
         uint256 marketsCount = borrowMarkets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
@@ -1258,17 +1258,6 @@ contract Comptroller is
     /*** Assets You Are In ***/
 
     /**
-     * @notice Returns the assets an account has entered
-     * @param account The address of the account to pull assets for
-     * @return A list with the assets the account has entered
-     */
-    function getAssetsIn(address account) external view returns (VToken[] memory) {
-        VToken[] memory assetsIn = accountAssets[account];
-
-        return assetsIn;
-    }
-
-    /**
      * @notice Returns whether the given account is entered in a given market
      * @param account The address of the account to check
      * @param vToken The vToken to check
@@ -1359,7 +1348,7 @@ contract Comptroller is
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
-        VToken[] memory vTokens = accountAssets[account];
+        VToken[] memory vTokens = getAssetsIn(account);
         uint256 vTokensCount = vTokens.length;
 
         ResilientOracleInterface oracle_ = oracle;
@@ -1377,6 +1366,33 @@ contract Comptroller is
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
+    }
+
+    /**
+     * @notice Returns the assets an account has entered
+     * @param account The address of the account to pull assets for
+     * @return A list with the assets the account has entered
+     */
+    function getAssetsIn(address account) public view returns (VToken[] memory) {
+        uint256 len = 0;
+        for (uint256 i = 0; i < accountAssets[account].length; i++) {
+            Market storage market = markets[address(accountAssets[account][i])];
+            if (market.isListed) {
+                len++;
+            }
+        }
+
+        VToken[] memory assetsIn = new VToken[](len);
+        uint256 index = 0;
+        for (uint256 i = 0; i < accountAssets[account].length; i++) {
+            Market storage market = markets[address(accountAssets[account][i])];
+            if (market.isListed) {
+                assetsIn[index] = accountAssets[account][i];
+                index++;
+            }
+        }
+
+        return assetsIn;
     }
 
     /**
@@ -1508,7 +1524,7 @@ contract Comptroller is
         function(VToken) internal view returns (Exp memory) weight
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         // For each asset the account is in
-        VToken[] memory assets = accountAssets[account];
+        VToken[] memory assets = getAssetsIn(account);
         uint256 assetsCount = assets.length;
 
         for (uint256 i; i < assetsCount; ++i) {
