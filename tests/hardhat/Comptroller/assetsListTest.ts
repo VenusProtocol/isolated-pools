@@ -135,6 +135,32 @@ describe("assetListTest", () => {
     return receipt;
   };
 
+  async function unlistAndCheckMarket(
+    unlistToken: FakeContract<VToken>,
+    expectedTokens: FakeContract<VToken>[],
+    membershipTokens: FakeContract<VToken>[] = [],
+    expectedError: Error | null = null,
+  ) {
+    const reply = await comptroller.connect(customer).callStatic.unlistMarket(unlistToken.address);
+    const receipt = await comptroller.connect(customer).unlistMarket(unlistToken.address);
+    const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
+
+    const expectedError_ = expectedError || Error.NO_ERROR;
+    expect(reply).to.equal(expectedError_);
+
+    await expect(receipt).to.emit(comptroller, "MarketUnlisted");
+    await expect(receipt).to.emit(comptroller, "NewBorrowCap");
+    await expect(receipt).to.emit(comptroller, "NewSupplyCap");
+    await expect(receipt).to.emit(comptroller, "ActionPausedMarket");
+    await expect(receipt).to.emit(comptroller, "NewCollateralFactor");
+
+    expect(assetsIn).to.deep.equal(expectedTokens.map(t => t.address));
+
+    await checkMarkets(membershipTokens);
+
+    return receipt;
+  }
+
   async function exitAndCheckMarkets(
     exitToken: FakeContract<VToken>,
     expectedTokens: FakeContract<VToken>[],
@@ -276,6 +302,22 @@ describe("assetListTest", () => {
       await comptroller.connect(BAT.wallet).preBorrowHook(BAT.address, await customer.getAddress(), 1);
       const assetsIn = await comptroller.getAssetsIn(await customer.getAddress());
       expect(assetsIn).to.deep.equal([BAT.address]);
+    });
+  });
+
+  describe("unlistMarkets", () => {
+    it("properly emits events and unlist market", async () => {
+      await enterAndCheckMarkets([OMG, BAT, ZRX], [OMG, BAT, ZRX]);
+      await unlistAndCheckMarket(OMG, [BAT, ZRX], [OMG, BAT, ZRX], Error.NO_ERROR);
+    });
+
+    it("reverts when unlisting not a listed market", async () => {
+      const vToken = await smock.fake<VToken>("VToken");
+      await enterAndCheckMarkets([BAT, ZRX], [BAT, ZRX]);
+      await expect(unlistAndCheckMarket(vToken, [BAT, ZRX], [BAT, ZRX])).to.be.revertedWithCustomError(
+        comptroller,
+        "MarketNotListed",
+      );
     });
   });
 });
