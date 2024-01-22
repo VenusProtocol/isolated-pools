@@ -873,7 +873,7 @@ contract Comptroller is
             );
         }
 
-        VToken[] memory borrowMarkets = getAssetsIn(borrow);
+        VToken[] memory borrowMarkets = getAssetsIn(borrower);
         uint256 marketsCount = borrowMarkets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
