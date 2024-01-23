@@ -1,3 +1,11 @@
+## [2.4.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.5...v2.4.0-dev.6) (2024-01-23)
+
+
+### Features
+
+* update deps to the stable versions ([5df4dac](https://github.com/VenusProtocol/isolated-pools/commit/5df4dac72429bbff083aab6df4d04967dc638f1b))
+* update deps to the stable versions ([bc2bcab](https://github.com/VenusProtocol/isolated-pools/commit/bc2bcab668fcd4e859ce420ea5530a736a7b3b3c))
+
 ## [2.4.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.4...v2.4.0-dev.5) (2024-01-23)
 
 
