@@ -18,7 +18,7 @@
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps": "0x87C427b00C89E82064B32Ca63c9E983fedD3e53e",
     "PoolLens": "0x5A44D6dc0330A92674F9FAdE1e4eB40b3D2aDf04",
     "PoolRegistry": "0x61CAff113CCaf05FFc6540302c37adcf077C5179",
-    "PoolRegistry_Implementation": "0x9D602A9bc347A40B67ef40b78CB55130d4988511",
+    "PoolRegistry_Implementation": "0x08A2577611Ae63d1ba40188035eD6Ad21F8502A9",
     "PoolRegistry_Proxy": "0x61CAff113CCaf05FFc6540302c37adcf077C5179",
     "VTokenBeacon": "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a",
     "VTokenImpl": "0x48Df4806e6734B5881f59AE7237988D3dA50891e",

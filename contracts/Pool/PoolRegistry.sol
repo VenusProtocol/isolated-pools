@@ -196,8 +196,8 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         _supportedPools[underlyingAddress].push(comptrollerAddress);
 
         uint256 amountToSupply = _transferIn(underlying, msg.sender, input.initialSupply);
-        underlying.approve(vTokenAddress, 0);
-        underlying.approve(vTokenAddress, amountToSupply);
+        underlying.forceApprove(vTokenAddress, 0);
+        underlying.forceApprove(vTokenAddress, amountToSupply);
         vToken.mintBehalf(input.vTokenReceiver, amountToSupply);
 
         emit MarketAdded(comptrollerAddress, vTokenAddress);

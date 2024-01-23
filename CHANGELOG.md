@@ -1,3 +1,13 @@
+## [2.4.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.3...v2.4.0-dev.4) (2024-01-23)
+
+
+### Features
+
+* add PoolRegistry fix, deployment script and deployment fixing the approve for non-compliant tokens ([4c0ad9b](https://github.com/VenusProtocol/isolated-pools/commit/4c0ad9bdc508d7023d8069b1576f7e876ded4770))
+* updating deployment files ([8a7c9e1](https://github.com/VenusProtocol/isolated-pools/commit/8a7c9e18b3b875428d061e2276ff626cd82a26e3))
+
+## [2.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.2...v2.4.0-dev.3) (2024-01-09)
+
 ## [2.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.1...v2.4.0-dev.2) (2024-01-03)
 
 

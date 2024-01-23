@@ -86,38 +86,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await tx.wait(1);
   }
 
-  await deploy("ProtocolShareReserve", {
-    from: deployer,
-    contract: "ProtocolShareReserve",
-    proxy: {
-      owner: owner,
-      proxyContract: "OpenZeppelinTransparentProxy",
-      execute: {
-        methodName: "initialize",
-        args: [accessControlManagerAddress, 10],
-      },
-      upgradeIndex: 0,
-    },
-    autoMine: true,
-    log: true,
-    args: [
-      corePoolComptrollerAddress,
-      preconfiguredAddresses.VBNB_CorePool || "0x0000000000000000000000000000000000000001",
-      preconfiguredAddresses.WBNB || "0x0000000000000000000000000000000000000002",
-    ],
-  });
-
-  for (const contractName of ["ProtocolShareReserve", "RiskFund"]) {
-    const contract = await ethers.getContract(contractName);
-    if ((await contract.poolRegistry()) !== poolRegistry.address) {
-      console.log(`Setting PoolRegistry address in ${contractName} contract`);
-      const tx = await contract.setPoolRegistry(poolRegistry.address);
-      await tx.wait();
-    }
+  const contract = await ethers.getContract("RiskFund");
+  if ((await contract.poolRegistry()) !== poolRegistry.address) {
+    console.log(`Setting PoolRegistry address in RiskFund contract`);
+    const tx = await contract.setPoolRegistry(poolRegistry.address);
+    await tx.wait();
   }
 
   const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-  for (const contractName of ["RiskFund", "Shortfall", "ProtocolShareReserve"]) {
+  for (const contractName of ["RiskFund", "Shortfall"]) {
     const contract = await ethers.getContract(contractName);
     if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
       console.log(`Transferring ownership of ${contractName} to ${targetOwner}`);
