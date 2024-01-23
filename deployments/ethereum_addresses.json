@@ -1,5 +1,7 @@
 {
   "name": "ethereum",
   "chainId": "1",
-  "addresses": {}
+  "addresses": {
+    "PoolRegistry_Implementation": "0x08A2577611Ae63d1ba40188035eD6Ad21F8502A9"
+  }
 }
