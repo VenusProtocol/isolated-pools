@@ -1,3 +1,15 @@
+## [2.4.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.4...v2.4.0-dev.5) (2024-01-23)
+
+
+### Features
+
+* set Curve as the receiver of initial VTokens in the Curve markets ([f1e6835](https://github.com/VenusProtocol/isolated-pools/commit/f1e6835b65886b4fd28f773d225857d517845784))
+* updating deployment files ([0363847](https://github.com/VenusProtocol/isolated-pools/commit/036384727a1e34bd62544fa909769c945e3810bb))
+* updating deployment files ([4a4e6de](https://github.com/VenusProtocol/isolated-pools/commit/4a4e6de7992e7374895519ed9bc9f477c96ec36d))
+* updating deployment files ([9a74882](https://github.com/VenusProtocol/isolated-pools/commit/9a748826ccbe7107f96cb48df32c06153dfa6e4d))
+* updating deployment files ([99c4e0c](https://github.com/VenusProtocol/isolated-pools/commit/99c4e0cca4c42c6991acca788edb8f2c3b0b8898))
+* updating deployment files ([cf5fba8](https://github.com/VenusProtocol/isolated-pools/commit/cf5fba8a493575f186f06fb6923258f5d9f77bf1))
+
 ## [2.4.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0-dev.3...v2.4.0-dev.4) (2024-01-23)
 
 
