@@ -18,7 +18,7 @@ const targetOwners: Config = {
   ethereum: ETHEREUM_MULTISIG,
 };
 
-const contracts = ["RiskFund", "Shortfall", "ProtocolShareReserve"];
+const contracts = ["RiskFund", "Shortfall"];
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await transfer2StepOwnerships(contracts, hre.network.name);
