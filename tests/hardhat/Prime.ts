@@ -192,6 +192,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     ],
     {
       constructorArgs: [false, 10512000],
+      unsafeAllow: "constructor",
     },
   );
 

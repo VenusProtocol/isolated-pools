@@ -12,8 +12,8 @@ contract PrimeScenario is Prime {
         uint256 _stakingPeriod,
         uint256 _minimumStakedXVS,
         uint256 _maximumXVSCap,
-        bool _isTimeBased
-    ) Prime(_wbnb, _vbnb, _blocksPerYear, _stakingPeriod, _minimumStakedXVS, _maximumXVSCap, _isTimeBased) {}
+        bool _timeBased
+    ) Prime(_wbnb, _vbnb, _blocksPerYear, _stakingPeriod, _minimumStakedXVS, _maximumXVSCap, _timeBased) {}
 
     function setPLP(address plp) external {
         primeLiquidityProvider = plp;
