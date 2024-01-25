@@ -1,3 +1,10 @@
+## [2.5.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0...v2.5.0-dev.1) (2024-01-25)
+
+
+### Features
+
+* usr the version with Token converters ([8354cce](https://github.com/VenusProtocol/isolated-pools/commit/8354cce398da2d0f33aec0cfbfa00e0cc9386eeb))
+
 ## [2.4.0](https://github.com/VenusProtocol/isolated-pools/compare/v2.3.0...v2.4.0) (2024-01-23)
 
 
