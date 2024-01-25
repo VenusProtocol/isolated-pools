@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0xA693FbB4C5F479142e4Fb253B06FC113E5EB1536",
+      "address": "0x3cE617FCeb5e9Ed622F73b483aC7c94053795197",
       "abi": [
         {
           "inputs": [
@@ -483,6 +483,19 @@
             }
           ],
           "name": "MarketSupported",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "contract VToken",
+              "name": "vToken",
+              "type": "address"
+            }
+          ],
+          "name": "MarketUnlisted",
           "type": "event"
         },
         {
@@ -2051,6 +2064,25 @@
           ],
           "name": "transferVerify",
           "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "market",
+              "type": "address"
+            }
+          ],
+          "name": "unlistMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
           "stateMutability": "nonpayable",
           "type": "function"
         },

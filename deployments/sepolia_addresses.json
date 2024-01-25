@@ -3,7 +3,7 @@
   "chainId": "11155111",
   "addresses": {
     "ComptrollerBeacon": "0x6cE54143a88CC22500D49D744fb6535D66a8294F",
-    "ComptrollerImpl": "0x0bA3dBDb53a367e9132587c7Fc985153A2E25f08",
+    "ComptrollerImpl": "0x3cE617FCeb5e9Ed622F73b483aC7c94053795197",
     "Comptroller_Core": "0x7Aa39ab4BcA897F403425C9C6FDbd0f882Be0D70",
     "Comptroller_Curve": "0xD298182D3ACb43e98e32757FF09C91F203e9E67E",
     "Comptroller_Stablecoins": "0x18eF8D2bee415b731C25662568dc1035001cEB2c",
