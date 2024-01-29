@@ -99,7 +99,7 @@ contract Comptroller is
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
     /// @notice Emitted when a market is unlisted
-    event MarketUnlisted(VToken vToken);
+    event MarketUnlisted(VToken indexed vToken);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
