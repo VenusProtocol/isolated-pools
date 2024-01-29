@@ -595,7 +595,7 @@ contract Comptroller is
         }
 
         uint256 borrowBalance;
-        if (address(vTokenBorrowed) != address(VAIController)) {
+        if (vTokenBorrowed != address(VAIController)) {
             borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
         } else {
             borrowBalance = VAIController.getVAIRepayAmount(borrower);
@@ -1280,7 +1280,7 @@ contract Comptroller is
     ) external view override returns (uint256 error, uint256 tokensToSeize) {
         /* Read oracle prices for borrowed and collateral markets */
         uint256 priceBorrowedMantissa = 1e18; // Note: this is VAI
-        if (address(vTokenBorrowed) != address(VAIController)) {
+        if (vTokenBorrowed != address(VAIController)) {
             priceBorrowedMantissa = _safeGetUnderlyingPrice(VToken(vTokenBorrowed));
         }
         uint256 priceCollateralMantissa = _safeGetUnderlyingPrice(VToken(vTokenCollateral));

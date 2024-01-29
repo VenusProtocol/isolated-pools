@@ -28,13 +28,6 @@ contract VAIController is
     TokenErrorReporter,
     ExponentialNoError
 {
-    /*** Main Actions ***/
-    struct MintLocalVars {
-        uint256 mintAmount;
-        uint256 accountMintVAINew;
-        uint256 accountMintableVAI;
-    }
-
     /**
      * @dev Local vars for avoiding stack-depth limits in calculating account total supply balance.
      *  Note that `vTokenBalance` is the number of vTokens the account owns in the market,
@@ -157,7 +150,6 @@ contract VAIController is
      * @custom:error MintCapReached is thrown when mint limit is reached
      * @custom:error InsufficientMintableVAIBalance is thrown when VAI mint amount is more than account mintable VAI amount
      */
-    // solhint-disable-next-line code-complexity
     function mintVAI(uint256 mintVAIAmount) external nonReentrant {
         ensureNonzeroAddress(address(comptroller));
         ensureNonzeroValue(mintVAIAmount);
@@ -167,21 +159,19 @@ contract VAIController is
 
         accrueVAIInterest();
 
-        MintLocalVars memory vars;
-
         address minter = msg.sender;
         IVAI _VAI = IVAI(VAI);
         uint256 VAITotalSupply = _VAI.totalSupply();
         uint256 VAINewTotalSupply = VAITotalSupply + mintVAIAmount;
 
-        if (VAINewTotalSupply <= mintCap) {
+        if (VAINewTotalSupply > mintCap) {
             revert MintCapReached();
         }
 
-        vars.accountMintableVAI = getMintableVAI(minter);
+        uint256 accountMintableVAI = getMintableVAI(minter);
 
         // check that user have sufficient mintableVAI balance
-        if (mintVAIAmount > vars.accountMintableVAI) {
+        if (mintVAIAmount > accountMintableVAI) {
             revert InsufficientMintableVAIBalance();
         }
 
@@ -196,20 +186,19 @@ contract VAIController is
             totalMintedVAI = repayAmount;
         }
 
-        vars.accountMintVAINew = totalMintedVAI + mintVAIAmount;
-        mintedVAIs[minter] = vars.accountMintVAINew;
+        mintedVAIs[minter] = totalMintedVAI + mintVAIAmount;
 
         uint256 feeAmount;
         uint256 remainedAmount;
-        vars.mintAmount = mintVAIAmount;
+        uint256 mintAmount = mintVAIAmount;
         if (treasuryPercent != 0) {
-            feeAmount = mul_(vars.mintAmount, treasuryPercent) / 1e18;
-            remainedAmount = vars.mintAmount - feeAmount;
+            feeAmount = mul_(mintAmount, treasuryPercent) / 1e18;
+            remainedAmount = mintAmount - feeAmount;
 
             IVAI(_VAI).mint(treasuryAddress, feeAmount);
             emit MintFee(minter, feeAmount);
         } else {
-            remainedAmount = vars.mintAmount;
+            remainedAmount = mintAmount;
         }
 
         IVAI(_VAI).mint(minter, remainedAmount);
@@ -445,7 +434,6 @@ contract VAIController is
      * @custom:error ZeroValueNotAllowed is thrown if oraclePrice is 0
      * @return (uint256) Returns the mintable VAI amount
      */
-    // solhint-disable-next-line code-complexity
     function getMintableVAI(address minter) public view returns (uint256) {
         if (mintEnabledOnlyForPrimeHolder && !IPrime(prime).isUserPrimeHolder(minter)) {
             return 0;
