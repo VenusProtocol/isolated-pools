@@ -4,5 +4,5 @@ import { PrimeLiquidityProvider } from "@venusprotocol/venus-protocol/contracts/
 
 contract PrimeLiquidityProviderScenario is PrimeLiquidityProvider {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() PrimeLiquidityProvider() {}
+    constructor(bool _timeBased, uint256 _blocksPerYear) PrimeLiquidityProvider(_timeBased, _blocksPerYear) {}
 }
