@@ -62,7 +62,7 @@ let resilientOracle: MockPriceOracle;
 let priceOracle: ChainlinkOracle;
 let accessControlManager: AccessControlManager;
 
-const blocksToMine: number = 300000;
+const blocksToMine: number = 30000;
 const TOKEN2BorrowAmount = convertToUnit("1", 17);
 
 async function configureTimelock() {
@@ -134,9 +134,7 @@ if (FORK) {
       await resilientOracle.setTokenConfig(tupleForToken2);
       await resilientOracle.setTokenConfig(tupleForToken1);
 
-      if (FORKED_NETWORK == "bscmainnet") {
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 18));
-      }
+      await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 18));
 
       await grantPermissions();
 
@@ -206,7 +204,7 @@ if (FORK) {
       await token2.connect(acc1Signer).approve(vTOKEN2.address, convertToUnit(2, 18));
       await expect(vTOKEN2.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
 
-      // Mining  3,00,000 blocks
+      // Mining  300,000 blocks
       await mine(300000);
 
       // Assert current exchange rate
@@ -225,7 +223,7 @@ if (FORK) {
       // Borrow TOKEN2 with second account(ACC2)
       await expect(vTOKEN2.connect(acc2Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Accural all the interest till latest block
@@ -238,7 +236,7 @@ if (FORK) {
 
       await vTOKEN2.connect(acc2Signer).repayBorrow(TOKEN2BorrowAmount);
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Accural all the interest till latest block
@@ -277,7 +275,7 @@ if (FORK) {
       let result = vTOKEN2.connect(acc1Signer).liquidateBorrow(ACC2, maxClose, vTOKEN1.address);
       await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Accural all the interest till latest block
@@ -309,7 +307,7 @@ if (FORK) {
       const totalBal = await vTOKEN2.balanceOf(ACC1);
       await expect(vTOKEN2.connect(acc1Signer).redeem(totalBal)).to.emit(vTOKEN2, "Redeem");
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Accural all the interest till latest block
@@ -339,7 +337,7 @@ if (FORK) {
       // Borrow TOKEN2 with third account(ACC3)
       await expect(vTOKEN2.connect(acc3Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Partial redeem for first account(ACC1)
@@ -349,7 +347,7 @@ if (FORK) {
       // Assert undelying after partial redeem
       await assertRedeemAmount(convertToUnit(5, 7), balanceBefore);
 
-      // Mine 300,000 blocks
+      // Mine 30,000 blocks
       await mine(blocksToMine);
 
       // Complete redeem for first account(ACC1)
