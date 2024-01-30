@@ -1,11 +1,14 @@
 import GovernanceBscMainnet from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import GovernanceBscTestnet from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import GovernanceEthMainnet from "@venusprotocol/governance-contracts/deployments/ethereum.json";
+import GovernanceSepTestnet from "@venusprotocol/governance-contracts/deployments/sepolia.json";
 import OracleBscMainnet from "@venusprotocol/oracle/deployments/bscmainnet.json";
 import OracleBscTestnet from "@venusprotocol/oracle/deployments/bsctestnet.json";
 import OracleEthMainnet from "@venusprotocol/oracle/deployments/ethereum.json";
+import OracleSepTestnet from "@venusprotocol/oracle/deployments/sepolia.json";
 import PsrBscMainnet from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
 import PsrBscTestnet from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
+import PsrSepTestnet from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
 import CoreBscMainnet from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import CoreBscTestnet from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import CoreEthMainnet from "@venusprotocol/venus-protocol/deployments/ethereum.json";
@@ -13,30 +16,31 @@ import CoreEthMainnet from "@venusprotocol/venus-protocol/deployments/ethereum.j
 import { contracts as MainnetContracts } from "../../../deployments/bscmainnet.json";
 import { contracts as TestnetContracts } from "../../../deployments/bsctestnet.json";
 import { contracts as EthereumContracts } from "../../../deployments/ethereum.json";
+import { contracts as SepoliaContracts } from "../../../deployments/sepolia.json";
 
 export const contractAddreseses = {
   sepolia: {
-    ADMIN: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
-    ACM: "0x92587A8799CaC6C0A5184218c050B3E19790ac0B",
-    TOKEN1: "0x16ffae6A9b4DcDb4a626Ee35721Aa748F0902D9C", // DAI
-    TOKEN2: "0xA33524BeFb504152EFBfB4433501D42BCA90e704", // HAY
-    VTOKEN1: "0x7fD0b5fCb967D92BcD8BD5d049919D8D76ADC6f7",
-    VTOKEN2: "0x90d2c73D861f53d62358b34f9617FE3f3dC3Bea3",
-    COMPTROLLER: "0x289A29573a41D3A181F4Ca238f6967FbDF792D10",
-    PSR: "0xcF567bb527ed46969a486DD67a6ba682afA6dcd5",
-    SHORTFALL: "0x43745820F84caDCf281C5272CA5bf4f1138E8a42",
-    RISKFUND: "0x908607f2649fc5176C502bf4BFf49CD41d4e58cc",
-    REWARD_DISTRIBUTOR1: "0x4330074c070AaE192b6fffcB610A6B891B8Ee3Da",
-    POOL_REGISTRY: "0x71Ba41E3Ec4e68a02A3F58Bd7829f8B38688439d",
-    CHAINLINK_ORACLE: "0xEdaB2b65fD3413d89b6D2a3AeB61E0c9eECA6A76",
-    RESILIENT_ORACLE: "0xd44B364a28386a2aa4Df1C54EA32deF3B2b98EeC",
+    ADMIN: "0x94fa6078b6b8a26F0B6EDFFBE6501B22A10470fB",
+    ACM: GovernanceSepTestnet.contracts.AccessControlManager.address,
+    TOKEN1: SepoliaContracts.MockcrvUSD.address, // crvUSD
+    TOKEN2: SepoliaContracts.MockCRV.address, // CRV
+    VTOKEN1: SepoliaContracts.VToken_vcrvUSD_Core.address,
+    VTOKEN2: SepoliaContracts.VToken_vCRV_Core.address,
+    COMPTROLLER: SepoliaContracts.Comptroller_Core.address,
+    PSR: PsrSepTestnet.contracts.ProtocolShareReserve.address,
+    SHORTFALL: "",
+    RISKFUND: "",
+    REWARD_DISTRIBUTOR1: SepoliaContracts.RewardsDistributor_Core_3.address,
+    POOL_REGISTRY: SepoliaContracts.PoolRegistry.address,
+    CHAINLINK_ORACLE: OracleSepTestnet.contracts.ChainlinkOracle.address,
+    RESILIENT_ORACLE: OracleSepTestnet.contracts.ResilientOracle.address,
     SWAP_ROUTER_CORE_POOL: "0x83edf1deE1B730b7e8e13C00ba76027D63a51ac0", // picked from bscmainnet
     TOKEN1_HOLDER: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
     TOKEN2_HOLDER: "0x02EB950C215D12d723b44a18CfF098C6E166C531",
     ACC1: "0x3Ac99C7853b58f4AA38b309D372562a5A88bB9C1",
     ACC2: "0xA4a04C2D661bB514bB8B478CaCB61145894563ef",
     ACC3: "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3",
-    BLOCK_NUMBER: 4794360,
+    BLOCK_NUMBER: 5184120,
   },
   ethereum: {
     ADMIN: "0x285960C5B22fD66A736C7136967A3eB15e93CC67",

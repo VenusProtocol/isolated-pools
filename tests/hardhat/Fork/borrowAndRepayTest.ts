@@ -33,7 +33,6 @@ console.log("fork tests are running on network: ", FORKED_NETWORK);
 const {
   ACC1,
   ACC2,
-  ACC3,
   ADMIN,
   ACM,
   TOKEN1,
@@ -55,7 +54,6 @@ let vTOKEN2: VToken;
 let comptroller: Comptroller;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
-let acc3Signer: Signer;
 let token2Holder: Signer;
 let token1Holder: Signer;
 let impersonatedTimelock: Signer;
@@ -98,7 +96,6 @@ if (FORK) {
       await configureTimelock();
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
-      acc3Signer = await initMainnetUser(ACC3, ethers.utils.parseUnits("2"));
       // it will be the depositor
       token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
@@ -141,7 +138,6 @@ if (FORK) {
 
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);
       await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
-      await comptroller.connect(acc3Signer).enterMarkets([vTOKEN2.address]);
 
       await comptroller.setMarketSupplyCaps(
         [vTOKEN2.address, vTOKEN1.address],
