@@ -6,8 +6,8 @@ contract VAIControllerHarness is VAIController {
     uint256 public blockNumber;
     uint256 public blocksPerYear;
 
-    function setVAIAddress(address VAIAddress_) public {
-        VAI = VAIAddress_;
+    function setVAIAddress(address vaiAddress_) public {
+        vai = vaiAddress_;
     }
 
     function harnessRepayVAIFresh(address payer, address account, uint256 repayAmount) public {

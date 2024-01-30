@@ -14,10 +14,10 @@ contract VAIControllerStorage {
     uint256 public floatRateMantissa;
 
     /// @notice VAI Mint Rate as a percentage
-    uint256 public VAIMintRate;
+    uint256 public vaiMintRate;
 
     /// @notice Accumulator of the total earned interest rate since the opening of the market. For example: 0.6 (60%)
-    uint256 public VAIMintIndex;
+    uint256 public vaiMintIndex;
 
     /// @notice Block number that interest was last accrued at
     uint256 internal accrualBlockNumber;
@@ -29,7 +29,7 @@ contract VAIControllerStorage {
     IComptroller public comptroller;
 
     /// @notice The address of the VAI token
-    address internal VAI;
+    address internal vai;
 
     /// @notice Treasury address
     address public treasuryAddress;
@@ -47,11 +47,11 @@ contract VAIControllerStorage {
     bool public mintEnabledOnlyForPrimeHolder;
 
     /// @notice Global VAIMintIndex as of the most recent balance-changing action for user
-    mapping(address => uint256) internal VAIMinterInterestIndex;
+    mapping(address => uint256) internal vaiMinterInterestIndex;
 
     /// @notice Tracks the amount of mintedVAI of a user that represents the accrued interest
-    mapping(address => uint256) public pastVAIInterest;
+    mapping(address => uint256) public pastVaiInterest;
 
     /// @notice The minted VAI amount to each user
-    mapping(address => uint256) public mintedVAIs;
+    mapping(address => uint256) public mintedVais;
 }

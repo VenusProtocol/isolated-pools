@@ -126,8 +126,8 @@ contract ComptrollerStorage {
     /// Prime token address
     IPrime public prime;
 
-    // VAIController address
-    IVAIController public VAIController;
+    // vaiController address
+    IVAIController public vaiController;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

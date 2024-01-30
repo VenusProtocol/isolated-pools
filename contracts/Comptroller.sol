@@ -584,7 +584,7 @@ contract Comptroller is
         // Update the prices of tokens
         updatePrices(borrower);
 
-        if (vTokenBorrowed != address(VAIController)) {
+        if (vTokenBorrowed != address(vaiController)) {
             if (!markets[vTokenBorrowed].isListed) {
                 revert MarketNotListed(address(vTokenBorrowed));
             }
@@ -595,10 +595,10 @@ contract Comptroller is
         }
 
         uint256 borrowBalance;
-        if (vTokenBorrowed != address(VAIController)) {
+        if (vTokenBorrowed != address(vaiController)) {
             borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
         } else {
-            borrowBalance = VAIController.getVAIRepayAmount(borrower);
+            borrowBalance = vaiController.getVAIRepayAmount(borrower);
         }
 
         /* Allow accounts to be liquidated if it is a forced liquidation */
@@ -1117,15 +1117,15 @@ contract Comptroller is
     /**
      * @notice Sets VAI controller
      * @dev Only callable by the admin
-     * @param newVAIController Address of the new VAIController
+     * @param newVaiController Address of the new vaiController
      * @custom:event Emits NewVAIController on success
-     * @custom:error ZeroAddressNotAllowed is thrown when the new VAIController address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when the new vaiController address is zero
      */
-    function setVAIController(IVAIController newVAIController) external onlyOwner {
-        ensureNonzeroAddress(address(newVAIController));
+    function setVaiController(IVAIController newVaiController) external onlyOwner {
+        ensureNonzeroAddress(address(newVaiController));
 
-        emit NewVAIController(VAIController, newVAIController);
-        VAIController = newVAIController;
+        emit NewVAIController(vaiController, newVaiController);
+        vaiController = newVaiController;
     }
 
     /**
@@ -1280,7 +1280,7 @@ contract Comptroller is
     ) external view override returns (uint256 error, uint256 tokensToSeize) {
         /* Read oracle prices for borrowed and collateral markets */
         uint256 priceBorrowedMantissa = 1e18; // Note: this is VAI
-        if (vTokenBorrowed != address(VAIController)) {
+        if (vTokenBorrowed != address(vaiController)) {
             priceBorrowedMantissa = _safeGetUnderlyingPrice(VToken(vTokenBorrowed));
         }
         uint256 priceCollateralMantissa = _safeGetUnderlyingPrice(VToken(vTokenCollateral));
@@ -1421,7 +1421,7 @@ contract Comptroller is
      * @param paused The new paused state (true=paused, false=unpaused)
      */
     function _setActionPaused(address market, Action action, bool paused) internal {
-        if (market != address(VAIController)) {
+        if (market != address(vaiController)) {
             require(markets[market].isListed, "cannot pause a market that is not listed");
         }
 
@@ -1545,8 +1545,8 @@ contract Comptroller is
 
         uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
 
-        if (address(VAIController) != address(0)) {
-            borrowPlusEffects = add_(borrowPlusEffects, VAIController.getVAIRepayAmount(account));
+        if (address(vaiController) != address(0)) {
+            borrowPlusEffects = add_(borrowPlusEffects, vaiController.getVAIRepayAmount(account));
         }
 
         // These are safe, as the underflow condition is checked first

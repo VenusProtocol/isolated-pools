@@ -62,10 +62,10 @@ contract VAIController is
     event NewPrime(address indexed oldPrime, address indexed newPrime);
 
     /// @notice Event emitted when VAI is minted
-    event MintVAI(address indexed minter, uint256 mintVAIAmount);
+    event MintVAI(address indexed minter, uint256 mintVaiAmount);
 
     /// @notice Event emitted when VAI is repaid
-    event RepayVAI(address indexed payer, address indexed borrower, uint256 repayVAIAmount);
+    event RepayVAI(address indexed payer, address indexed borrower, uint256 repayVaiAmount);
 
     /// @notice Event emitted when a borrow is liquidated
     event LiquidateVAI(
@@ -103,8 +103,8 @@ contract VAIController is
     /// @notice Emitted when VAI token address is changed by admin
     event NewVAIToken(address indexed oldVaiToken, address indexed newVaiToken);
 
-    /// @notice Emitted when VAIMintRate is changed
-    event NewVAIMintRate(uint256 indexed oldVAIMintRate, uint256 indexed newVAIMintRate);
+    /// @notice Emitted when vaiMintRate is changed
+    event NewVAIMintRate(uint256 indexed oldVaiMintRate, uint256 indexed newVaiMintRate);
 
     /// @notice Thrown when action is restricted to the caller
     error CallerNotAuthorized();
@@ -133,7 +133,7 @@ contract VAIController is
         __AccessControlled_init_unchained(accessControlManager_);
         __ReentrancyGuard_init();
 
-        VAIMintIndex = INITIAL_VAI_MINT_INDEX;
+        vaiMintIndex = INITIAL_VAI_MINT_INDEX;
         accrualBlockNumber = _getBlockNumber();
         mintCap = type(uint256).max;
     }
@@ -141,18 +141,18 @@ contract VAIController is
     /**
      * @notice The mintVAI function mints and transfers VAI from the protocol to the user, and adds a borrow balance
      * The amount minted must be less than the user's Account Liquidity and the mint VAI limit
-     * @param mintVAIAmount The amount of the VAI to be minted
+     * @param mintVaiAmount The amount of the VAI to be minted
      * @custom:event MintFee emits on success
      * @custom:event MintVAI emits on success
      * @custom:error ZeroAddressNotAllowed is thrown when comptroller address is zero
-     * @custom:error ZeroValueNotAllowed is thrown if mintVAIAmount is 0
+     * @custom:error ZeroValueNotAllowed is thrown if mintVaiAmount is 0
      * @custom:error ActionPaused is thrown when mint action is disabled
      * @custom:error MintCapReached is thrown when mint limit is reached
      * @custom:error InsufficientMintableVAIBalance is thrown when VAI mint amount is more than account mintable VAI amount
      */
-    function mintVAI(uint256 mintVAIAmount) external nonReentrant {
+    function mintVAI(uint256 mintVaiAmount) external nonReentrant {
         ensureNonzeroAddress(address(comptroller));
-        ensureNonzeroValue(mintVAIAmount);
+        ensureNonzeroValue(mintVaiAmount);
         if (comptroller.actionPaused(address(this), IComptroller.Action.MINT)) {
             revert ActionPaused();
         }
@@ -160,49 +160,49 @@ contract VAIController is
         accrueVAIInterest();
 
         address minter = msg.sender;
-        IVAI _VAI = IVAI(VAI);
-        uint256 VAITotalSupply = _VAI.totalSupply();
-        uint256 VAINewTotalSupply = VAITotalSupply + mintVAIAmount;
+        IVAI _vai = IVAI(vai);
+        uint256 vaiTotalSupply = _vai.totalSupply();
+        uint256 vaiNewTotalSupply = vaiTotalSupply + mintVaiAmount;
 
-        if (VAINewTotalSupply > mintCap) {
+        if (vaiNewTotalSupply > mintCap) {
             revert MintCapReached();
         }
 
-        uint256 accountMintableVAI = getMintableVAI(minter);
+        uint256 accountMintableVai = getMintableVAI(minter);
 
         // check that user have sufficient mintableVAI balance
-        if (mintVAIAmount > accountMintableVAI) {
+        if (mintVaiAmount > accountMintableVai) {
             revert InsufficientMintableVAIBalance();
         }
 
         // Calculate the minted balance based on interest index
-        uint256 totalMintedVAI = mintedVAIs[minter];
+        uint256 totalMintedVai = mintedVais[minter];
 
-        if (totalMintedVAI > 0) {
+        if (totalMintedVai > 0) {
             uint256 repayAmount = getVAIRepayAmount(minter);
-            uint256 remainedRepayAmount = repayAmount - totalMintedVAI;
+            uint256 remainedRepayAmount = repayAmount - totalMintedVai;
 
-            pastVAIInterest[minter] += remainedRepayAmount;
-            totalMintedVAI = repayAmount;
+            pastVaiInterest[minter] += remainedRepayAmount;
+            totalMintedVai = repayAmount;
         }
 
-        mintedVAIs[minter] = totalMintedVAI + mintVAIAmount;
+        mintedVais[minter] = totalMintedVai + mintVaiAmount;
 
         uint256 feeAmount;
         uint256 remainedAmount;
-        uint256 mintAmount = mintVAIAmount;
+        uint256 mintAmount = mintVaiAmount;
         if (treasuryPercent != 0) {
             feeAmount = mul_(mintAmount, treasuryPercent) / 1e18;
             remainedAmount = mintAmount - feeAmount;
 
-            IVAI(_VAI).mint(treasuryAddress, feeAmount);
+            IVAI(_vai).mint(treasuryAddress, feeAmount);
             emit MintFee(minter, feeAmount);
         } else {
             remainedAmount = mintAmount;
         }
 
-        IVAI(_VAI).mint(minter, remainedAmount);
-        VAIMinterInterestIndex[minter] = VAIMintIndex;
+        IVAI(_vai).mint(minter, remainedAmount);
+        vaiMinterInterestIndex[minter] = vaiMintIndex;
 
         emit MintVAI(minter, remainedAmount);
     }
@@ -210,15 +210,15 @@ contract VAIController is
     /**
      * @notice The repay function transfers VAI into the protocol and burn, reducing the user's borrow balance
      * Before repaying an asset, users must first approve the VAI to access their VAI balance
-     * @param repayVAIAmount The amount of the VAI to be repaid
+     * @param repayVaiAmount The amount of the VAI to be repaid
      * @return uint256 The actual repayment amount
      * @custom:error ZeroAddressNotAllowed is thrown when comptroller address is zero
-     * @custom:error ZeroValueNotAllowed is thrown if repayVAIAmount is 0
+     * @custom:error ZeroValueNotAllowed is thrown if repayVaiAmount is 0
      * @custom:error ActionPaused is thrown when repay action is disabled
      */
-    function repayVAI(uint256 repayVAIAmount) external nonReentrant returns (uint256) {
+    function repayVAI(uint256 repayVaiAmount) external nonReentrant returns (uint256) {
         ensureNonzeroAddress(address(comptroller));
-        ensureNonzeroValue(repayVAIAmount);
+        ensureNonzeroValue(repayVaiAmount);
 
         accrueVAIInterest();
 
@@ -226,7 +226,7 @@ contract VAIController is
             revert ActionPaused();
         }
 
-        return _repayVAIFresh(msg.sender, msg.sender, repayVAIAmount);
+        return _repayVAIFresh(msg.sender, msg.sender, repayVaiAmount);
     }
 
     /**
@@ -259,29 +259,29 @@ contract VAIController is
 
     /**
      * @notice Set the VAI token contract address
-     * @param VAI_ The new address of the VAI token contract
+     * @param vai_ The new address of the VAI token contract
      * @custom:error ZeroAddressNotAllowed is thrown when new VAI address is zero
      * @custom:event NewVAIToken emits on success
      * @custom:access Only Governance
      */
-    function setVAIToken(address VAI_) external onlyOwner {
-        ensureNonzeroAddress(VAI_);
+    function setVAIToken(address vai_) external onlyOwner {
+        ensureNonzeroAddress(vai_);
 
-        emit NewVAIToken(VAI, VAI_);
-        VAI = VAI_;
+        emit NewVAIToken(vai, vai_);
+        vai = vai_;
     }
 
     /**
      * @notice Set the VAI mint rate
-     * @param newVAIMintRate The new VAI mint rate to be set
-     * @custom:event NewVAIMintRate emits on success
+     * @param newVaiMintRate The new VAI mint rate to be set
+     * @custom:event NewVaiMintRate emits on success
      * @custom:access Controlled by AccessControlManager
      */
-    function setVAIMintRate(uint256 newVAIMintRate) external {
+    function setVAIMintRate(uint256 newVaiMintRate) external {
         _checkAccessAllowed("setVAIMintRate(uint256)");
 
-        emit NewVAIMintRate(VAIMintRate, newVAIMintRate);
-        VAIMintRate = newVAIMintRate;
+        emit NewVAIMintRate(vaiMintRate, newVaiMintRate);
+        vaiMintRate = newVaiMintRate;
     }
 
     /**
@@ -422,9 +422,9 @@ contract VAIController is
      */
     function accrueVAIInterest() public {
         uint256 delta = getVAIRepayRatePerBlock() * (_getBlockNumber() - accrualBlockNumber);
-        delta += VAIMintIndex;
+        delta += vaiMintIndex;
 
-        VAIMintIndex = delta;
+        vaiMintIndex = delta;
         accrualBlockNumber = _getBlockNumber();
     }
 
@@ -444,12 +444,12 @@ contract VAIController is
 
         AccountAmountLocalVars memory vars; // Holds all our calculation results
 
-        uint256 accountMintableVAI;
+        uint256 accountMintableVai;
         uint256 numberOfMarkets = enteredMarkets.length;
 
         /**
          * We use this formula to calculate mintable VAI amount.
-         * totalSupplyAmount * VAIMintRate - (totalBorrowAmount + mintedVAIOf)
+         * totalSupplyAmount * vaiMintRate - (totalBorrowAmount + mintedVAIOf)
          */
         for (uint256 i; i < numberOfMarkets; ) {
             (, vars.vTokenBalance, vars.borrowBalance, vars.exchangeRateMantissa) = enteredMarkets[i]
@@ -486,18 +486,18 @@ contract VAIController is
             }
         }
 
-        uint256 totalMintedVAI = mintedVAIs[minter];
+        uint256 totalMintedVai = mintedVais[minter];
         uint256 repayAmount;
 
-        if (totalMintedVAI > 0) {
+        if (totalMintedVai > 0) {
             repayAmount = getVAIRepayAmount(minter);
         }
 
         vars.sumBorrowPlusEffects = vars.sumBorrowPlusEffects + repayAmount;
 
-        accountMintableVAI = (vars.sumSupply * VAIMintRate) / 10000;
-        accountMintableVAI -= vars.sumBorrowPlusEffects;
-        return accountMintableVAI;
+        accountMintableVai = (vars.sumSupply * vaiMintRate) / 10000;
+        accountMintableVai -= vars.sumBorrowPlusEffects;
+        return accountMintableVai;
     }
 
     /**
@@ -540,7 +540,7 @@ contract VAIController is
      * @return (uint256) Returns the interest index for the minter
      */
     function getVAIMinterInterestIndex(address minter) public view returns (uint256) {
-        uint256 storedIndex = VAIMinterInterestIndex[minter];
+        uint256 storedIndex = vaiMinterInterestIndex[minter];
 
         // If the user minted VAI before the stability fee was introduced, accrue
         // starting from stability fee launch
@@ -558,14 +558,14 @@ contract VAIController is
     function getVAIRepayAmount(address account) public view returns (uint256) {
         uint256 delta;
 
-        uint256 amount = mintedVAIs[account];
-        uint256 interest = pastVAIInterest[account];
+        uint256 amount = mintedVais[account];
+        uint256 interest = pastVaiInterest[account];
 
-        uint256 totalMintedVAI = amount - interest;
+        uint256 totalMintedVai = amount - interest;
 
-        delta = VAIMintIndex - getVAIMinterInterestIndex(account);
+        delta = vaiMintIndex - getVAIMinterInterestIndex(account);
 
-        uint256 newInterest = (delta * totalMintedVAI) / 1e18;
+        uint256 newInterest = (delta * totalMintedVai) / 1e18;
         uint256 newAmount = amount + newInterest;
 
         return newAmount;
@@ -585,13 +585,13 @@ contract VAIController is
         uint256 totalRepayAmount = getVAIRepayAmount(borrower);
         uint256 currentInterest;
 
-        currentInterest = totalRepayAmount - mintedVAIs[borrower];
+        currentInterest = totalRepayAmount - mintedVais[borrower];
 
-        currentInterest = pastVAIInterest[borrower] + currentInterest;
+        currentInterest = pastVaiInterest[borrower] + currentInterest;
 
         uint256 burn;
         uint256 partOfCurrentInterest = currentInterest;
-        uint256 partOfPastInterest = pastVAIInterest[borrower];
+        uint256 partOfPastInterest = pastVaiInterest[borrower];
 
         if (repayAmount >= totalRepayAmount) {
             burn = totalRepayAmount - currentInterest;
@@ -602,7 +602,7 @@ contract VAIController is
 
             burn = (totalMintedAmount * delta) / 1e18;
             partOfCurrentInterest = (currentInterest * delta) / 1e18;
-            partOfPastInterest = (pastVAIInterest[borrower] * delta) / 1e18;
+            partOfPastInterest = (pastVaiInterest[borrower] * delta) / 1e18;
         }
 
         return (burn, partOfCurrentInterest, partOfPastInterest);
@@ -613,7 +613,7 @@ contract VAIController is
      * @return The address of VAI
      */
     function getVAIAddress() public view returns (address) {
-        return VAI;
+        return vai;
     }
 
     /**
@@ -639,18 +639,18 @@ contract VAIController is
             repayAmount
         );
 
-        IVAI _VAI = IVAI(VAI);
-        _VAI.burn(payer, burn);
+        IVAI _vai = IVAI(vai);
+        _vai.burn(payer, burn);
 
-        bool success = _VAI.transferFrom(payer, receiver, partOfCurrentInterest);
+        bool success = _vai.transferFrom(payer, receiver, partOfCurrentInterest);
         require(success, "Failed to transfer VAI fee");
 
-        uint256 VAIBalanceBorrower = mintedVAIs[borrower];
-        uint256 accountVAINew = VAIBalanceBorrower - burn - partOfPastInterest;
+        uint256 vaiBalanceBorrower = mintedVais[borrower];
+        uint256 accountVaiNew = vaiBalanceBorrower - burn - partOfPastInterest;
 
-        pastVAIInterest[borrower] -= partOfPastInterest;
+        pastVaiInterest[borrower] -= partOfPastInterest;
 
-        mintedVAIs[borrower] = accountVAINew;
+        mintedVais[borrower] = accountVaiNew;
 
         emit RepayVAI(payer, borrower, burn);
         return burn;
