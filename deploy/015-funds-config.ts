@@ -1,4 +1,4 @@
-import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/1-deploy";
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/001-psr";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
