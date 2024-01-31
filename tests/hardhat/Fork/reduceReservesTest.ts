@@ -80,8 +80,6 @@ if (FORK) {
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
 
-      await vTOKEN1.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
-
       await grantPermissions();
 
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);

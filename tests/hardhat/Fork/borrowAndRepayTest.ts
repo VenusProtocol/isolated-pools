@@ -10,6 +10,7 @@ import {
   AccessControlManager__factory,
   BinanceOracle,
   BinanceOracle__factory,
+  ChainlinkOracle__factory,
   Comptroller,
   Comptroller__factory,
   IERC20,
@@ -32,7 +33,6 @@ console.log("fork tests are running on network: ", FORKED_NETWORK);
 const {
   ACC1,
   ACC2,
-  ACC3,
   ADMIN,
   ACM,
   TOKEN1,
@@ -41,6 +41,7 @@ const {
   VTOKEN2,
   COMPTROLLER,
   BINANCE_ORACLE,
+  CHAINLINK_ORACLE,
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
   BLOCK_NUMBER,
@@ -53,7 +54,6 @@ let vTOKEN2: VToken;
 let comptroller: Comptroller;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
-let acc3Signer: Signer;
 let token2Holder: Signer;
 let token1Holder: Signer;
 let impersonatedTimelock: Signer;
@@ -96,7 +96,7 @@ if (FORK) {
       await configureTimelock();
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
-      acc3Signer = await initMainnetUser(ACC3, ethers.utils.parseUnits("2")); // it will be the depositor
+      // it will be the depositor
       token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
 
@@ -105,6 +105,26 @@ if (FORK) {
         await binanceOracle.setMaxStalePeriod("HAY", BigInt(150000000000000000));
         await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));
       }
+
+      if (FORKED_NETWORK == "ethereum") {
+        const ChainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
+        const token1Config = await ChainlinkOracle.tokenConfigs(TOKEN1);
+        const token2Config = await ChainlinkOracle.tokenConfigs(TOKEN2);
+
+        const token1NewConfig = {
+          asset: token1Config.asset,
+          feed: token1Config.feed,
+          maxStalePeriod: BigNumber.from(1000000000),
+        };
+        const token2NewConfig = {
+          asset: token2Config.asset,
+          feed: token2Config.feed,
+          maxStalePeriod: BigNumber.from(1000000000),
+        };
+        await ChainlinkOracle.setTokenConfig(token1NewConfig);
+        await ChainlinkOracle.setTokenConfig(token2NewConfig);
+      }
+
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
 
@@ -118,7 +138,6 @@ if (FORK) {
 
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);
       await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
-      await comptroller.connect(acc3Signer).enterMarkets([vTOKEN2.address]);
 
       await comptroller.setMarketSupplyCaps(
         [vTOKEN2.address, vTOKEN1.address],

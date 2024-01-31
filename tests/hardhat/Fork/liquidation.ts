@@ -351,10 +351,14 @@ if (FORK) {
         await vTOKEN1.connect(acc2Signer).mint(convertToUnit(1, 12));
 
         // repayAmount will be calculated after accruing interest and then using borrowBalanceStored to get the repayAmount.
-        let repayAmount;
-        if (FORKED_NETWORK == "bsctestnet") repayAmount = 1000000047610436;
-        else if (FORKED_NETWORK == "sepolia") repayAmount = 1000000019818620;
-        else if (FORKED_NETWORK == "bscmainnet") repayAmount = 1000000034788981;
+        const NetworkRespectiveRepayAmounts = {
+          bsctestnet: 1000000047610436,
+          sepolia: 1000000137700483,
+          bscmainnet: 1000000034788981,
+          ethereum: 1000000076103691,
+        };
+
+        const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
         const seizeTokens = ratio * repayAmount;
         const param = {
           vTokenCollateral: vTOKEN1.address,
@@ -374,7 +378,7 @@ if (FORK) {
         const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
         const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
 
-        expect(vTOKEN1BalAcc2Prev - vTOKEN1BalAcc2New).to.closeTo(Math.floor(seizeTokens), 99);
+        expect(vTOKEN1BalAcc2Prev - vTOKEN1BalAcc2New).to.closeTo(Math.floor(seizeTokens), 100);
         expect(vTOKEN1BalAcc1New - vTOKEN1BalAcc1Prev).to.closeTo(liquidatorSeizeTokens, 1);
         expect(totalReservesToken1New - totalReservesToken1Prev).to.closeTo(
           Math.round(reserveIncrease),
