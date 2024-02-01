@@ -15,9 +15,11 @@ contract TokenErrorReporter {
 
     error RedeemFreshnessCheck();
     error RedeemTransferOutNotPossible();
+    error InsufficientRedeemApproval();
 
     error BorrowFreshnessCheck();
     error BorrowCashNotAvailable();
+    error DelegateNotApproved();
 
     error RepayBorrowFreshnessCheck();
 
