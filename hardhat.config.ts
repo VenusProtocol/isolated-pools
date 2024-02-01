@@ -161,6 +161,22 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            details: {
+              yul: !process.env.CI,
+            },
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+      {
         version: "0.6.6",
         settings: {
           optimizer: {
