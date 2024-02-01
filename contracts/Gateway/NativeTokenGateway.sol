@@ -132,6 +132,8 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         vToken.repayBorrowBehalf(msg.sender, repayAmount);
         uint256 borrowBalanceAfter = vToken.borrowBalanceCurrent(msg.sender);
 
+        wrappedNativeToken.approve(address(vToken), 0);
+
         if (borrowBalanceAfter == 0 && (repayAmount > borrowBalanceBefore)) {
             uint256 dust = repayAmount - borrowBalanceBefore;
 
