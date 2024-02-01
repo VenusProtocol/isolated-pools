@@ -118,6 +118,4 @@ interface ComptrollerViewInterface {
     function supplyCaps(address) external view returns (uint256);
 
     function approvedDelegates(address borrower, address receiver) external view returns (bool);
-
-    function redeemAllowance(address borrower, address receiver) external view returns (uint256);
 }

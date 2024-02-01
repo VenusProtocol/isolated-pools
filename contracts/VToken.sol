@@ -297,8 +297,9 @@ contract VToken is
 
     /**
      * @notice Sender redeems assets on behalf of some other address. This function is only available
-     *   for senders, sender should be approved by the redeemer for the amount he wants to redeem
+     *   for senders, explicitly marked as delegates of the supplier using `comptroller.updateDelegate`
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemer The user on behalf of whom to redeem
      * @param redeemTokens The number of vTokens to redeem into underlying
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:error InsufficientRedeemApproval is thrown when sender is not approved by the redeemer for the given amount
@@ -307,9 +308,7 @@ contract VToken is
      * @custom:access Not restricted
      */
     function redeemBehalf(address redeemer, uint256 redeemTokens) external override nonReentrant returns (uint256) {
-        if (ComptrollerViewInterface(address(comptroller)).redeemAllowance(redeemer, msg.sender) < redeemTokens) {
-            revert InsufficientRedeemApproval();
-        }
+        _ensureSenderIsDelegateOf(redeemer);
 
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
@@ -332,7 +331,7 @@ contract VToken is
 
     /**
      * @notice Sender redeems underlying assets on behalf of some other address. This function is only available
-     *   for senders, sender should be approved by the redeemer for the amount he wants to redeem
+     *   for senders, explicitly marked as delegates of the supplier using `comptroller.updateDelegate`
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemer, on behalf of whom to redeem
      * @param redeemAmount The amount of underlying to receive from redeeming vTokens
@@ -345,24 +344,11 @@ contract VToken is
         address redeemer,
         uint256 redeemAmount
     ) external override nonReentrant returns (uint256) {
-        Exp memory exchangeRate = Exp({ mantissa: _exchangeRateStored() });
-
-        /*
-         * We get the current exchange rate and calculate the amount to be redeemed:
-         *  redeemTokens = redeemAmount / exchangeRate
-         */
-        uint256 redeemTokens = div_(redeemAmount, exchangeRate);
-
-        uint256 _redeemAmount = mul_(redeemTokens, exchangeRate);
-        if (_redeemAmount != 0 && _redeemAmount != redeemAmount) redeemTokens++; // round up
-
-        if (ComptrollerViewInterface(address(comptroller)).redeemAllowance(redeemer, msg.sender) < redeemTokens) {
-            revert InsufficientRedeemApproval();
-        }
+        _ensureSenderIsDelegateOf(redeemer);
 
         accrueInterest();
         // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(redeemer, msg.sender, redeemTokens, 0);
+        _redeemFresh(redeemer, msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
 
@@ -393,9 +379,7 @@ contract VToken is
      * @custom:access Not restricted
      */
     function borrowBehalf(address borrower, uint borrowAmount) external override returns (uint256) {
-        if (!ComptrollerViewInterface(address(comptroller)).approvedDelegates(borrower, msg.sender)) {
-            revert DelegateNotApproved();
-        }
+        _ensureSenderIsDelegateOf(borrower);
 
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         _borrowFresh(borrower, msg.sender, borrowAmount);
@@ -934,6 +918,7 @@ contract VToken is
      * @notice User redeems vTokens in exchange for the underlying asset
      * @dev Assumes interest has already been accrued up to the current block
      * @param redeemer The address of the account which is redeeming the tokens
+     * @param receiver The receiver of the tokens, if called by a delegate
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
@@ -1013,8 +998,9 @@ contract VToken is
     }
 
     /**
-     * @notice Users borrow assets from the protocol to their own address
+     * @notice Users or their delegates borrow assets from the protocol
      * @param borrower User who borrows the assets
+     * @param receiver The receiver of the tokens, if called by a delegate
      * @param borrowAmount The amount of the underlying asset to borrow
      */
     function _borrowFresh(address borrower, address receiver, uint256 borrowAmount) internal {
@@ -1586,6 +1572,12 @@ contract VToken is
         address oldProtocolShareReserve = address(protocolShareReserve);
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, address(protocolShareReserve_));
+    }
+
+    function _ensureSenderIsDelegateOf(address user) internal view {
+        if (!ComptrollerViewInterface(address(comptroller)).approvedDelegates(user, msg.sender)) {
+            revert DelegateNotApproved();
+        }
     }
 
     /**

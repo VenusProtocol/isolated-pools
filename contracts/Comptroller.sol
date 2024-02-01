@@ -98,11 +98,8 @@ contract Comptroller is
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
-    /// @notice Emitted when the borrowing delegate rights are updated for an account
-    event DelegateUpdated(address indexed borrower, address indexed delegate, bool allowDelegatedBorrows);
-
-    /// @notice Emitted when redeemer approves an account to redeem tokens on his behalf
-    event RedeemApproval(address indexed redeemer, address indexed trustee, uint256 amount);
+    /// @notice Emitted when the delegate rights are updated for an account
+    event DelegateUpdated(address indexed user, address indexed delegate, bool allowDelegate);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -218,17 +215,6 @@ contract Comptroller is
     function updateDelegate(address delegate, bool allowBorrows) external {
         approvedDelegates[msg.sender][delegate] = allowBorrows;
         emit DelegateUpdated(msg.sender, delegate, allowBorrows);
-    }
-
-    /**
-     * @notice Gives allowance to an account to redeem vTokens or underlying on behalf of the approver
-     * @param trustee The address of the trustee being approved for redemption.
-     * @param amount The amount of tokens approved for redemption.
-     * @custom:event RedeemApproval emits on success
-     */
-    function approveRedeem(address trustee, uint256 amount) external {
-        redeemAllowance[msg.sender][trustee] = amount;
-        emit RedeemApproval(msg.sender, trustee, amount);
     }
 
     /**
