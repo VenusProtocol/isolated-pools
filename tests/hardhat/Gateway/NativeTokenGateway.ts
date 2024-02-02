@@ -221,9 +221,7 @@ describe("NativeTokenGateway", () => {
     });
 
     it("should revert when sender is not approved to borrow on behalf", async () => {
-      const tx = nativeTokenGateway
-        .connect(user2)
-        .borrowAndUnwrap(vweth.address, await user2.getAddress(), parseUnits("1", 18));
+      const tx = nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, parseUnits("1", 18));
       await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
     });
 
@@ -238,7 +236,7 @@ describe("NativeTokenGateway", () => {
 
       const borrowAmount = parseUnits("2", 18);
       const user2BalancePrevious = await user2.getBalance();
-      await nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, await user2.getAddress(), borrowAmount);
+      await nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, borrowAmount);
 
       expect(await user2.getBalance()).to.closeTo(user2BalancePrevious.add(borrowAmount), parseUnits("1", 15));
     });

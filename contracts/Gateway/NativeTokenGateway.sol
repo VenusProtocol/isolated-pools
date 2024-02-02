@@ -70,7 +70,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @param redeemAmount The amount of underlying tokens to redeem
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
-    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external payable nonReentrant {
+    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external nonReentrant {
         ensureNonzeroAddress(address(vToken));
         ensureNonzeroValue(redeemAmount);
 
@@ -91,26 +91,26 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     /**
      * @dev Borrow wrappedNativeToken, unwrap to Native, and send to the user
      * @param vToken The vToken market to interact with
-     * @param borrower Address of the borrower
-     * @param amount The amount of underlying tokens to borrow
+     * @param borrowAmount The amount of underlying tokens to borrow
+     * @custom:error ZeroAddressNotAllowed is thrown if  vToken address is zero address
+     * @custom:error ZeroValueNotAllowed is thrown if borrowAmount is zero
      * @custom:event TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped
      */
-    function borrowAndUnwrap(IVToken vToken, address borrower, uint256 amount) external nonReentrant {
+    function borrowAndUnwrap(IVToken vToken, uint256 borrowAmount) external nonReentrant {
         ensureNonzeroAddress(address(vToken));
-        ensureNonzeroAddress(borrower);
-        ensureNonzeroValue(amount);
+        ensureNonzeroValue(borrowAmount);
 
-        vToken.borrowBehalf(borrower, amount);
+        vToken.borrowBehalf(msg.sender, borrowAmount);
 
-        wrappedNativeToken.withdraw(amount);
-        _safeTransferETH(borrower, amount);
-        emit TokensBorrowedAndUnwrapped(borrower, address(vToken), amount);
+        wrappedNativeToken.withdraw(borrowAmount);
+        _safeTransferETH(msg.sender, borrowAmount);
+        emit TokensBorrowedAndUnwrapped(msg.sender, address(vToken), borrowAmount);
     }
 
     /**
      * @notice Wrap Native, repay borrow in the market, and send remaining Native to the user
      * @param vToken The vToken market to interact with
-     * @custom:error ZeroAddressNotAllowed is thrown if either vToken address is zero address
+     * @custom:error ZeroAddressNotAllowed is thrown if vToken address is zero address
      * @custom:error ZeroValueNotAllowed is thrown if repayAmount is zero
      * @custom:event TokensWrappedAndRepaid is emitted when assets are repaid to a market and unwrapped
      */

@@ -378,8 +378,9 @@ contract VToken is
      * @custom:event Emits Borrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function borrowBehalf(address borrower, uint borrowAmount) external override returns (uint256) {
+    function borrowBehalf(address borrower, uint256 borrowAmount) external override returns (uint256) {
         _ensureSenderIsDelegateOf(borrower);
+        accrueInterest();
 
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         _borrowFresh(borrower, msg.sender, borrowAmount);

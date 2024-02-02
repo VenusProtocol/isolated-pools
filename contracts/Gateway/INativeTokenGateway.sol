@@ -66,15 +66,14 @@ interface INativeTokenGateway {
      * @param vToken The vToken market to interact with
      * @param redeemAmount The amount of underlying tokens to redeem
      */
-    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external payable;
+    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external;
 
     /**
      * @dev Borrow WETH, unwrap to ETH, and send to the user
      * @param vToken The vToken market to interact with
-     * @param borrower Address of the borrower
      * @param amount The amount of underlying tokens to borrow
      */
-    function borrowAndUnwrap(IVToken vToken, address borrower, uint256 amount) external;
+    function borrowAndUnwrap(IVToken vToken, uint256 amount) external;
 
     /**
      * @dev Wrap ETH, repay borrow in the market, and send remaining ETH to the user
