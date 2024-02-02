@@ -70,7 +70,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @param redeemAmount The amount of underlying tokens to redeem
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
-    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external payable {
+    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external payable nonReentrant {
         ensureNonzeroAddress(address(vToken));
         ensureNonzeroValue(redeemAmount);
 
@@ -100,16 +100,11 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         ensureNonzeroAddress(borrower);
         ensureNonzeroValue(amount);
 
-        uint256 balanceBeforeBorrow = wrappedNativeToken.balanceOf(address(this));
         vToken.borrowBehalf(borrower, amount);
-        uint256 balanceAfterBorrow = wrappedNativeToken.balanceOf(address(this));
 
-        uint256 borrowedAmount = balanceAfterBorrow - balanceBeforeBorrow;
-        if (borrowedAmount > 0) {
-            wrappedNativeToken.withdraw(borrowedAmount);
-            _safeTransferETH(borrower, borrowedAmount);
-            emit TokensBorrowedAndUnwrapped(borrower, address(vToken), borrowedAmount);
-        }
+        wrappedNativeToken.withdraw(amount);
+        _safeTransferETH(borrower, amount);
+        emit TokensBorrowedAndUnwrapped(borrower, address(vToken), amount);
     }
 
     /**
