@@ -231,7 +231,7 @@ describe("VToken", function () {
       );
     });
 
-    it("returns success from borrowFresh and transfers the correct amount", async () => {
+    it("returns success from borrowBehalf and transfers the correct amount", async () => {
       const beforeAccountCash = await underlying.balanceOf(trustee.address);
       comptroller.approvedDelegates.returns(true);
       await vToken.connect(trustee).borrowBehalf(borrower.address, borrowAmount);
