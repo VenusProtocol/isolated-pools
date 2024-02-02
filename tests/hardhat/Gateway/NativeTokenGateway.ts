@@ -169,6 +169,20 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("wrapAndSupply", () => {
+    it("should revert when zero address is provided as vtoken address", async () => {
+      await expect(
+        nativeTokenGateway
+          .connect(user1)
+          .wrapAndSupply(ethers.constants.AddressZero, await user1.getAddress(), { value: supplyAmount }),
+      ).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroAddressNotAllowed");
+    });
+
+    it("should revert when zero amount is provided to mint", async () => {
+      await expect(
+        nativeTokenGateway.connect(user1).wrapAndSupply(vweth.address, await user1.getAddress(), { value: 0 }),
+      ).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroValueNotAllowed");
+    });
+
     it("should wrap and supply eth", async () => {
       await nativeTokenGateway
         .connect(user1)
@@ -187,13 +201,14 @@ describe("NativeTokenGateway", () => {
 
     it("should revert when sender is not approved to redeem on behalf", async () => {
       const tx = nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, parseUnits("10", 18));
-      await expect(tx).to.be.revertedWithCustomError(vweth, "InsufficientRedeemApproval");
+      await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
     });
 
     it("should redeem underlying tokens and unwrap and sent it to the user", async () => {
-      await comptroller.connect(user1).approveRedeem(nativeTokenGateway.address, parseUnits("10", 18));
-      await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, parseUnits("10", 18));
+      const redeemAmount = parseUnits("10", 18);
+      await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
 
+      await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, redeemAmount);
       expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
     });
   });
@@ -244,6 +259,12 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("sweepNative", () => {
+    it("should revert when called by non owener", async () => {
+      await expect(nativeTokenGateway.connect(user1).sweepNative()).to.be.rejectedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
     it("should execute successfully", async () => {
       await user1.sendTransaction({ to: nativeTokenGateway.address, value: ethers.utils.parseEther("10") });
 
@@ -255,6 +276,12 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("SweepToken", () => {
+    it("should revert when called by non owener", async () => {
+      await expect(nativeTokenGateway.connect(user1).sweepToken()).to.be.rejectedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
     it("should sweep all tokens", async () => {
       await weth.transfer(nativeTokenGateway.address, parseUnits("2", 18));
 
