@@ -291,6 +291,9 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
+    event NameUpdated(string indexed _oldName, string indexed _newName);
+    event SymbolUpdated(string indexed _oldSymbol, string indexed _newSymbol);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);

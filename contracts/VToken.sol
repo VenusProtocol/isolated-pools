@@ -120,6 +120,16 @@ contract VToken is
         );
     }
 
+    function setName(string calldata _name) external {
+        emit NameUpdated(name, _name);
+        name = _name;
+    }
+
+    function setSymbol(string calldata _symbol) external {
+        emit SymbolUpdated(symbol, _symbol);
+        symbol = _symbol;
+    }
+
     /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account

@@ -206,7 +206,9 @@ const config: HardhatUserConfig = {
       chainId: 97,
       live: true,
       gasPrice: 20000000000,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
     },
     // Mainnet deployments are done through Frame wallet RPC
     bscmainnet: {
@@ -214,7 +216,9 @@ const config: HardhatUserConfig = {
       chainId: 56,
       live: true,
       timeout: 1200000, // 20 minutes
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: {
+        mnemonic: process.env.MNEMONIC || "",
+      },
     },
     ethereum: {
       url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
