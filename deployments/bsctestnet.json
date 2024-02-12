@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x329Bc34E6A46243d21955A4369cD66bdD52E6C22",
+      "address": "0x2Ba2fbFeBaA90eda758bc16f89DB6216387f4488",
       "abi": [
         {
           "inputs": [
@@ -400,6 +400,31 @@
             }
           ],
           "name": "ActionPausedMarket",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "delegate",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "allowDelegate",
+              "type": "bool"
+            }
+          ],
+          "name": "DelegateUpdated",
           "type": "event"
         },
         {
@@ -858,6 +883,30 @@
               "internalType": "contract VToken",
               "name": "",
               "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "name": "approvedDelegates",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
             }
           ],
           "stateMutability": "view",
@@ -2050,6 +2099,24 @@
             }
           ],
           "name": "transferVerify",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "delegate",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "allowBorrows",
+              "type": "bool"
+            }
+          ],
+          "name": "updateDelegate",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"
@@ -11815,6 +11882,368 @@
           ],
           "stateMutability": "nonpayable",
           "type": "function"
+        }
+      ]
+    },
+    "NativeTokenGateway": {
+      "address": "0xc2FF955724a4c07DdB13b65f4dA4Ca8B9c49E7c5",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "contract IWrappedNative",
+              "name": "wrappedNativeToken_",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "NativeTokenTransferFailed",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroAddressNotAllowed",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ZeroValueNotAllowed",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "previousOwner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "OwnershipTransferStarted",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "previousOwner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "OwnershipTransferred",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SweepNative",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "SweepToken",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "TokensBorrowedAndUnwrapped",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "TokensRedeemedAndUnwrapped",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "TokensWrappedAndRepaid",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "TokensWrappedAndSupplied",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "inputs": [],
+          "name": "acceptOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract IVToken",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrowAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "borrowAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "pendingOwner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract IVToken",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemUnderlyingAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "renounceOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "sweepNative",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "sweepToken",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "transferOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract IVToken",
+              "name": "vToken",
+              "type": "address"
+            }
+          ],
+          "name": "wrapAndRepay",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract IVToken",
+              "name": "vToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "minter",
+              "type": "address"
+            }
+          ],
+          "name": "wrapAndSupply",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "wrappedNativeToken",
+          "outputs": [
+            {
+              "internalType": "contract IWrappedNative",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
         }
       ]
     },
@@ -49932,7 +50361,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xE21251bC79Ee0abebA71FaABDC2Ad36762A0b82F",
+      "address": "0x344cD779C5aAF3436795B49f7C375E716A20f527",
       "abi": [
         {
           "inputs": [],
@@ -49958,6 +50387,11 @@
         {
           "inputs": [],
           "name": "BorrowFreshnessCheck",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "DelegateNotApproved",
           "type": "error"
         },
         {
@@ -50953,6 +51387,30 @@
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "borrower",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrowAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "borrowBehalf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
           "inputs": [],
           "name": "borrowIndex",
           "outputs": [
@@ -51441,12 +51899,60 @@
         {
           "inputs": [
             {
+              "internalType": "address",
+              "name": "redeemer",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemBehalf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "uint256",
               "name": "redeemAmount",
               "type": "uint256"
             }
           ],
           "name": "redeemUnderlying",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "redeemer",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemAmount",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemUnderlyingBehalf",
           "outputs": [
             {
               "internalType": "uint256",
