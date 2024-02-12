@@ -141,7 +141,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     /**
      * @notice Sweeps native assets (Native) from the contract and sends them to the owner
      * @custom:event SweepNative is emitted when assets are swept from the contract
-     * @custom:access Controller by Governance
+     * @custom:access Controlled by Governance
      */
     function sweepNative() external payable onlyOwner {
         uint256 balance = address(this).balance;
@@ -155,7 +155,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     /**
      * @notice Sweeps wrappedNativeToken tokens from the contract and sends them to the owner
      * @custom:event SweepToken emits on success
-     * @custom:access Controller by Governance
+     * @custom:access Controlled by Governance
      */
     function sweepToken() external onlyOwner {
         uint256 balance = wrappedNativeToken.balanceOf(address(this));

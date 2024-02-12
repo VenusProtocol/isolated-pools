@@ -210,9 +210,11 @@ contract Comptroller is
      * @param delegate The address to update the rights for
      * @param allowBorrows Whether to grant (true) or revoke (false) the rights
      * @custom:event DelegateUpdated emits on success
+     * @custom:error ZeroAddressNotAllowed is thrown when delegate address is zero
      * @custom:access Not restricted
      */
     function updateDelegate(address delegate, bool allowBorrows) external {
+        ensureNonzeroAddress(delegate);
         approvedDelegates[msg.sender][delegate] = allowBorrows;
         emit DelegateUpdated(msg.sender, delegate, allowBorrows);
     }
