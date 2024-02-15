@@ -7,7 +7,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuar
 
 import { IWrappedNative } from "./Interfaces/IWrappedNative.sol";
 import { INativeTokenGateway } from "./INativeTokenGateway.sol";
-import { IVToken } from "./Interfaces/IVtoken.sol";
+import { IVToken } from "./Interfaces/IVToken.sol";
 
 /**
  * @title NativeTokenGateway
@@ -91,7 +91,6 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         _safeTransferNativeTokens(msg.sender, redeemedAmount);
         emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
     }
-
 
     /**
      * @dev Borrow wNativeToken, unwrap to Native, and send to the user
