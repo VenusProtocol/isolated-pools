@@ -18,7 +18,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Address of wrapped ether token contract
+     * @notice Address of wrapped native token contract
      */
     IWrappedNative public immutable wNativeToken;
 
@@ -51,7 +51,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     fallback() external payable {}
 
     /**
-     * @notice Wrap Native, get wNativeToken, mint vWETH, and supply to the market.
+     * @notice Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market.
      * @param minter The address on behalf of whom the supply is performed.
      * @custom:error ZeroAddressNotAllowed is thrown if address of minter is zero address
      * @custom:error ZeroValueNotAllowed is thrown if mintAmount is zero
@@ -91,7 +91,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
 
         uint256 redeemedAmount = nativeTokenBalanceAfter - nativeTokenBalanceBefore;
 
-        _safeTransferETH(msg.sender, redeemedAmount);
+        _safeTransferNativeTokens(msg.sender, redeemedAmount);
         emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
     }
 
@@ -108,7 +108,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         vWNativeToken.borrowBehalf(msg.sender, borrowAmount);
 
         wNativeToken.withdraw(borrowAmount);
-        _safeTransferETH(msg.sender, borrowAmount);
+        _safeTransferNativeTokens(msg.sender, borrowAmount);
         emit TokensBorrowedAndUnwrapped(msg.sender, address(vWNativeToken), borrowAmount);
     }
 
@@ -134,7 +134,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
             uint256 dust = repayAmount - borrowBalanceBefore;
 
             wNativeToken.withdraw(dust);
-            _safeTransferETH(msg.sender, dust);
+            _safeTransferNativeTokens(msg.sender, dust);
         }
         emit TokensWrappedAndRepaid(msg.sender, address(vWNativeToken), borrowBalanceBefore - borrowBalanceAfter);
     }
@@ -148,7 +148,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         uint256 balance = address(this).balance;
 
         if (balance > 0) {
-            _safeTransferETH((owner()), balance);
+            _safeTransferNativeTokens((owner()), balance);
             emit SweepNative((owner()), balance);
         }
     }
@@ -168,12 +168,12 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     }
 
     /**
-     * @dev transfer Native to an address, revert if it fails
+     * @dev transfer Native tokens to an address, revert if it fails
      * @param to recipient of the transfer
      * @param value the amount to send
-     * @custom:error NativeTokenTransferFailed is thrown if the eth transfer fails
+     * @custom:error NativeTokenTransferFailed is thrown if the Native token transfer fails
      */
-    function _safeTransferETH(address to, uint256 value) internal {
+    function _safeTransferNativeTokens(address to, uint256 value) internal {
         (bool success, ) = to.call{ value: value }(new bytes(0));
 
         if (!success) {
