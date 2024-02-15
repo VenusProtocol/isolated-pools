@@ -80,9 +80,6 @@ async function deployGateway(): Promise<GatewayFixture> {
   const weth = await wethFactory.deploy();
   weth.mint(parseUnits("100000000", 18));
 
-  const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
-  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(weth.address);
-
   const vusdt = await makeVToken<VTokenHarness__factory>(
     {
       underlying: usdt,
@@ -104,6 +101,9 @@ async function deployGateway(): Promise<GatewayFixture> {
     },
     { kind: "VTokenHarness" },
   );
+
+  const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
+  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(weth.address, vweth.address);
 
   fakePriceOracle.getUnderlyingPrice.whenCalledWith(vusdt.address).returns(parseUnits("1", 18));
   fakePriceOracle.getUnderlyingPrice.whenCalledWith(vweth.address).returns(parseUnits("1000", 18));
@@ -169,24 +169,14 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("wrapAndSupply", () => {
-    it("should revert when zero address is provided as vtoken address", async () => {
-      await expect(
-        nativeTokenGateway
-          .connect(user1)
-          .wrapAndSupply(ethers.constants.AddressZero, await user1.getAddress(), { value: supplyAmount }),
-      ).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroAddressNotAllowed");
-    });
-
     it("should revert when zero amount is provided to mint", async () => {
       await expect(
-        nativeTokenGateway.connect(user1).wrapAndSupply(vweth.address, await user1.getAddress(), { value: 0 }),
+        nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: 0 }),
       ).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroValueNotAllowed");
     });
 
     it("should wrap and supply eth", async () => {
-      await nativeTokenGateway
-        .connect(user1)
-        .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+      await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
       const balanceAfterSupplying = await vweth.balanceOf(await user1.getAddress());
       await expect(balanceAfterSupplying.toString()).to.eq(parseUnits("10", 8));
     });
@@ -194,13 +184,11 @@ describe("NativeTokenGateway", () => {
 
   describe("redeemUnderlyingAndUnwrap", () => {
     beforeEach(async () => {
-      await nativeTokenGateway
-        .connect(user1)
-        .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+      await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
     });
 
     it("should revert when sender is not approved to redeem on behalf", async () => {
-      const tx = nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, parseUnits("10", 18));
+      const tx = nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(parseUnits("10", 18));
       await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
     });
 
@@ -208,27 +196,23 @@ describe("NativeTokenGateway", () => {
       const redeemAmount = parseUnits("10", 18);
       await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
 
-      await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, redeemAmount);
+      await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(redeemAmount);
       expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
     });
   });
 
   describe("borrowAndUnwrap", () => {
     beforeEach(async () => {
-      await nativeTokenGateway
-        .connect(user1)
-        .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+      await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
     });
 
     it("should revert when sender is not approved to borrow on behalf", async () => {
-      const tx = nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, parseUnits("1", 18));
+      const tx = nativeTokenGateway.connect(user2).borrowAndUnwrap(parseUnits("1", 18));
       await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
     });
 
     it("should borrow and unwrap weth and sent it to borrower", async () => {
-      await nativeTokenGateway
-        .connect(user1)
-        .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+      await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
       await usdt.connect(user2).approve(vusdt.address, parseUnits("5000", 18));
       await vusdt.connect(user2).mint(parseUnits("5000", 18));
 
@@ -236,7 +220,7 @@ describe("NativeTokenGateway", () => {
 
       const borrowAmount = parseUnits("2", 18);
       const user2BalancePrevious = await user2.getBalance();
-      await nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, borrowAmount);
+      await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
 
       expect(await user2.getBalance()).to.closeTo(user2BalancePrevious.add(borrowAmount), parseUnits("1", 15));
     });
@@ -249,7 +233,7 @@ describe("NativeTokenGateway", () => {
       await vweth.connect(user2).borrow(parseUnits("2", 18));
 
       const userBalancePrevious = await user2.getBalance();
-      await nativeTokenGateway.connect(user2).wrapAndRepay(vweth.address, { value: parseUnits("10", 18) });
+      await nativeTokenGateway.connect(user2).wrapAndRepay({ value: parseUnits("10", 18) });
 
       expect(await user2.getBalance()).to.closeTo(userBalancePrevious.sub(parseUnits("2", 18)), parseUnits("1", 16));
       expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);

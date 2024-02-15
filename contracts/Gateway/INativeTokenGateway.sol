@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-import { IVToken } from "./Interfaces/IVToken.sol";
-
 /**
  * @title INativeTokenGateway
  * @author Venus
@@ -56,30 +54,26 @@ interface INativeTokenGateway {
 
     /**
      * @dev Wrap ETH, get WETH, mint vWETH, and supply to the market
-     * @param vToken The vToken market to interact with
      * @param minter The address on behalf of whom the supply is performed
      */
-    function wrapAndSupply(IVToken vToken, address minter) external payable;
+    function wrapAndSupply(address minter) external payable;
 
     /**
      * @dev Redeem vWETH, unwrap to ETH, and send to the user
-     * @param vToken The vToken market to interact with
      * @param redeemAmount The amount of underlying tokens to redeem
      */
-    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external;
+    function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external;
 
     /**
      * @dev Borrow WETH, unwrap to ETH, and send to the user
-     * @param vToken The vToken market to interact with
      * @param amount The amount of underlying tokens to borrow
      */
-    function borrowAndUnwrap(IVToken vToken, uint256 amount) external;
+    function borrowAndUnwrap(uint256 amount) external;
 
     /**
      * @dev Wrap ETH, repay borrow in the market, and send remaining ETH to the user
-     * @param vToken The vToken market to interact with
      */
-    function wrapAndRepay(IVToken vToken) external payable;
+    function wrapAndRepay() external payable;
 
     /**
      * @dev Sweeps WETH tokens from the contract and sends them to the owner

@@ -6,12 +6,13 @@ import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/Saf
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import { IWrappedNative } from "./Interfaces/IWrappedNative.sol";
-import { INativeTokenGateway, IVToken } from "./INativeTokenGateway.sol";
+import { INativeTokenGateway } from "./INativeTokenGateway.sol";
+import { IVToken } from "./Interfaces/IVtoken.sol";
 
 /**
  * @title NativeTokenGateway
  * @author Venus
- * @notice NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wrappedNativeToken)
+ * @notice NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wNativeToken)
  */
 contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -19,15 +20,24 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     /**
      * @notice Address of wrapped ether token contract
      */
-    IWrappedNative public immutable wrappedNativeToken;
+    IWrappedNative public immutable wNativeToken;
+
+    /**
+     * @notice Address of wrapped native token market
+     */
+    IVToken public immutable vWNativeToken;
 
     /**
      * @notice Constructor for NativeTokenGateway
-     * @param wrappedNativeToken_ Address of wrapped ether token contract
+     * @param wrappedNativeToken Address of wrapped native token contract
+     * @param vWrappedNativeToken Address of wrapped native token market
      */
-    constructor(IWrappedNative wrappedNativeToken_) {
-        ensureNonzeroAddress(address(wrappedNativeToken_));
-        wrappedNativeToken = wrappedNativeToken_;
+    constructor(IWrappedNative wrappedNativeToken, IVToken vWrappedNativeToken) {
+        ensureNonzeroAddress(address(wrappedNativeToken));
+        ensureNonzeroAddress(address(vWrappedNativeToken));
+
+        wNativeToken = wrappedNativeToken;
+        vWNativeToken = vWrappedNativeToken;
     }
 
     /**
@@ -41,101 +51,92 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     fallback() external payable {}
 
     /**
-     * @notice Wrap Native, get wrappedNativeToken, mint vWETH, and supply to the market.
-     * @param vToken The vToken market to interact with.
+     * @notice Wrap Native, get wNativeToken, mint vWETH, and supply to the market.
      * @param minter The address on behalf of whom the supply is performed.
-     * @custom:error ZeroAddressNotAllowed is thrown if either vToken or minter address is zero address
+     * @custom:error ZeroAddressNotAllowed is thrown if address of minter is zero address
      * @custom:error ZeroValueNotAllowed is thrown if mintAmount is zero
      * @custom:event TokensWrappedAndSupplied is emitted when assets are supplied to the market
      */
-    function wrapAndSupply(IVToken vToken, address minter) external payable nonReentrant {
-        ensureNonzeroAddress(address(vToken));
+    function wrapAndSupply(address minter) external payable nonReentrant {
         ensureNonzeroAddress(minter);
 
         uint256 mintAmount = msg.value;
         ensureNonzeroValue(mintAmount);
 
-        wrappedNativeToken.deposit{ value: mintAmount }();
-        wrappedNativeToken.approve(address(vToken), mintAmount);
+        wNativeToken.deposit{ value: mintAmount }();
+        wNativeToken.approve(address(vWNativeToken), mintAmount);
 
-        vToken.mintBehalf(minter, mintAmount);
+        vWNativeToken.mintBehalf(minter, mintAmount);
 
-        wrappedNativeToken.approve(address(vToken), 0);
-        emit TokensWrappedAndSupplied(minter, address(vToken), mintAmount);
+        wNativeToken.approve(address(vWNativeToken), 0);
+        emit TokensWrappedAndSupplied(minter, address(vWNativeToken), mintAmount);
     }
 
     /**
      * @notice Redeem vWETH, unwrap to ETH, and send to the user
-     * @param vToken The vToken market to interact with
      * @param redeemAmount The amount of underlying tokens to redeem
+     * @custom:error ZeroValueNotAllowed is thrown if redeemAmount is zero
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
-    function redeemUnderlyingAndUnwrap(IVToken vToken, uint256 redeemAmount) external nonReentrant {
-        ensureNonzeroAddress(address(vToken));
+    function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external nonReentrant {
         ensureNonzeroValue(redeemAmount);
 
-        uint256 balanceBefore = wrappedNativeToken.balanceOf(address(this));
-        vToken.redeemUnderlyingBehalf(msg.sender, redeemAmount);
-        uint256 balanceAfter = wrappedNativeToken.balanceOf(address(this));
+        uint256 balanceBefore = wNativeToken.balanceOf(address(this));
+        vWNativeToken.redeemUnderlyingBehalf(msg.sender, redeemAmount);
+        uint256 balanceAfter = wNativeToken.balanceOf(address(this));
 
         uint256 nativeTokenBalanceBefore = address(this).balance;
-        wrappedNativeToken.withdraw(balanceAfter - balanceBefore);
+        wNativeToken.withdraw(balanceAfter - balanceBefore);
         uint256 nativeTokenBalanceAfter = address(this).balance;
 
         uint256 redeemedAmount = nativeTokenBalanceAfter - nativeTokenBalanceBefore;
 
         _safeTransferETH(msg.sender, redeemedAmount);
-        emit TokensRedeemedAndUnwrapped(msg.sender, address(vToken), redeemedAmount);
+        emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
     }
 
     /**
-     * @dev Borrow wrappedNativeToken, unwrap to Native, and send to the user
-     * @param vToken The vToken market to interact with
+     * @dev Borrow wNativeToken, unwrap to Native, and send to the user
      * @param borrowAmount The amount of underlying tokens to borrow
-     * @custom:error ZeroAddressNotAllowed is thrown if  vToken address is zero address
      * @custom:error ZeroValueNotAllowed is thrown if borrowAmount is zero
      * @custom:event TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped
      */
-    function borrowAndUnwrap(IVToken vToken, uint256 borrowAmount) external nonReentrant {
-        ensureNonzeroAddress(address(vToken));
+    function borrowAndUnwrap(uint256 borrowAmount) external nonReentrant {
+        ensureNonzeroAddress(address(vWNativeToken));
         ensureNonzeroValue(borrowAmount);
 
-        vToken.borrowBehalf(msg.sender, borrowAmount);
+        vWNativeToken.borrowBehalf(msg.sender, borrowAmount);
 
-        wrappedNativeToken.withdraw(borrowAmount);
+        wNativeToken.withdraw(borrowAmount);
         _safeTransferETH(msg.sender, borrowAmount);
-        emit TokensBorrowedAndUnwrapped(msg.sender, address(vToken), borrowAmount);
+        emit TokensBorrowedAndUnwrapped(msg.sender, address(vWNativeToken), borrowAmount);
     }
 
     /**
      * @notice Wrap Native, repay borrow in the market, and send remaining Native to the user
-     * @param vToken The vToken market to interact with
-     * @custom:error ZeroAddressNotAllowed is thrown if vToken address is zero address
      * @custom:error ZeroValueNotAllowed is thrown if repayAmount is zero
      * @custom:event TokensWrappedAndRepaid is emitted when assets are repaid to a market and unwrapped
      */
-    function wrapAndRepay(IVToken vToken) external payable nonReentrant {
-        ensureNonzeroAddress(address(vToken));
-
+    function wrapAndRepay() external payable nonReentrant {
         uint256 repayAmount = msg.value;
         ensureNonzeroValue(repayAmount);
 
-        wrappedNativeToken.deposit{ value: repayAmount }();
-        wrappedNativeToken.approve(address(vToken), repayAmount);
+        wNativeToken.deposit{ value: repayAmount }();
+        wNativeToken.approve(address(vWNativeToken), repayAmount);
 
-        uint256 borrowBalanceBefore = vToken.borrowBalanceCurrent(msg.sender);
-        vToken.repayBorrowBehalf(msg.sender, repayAmount);
-        uint256 borrowBalanceAfter = vToken.borrowBalanceCurrent(msg.sender);
+        uint256 borrowBalanceBefore = vWNativeToken.borrowBalanceCurrent(msg.sender);
+        vWNativeToken.repayBorrowBehalf(msg.sender, repayAmount);
+        uint256 borrowBalanceAfter = vWNativeToken.borrowBalanceCurrent(msg.sender);
 
-        wrappedNativeToken.approve(address(vToken), 0);
+        wNativeToken.approve(address(vWNativeToken), 0);
 
         if (borrowBalanceAfter == 0 && (repayAmount > borrowBalanceBefore)) {
             uint256 dust = repayAmount - borrowBalanceBefore;
 
-            wrappedNativeToken.withdraw(dust);
+            wNativeToken.withdraw(dust);
             _safeTransferETH(msg.sender, dust);
         }
-        emit TokensWrappedAndRepaid(msg.sender, address(vToken), borrowBalanceBefore - borrowBalanceAfter);
+        emit TokensWrappedAndRepaid(msg.sender, address(vWNativeToken), borrowBalanceBefore - borrowBalanceAfter);
     }
 
     /**
@@ -153,15 +154,15 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     }
 
     /**
-     * @notice Sweeps wrappedNativeToken tokens from the contract and sends them to the owner
+     * @notice Sweeps wNativeToken tokens from the contract and sends them to the owner
      * @custom:event SweepToken emits on success
      * @custom:access Controlled by Governance
      */
     function sweepToken() external onlyOwner {
-        uint256 balance = wrappedNativeToken.balanceOf(address(this));
+        uint256 balance = wNativeToken.balanceOf(address(this));
 
         if (balance > 0) {
-            IERC20(address(wrappedNativeToken)).safeTransfer(owner(), balance);
+            IERC20(address(wNativeToken)).safeTransfer(owner(), balance);
             emit SweepToken(owner(), balance);
         }
     }
