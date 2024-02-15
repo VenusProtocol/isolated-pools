@@ -144,7 +144,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @custom:event SweepNative is emitted when assets are swept from the contract
      * @custom:access Controlled by Governance
      */
-    function sweepNative() external payable onlyOwner {
+    function sweepNative() external onlyOwner {
         uint256 balance = address(this).balance;
 
         if (balance > 0) {

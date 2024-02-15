@@ -83,5 +83,5 @@ interface INativeTokenGateway {
     /**
      * @dev Sweeps native assets (ETH) from the contract and sends them to the owner
      */
-    function sweepNative() external payable;
+    function sweepNative() external;
 }
