@@ -73,7 +73,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     }
 
     /**
-     * @notice Redeem vWETH, unwrap to ETH, and send to the user
+     * @notice Redeem vWNativeToken, unwrap to Native Token, and send to the user
      * @param redeemAmount The amount of underlying tokens to redeem
      * @custom:error ZeroValueNotAllowed is thrown if redeemAmount is zero
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
@@ -85,15 +85,13 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         vWNativeToken.redeemUnderlyingBehalf(msg.sender, redeemAmount);
         uint256 balanceAfter = wNativeToken.balanceOf(address(this));
 
-        uint256 nativeTokenBalanceBefore = address(this).balance;
-        wNativeToken.withdraw(balanceAfter - balanceBefore);
-        uint256 nativeTokenBalanceAfter = address(this).balance;
-
-        uint256 redeemedAmount = nativeTokenBalanceAfter - nativeTokenBalanceBefore;
+        uint256 redeemedAmount = balanceAfter - balanceBefore;
+        wNativeToken.withdraw(redeemAmount);
 
         _safeTransferNativeTokens(msg.sender, redeemedAmount);
         emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
     }
+
 
     /**
      * @dev Borrow wNativeToken, unwrap to Native, and send to the user
