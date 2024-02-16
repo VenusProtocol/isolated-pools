@@ -86,7 +86,7 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         uint256 balanceAfter = wNativeToken.balanceOf(address(this));
 
         uint256 redeemedAmount = balanceAfter - balanceBefore;
-        wNativeToken.withdraw(redeemAmount);
+        wNativeToken.withdraw(redeemedAmount);
 
         _safeTransferNativeTokens(msg.sender, redeemedAmount);
         emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
