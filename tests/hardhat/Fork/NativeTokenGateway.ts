@@ -81,7 +81,7 @@ async function setup() {
   await comptroller.connect(user2).enterMarkets([vusdt.address, vweth.address]);
 
   const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
-  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(WETH);
+  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(WETH, VWETH);
 
   return {
     oracle,
@@ -104,9 +104,7 @@ if (FORK && FORKED_NETWORK === "ethereum") {
 
     describe("wrapAndSupply", () => {
       it("should wrap and supply eth", async () => {
-        await nativeTokenGateway
-          .connect(user1)
-          .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
         const balanceAfterSupplying = await vweth.balanceOf(await user1.getAddress());
         await expect(balanceAfterSupplying.toString()).to.closeTo(parseUnits("10", 8), parseUnits("1", 5));
       });
@@ -114,31 +112,25 @@ if (FORK && FORKED_NETWORK === "ethereum") {
 
     describe("redeemUnderlyingAndUnwrap", () => {
       beforeEach(async () => {
-        await nativeTokenGateway
-          .connect(user1)
-          .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
       });
 
-      it("should redeem underlying tokens and unwrap and sent it to the user", async () => {
+      it("should redeem underlying tokens and unwrap and send it to the user", async () => {
         const redeemAmount = parseUnits("10", 18);
         await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
 
-        await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(vweth.address, redeemAmount);
+        await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(redeemAmount);
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
       });
     });
 
     describe("borrowAndUnwrap", () => {
       beforeEach(async () => {
-        await nativeTokenGateway
-          .connect(user1)
-          .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
       });
 
-      it("should borrow and unwrap weth and sent it to borrower", async () => {
-        await nativeTokenGateway
-          .connect(user1)
-          .wrapAndSupply(vweth.address, await user1.getAddress(), { value: supplyAmount });
+      it("should borrow and unwrap weth and send it to borrower", async () => {
+        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
         await usdt.connect(user2).approve(vusdt.address, parseUnits("5000", 6));
 
         await vusdt.connect(user2).mint(parseUnits("5000", 6));
@@ -147,7 +139,7 @@ if (FORK && FORKED_NETWORK === "ethereum") {
 
         const borrowAmount = parseUnits("2", 6);
         const user2BalancePrevious = await user2.getBalance();
-        await nativeTokenGateway.connect(user2).borrowAndUnwrap(vweth.address, borrowAmount);
+        await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
 
         expect(await user2.getBalance()).to.closeTo(user2BalancePrevious.add(borrowAmount), parseUnits("1", 16));
       });
@@ -160,7 +152,7 @@ if (FORK && FORKED_NETWORK === "ethereum") {
         await vweth.connect(user2).borrow(parseUnits("1", 18));
 
         const userBalancePrevious = await user2.getBalance();
-        await nativeTokenGateway.connect(user2).wrapAndRepay(vweth.address, { value: parseUnits("10", 18) });
+        await nativeTokenGateway.connect(user2).wrapAndRepay({ value: parseUnits("10", 18) });
 
         expect(await user2.getBalance()).to.closeTo(userBalancePrevious.sub(parseUnits("1", 18)), parseUnits("1", 18));
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
