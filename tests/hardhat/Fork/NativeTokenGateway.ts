@@ -20,7 +20,6 @@ const COMPTROLLER_BEACON = "0xAE2C3F21896c02510aA187BdA0791cDA77083708";
 const VTOKEN_BEACON = "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a";
 const COMPTROLLER_ADDRESS = "0x687a01ecF6d3907658f7A7c714749fAC32336D1B";
 const POOL_REGISTRY = "0x61CAff113CCaf05FFc6540302c37adcf077C5179";
-const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const VWETH = "0x7c8ff7d2A1372433726f879BD945fFb250B94c65";
 const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const VUSDT = "0x8C3e3821259B82fFb32B2450A95d2dcbf161C24E";
@@ -81,7 +80,7 @@ async function setup() {
   await comptroller.connect(user2).enterMarkets([vusdt.address, vweth.address]);
 
   const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
-  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(WETH, VWETH);
+  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(VWETH);
 
   return {
     oracle,

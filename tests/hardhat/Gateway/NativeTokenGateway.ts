@@ -103,7 +103,7 @@ async function deployGateway(): Promise<GatewayFixture> {
   );
 
   const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
-  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(weth.address, vweth.address);
+  const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(vweth.address);
 
   fakePriceOracle.getUnderlyingPrice.whenCalledWith(vusdt.address).returns(parseUnits("1", 18));
   fakePriceOracle.getUnderlyingPrice.whenCalledWith(vweth.address).returns(parseUnits("1000", 18));

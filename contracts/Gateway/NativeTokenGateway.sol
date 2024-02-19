@@ -29,15 +29,13 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
 
     /**
      * @notice Constructor for NativeTokenGateway
-     * @param wrappedNativeToken Address of wrapped native token contract
      * @param vWrappedNativeToken Address of wrapped native token market
      */
-    constructor(IWrappedNative wrappedNativeToken, IVToken vWrappedNativeToken) {
-        ensureNonzeroAddress(address(wrappedNativeToken));
+    constructor(IVToken vWrappedNativeToken) {
         ensureNonzeroAddress(address(vWrappedNativeToken));
 
-        wNativeToken = wrappedNativeToken;
         vWNativeToken = vWrappedNativeToken;
+        wNativeToken = IWrappedNative(vWNativeToken.underlying());
     }
 
     /**
