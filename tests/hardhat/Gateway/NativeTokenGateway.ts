@@ -18,7 +18,7 @@ import {
   VToken,
   VTokenHarness,
   VTokenHarness__factory,
-  WNative,
+  WrappedNative,
 } from "../../../typechain";
 import { makeVToken } from "../util/TokenTestHelpers";
 
@@ -31,7 +31,7 @@ type GatewayFixture = {
   comptroller: Comptroller;
   usdt: MockContract<MockToken>;
   vusdt: VTokenHarness;
-  weth: WNative;
+  weth: WrappedNative;
   vweth: VTokenHarness;
   nativeTokenGateway: NativeTokenGateway;
 };
@@ -76,7 +76,7 @@ async function deployGateway(): Promise<GatewayFixture> {
 
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
-  const wethFactory = await ethers.getContractFactory("WNative");
+  const wethFactory = await ethers.getContractFactory("WrappedNative");
   const weth = await wethFactory.deploy();
   weth.mint(parseUnits("100000000", 18));
 
@@ -156,7 +156,7 @@ describe("NativeTokenGateway", () => {
   let vusdt: VToken;
   let vweth: VToken;
   let usdt: MockContract<MockToken>;
-  let weth: WNative;
+  let weth: WrappedNative;
   let nativeTokenGateway: NativeTokenGateway;
   const supplyAmount = parseUnits("10", 18);
 

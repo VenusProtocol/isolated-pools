@@ -44,11 +44,6 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     receive() external payable {}
 
     /**
-     * @notice To receive Native when msg.data is not empty
-     */
-    fallback() external payable {}
-
-    /**
      * @notice Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market.
      * @param minter The address on behalf of whom the supply is performed.
      * @custom:error ZeroAddressNotAllowed is thrown if address of minter is zero address
@@ -97,7 +92,6 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @custom:event TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped
      */
     function borrowAndUnwrap(uint256 borrowAmount) external nonReentrant {
-        ensureNonzeroAddress(address(vWNativeToken));
         ensureNonzeroValue(borrowAmount);
 
         vWNativeToken.borrowBehalf(msg.sender, borrowAmount);
@@ -126,7 +120,10 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         IERC20(address(wNativeToken)).safeApprove(address(vWNativeToken), 0);
 
         if (borrowBalanceAfter == 0 && (repayAmount > borrowBalanceBefore)) {
-            uint256 dust = repayAmount - borrowBalanceBefore;
+            uint256 dust;
+            unchecked {
+                dust = repayAmount - borrowBalanceBefore;
+            }
 
             wNativeToken.withdraw(dust);
             _safeTransferNativeTokens(msg.sender, dust);

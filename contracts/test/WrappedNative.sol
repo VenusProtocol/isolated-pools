@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
-contract WNative {
+contract WrappedNative {
     string public name = "Wrapped Native";
     string public symbol = "WNATIVE";
     uint8 public decimals = 18;

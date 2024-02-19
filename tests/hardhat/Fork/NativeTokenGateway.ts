@@ -3,19 +3,10 @@ import { Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
-import {
-  AccessControlManager,
-  AccessControlManager__factory,
-  Comptroller,
-  ERC20,
-  NativeTokenGateway,
-  VToken,
-} from "../../../typechain";
+import { Comptroller, ERC20, NativeTokenGateway, VToken } from "../../../typechain";
 import { initMainnetUser, setForkBlock } from "./utils";
 
-const ACM = "0x230058da2D23eb8836EC5DB7037ef7250c56E25E";
 const ADMIN = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
-const ORACLE = "0xd2ce3fb018805ef92b8C5976cb31F84b4E295F94";
 const COMPTROLLER_BEACON = "0xAE2C3F21896c02510aA187BdA0791cDA77083708";
 const VTOKEN_BEACON = "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a";
 const COMPTROLLER_ADDRESS = "0x687a01ecF6d3907658f7A7c714749fAC32336D1B";
@@ -38,7 +29,6 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK;
 let user1: Signer;
 let user2: Signer;
 let impersonatedTimeLock: Signer;
-let accessControlManager: AccessControlManager;
 let comptroller: Comptroller;
 let vweth: VToken;
 let usdt: ERC20;
@@ -52,8 +42,6 @@ async function setup() {
   user2 = await initMainnetUser(USER2, ethers.utils.parseEther("100"));
 
   usdt = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", USDT);
-  usdt = await ethers.getContractAt("WNative", USDT);
-  accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimeLock);
 
   const comptroller = await ethers.getContractAt("Comptroller", COMPTROLLER_ADDRESS);
   const newComptrollerFactory = await ethers.getContractFactory("Comptroller");
@@ -66,8 +54,6 @@ async function setup() {
 
   await beaconContract.connect(impersonatedTimeLock).upgradeTo(newComptrollerImplementation.address);
   await vTokenBeaconContract.connect(impersonatedTimeLock).upgradeTo(newVTokenImplementation.address);
-
-  const oracle = await ethers.getContractAt("ResilientOracle", ORACLE);
 
   vusdt = await ethers.getContractAt("VToken", VUSDT);
   vweth = await ethers.getContractAt("VToken", VWETH);
@@ -83,9 +69,7 @@ async function setup() {
   const nativeTokenGateway = await nativeTokenGatewayFactory.deploy(VWETH);
 
   return {
-    oracle,
     usdt,
-    accessControlManager,
     comptroller,
     vusdt,
     vweth,
@@ -98,14 +82,21 @@ if (FORK && FORKED_NETWORK === "ethereum") {
     const supplyAmount = parseUnits("10", 18);
     beforeEach("setup", async () => {
       await setForkBlock(BLOCK_NUMBER);
-      ({ usdt, accessControlManager, comptroller, vusdt, nativeTokenGateway } = await setup());
+      ({ usdt, comptroller, vusdt, nativeTokenGateway } = await setup());
     });
 
     describe("wrapAndSupply", () => {
       it("should wrap and supply eth", async () => {
-        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
+        const balanceBeforeSupplying = await vweth.balanceOf(await user1.getAddress());
+        const tx = await nativeTokenGateway
+          .connect(user1)
+          .wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
         const balanceAfterSupplying = await vweth.balanceOf(await user1.getAddress());
-        await expect(balanceAfterSupplying.toString()).to.closeTo(parseUnits("10", 8), parseUnits("1", 5));
+        await expect(balanceAfterSupplying.sub(balanceBeforeSupplying).toString()).to.closeTo(
+          parseUnits("10", 8),
+          parseUnits("1", 5),
+        );
+        await expect(tx).to.changeEtherBalances([user1], [supplyAmount.mul(-1)]);
       });
     });
 
@@ -118,7 +109,12 @@ if (FORK && FORKED_NETWORK === "ethereum") {
         const redeemAmount = parseUnits("10", 18);
         await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
 
+        const ethBalanceBefore = await user1.getBalance();
         await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(redeemAmount);
+        const ethBalanceAfter = await user1.getBalance();
+
+        await expect(ethBalanceAfter.sub(ethBalanceBefore)).to.closeTo(redeemAmount, parseUnits("1", 16));
+
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
       });
     });
@@ -137,23 +133,25 @@ if (FORK && FORKED_NETWORK === "ethereum") {
         await comptroller.connect(user2).updateDelegate(nativeTokenGateway.address, true);
 
         const borrowAmount = parseUnits("2", 6);
-        const user2BalancePrevious = await user2.getBalance();
-        await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
+        const tx = await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
 
-        expect(await user2.getBalance()).to.closeTo(user2BalancePrevious.add(borrowAmount), parseUnits("1", 16));
+        await expect(tx).to.changeEtherBalances([user2], [borrowAmount]);
       });
     });
 
     describe("wrapAndRepay", () => {
       it("should wrap and repay", async () => {
+        const borrowAmount = parseUnits("1", 18);
+        const repayAmount = parseUnits("10", 18);
         await usdt.connect(user2).approve(vusdt.address, parseUnits("5000", 6));
         await vusdt.connect(user2).mint(parseUnits("5000", 6));
-        await vweth.connect(user2).borrow(parseUnits("1", 18));
+        await vweth.connect(user2).borrow(borrowAmount);
 
-        const userBalancePrevious = await user2.getBalance();
-        await nativeTokenGateway.connect(user2).wrapAndRepay({ value: parseUnits("10", 18) });
+        const ethBalanceBefore = await user2.getBalance();
+        await nativeTokenGateway.connect(user2).wrapAndRepay({ value: repayAmount });
+        const ethBalanceAfter = await user2.getBalance();
 
-        expect(await user2.getBalance()).to.closeTo(userBalancePrevious.sub(parseUnits("1", 18)), parseUnits("1", 18));
+        expect(ethBalanceBefore.sub(ethBalanceAfter)).to.closeTo(borrowAmount, parseUnits("1", 18));
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
       });
     });
