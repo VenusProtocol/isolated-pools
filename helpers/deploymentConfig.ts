@@ -11,6 +11,9 @@ import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
 
+import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
+import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
+import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { convertToUnit } from "./utils";
 
 export type NetworkConfig = {
@@ -3000,3 +3003,20 @@ export async function getTokenAddress(tokenConfig: TokenConfig, deployments: Dep
     return tokenConfig.tokenAddress;
   }
 }
+
+export const getVWNativeToken = (networkName: string) => {
+  switch (networkName) {
+    case "hardhat":
+      return ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address;
+    case "bsctestnet":
+      return ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address;
+    case "bscmainnet":
+      return ilBscMainnet.VToken_vWBNB_LiquidStakedBNB.address;
+    case "ethereum":
+      return ilEthereum.VToken_vWETH_Core.address;
+    case "development":
+      return ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address;
+    default:
+      throw new Error(`config for network ${networkName} is not available.`);
+  }
+};
