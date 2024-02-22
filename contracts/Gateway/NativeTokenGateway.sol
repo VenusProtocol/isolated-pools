@@ -151,16 +151,17 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     }
 
     /**
-     * @notice Sweeps wNativeToken tokens from the contract and sends them to the owner
+     * @notice Sweeps the input token address tokens from the contract and sends them to the owner
+     * @param token Address of the token
      * @custom:event SweepToken emits on success
      * @custom:access Controlled by Governance
      */
-    function sweepToken() external onlyOwner {
-        uint256 balance = wNativeToken.balanceOf(address(this));
+    function sweepToken(IERC20 token) external onlyOwner {
+        uint256 balance = token.balanceOf(address(this));
 
         if (balance > 0) {
-            IERC20(address(wNativeToken)).safeTransfer(owner(), balance);
-            emit SweepToken(owner(), balance);
+            token.safeTransfer(owner(), balance);
+            emit SweepToken(address(token), owner(), balance);
         }
     }
 

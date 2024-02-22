@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.20;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 /**
  * @title INativeTokenGateway
  * @author Venus
@@ -30,12 +32,12 @@ interface INativeTokenGateway {
     /**
      * @dev Emitted when wNativeToken is swept from the contract
      */
-    event SweepToken(address indexed sender, uint256 amount);
+    event SweepToken(address indexed token, address indexed receiver, uint256 amount);
 
     /**
      * @dev Emitted when native asset is swept from the contract
      */
-    event SweepNative(address indexed sender, uint256 amount);
+    event SweepNative(address indexed receiver, uint256 amount);
 
     /**
      * @notice Thrown if transfer of native token fails
@@ -76,9 +78,9 @@ interface INativeTokenGateway {
     function wrapAndRepay() external payable;
 
     /**
-     * @dev Sweeps wNativeToken tokens from the contract and sends them to the owner
+     * @dev Sweeps input token address tokens from the contract and sends them to the owner
      */
-    function sweepToken() external;
+    function sweepToken(IERC20 token) external;
 
     /**
      * @dev Sweeps native assets (Native Token) from the contract and sends them to the owner

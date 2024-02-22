@@ -259,7 +259,7 @@ describe("NativeTokenGateway", () => {
 
   describe("SweepToken", () => {
     it("should revert when called by non owner", async () => {
-      await expect(nativeTokenGateway.connect(user1).sweepToken()).to.be.rejectedWith(
+      await expect(nativeTokenGateway.connect(user1).sweepToken(weth.address)).to.be.rejectedWith(
         "Ownable: caller is not the owner",
       );
     });
@@ -268,7 +268,7 @@ describe("NativeTokenGateway", () => {
       await weth.transfer(nativeTokenGateway.address, parseUnits("2", 18));
 
       const ownerPreviousBalance = await weth.balanceOf(await deployer.getAddress());
-      await nativeTokenGateway.sweepToken();
+      await nativeTokenGateway.sweepToken(weth.address);
 
       expect(await weth.balanceOf(nativeTokenGateway.address)).to.be.eq(0);
       expect(await weth.balanceOf(await deployer.getAddress())).to.be.greaterThan(ownerPreviousBalance);
