@@ -3,7 +3,7 @@
   "chainId": "11155111",
   "addresses": {
     "ComptrollerBeacon": "0x6cE54143a88CC22500D49D744fb6535D66a8294F",
-    "ComptrollerImpl": "0xE5A008B6A0bAB405343B3ABe8895966EAaFb5790",
+    "ComptrollerImpl": "0x664488124Df6D48670fE38930F0e4Ce2a4faEdE1",
     "Comptroller_Core": "0x7Aa39ab4BcA897F403425C9C6FDbd0f882Be0D70",
     "Comptroller_Curve": "0xD298182D3ACb43e98e32757FF09C91F203e9E67E",
     "Comptroller_Stablecoins": "0x18eF8D2bee415b731C25662568dc1035001cEB2c",
@@ -34,7 +34,7 @@
     "RewardsDistributor_Core_3": "0xa822b4aadc53A7641ce84c690C3109fD336440Aa",
     "RewardsDistributor_Core_3_Proxy": "0xa822b4aadc53A7641ce84c690C3109fD336440Aa",
     "VTokenBeacon": "0x0463a7E5221EAE1990cEddB51A5821a68cdA6008",
-    "VTokenImpl": "0x062c7E0FB3E893d0fbB635F6911CDe7C2fB7E346",
+    "VTokenImpl": "0x382C1085f2D32496769Bd16cC222aA02a4F2b82C",
     "VToken_vCRV_Core": "0x121E3be152F283319310D807ed847E8b98319C1e",
     "VToken_vCRV_Curve": "0x9Db62c5BBc6fb79416545FcCBDB2204099217b78",
     "VToken_vUSDC_Core": "0xF87bceab8DD37489015B426bA931e08A4D787616",

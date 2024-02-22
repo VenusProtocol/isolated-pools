@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x2Ba2fbFeBaA90eda758bc16f89DB6216387f4488",
+      "address": "0x98cbE9e61e41a4A60E326A4aE5e249Eb82D5fC10",
       "abi": [
         {
           "inputs": [
@@ -11886,13 +11886,13 @@
       ]
     },
     "NativeTokenGateway": {
-      "address": "0xc2FF955724a4c07DdB13b65f4dA4Ca8B9c49E7c5",
+      "address": "0xb1a3D8673e22c5eb9466Da90C52D081652a83F9f",
       "abi": [
         {
           "inputs": [
             {
-              "internalType": "contract IWrappedNative",
-              "name": "wrappedNativeToken_",
+              "internalType": "contract IVToken",
+              "name": "vWrappedNativeToken",
               "type": "address"
             }
           ],
@@ -12091,10 +12091,6 @@
           "type": "event"
         },
         {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
           "inputs": [],
           "name": "acceptOwnership",
           "outputs": [],
@@ -12103,11 +12099,6 @@
         },
         {
           "inputs": [
-            {
-              "internalType": "contract IVToken",
-              "name": "vToken",
-              "type": "address"
-            },
             {
               "internalType": "uint256",
               "name": "borrowAmount",
@@ -12148,11 +12139,6 @@
         {
           "inputs": [
             {
-              "internalType": "contract IVToken",
-              "name": "vToken",
-              "type": "address"
-            },
-            {
               "internalType": "uint256",
               "name": "redeemAmount",
               "type": "uint256"
@@ -12174,7 +12160,7 @@
           "inputs": [],
           "name": "sweepNative",
           "outputs": [],
-          "stateMutability": "payable",
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -12198,13 +12184,33 @@
           "type": "function"
         },
         {
-          "inputs": [
+          "inputs": [],
+          "name": "vWNativeToken",
+          "outputs": [
             {
               "internalType": "contract IVToken",
-              "name": "vToken",
+              "name": "",
               "type": "address"
             }
           ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "wNativeToken",
+          "outputs": [
+            {
+              "internalType": "contract IWrappedNative",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "wrapAndRepay",
           "outputs": [],
           "stateMutability": "payable",
@@ -12212,11 +12218,6 @@
         },
         {
           "inputs": [
-            {
-              "internalType": "contract IVToken",
-              "name": "vToken",
-              "type": "address"
-            },
             {
               "internalType": "address",
               "name": "minter",
@@ -12226,19 +12227,6 @@
           "name": "wrapAndSupply",
           "outputs": [],
           "stateMutability": "payable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "wrappedNativeToken",
-          "outputs": [
-            {
-              "internalType": "contract IWrappedNative",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
           "type": "function"
         },
         {
@@ -50361,7 +50349,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0x344cD779C5aAF3436795B49f7C375E716A20f527",
+      "address": "0x9459a33c0a4EAd7794497Da85867859CdB06aCc5",
       "abi": [
         {
           "inputs": [],

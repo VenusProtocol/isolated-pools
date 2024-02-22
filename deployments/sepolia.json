@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0xE5A008B6A0bAB405343B3ABe8895966EAaFb5790",
+      "address": "0x664488124Df6D48670fE38930F0e4Ce2a4faEdE1",
       "abi": [
         {
           "inputs": [
@@ -15294,7 +15294,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0x062c7E0FB3E893d0fbB635F6911CDe7C2fB7E346",
+      "address": "0x382C1085f2D32496769Bd16cC222aA02a4F2b82C",
       "abi": [
         {
           "inputs": [],
