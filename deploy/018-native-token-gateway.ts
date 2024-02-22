@@ -10,15 +10,7 @@ interface NetworkConfig {
   [poolName: string]: string;
 }
 
-interface VWNativePoolType {
-  hardhat: NetworkConfig;
-  bsctestnet: NetworkConfig;
-  bscmainnet: NetworkConfig;
-  sepolia: NetworkConfig;
-  ethereum: NetworkConfig;
-}
-
-const VWNativePooL: VWNativePoolType = {
+const VWNativePooL: { [key: string]: NetworkConfig } = {
   hardhat: {
     Comptroller_LiquidStakedBNB: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
   },
