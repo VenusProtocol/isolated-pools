@@ -57,11 +57,11 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         ensureNonzeroValue(mintAmount);
 
         wNativeToken.deposit{ value: mintAmount }();
-        IERC20(address(wNativeToken)).safeApprove(address(vWNativeToken), mintAmount);
+        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), mintAmount);
 
         vWNativeToken.mintBehalf(minter, mintAmount);
 
-        IERC20(address(wNativeToken)).safeApprove(address(vWNativeToken), 0);
+        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), 0);
         emit TokensWrappedAndSupplied(minter, address(vWNativeToken), mintAmount);
     }
 
@@ -111,13 +111,13 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         ensureNonzeroValue(repayAmount);
 
         wNativeToken.deposit{ value: repayAmount }();
-        IERC20(address(wNativeToken)).safeApprove(address(vWNativeToken), repayAmount);
+        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), repayAmount);
 
         uint256 borrowBalanceBefore = vWNativeToken.borrowBalanceCurrent(msg.sender);
         vWNativeToken.repayBorrowBehalf(msg.sender, repayAmount);
         uint256 borrowBalanceAfter = vWNativeToken.borrowBalanceCurrent(msg.sender);
 
-        IERC20(address(wNativeToken)).safeApprove(address(vWNativeToken), 0);
+        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), 0);
 
         if (borrowBalanceAfter == 0 && (repayAmount > borrowBalanceBefore)) {
             uint256 dust;
@@ -140,8 +140,8 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         uint256 balance = address(this).balance;
 
         if (balance > 0) {
-            _safeTransferNativeTokens((owner()), balance);
-            emit SweepNative((owner()), balance);
+            _safeTransferNativeTokens(owner(), balance);
+            emit SweepNative(owner(), balance);
         }
     }
 

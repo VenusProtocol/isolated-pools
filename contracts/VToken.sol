@@ -255,7 +255,7 @@ contract VToken is
      */
     function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+
         _mintFresh(msg.sender, msg.sender, mintAmount);
         return NO_ERROR;
     }
@@ -274,7 +274,7 @@ contract VToken is
         ensureNonzeroAddress(minter);
 
         accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+
         _mintFresh(msg.sender, minter, mintAmount);
         return NO_ERROR;
     }
@@ -290,7 +290,7 @@ contract VToken is
      */
     function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+
         _redeemFresh(msg.sender, msg.sender, redeemTokens, 0);
         return NO_ERROR;
     }
@@ -311,7 +311,7 @@ contract VToken is
         _ensureSenderIsDelegateOf(redeemer);
 
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+
         _redeemFresh(redeemer, msg.sender, redeemTokens, 0);
         return NO_ERROR;
     }
@@ -324,7 +324,7 @@ contract VToken is
      */
     function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+
         _redeemFresh(msg.sender, msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
@@ -347,7 +347,7 @@ contract VToken is
         _ensureSenderIsDelegateOf(redeemer);
 
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
+
         _redeemFresh(redeemer, msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
@@ -362,7 +362,7 @@ contract VToken is
      */
     function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
+
         _borrowFresh(msg.sender, msg.sender, borrowAmount);
         return NO_ERROR;
     }
@@ -382,7 +382,6 @@ contract VToken is
         _ensureSenderIsDelegateOf(borrower);
         accrueInterest();
 
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
         _borrowFresh(borrower, msg.sender, borrowAmount);
         return NO_ERROR;
     }
@@ -396,7 +395,7 @@ contract VToken is
      */
     function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+
         _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
         return NO_ERROR;
     }
@@ -411,7 +410,7 @@ contract VToken is
      */
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+
         _repayBorrowFresh(msg.sender, borrower, repayAmount);
         return NO_ERROR;
     }
@@ -1134,7 +1133,6 @@ contract VToken is
             revert LiquidateAccrueCollateralInterestFailed(error);
         }
 
-        // _liquidateBorrowFresh emits borrow-specific logs on errors, so we don't need to
         _liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
     }
 

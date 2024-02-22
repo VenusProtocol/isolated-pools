@@ -98,8 +98,8 @@ contract Comptroller is
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
-    /// @notice Emitted when the delegate rights are updated for an account
-    event DelegateUpdated(address indexed user, address indexed delegate, bool allowDelegate);
+    /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
+    event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -203,22 +203,22 @@ contract Comptroller is
     }
 
     /**
-     * @notice Grants or revokes the borrowing delegate rights to / from an account
-     *  If allowed, the delegate will be able to borrow/redeem funds on behalf of the sender
+     * @notice Grants or revokes the borrowing or redeeming delegate rights to / from an account
+     *  If allowed, the delegate will be able to borrow funds on behalf of the sender
      *  Upon a delegated borrow, the delegate will receive the funds, and the borrower
      *  will see the debt on their account
      *  Upon a delegated redeem, the delegate will redeem the vTokens or the underlying,
      *  will receive the redeemed amount on behalf of the approver(redeemer)
      * @param delegate The address to update the rights for
-     * @param allowBorrows Whether to grant (true) or revoke (false) the rights
+     * @param approved Whether to grant (true) or revoke (false) the rights
      * @custom:event DelegateUpdated emits on success
      * @custom:error ZeroAddressNotAllowed is thrown when delegate address is zero
      * @custom:access Not restricted
      */
-    function updateDelegate(address delegate, bool allowBorrows) external {
+    function updateDelegate(address delegate, bool approved) external {
         ensureNonzeroAddress(delegate);
-        approvedDelegates[msg.sender][delegate] = allowBorrows;
-        emit DelegateUpdated(msg.sender, delegate, allowBorrows);
+        approvedDelegates[msg.sender][delegate] = approved;
+        emit DelegateUpdated(msg.sender, delegate, approved);
     }
 
     /**

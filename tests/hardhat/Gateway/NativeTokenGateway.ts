@@ -258,7 +258,7 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("SweepToken", () => {
-    it("should revert when called by non owener", async () => {
+    it("should revert when called by non owner", async () => {
       await expect(nativeTokenGateway.connect(user1).sweepToken()).to.be.rejectedWith(
         "Ownable: caller is not the owner",
       );
