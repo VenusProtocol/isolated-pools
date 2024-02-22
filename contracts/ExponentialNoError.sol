@@ -151,4 +151,15 @@ contract ExponentialNoError {
     function fraction(uint256 a, uint256 b) internal pure returns (Double memory) {
         return Double({ mantissa: div_(mul_(a, DOUBLE_SCALE), b) });
     }
+
+    function mulExp(Exp memory a, Exp memory b) internal pure returns (Exp memory) {
+        uint256 doubleScaledProduct = mul_(a.mantissa, b.mantissa);
+
+        // We add half the scale before dividing so that we get rounding instead of truncation.
+        //  See "Listing 6" and text above it at https://accu.org/index.php/journals/1717
+        // Without this change, a result like 6.6...e-19 will be truncated to 0 instead of being rounded to 1e-18.
+        uint256 doubleScaledProductWithHalfScale = add_(HALF_EXP_SCALE, doubleScaledProduct);
+        uint256 product = div_(doubleScaledProductWithHalfScale, EXP_SCALE);
+        return Exp({ mantissa: product });
+    }
 }

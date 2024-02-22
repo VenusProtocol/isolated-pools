@@ -180,7 +180,6 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const poolId = 0;
   const rewardPerBlock = bigNumber18.mul(1);
   await xvsVaultScenario.add(xvs.address, allocPoint, xvs.address, rewardPerBlock, lockPeriod);
-
   const primeLiquidityProviderScenarioFactory = await ethers.getContractFactory("PrimeLiquidityProviderScenario");
   const _primeLiquidityProviderScenario = await upgrades.deployProxy(
     primeLiquidityProviderScenarioFactory,

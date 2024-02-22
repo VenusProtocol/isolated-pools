@@ -19,6 +19,14 @@ contract PrimeScenario is Prime {
         primeLiquidityProvider = plp;
     }
 
+    function mintForUser(address user) external {
+        tokens[user] = Token(true, true);
+    }
+
+    function burnForUser(address user) external {
+        tokens[user] = Token(false, false);
+    }
+
     function calculateScore(uint256 xvs, uint256 capital) external view returns (uint256) {
         return Scores._calculateScore(xvs, capital, alphaNumerator, alphaDenominator);
     }

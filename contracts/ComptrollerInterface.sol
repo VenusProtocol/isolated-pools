@@ -117,3 +117,25 @@ interface ComptrollerViewInterface {
 
     function supplyCaps(address) external view returns (uint256);
 }
+
+interface IComptroller is ComptrollerInterface {
+    enum Action {
+        MINT,
+        REDEEM,
+        BORROW,
+        REPAY,
+        SEIZE,
+        LIQUIDATE,
+        TRANSFER,
+        ENTER_MARKET,
+        EXIT_MARKET
+    }
+
+    function oracle() external view returns (ResilientOracleInterface);
+
+    function actionPaused(address market, Action action) external view returns (bool);
+
+    function markets(address) external view returns (bool, uint256);
+
+    function getAssetsIn(address account) external view returns (VToken[] memory);
+}
