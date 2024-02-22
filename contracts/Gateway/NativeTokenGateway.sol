@@ -44,6 +44,11 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
     receive() external payable {}
 
     /**
+     * @notice To receive Native when msg.data is not empty
+     */
+    fallback() external payable {}
+
+    /**
      * @notice Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market.
      * @param minter The address on behalf of whom the supply is performed.
      * @custom:error ZeroAddressNotAllowed is thrown if address of minter is zero address
