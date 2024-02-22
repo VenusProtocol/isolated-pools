@@ -3092,7 +3092,39 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@^2.3.0, @venusprotocol/isolated-pools@workspace:.":
+"@venusprotocol/isolated-pools@npm:2.3.0":
+  version: 2.3.0
+  resolution: "@venusprotocol/isolated-pools@npm:2.3.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: e3ef4115048b41415e50ff8d7c4297a93e88f7914ce7eb061d1c976d686c8c5c0082d01612a615a61ef9d130ff2a72e7acba2a6612eda0fc44e12ccb9277c411
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/isolated-pools@npm:^2.3.0":
+  version: 2.5.0
+  resolution: "@venusprotocol/isolated-pools@npm:2.5.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: 21d849893ec115165352df9e937178321a2f5daea11e11221787e67f80476905a5b4c3564382a58b89b5308e00cb88d57a677ac46cc9df5782c884cdce8c4c42
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/isolated-pools@workspace:.":
   version: 0.0.0-use.local
   resolution: "@venusprotocol/isolated-pools@workspace:."
   dependencies:
@@ -3152,22 +3184,6 @@ __metadata:
     typescript: ^4.6.3
   languageName: unknown
   linkType: soft
-
-"@venusprotocol/isolated-pools@npm:2.3.0":
-  version: 2.3.0
-  resolution: "@venusprotocol/isolated-pools@npm:2.3.0"
-  dependencies:
-    "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: e3ef4115048b41415e50ff8d7c4297a93e88f7914ce7eb061d1c976d686c8c5c0082d01612a615a61ef9d130ff2a72e7acba2a6612eda0fc44e12ccb9277c411
-  languageName: node
-  linkType: hard
 
 "@venusprotocol/oracle@npm:1.8.0":
   version: 1.8.0

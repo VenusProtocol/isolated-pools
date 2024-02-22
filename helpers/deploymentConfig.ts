@@ -119,7 +119,7 @@ export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
 
-const preconfiguredAddresses = {
+export const preconfiguredAddresses = {
   hardhat: {
     VTreasury: "account:deployer",
   },
@@ -814,7 +814,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 6), // USDT has 6 decimals on testnet
             supplyCap: convertToUnit(1_000_000, 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit(400_000, 6), // USDT has 6 decimals on testnet
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -933,7 +933,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 6), // USDT has 6 decimals on testnet
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -1106,7 +1106,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 6), // USDT has 6 decimals on testnet
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -1219,7 +1219,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("35", 18),
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -1237,7 +1237,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 6), // USDT has 6 decimals on testnet
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -1404,7 +1404,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 6), // USDT has 6 decimals on testnet
             supplyCap: convertToUnit("18600000", 6), // USDT has 6 decimals on testnet
             borrowCap: convertToUnit("14880000", 6), // USDT has 6 decimals on testnet
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
           },
           {
@@ -1667,7 +1667,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(10_000, 18),
             supplyCap: convertToUnit(1_000_000, 18),
             borrowCap: convertToUnit(400_000, 18),
-            vTokenReceiver: "0xF322942f644A996A617BD29c16bd7d231d9F35E9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1703,7 +1703,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(9000, 18),
             supplyCap: convertToUnit(100000, 18),
             borrowCap: convertToUnit(50000, 18),
-            vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
+            vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391", // community wallet
             reduceReservesBlockDelta: "28800",
           },
         ],
@@ -1750,7 +1750,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("475750", 18),
             supplyCap: convertToUnit("15000000", 18),
             borrowCap: convertToUnit("10500000", 18),
-            vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
+            vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73", // biswap team treasury
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1768,7 +1768,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("5189", 18),
             supplyCap: convertToUnit("2500000", 18),
             borrowCap: convertToUnit("1750000", 18),
-            vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
+            vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77", // alpaca team treasury
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1786,7 +1786,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1804,7 +1804,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit("1600000", 18),
-            vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
+            vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", // tron ecosystem treasury
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1822,7 +1822,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("500000", 18),
             supplyCap: convertToUnit("9508802", 18),
             borrowCap: convertToUnit("6656161", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // ankr team treasury
             reduceReservesBlockDelta: "28800",
           },
 
@@ -1841,7 +1841,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("39", 18),
             supplyCap: convertToUnit("5000", 18),
             borrowCap: convertToUnit("4000", 18),
-            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
+            vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // ankr team treasury
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -1961,7 +1961,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -2074,7 +2074,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("35", 18),
             supplyCap: convertToUnit("80000", 18),
             borrowCap: convertToUnit("56000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -2092,7 +2092,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -2259,7 +2259,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10000", 18),
             supplyCap: convertToUnit("18600000", 18),
             borrowCap: convertToUnit("14880000", 18),
-            vTokenReceiver: "0xf322942f644a996a617bd29c16bd7d231d9f35e9",
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
           },
           {
@@ -2327,11 +2327,11 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
-        isMock: true,
+        isMock: false,
         name: "Wrapped Ether",
         symbol: "WETH",
         decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
       },
       {
         isMock: true,

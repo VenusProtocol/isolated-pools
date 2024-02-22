@@ -1,3 +1,10 @@
+## [2.5.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.5.0...v2.5.1-dev.1) (2024-02-21)
+
+
+### Bug Fixes
+
+* yarn lock ([0f54865](https://github.com/VenusProtocol/isolated-pools/commit/0f548651a54e3ba9cd060c1fb90323dd881ddac2))
+
 ## [2.5.0](https://github.com/VenusProtocol/isolated-pools/compare/v2.4.0...v2.5.0) (2024-01-25)
 
 
