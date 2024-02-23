@@ -145,8 +145,9 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         uint256 balance = address(this).balance;
 
         if (balance > 0) {
-            _safeTransferNativeTokens(owner(), balance);
-            emit SweepNative(owner(), balance);
+            address owner_ = owner();
+            _safeTransferNativeTokens(owner_, balance);
+            emit SweepNative(owner_, balance);
         }
     }
 
@@ -160,8 +161,9 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
         uint256 balance = token.balanceOf(address(this));
 
         if (balance > 0) {
-            token.safeTransfer(owner(), balance);
-            emit SweepToken(address(token), owner(), balance);
+            address owner_ = owner();
+            token.safeTransfer(owner_, balance);
+            emit SweepToken(address(token), owner_, balance);
         }
     }
 
