@@ -1,3 +1,4 @@
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -5,6 +6,7 @@ import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
+import { getConfig } from "../helpers/deploymentConfig";
 
 interface NetworkConfig {
   [poolName: string]: string;
@@ -42,11 +44,15 @@ const getVWNativeToken = (networkName: string, poolName: string): string => {
   return vTokenAddress;
 };
 
-const poolName: string = "";
+// Enter the desired pool name here
+const poolName: string = "Comptroller_Core";
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const { preconfiguredAddresses } = await getConfig(hre.network.name);
+
   const vWNativeAddress = getVWNativeToken(hre.network.name, poolName);
 
   await deploy(`NativeTokenGateway_${poolName}`, {
@@ -56,6 +62,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     autoMine: true,
   });
+
+  const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${poolName}`);
+  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
+  if (hre.network.live) {
+    const tx = await nativeTokenGateway.transferOwnership(targetOwner);
+    await tx.wait();
+    console.log(`Transferred ownership of NativeTokenGateway to Timelock`);
+  }
 };
 
 func.tags = ["NativeTokenGateway"];
