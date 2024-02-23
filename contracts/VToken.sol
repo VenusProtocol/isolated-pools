@@ -984,7 +984,7 @@ contract VToken is
         accountTokens[redeemer] = balanceAfter;
 
         /*
-         * We invoke _doTransferOut for the reciever and the redeemAmount.
+         * We invoke _doTransferOut for the receiver and the redeemAmount.
          *  On success, the vToken has redeemAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
@@ -1040,7 +1040,7 @@ contract VToken is
         totalBorrows = totalBorrowsNew;
 
         /*
-         * We invoke _doTransferOut for the reciever and the borrowAmount.
+         * We invoke _doTransferOut for the receiver and the borrowAmount.
          *  On success, the vToken borrowAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
