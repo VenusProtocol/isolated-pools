@@ -915,11 +915,11 @@ contract VToken is
     }
 
     /**
-     * @notice Sender redeems vTokens in exchange for the underlying asset on behalf of some other address. This function is only available
-     *   for senders, explicitly marked as delegates of the supplier using `comptroller.updateDelegate`
+     * @notice Redeemer redeems vTokens in exchange for the underlying assets, transferred to the receiver. Redeemer and receiver can be the same
+     *   address, or different addresses if the receiver was previously approved by the redeemer as a valid delegate (see Comptroller.updateDelegate)
      * @dev Assumes interest has already been accrued up to the current block
      * @param redeemer The address of the account which is redeeming the tokens
-     * @param receiver The receiver of the tokens, if called by a delegate
+     * @param receiver The receiver of the underlying tokens
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
