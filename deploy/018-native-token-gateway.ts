@@ -8,44 +8,38 @@ import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
 import { getConfig } from "../helpers/deploymentConfig";
 
-interface NetworkConfig {
-  [poolName: string]: string;
+interface VTokenConfig {
+  name: string;
+  address: string;
 }
 
-const VWNativePooL: { [key: string]: NetworkConfig } = {
-  hardhat: {
-    Comptroller_LiquidStakedBNB: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
-  },
+const VWNativeInfo: { [key: string]: VTokenConfig } = {
   bsctestnet: {
-    Comptroller_LiquidStakedBNB: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
+    name: "vWBNB_LiquidStakedBNB",
+    address: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
   },
   bscmainnet: {
-    Comptroller_LiquidStakedBNB: ilBscMainnet.VToken_vWBNB_LiquidStakedBNB.address,
+    name: "vWBNB_LiquidStakedBNB",
+    address: ilBscMainnet.VToken_vWBNB_LiquidStakedBNB.address,
   },
   sepolia: {
-    Comptroller_Core: ilSepolia.VToken_vWETH_Core.address,
+    name: "vWETH_Core",
+    address: ilSepolia.VToken_vWETH_Core.address,
   },
   ethereum: {
-    Comptroller_Core: ilEthereum.VToken_vWETH_Core.address,
+    name: "vWETH_Core",
+    address: ilEthereum.VToken_vWETH_Core.address,
   },
 };
 
-const getVWNativeToken = (networkName: string, poolName: string): string => {
-  const poolAssociatedVToken = VWNativePooL[networkName];
-  if (poolAssociatedVToken === undefined) {
+const getVWNativeToken = (networkName: string): VTokenConfig => {
+  const vTokenInfo = VWNativeInfo[networkName];
+  if (vTokenInfo === undefined) {
     throw new Error(`config for network ${networkName} is not available.`);
   }
 
-  const vTokenAddress = poolAssociatedVToken[poolName];
-  if (vTokenAddress === undefined) {
-    throw new Error(`config for pool ${poolName} is not available.`);
-  }
-
-  return vTokenAddress;
+  return vTokenInfo;
 };
-
-// Enter the desired pool name here
-const poolName: string = "Comptroller_Core";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -53,17 +47,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { preconfiguredAddresses } = await getConfig(hre.network.name);
 
-  const vWNativeAddress = getVWNativeToken(hre.network.name, poolName);
+  const vWNativeInfo = getVWNativeToken(hre.network.name);
 
-  await deploy(`NativeTokenGateway_${poolName}`, {
+  await deploy(`NativeTokenGateway_${vWNativeInfo.name}`, {
     contract: "NativeTokenGateway",
     from: deployer,
-    args: [vWNativeAddress],
+    args: [vWNativeInfo.address],
     log: true,
     autoMine: true,
   });
 
-  const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${poolName}`);
+  const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);
   const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
   if (hre.network.live) {
     const tx = await nativeTokenGateway.transferOwnership(targetOwner);
