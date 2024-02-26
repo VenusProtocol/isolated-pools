@@ -35,6 +35,11 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
         ],
+        ethereum: [
+          "node_modules/@venusprotocol/oracle/deployments/ethereum",
+          "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
+        ],
         bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
       },
     };
@@ -212,18 +217,16 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC || "",
       },
     },
-    sepolia: {
-      url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
-      chainId: 11155111,
-      live: true,
-      timeout: 1200000, // 20 minutes,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
-    },
     ethereum: {
       url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
       chainId: 1,
       live: true,
-      timeout: 1200000, // 20 minutes,
+      timeout: 1200000, // 20 minutes
+    },
+    sepolia: {
+      url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
+      chainId: 11155111,
+      live: true,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbtestnet: {
