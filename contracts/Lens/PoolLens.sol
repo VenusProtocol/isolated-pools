@@ -445,20 +445,38 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         RewardsDistributor rewardsDistributor
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
+
+        bool isTimeBased = rewardsDistributor.isTimeBased();
+
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (
-                borrowState.index,
-                borrowState.blockOrTimestamp,
-                borrowState.lastRewardingBlockOrTimestamp
-            ) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (
-                supplyState.index,
-                supplyState.blockOrTimestamp,
-                supplyState.lastRewardingBlockOrTimestamp
-            ) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
+
+            if (isTimeBased) {
+                (
+                    borrowState.index,
+                    borrowState.blockOrTimestamp,
+                    borrowState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenBorrowStateTimeBased(address(markets[i]));
+                (
+                    supplyState.index,
+                    supplyState.blockOrTimestamp,
+                    supplyState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenSupplyStateTimeBased(address(markets[i]));
+            } else {
+                (
+                    borrowState.index,
+                    borrowState.blockOrTimestamp,
+                    borrowState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
+                (
+                    supplyState.index,
+                    supplyState.blockOrTimestamp,
+                    supplyState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
+            }
+
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             // Update market supply and borrow index in-memory
