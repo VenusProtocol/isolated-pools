@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x044dd75b9E043ACFD2d6EB56b6BB814df2a9c809",
+      "address": "0xF37e2f9366Db8F26B1fAf16700C6858c09C8E754",
       "abi": [
         {
           "inputs": [
@@ -5663,8 +5663,8 @@
         }
       ]
     },
-    "NativeTokenGateway_Comptroller_Core": {
-      "address": "0xc7f990687aAC4662Ab26CC319842F1a2214B494D",
+    "NativeTokenGateway_vWETH_Core": {
+      "address": "0x02fC3253e6839e001Ac959b9834f6BdDAC7bE705",
       "abi": [
         {
           "inputs": [
@@ -14989,7 +14989,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xc54EAa879D22Da14e4475C56D2909cA0C7CFF23b",
+      "address": "0xaE39C38AF957338b3cEE2b3E5d825ea88df02EfE",
       "abi": [
         {
           "inputs": [],
