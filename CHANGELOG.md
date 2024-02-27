@@ -1,3 +1,21 @@
+## [2.6.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.5.1-dev.1...v2.6.0-dev.1) (2024-02-27)
+
+
+### Features
+
+* add pool iin config and sepolia deployments ([34d5932](https://github.com/VenusProtocol/isolated-pools/commit/34d59326929472eb7a85856f47aecb196b3df647))
+* updating deployment files ([30fec3a](https://github.com/VenusProtocol/isolated-pools/commit/30fec3af7cfbb1c042c16591707bb53195092f8b))
+* updating deployment files ([52cb895](https://github.com/VenusProtocol/isolated-pools/commit/52cb895c969bd1b9cf960f115ef072db2d07d9e5))
+* updating deployment files ([3cb372d](https://github.com/VenusProtocol/isolated-pools/commit/3cb372db4ac61a1684350d0504500d6ba57dcd7d))
+* use main version of the oracles npm package ([932c328](https://github.com/VenusProtocol/isolated-pools/commit/932c3285308fe813fff17ef518c55d3f262a23d9))
+
+
+### Bug Fixes
+
+* bootstrap liquidity ([5aa7cbf](https://github.com/VenusProtocol/isolated-pools/commit/5aa7cbf802634f66a7ff7d4e826a8a4b187b2b84))
+* lint ([9aceb23](https://github.com/VenusProtocol/isolated-pools/commit/9aceb2394bd14a4c8efb7a18d913b2244a31d870))
+* yarn lock ([4f22baa](https://github.com/VenusProtocol/isolated-pools/commit/4f22baa1322b851aae5baf4ab225a6db61a0b81a))
+
 ## [2.5.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.5.0...v2.5.1-dev.1) (2024-02-21)
 
 
