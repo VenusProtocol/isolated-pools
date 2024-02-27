@@ -1,11 +1,13 @@
 import { contracts as governanceBscMainnet } from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import { contracts as governanceBscTestnet } from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import { contracts as governanceEthereum } from "@venusprotocol/governance-contracts/deployments/ethereum.json";
+import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import { contracts as venusProtocolBscTestnet } from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protocol/deployments/ethereum.json";
+import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
 import { ethers } from "hardhat";
@@ -20,6 +22,7 @@ export type NetworkConfig = {
   sepolia: DeploymentConfig;
   ethereum: DeploymentConfig;
   opbnbtestnet: DeploymentConfig;
+  opbnbmainnet: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -110,14 +113,17 @@ export const blocksPerYear: BlocksPerYear = {
   sepolia: ETH_BLOCKS_PER_YEAR,
   ethereum: ETH_BLOCKS_PER_YEAR,
   opbnbtestnet: OPBNB_BLOCKS_PER_YEAR,
+  opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 export const ETHEREUM_MULTISIG = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
 export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf";
+export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
+const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -173,6 +179,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: OPBNBTESTNET_MULTISIG,
     CriticalTimelock: OPBNBTESTNET_MULTISIG,
     AccessControlManager: governanceOpbnbTestnet.AccessControlManager.address,
+  },
+  opbnbmainnet: {
+    VTreasury: venusProtocolOpbnbMainnet.VTreasuryV8.address,
+    NormalTimelock: OPBNBMAINNET_MULTISIG,
+    FastTrackTimelock: OPBNBMAINNET_MULTISIG,
+    CriticalTimelock: OPBNBMAINNET_MULTISIG,
+    AccessControlManager: governanceOpbnbMainnet.AccessControlManager.address,
   },
 };
 
@@ -3063,6 +3076,159 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.opbnbtestnet,
   },
+  opbnbmainnet: {
+    tokensConfig: [
+      {
+        isMock: false,
+        name: "BTCB Token",
+        symbol: "BTCB",
+        decimals: 18,
+        tokenAddress: "0x7c6b91d9be155a6db01f749217d76ff02a7227f2",
+      },
+      {
+        isMock: false,
+        name: "Ethereum Token",
+        symbol: "ETH",
+        decimals: 18,
+        tokenAddress: "0xe7798f023fc62146e8aa1b36da45fb70855a77ea",
+      },
+      {
+        isMock: false,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 18,
+        tokenAddress: "0x9e5aac1ba1a2e6aed6b32689dfcf62a509ca96f3",
+      },
+      {
+        isMock: false,
+        name: "Wrapped BNB",
+        symbol: "WBNB",
+        decimals: 18,
+        tokenAddress: "0x4200000000000000000000000000000000000006",
+      },
+      {
+        isMock: false,
+        name: "Venus XVS",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0x3E2e61F1c075881F3fB8dd568043d8c221fd5c61",
+      },
+      {
+        isMock: false,
+        name: "First Digital USD",
+        symbol: "FDUSD",
+        decimals: 18,
+        tokenAddress: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+      },
+    ],
+    poolConfig: [
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus BTCB (Core)",
+            asset: "BTCB",
+            symbol: "vBTCB_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.03553143", 18), // 0.03553143 BTCB
+            supplyCap: convertToUnit(1, 18),
+            borrowCap: convertToUnit("0.55", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
+            vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
+          },
+          {
+            name: "Venus ETH (Core)",
+            asset: "ETH",
+            symbol: "vETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 ETH
+            supplyCap: convertToUnit(25, 18),
+            borrowCap: convertToUnit(16, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
+            vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
+          },
+          {
+            name: "Venus USDT (Core)",
+            asset: "USDT",
+            symbol: "vUSDT_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800.00000001", 18), // 1,800.00000001 USDT
+            supplyCap: convertToUnit(150_000, 18),
+            borrowCap: convertToUnit(130_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
+            vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
+          },
+          {
+            name: "Venus WBNB (Core)",
+            asset: "WBNB",
+            symbol: "vWBNB_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("300", 18),
+            kink_: convertToUnit("0.6", 18),
+            collateralFactor: convertToUnit("0.6", 18),
+            liquidationThreshold: convertToUnit("0.65", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("4.881499602605344833", 18), // 4,881499602605344833 WBNB
+            supplyCap: convertToUnit(100, 18),
+            borrowCap: convertToUnit(75, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
+            vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
+          },
+          {
+            name: "Venus FDUSD (Core)",
+            asset: "FDUSD",
+            symbol: "vFDUSD_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800.00000001", 18), // 1,800.00000001 FUSDT
+            supplyCap: convertToUnit(150_000, 18),
+            borrowCap: convertToUnit(130_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
+            vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
+          },
+        ],
+        rewards: [],
+      },
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.opbnbmainnet.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.opbnbmainnet,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -3079,6 +3245,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.ethereum;
     case "opbnbtestnet":
       return globalConfig.opbnbtestnet;
+    case "opbnbmainnet":
+      return globalConfig.opbnbmainnet;
     case "development":
       return globalConfig.bsctestnet;
     default:
