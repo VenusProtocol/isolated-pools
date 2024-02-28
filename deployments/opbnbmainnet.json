@@ -2308,8 +2308,8 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump3000000bps_kink6000bps": {
-      "address": "0x05D0567aa5dDB9179D353871CDc93ece31927026",
+    "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink6000bps": {
+      "address": "0x0b7cdC617bFE8e63D7861AbC1139811b61DbC869",
       "abi": [
         {
           "inputs": [
