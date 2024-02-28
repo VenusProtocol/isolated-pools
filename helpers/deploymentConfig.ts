@@ -3190,7 +3190,7 @@ export const globalConfig: NetworkConfig = {
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.15", 18),
-            jumpMultiplierPerYear: convertToUnit("300", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
             kink_: convertToUnit("0.6", 18),
             collateralFactor: convertToUnit("0.6", 18),
             liquidationThreshold: convertToUnit("0.65", 18),
