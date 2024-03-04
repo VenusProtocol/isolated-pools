@@ -45,6 +45,8 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
         ],
+        opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
+        opbnbtestnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbtestnet"],
       },
     };
   }
