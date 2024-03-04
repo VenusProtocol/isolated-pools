@@ -13,32 +13,44 @@ interface VTokenConfig {
   address: string;
 }
 
-const VWNativeInfo: { [key: string]: VTokenConfig } = {
-  bsctestnet: {
-    name: "vWBNB_LiquidStakedBNB",
-    address: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
-  },
-  bscmainnet: {
-    name: "vWBNB_LiquidStakedBNB",
-    address: ilBscMainnet.VToken_vWBNB_LiquidStakedBNB.address,
-  },
-  sepolia: {
-    name: "vWETH_Core",
-    address: ilSepolia.VToken_vWETH_Core.address,
-  },
-  ethereum: {
-    name: "vWETH_Core",
-    address: ilEthereum.VToken_vWETH_Core.address,
-  },
+const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
+  bsctestnet: [
+    {
+      name: "vWBNB_LiquidStakedBNB",
+      address: ilBscTestnet.VToken_vWBNB_LiquidStakedBNB.address,
+    },
+  ],
+  bscmainnet: [
+    {
+      name: "vWBNB_LiquidStakedBNB",
+      address: ilBscMainnet.VToken_vWBNB_LiquidStakedBNB.address,
+    },
+  ],
+  sepolia: [
+    {
+      name: "vWETH_Core",
+      address: ilSepolia.VToken_vWETH_Core.address,
+    },
+    {
+      name: "vWETH_LiquidStakedETH",
+      address: ilSepolia.VToken_vWETH_LiquidStakedETH.address,
+    },
+  ],
+  ethereum: [
+    {
+      name: "vWETH_Core",
+      address: ilEthereum.VToken_vWETH_Core.address,
+    },
+  ],
 };
 
-const getVWNativeToken = (networkName: string): VTokenConfig => {
-  const vTokenInfo = VWNativeInfo[networkName];
-  if (vTokenInfo === undefined) {
+const getVWNativeTokens = (networkName: string): VTokenConfig[] => {
+  const vTokensInfo = VWNativeInfo[networkName];
+  if (vTokensInfo === undefined) {
     throw new Error(`config for network ${networkName} is not available.`);
   }
 
-  return vTokenInfo;
+  return vTokensInfo;
 };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -47,22 +59,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { preconfiguredAddresses } = await getConfig(hre.network.name);
 
-  const vWNativeInfo = getVWNativeToken(hre.network.name);
+  const vWNativesInfo = getVWNativeTokens(hre.network.name);
+  for (const vWNativeInfo of vWNativesInfo) {
+    await deploy(`NativeTokenGateway_${vWNativeInfo.name}`, {
+      contract: "NativeTokenGateway",
+      from: deployer,
+      args: [vWNativeInfo.address],
+      log: true,
+      autoMine: true,
+    });
 
-  await deploy(`NativeTokenGateway_${vWNativeInfo.name}`, {
-    contract: "NativeTokenGateway",
-    from: deployer,
-    args: [vWNativeInfo.address],
-    log: true,
-    autoMine: true,
-  });
-
-  const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);
-  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-  if (hre.network.live) {
-    const tx = await nativeTokenGateway.transferOwnership(targetOwner);
-    await tx.wait();
-    console.log(`Transferred ownership of NativeTokenGateway to Timelock`);
+    const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);
+    const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
+    if (hre.network.live) {
+      const tx = await nativeTokenGateway.transferOwnership(targetOwner);
+      await tx.wait();
+      console.log(`Transferred ownership of NativeTokenGateway_${vWNativeInfo.name} to Timelock`);
+    }
   }
 };
 
