@@ -6,7 +6,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
-import { ComptrollerInterface } from "./ComptrollerInterface.sol";
+import { ComptrollerInterface, Action } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { VToken } from "./VToken.sol";

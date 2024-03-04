@@ -6,6 +6,18 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 
+enum Action {
+    MINT,
+    REDEEM,
+    BORROW,
+    REPAY,
+    SEIZE,
+    LIQUIDATE,
+    TRANSFER,
+    ENTER_MARKET,
+    EXIT_MARKET
+}
+
 /**
  * @title ComptrollerInterface
  * @author Venus
@@ -89,6 +101,8 @@ interface ComptrollerInterface {
     ) external view returns (uint256, uint256);
 
     function getAllMarkets() external view returns (VToken[] memory);
+
+    function actionPaused(address market, Action action) external view returns (bool);
 }
 
 /**
