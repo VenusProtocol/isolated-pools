@@ -99,7 +99,7 @@ contract Comptroller is
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
     /// @notice Emitted when a market is unlisted
-    event MarketUnlisted(VToken indexed vToken);
+    event MarketUnlisted(address indexed vToken);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -217,27 +217,20 @@ contract Comptroller is
             revert MarketNotListed(market);
         }
 
-        _setActionPaused(market, Action.BORROW, true);
-        _setActionPaused(market, Action.MINT, true);
-        _setActionPaused(market, Action.REDEEM, true);
-        _setActionPaused(market, Action.REPAY, true);
-        _setActionPaused(market, Action.ENTER_MARKET, true);
-        _setActionPaused(market, Action.LIQUIDATE, true);
+        require(actionPaused(market, Action.BORROW), "borrow action is not paused");
+        require(actionPaused(market, Action.MINT), "mint action is not paused");
+        require(actionPaused(market, Action.REDEEM), "redeem action is not paused");
+        require(actionPaused(market, Action.REPAY), "repay action is not paused");
+        require(actionPaused(market, Action.ENTER_MARKET), "enter market action is not paused");
+        require(actionPaused(market, Action.LIQUIDATE), "liquidate action is not paused");
 
-        borrowCaps[market] = 0;
-        supplyCaps[market] = 0;
+        require(borrowCaps[market] == 0, "borrow cap is not 0");
+        require(supplyCaps[market] == 0, "supply cap is not 0");
 
-        VToken vToken = VToken(market);
-
-        emit NewSupplyCap(vToken, 0);
-        emit NewBorrowCap(vToken, 0);
-
-        emit NewCollateralFactor(vToken, _market.collateralFactorMantissa, 0);
-        _market.collateralFactorMantissa = 0;
+        require(_market.collateralFactorMantissa == 0, "collateral factor is not 0");
 
         _market.isListed = false;
-
-        emit MarketUnlisted(vToken);
+        emit MarketUnlisted(market);
 
         return NO_ERROR;
     }
