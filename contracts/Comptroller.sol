@@ -158,6 +158,9 @@ contract Comptroller is
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
 
+    /// @notice Thrown if delegate approval status is already set to the requested value
+    error DelegationStatusUnchanged();
+
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
@@ -213,10 +216,15 @@ contract Comptroller is
      * @param approved Whether to grant (true) or revoke (false) the borrowing or redeeming rights
      * @custom:event DelegateUpdated emits on success
      * @custom:error ZeroAddressNotAllowed is thrown when delegate address is zero
+     * @custom:error DelegationStatusUnchanged is thrown if approval status is already set to the requested value
      * @custom:access Not restricted
      */
     function updateDelegate(address delegate, bool approved) external {
         ensureNonzeroAddress(delegate);
+        if (approvedDelegates[msg.sender][delegate] == approved) {
+            revert DelegationStatusUnchanged();
+        }
+
         approvedDelegates[msg.sender][delegate] = approved;
         emit DelegateUpdated(msg.sender, delegate, approved);
     }
