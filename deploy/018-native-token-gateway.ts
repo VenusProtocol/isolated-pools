@@ -5,6 +5,8 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
+import { contracts as ilOpbnbMainnet } from "../deployments/opbnbmainnet.json";
+import { contracts as ilOpbnbTestnet } from "../deployments/opbnbtestnet.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
 import { getConfig } from "../helpers/deploymentConfig";
 
@@ -40,6 +42,22 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilEthereum.VToken_vWETH_Core.address,
+    },
+    {
+      name: "vWETH_LiquidStakedETH",
+      address: ilEthereum.VToken_vWETH_LiquidStakedETH.address,
+    },
+  ],
+  opbnbtestnet: [
+    {
+      name: "vWBNB_Core",
+      address: ilOpbnbTestnet.VToken_vWBNB_Core.address,
+    },
+  ],
+  opbnbmainnet: [
+    {
+      name: "vWBNB_Core",
+      address: ilOpbnbMainnet.VToken_vWBNB_Core.address,
     },
   ],
 };
