@@ -11819,7 +11819,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0x6492dF28A9478230205c940A245Ffb114EaEb9d1",
+      "address": "0xe73993e47BA43566cCc010e9d26B874515da77C8",
       "abi": [
         {
           "inputs": [
@@ -11973,6 +11973,11 @@
                     {
                       "internalType": "uint256",
                       "name": "underlyingDecimals",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "pausedActions",
                       "type": "uint256"
                     }
                   ],
@@ -12253,6 +12258,11 @@
                       "internalType": "uint256",
                       "name": "underlyingDecimals",
                       "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "pausedActions",
+                      "type": "uint256"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -12452,6 +12462,11 @@
                     {
                       "internalType": "uint256",
                       "name": "underlyingDecimals",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "pausedActions",
                       "type": "uint256"
                     }
                   ],
@@ -12724,6 +12739,11 @@
                   "internalType": "uint256",
                   "name": "underlyingDecimals",
                   "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "pausedActions",
+                  "type": "uint256"
                 }
               ],
               "internalType": "struct PoolLens.VTokenMetadata",
@@ -12824,6 +12844,11 @@
                 {
                   "internalType": "uint256",
                   "name": "underlyingDecimals",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "pausedActions",
                   "type": "uint256"
                 }
               ],
