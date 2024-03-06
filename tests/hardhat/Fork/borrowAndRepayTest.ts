@@ -177,14 +177,14 @@ if (FORK) {
 
       let vTokenPrice = exchangeRateCollateral.mul(TOKEN1Price).div(convertToUnit(1, 18));
 
-      let weighhtedPriceTOKEN1 = vTokenPrice
+      let weightedPriceTOKEN1 = vTokenPrice
         .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
 
       let expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(exchangeRateCollateral);
 
       // ACC1 pre borrow checks
-      let expectedLiquidityAcc1 = weighhtedPriceTOKEN1.mul(expectedMintAmount).div(convertToUnit(1, 18));
+      let expectedLiquidityAcc1 = weightedPriceTOKEN1.mul(expectedMintAmount).div(convertToUnit(1, 18));
       let [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC1);
       expect(expectedMintAmount).equals(await vTOKEN1.balanceOf(ACC1));
       expect(err).equals(0);
@@ -201,16 +201,14 @@ if (FORK) {
 
       vTokenPrice = exchangeRateCollateral.mul(TOKEN1Price).div(convertToUnit(1, 18));
 
-      weighhtedPriceTOKEN1 = vTokenPrice
-        .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
-        .div(convertToUnit(1, 18));
+      weightedPriceTOKEN1 = vTokenPrice.mul(vTOKEN1CollateralFactor.collateralFactorMantissa).div(convertToUnit(1, 18));
       expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(await vTOKEN1.exchangeRateStored());
 
-      expectedLiquidityAcc1 = weighhtedPriceTOKEN1.mul(await vTOKEN1.balanceOf(ACC1)).div(convertToUnit(1, 18));
+      expectedLiquidityAcc1 = weightedPriceTOKEN1.mul(await vTOKEN1.balanceOf(ACC1)).div(convertToUnit(1, 18));
 
       [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC2);
 
-      let expectedLiquidityAcc2 = weighhtedPriceTOKEN1.mul(expectedMintAmount).div(convertToUnit(1, 18));
+      let expectedLiquidityAcc2 = weightedPriceTOKEN1.mul(expectedMintAmount).div(convertToUnit(1, 18));
       [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC2);
       expect(expectedMintAmount).equals(await vTOKEN1.balanceOf(ACC2));
       expect(err).equals(0);
@@ -234,8 +232,8 @@ if (FORK) {
       expect(liquidity).equals(expectedLiquidityAcc1); // ************************************
       expect(shortfall).equals(0);
 
-      // ********************************Mine 300000 blocks***********************************/
-      await mine(300000);
+      // ********************************Mine 30000 blocks***********************************/
+      await mine(30000);
       await vTOKEN2.accrueInterest();
       let borrowIndexCurrent = await vTOKEN2.borrowIndex();
 
@@ -297,14 +295,14 @@ if (FORK) {
       const TOKEN1Price = await priceOracle.getUnderlyingPrice(VTOKEN1);
       const TOKEN2Price = await priceOracle.getUnderlyingPrice(VTOKEN2);
       const vTokenPrice = exchangeRateCollateral.mul(TOKEN1Price).div(convertToUnit(1, 18));
-      const weighhtedPriceTOKEN1 = vTokenPrice
+      const weightedPriceTOKEN1 = vTokenPrice
         .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
 
       const expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(await vTOKEN1.exchangeRateStored());
 
       // checks
-      let expectedLiquidityAcc1 = weighhtedPriceTOKEN1.mul(await vTOKEN1.balanceOf(ACC1)).div(convertToUnit(1, 18));
+      let expectedLiquidityAcc1 = weightedPriceTOKEN1.mul(await vTOKEN1.balanceOf(ACC1)).div(convertToUnit(1, 18));
       let [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC1);
 
       expect(expectedMintAmount).equals(await vTOKEN1.balanceOf(ACC1));

@@ -1,13 +1,18 @@
 import GovernanceBscMainnet from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import GovernanceBscTestnet from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import GovernanceEthMainnet from "@venusprotocol/governance-contracts/deployments/ethereum.json";
+import GovernanceOpBnbMainnet from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
+import GovernanceOpBnbTestnet from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import GovernanceSepTestnet from "@venusprotocol/governance-contracts/deployments/sepolia.json";
 import OracleBscMainnet from "@venusprotocol/oracle/deployments/bscmainnet.json";
 import OracleBscTestnet from "@venusprotocol/oracle/deployments/bsctestnet.json";
 import OracleEthMainnet from "@venusprotocol/oracle/deployments/ethereum.json";
+import OracleOpBnbMainnet from "@venusprotocol/oracle/deployments/opbnbmainnet.json";
+import OracleOpBnbTestnet from "@venusprotocol/oracle/deployments/opbnbtestnet.json";
 import OracleSepTestnet from "@venusprotocol/oracle/deployments/sepolia.json";
 import PsrBscMainnet from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
 import PsrBscTestnet from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
+import PsrOpBnbTestnet from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet/ProtocolShareReserve.json";
 import PsrSepTestnet from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
 import CoreBscMainnet from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import CoreBscTestnet from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
@@ -16,9 +21,11 @@ import CoreEthMainnet from "@venusprotocol/venus-protocol/deployments/ethereum.j
 import { contracts as MainnetContracts } from "../../../deployments/bscmainnet.json";
 import { contracts as TestnetContracts } from "../../../deployments/bsctestnet.json";
 import { contracts as EthereumContracts } from "../../../deployments/ethereum.json";
+import { contracts as OpBnbMainnetContracts } from "../../../deployments/opbnbmainnet.json";
+import { contracts as OpBnbTestnetContracts } from "../../../deployments/opbnbtestnet.json";
 import { contracts as SepoliaContracts } from "../../../deployments/sepolia.json";
 
-export const contractAddreseses = {
+export const contractAddresses = {
   sepolia: {
     ADMIN: "0x94fa6078b6b8a26F0B6EDFFBE6501B22A10470fB",
     ACM: GovernanceSepTestnet.contracts.AccessControlManager.address,
@@ -118,5 +125,60 @@ export const contractAddreseses = {
     ACC2: "0xA4a04C2D661bB514bB8B478CaCB61145894563ef",
     ACC3: "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3",
     BLOCK_NUMBER: 33966470,
+  },
+  opbnbtestnet: {
+    ADMIN: GovernanceOpBnbTestnet?.contracts?.NormalTimelock?.address || "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf",
+    ACM: GovernanceOpBnbTestnet.contracts.AccessControlManager.address,
+    VTOKEN1: OpBnbTestnetContracts.VToken_vBTCB_Core.address,
+    VTOKEN2: OpBnbTestnetContracts.VToken_vETH_Core.address,
+    VUSDT: "",
+    COMPTROLLER: OpBnbTestnetContracts.Comptroller_Core.address,
+    PSR: PsrOpBnbTestnet.address,
+    SHORTFALL: "",
+    RISKFUND: "",
+    REWARD_DISTRIBUTOR1: "",
+    POOL_REGISTRY: OpBnbTestnetContracts.PoolRegistry.address,
+    RESILIENT_ORACLE: OracleOpBnbTestnet.contracts.ResilientOracle.address,
+    // CHAINLINK_ORACLE: OracleOpBnbTestnet.contracts.ChainlinkOracle.address,
+    CHAINLINK_ORACLE: "",
+    BINANCE_ORACLE: OracleOpBnbTestnet.contracts.BinanceOracle.address,
+    SWAP_ROUTER_CORE_POOL: "",
+    USDT: "",
+    TOKEN1: "0x7Af23F9eA698E9b953D2BD70671173AaD0347f19", // BTCB
+    TOKEN2: "0x94680e003861D43C6c0cf18333972312B6956FF1", // ETH
+    TOKEN1_HOLDER: "0x2ce1d0ffd7e869d9df33e28552b12ddded326706",
+    TOKEN2_HOLDER: "0x638eb8dfff094fd1d52c5a198b44984806c521e5",
+    USDT_HOLDER: "0x8894E0a0c962CB723c1976a4421c95949bE2D4E3",
+    ACC1: "0x3Ac99C7853b58f4AA38b309D372562a5A88bB9C1",
+    ACC2: "0xA4a04C2D661bB514bB8B478CaCB61145894563ef",
+    ACC3: "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3",
+    BLOCK_NUMBER: 22749193,
+  },
+  opbnbmainnet: {
+    ADMIN: GovernanceOpBnbMainnet?.contracts?.NormalTimelock?.address || "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207",
+    ACM: GovernanceOpBnbMainnet.contracts.AccessControlManager.address,
+    VTOKEN1: OpBnbMainnetContracts.VToken_vUSDT_Core.address,
+    VTOKEN2: OpBnbMainnetContracts.VToken_vFDUSD_Core.address,
+    VUSDT: "",
+    COMPTROLLER: OpBnbMainnetContracts.Comptroller_Core.address,
+    PSR: "0xDDc9017F3073aa53a4A8535163b0bf7311F72C52",
+    SHORTFALL: "",
+    RISKFUND: "",
+    REWARD_DISTRIBUTOR1: "",
+    POOL_REGISTRY: OpBnbMainnetContracts.PoolRegistry.address,
+    RESILIENT_ORACLE: OracleOpBnbMainnet.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: "",
+    BINANCE_ORACLE: OracleOpBnbMainnet.contracts.BinanceOracle.address,
+    SWAP_ROUTER_CORE_POOL: "",
+    USDT: "0x9e5aac1ba1a2e6aed6b32689dfcf62a509ca96f3",
+    TOKEN1: "0x9e5AAC1Ba1a2e6aEd6b32689DFcF62A509Ca96f3", // USDT
+    TOKEN2: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb", // FDUSD
+    TOKEN1_HOLDER: "0x001ceb373c83ae75b9f5cf78fc2aba3e185d09e2",
+    TOKEN2_HOLDER: "0x001ceb373c83ae75b9f5cf78fc2aba3e185d09e2",
+    USDT_HOLDER: "0x8894E0a0c962CB723c1976a4421c95949bE2D4E3",
+    ACC1: "0x3Ac99C7853b58f4AA38b309D372562a5A88bB9C1",
+    ACC2: "0xA4a04C2D661bB514bB8B478CaCB61145894563ef",
+    ACC3: "0x394d1d517e8269596a7E4Cd1DdaC1C928B3bD8b3",
+    BLOCK_NUMBER: 17881611,
   },
 };

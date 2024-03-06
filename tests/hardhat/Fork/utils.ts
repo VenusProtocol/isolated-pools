@@ -2,10 +2,10 @@ import { impersonateAccount, setBalance } from "@nomicfoundation/hardhat-network
 import { NumberLike } from "@nomicfoundation/hardhat-network-helpers/dist/src/types";
 import { ethers, network } from "hardhat";
 
-import { contractAddreseses } from "./constants";
+import { contractAddresses } from "./constants";
 
 export function getContractAddresses(name: string) {
-  return contractAddreseses[name];
+  return contractAddresses[name];
 }
 
 export const forking = (blockNumber: number, fn: () => void) => {
