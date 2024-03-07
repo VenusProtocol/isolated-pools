@@ -382,8 +382,7 @@ contract PoolLens is ExponentialNoError {
         uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
 
         uint256 pausedActions;
-        // We use a hardcoded value of 8 actions here since solc v0.5 doesn't support type(enum).max
-        for (uint8 i = 0; i <= 8; ++i) {
+        for (uint8 i; i <= uint8(type(Action).max); ++i) {
             uint256 paused = ComptrollerInterface(comptrollerAddress).actionPaused(address(vToken), Action(i)) ? 1 : 0;
             pausedActions |= paused << i;
         }
