@@ -242,6 +242,7 @@ const config: HardhatUserConfig = {
       chainId: 1,
       live: true,
       timeout: 1200000, // 20 minutes
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     sepolia: {
       url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
@@ -300,6 +301,14 @@ const config: HardhatUserConfig = {
           browserURL: "https://opbnbscan.com/",
         },
       },
+      {
+        network: "ethereum",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
@@ -307,6 +316,7 @@ const config: HardhatUserConfig = {
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
