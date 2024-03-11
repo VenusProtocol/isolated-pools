@@ -77,7 +77,6 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
     function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external nonReentrant {
-        ensureNonzeroValue(redeemAmount);
         _redeemAndUnwrap(redeemAmount, true);
     }
 
@@ -88,7 +87,6 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
     function redeemAndUnwrap(uint256 redeemTokens) external nonReentrant {
-        ensureNonzeroValue(redeemTokens);
         _redeemAndUnwrap(redeemTokens, false);
     }
 
@@ -174,9 +172,12 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      * This function is internally called by `redeemUnderlyingAndUnwrap` and `redeemAndUnwrap`
      * @param redeemTokens The amount of tokens to be redeemed. This can refer to either the underlying tokens directly or their equivalent vTokens
      * @param isUnderlying A boolean flag indicating whether the redemption is for underlying tokens directly (`true`) or for their equivalent vTokens (`false`).
+     * @custom:error ZeroValueNotAllowed is thrown if redeemTokens is zero
      * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
      */
     function _redeemAndUnwrap(uint256 redeemTokens, bool isUnderlying) internal {
+        ensureNonzeroValue(redeemTokens);
+
         uint256 balanceBefore = wNativeToken.balanceOf(address(this));
 
         if (isUnderlying) {
