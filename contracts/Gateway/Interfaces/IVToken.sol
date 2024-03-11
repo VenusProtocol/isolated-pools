@@ -6,11 +6,13 @@ interface IVToken {
 
     function redeemUnderlyingBehalf(address redeemer, uint256 redeemAmount) external returns (uint256);
 
+    function redeemBehalf(address redeemer, uint256 redeemTokens) external returns (uint256);
+
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external returns (uint256);
 
-    function borrowBalanceCurrent(address account) external returns (uint256);
-
     function borrowBehalf(address borrower, uint256 borrowAmount) external returns (uint256);
+
+    function borrowBalanceCurrent(address account) external returns (uint256);
 
     function underlying() external returns (address);
 

@@ -78,16 +78,18 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
      */
     function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external nonReentrant {
         ensureNonzeroValue(redeemAmount);
+        _redeemAndUnwrap(redeemAmount, true);
+    }
 
-        uint256 balanceBefore = wNativeToken.balanceOf(address(this));
-        vWNativeToken.redeemUnderlyingBehalf(msg.sender, redeemAmount);
-        uint256 balanceAfter = wNativeToken.balanceOf(address(this));
-
-        uint256 redeemedAmount = balanceAfter - balanceBefore;
-        wNativeToken.withdraw(redeemedAmount);
-
-        _safeTransferNativeTokens(msg.sender, redeemedAmount);
-        emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
+    /**
+     * @notice Redeem vWNativeToken, unwrap to Native Token, and send to the user
+     * @param redeemTokens The amount of vWNative tokens to redeem
+     * @custom:error ZeroValueNotAllowed is thrown if redeemTokens is zero
+     * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
+     */
+    function redeemAndUnwrap(uint256 redeemTokens) external nonReentrant {
+        ensureNonzeroValue(redeemTokens);
+        _redeemAndUnwrap(redeemTokens, false);
     }
 
     /**
@@ -165,6 +167,30 @@ contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuar
             token.safeTransfer(owner_, balance);
             emit SweepToken(address(token), owner_, balance);
         }
+    }
+
+    /**
+     * @dev Redeems tokens, unwrap them to Native Token, and send to the user
+     * This function is internally called by `redeemUnderlyingAndUnwrap` and `redeemAndUnwrap`
+     * @param redeemTokens The amount of tokens to be redeemed. This can refer to either the underlying tokens directly or their equivalent vTokens
+     * @param isUnderlying A boolean flag indicating whether the redemption is for underlying tokens directly (`true`) or for their equivalent vTokens (`false`).
+     * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped
+     */
+    function _redeemAndUnwrap(uint256 redeemTokens, bool isUnderlying) internal {
+        uint256 balanceBefore = wNativeToken.balanceOf(address(this));
+
+        if (isUnderlying) {
+            vWNativeToken.redeemUnderlyingBehalf(msg.sender, redeemTokens);
+        } else {
+            vWNativeToken.redeemBehalf(msg.sender, redeemTokens);
+        }
+
+        uint256 balanceAfter = wNativeToken.balanceOf(address(this));
+        uint256 redeemedAmount = balanceAfter - balanceBefore;
+        wNativeToken.withdraw(redeemedAmount);
+
+        _safeTransferNativeTokens(msg.sender, redeemedAmount);
+        emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);
     }
 
     /**

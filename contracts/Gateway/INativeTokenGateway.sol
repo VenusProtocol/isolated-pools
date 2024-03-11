@@ -67,6 +67,12 @@ interface INativeTokenGateway {
     function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external;
 
     /**
+     * @dev Redeem vWNativeTokens, unwrap to Native Token, and send to the user
+     * @param redeemTokens The amount of vWNative tokens to redeem
+     */
+    function redeemAndUnwrap(uint256 redeemTokens) external;
+
+    /**
      * @dev Borrow wNativeToken, unwrap to Native Token, and send to the user
      * @param amount The amount of underlying tokens to borrow
      */
