@@ -169,6 +169,12 @@ describe("NativeTokenGateway", () => {
   });
 
   describe("wrapAndSupply", () => {
+    it("should revert when minter address provided is zero address", async () => {
+      await expect(
+        nativeTokenGateway.connect(user1).wrapAndSupply(ethers.constants.AddressZero, { value: 0 }),
+      ).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroAddressNotAllowed");
+    });
+
     it("should revert when zero amount is provided to mint", async () => {
       await expect(
         nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: 0 }),
@@ -187,6 +193,11 @@ describe("NativeTokenGateway", () => {
       await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
     });
 
+    it("should revert when zero value is passed", async () => {
+      const tx = nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(0);
+      await expect(tx).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroValueNotAllowed");
+    });
+
     it("should revert when sender is not approved to redeem on behalf", async () => {
       const tx = nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(parseUnits("10", 18));
       await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
@@ -197,6 +208,30 @@ describe("NativeTokenGateway", () => {
       await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
 
       await nativeTokenGateway.connect(user1).redeemUnderlyingAndUnwrap(redeemAmount);
+      expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
+    });
+  });
+
+  describe("redeemAndUnwrap", () => {
+    beforeEach(async () => {
+      await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
+    });
+
+    it("should revert when zero value is passed", async () => {
+      const tx = nativeTokenGateway.connect(user1).redeemAndUnwrap(0);
+      await expect(tx).to.be.revertedWithCustomError(nativeTokenGateway, "ZeroValueNotAllowed");
+    });
+
+    it("should revert when sender is not approved to redeem on behalf", async () => {
+      const tx = nativeTokenGateway.connect(user1).redeemAndUnwrap(parseUnits("10", 18));
+      await expect(tx).to.be.revertedWithCustomError(vweth, "DelegateNotApproved");
+    });
+
+    it("should redeem vTokens and unwrap and sent it to the user", async () => {
+      const redeemTokens = parseUnits("10", 8);
+      await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
+
+      await nativeTokenGateway.connect(user1).redeemAndUnwrap(redeemTokens);
       expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
     });
   });

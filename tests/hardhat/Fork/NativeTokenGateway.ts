@@ -119,6 +119,24 @@ if (FORK && FORKED_NETWORK === "ethereum") {
       });
     });
 
+    describe("redeemAndUnwrap", () => {
+      beforeEach(async () => {
+        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
+      });
+
+      it("should redeem vTokens and unwrap and send it to the user", async () => {
+        const redeemTokens = await vweth.balanceOf(await user1.getAddress());
+        await comptroller.connect(user1).updateDelegate(nativeTokenGateway.address, true);
+
+        const ethBalanceBefore = await user1.getBalance();
+        await nativeTokenGateway.connect(user1).redeemAndUnwrap(redeemTokens);
+        const ethBalanceAfter = await user1.getBalance();
+
+        await expect(ethBalanceAfter.sub(ethBalanceBefore)).to.closeTo(parseUnits("10", 18), parseUnits("1", 16));
+        expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
+      });
+    });
+
     describe("borrowAndUnwrap", () => {
       beforeEach(async () => {
         await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
