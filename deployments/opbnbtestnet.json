@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x996597fc8726eC0f62BCA0aF4f2Af67D2f7563Ee",
+      "address": "0x17f5D66Fd99FF19B862C831137c39c0B5624e23C",
       "abi": [
         {
           "inputs": [
@@ -4893,7 +4893,7 @@
       ]
     },
     "NativeTokenGateway_vWBNB_Core": {
-      "address": "0xbA12d0BFC59fd29C44795FfFa8A3Ccc877A41325",
+      "address": "0x78FB73687209019CC1799B99Af30b6FB0A5b8e14",
       "abi": [
         {
           "inputs": [
@@ -5151,6 +5151,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -8101,7 +8114,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xcdeF2739BAC410Af396054f17C9217b15FF89f96",
+      "address": "0xd63c59d954A8888e7631ebc2CCc860FDB8Ae85Ad",
       "abi": [
         {
           "inputs": [],

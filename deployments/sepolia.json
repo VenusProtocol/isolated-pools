@@ -6381,7 +6381,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_Core": {
-      "address": "0x02fC3253e6839e001Ac959b9834f6BdDAC7bE705",
+      "address": "0xb8fD67f215117FADeF06447Af31590309750529D",
       "abi": [
         {
           "inputs": [
@@ -6639,6 +6639,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -6747,7 +6760,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_LiquidStakedETH": {
-      "address": "0xe6FF9010852a14fA58CdBe3F2e91d6FbCB3567f9",
+      "address": "0x1FD30e761C3296fE36D9067b1e398FD97B4C0407",
       "abi": [
         {
           "inputs": [
@@ -7005,6 +7018,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
