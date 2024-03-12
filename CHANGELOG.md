@@ -1,3 +1,11 @@
+## [2.7.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0-dev.1...v2.7.0-dev.2) (2024-03-12)
+
+
+### Features
+
+* reduce reserves with available cash when accruing interest ([e1fd22d](https://github.com/VenusProtocol/isolated-pools/commit/e1fd22d7bdb02f813ff0dbf2e10e11d8530aa89f))
+* the new version of hardhat-network-helpers was breaking the tests ([7ab9c1f](https://github.com/VenusProtocol/isolated-pools/commit/7ab9c1fc0e590722480ab8d429c2e2c4bf48605d))
+
 ## [2.7.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.6.0...v2.7.0-dev.1) (2024-02-29)
 
 
