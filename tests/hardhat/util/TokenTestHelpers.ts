@@ -1,6 +1,6 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import chai from "chai";
-import { BigNumber, BigNumberish, Signer } from "ethers";
+import { BaseContract, BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
@@ -156,6 +156,7 @@ export type VTokenTestFixture = {
   vToken: VTokenHarness;
   underlying: MockContract<ERC20Harness>;
   interestRateModel: FakeContract<InterestRateModel>;
+  protocolShareReserve: FakeContract<BaseContract>;
 };
 
 export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
@@ -166,6 +167,7 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
   const [admin] = await ethers.getSigners();
   const underlying = await mockUnderlying("BAT", "BAT");
   const interestRateModel = await fakeInterestRateModel();
+  const protocolShareReserve = await smock.fake("ProtocolShareReserve");
   const vToken = await makeVToken<VTokenHarness__factory>(
     {
       underlying,
@@ -173,11 +175,12 @@ export async function vTokenTestFixture(): Promise<VTokenTestFixture> {
       accessControlManager,
       admin,
       interestRateModel,
+      protocolShareReserve,
     },
     { kind: "VTokenHarness" },
   );
 
-  return { accessControlManager, comptroller, vToken, interestRateModel, underlying };
+  return { accessControlManager, comptroller, vToken, interestRateModel, underlying, protocolShareReserve };
 }
 
 type BalancesSnapshot = {

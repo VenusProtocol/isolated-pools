@@ -805,7 +805,11 @@ contract VToken is
 
         if (currentSlotNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
             reduceReservesBlockNumber = currentSlotNumber;
-            _reduceReservesFresh(totalReservesNew);
+            if (cashPrior < totalReservesNew) {
+                _reduceReservesFresh(cashPrior);
+            } else {
+                _reduceReservesFresh(totalReservesNew);
+            }
         }
 
         /* We emit an AccrueInterest event */
