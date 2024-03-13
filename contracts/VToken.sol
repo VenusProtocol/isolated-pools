@@ -87,6 +87,8 @@ contract VToken is
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
+        require(maxBorrowRateMantissa_ <= 1e18, "Max borrow rate must be <= 1e18");
+
         MAX_BORROW_RATE_MANTISSA = maxBorrowRateMantissa_;
         _disableInitializers();
     }
