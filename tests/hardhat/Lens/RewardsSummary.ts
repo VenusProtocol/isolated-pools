@@ -67,6 +67,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardDistributor3.address,
   ]);
 
+  rewardDistributor1.isTimeBased.returns(false);
   rewardDistributor1.rewardToken.returns(rewardToken1.address);
   rewardDistributor1.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor1.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -86,6 +87,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     lastRewardingBlock: 0,
   });
 
+  rewardDistributor2.isTimeBased.returns(false);
   rewardDistributor2.rewardToken.returns(rewardToken2.address);
   rewardDistributor2.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor2.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -105,6 +107,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     lastRewardingBlock: 0,
   });
 
+  rewardDistributor3.isTimeBased.returns(false);
   rewardDistributor3.rewardToken.returns(rewardToken3.address);
   rewardDistributor3.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor3.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -178,6 +181,7 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardDistributor3.address,
   ]);
 
+  rewardDistributor1.isTimeBased.returns(true);
   rewardDistributor1.rewardToken.returns(rewardToken1.address);
   rewardDistributor1.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor1.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -186,17 +190,18 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor1.rewardTokenSupplySpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor1.rewardTokenBorrowSpeeds.whenCalledWith(vBUSD.address).returns(convertToUnit(0.5, 18));
   rewardDistributor1.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
-  rewardDistributor1.rewardTokenBorrowState.returns({
+  rewardDistributor1.rewardTokenBorrowStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
-  rewardDistributor1.rewardTokenSupplyState.returns({
+  rewardDistributor1.rewardTokenSupplyStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
 
+  rewardDistributor2.isTimeBased.returns(true);
   rewardDistributor2.rewardToken.returns(rewardToken2.address);
   rewardDistributor2.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor2.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -205,17 +210,18 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor2.rewardTokenSupplySpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor2.rewardTokenBorrowSpeeds.whenCalledWith(vBUSD.address).returns(convertToUnit(0.5, 18));
   rewardDistributor2.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
-  rewardDistributor2.rewardTokenBorrowState.returns({
+  rewardDistributor2.rewardTokenBorrowStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
-  rewardDistributor2.rewardTokenSupplyState.returns({
+  rewardDistributor2.rewardTokenSupplyStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
 
+  rewardDistributor3.isTimeBased.returns(true);
   rewardDistributor3.rewardToken.returns(rewardToken3.address);
   rewardDistributor3.rewardTokenBorrowerIndex.returns(convertToUnit(1, 18));
   rewardDistributor3.rewardTokenSupplierIndex.returns(convertToUnit(1, 18));
@@ -224,15 +230,15 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardDistributor3.rewardTokenSupplySpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
   rewardDistributor3.rewardTokenBorrowSpeeds.whenCalledWith(vBUSD.address).returns(convertToUnit(0.5, 18));
   rewardDistributor3.rewardTokenBorrowSpeeds.whenCalledWith(vWBTC.address).returns(convertToUnit(0.5, 18));
-  rewardDistributor3.rewardTokenBorrowState.returns({
+  rewardDistributor3.rewardTokenBorrowStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
-  rewardDistributor3.rewardTokenSupplyState.returns({
+  rewardDistributor3.rewardTokenSupplyStateTimeBased.returns({
     index: convertToUnit(1, 18),
-    block: startBlockTimestamp,
-    lastRewardingBlock: 0,
+    timestamp: startBlockTimestamp,
+    lastRewardingTimestamp: 0,
   });
 
   vBUSD.borrowIndex.returns(convertToUnit(1, 18));
@@ -295,6 +301,7 @@ for (const isTimeBased of [false, true]) {
       const accountAddress = await account.getAddress();
 
       const pendingRewards = await poolLens.getPendingRewards(accountAddress, comptroller.address);
+
       expect(comptroller.getAllMarkets).to.have.been.calledOnce;
       expect(comptroller.getRewardDistributors).to.have.been.calledOnce;
 
@@ -307,13 +314,23 @@ for (const isTimeBased of [false, true]) {
       expect(rewardDistributor3.rewardTokenAccrued).to.have.been.calledOnce;
 
       // Should be called once per market
-      expect(rewardDistributor1.rewardTokenBorrowState).to.have.been.callCount(2);
-      expect(rewardDistributor2.rewardTokenBorrowState).to.have.been.callCount(2);
-      expect(rewardDistributor3.rewardTokenBorrowState).to.have.been.callCount(2);
+      if (isTimeBased) {
+        expect(rewardDistributor1.rewardTokenBorrowStateTimeBased).to.have.been.callCount(2);
+        expect(rewardDistributor2.rewardTokenBorrowStateTimeBased).to.have.been.callCount(2);
+        expect(rewardDistributor3.rewardTokenBorrowStateTimeBased).to.have.been.callCount(2);
 
-      expect(rewardDistributor1.rewardTokenSupplyState).to.have.been.callCount(2);
-      expect(rewardDistributor2.rewardTokenSupplyState).to.have.been.callCount(2);
-      expect(rewardDistributor3.rewardTokenSupplyState).to.have.been.callCount(2);
+        expect(rewardDistributor1.rewardTokenSupplyStateTimeBased).to.have.been.callCount(2);
+        expect(rewardDistributor2.rewardTokenSupplyStateTimeBased).to.have.been.callCount(2);
+        expect(rewardDistributor3.rewardTokenSupplyStateTimeBased).to.have.been.callCount(2);
+      } else {
+        expect(rewardDistributor1.rewardTokenBorrowState).to.have.been.callCount(2);
+        expect(rewardDistributor2.rewardTokenBorrowState).to.have.been.callCount(2);
+        expect(rewardDistributor3.rewardTokenBorrowState).to.have.been.callCount(2);
+
+        expect(rewardDistributor1.rewardTokenSupplyState).to.have.been.callCount(2);
+        expect(rewardDistributor2.rewardTokenSupplyState).to.have.been.callCount(2);
+        expect(rewardDistributor3.rewardTokenSupplyState).to.have.been.callCount(2);
+      }
 
       // Should be called once per reward token configured
       expect(vBUSD.borrowIndex).to.have.been.callCount(3);
@@ -362,12 +379,18 @@ for (const isTimeBased of [false, true]) {
       let blockNumberOrTimestamp = (await ethers.provider.getBlock("latest")).number;
       if (isTimeBased) {
         blockNumberOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+        rewardDistributor3.rewardTokenBorrowStateTimeBased.returns({
+          index: convertToUnit(1, 36), // Current index is 1.0, double scale
+          timestamp: blockNumberOrTimestamp,
+          lastRewardingTimestamp: 0,
+        });
+      } else {
+        rewardDistributor3.rewardTokenBorrowState.returns({
+          index: convertToUnit(1, 36), // Current index is 1.0, double scale
+          block: blockNumberOrTimestamp,
+          lastRewardingBlock: 0,
+        });
       }
-      rewardDistributor3.rewardTokenBorrowState.returns({
-        index: convertToUnit(1, 36), // Current index is 1.0, double scale
-        block: blockNumberOrTimestamp,
-        lastRewardingBlock: 0,
-      });
       rewardDistributor3.INITIAL_INDEX.returns(convertToUnit(0.6, 36)); // Should start accruing rewards at 0.6 of the current index
 
       const pendingRewards = await poolLens.getPendingRewards(await account.getAddress(), comptroller.address);
@@ -394,6 +417,21 @@ for (const isTimeBased of [false, true]) {
         ],
       ];
       expect(pendingRewards).to.have.deep.members(EXPECTED_OUTPUT);
+    });
+
+    it("Should revert when mode of PoolLens and RewardsDistributor differ", async () => {
+      await mineUpTo(startBlock + 1000);
+
+      const accountAddress = await account.getAddress();
+
+      if (isTimeBased) {
+        rewardDistributor3.isTimeBased.returns(false);
+      } else {
+        rewardDistributor3.isTimeBased.returns(true);
+      }
+      await expect(poolLens.getPendingRewards(accountAddress, comptroller.address)).to.be.revertedWith(
+        "Inconsistent Reward mode",
+      );
     });
   });
 }

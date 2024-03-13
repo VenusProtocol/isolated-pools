@@ -446,14 +446,15 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
 
-        bool isTimeBased = rewardsDistributor.isTimeBased();
+        bool _isTimeBased = rewardsDistributor.isTimeBased();
+        require(_isTimeBased == isTimeBased, "Inconsistent Reward mode");
 
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
             RewardTokenState memory supplyState;
 
-            if (isTimeBased) {
+            if (_isTimeBased) {
                 (
                     borrowState.index,
                     borrowState.blockOrTimestamp,
