@@ -1,3 +1,17 @@
+## [2.7.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0-dev.2...v2.7.0-dev.3) (2024-03-13)
+
+
+### Features
+
+* add actions paused bitmask to PoolLens ([12a1810](https://github.com/VenusProtocol/isolated-pools/commit/12a18107c4c2eb4a8123129eaca07dca9cc28ccf))
+* add PoolLens deployment fot ethereum ([dece366](https://github.com/VenusProtocol/isolated-pools/commit/dece3664c49ba6c2473795e10020d6036fc6fb33))
+* add PoolLens deployments for mainnets(opBNB BSC) ([0c48e9a](https://github.com/VenusProtocol/isolated-pools/commit/0c48e9a16e206953e6245f149744417a2a96a4e6))
+* add PoolLens deployments for testnets(sepolia, bsctestnet, opbnbtestnet) ([fa2daa4](https://github.com/VenusProtocol/isolated-pools/commit/fa2daa449e449a943df738fa615645123ba67991))
+* updating deployment files ([5371f96](https://github.com/VenusProtocol/isolated-pools/commit/5371f966e89b939e2172f5ca1e9ad8c79ab450d3))
+* updating deployment files ([2a5a8fc](https://github.com/VenusProtocol/isolated-pools/commit/2a5a8fc00dfabd1b9bf78f6f4b28cc55daaf619e))
+* updating deployment files ([bdbcbc4](https://github.com/VenusProtocol/isolated-pools/commit/bdbcbc4fc06c33c31ab3b103b7b76a3491ab0304))
+* updating deployment files ([6f7cf1c](https://github.com/VenusProtocol/isolated-pools/commit/6f7cf1c23acb4842d8ede8e163569949c7587dc7))
+
 ## [2.7.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0-dev.1...v2.7.0-dev.2) (2024-03-12)
 
 
