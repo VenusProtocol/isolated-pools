@@ -220,7 +220,7 @@ contract RewardsDistributor is
         uint32[] calldata supplyLastRewardingBlocks,
         uint32[] calldata borrowLastRewardingBlocks
     ) external {
-        _checkAccessAllowed("setLastRewardingBlock(address[],uint32[],uint32[])");
+        _checkAccessAllowed("setLastRewardingBlocks(address[],uint32[],uint32[])");
         require(!isTimeBased, "Block-based operation only");
 
         uint256 numTokens = vTokens.length;
