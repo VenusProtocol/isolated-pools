@@ -19,7 +19,7 @@
     "JumpRateModelV2_base200bps_slope1500bps_jump30000bps_kink4500bps": "0x162b94324279A3ad3AF3Eafd0CE3103a14e5b377",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": "0x5eD025A0a8A050bB08BC6c5FbEd526be2321A872",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps": "0x87C427b00C89E82064B32Ca63c9E983fedD3e53e",
-    "PoolLens": "0x5A44D6dc0330A92674F9FAdE1e4eB40b3D2aDf04",
+    "PoolLens": "0x57bea400aE7E51855a2e1E1523475d9d2eB0742F",
     "PoolRegistry": "0x61CAff113CCaf05FFc6540302c37adcf077C5179",
     "PoolRegistry_Implementation": "0x08A2577611Ae63d1ba40188035eD6Ad21F8502A9",
     "PoolRegistry_Proxy": "0x61CAff113CCaf05FFc6540302c37adcf077C5179",
