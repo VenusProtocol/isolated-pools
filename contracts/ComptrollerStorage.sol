@@ -6,6 +6,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
+import { Action } from "./ComptrollerInterface.sol";
 
 /**
  * @title ComptrollerStorage
@@ -47,18 +48,6 @@ contract ComptrollerStorage {
         uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
-    }
-
-    enum Action {
-        MINT,
-        REDEEM,
-        BORROW,
-        REPAY,
-        SEIZE,
-        LIQUIDATE,
-        TRANSFER,
-        ENTER_MARKET,
-        EXIT_MARKET
     }
 
     /**
