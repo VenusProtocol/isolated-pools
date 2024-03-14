@@ -125,6 +125,33 @@ contract Comptroller is
     /// @notice Thrown when user is not member of market
     error MarketNotCollateral(address vToken, address user);
 
+    /// @notice Thrown when borrow action is not paused
+    error BorrowActionNotPaused();
+
+    /// @notice Thrown when mint action is not paused
+    error MintActionNotPaused();
+
+    /// @notice Thrown when redeem action is not paused
+    error RedeemActionNotPaused();
+
+    /// @notice Thrown when repay action is not paused
+    error RepayActionNotPaused();
+
+    /// @notice Thrown when enter market action is not paused
+    error EnterMarketActionNotPaused();
+
+    /// @notice Thrown when liquidate action is not paused
+    error LiquidateActionNotPaused();
+
+    /// @notice Thrown when borrow cap is not zero
+    error BorrowCapIsNotZero();
+
+    /// @notice Thrown when supply cap is not zero
+    error SupplyCapIsNotZero();
+
+    /// @notice Thrown when collateral factor is not zero
+    error CollateralFactorIsNotZero();
+
     /**
      * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
@@ -207,6 +234,17 @@ contract Comptroller is
      * @dev Checks if all actions are paused, borrow/supply caps is set to 0 and collateral factor is to 0.
      * @param market The address of the market (token) to unlist
      * @return uint256 Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event MarketUnlisted is emitted on success
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error BorrowActionNotPaused error is thrown if borrow action is not paused
+     * @custom:error MintActionNotPaused error is thrown if mint action is not paused
+     * @custom:error RedeemActionNotPaused error is thrown if redeem action is not paused
+     * @custom:error RepayActionNotPaused error is thrown if repay action is not paused
+     * @custom:error EnterMarketActionNotPaused error is thrown if enter market action is not paused
+     * @custom:error LiquidateActionNotPaused error is thrown if liquidate action is not paused
+     * @custom:error BorrowCapIsNotZero error is thrown if borrow cap is not zero
+     * @custom:error SupplyCapIsNotZero error is thrown if supply cap is not zero
+     * @custom:error CollateralFactorIsNotZero error is thrown if collateral factor is not zero
      */
     function unlistMarket(address market) external returns (uint256) {
         _checkAccessAllowed("unlistMarket(address)");
@@ -217,17 +255,41 @@ contract Comptroller is
             revert MarketNotListed(market);
         }
 
-        require(actionPaused(market, Action.BORROW), "borrow action is not paused");
-        require(actionPaused(market, Action.MINT), "mint action is not paused");
-        require(actionPaused(market, Action.REDEEM), "redeem action is not paused");
-        require(actionPaused(market, Action.REPAY), "repay action is not paused");
-        require(actionPaused(market, Action.ENTER_MARKET), "enter market action is not paused");
-        require(actionPaused(market, Action.LIQUIDATE), "liquidate action is not paused");
+        if (!actionPaused(market, Action.BORROW)) {
+            revert BorrowActionNotPaused();
+        }
 
-        require(borrowCaps[market] == 0, "borrow cap is not 0");
-        require(supplyCaps[market] == 0, "supply cap is not 0");
+        if (!actionPaused(market, Action.MINT)) {
+            revert MintActionNotPaused();
+        }
 
-        require(_market.collateralFactorMantissa == 0, "collateral factor is not 0");
+        if (!actionPaused(market, Action.REDEEM)) {
+            revert RedeemActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.REPAY)) {
+            revert RepayActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.ENTER_MARKET)) {
+            revert EnterMarketActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.LIQUIDATE)) {
+            revert LiquidateActionNotPaused();
+        }
+
+        if (borrowCaps[market] != 0) {
+            revert BorrowCapIsNotZero();
+        }
+
+        if (supplyCaps[market] != 0) {
+            revert SupplyCapIsNotZero();
+        }
+
+        if (_market.collateralFactorMantissa != 0) {
+            revert CollateralFactorIsNotZero();
+        }
 
         _market.isListed = false;
         emit MarketUnlisted(market);
