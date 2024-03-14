@@ -203,8 +203,8 @@ contract Comptroller is
     }
 
     /**
-     * @notice Unlist an market by setting isListed to false
-     * @dev Pauses all actions, sets borrow/supply caps to 0 and sets collateral factor to 0.
+     * @notice Unlist a market by setting isListed to false
+     * @dev Checks if all actions are paused, borrow/supply caps is set to 0 and collateral factor is to 0.
      * @param market The address of the market (token) to unlist
      * @return uint256 Always NO_ERROR for compatibility with Venus core tooling
      */
