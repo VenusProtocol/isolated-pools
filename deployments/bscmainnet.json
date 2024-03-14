@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x9Ea638B93b9cb591fbB28EA66085591B3B511bf1",
+      "address": "0x011a2ED16EBCbcAE5CC97B1d4c7319d19a9fad06",
       "abi": [
         {
           "inputs": [
@@ -4784,7 +4784,7 @@
       ]
     },
     "NativeTokenGateway_vWBNB_LiquidStakedBNB": {
-      "address": "0xa8433F284795aE7f8652127af47482578b58673d",
+      "address": "0x24896601A4bf1b6a27E51Cb3eff750Bd9FE00d08",
       "abi": [
         {
           "inputs": [
@@ -5042,6 +5042,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
@@ -43288,7 +43301,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xC760459324C6F5cdd17c447b6bE6D6Fc43aCcCCa",
+      "address": "0x1EC822383805FfDb9dC2Ae456DF8C0Ca2Bf14d7d",
       "abi": [
         {
           "inputs": [],
