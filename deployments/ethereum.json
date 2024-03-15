@@ -6404,7 +6404,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_LiquidStakedETH": {
-      "address": "0x664488124Df6D48670fE38930F0e4Ce2a4faEdE1",
+      "address": "0xBC1471308eb2287eBE137420Eb1664A964895D21",
       "abi": [
         {
           "inputs": [
@@ -6662,6 +6662,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
