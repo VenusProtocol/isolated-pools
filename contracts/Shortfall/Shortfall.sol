@@ -9,7 +9,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
-import { IRiskFund } from "../RiskFund/IRiskFund.sol";
+import { IRiskFund } from "./IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
