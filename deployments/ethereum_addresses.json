@@ -19,7 +19,7 @@
     "JumpRateModelV2_base200bps_slope1500bps_jump30000bps_kink4500bps": "0x162b94324279A3ad3AF3Eafd0CE3103a14e5b377",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": "0x5eD025A0a8A050bB08BC6c5FbEd526be2321A872",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps": "0x87C427b00C89E82064B32Ca63c9E983fedD3e53e",
-    "NativeTokenGateway_vWETH_Core": "0x062c7E0FB3E893d0fbB635F6911CDe7C2fB7E346",
+    "NativeTokenGateway_vWETH_Core": "0x044dd75b9E043ACFD2d6EB56b6BB814df2a9c809",
     "NativeTokenGateway_vWETH_LiquidStakedETH": "0xBC1471308eb2287eBE137420Eb1664A964895D21",
     "PoolLens": "0x57bea400aE7E51855a2e1E1523475d9d2eB0742F",
     "PoolRegistry": "0x61CAff113CCaf05FFc6540302c37adcf077C5179",

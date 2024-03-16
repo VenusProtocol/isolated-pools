@@ -6038,7 +6038,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_Core": {
-      "address": "0x062c7E0FB3E893d0fbB635F6911CDe7C2fB7E346",
+      "address": "0x044dd75b9E043ACFD2d6EB56b6BB814df2a9c809",
       "abi": [
         {
           "inputs": [
@@ -6296,6 +6296,19 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "redeemTokens",
+              "type": "uint256"
+            }
+          ],
+          "name": "redeemAndUnwrap",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
