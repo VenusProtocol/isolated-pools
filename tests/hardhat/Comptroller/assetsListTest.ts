@@ -329,6 +329,8 @@ describe("assetListTest", () => {
             actions.SEIZE,
             actions.ENTER_MARKET,
             actions.LIQUIDATE,
+            actions.EXIT_MARKET,
+            actions.TRANSFER,
           ],
           true,
         );

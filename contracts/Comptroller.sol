@@ -137,6 +137,15 @@ contract Comptroller is
     /// @notice Thrown when repay action is not paused
     error RepayActionNotPaused();
 
+    /// @notice Thrown when seize action is not paused
+    error SeizeActionNotPaused();
+
+    /// @notice Thrown when exit market action is not paused
+    error ExitMarketActionNotPaused();
+
+    /// @notice Thrown when transfer action is not paused
+    error TransferActionNotPaused();
+
     /// @notice Thrown when enter market action is not paused
     error EnterMarketActionNotPaused();
 
@@ -271,12 +280,24 @@ contract Comptroller is
             revert RepayActionNotPaused();
         }
 
+        if (!actionPaused(market, Action.SEIZE)) {
+            revert SeizeActionNotPaused();
+        }
+
         if (!actionPaused(market, Action.ENTER_MARKET)) {
             revert EnterMarketActionNotPaused();
         }
 
         if (!actionPaused(market, Action.LIQUIDATE)) {
             revert LiquidateActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.TRANSFER)) {
+            revert TransferActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.EXIT_MARKET)) {
+            revert ExitMarketActionNotPaused();
         }
 
         if (borrowCaps[market] != 0) {
