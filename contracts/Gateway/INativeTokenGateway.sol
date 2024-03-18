@@ -30,7 +30,7 @@ interface INativeTokenGateway {
     event TokensWrappedAndRepaid(address indexed sender, address indexed vToken, uint256 amount);
 
     /**
-     * @dev Emitted when wNativeToken is swept from the contract
+     * @dev Emitted when token is swept from the contract
      */
     event SweepToken(address indexed token, address indexed receiver, uint256 amount);
 
