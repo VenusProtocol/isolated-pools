@@ -7,7 +7,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
-import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { Action, ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
@@ -66,6 +66,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         address underlyingAssetAddress;
         uint256 vTokenDecimals;
         uint256 underlyingDecimals;
+        uint256 pausedActions;
     }
 
     /**
@@ -388,6 +389,12 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         address underlyingAssetAddress = vToken.underlying();
         uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
 
+        uint256 pausedActions;
+        for (uint8 i; i <= uint8(type(Action).max); ++i) {
+            uint256 paused = ComptrollerInterface(comptrollerAddress).actionPaused(address(vToken), Action(i)) ? 1 : 0;
+            pausedActions |= paused << i;
+        }
+
         return
             VTokenMetadata({
                 vToken: address(vToken),
@@ -405,7 +412,8 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
                 collateralFactorMantissa: collateralFactorMantissa,
                 underlyingAssetAddress: underlyingAssetAddress,
                 vTokenDecimals: vToken.decimals(),
-                underlyingDecimals: underlyingDecimals
+                underlyingDecimals: underlyingDecimals,
+                pausedActions: pausedActions
             });
     }
 

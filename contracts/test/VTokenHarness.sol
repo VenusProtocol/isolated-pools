@@ -76,7 +76,7 @@ contract VTokenHarness is VToken {
     }
 
     function harnessRedeemFresh(address payable account, uint256 vTokenAmount, uint256 underlyingAmount) external {
-        super._redeemFresh(account, vTokenAmount, underlyingAmount);
+        super._redeemFresh(account, account, vTokenAmount, underlyingAmount);
     }
 
     function harnessSetAccountBorrows(address account, uint256 principal, uint256 interestIndex) external {
@@ -88,7 +88,7 @@ contract VTokenHarness is VToken {
     }
 
     function harnessBorrowFresh(address payable account, uint256 borrowAmount) external {
-        _borrowFresh(account, borrowAmount);
+        _borrowFresh(account, account, borrowAmount);
     }
 
     function harnessRepayBorrowFresh(address payer, address account, uint256 repayAmount) external {
