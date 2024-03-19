@@ -40,8 +40,19 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
-        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
-        opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
+        bscmainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+        ],
+        opbnbmainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbmainnet",
+        ],
+        opbnbtestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbtestnet",
+        ],
       },
     };
   }
@@ -286,6 +297,22 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "ethereum",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io",
+        },
+      },
+      {
         network: "opbnbtestnet",
         chainId: 5611,
         urls: {
@@ -314,6 +341,8 @@ const config: HardhatUserConfig = {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",

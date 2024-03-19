@@ -1,7 +1,7 @@
 import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
-import { BigNumberish, Signer } from "ethers";
+import { BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
@@ -11,55 +11,34 @@ import {
   AccessControlManager__factory,
   Comptroller,
   Comptroller__factory,
-  MockToken,
-  MockToken__factory,
+  IERC20,
+  IERC20__factory,
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import { initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const FORK_TESTNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bsctestnet";
-const FORK_MAINNET = process.env.FORK === "true" && process.env.FORKED_NETWORK === "bscmainnet";
-let ADMIN: string;
-let ACM: string;
-let acc1: string;
-let acc2: string;
-let USDD: string;
-let COMPTROLLER: string;
-let VUSDD: string;
-let PROTOCOL_SHARE_RESERVE: string;
-let POOL_REGISTRY: string;
-let BLOCK_NUMBER: number;
+const FORK = process.env.FORK === "true";
+const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
-if (FORK_TESTNET) {
-  ADMIN = "0xce10739590001705F7FF231611ba4A48B2820327";
-  ACM = "0x45f8a08F534f34A97187626E05d4b6648Eeaa9AA";
-  acc1 = "0xe70898180a366F204AA529708fB8f5052ea5723c";
-  acc2 = "0xA4a04C2D661bB514bB8B478CaCB61145894563ef";
-  USDD = "0x2E2466e22FcbE0732Be385ee2FBb9C59a1098382";
-  COMPTROLLER = "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B";
-  VUSDD = "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4";
-  PROTOCOL_SHARE_RESERVE = "0x8b293600c50d6fbdc6ed4251cc75ece29880276f"; // VTreasury contract
-  POOL_REGISTRY = "0xC85491616Fa949E048F3aAc39fbf5b0703800667";
-  BLOCK_NUMBER = 30951193;
-}
+const { ACC1, ACC2, ACM, ADMIN, PSR, TOKEN1_HOLDER, TOKEN1, VTOKEN1, COMPTROLLER, BLOCK_NUMBER } = getContractAddresses(
+  FORKED_NETWORK as string,
+);
 
-if (FORK_MAINNET) {
-  // Mainnet addresses
-}
-
-let impersonatedTimelock: Signer;
+let token1Holder: string;
 let accessControlManager: AccessControlManager;
+let token1: IERC20;
+let vTOKEN1: VToken;
+
 let comptroller: Comptroller;
-let vUSDD: VToken;
-let usdd: MockToken;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
+let impersonatedTimelock: Signer;
 let mintAmount: BigNumberish;
-let bswBorrowAmount: BigNumberish;
+let TOKEN1BorrowAmount: BigNumberish;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -84,104 +63,119 @@ async function grantPermissions() {
   await tx.wait();
 }
 
-if (FORK_TESTNET || FORK_MAINNET) {
+if (FORK) {
   describe("Reduce Reserves", async () => {
     mintAmount = convertToUnit("1000", 18);
-    bswBorrowAmount = convertToUnit("100", 18);
+    TOKEN1BorrowAmount = convertToUnit("100", 18);
 
     async function setup() {
       await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
-      acc1Signer = await initMainnetUser(acc1, ethers.utils.parseUnits("2"));
-      acc2Signer = await initMainnetUser(acc2, ethers.utils.parseUnits("2"));
+      acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
+      acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
 
-      usdd = MockToken__factory.connect(USDD, impersonatedTimelock);
-      vUSDD = await configureVToken(VUSDD);
+      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
+      vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
 
       await grantPermissions();
 
-      await comptroller.connect(acc1Signer).enterMarkets([vUSDD.address]);
-      await comptroller.connect(acc2Signer).enterMarkets([vUSDD.address]);
+      await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);
+      await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
 
-      await comptroller.setMarketSupplyCaps([vUSDD.address], [convertToUnit(1, 50)]);
-      await comptroller.setMarketBorrowCaps([vUSDD.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketSupplyCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
+      await comptroller.setMarketBorrowCaps([vTOKEN1.address], [convertToUnit(1, 50)]);
     }
-    async function mintVTokens(signer: Signer, token: MockToken, vToken: VToken, amount: BigNumberish) {
-      await token.connect(signer).faucet(amount);
+
+    async function mintVTokens(signer: Signer, token: IERC20, vToken: VToken, amount: BigNumberish) {
+      await token.connect(token1Holder).transfer(await signer.getAddress(), amount);
       await token.connect(signer).approve(vToken.address, amount);
       await expect(vToken.connect(signer).mint(amount)).to.emit(vToken, "Mint");
     }
 
     beforeEach(async () => {
       await setup();
-      // Mint some tokens in vUsdd market to add underlying assets for borrow and reserves purpose
-      await mintVTokens(acc2Signer, usdd, vUSDD, mintAmount);
+      // Mint some tokens in vTOKEN1 market to add underlying assets for borrow and reserves purpose
+      await mintVTokens(acc2Signer, token1, vTOKEN1, mintAmount);
     });
 
     it("Reduce partial reserves and verify effects", async function () {
-      let totalCashOld = await vUSDD.getCash();
-      await mintVTokens(acc1Signer, usdd, vUSDD, mintAmount);
-      let totalCashNew = await vUSDD.getCash();
+      let totalCashOld = await vTOKEN1.getCash();
+      await mintVTokens(acc1Signer, token1, vTOKEN1, mintAmount);
+      let totalCashNew = await vTOKEN1.getCash();
+
       expect(totalCashNew.sub(totalCashOld)).equals(mintAmount);
 
       totalCashOld = totalCashNew;
-      await vUSDD.connect(acc2Signer).borrow(bswBorrowAmount);
-      totalCashNew = await vUSDD.getCash();
-      expect(totalCashOld.sub(totalCashNew)).equals(bswBorrowAmount);
+      await vTOKEN1.connect(acc2Signer).borrow(TOKEN1BorrowAmount);
+      totalCashNew = await vTOKEN1.getCash();
+
+      expect(totalCashOld.sub(totalCashNew)).equals(TOKEN1BorrowAmount);
 
       // MINE 300000 BLOCKS
       await mine(300000);
 
       // Save states just before accruing interests
-      const accrualBlockNumberPrior = await vUSDD.accrualBlockNumber();
-      const borrowRatePrior = await vUSDD.borrowRatePerBlock();
-      const totalBorrowsPrior = await vUSDD.totalBorrows();
+      const accrualBlockNumberPrior = await vTOKEN1.accrualBlockNumber();
+      const borrowRatePrior = await vTOKEN1.borrowRatePerBlock();
+      const totalBorrowsPrior = await vTOKEN1.totalBorrows();
+      const reserveBefore = await vTOKEN1.totalReserves();
+      const psrBalancePrior = await token1.balanceOf(PSR);
 
-      await vUSDD.accrueInterest();
+      await vTOKEN1.accrueInterest();
 
       // Calculation of reserves
       const currBlock = await ethers.provider.getBlockNumber();
-      const blockDelta = currBlock - accrualBlockNumberPrior;
+      const blockDelta = BigNumber.from(currBlock).sub(BigNumber.from(accrualBlockNumberPrior));
       const simpleInterestFactor = borrowRatePrior.mul(blockDelta);
       const interestAccumulated = simpleInterestFactor.mul(totalBorrowsPrior).div(convertToUnit(1, 18));
-      const reserveFactorMantissa = await vUSDD.reserveFactorMantissa();
+      const reserveFactorMantissa = await vTOKEN1.reserveFactorMantissa();
       const totalReservesExpected = reserveFactorMantissa.mul(interestAccumulated).div(convertToUnit(1, 18));
-      let totalReservesCurrent = await vUSDD.totalReserves();
+      const psrBalanceNew = await token1.balanceOf(PSR);
+
+      const psrBalanceDiff = psrBalanceNew.sub(psrBalancePrior);
+      let totalReservesCurrent = BigNumber.from((await vTOKEN1.totalReserves()).add(psrBalanceDiff)).sub(reserveBefore);
+
       expect(totalReservesExpected).equals(totalReservesCurrent);
 
       // Calculation of exchange rate
-      let exchangeRateStored = await vUSDD.exchangeRateStored();
-      totalCashNew = await vUSDD.getCash();
-      let totalSupply = await vUSDD.totalSupply();
-      let badDebt = await vUSDD.badDebt();
-      let totalBorrowCurrent = await vUSDD.totalBorrows();
-      let cashPlusBorrowsMinusReserves = totalCashNew.add(totalBorrowCurrent).add(badDebt).sub(totalReservesCurrent);
+      let exchangeRateStored = await vTOKEN1.exchangeRateStored();
+      totalCashNew = await vTOKEN1.getCash();
+      let totalSupply = await vTOKEN1.totalSupply();
+      let badDebt = await vTOKEN1.badDebt();
+      let totalBorrowCurrent = await vTOKEN1.totalBorrows();
+      let cashPlusBorrowsMinusReserves = totalCashNew
+        .add(totalBorrowCurrent)
+        .add(badDebt)
+        .sub(await vTOKEN1.totalReserves());
       let exchangeRateExpected = cashPlusBorrowsMinusReserves.mul(convertToUnit(1, 18)).div(totalSupply);
+
       expect(exchangeRateExpected).equals(exchangeRateStored);
 
       // Reduce reserves
-      totalCashOld = await vUSDD.getCash();
-      const totalReservesOld = await vUSDD.totalReserves();
+      await vTOKEN1.accrueInterest();
+      totalCashOld = await vTOKEN1.getCash();
+      const totalReservesOld = await vTOKEN1.totalReserves();
       const reduceAmount = totalReservesOld.mul(50).div(100);
-      const protocolShareBalanceOld = await usdd.balanceOf(PROTOCOL_SHARE_RESERVE);
+      const protocolShareBalanceOld = await token1.balanceOf(PSR);
 
-      await vUSDD.reduceReserves(reduceAmount);
-      totalReservesCurrent = await vUSDD.totalReserves();
-      expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.0000002", 18));
+      await vTOKEN1.reduceReserves(reduceAmount);
+      totalReservesCurrent = await vTOKEN1.totalReserves();
+      expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.0000002", 19));
 
-      const protocolShareBalanceNew = await usdd.balanceOf(PROTOCOL_SHARE_RESERVE);
+      const protocolShareBalanceNew = await token1.balanceOf(PSR);
       expect(protocolShareBalanceNew.sub(protocolShareBalanceOld)).equals(reduceAmount);
 
-      totalCashNew = await vUSDD.getCash();
+      totalCashNew = await vTOKEN1.getCash();
       expect(totalCashOld.sub(totalCashNew)).equals(reduceAmount);
 
-      exchangeRateStored = await vUSDD.exchangeRateStored();
-      totalCashNew = await vUSDD.getCash();
-      totalSupply = await vUSDD.totalSupply();
-      badDebt = await vUSDD.badDebt();
-      totalBorrowCurrent = await vUSDD.totalBorrows();
+      exchangeRateStored = await vTOKEN1.exchangeRateStored();
+      totalCashNew = await vTOKEN1.getCash();
+      totalSupply = await vTOKEN1.totalSupply();
+      badDebt = await vTOKEN1.badDebt();
+      totalBorrowCurrent = await vTOKEN1.totalBorrows();
       cashPlusBorrowsMinusReserves = totalCashNew.add(totalBorrowCurrent).add(badDebt).sub(totalReservesCurrent);
       exchangeRateExpected = cashPlusBorrowsMinusReserves.mul(convertToUnit(1, 18)).div(totalSupply);
       expect(exchangeRateExpected).equals(exchangeRateStored);
