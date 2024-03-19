@@ -85,6 +85,8 @@ describe("PoolLens", async function () {
     return { poolRegistry, fakeAccessControlManager };
   };
 
+  const [ACTION_LIQUIDATE, ACTION_EXIT_MARKET] = [5, 8];
+
   /**
    * Deploying required contracts along with the poolRegistry.
    */
@@ -225,6 +227,11 @@ describe("PoolLens", async function () {
     await comptroller1Proxy.enterMarkets([vDAI.address, vWBTC.address]);
     await comptroller1Proxy.connect(owner).enterMarkets([vDAI.address, vWBTC.address]);
 
+    // Pause some actions
+    await comptroller1Proxy
+      .connect(owner)
+      .setActionsPaused([vWBTC.address], [ACTION_LIQUIDATE, ACTION_EXIT_MARKET], true);
+
     const PoolLens = await ethers.getContractFactory<PoolLens__factory>("PoolLens");
     poolLens = await PoolLens.deploy();
   });
@@ -342,7 +349,7 @@ describe("PoolLens", async function () {
     });
 
     it("is correct for WBTC as underlyingAsset", async () => {
-      // get CToken for Asset-1 : WBTC
+      // get vToken for Asset-1 : WBTC
       const vTokenAddressWBTC = await poolRegistry.getVTokenForAsset(comptroller1Proxy.address, mockWBTC.address);
       const vTokenMetadataActual = await poolLens.vTokenMetadata(vTokenAddressWBTC);
 
@@ -363,6 +370,8 @@ describe("PoolLens", async function () {
       expect(vTokenMetadataActualParsed["underlyingAssetAddress"]).equal(mockWBTC.address);
       expect(vTokenMetadataActualParsed["vTokenDecimals"]).equal("8");
       expect(vTokenMetadataActualParsed["underlyingDecimals"]).equal("8");
+      const expectedBitmask = (1 << ACTION_LIQUIDATE) | (1 << ACTION_EXIT_MARKET);
+      expect(Number(vTokenMetadataActualParsed["pausedActions"])).equal(expectedBitmask);
     });
 
     it("is correct minted for user", async () => {

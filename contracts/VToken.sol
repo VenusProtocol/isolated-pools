@@ -255,7 +255,7 @@ contract VToken is
      */
     function mint(uint256 mintAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+
         _mintFresh(msg.sender, msg.sender, mintAmount);
         return NO_ERROR;
     }
@@ -274,7 +274,7 @@ contract VToken is
         ensureNonzeroAddress(minter);
 
         accrueInterest();
-        // _mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
+
         _mintFresh(msg.sender, minter, mintAmount);
         return NO_ERROR;
     }
@@ -290,8 +290,29 @@ contract VToken is
      */
     function redeem(uint256 redeemTokens) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(msg.sender, redeemTokens, 0);
+
+        _redeemFresh(msg.sender, msg.sender, redeemTokens, 0);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender redeems assets on behalf of some other address. This function is only available
+     *   for senders, explicitly marked as delegates of the supplier using `comptroller.updateDelegate`
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemer The user on behalf of whom to redeem
+     * @param redeemTokens The number of vTokens to redeem into underlying
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:error InsufficientRedeemApproval is thrown when sender is not approved by the redeemer for the given amount
+     * @custom:error RedeemTransferOutNotPossible is thrown when the protocol has insufficient cash
+     * @custom:event Emits Redeem and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function redeemBehalf(address redeemer, uint256 redeemTokens) external override nonReentrant returns (uint256) {
+        _ensureSenderIsDelegateOf(redeemer);
+
+        accrueInterest();
+
+        _redeemFresh(redeemer, msg.sender, redeemTokens, 0);
         return NO_ERROR;
     }
 
@@ -303,8 +324,31 @@ contract VToken is
      */
     function redeemUnderlying(uint256 redeemAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _redeemFresh emits redeem-specific logs on errors, so we don't need to
-        _redeemFresh(msg.sender, 0, redeemAmount);
+
+        _redeemFresh(msg.sender, msg.sender, 0, redeemAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender redeems underlying assets on behalf of some other address. This function is only available
+     *   for senders, explicitly marked as delegates of the supplier using `comptroller.updateDelegate`
+     * @dev Accrues interest whether or not the operation succeeds, unless reverted
+     * @param redeemer, on behalf of whom to redeem
+     * @param redeemAmount The amount of underlying to receive from redeeming vTokens
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:error InsufficientRedeemApproval is thrown when sender is not approved by the redeemer for the given amount
+     * @custom:event Emits Redeem and Transfer events; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function redeemUnderlyingBehalf(
+        address redeemer,
+        uint256 redeemAmount
+    ) external override nonReentrant returns (uint256) {
+        _ensureSenderIsDelegateOf(redeemer);
+
+        accrueInterest();
+
+        _redeemFresh(redeemer, msg.sender, 0, redeemAmount);
         return NO_ERROR;
     }
 
@@ -318,8 +362,27 @@ contract VToken is
      */
     function borrow(uint256 borrowAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        _borrowFresh(msg.sender, borrowAmount);
+
+        _borrowFresh(msg.sender, msg.sender, borrowAmount);
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Sender borrows assets on behalf of some other address. This function is only available
+     *   for senders, explicitly marked as delegates of the borrower using `comptroller.updateDelegate`
+     * @param borrower The borrower, on behalf of whom to borrow
+     * @param borrowAmount The amount of the underlying asset to borrow
+     * @return error Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:error DelegateNotApproved is thrown if caller is not approved delegate
+     * @custom:error BorrowCashNotAvailable is thrown when the protocol has insufficient cash
+     * @custom:event Emits Borrow event; may emit AccrueInterest
+     * @custom:access Not restricted
+     */
+    function borrowBehalf(address borrower, uint256 borrowAmount) external override returns (uint256) {
+        _ensureSenderIsDelegateOf(borrower);
+        accrueInterest();
+
+        _borrowFresh(borrower, msg.sender, borrowAmount);
         return NO_ERROR;
     }
 
@@ -332,7 +395,7 @@ contract VToken is
      */
     function repayBorrow(uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+
         _repayBorrowFresh(msg.sender, msg.sender, repayAmount);
         return NO_ERROR;
     }
@@ -347,7 +410,7 @@ contract VToken is
      */
     function repayBorrowBehalf(address borrower, uint256 repayAmount) external override nonReentrant returns (uint256) {
         accrueInterest();
-        // _repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
+
         _repayBorrowFresh(msg.sender, borrower, repayAmount);
         return NO_ERROR;
     }
@@ -786,7 +849,11 @@ contract VToken is
 
         if (currentBlockNumber - reduceReservesBlockNumber >= reduceReservesBlockDelta) {
             reduceReservesBlockNumber = currentBlockNumber;
-            _reduceReservesFresh(totalReservesNew);
+            if (cashPrior < totalReservesNew) {
+                _reduceReservesFresh(cashPrior);
+            } else {
+                _reduceReservesFresh(totalReservesNew);
+            }
         }
 
         /* We emit an AccrueInterest event */
@@ -852,13 +919,15 @@ contract VToken is
     }
 
     /**
-     * @notice User redeems vTokens in exchange for the underlying asset
+     * @notice Redeemer redeems vTokens in exchange for the underlying assets, transferred to the receiver. Redeemer and receiver can be the same
+     *   address, or different addresses if the receiver was previously approved by the redeemer as a valid delegate (see Comptroller.updateDelegate)
      * @dev Assumes interest has already been accrued up to the current block
      * @param redeemer The address of the account which is redeeming the tokens
+     * @param receiver The receiver of the underlying tokens
      * @param redeemTokensIn The number of vTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming vTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
-    function _redeemFresh(address redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
+    function _redeemFresh(address redeemer, address receiver, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
         /* Verify market's block number equals current block number */
@@ -919,11 +988,11 @@ contract VToken is
         accountTokens[redeemer] = balanceAfter;
 
         /*
-         * We invoke _doTransferOut for the redeemer and the redeemAmount.
+         * We invoke _doTransferOut for the receiver and the redeemAmount.
          *  On success, the vToken has redeemAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
-        _doTransferOut(redeemer, redeemAmount);
+        _doTransferOut(receiver, redeemAmount);
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), redeemTokens);
@@ -934,11 +1003,12 @@ contract VToken is
     }
 
     /**
-     * @notice Users borrow assets from the protocol to their own address
+     * @notice Users or their delegates borrow assets from the protocol
      * @param borrower User who borrows the assets
+     * @param receiver The receiver of the tokens, if called by a delegate
      * @param borrowAmount The amount of the underlying asset to borrow
      */
-    function _borrowFresh(address borrower, uint256 borrowAmount) internal {
+    function _borrowFresh(address borrower, address receiver, uint256 borrowAmount) internal {
         /* Fail if borrow not allowed */
         comptroller.preBorrowHook(address(this), borrower, borrowAmount);
 
@@ -974,11 +1044,11 @@ contract VToken is
         totalBorrows = totalBorrowsNew;
 
         /*
-         * We invoke _doTransferOut for the borrower and the borrowAmount.
+         * We invoke _doTransferOut for the receiver and the borrowAmount.
          *  On success, the vToken borrowAmount less of cash.
          *  _doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
-        _doTransferOut(borrower, borrowAmount);
+        _doTransferOut(receiver, borrowAmount);
 
         /* We emit a Borrow event */
         emit Borrow(borrower, borrowAmount, accountBorrowsNew, totalBorrowsNew);
@@ -1067,7 +1137,6 @@ contract VToken is
             revert LiquidateAccrueCollateralInterestFailed(error);
         }
 
-        // _liquidateBorrowFresh emits borrow-specific logs on errors, so we don't need to
         _liquidateBorrowFresh(liquidator, borrower, repayAmount, vTokenCollateral, skipLiquidityCheck);
     }
 
@@ -1507,6 +1576,12 @@ contract VToken is
         address oldProtocolShareReserve = address(protocolShareReserve);
         protocolShareReserve = protocolShareReserve_;
         emit NewProtocolShareReserve(oldProtocolShareReserve, address(protocolShareReserve_));
+    }
+
+    function _ensureSenderIsDelegateOf(address user) internal view {
+        if (!ComptrollerViewInterface(address(comptroller)).approvedDelegates(user, msg.sender)) {
+            revert DelegateNotApproved();
+        }
     }
 
     /**

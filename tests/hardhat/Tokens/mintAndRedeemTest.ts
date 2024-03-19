@@ -154,11 +154,13 @@ describe("VToken", function () {
   let vToken: VTokenHarness;
   let underlying: MockContract<ERC20Harness>;
   let interestRateModel: FakeContract<InterestRateModel>;
+  let trustee: SignerWithAddress;
 
   beforeEach(async () => {
-    [_root, minter, redeemer] = await ethers.getSigners();
+    [_root, minter, redeemer, trustee] = await ethers.getSigners();
     contracts = await loadFixture(vTokenTestFixture);
     ({ comptroller, vToken, underlying, interestRateModel } = contracts);
+    comptroller.approvedDelegates.returns(false);
   });
 
   describe("mintFresh", () => {
@@ -405,6 +407,45 @@ describe("VToken", function () {
       await expect(await quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate }))
         .to.emit(vToken, "AccrueInterest")
         .withArgs("50000000000000000000000000", "0", "1000000000000000000", "0");
+    });
+  });
+
+  describe("redeemBehalf", () => {
+    beforeEach(async () => {
+      await preRedeem(contracts, redeemer, redeemTokens, redeemAmount, exchangeRate);
+    });
+
+    it("reverts when caller is not the user's approved delegate", async () => {
+      await vToken.harnessFastForward(5);
+      await expect(vToken.connect(trustee).redeemBehalf(redeemer.address, redeemTokens)).to.be.revertedWithCustomError(
+        vToken,
+        "DelegateNotApproved",
+      );
+    });
+
+    it("returns success from redeemBehalf and transfers the correct amount", async () => {
+      comptroller.approvedDelegates.returns(true);
+      const tx = await vToken.connect(trustee).redeemBehalf(redeemer.address, redeemTokens);
+      await expect(tx).to.emit(vToken, "Redeem").withArgs(redeemer.address, redeemAmount, redeemTokens, 0);
+    });
+  });
+
+  describe("redeemUnderlyingBehalf", () => {
+    beforeEach(async () => {
+      await preRedeem(contracts, redeemer, redeemTokens, redeemAmount, exchangeRate);
+    });
+
+    it("reverts when caller is not the user's approved delegate", async () => {
+      await vToken.harnessFastForward(5);
+      await expect(
+        vToken.connect(trustee).redeemUnderlyingBehalf(redeemer.address, redeemAmount),
+      ).to.be.revertedWithCustomError(vToken, "DelegateNotApproved");
+    });
+
+    it("returns success from redeemUnderlyingBehalf and transfers the correct amount", async () => {
+      comptroller.approvedDelegates.returns(true);
+      const tx = await vToken.connect(trustee).redeemUnderlyingBehalf(redeemer.address, redeemAmount);
+      await expect(tx).to.emit(vToken, "Redeem").withArgs(redeemer.address, redeemAmount, redeemTokens, 0);
     });
   });
 });
