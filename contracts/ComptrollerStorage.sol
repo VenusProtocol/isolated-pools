@@ -114,10 +114,14 @@ contract ComptrollerStorage {
     /// Prime token address
     IPrime public prime;
 
+    /// @notice Whether the delegate is allowed to borrow or redeem on behalf of the user
+    //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
+    mapping(address => mapping(address => bool)) public approvedDelegates;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

@@ -130,4 +130,6 @@ interface ComptrollerViewInterface {
     function borrowCaps(address) external view returns (uint256);
 
     function supplyCaps(address) external view returns (uint256);
+
+    function approvedDelegates(address user, address delegate) external view returns (bool);
 }
