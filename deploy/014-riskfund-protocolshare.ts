@@ -3,8 +3,8 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig } from "../helpers/deploymentConfig";
-import { getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
+import { getBidderDeploymentValues, getConfig } from "../helpers/deploymentConfig";
+import { getBlockOrTimestampBasedDeploymentInfo, getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
 import { Comptroller } from "../typechain";
 
@@ -18,6 +18,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { tokensConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
   const usdt = await getUnderlyingToken("USDT", tokensConfig);
+
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+
+  const { waitForFirstBidder, nextBidderBlockOrTimestampLimit } = getBidderDeploymentValues(hre.network.name);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
@@ -69,6 +73,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       },
       upgradeIndex: 0,
     },
+    args: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
     autoMine: true,
     log: true,
   });

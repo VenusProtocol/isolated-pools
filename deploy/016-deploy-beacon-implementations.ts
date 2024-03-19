@@ -2,12 +2,19 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { getMaxBorrowRateMantissa } from "../helpers/deploymentConfig";
+import { getBlockOrTimestampBasedDeploymentInfo } from "../helpers/deploymentUtils";
+
 // This deploy script deploys implementations for Comptroller and/or VToken that should be updated through a VIP afterwards
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+
   const poolRegistry = await ethers.getContract("PoolRegistry");
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
 
   // Comptroller Implementation
   await deploy("ComptrollerImpl", {
@@ -22,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [],
+    args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
   });

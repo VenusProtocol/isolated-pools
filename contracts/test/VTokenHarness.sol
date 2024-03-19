@@ -13,6 +13,21 @@ contract VTokenHarness is VToken {
 
     mapping(address => bool) public failTransferToAddresses;
 
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 maxBorrowRateMantissa_
+    ) VToken(timeBased_, blocksPerYear_, maxBorrowRateMantissa_) {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     function harnessSetAccrualBlockNumber(uint256 accrualBlockNumber_) external {
         accrualBlockNumber = accrualBlockNumber_;
     }
@@ -107,7 +122,7 @@ contract VTokenHarness is VToken {
         return (snapshot.principal, snapshot.interestIndex);
     }
 
-    function getBorrowRateMaxMantissa() external pure returns (uint256) {
+    function getBorrowRateMaxMantissa() external view returns (uint256) {
         return MAX_BORROW_RATE_MANTISSA;
     }
 
@@ -117,6 +132,10 @@ contract VTokenHarness is VToken {
 
     function harnessCallPreBorrowHook(uint256 amount) public {
         comptroller.preBorrowHook(address(this), msg.sender, amount);
+    }
+
+    function getBlockNumberOrTimestamp() public view override returns (uint256) {
+        return blockNumber;
     }
 
     function _doTransferOut(address to, uint256 amount) internal override {
@@ -129,9 +148,5 @@ contract VTokenHarness is VToken {
             return harnessExchangeRate;
         }
         return super._exchangeRateStored();
-    }
-
-    function _getBlockNumber() internal view override returns (uint256) {
-        return blockNumber;
     }
 }

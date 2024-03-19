@@ -7,12 +7,12 @@ pragma solidity 0.8.13;
  */
 abstract contract InterestRateModel {
     /**
-     * @notice Calculates the current borrow interest rate per block
+     * @notice Calculates the current borrow interest rate per slot (block or second)
      * @param cash The total amount of cash the market has
      * @param borrows The total amount of borrows the market has outstanding
      * @param reserves The total amount of reserves the market has
      * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate per block (as a percentage, and scaled by 1e18)
+     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
      */
     function getBorrowRate(
         uint256 cash,
@@ -22,13 +22,13 @@ abstract contract InterestRateModel {
     ) external view virtual returns (uint256);
 
     /**
-     * @notice Calculates the current supply interest rate per block
+     * @notice Calculates the current supply interest rate per slot (block or second)
      * @param cash The total amount of cash the market has
      * @param borrows The total amount of borrows the market has outstanding
      * @param reserves The total amount of reserves the market has
      * @param reserveFactorMantissa The current reserve factor the market has
      * @param badDebt The amount of badDebt in the market
-     * @return The supply rate per block (as a percentage, and scaled by 1e18)
+     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
      */
     function getSupplyRate(
         uint256 cash,

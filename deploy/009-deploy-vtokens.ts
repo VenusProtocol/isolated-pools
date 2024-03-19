@@ -5,9 +5,9 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { blocksPerYear, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { getConfig, getMaxBorrowRateMantissa, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
-import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
+import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 import { AddressOne } from "../helpers/utils";
 
 const mantissaToBps = (num: BigNumberish) => {
@@ -20,6 +20,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
 
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
+
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
@@ -29,7 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [],
+    args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
   });
@@ -72,7 +75,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       }
 
       let rateModelAddress: string;
-      const BLOCKS_PER_YEAR: number = blocksPerYear[hre.network.name];
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
@@ -81,12 +83,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           from: deployer,
           contract: "JumpRateModelV2",
           args: [
-            BLOCKS_PER_YEAR,
             baseRatePerYear,
             multiplierPerYear,
             jumpMultiplierPerYear,
             kink_,
             accessControlManagerAddress,
+            isTimeBased,
+            blocksPerYear,
           ],
           log: true,
           autoMine: true,
@@ -99,7 +102,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
-          args: [BLOCKS_PER_YEAR, baseRatePerYear, multiplierPerYear],
+          args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
           log: true,
           autoMine: true,
         });
