@@ -2509,25 +2509,25 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["vWETH_Core"],
-            supplySpeeds: ["27777777776000"], 
-            borrowSpeeds: ["41666666664000"], 
+            markets: ["WETH"],
+            supplySpeeds: ["27777777776000"],
+            borrowSpeeds: ["41666666664000"],
           },
           {
             asset: "XVS",
-            markets: ["vWBTC_Core, vUSDT_Core, vUSDC_Core"],
-            supplySpeeds: ["83333333320000"], 
-            borrowSpeeds: ["125000000000000"], 
+            markets: ["WBTC", "USDT", "USDC"],
+            supplySpeeds: ["83333333320000"],
+            borrowSpeeds: ["125000000000000"],
           },
           {
             asset: "XVS",
-            markets: ["vcrvUSD_Core"],
+            markets: ["crvUSD"],
             supplySpeeds: ["37037037036000"],
             borrowSpeeds: ["55555555554000"],
           },
           {
             asset: "CRV",
-            markets: ["vcrvUSD_Core"],
+            markets: ["crvUSD"],
             supplySpeeds: ["771604938400000"],
             borrowSpeeds: ["1157407408000000"],
           },
@@ -2644,23 +2644,23 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["vCRV_Curve"],
+            markets: ["CRV"],
             supplySpeeds: ["9259259260000"],
             borrowSpeeds: ["13888888890000"],
           },
           {
             asset: "XVS",
-            markets: ["vcrvUSD_Curve"],
+            markets: ["crvUSD"],
             supplySpeeds: ["37037037036000"],
             borrowSpeeds: ["55555555554000"],
           },
           {
             asset: "CRV",
-            markets: ["vcrvUSD_Curve"],
+            markets: ["crvUSD"],
             supplySpeeds: ["77160493840000000"],
             borrowSpeeds: ["115740740800000000"],
           },
-        ]
+        ],
       },
       {
         id: "Liquid Staked ETH",
@@ -2709,23 +2709,23 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["vwstETH_LiquidStakedETH"],
+            markets: ["wstETH"],
             supplySpeeds: ["222222222200000"],
             borrowSpeeds: ["0"],
           },
           {
             asset: "XVS",
-            markets: ["vWETH_LiquidStakedETH"],
+            markets: ["WETH"],
             supplySpeeds: ["254629629600000"],
             borrowSpeeds: ["594135802500000"],
           },
           {
             asset: "wstETH",
-            markets: ["vwstETH_LiquidStakedETH"],
+            markets: ["wstETH"],
             supplySpeeds: ["712962963000"],
             borrowSpeeds: ["0"],
           },
-        ]
+        ],
       },
     ],
     accessControlConfig: [
@@ -2896,14 +2896,14 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "XVS",
             markets: ["vWETH_Core"],
-            supplySpeeds: ["2777777777600000"], 
-            borrowSpeeds: ["4166666666400000"], 
+            supplySpeeds: ["2777777777600000"],
+            borrowSpeeds: ["4166666666400000"],
           },
           {
             asset: "XVS",
             markets: ["vWBTC_Core, vUSDT_Core, vUSDC_Core"],
-            supplySpeeds: ["8333333332000000"], 
-            borrowSpeeds: ["12500000000000000"], 
+            supplySpeeds: ["8333333332000000"],
+            borrowSpeeds: ["12500000000000000"],
           },
           {
             asset: "XVS",
@@ -2982,7 +2982,7 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["77160493840000000"],
             borrowSpeeds: ["115740740800000000"],
           },
-        ]
+        ],
       },
       {
         id: "Liquid Staked ETH",
@@ -3047,7 +3047,7 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["71296296300000"],
             borrowSpeeds: ["0"],
           },
-        ]
+        ],
       },
     ],
     accessControlConfig: [
