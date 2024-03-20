@@ -2509,7 +2509,7 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["WETH","WBTC, USDT, USDC","crvUSD"],
+            markets: ["WETH","WBTC", "USDT", "USDC","crvUSD"],
             supplySpeeds: [ "27777777777777","83333333333333","83333333333333","83333333333333","37037037037036"],
             borrowSpeeds: ["41666666666666","124999999999999","125000000000000","125000000000000","55555555555555"],
           },
