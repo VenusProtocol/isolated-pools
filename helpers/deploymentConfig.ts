@@ -2509,13 +2509,13 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["vWETH_Core","vWBTC_Core, vUSDT_Core, vUSDC_Core","vcrvUSD_Core"],
+            markets: ["WETH","WBTC, USDT, USDC","crvUSD"],
             supplySpeeds: [ "27777777777777","83333333333333","83333333333333","83333333333333","37037037037036"],
             borrowSpeeds: ["41666666666666","124999999999999","125000000000000","125000000000000","55555555555555"],
           },
           {
             asset: "CRV",
-            markets: ["vcrvUSD_Core"],
+            markets: ["crvUSD"],
             supplySpeeds: ["771604938271604"],
             borrowSpeeds: ["1157407407407407"],
           },
