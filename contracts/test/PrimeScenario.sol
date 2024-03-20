@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity 0.8.20;
 
 import { Prime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Prime.sol";
 import { IPrimeLiquidityProvider } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrimeLiquidityProvider.sol";

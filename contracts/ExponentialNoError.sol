@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.20;
 
 import { EXP_SCALE as EXP_SCALE_, MANTISSA_ONE as MANTISSA_ONE_ } from "./lib/constants.sol";
 

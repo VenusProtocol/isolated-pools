@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 interface IVToken {
     function mintBehalf(address receiver, uint256 mintAmount) external returns (uint256);
