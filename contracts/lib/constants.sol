@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity ^0.8.20;
 
 /// @dev Base unit for computations, usually used in scaling (multiplications, divisions)
 uint256 constant EXP_SCALE = 1e18;
