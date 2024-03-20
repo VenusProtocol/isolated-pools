@@ -2509,9 +2509,9 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["WETH","WBTC", "USDT", "USDC","crvUSD"],
-            supplySpeeds: [ "27777777777777","83333333333333","83333333333333","83333333333333","37037037037036"],
-            borrowSpeeds: ["41666666666666","125000000000000","125000000000000","125000000000000","55555555555555"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            supplySpeeds: ["27777777777777", "83333333333333", "83333333333333", "83333333333333", "37037037037036"],
+            borrowSpeeds: ["41666666666666", "125000000000000", "125000000000000", "125000000000000", "55555555555555"],
           },
           {
             asset: "CRV",
@@ -2632,9 +2632,9 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["CRV","crvUSD"],
-            supplySpeeds: ["9259259259259","37037037037037"],
-            borrowSpeeds: ["13888888888888","55555555555555"],
+            markets: ["CRV", "crvUSD"],
+            supplySpeeds: ["9259259259259", "37037037037037"],
+            borrowSpeeds: ["13888888888888", "55555555555555"],
           },
           {
             asset: "CRV",
@@ -2691,9 +2691,9 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["wstETH","WETH"],
-            supplySpeeds: ["222222222222222","254629629629629"],
-            borrowSpeeds: ["0","594135802469135"],
+            markets: ["wstETH", "WETH"],
+            supplySpeeds: ["222222222222222", "254629629629629"],
+            borrowSpeeds: ["0", "594135802469135"],
           },
           {
             asset: "wstETH",
@@ -2871,9 +2871,21 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["WETH","WBTC", "USDT", "USDC", "crvUSD"],
-            supplySpeeds: ["2777777777777777","8333333333333333","8333333333333333","8333333333333333", "3703703703703703"],
-            borrowSpeeds: ["4166666666666666", "12500000000000000", "12500000000000000", "12500000000000000", "5555555555555555"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            supplySpeeds: [
+              "2777777777777777",
+              "8333333333333333",
+              "8333333333333333",
+              "8333333333333333",
+              "3703703703703703",
+            ],
+            borrowSpeeds: [
+              "4166666666666666",
+              "12500000000000000",
+              "12500000000000000",
+              "12500000000000000",
+              "5555555555555555",
+            ],
           },
           {
             asset: "CRV",
@@ -2930,7 +2942,7 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["vCRV","crvUSD"],
+            markets: ["vCRV", "crvUSD"],
             supplySpeeds: ["925925925925925", "3703703703703703"],
             borrowSpeeds: ["1388888888888888", "5555555555555555"],
           },
@@ -2989,9 +3001,9 @@ export const globalConfig: NetworkConfig = {
         rewards: [
           {
             asset: "XVS",
-            markets: ["wstETH","WETH"],
-            supplySpeeds: ["22222222222222222","25462962962962962"],
-            borrowSpeeds: ["0","59413580246913580"],
+            markets: ["wstETH", "WETH"],
+            supplySpeeds: ["22222222222222222", "25462962962962962"],
+            borrowSpeeds: ["0", "59413580246913580"],
           },
           {
             asset: "wstETH",
