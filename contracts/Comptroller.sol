@@ -1451,7 +1451,7 @@ contract Comptroller is
      */
     function getAssetsIn(address account) public view returns (VToken[] memory) {
         uint256 len;
-        VToken[] storage _accountAssets = accountAssets[account];
+        VToken[] memory _accountAssets = accountAssets[account];
         uint256 _accountAssetsLength = _accountAssets.length;
 
         VToken[] memory assetsIn = new VToken[](_accountAssetsLength);
