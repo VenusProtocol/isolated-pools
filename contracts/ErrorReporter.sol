@@ -18,6 +18,7 @@ contract TokenErrorReporter {
 
     error BorrowFreshnessCheck();
     error BorrowCashNotAvailable();
+    error DelegateNotApproved();
 
     error RepayBorrowFreshnessCheck();
 
