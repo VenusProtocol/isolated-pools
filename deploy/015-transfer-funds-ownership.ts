@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getConfig } from "../helpers/deploymentConfig";
 import { toAddress } from "../helpers/deploymentUtils";
 
-const contracts = ["RiskFund", "Shortfall"];
+const contracts = ["Shortfall"];
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { preconfiguredAddresses } = await getConfig(hre.network.name);
