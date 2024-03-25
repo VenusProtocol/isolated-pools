@@ -1,4 +1,8 @@
-import { smock } from "@defi-wonderland/smock";
+import deployTimelocks from "@venusprotocol/governance-contracts/dist/deploy/001-timelock";
+import deployComptroller from "@venusprotocol/venus-protocol/dist/deploy/001-comptroller";
+import deployInterestRateModels from "@venusprotocol/venus-protocol/dist/deploy/002-interest-rate-model";
+import deployTokens from "@venusprotocol/venus-protocol/dist/deploy/003-deploy-VBep20";
+import deploySwapRouter from "@venusprotocol/venus-protocol/dist/deploy/006-deploy-swaprouter";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -6,7 +10,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getConfig } from "../helpers/deploymentConfig";
 import { getUnderlyingToken, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
-import { Comptroller } from "../typechain";
 
 const MIN_AMOUNT_TO_CONVERT = convertToUnit(10, 18);
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
@@ -16,23 +19,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { tokensConfig } = await getConfig(hre.network.name);
   const usdt = await getUnderlyingToken("USDT", tokensConfig);
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
-  const swapRouterAddress = await toAddress(preconfiguredAddresses.SwapRouter_CorePool || "SwapRouter", hre);
-  const accessControlManagerAddress = await toAddress(
-    preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
-  );
+
+  // Ensure swap Router and unitroller are deployed on local network
+  await deployComptroller(hre);
+  if (hre.network.name === "hardhat") {
+    // Ensure required tokens are deployed locally,
+    // these are inside an if statement because they are not production ready
+    await deployInterestRateModels(hre);
+    await deployTokens(hre);
+  }
+  await deploySwapRouter(hre);
+  await deployTimelocks(hre);
+  const swapRouterAddress = await toAddress("SwapRouterCorePool", hre);
+  const accessControlManagerAddress = await toAddress("AccessControlManager", hre);
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
-  let corePoolComptrollerAddress = preconfiguredAddresses.Unitroller;
-  if (!hre.network.live) {
-    corePoolComptrollerAddress = (await smock.fake<Comptroller>("Comptroller")).address;
-  }
+  const corePoolComptrollerAddress = await toAddress("Unitroller", hre);
 
   await deploy("RiskFund", {
     from: deployer,
@@ -48,11 +56,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
     autoMine: true,
     log: true,
-    args: [
-      corePoolComptrollerAddress,
-      preconfiguredAddresses.VBNB_CorePool || "0x0000000000000000000000000000000000000001",
-      preconfiguredAddresses.WBNB || "0x0000000000000000000000000000000000000002",
-    ],
+    args: [corePoolComptrollerAddress, await toAddress("vBNB", hre), await toAddress("WBNB", hre)],
   });
 
   const riskFund = await ethers.getContract("RiskFund");
@@ -93,7 +97,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await tx.wait();
   }
 
-  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
+  const targetOwner = await toAddress("NormalTimelock", hre);
   for (const contractName of ["RiskFund", "Shortfall"]) {
     const contract = await ethers.getContract(contractName);
     if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
