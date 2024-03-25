@@ -7,7 +7,6 @@ pragma solidity ^0.8.25;
  * @notice Interface implemented by `RiskFund`.
  */
 interface IRiskFund {
-
     function transferReserveForAuction(address comptroller, uint256 amount) external returns (uint256);
 
     function convertibleBaseAsset() external view returns (address);
