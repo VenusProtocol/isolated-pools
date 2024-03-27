@@ -1,8 +1,3 @@
-import deployTimelocks from "@venusprotocol/governance-contracts/dist/deploy/001-timelock";
-import deployComptroller from "@venusprotocol/venus-protocol/dist/deploy/001-comptroller";
-import deployInterestRateModels from "@venusprotocol/venus-protocol/dist/deploy/002-interest-rate-model";
-import deployTokens from "@venusprotocol/venus-protocol/dist/deploy/003-deploy-VBep20";
-import deploySwapRouter from "@venusprotocol/venus-protocol/dist/deploy/006-deploy-swaprouter";
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -25,16 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
 
-  // Ensure swap Router and unitroller are deployed on local network
-  await deployComptroller(hre);
-  if (hre.network.name === "hardhat") {
-    // Ensure required tokens are deployed locally,
-    // these are inside an if statement because they are not production ready
-    await deployInterestRateModels(hre);
-    await deployTokens(hre);
-  }
-  await deploySwapRouter(hre);
-  await deployTimelocks(hre);
   const swapRouterAddress = await toAddress("SwapRouterCorePool", hre);
   const accessControlManagerAddress = await toAddress("AccessControlManager", hre);
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
