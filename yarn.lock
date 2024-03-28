@@ -3123,7 +3123,7 @@ __metadata:
     "@venusprotocol/governance-contracts": 1.4.0
     "@venusprotocol/oracle": 1.10.0
     "@venusprotocol/protocol-reserve": 1.4.0
-    "@venusprotocol/solidity-utilities": ^1.3.0
+    "@venusprotocol/solidity-utilities": ^1.3.1-dev.1
     "@venusprotocol/venus-protocol": 7.1.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3213,6 +3213,13 @@ __metadata:
   version: 1.3.0
   resolution: "@venusprotocol/solidity-utilities@npm:1.3.0"
   checksum: d1109365a5e01959c47b25fb129373db93792e60bf1bc0ed324b63c2a64f6e4a7878ebf016cfade94bc41a2c1245d3e861fdc6b8c5844ac210ed1d73e7307e72
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/solidity-utilities@npm:^1.3.1-dev.1":
+  version: 1.3.1-dev.1
+  resolution: "@venusprotocol/solidity-utilities@npm:1.3.1-dev.1"
+  checksum: 3e51f3f0ea121091c8e4c61cc8c52250d3ac7303e0b0c4d1010ba7f379cb24cd26ec35a056939629f2dbb46aa7a2b76337c4004acc48fa3645058b8a45fba881
   languageName: node
   linkType: hard
 
