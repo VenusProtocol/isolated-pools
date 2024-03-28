@@ -1,0 +1,7 @@
+{
+  "name": "arbitrumsepolia",
+  "chainId": "421614",
+  "addresses": {
+    "NativeTokenGateway_vWETH_Core": "0x4602BCddAE1636093c72335007a23BaA0241672D"
+  }
+}
