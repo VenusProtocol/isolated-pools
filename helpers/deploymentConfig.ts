@@ -23,6 +23,7 @@ export type NetworkConfig = {
   ethereum: DeploymentConfig;
   opbnbtestnet: DeploymentConfig;
   opbnbmainnet: DeploymentConfig;
+  arbitrumsepolia: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -120,6 +121,8 @@ export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 export const ETHEREUM_MULTISIG = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
 export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf";
 export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207";
+export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A61C2";
+export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
@@ -186,6 +189,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: OPBNBMAINNET_MULTISIG,
     CriticalTimelock: OPBNBMAINNET_MULTISIG,
     AccessControlManager: governanceOpbnbMainnet.AccessControlManager.address,
+  },
+  arbitrumsepolia: {
+    VTreasury: "0x4e7ab1fD841E1387Df4c91813Ae03819C33D5bdB",
+    NormalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    FastTrackTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    CriticalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    AccessControlManager: "0xa36AD96441cB931D8dFEAAaC97D3FaB4B39E590F",
   },
 };
 
@@ -3229,6 +3239,15 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.opbnbmainnet,
   },
+  arbitrumsepolia: {
+    tokensConfig: [],
+    poolConfig: [],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.arbitrumsepolia.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.arbitrumsepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -3247,6 +3266,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opbnbtestnet;
     case "opbnbmainnet":
       return globalConfig.opbnbmainnet;
+    case "arbitrumsepolia":
+      return globalConfig.arbitrumsepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:
