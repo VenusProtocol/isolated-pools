@@ -60,6 +60,12 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
       address: ilOpbnbMainnet.VToken_vWBNB_Core.address,
     },
   ],
+  arbitrumsepolia: [
+    {
+      name: "vWETH_Core",
+      address: "0xed78d7FD8DBbF59B7b38eD53514e017a2F461bCb",
+    },
+  ],
 };
 
 const getVWNativeTokens = (networkName: string): VTokenConfig[] => {
