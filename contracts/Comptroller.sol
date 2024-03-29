@@ -6,7 +6,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
-import { ComptrollerInterface } from "./ComptrollerInterface.sol";
+import { ComptrollerInterface, Action } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { VToken } from "./VToken.sol";
@@ -100,6 +100,8 @@ contract Comptroller is
 
     /// @notice Emitted when a market is unlisted
     event MarketUnlisted(address indexed vToken);
+    /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
+    event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -193,6 +195,9 @@ contract Comptroller is
 
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
+
+    /// @notice Thrown if delegate approval status is already set to the requested value
+    error DelegationStatusUnchanged();
 
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -316,6 +321,30 @@ contract Comptroller is
         emit MarketUnlisted(market);
 
         return NO_ERROR;
+    }
+    
+    /**
+     * @notice Grants or revokes the borrowing or redeeming delegate rights to / from an account
+     *  If allowed, the delegate will be able to borrow funds on behalf of the sender
+     *  Upon a delegated borrow, the delegate will receive the funds, and the borrower
+     *  will see the debt on their account
+     *  Upon a delegated redeem, the delegate will receive the redeemed amount and the approver
+     *  will see a deduction in his vToken balance
+     * @param delegate The address to update the rights for
+     * @param approved Whether to grant (true) or revoke (false) the borrowing or redeeming rights
+     * @custom:event DelegateUpdated emits on success
+     * @custom:error ZeroAddressNotAllowed is thrown when delegate address is zero
+     * @custom:error DelegationStatusUnchanged is thrown if approval status is already set to the requested value
+     * @custom:access Not restricted
+     */
+    function updateDelegate(address delegate, bool approved) external {
+        ensureNonzeroAddress(delegate);
+        if (approvedDelegates[msg.sender][delegate] == approved) {
+            revert DelegationStatusUnchanged();
+        }
+
+        approvedDelegates[msg.sender][delegate] = approved;
+        emit DelegateUpdated(msg.sender, delegate, approved);
     }
 
     /**

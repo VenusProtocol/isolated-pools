@@ -197,4 +197,29 @@ describe("setters", async () => {
         .withArgs(OMG.address);
     });
   });
+
+  describe("updateDelegate", async () => {
+    it("should revert when zero address is passed", async () => {
+      await expect(comptroller.updateDelegate(ethers.constants.AddressZero, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("should revert when approval status is already set to the requested value", async () => {
+      const [, , user2] = await ethers.getSigners();
+      await comptroller.updateDelegate(user2.address, true);
+      await expect(comptroller.updateDelegate(user2.address, true)).to.be.revertedWithCustomError(
+        comptroller,
+        "DelegationStatusUnchanged",
+      );
+    });
+
+    it("should emit event on success", async () => {
+      const [, , user2] = await ethers.getSigners();
+      await expect(await comptroller.updateDelegate(user2.address, true))
+        .to.emit(comptroller, "DelegateUpdated")
+        .withArgs(owner.address, user2.address, true);
+    });
+  });
 });

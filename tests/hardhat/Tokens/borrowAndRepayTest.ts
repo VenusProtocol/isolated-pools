@@ -96,9 +96,10 @@ describe("VToken", function () {
   let _root: SignerWithAddress;
   let borrower: SignerWithAddress;
   let benefactor: SignerWithAddress;
+  let trustee: SignerWithAddress;
 
   beforeEach(async () => {
-    [_root, borrower, benefactor] = await ethers.getSigners();
+    [_root, borrower, benefactor, trustee] = await ethers.getSigners();
     contracts = await loadFixture(vTokenTestFixture);
     ({ comptroller, vToken, underlying, interestRateModel } = contracts);
   });
@@ -216,6 +217,27 @@ describe("VToken", function () {
       expect(await vToken.callStatic.totalBorrowsCurrent()).to.be.equal(borrowAmount);
       // ).toSucceed();
       expect(await underlying.balanceOf(borrower.address)).to.equal(beforeAccountCash.add(borrowAmount));
+    });
+  });
+
+  describe("borrowBehalf", () => {
+    beforeEach(async () => await preBorrow(contracts, borrower, borrowAmount));
+
+    it("reverts when caller is not approved by borrower to borrow on his behalf", async () => {
+      await vToken.harnessFastForward(5);
+      await expect(vToken.connect(trustee).borrowBehalf(borrower.address, borrowAmount)).to.be.revertedWithCustomError(
+        vToken,
+        "DelegateNotApproved",
+      );
+    });
+
+    it("returns success from borrowBehalf and transfers the correct amount", async () => {
+      const beforeAccountCash = await underlying.balanceOf(trustee.address);
+      comptroller.approvedDelegates.returns(true);
+      await vToken.connect(trustee).borrowBehalf(borrower.address, borrowAmount);
+
+      expect(await vToken.callStatic.totalBorrowsCurrent()).to.be.equal(borrowAmount);
+      expect(await underlying.balanceOf(trustee.address)).to.equal(beforeAccountCash.add(borrowAmount));
     });
   });
 
