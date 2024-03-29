@@ -322,7 +322,7 @@ contract Comptroller is
 
         return NO_ERROR;
     }
-    
+
     /**
      * @notice Grants or revokes the borrowing or redeeming delegate rights to / from an account
      *  If allowed, the delegate will be able to borrow funds on behalf of the sender
