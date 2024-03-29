@@ -338,7 +338,7 @@ describe("assetListTest", () => {
       await unlistAndCheckMarket(OMG, [BAT, ZRX], [OMG, BAT, ZRX], Error.NO_ERROR);
     });
 
-    it("reverts when unlisting not a listed market", async () => {
+    it("reverts when unlisting a non listed market", async () => {
       const vToken = await smock.fake<VToken>("VToken");
       await enterAndCheckMarkets([BAT, ZRX], [BAT, ZRX]);
       await expect(unlistAndCheckMarket(vToken, [BAT, ZRX], [BAT, ZRX])).to.be.revertedWithCustomError(
