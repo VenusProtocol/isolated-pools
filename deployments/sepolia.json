@@ -520,19 +520,6 @@
           "inputs": [
             {
               "indexed": false,
-              "internalType": "contract VToken",
-              "name": "vToken",
-              "type": "address"
-            }
-          ],
-          "name": "MarketUnlisted",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
               "internalType": "uint256",
               "name": "oldMaxLoopsLimit",
               "type": "uint256"
