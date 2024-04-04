@@ -2717,6 +2717,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus weETH (Liquid Staked eETH)",
+            asset: "weETH",
+            symbol: "vweETH_LiquidStakedEETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.9", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.9", 18),
+            liquidationThreshold: convertToUnit("0.93", 18),
+            reserveFactor: convertToUnit("0.20", 18),
+            initialSupply: convertToUnit(5, 18),
+            supplyCap: convertToUnit(7_500, 18),
+            borrowCap: convertToUnit(750, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          }
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2734,6 +2752,12 @@ export const globalConfig: NetworkConfig = {
             asset: "wstETH",
             markets: ["wstETH"],
             supplySpeeds: ["712962962962"], // 0.154 WSTETH over 30 days (216000 blocks)
+            borrowSpeeds: ["0"],
+          },
+          {
+            asset: "USDC",
+            markets: ["weETH"],
+            supplySpeeds: ["5787037037000000"], // 5,000 USDC for 30 days (864000 blocks)
             borrowSpeeds: ["0"],
           },
         ],
