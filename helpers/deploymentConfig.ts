@@ -2388,6 +2388,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x9b87ea90fdb55e1a0f17fbeddcf7eb0ac4d50493",
       },
+      {
+        isMock: true,
+        name: "Wrapped eETH",
+        symbol: "weETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
