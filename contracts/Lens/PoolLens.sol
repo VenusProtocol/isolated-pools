@@ -52,8 +52,8 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     struct VTokenMetadata {
         address vToken;
         uint256 exchangeRateCurrent;
-        uint256 supplyRatePerBlock;
-        uint256 borrowRatePerBlock;
+        uint256 supplyRatePerBlockOrTimestamp;
+        uint256 borrowRatePerBlockOrTimestamp;
         uint256 reserveFactorMantissa;
         uint256 supplyCaps;
         uint256 borrowCaps;
@@ -67,6 +67,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 vTokenDecimals;
         uint256 underlyingDecimals;
         uint256 pausedActions;
+        bool isTimeBased;
     }
 
     /**
@@ -399,8 +400,8 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
             VTokenMetadata({
                 vToken: address(vToken),
                 exchangeRateCurrent: exchangeRateCurrent,
-                supplyRatePerBlock: vToken.supplyRatePerBlock(),
-                borrowRatePerBlock: vToken.borrowRatePerBlock(),
+                supplyRatePerBlockOrTimestamp: vToken.supplyRatePerBlock(),
+                borrowRatePerBlockOrTimestamp: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
                 supplyCaps: comptroller.supplyCaps(address(vToken)),
                 borrowCaps: comptroller.borrowCaps(address(vToken)),
@@ -413,7 +414,8 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
                 underlyingAssetAddress: underlyingAssetAddress,
                 vTokenDecimals: vToken.decimals(),
                 underlyingDecimals: underlyingDecimals,
-                pausedActions: pausedActions
+                pausedActions: pausedActions,
+                isTimeBased: vToken.isTimeBased()
             });
     }
 
