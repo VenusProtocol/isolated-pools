@@ -2734,7 +2734,7 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(750, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
-          }
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
