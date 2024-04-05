@@ -1,3 +1,28 @@
+## [2.8.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0...v2.8.0-dev.1) (2024-04-03)
+
+
+### Features
+
+* add rewards config for Ethereum (initial config) ([5c2a03e](https://github.com/VenusProtocol/isolated-pools/commit/5c2a03e7d8d1929a5ef586f79b47d5c7107abb34))
+* add rewards config for Ethereum (initial config) ([4dfa61e](https://github.com/VenusProtocol/isolated-pools/commit/4dfa61e0c54779a34a45b61a50dabb58c8aa2b80))
+* updating deployment files ([1cb06c8](https://github.com/VenusProtocol/isolated-pools/commit/1cb06c80dbbf3b0f09c6675b9b6f2cfd0ecbaf07))
+* updating deployment files ([e3649f8](https://github.com/VenusProtocol/isolated-pools/commit/e3649f8bce1ab895a5dce244109d307f72932966))
+* updating deployment files ([da6fe92](https://github.com/VenusProtocol/isolated-pools/commit/da6fe92c7ec73bcb2bfe963c914f4e4d044ade37))
+
+
+### Bug Fixes
+
+* add quotes in markets array ([81185ce](https://github.com/VenusProtocol/isolated-pools/commit/81185ceead6fa096ccbea770886f700231284ae0))
+* bump core protocol version ([025dfee](https://github.com/VenusProtocol/isolated-pools/commit/025dfeeaa0b6e96719bd7f274fd6866c6cbc12b2))
+* market naming in rewards config ([a09ce96](https://github.com/VenusProtocol/isolated-pools/commit/a09ce96a8763e30c568f061e45a2257a1078f36e))
+* push only necessary files ([c74b03f](https://github.com/VenusProtocol/isolated-pools/commit/c74b03fb547858577aae6101d9da1dda8d443c9b))
+* reward config ([e674ba1](https://github.com/VenusProtocol/isolated-pools/commit/e674ba13e0234397e64bef2e923d58ecd63753cf))
+* reward configuration syntax ([3aa6ff7](https://github.com/VenusProtocol/isolated-pools/commit/3aa6ff726cadef466cb49e7fc0d1b81ca7e04134))
+* update yarn.lock ([fd635d7](https://github.com/VenusProtocol/isolated-pools/commit/fd635d7e9776dcb2d2a1b07dffea3ecd523fb1bc))
+* update yarn.lock ([e841216](https://github.com/VenusProtocol/isolated-pools/commit/e84121636636d45009db14471581fa832a87a174))
+* yarn lock ([54837b3](https://github.com/VenusProtocol/isolated-pools/commit/54837b39f011be2582f8ea858947b2d1eae6e4a3))
+* yarn.lock ([ce42810](https://github.com/VenusProtocol/isolated-pools/commit/ce4281040413997ac751d5e742e174631aba322e))
+
 ## [2.7.0](https://github.com/VenusProtocol/isolated-pools/compare/v2.6.0...v2.7.0) (2024-03-19)
 
 

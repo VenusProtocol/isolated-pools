@@ -2520,29 +2520,28 @@ export const globalConfig: NetworkConfig = {
           },
         ],
         rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // WETH:    18 XVS for Suppliers
+          //          27 XVS for Borrowers
+          // WBTC:    54 XVS for Suppliers
+          //          81 XVS for Borrowers
+          // USDT:    54 XVS for Suppliers
+          //          81 XVS for Borrowers
+          // USDC:    54 XVS for Suppliers
+          //          81 XVS for Borrowers
+          // crvUSD:  24 XVS for Suppliers
+          //          36 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WBTC"],
-            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            supplySpeeds: ["27777777777777", "83333333333333", "83333333333333", "83333333333333", "37037037037036"],
+            borrowSpeeds: ["41666666666666", "125000000000000", "125000000000000", "125000000000000", "55555555555555"],
           },
           {
-            asset: "XVS",
-            markets: ["WETH"],
-            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-          },
-          {
-            asset: "XVS",
-            markets: ["USDC"],
-            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-          },
-          {
-            asset: "XVS",
-            markets: ["USDT"],
-            supplySpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
-            borrowSpeeds: ["190258751902587"], // 190258751902587 XVS over 365 days (2628000 blocks)
+            asset: "CRV",
+            markets: ["crvUSD"],
+            supplySpeeds: ["771604938271604"], // 500 CRV over 90 days (648000 blocks)
+            borrowSpeeds: ["1157407407407407"], // 750 CRV over 90 days (648000 blocks)
           },
         ],
       },
@@ -2654,7 +2653,25 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // CRV:     6 XVS for Suppliers
+          //          9 XVS for Borrowers
+          // crvUSD:  24 XVS for Suppliers
+          //          36 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["CRV", "crvUSD"],
+            supplySpeeds: ["9259259259259", "37037037037037"],
+            borrowSpeeds: ["13888888888888", "55555555555555"],
+          },
+          {
+            asset: "CRV",
+            markets: ["crvUSD"],
+            supplySpeeds: ["771604938271604"], // 500 CRV over 90 days (648000 blocks)
+            borrowSpeeds: ["1157407407407407"], // 750 CRV over 90 days (648000 blocks)
+          },
+        ],
       },
       {
         id: "Liquid Staked ETH",
@@ -2700,7 +2717,25 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // WSTETH:  144 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // WETH:    165 XVS for Suppliers
+          //          385 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["wstETH", "WETH"],
+            supplySpeeds: ["222222222222222", "254629629629629"],
+            borrowSpeeds: ["0", "594135802469135"],
+          },
+          {
+            asset: "wstETH",
+            markets: ["wstETH"],
+            supplySpeeds: ["712962962962"], // 0.154 WSTETH over 30 days (216000 blocks)
+            borrowSpeeds: ["0"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
@@ -2867,7 +2902,43 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // WETH:    1800 XVS for Suppliers
+          //          2700 XVS for Borrowers
+          // WBTC:    5400 XVS for Suppliers
+          //          8100 XVS for Borrowers
+          // USDT:    5400 XVS for Suppliers
+          //          8100 XVS for Borrowers
+          // USDC:    5400 XVS for Suppliers
+          //          8100 XVS for Borrowers
+          // crvUSD:  2400 XVS for Suppliers
+          //          3600 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            supplySpeeds: [
+              "2777777777777777",
+              "8333333333333333",
+              "8333333333333333",
+              "8333333333333333",
+              "3703703703703703",
+            ],
+            borrowSpeeds: [
+              "4166666666666666",
+              "12500000000000000",
+              "12500000000000000",
+              "12500000000000000",
+              "5555555555555555",
+            ],
+          },
+          {
+            asset: "CRV",
+            markets: ["crvUSD"],
+            supplySpeeds: ["77160493827160493"], // 50000 CRV over 90 days (648000 blocks)
+            borrowSpeeds: ["115740740740740740"], // 75000 CRV over 90 days (648000 blocks)
+          },
+        ],
       },
       {
         id: "Curve",
@@ -2913,7 +2984,25 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // CRV:     600 XVS for Suppliers
+          //          900 XVS for Borrowers
+          // crvUSD:  2400 XVS for Suppliers
+          //          3600 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["vCRV", "crvUSD"],
+            supplySpeeds: ["925925925925925", "3703703703703703"],
+            borrowSpeeds: ["1388888888888888", "5555555555555555"],
+          },
+          {
+            asset: "CRV",
+            markets: ["crvUSD"],
+            supplySpeeds: ["77160493827160493"], // 50000 CRV over 90 days (648000 blocks)
+            borrowSpeeds: ["115740740740740740"], // 75000 CRV over 90 days (648000 blocks)
+          },
+        ],
       },
       {
         id: "Liquid Staked ETH",
@@ -2959,7 +3048,25 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (648000 blocks)
+          // WSTETH:  14400 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // WETH:    16500 XVS for Suppliers
+          //          38500 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["wstETH", "WETH"],
+            supplySpeeds: ["22222222222222222", "25462962962962962"],
+            borrowSpeeds: ["0", "59413580246913580"],
+          },
+          {
+            asset: "wstETH",
+            markets: ["wstETH"],
+            supplySpeeds: ["71296296296296"], // 15.4 WSTETH over 30 days (216000 blocks)
+            borrowSpeeds: ["0"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
