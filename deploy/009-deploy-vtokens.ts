@@ -32,6 +32,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
@@ -40,6 +41,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [vTokenImpl.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
@@ -90,6 +92,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           ],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       } else {
@@ -102,6 +105,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           args: [BLOCKS_PER_YEAR, baseRatePerYear, multiplierPerYear],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       }
@@ -130,6 +134,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
         log: true,
         autoMine: true,
+        skipIfAlreadyDeployed: true,
       });
       console.log(`-----------------------------------------`);
     }
