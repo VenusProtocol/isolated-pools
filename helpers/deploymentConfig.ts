@@ -2723,7 +2723,7 @@ export const globalConfig: NetworkConfig = {
             symbol: "vweETH_LiquidStakedETH",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.9", 18),
+            multiplierPerYear: convertToUnit("0.09", 18),
             jumpMultiplierPerYear: convertToUnit("0.75", 18),
             kink_: convertToUnit("0.45", 18),
             collateralFactor: convertToUnit("0.9", 18),
