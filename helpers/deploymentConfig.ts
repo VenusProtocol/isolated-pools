@@ -2718,7 +2718,7 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
           {
-            name: "Venus weETH (Liquid Staked eETH)",
+            name: "Venus weETH (Liquid Staked ETH)",
             asset: "weETH",
             symbol: "vweETH_LiquidStakedEETH",
             rateModel: InterestRateModels.JumpRate.toString(),
