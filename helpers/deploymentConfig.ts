@@ -2757,7 +2757,7 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "USDC",
             markets: ["weETH"],
-            supplySpeeds: ["5787037037000000"], // 5,000 USDC for 30 days (864000 blocks)
+            supplySpeeds: ["23148148148148148"], // 5,000 USDC for 30 days (216000 blocks)
             borrowSpeeds: ["0"],
           },
         ],
