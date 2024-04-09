@@ -2720,7 +2720,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus weETH (Liquid Staked ETH)",
             asset: "weETH",
-            symbol: "vweETH_LiquidStakedEETH",
+            symbol: "vweETH_LiquidStakedETH",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.9", 18),
