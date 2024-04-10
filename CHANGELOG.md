@@ -1,3 +1,14 @@
+## [2.8.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v2.8.0-dev.1...v2.8.0-dev.2) (2024-04-10)
+
+
+### Features
+
+* add IR deployment for some asset on bscmainnet ([ef32034](https://github.com/VenusProtocol/isolated-pools/commit/ef3203455cd4c1e10f21d00ac54c47cc83f1d80f))
+* IR deployments for some assets on opbnb and ethereum ([b353c2a](https://github.com/VenusProtocol/isolated-pools/commit/b353c2a3c2b4709c483c5b1a1ff5ce26cf068879))
+* updating deployment files ([bfd0f79](https://github.com/VenusProtocol/isolated-pools/commit/bfd0f79d60a8eacd6354d6c3ff8833b9438e0836))
+* updating deployment files ([86fb040](https://github.com/VenusProtocol/isolated-pools/commit/86fb0407c03595acd2abdf1609eaa33e6ef78279))
+* updating deployment files ([bd10368](https://github.com/VenusProtocol/isolated-pools/commit/bd10368a435dbd61ae463864aa316280eae1a27f))
+
 ## [2.8.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0...v2.8.0-dev.1) (2024-04-03)
 
 
