@@ -47,16 +47,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const tx = await shortfall.connect(deployerSigner).updatePoolRegistry(poolRegistry.address);
     await tx.wait();
   }
-
-  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-  for (const contractName of ["Shortfall"]) {
-    const contract = await ethers.getContract(contractName);
-    if ((await contract.owner()) !== targetOwner && (await contract.pendingOwner()) !== targetOwner) {
-      console.log(`Transferring ownership of ${contractName} to ${targetOwner}`);
-      const tx = await contract.transferOwnership(targetOwner);
-      await tx.wait();
-    }
-  }
 };
 func.tags = ["Shortfall", "il"];
 
