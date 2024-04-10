@@ -1,11 +1,10 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
-import { RiskFundV2, ProtocolShareReserve } from "@venusprotocol/protocol-reserve/typechain";
+import { ProtocolShareReserve, RiskFundV2 } from "@venusprotocol/protocol-reserve/typechain";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
-import { ethers, network } from "hardhat";
-import { deployments } from "hardhat";
+import { deployments, ethers, network } from "hardhat";
 
 import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
@@ -43,7 +42,8 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
-  const RiskFund = await ethers.getContract("RiskFundV2");
+  const RiskFund = await smock.fake<RiskFundV2>("RiskFundV2");
+
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
 
@@ -56,7 +56,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const BTCB = await ethers.getContract("MockBTCB");
   const BUSD = await ethers.getContract("MockBUSD");
 
-  // await RiskFund.setPoolRegistry(PoolRegistry.address);
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
   // Set Oracle
@@ -117,8 +116,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const vBTCBPrice: BigNumber = new BigNumber(
     scaleDownBy((await priceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
   );
-
-  // await RiskFund.setPoolRegistry(PoolRegistry.address);
 
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
@@ -792,13 +789,11 @@ describe("Risk Fund and Auction related scenarios", function () {
   let acc2: string;
   let deployer: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  let RiskFund: RiskFundV2;
-  let PoolRegistry: PoolRegistry;
+  let RiskFund: FakeContract<RiskFundV2>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, deployer, ProtocolShareReserve, RiskFund, PoolRegistry } =
-      fixture);
+    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, deployer, ProtocolShareReserve, RiskFund } = fixture);
   });
 
   describe("Generate risk fund swap it to base asset", () => {
@@ -828,10 +823,8 @@ describe("Risk Fund and Auction related scenarios", function () {
       // Approve more assets for liquidation
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
-      // await RiskFund.setPoolRegistry(PoolRegistry.address);
 
       const fakeProtocolIncome = await smock.fake<RiskFundV2>("RiskFundV2");
-
       await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
         {
           schema: 0,
@@ -868,19 +861,14 @@ describe("Risk Fund and Auction related scenarios", function () {
 
       const protocolSeizeTokens = seizeTokens.mul(protocolSeizeShareMantissa).div(convertToUnit(1, 18));
       const expectedTotalReserves = protocolSeizeTokens.mul(exchangeRateStored).div(convertToUnit(1, 18));
-      console.log(1);
+
       await Comptroller.connect(acc1Signer).healAccount(acc2);
-      console.log(2);
+
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
-      console.log(3);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
-      console.log(4);
-      console.log(ProtocolShareReserve.address);
       // Reduce reserves, transfer 50% to protocol income and rest 50% to riskFund
       await ProtocolShareReserve.connect(deployerSigner).releaseFunds(Comptroller.address, [BNX.address]);
-      console.log(5);
       expect(await BNX.balanceOf(RiskFund.address)).to.be.equal(expectedTotalReserves * 0.5);
-      console.log(6);
     });
   });
 });
