@@ -40,7 +40,10 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
-        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+        bscmainnet: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+        ],
         opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
       },
     };
@@ -392,6 +395,9 @@ const config: HardhatUserConfig = {
       },
       {
         artifacts: "node_modules/@venusprotocol/protocol-reserve/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
     ],
   },
