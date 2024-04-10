@@ -3260,7 +3260,7 @@ export const globalConfig: NetworkConfig = {
         isMock: true,
         name: "Wrapped BTC",
         symbol: "WBTC",
-        decimals: 18,
+        decimals: 8,
         tokenAddress: ethers.constants.AddressZero,
       },
       {
@@ -3274,14 +3274,14 @@ export const globalConfig: NetworkConfig = {
         isMock: true,
         name: "USD Coin",
         symbol: "USDC",
-        decimals: 18,
+        decimals: 6,
         tokenAddress: ethers.constants.AddressZero,
       },
       {
         isMock: true,
         name: "Tether USD",
         symbol: "USDT",
-        decimals: 18,
+        decimals: 6,
         tokenAddress: ethers.constants.AddressZero,
       },
       {
@@ -3312,9 +3312,9 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.7", 18),
             liquidationThreshold: convertToUnit("0.75", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.03553143", 18), // 0.03553143 WBTC
-            supplyCap: convertToUnit(1, 18),
-            borrowCap: convertToUnit("0.55", 18),
+            initialSupply: convertToUnit("0.03553143", 8), // 0.03553143 WBTC
+            supplyCap: convertToUnit(1, 8),
+            borrowCap: convertToUnit("0.55", 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
           },
@@ -3348,9 +3348,9 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.77", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("1800.00000001", 18), // 1,800.00000001 USDC
-            supplyCap: convertToUnit(150_000, 18),
-            borrowCap: convertToUnit(130_000, 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDC
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
           },
@@ -3366,9 +3366,9 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.77", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("1800.00000001", 18), // 1,800.00000001 USDT
-            supplyCap: convertToUnit(150_000, 18),
-            borrowCap: convertToUnit(130_000, 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDT
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
           },
