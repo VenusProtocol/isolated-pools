@@ -43,6 +43,8 @@
     "RewardsDistributor_Liquid Staked ETH_0_Proxy": "0x4597B9287fE0DF3c5513D66886706E0719bD270f",
     "RewardsDistributor_Liquid Staked ETH_1": "0xec594364d2B7eB3678f351Ac632cC71E718E0F89",
     "RewardsDistributor_Liquid Staked ETH_1_Proxy": "0xec594364d2B7eB3678f351Ac632cC71E718E0F89",
+    "RewardsDistributor_Liquid Staked ETH_2": "0x92e8E3C202093A495e98C10f9fcaa5Abe288F74A",
+    "RewardsDistributor_Liquid Staked ETH_2_Proxy": "0x92e8E3C202093A495e98C10f9fcaa5Abe288F74A",
     "VTokenBeacon": "0x0463a7E5221EAE1990cEddB51A5821a68cdA6008",
     "VTokenImpl": "0x558083c8Ca93e42F5c0FE7e8c5FC49e9c0d94E14",
     "VToken_vCRV_Core": "0x121E3be152F283319310D807ed847E8b98319C1e",
