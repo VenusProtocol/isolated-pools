@@ -58,7 +58,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       });
 
       const rewardsDistributor = await ethers.getContract(contractName);
-      if (rewardsDistributor.address !== proxyOwnerAddress && rewardsDistributor.owner() === deployer) {
+      if (rewardsDistributor.owner() === deployer) {
         await rewardsDistributor.transferOwnership(proxyOwnerAddress);
       }
     }
