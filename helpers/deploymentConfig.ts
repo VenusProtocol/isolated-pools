@@ -2827,6 +2827,20 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
       },
+      {
+        isMock: false,
+        name: "Wrapped eETH",
+        symbol: "weETH",
+        decimals: 18,
+        tokenAddress: "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+      },
+      {
+        isMock: false,
+        name: "ether.fi ETH",
+        symbol: "eETH",
+        decimals: 18,
+        tokenAddress: "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+      },
     ],
     poolConfig: [
       {
@@ -3072,6 +3086,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus weETH (Liquid Staked ETH)",
+            asset: "weETH",
+            symbol: "vweETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.9", 18),
+            liquidationThreshold: convertToUnit("0.93", 18),
+            reserveFactor: convertToUnit("0.20", 18),
+            initialSupply: convertToUnit(5, 18),
+            supplyCap: convertToUnit(7_500, 18),
+            borrowCap: convertToUnit(750, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3089,6 +3121,12 @@ export const globalConfig: NetworkConfig = {
             asset: "wstETH",
             markets: ["wstETH"],
             supplySpeeds: ["71296296296296"], // 15.4 WSTETH over 30 days (216000 blocks)
+            borrowSpeeds: ["0"],
+          },
+          {
+            asset: "USDC",
+            markets: ["weETH"],
+            supplySpeeds: ["23148"], // 5,000 USDC for 30 days (216000 blocks)
             borrowSpeeds: ["0"],
           },
         ],
