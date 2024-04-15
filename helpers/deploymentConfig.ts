@@ -3066,7 +3066,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(20_000, 18),
             borrowCap: convertToUnit(2_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            vTokenReceiver: `0xF6C612c745Ba4546075DB62902c1Eb3255CdAe28`,
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -3084,7 +3084,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(20_000, 18),
             borrowCap: convertToUnit(18_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            vTokenReceiver: `0xF6C612c745Ba4546075DB62902c1Eb3255CdAe28`,
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -3102,7 +3102,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(7_500, 18),
             borrowCap: convertToUnit(750, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            vTokenReceiver: `0xF6C612c745Ba4546075DB62902c1Eb3255CdAe28`,
           },
         ],
         rewards: [
