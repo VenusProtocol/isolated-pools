@@ -114,7 +114,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+      const protocolShareReserveAddress = await toAddress(preconfiguredAddresses.ProtocolShareReserve || "ProtocolShareReserve", hre);
+
       const args = [
         tokenContract.address,
         comptrollerProxy.address,
@@ -125,7 +126,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [AddressOne, treasuryAddress],
+        [AddressOne, protocolShareReserveAddress],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {
