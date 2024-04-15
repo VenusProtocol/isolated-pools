@@ -134,6 +134,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 export const preconfiguredAddresses = {
   hardhat: {
     VTreasury: "account:deployer",
+    ProtocolShareReserve: "account:deployer",
   },
   bsctestnet: {
     VTreasury: venusProtocolBscTestnet.VTreasury.address,

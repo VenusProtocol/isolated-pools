@@ -115,7 +115,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
       const protocolShareReserveAddress = await toAddress(
-        preconfiguredAddresses.ProtocolShareReserve || "VTreasury",
+        preconfiguredAddresses.ProtocolShareReserve || "ProtocolShareReserve",
         hre,
       );
 
