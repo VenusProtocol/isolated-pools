@@ -4,19 +4,18 @@ import { contracts as governanceEthereum } from "@venusprotocol/governance-contr
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as protocolShareReserveBscMainnet } from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
+import { contracts as protocolShareReserveBscTestnet } from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
+import { contracts as protocolShareReserveEthereum } from "@venusprotocol/protocol-reserve/deployments/ethereum.json";
+import { contracts as protocolShareReserveOpbnbMainnet } from "@venusprotocol/protocol-reserve/deployments/opbnbmainnet.json";
+import { contracts as protocolShareReserveOpbnbTestnet } from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet.json";
+import { contracts as protocolShareReserveSepolia } from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import { contracts as venusProtocolBscTestnet } from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protocol/deployments/ethereum.json";
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
-import { contracts as protocolShareReserveSepolia } from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
-import { contracts as protocolShareReserveEthereum } from "@venusprotocol/protocol-reserve/deployments/ethereum.json";
-import { contracts as protocolShareReserveOpbnbMainnet } from "@venusprotocol/protocol-reserve/deployments/opbnbmainnet.json";
-import { contracts as protocolShareReserveOpbnbTestnet } from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet.json";
-import { contracts as protocolShareReserveBscTestnet } from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
-import { contracts as protocolShareReserveBscMainnet } from "@venusprotocol/protocol-reserve/deployments/bscmainnet
-
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
 

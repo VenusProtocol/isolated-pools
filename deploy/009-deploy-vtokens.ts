@@ -114,7 +114,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      const protocolShareReserveAddress = await toAddress(preconfiguredAddresses.ProtocolShareReserve || "ProtocolShareReserve", hre);
+      const protocolShareReserveAddress = await toAddress(
+        preconfiguredAddresses.ProtocolShareReserve || "ProtocolShareReserve",
+        hre,
+      );
 
       const args = [
         tokenContract.address,
