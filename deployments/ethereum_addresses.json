@@ -38,6 +38,8 @@
     "RewardsDistributor_Liquid Staked ETH_0_Proxy": "0x7A91bEd36D96E4e644d3A181c287E0fcf9E9cc98",
     "RewardsDistributor_Liquid Staked ETH_1": "0xe72Aa7BaB160eaa2605964D2379AA56Cb4b9A1BB",
     "RewardsDistributor_Liquid Staked ETH_1_Proxy": "0xe72Aa7BaB160eaa2605964D2379AA56Cb4b9A1BB",
+    "RewardsDistributor_Liquid Staked ETH_2": "0xDCB0CfA130496c749738Acbe2d6aA06C7C320f06",
+    "RewardsDistributor_Liquid Staked ETH_2_Proxy": "0xDCB0CfA130496c749738Acbe2d6aA06C7C320f06",
     "VTokenBeacon": "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a",
     "VTokenImpl": "0xE5A008B6A0bAB405343B3ABe8895966EAaFb5790",
     "VToken_vCRV_Curve": "0x30aD10Bd5Be62CAb37863C2BfcC6E8fb4fD85BDa",
@@ -48,6 +50,7 @@
     "VToken_vWETH_LiquidStakedETH": "0xc82780Db1257C788F262FBbDA960B3706Dfdcaf2",
     "VToken_vcrvUSD_Core": "0x672208C10aaAA2F9A6719F449C4C8227bc0BC202",
     "VToken_vcrvUSD_Curve": "0x2d499800239C4CD3012473Cb1EAE33562F0A6933",
+    "VToken_vweETH_LiquidStakedETH": "0xb4933AF59868986316Ed37fa865C829Eba2df0C7",
     "VToken_vwstETH_LiquidStakedETH": "0x4a240F0ee138697726C8a3E43eFE6Ac3593432CB"
   }
 }
