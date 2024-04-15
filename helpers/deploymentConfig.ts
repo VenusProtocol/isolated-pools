@@ -4,12 +4,6 @@ import { contracts as governanceEthereum } from "@venusprotocol/governance-contr
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
-import { contracts as protocolShareReserveBscMainnet } from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
-import { contracts as protocolShareReserveBscTestnet } from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
-import { contracts as protocolShareReserveEthereum } from "@venusprotocol/protocol-reserve/deployments/ethereum.json";
-import { contracts as protocolShareReserveOpbnbMainnet } from "@venusprotocol/protocol-reserve/deployments/opbnbmainnet.json";
-import { contracts as protocolShareReserveOpbnbTestnet } from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet.json";
-import { contracts as protocolShareReserveSepolia } from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import { contracts as venusProtocolBscTestnet } from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protocol/deployments/ethereum.json";
@@ -134,7 +128,6 @@ const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 export const preconfiguredAddresses = {
   hardhat: {
     VTreasury: "account:deployer",
-    ProtocolShareReserve: "account:deployer",
   },
   bsctestnet: {
     VTreasury: venusProtocolBscTestnet.VTreasury.address,
@@ -149,7 +142,6 @@ export const preconfiguredAddresses = {
     SwapRouter_CorePool: venusProtocolBscTestnet.SwapRouterCorePool.address,
     Unitroller: venusProtocolBscTestnet.Unitroller.address,
     Shortfall: "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
-    ProtocolShareReserve: protocolShareReserveBscTestnet.ProtocolShareReserve.address,
   },
   bscmainnet: {
     VTreasury: venusProtocolBscMainnet.VTreasury.address,
@@ -164,7 +156,6 @@ export const preconfiguredAddresses = {
     SwapRouter_CorePool: venusProtocolBscMainnet.SwapRouterCorePool.address,
     Unitroller: venusProtocolBscMainnet.Unitroller.address,
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
-    ProtocolShareReserve: protocolShareReserveBscMainnet.ProtocolShareReserve.address,
   },
   sepolia: {
     VTreasury: venusProtocolSepolia.VTreasuryV8.address,
@@ -173,7 +164,6 @@ export const preconfiguredAddresses = {
     CriticalTimelock: SEPOLIA_MULTISIG,
     GovernorBravo: SEPOLIA_MULTISIG,
     AccessControlManager: governanceSepolia.AccessControlManager.address,
-    ProtocolShareReserve: protocolShareReserveSepolia.ProtocolShareReserve.address,
   },
   ethereum: {
     VTreasury: venusProtocolEthereum.VTreasuryV8.address,
@@ -182,7 +172,6 @@ export const preconfiguredAddresses = {
     CriticalTimelock: ETHEREUM_MULTISIG,
     GovernorBravo: ETHEREUM_MULTISIG,
     AccessControlManager: governanceEthereum.AccessControlManager.address,
-    ProtocolShareReserve: protocolShareReserveEthereum.ProtocolShareReserve.address,
   },
   opbnbtestnet: {
     VTreasury: venusProtocolOpbnbTestnet.VTreasuryV8.address,
@@ -190,7 +179,6 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: OPBNBTESTNET_MULTISIG,
     CriticalTimelock: OPBNBTESTNET_MULTISIG,
     AccessControlManager: governanceOpbnbTestnet.AccessControlManager.address,
-    ProtocolShareReserve: protocolShareReserveOpbnbTestnet.ProtocolShareReserve.address,
   },
   opbnbmainnet: {
     VTreasury: venusProtocolOpbnbMainnet.VTreasuryV8.address,
@@ -198,7 +186,6 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: OPBNBMAINNET_MULTISIG,
     CriticalTimelock: OPBNBMAINNET_MULTISIG,
     AccessControlManager: governanceOpbnbMainnet.AccessControlManager.address,
-    ProtocolShareReserve: protocolShareReserveOpbnbMainnet.ProtocolShareReserve.address,
   },
 };
 

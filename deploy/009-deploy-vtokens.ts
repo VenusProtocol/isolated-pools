@@ -1,3 +1,4 @@
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/001-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
@@ -114,10 +115,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      const protocolShareReserveAddress = await toAddress(
-        preconfiguredAddresses.ProtocolShareReserve || "ProtocolShareReserve",
-        hre,
-      );
+      let protocolShareReserveAddress;
+      try {
+        protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+      } catch (e) {
+        if (!hre.network.live) {
+          console.warn("ProtocolShareReserve contract not found. Deploying address");
+          await deployProtocolShareReserve(hre);
+          protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+        } else {
+          throw e;
+        }
+      }
 
       const args = [
         tokenContract.address,
