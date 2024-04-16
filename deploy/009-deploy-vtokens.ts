@@ -1,3 +1,4 @@
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/001-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
@@ -32,6 +33,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
@@ -40,6 +42,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [vTokenImpl.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
@@ -90,6 +93,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           ],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       } else {
@@ -102,6 +106,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           args: [BLOCKS_PER_YEAR, baseRatePerYear, multiplierPerYear],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       }
@@ -110,7 +115,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+      let protocolShareReserveAddress;
+      try {
+        protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+      } catch (e) {
+        if (!hre.network.live) {
+          console.warn("ProtocolShareReserve contract not found. Deploying address");
+          await deployProtocolShareReserve(hre);
+          protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+        } else {
+          throw e;
+        }
+      }
+
       const args = [
         tokenContract.address,
         comptrollerProxy.address,
@@ -121,7 +138,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [AddressOne, treasuryAddress],
+        [AddressOne, protocolShareReserveAddress],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {
@@ -130,6 +147,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
         log: true,
         autoMine: true,
+        skipIfAlreadyDeployed: true,
       });
       console.log(`-----------------------------------------`);
     }
