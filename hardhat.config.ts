@@ -40,7 +40,10 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
-        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+        bscmainnet: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+        ],
         opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
       },
     };
@@ -146,7 +149,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.13",
+        version: "0.8.25",
         settings: {
           optimizer: {
             enabled: true,
@@ -154,22 +157,7 @@ const config: HardhatUserConfig = {
               yul: !process.env.CI,
             },
           },
-          outputSelection: {
-            "*": {
-              "*": ["storageLayout"],
-            },
-          },
-        },
-      },
-      {
-        version: "0.8.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            details: {
-              yul: !process.env.CI,
-            },
-          },
+          evmVersion: "paris",
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
@@ -375,6 +363,9 @@ const config: HardhatUserConfig = {
       },
       {
         artifacts: "node_modules/@venusprotocol/protocol-reserve/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
     ],
   },
