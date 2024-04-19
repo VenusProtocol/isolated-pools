@@ -13,6 +13,7 @@
     "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps": "0xe948BBE16a846988A501A33Fb6A82Af4E2f231aE",
     "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps": "0x1A9ca9032C7ee7335736fCaa5e8fb62b283538da",
     "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps": "0xA03205bC635A772E533E7BE36b5701E331a70ea3",
+    "JumpRateModelV2_base0bps_slope9000bps_jump7500bps_kink4500bps": "0xf5EA67C92EF40b948EF672DE5fb913237A880A9E",
     "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink4500bps": "0x1b821241f5E3f3AecBeE29901BeE07f5a264915f",
     "JumpRateModelV2_base200bps_slope1500bps_jump30000bps_kink4500bps": "0x710F4044007a0e72e54626394462dB57d2d8479F",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": "0xaf5feAbe347BE5DF603CE63e45155bDb8049C78c",
@@ -21,6 +22,8 @@
     "MockUSDT": "0x8d412FD0bc5d826615065B931171Eed10F5AF266",
     "MockWBTC": "0x92A2928f5634BEa89A195e7BeCF0f0FEEDAB885b",
     "MockcrvUSD": "0x36421d873abCa3E2bE6BB3c819C0CF26374F63b6",
+    "MockeETH": "0x0012875a7395a293Adfc9b5cDC2Cfa352C4cDcD3",
+    "MockweETH": "0x3b8b6E96e57f0d1cD366AaCf4CcC68413aF308D0",
     "NativeTokenGateway_vWETH_Core": "0xb8fD67f215117FADeF06447Af31590309750529D",
     "NativeTokenGateway_vWETH_LiquidStakedETH": "0x1FD30e761C3296fE36D9067b1e398FD97B4C0407",
     "PoolLens": "0xa78e0D276203290eB0Be7697104379e14c90698a",
@@ -40,6 +43,8 @@
     "RewardsDistributor_Liquid Staked ETH_0_Proxy": "0x4597B9287fE0DF3c5513D66886706E0719bD270f",
     "RewardsDistributor_Liquid Staked ETH_1": "0xec594364d2B7eB3678f351Ac632cC71E718E0F89",
     "RewardsDistributor_Liquid Staked ETH_1_Proxy": "0xec594364d2B7eB3678f351Ac632cC71E718E0F89",
+    "RewardsDistributor_Liquid Staked ETH_2": "0x92e8E3C202093A495e98C10f9fcaa5Abe288F74A",
+    "RewardsDistributor_Liquid Staked ETH_2_Proxy": "0x92e8E3C202093A495e98C10f9fcaa5Abe288F74A",
     "VTokenBeacon": "0x0463a7E5221EAE1990cEddB51A5821a68cdA6008",
     "VTokenImpl": "0x558083c8Ca93e42F5c0FE7e8c5FC49e9c0d94E14",
     "VToken_vCRV_Core": "0x121E3be152F283319310D807ed847E8b98319C1e",
@@ -54,6 +59,7 @@
     "VToken_vcrvUSD_Core": "0xA09cFAd2e138fe6d8FF62df803892cbCb79ED082",
     "VToken_vcrvUSD_Curve": "0xc7be132027e191636172798B933202E0f9CAD548",
     "VToken_vcrvUSD_Stablecoins": "0x9C5e7a3B4db931F07A6534f9e44100DDDc78c408",
+    "VToken_vweETH_LiquidStakedETH": "0x30c31bA6f4652B548fe7a142A949987c3f3Bf80b",
     "VToken_vwstETH_LiquidStakedETH": "0x0a95088403229331FeF1EB26a11F9d6C8E73f23D"
   }
 }

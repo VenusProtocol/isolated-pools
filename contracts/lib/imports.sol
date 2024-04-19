@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 // This file is needed to make hardhat and typechain generate artifacts for
 // contracts we depend on (e.g. in tests or deployments) but not use directly.
