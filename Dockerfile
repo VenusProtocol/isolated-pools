@@ -7,7 +7,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 SHELL ["/bin/bash", "-c"]
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash
 RUN apt -y install nodejs
-RUN wget https://github.com/ethereum/solidity/releases/download/v0.8.13/solc-static-linux -O /usr/bin/solc && chmod +x /usr/bin/solc
+RUN wget https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux -O /usr/bin/solc && chmod +x /usr/bin/solc
 
 RUN mkdir -p /usr/app
 WORKDIR /usr/app

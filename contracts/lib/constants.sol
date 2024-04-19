@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity ^0.8.25;
 
 /// @dev The approximate number of seconds per year
 uint256 constant SECONDS_PER_YEAR = 31_536_000;
