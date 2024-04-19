@@ -1,3 +1,14 @@
+## [3.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v2.8.0...v3.0.0-dev.1) (2024-04-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate to Solidity 0.8.25
+
+### Features
+
+* migrate to Solidity 0.8.25 ([9190201](https://github.com/VenusProtocol/isolated-pools/commit/919020170941c1d194a5a7b3bab9d5cd769e3932))
+
 ## [2.8.0](https://github.com/VenusProtocol/isolated-pools/compare/v2.7.0...v2.8.0) (2024-04-16)
 
 

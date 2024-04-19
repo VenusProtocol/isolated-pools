@@ -149,7 +149,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.13",
+        version: "0.8.25",
         settings: {
           optimizer: {
             enabled: true,
@@ -157,22 +157,7 @@ const config: HardhatUserConfig = {
               yul: !process.env.CI,
             },
           },
-          outputSelection: {
-            "*": {
-              "*": ["storageLayout"],
-            },
-          },
-        },
-      },
-      {
-        version: "0.8.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            details: {
-              yul: !process.env.CI,
-            },
-          },
+          evmVersion: "paris",
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
