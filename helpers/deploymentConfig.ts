@@ -2541,7 +2541,6 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("5000", 18), // 5000 DAI
             supplyCap: convertToUnit(50_000_000, 18),
             borrowCap: convertToUnit(45_000_000, 18),
-
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
@@ -2988,9 +2987,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("5000", 18), // 5000 DAI
             supplyCap: convertToUnit(50_000_000, 18),
             borrowCap: convertToUnit(45_000_000, 18),
-
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
