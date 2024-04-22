@@ -63,7 +63,7 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
   arbitrumsepolia: [
     {
       name: "vWETH_Core",
-      address: "0xed78d7FD8DBbF59B7b38eD53514e017a2F461bCb",
+      address: "0xef6DF2bE5d6Ad0291eDb1160fEf7a4ED2528fAfb",
     },
   ],
 };
