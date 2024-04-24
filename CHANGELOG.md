@@ -1,3 +1,16 @@
+## [3.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.1...v3.1.0-dev.2) (2024-04-24)
+
+
+### Features
+
+* add DAI market to core pool on sepolia and ethereum ([d0c9f58](https://github.com/VenusProtocol/isolated-pools/commit/d0c9f58686dd5ee4ee32e6c280abf56e48541934))
+* updating deployment files ([960a298](https://github.com/VenusProtocol/isolated-pools/commit/960a2989828740654b7ffa814d99835894c9b0df))
+
+
+### Bug Fixes
+
+* typo ([67147b9](https://github.com/VenusProtocol/isolated-pools/commit/67147b90680483b0d960201d0985fd929f6927e6))
+
 ## [3.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.0.0...v3.1.0-dev.1) (2024-04-19)
 
 
