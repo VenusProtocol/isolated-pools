@@ -2402,6 +2402,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "PT ether.fi weETH 26DEC2024",
+        symbol: "PT-weETH-26DEC2024",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      }
     ],
     poolConfig: [
       {
@@ -2735,6 +2742,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus PT-wETH-26DEC2024 (Liquid Staked ETH)",
+            asset: "PT-weETH-26DEC2024",
+            symbol: "vPT-weETH-26DEC2024_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.20", 18),
+            initialSupply: convertToUnit("1.799618792392372642", 18),
+            supplyCap: convertToUnit(3750, 18),
+            borrowCap: convertToUnit(375, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2758,6 +2783,12 @@ export const globalConfig: NetworkConfig = {
             asset: "USDC",
             markets: ["weETH"],
             supplySpeeds: ["23148"], // 5,000 USDC for 30 days (216000 blocks)
+            borrowSpeeds: ["0"],
+          },
+          {
+            asset: "USDC",
+            markets: ["PT-weETH-26DEC2024"],
+            supplySpeeds: ["0"],
             borrowSpeeds: ["0"],
           },
         ],
