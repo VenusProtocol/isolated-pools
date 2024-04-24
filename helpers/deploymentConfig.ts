@@ -2408,7 +2408,7 @@ export const globalConfig: NetworkConfig = {
         symbol: "PT-weETH-26DEC2024",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
-      }
+      },
     ],
     poolConfig: [
       {
