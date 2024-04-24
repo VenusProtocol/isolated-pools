@@ -2785,12 +2785,6 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["23148"], // 5,000 USDC for 30 days (216000 blocks)
             borrowSpeeds: ["0"],
           },
-          {
-            asset: "USDC",
-            markets: ["PT-weETH-26DEC2024"],
-            supplySpeeds: ["0"],
-            borrowSpeeds: ["0"],
-          },
         ],
       },
     ],
