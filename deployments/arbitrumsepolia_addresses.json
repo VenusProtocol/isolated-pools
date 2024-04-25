@@ -1,0 +1,26 @@
+{
+  "name": "arbitrumsepolia",
+  "chainId": "421614",
+  "addresses": {
+    "ComptrollerBeacon": "0x1847A284f4E4d2467964b17c78f6548d17156FFe",
+    "ComptrollerImpl": "0x263Fa11D8D6A7869e3696BaC29954addE2670497",
+    "Comptroller_Core": "0xA198909e8432f262f6978F2C81B04b32c55eb063",
+    "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
+    "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": "0xaE38205BEF83c18F006Bf2B8C92e3B7d69076166",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x1719cc45F774e1C944B70F31EDA1E8dCCDaE65EA",
+    "MockARB": "0x4371bb358aB5cC192E481543417D2F67b8781731",
+    "MockUSDC": "0x86f096B1D970990091319835faF3Ee011708eAe8",
+    "MockUSDT": "0xf3118a17863996B9F2A073c9A66Faaa664355cf8",
+    "MockWBTC": "0xFb8d93FD3Cf18386a5564bb5619cD1FdB130dF7D",
+    "PoolRegistry": "0x6866b2BDaaEf6648ddd5b678B3e9f3352bF3d2A5",
+    "PoolRegistry_Implementation": "0x1B052EdDD0a0072875cD3CECBf9D78E95a2aa078",
+    "PoolRegistry_Proxy": "0x6866b2BDaaEf6648ddd5b678B3e9f3352bF3d2A5",
+    "VTokenBeacon": "0x0044263D597087f3fE884C318c10720cD21d1459",
+    "VTokenImpl": "0x5b3CF6fD8c8240a38486BfD7685eF290238402e0",
+    "VToken_vARB_Core": "0x09522549a45767093F8b044a6CcA86E34Bf52396",
+    "VToken_vUSDC_Core": "0xf34F869da124Ae9b6b45EcB1787d0559Efa5DFA8",
+    "VToken_vUSDT_Core": "0xFf3a9fD8d4f208Ed98f56A5F771AD470258866D7",
+    "VToken_vWBTC_Core": "0x86bA857556ce8Ea25175e844E11ee413B7A73a25",
+    "VToken_vWETH_Core": "0xef6DF2bE5d6Ad0291eDb1160fEf7a4ED2528fAfb"
+  }
+}
