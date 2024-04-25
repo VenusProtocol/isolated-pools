@@ -1,3 +1,20 @@
+## [3.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.3...v3.1.0-dev.4) (2024-04-25)
+
+
+### Features
+
+* updating deployment files ([66bdcd0](https://github.com/VenusProtocol/isolated-pools/commit/66bdcd0629eb924d31dcb6f5ab7674d89a4123de))
+* updating deployment files ([996353c](https://github.com/VenusProtocol/isolated-pools/commit/996353c139cbfb2fd92cc66d591b64122b3cf260))
+
+
+### Bug Fixes
+
+* added pendle token configuration ([d968001](https://github.com/VenusProtocol/isolated-pools/commit/d96800140f81eba909b5d7af94c90b60584dc8e8))
+* deployed vtoken ([2bdc98d](https://github.com/VenusProtocol/isolated-pools/commit/2bdc98d79dc1544d1ea1c8bf9f35de24363545c4))
+* rebased ([1f69ea7](https://github.com/VenusProtocol/isolated-pools/commit/1f69ea7a3fa625b0baac3a7e42a3ab64dee160ff))
+* removed rewards distributor ([5dc1745](https://github.com/VenusProtocol/isolated-pools/commit/5dc1745890e3f6e51fb6428175de7b4f479f62f0))
+* removed rewards distributor config ([379aedc](https://github.com/VenusProtocol/isolated-pools/commit/379aedcb3b09b7d4cf645be1cbc8babfe7e3f837))
+
 ## [3.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.2...v3.1.0-dev.3) (2024-04-25)
 
 
