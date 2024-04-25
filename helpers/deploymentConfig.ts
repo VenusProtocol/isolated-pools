@@ -10,6 +10,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
 
@@ -32,6 +33,16 @@ export type DeploymentConfig = {
   poolConfig: PoolConfig[];
   accessControlConfig: AccessControlEntry[];
   preconfiguredAddresses: PreconfiguredAddresses;
+};
+
+export type DeploymentInfo = {
+  isTimeBased: boolean;
+  blocksPerYear: number;
+};
+
+type BidderDeploymentValues = {
+  waitForFirstBidder: number;
+  nextBidderBlockOrTimestampLimit: number;
 };
 
 export type TokenConfig = {
@@ -98,9 +109,10 @@ export enum InterestRateModels {
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
-const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
-const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
-const OPBNB_BLOCKS_PER_YEAR = 31_536_000; // assuming a block is mined every 1 seconds
+export const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
+export const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
+export const OPBNB_BLOCKS_PER_YEAR = 31_536_000; // assuming a block is mined every 1 seconds
+export const SECONDS_PER_YEAR = 31_536_000; // seconds per year
 
 export type BlocksPerYear = {
   [key: string]: number;
@@ -114,6 +126,7 @@ export const blocksPerYear: BlocksPerYear = {
   ethereum: ETH_BLOCKS_PER_YEAR,
   opbnbtestnet: OPBNB_BLOCKS_PER_YEAR,
   opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
+  isTimeBased: 0,
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
@@ -2404,6 +2417,20 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
+        name: "Dai Stablecoin",
+        symbol: "DAI",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "PT ether.fi weETH 26DEC2024",
+        symbol: "PT-weETH-26DEC2024",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
         name: "TrueUSD",
         symbol: "TUSD",
         decimals: 18,
@@ -2523,6 +2550,24 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit(20_000, 18),
             supplyCap: convertToUnit(5_000_000, 18),
             borrowCap: convertToUnit(2_500_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
+          {
+            name: "Venus DAI (Core)",
+            asset: "DAI",
+            symbol: "vDAI_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 18), // 5000 DAI
+            supplyCap: convertToUnit(50_000_000, 18),
+            borrowCap: convertToUnit(45_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
@@ -2760,6 +2805,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus PT-wETH-26DEC2024 (Liquid Staked ETH)",
+            asset: "PT-weETH-26DEC2024",
+            symbol: "vPT-weETH-26DEC2024_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.20", 18),
+            initialSupply: convertToUnit("1.799618792392372642", 18),
+            supplyCap: convertToUnit(3750, 18),
+            borrowCap: convertToUnit(375, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2868,6 +2931,13 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "Dai Stablecoin",
+        symbol: "DAI",
+        decimals: 18,
+        tokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
+      },
+      {
+        isMock: false,
         name: "TrueUSD",
         symbol: "TUSD",
         decimals: 18,
@@ -2971,6 +3041,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(45_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
+          },
+          {
+            name: "Venus DAI (Core)",
+            asset: "DAI",
+            symbol: "vDAI_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 18), // 5000 DAI
+            supplyCap: convertToUnit(50_000_000, 18),
+            borrowCap: convertToUnit(45_000_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
           {
             name: "Venus TUSD (Core)",
@@ -3505,5 +3593,90 @@ export async function getTokenAddress(tokenConfig: TokenConfig, deployments: Dep
     return token.address;
   } else {
     return tokenConfig.tokenAddress;
+  }
+}
+
+export function getBidderDeploymentValues(networkName: string): BidderDeploymentValues {
+  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
+  if (isTimeBased) {
+    return {
+      waitForFirstBidder: 300,
+      nextBidderBlockOrTimestampLimit: 300,
+    };
+  }
+
+  switch (networkName) {
+    case "hardhat":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "bsctestnet":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "bscmainnet":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "sepolia":
+      return {
+        waitForFirstBidder: 25,
+        nextBidderBlockOrTimestampLimit: 25,
+      };
+    case "ethereum":
+      return {
+        waitForFirstBidder: 25,
+        nextBidderBlockOrTimestampLimit: 25,
+      };
+    case "opbnbtestnet":
+      return {
+        waitForFirstBidder: 300,
+        nextBidderBlockOrTimestampLimit: 300,
+      };
+    case "opbnbmainnet":
+      return {
+        waitForFirstBidder: 300,
+        nextBidderBlockOrTimestampLimit: 300,
+      };
+    case "development":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    default:
+      throw new Error(`bidder limits for network ${networkName} is not available.`);
+  }
+}
+
+export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
+  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
+  if (isTimeBased) {
+    return BigNumber.from(0.00016667e16); // (0.0005e16 / 3) for per second
+  }
+
+  switch (networkName) {
+    case "hardhat":
+      return BigNumber.from(0.0005e16);
+    case "bsctestnet":
+      return BigNumber.from(0.0005e16);
+    case "bscmainnet":
+      return BigNumber.from(0.0005e16);
+    case "sepolia":
+      return BigNumber.from(0.0005e16);
+    case "ethereum":
+      return BigNumber.from(0.0005e16);
+    case "opbnbtestnet":
+      return BigNumber.from(0.0005e16);
+    case "opbnbmainnet":
+      return BigNumber.from(0.0005e16);
+    case "development":
+      return BigNumber.from(0.0005e16);
+    default:
+      throw new Error(`max borrow rate for network ${networkName} is not available.`);
   }
 }
