@@ -1,9 +1,11 @@
+import { contracts as governanceArbitrumSepolia } from "@venusprotocol/governance-contracts/deployments/arbitrumsepolia.json";
 import { contracts as governanceBscMainnet } from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import { contracts as governanceBscTestnet } from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import { contracts as governanceEthereum } from "@venusprotocol/governance-contracts/deployments/ethereum.json";
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import { contracts as venusProtocolBscTestnet } from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protocol/deployments/ethereum.json";
@@ -206,11 +208,11 @@ export const preconfiguredAddresses = {
     AccessControlManager: governanceOpbnbMainnet.AccessControlManager.address,
   },
   arbitrumsepolia: {
-    VTreasury: "0x4e7ab1fD841E1387Df4c91813Ae03819C33D5bdB",
+    VTreasury: venusProtocolArbitrumSepolia.VTreasuryV8.address,
     NormalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
     FastTrackTimelock: ARBITRUM_SEPOLIA_MULTISIG,
     CriticalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
-    AccessControlManager: "0xa36AD96441cB931D8dFEAAaC97D3FaB4B39E590F",
+    AccessControlManager: governanceArbitrumSepolia.AccessControlManager.address,
   },
 };
 
