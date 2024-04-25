@@ -10,6 +10,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
 
@@ -32,6 +33,16 @@ export type DeploymentConfig = {
   poolConfig: PoolConfig[];
   accessControlConfig: AccessControlEntry[];
   preconfiguredAddresses: PreconfiguredAddresses;
+};
+
+export type DeploymentInfo = {
+  isTimeBased: boolean;
+  blocksPerYear: number;
+};
+
+type BidderDeploymentValues = {
+  waitForFirstBidder: number;
+  nextBidderBlockOrTimestampLimit: number;
 };
 
 export type TokenConfig = {
@@ -98,9 +109,10 @@ export enum InterestRateModels {
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
-const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
-const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
-const OPBNB_BLOCKS_PER_YEAR = 31_536_000; // assuming a block is mined every 1 seconds
+export const BSC_BLOCKS_PER_YEAR = 10_512_000; // assuming a block is mined every 3 seconds
+export const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
+export const OPBNB_BLOCKS_PER_YEAR = 31_536_000; // assuming a block is mined every 1 seconds
+export const SECONDS_PER_YEAR = 31_536_000; // seconds per year
 
 export type BlocksPerYear = {
   [key: string]: number;
@@ -114,6 +126,7 @@ export const blocksPerYear: BlocksPerYear = {
   ethereum: ETH_BLOCKS_PER_YEAR,
   opbnbtestnet: OPBNB_BLOCKS_PER_YEAR,
   opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
+  isTimeBased: 0,
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
@@ -3505,5 +3518,90 @@ export async function getTokenAddress(tokenConfig: TokenConfig, deployments: Dep
     return token.address;
   } else {
     return tokenConfig.tokenAddress;
+  }
+}
+
+export function getBidderDeploymentValues(networkName: string): BidderDeploymentValues {
+  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
+  if (isTimeBased) {
+    return {
+      waitForFirstBidder: 300,
+      nextBidderBlockOrTimestampLimit: 300,
+    };
+  }
+
+  switch (networkName) {
+    case "hardhat":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "bsctestnet":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "bscmainnet":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    case "sepolia":
+      return {
+        waitForFirstBidder: 25,
+        nextBidderBlockOrTimestampLimit: 25,
+      };
+    case "ethereum":
+      return {
+        waitForFirstBidder: 25,
+        nextBidderBlockOrTimestampLimit: 25,
+      };
+    case "opbnbtestnet":
+      return {
+        waitForFirstBidder: 300,
+        nextBidderBlockOrTimestampLimit: 300,
+      };
+    case "opbnbmainnet":
+      return {
+        waitForFirstBidder: 300,
+        nextBidderBlockOrTimestampLimit: 300,
+      };
+    case "development":
+      return {
+        waitForFirstBidder: 100,
+        nextBidderBlockOrTimestampLimit: 100,
+      };
+    default:
+      throw new Error(`bidder limits for network ${networkName} is not available.`);
+  }
+}
+
+export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
+  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
+  if (isTimeBased) {
+    return BigNumber.from(0.00016667e16); // (0.0005e16 / 3) for per second
+  }
+
+  switch (networkName) {
+    case "hardhat":
+      return BigNumber.from(0.0005e16);
+    case "bsctestnet":
+      return BigNumber.from(0.0005e16);
+    case "bscmainnet":
+      return BigNumber.from(0.0005e16);
+    case "sepolia":
+      return BigNumber.from(0.0005e16);
+    case "ethereum":
+      return BigNumber.from(0.0005e16);
+    case "opbnbtestnet":
+      return BigNumber.from(0.0005e16);
+    case "opbnbmainnet":
+      return BigNumber.from(0.0005e16);
+    case "development":
+      return BigNumber.from(0.0005e16);
+    default:
+      throw new Error(`max borrow rate for network ${networkName} is not available.`);
   }
 }
