@@ -2538,7 +2538,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.77", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit(1_000_000, 18), // 5000 DAI
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
             supplyCap: convertToUnit(2_000_000, 18),
             borrowCap: convertToUnit(1_800_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
@@ -2984,7 +2984,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.77", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit(1_000_000, 18), // 1M TUSD
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
             supplyCap: convertToUnit(2_000_000, 18),
             borrowCap: convertToUnit(1_800_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
