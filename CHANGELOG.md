@@ -1,3 +1,17 @@
+## [3.1.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.4...v3.1.0-dev.5) (2024-04-26)
+
+
+### Features
+
+* add deployments of core pool with markets and underlying on arbitrum sepolia ([4340354](https://github.com/VenusProtocol/isolated-pools/commit/4340354cd7b4f901456e496ef069c329d26263bf))
+* updating deployment files ([d4ac26a](https://github.com/VenusProtocol/isolated-pools/commit/d4ac26ab1eaf9c95f766c15f1b1fdaac33ac343c))
+* updating deployment files ([afec7b7](https://github.com/VenusProtocol/isolated-pools/commit/afec7b7af8db94c428af71be9c387aada2e1afb0))
+
+
+### Bug Fixes
+
+* resolve merge conflicts ([bec2185](https://github.com/VenusProtocol/isolated-pools/commit/bec21853b6851e6fcd1d5178499f929579cfebe0))
+
 ## [3.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.3...v3.1.0-dev.4) (2024-04-25)
 
 
