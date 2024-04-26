@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { InterestRateModel } from "./InterestRateModel.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
@@ -9,44 +10,45 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
  * @author Compound
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
-contract WhitePaperInterestRateModel is InterestRateModel {
+contract WhitePaperInterestRateModel is InterestRateModel, TimeManagerV8 {
     /**
-     * @notice The approximate number of blocks per year that is assumed by the interest rate model
-     */
-    uint256 public immutable blocksPerYear;
-    /**
-     * @notice The multiplier of utilization rate that gives the slope of the interest rate
+     * @notice The multiplier of utilization rate per block or second that gives the slope of the interest rate
      */
     uint256 public immutable multiplierPerBlock;
 
     /**
-     * @notice The base interest rate which is the y-intercept when utilization rate is 0
+     * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0
      */
     uint256 public immutable baseRatePerBlock;
 
-    event NewInterestParams(uint256 baseRatePerBlock, uint256 multiplierPerBlock);
+    event NewInterestParams(uint256 baseRatePerBlockOrTimestamp, uint256 multiplierPerBlockOrTimestamp);
 
     /**
      * @notice Construct an interest rate model
-     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
+     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
+     * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
      */
-    constructor(uint256 blocksPerYear_, uint256 baseRatePerYear, uint256 multiplierPerYear) {
-        require(blocksPerYear_ != 0, "Invalid blocks per year");
-        baseRatePerBlock = baseRatePerYear / blocksPerYear_;
-        multiplierPerBlock = multiplierPerYear / blocksPerYear_;
-        blocksPerYear = blocksPerYear_;
+    constructor(
+        uint256 baseRatePerYear_,
+        uint256 multiplierPerYear_,
+        bool timeBased_,
+        uint256 blocksPerYear_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        baseRatePerBlock = baseRatePerYear_ / blocksOrSecondsPerYear;
+        multiplierPerBlock = multiplierPerYear_ / blocksOrSecondsPerYear;
 
         emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
     }
 
     /**
-     * @notice Calculates the current borrow rate per block, with the error code expected by the market
+     * @notice Calculates the current borrow rate per slot(block/second), with the error code expected by the market
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per block as a mantissa (scaled by EXP_SCALE)
+     * @return The borrow rate percentage per slot(block/second) as a mantissa (scaled by EXP_SCALE)
      */
     function getBorrowRate(
         uint256 cash,
@@ -59,13 +61,13 @@ contract WhitePaperInterestRateModel is InterestRateModel {
     }
 
     /**
-     * @notice Calculates the current supply rate per block
+     * @notice Calculates the current supply rate per slot(block/second)
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param reserveFactorMantissa The current reserve factor for the market
      * @param badDebt The amount of badDebt in the market
-     * @return The supply rate percentage per block as a mantissa (scaled by EXP_SCALE)
+     * @return The supply rate percentage per slot(block/second) as a mantissa (scaled by EXP_SCALE)
      */
     function getSupplyRate(
         uint256 cash,

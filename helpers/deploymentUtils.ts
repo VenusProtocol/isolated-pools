@@ -2,7 +2,15 @@ import { ethers } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
-import { PoolConfig, RewardConfig, TokenConfig, VTokenConfig, getTokenConfig } from "./deploymentConfig";
+import {
+  DeploymentInfo,
+  PoolConfig,
+  RewardConfig,
+  TokenConfig,
+  VTokenConfig,
+  blocksPerYear,
+  getTokenConfig,
+} from "./deploymentConfig";
 
 export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvironment): Promise<string> => {
   const { getNamedAccounts } = hre;
@@ -125,4 +133,10 @@ export const getUnregisteredRewardsDistributors = async (
       return { ...pool, rewards: rewards.filter((_, idx: number) => !isRegistered[idx]) };
     }),
   );
+};
+
+export const getBlockOrTimestampBasedDeploymentInfo = (network: string): DeploymentInfo => {
+  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
+  return { isTimeBased: isTimeBased, blocksPerYear: blocksPerYear[network] };
 };

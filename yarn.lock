@@ -3170,7 +3170,8 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": 2.0.0
     "@venusprotocol/oracle": 2.0.0
-    "@venusprotocol/protocol-reserve": 2.0.0
+    "@venusprotocol/protocol-reserve": 2.1.0
+    "@venusprotocol/solidity-utilities": ^2.0.0
     "@venusprotocol/venus-protocol": 8.0.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
@@ -3222,9 +3223,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:2.0.0, @venusprotocol/protocol-reserve@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "@venusprotocol/protocol-reserve@npm:2.0.0"
+"@venusprotocol/protocol-reserve@npm:2.1.0":
+  version: 2.1.0
+  resolution: "@venusprotocol/protocol-reserve@npm:2.1.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3236,7 +3237,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: a0e1f2621b7c29649755e518c87e7e93a452a9dadbc82dc434e5fa3728091a928038af6c40c532f6880beea0f1e06e43f0690df2e53e516b8973838be3a21984
+  checksum: f817dc28232fb37e11d5e87d68b0dfca867916b6b17b30288c132c3025fe5700764fdb162befbaffaf8d9cba16990507690e811d0079982687688c94c6a0437c
   languageName: node
   linkType: hard
 
@@ -3255,6 +3256,24 @@ __metadata:
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
   checksum: 6b9bc35ac7cdb2d828312c9ebcba1c55e3b63d6d8d237affa7b5baf94b5c2a86e296552c153a5c077f9b6178cc73c7fd20804126509a8a8670c5b50eeae41d2d
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/protocol-reserve@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@venusprotocol/protocol-reserve@npm:2.0.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    "@venusprotocol/solidity-utilities": ^2.0.0
+    "@venusprotocol/venus-protocol": ^7.5.0
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: a0e1f2621b7c29649755e518c87e7e93a452a9dadbc82dc434e5fa3728091a928038af6c40c532f6880beea0f1e06e43f0690df2e53e516b8973838be3a21984
   languageName: node
   linkType: hard
 
