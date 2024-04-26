@@ -9322,8 +9322,47 @@
       ]
     },
     "PoolLens": {
-      "address": "0xa78e0D276203290eB0Be7697104379e14c90698a",
+      "address": "0x95de59aD391589603DF33F81B53C4d894D8e5545",
       "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "bool",
+              "name": "timeBased_",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blocksPerYear_",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBlocksPerYear",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidTimeBasedConfiguration",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "blocksOrSecondsPerYear",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
         {
           "inputs": [
             {
@@ -9410,12 +9449,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -9482,6 +9521,11 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "isTimeBased",
+                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -9492,6 +9536,19 @@
               "internalType": "struct PoolLens.PoolData[]",
               "name": "",
               "type": "tuple[]"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getBlockNumberOrTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
           ],
           "stateMutability": "view",
@@ -9694,12 +9751,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -9766,6 +9823,11 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "isTimeBased",
+                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -9899,12 +9961,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -9971,6 +10033,11 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "isTimeBased",
+                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -10034,6 +10101,19 @@
               "internalType": "address",
               "name": "",
               "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isTimeBased",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
             }
           ],
           "stateMutability": "view",
@@ -10175,12 +10255,12 @@
                 },
                 {
                   "internalType": "uint256",
-                  "name": "supplyRatePerBlock",
+                  "name": "supplyRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "borrowRatePerBlock",
+                  "name": "borrowRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
@@ -10247,6 +10327,11 @@
                   "internalType": "uint256",
                   "name": "pausedActions",
                   "type": "uint256"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isTimeBased",
+                  "type": "bool"
                 }
               ],
               "internalType": "struct PoolLens.VTokenMetadata",
@@ -10281,12 +10366,12 @@
                 },
                 {
                   "internalType": "uint256",
-                  "name": "supplyRatePerBlock",
+                  "name": "supplyRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "borrowRatePerBlock",
+                  "name": "borrowRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
@@ -10353,6 +10438,11 @@
                   "internalType": "uint256",
                   "name": "pausedActions",
                   "type": "uint256"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "isTimeBased",
+                  "type": "bool"
                 }
               ],
               "internalType": "struct PoolLens.VTokenMetadata[]",
