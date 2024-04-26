@@ -3171,6 +3171,7 @@ __metadata:
     "@venusprotocol/governance-contracts": 2.0.0
     "@venusprotocol/oracle": 2.0.0
     "@venusprotocol/protocol-reserve": 2.0.0
+    "@venusprotocol/solidity-utilities": ^2.0.0
     "@venusprotocol/venus-protocol": 8.0.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
