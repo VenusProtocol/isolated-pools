@@ -379,11 +379,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const unregisteredRewardsDistributors = await getUnregisteredRewardsDistributors(poolConfig, hre);
   const owner = preconfiguredAddresses.NormalTimelock || deployer;
   const commands = [
-    // ...(await configureAccessControls(deploymentConfig, hre)),
-    // ...(await acceptOwnership("PoolRegistry", owner, hre)),
-    // ...(await addPools(unregisteredPools, owner, hre)),
+    ...(await configureAccessControls(deploymentConfig, hre)),
+    ...(await acceptOwnership("PoolRegistry", owner, hre)),
+    ...(await addPools(unregisteredPools, owner, hre)),
     ...(await addMarkets(unregisteredVTokens, deploymentConfig, hre)),
-    // ...(await configureRewards(unregisteredRewardsDistributors, owner, hre)),
+    ...(await configureRewards(unregisteredRewardsDistributors, owner, hre)),
   ];
 
   if (hre.network.live) {
