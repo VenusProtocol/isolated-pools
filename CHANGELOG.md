@@ -1,3 +1,12 @@
+## [3.1.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.5...v3.1.0-dev.6) (2024-04-26)
+
+
+### Features
+
+* add TUSD market to core pool on ethereum and sepolia ([17e9158](https://github.com/VenusProtocol/isolated-pools/commit/17e91587fe421365fc6515eb1ebc89f68db3b3c5))
+* updating deployment files ([99bb113](https://github.com/VenusProtocol/isolated-pools/commit/99bb11342a29bc0a0f49e5695020aa03ced15f81))
+* updating deployment files ([63aea9d](https://github.com/VenusProtocol/isolated-pools/commit/63aea9d3930ceb83a18604cf119a5b1992f01562))
+
 ## [3.1.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0-dev.4...v3.1.0-dev.5) (2024-04-26)
 
 
