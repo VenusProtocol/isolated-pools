@@ -2443,6 +2443,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "TrueUSD",
+        symbol: "TUSD",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -2577,6 +2584,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(45_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
+          {
+            name: "Venus TUSD (Core)",
+            asset: "TUSD",
+            symbol: "vTUSD_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
+            supplyCap: convertToUnit(2_000_000, 18),
+            borrowCap: convertToUnit(1_800_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
         ],
         rewards: [
@@ -2925,6 +2950,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
       },
+      {
+        isMock: false,
+        name: "TrueUSD",
+        symbol: "TUSD",
+        decimals: 18,
+        tokenAddress: "0x0000000000085d4780B73119b644AE5ecd22b376",
+      },
     ],
     poolConfig: [
       {
@@ -3041,6 +3073,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(45_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
+          },
+          {
+            name: "Venus TUSD (Core)",
+            asset: "TUSD",
+            symbol: "vTUSD_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
+            supplyCap: convertToUnit(2_000_000, 18),
+            borrowCap: convertToUnit(1_800_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury, // TBD
           },
         ],
         rewards: [
