@@ -3705,8 +3705,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "USDT",
             markets: ["USDT"],
-            supplySpeeds: ["250000000"], // 250 USDT per day
-            borrowSpeeds: ["250000000"], // 250 USDT per day
+            supplySpeeds: ["2893"], // 250 USDT per day
+            borrowSpeeds: ["2893"], // 250 USDT per day
           },
         ],
       },
