@@ -1,3 +1,4 @@
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/001-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
@@ -5,9 +6,9 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { blocksPerYear, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
+import { getConfig, getMaxBorrowRateMantissa, getTokenConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
-import { getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
+import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 import { AddressOne } from "../helpers/utils";
 
 const mantissaToBps = (num: BigNumberish) => {
@@ -20,6 +21,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
 
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
+
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
@@ -29,9 +33,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
     from: deployer,
-    args: [],
+    args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
@@ -40,6 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [vTokenImpl.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
@@ -72,7 +78,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       }
 
       let rateModelAddress: string;
-      const BLOCKS_PER_YEAR: number = blocksPerYear[hre.network.name];
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
@@ -81,15 +86,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           from: deployer,
           contract: "JumpRateModelV2",
           args: [
-            BLOCKS_PER_YEAR,
             baseRatePerYear,
             multiplierPerYear,
             jumpMultiplierPerYear,
             kink_,
             accessControlManagerAddress,
+            isTimeBased,
+            blocksPerYear,
           ],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       } else {
@@ -99,9 +106,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
-          args: [BLOCKS_PER_YEAR, baseRatePerYear, multiplierPerYear],
+          args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
       }
@@ -110,7 +118,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+      let protocolShareReserveAddress;
+      try {
+        protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+      } catch (e) {
+        if (!hre.network.live) {
+          console.warn("ProtocolShareReserve contract not found. Deploying address");
+          await deployProtocolShareReserve(hre);
+          protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+        } else {
+          throw e;
+        }
+      }
+
       const args = [
         tokenContract.address,
         comptrollerProxy.address,
@@ -121,7 +141,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         vTokenDecimals,
         preconfiguredAddresses.NormalTimelock || deployer, // admin
         accessControlManagerAddress,
-        [AddressOne, treasuryAddress],
+        [AddressOne, protocolShareReserveAddress],
         reserveFactor,
       ];
       await deploy(`VToken_${symbol}`, {
@@ -130,6 +150,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
         log: true,
         autoMine: true,
+        skipIfAlreadyDeployed: true,
       });
       console.log(`-----------------------------------------`);
     }

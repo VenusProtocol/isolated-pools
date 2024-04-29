@@ -1,5 +1,5 @@
 /// @notice  SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -7,13 +7,16 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
+
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { IRiskFund } from "../RiskFund/IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { ShortfallStorage } from "./ShortfallStorage.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
 
 /**
@@ -26,74 +29,34 @@ import { EXP_SCALE } from "../lib/constants.sol";
  * if the risk fund covers the pool's bad debt plus the 10% incentive, then the auction winner is determined by who will take the smallest percentage of the
  * risk fund in exchange for paying off all the pool's bad debt.
  */
-contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGuardUpgradeable, TokenDebtTracker {
+contract Shortfall is
+    Ownable2StepUpgradeable,
+    AccessControlledV8,
+    ReentrancyGuardUpgradeable,
+    TokenDebtTracker,
+    ShortfallStorage,
+    TimeManagerV8
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /// @notice Type of auction
-    enum AuctionType {
-        LARGE_POOL_DEBT,
-        LARGE_RISK_FUND
-    }
-
-    /// @notice Status of auction
-    enum AuctionStatus {
-        NOT_STARTED,
-        STARTED,
-        ENDED
-    }
-
-    /// @notice Auction metadata
-    struct Auction {
-        uint256 startBlock;
-        AuctionType auctionType;
-        AuctionStatus status;
-        VToken[] markets;
-        uint256 seizedRiskFund;
-        address highestBidder;
-        uint256 highestBidBps;
-        uint256 highestBidBlock;
-        uint256 startBidBps;
-        mapping(VToken => uint256) marketDebt;
-        mapping(VToken => uint256) bidAmount;
-    }
 
     /// @dev Max basis points i.e., 100%
     uint256 private constant MAX_BPS = 10000;
 
-    uint256 private constant DEFAULT_NEXT_BIDDER_BLOCK_LIMIT = 100;
+    // @notice Default incentive basis points (BPS) for the auction participants, set to 10%
+    uint256 private constant DEFAULT_INCENTIVE_BPS = 1000;
 
-    uint256 private constant DEFAULT_WAIT_FOR_FIRST_BIDDER = 100;
+    // @notice Default block or timestamp limit for the next bidder to place a bid
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 private immutable DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT;
 
-    uint256 private constant DEFAULT_INCENTIVE_BPS = 1000; // 10%
-
-    /// @notice Pool registry address
-    address public poolRegistry;
-
-    /// @notice Risk fund address
-    IRiskFund public riskFund;
-
-    /// @notice Minimum USD debt in pool for shortfall to trigger
-    uint256 public minimumPoolBadDebt;
-
-    /// @notice Incentive to auction participants, initial value set to 1000 or 10%
-    uint256 public incentiveBps;
-
-    /// @notice Time to wait for next bidder. Initially waits for 100 blocks
-    uint256 public nextBidderBlockLimit;
-
-    /// @notice Boolean of if auctions are paused
-    bool public auctionsPaused;
-
-    /// @notice Time to wait for first bidder. Initially waits for 100 blocks
-    uint256 public waitForFirstBidder;
-
-    /// @notice Auctions for each pool
-    mapping(address => Auction) public auctions;
+    // @notice Default number of blocks or seconds to wait for the first bidder before starting the auction
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    uint256 private immutable DEFAULT_WAIT_FOR_FIRST_BIDDER;
 
     /// @notice Emitted when a auction starts
     event AuctionStarted(
         address indexed comptroller,
-        uint256 auctionStartBlock,
+        uint256 auctionStartBlockOrTimestamp,
         AuctionType auctionType,
         VToken[] markets,
         uint256[] marketsDebt,
@@ -102,12 +65,17 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a bid is placed
-    event BidPlaced(address indexed comptroller, uint256 auctionStartBlock, uint256 bidBps, address indexed bidder);
+    event BidPlaced(
+        address indexed comptroller,
+        uint256 auctionStartBlockOrTimestamp,
+        uint256 bidBps,
+        address indexed bidder
+    );
 
     /// @notice Emitted when a auction is completed
     event AuctionClosed(
         address indexed comptroller,
-        uint256 auctionStartBlock,
+        uint256 auctionStartBlockOrTimestamp,
         address indexed highestBidder,
         uint256 highestBidBps,
         uint256 seizedRiskFind,
@@ -116,7 +84,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     );
 
     /// @notice Emitted when a auction is restarted
-    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlock);
+    event AuctionRestarted(address indexed comptroller, uint256 auctionStartBlockOrTimestamp);
 
     /// @notice Emitted when pool registry address is updated
     event PoolRegistryUpdated(address indexed oldPoolRegistry, address indexed newPoolRegistry);
@@ -124,11 +92,14 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when minimum pool bad debt is updated
     event MinimumPoolBadDebtUpdated(uint256 oldMinimumPoolBadDebt, uint256 newMinimumPoolBadDebt);
 
-    /// @notice Emitted when wait for first bidder block count is updated
+    /// @notice Emitted when wait for first bidder block or timestamp count is updated
     event WaitForFirstBidderUpdated(uint256 oldWaitForFirstBidder, uint256 newWaitForFirstBidder);
 
-    /// @notice Emitted when next bidder block limit is updated
-    event NextBidderBlockLimitUpdated(uint256 oldNextBidderBlockLimit, uint256 newNextBidderBlockLimit);
+    /// @notice Emitted when next bidder block or timestamp limit is updated
+    event NextBidderBlockLimitUpdated(
+        uint256 oldNextBidderBlockOrTimestampLimit,
+        uint256 newNextBidderBlockOrTimestampLimit
+    );
 
     /// @notice Emitted when incentiveBps is updated
     event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
@@ -139,8 +110,25 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
     /// @notice Emitted when auctions are unpaused
     event AuctionsResumed(address sender);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @param nextBidderBlockOrTimestampLimit_ Default block or timestamp limit for the next bidder to place a bid
+     * @param waitForFirstBidder_ Default number of blocks or seconds to wait for the first bidder before starting the auction
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 nextBidderBlockOrTimestampLimit_,
+        uint256 waitForFirstBidder_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        ensureNonzeroValue(nextBidderBlockOrTimestampLimit_);
+        ensureNonzeroValue(waitForFirstBidder_);
+
+        DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT = nextBidderBlockOrTimestampLimit_;
+        DEFAULT_WAIT_FOR_FIRST_BIDDER = waitForFirstBidder_;
+
         // Note that the contract is upgradeable. Use initialize() or reinitializers
         // to set the state variables.
         _disableInitializers();
@@ -168,23 +156,24 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         __TokenDebtTracker_init();
         minimumPoolBadDebt = minimumPoolBadDebt_;
         riskFund = riskFund_;
-        waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
-        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_LIMIT;
         incentiveBps = DEFAULT_INCENTIVE_BPS;
         auctionsPaused = false;
+
+        waitForFirstBidder = DEFAULT_WAIT_FOR_FIRST_BIDDER;
+        nextBidderBlockLimit = DEFAULT_NEXT_BIDDER_BLOCK_OR_TIMESTAMP_LIMIT;
     }
 
     /**
      * @notice Place a bid greater than the previous in an ongoing auction
      * @param comptroller Comptroller address of the pool
      * @param bidBps The bid percent of the risk fund or bad debt depending on auction type
-     * @param auctionStartBlock The block number when auction started
+     * @param auctionStartBlockOrTimestamp The block number or timestamp when auction started
      * @custom:event Emits BidPlaced event on success
      */
-    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlock) external nonReentrant {
+    function placeBid(address comptroller, uint256 bidBps, uint256 auctionStartBlockOrTimestamp) external nonReentrant {
         Auction storage auction = auctions[comptroller];
 
-        require(auction.startBlock == auctionStartBlock, "auction has been restarted");
+        require(auction.startBlockOrTimestamp == auctionStartBlockOrTimestamp, "auction has been restarted");
         require(_isStarted(auction), "no on-going auction");
         require(!_isStale(auction), "auction is stale, restart it");
         require(bidBps > 0, "basis points cannot be zero");
@@ -222,9 +211,9 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         auction.highestBidder = msg.sender;
         auction.highestBidBps = bidBps;
-        auction.highestBidBlock = block.number;
+        auction.highestBidBlockOrTimestamp = getBlockNumberOrTimestamp();
 
-        emit BidPlaced(comptroller, auction.startBlock, bidBps, msg.sender);
+        emit BidPlaced(comptroller, auction.startBlockOrTimestamp, bidBps, msg.sender);
     }
 
     /**
@@ -237,7 +226,8 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         require(_isStarted(auction), "no on-going auction");
         require(
-            block.number > auction.highestBidBlock + nextBidderBlockLimit && auction.highestBidder != address(0),
+            getBlockNumberOrTimestamp() > auction.highestBidBlockOrTimestamp + nextBidderBlockLimit &&
+                auction.highestBidder != address(0),
             "waiting for next bidder. cannot close auction"
         );
 
@@ -273,7 +263,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         emit AuctionClosed(
             comptroller,
-            auction.startBlock,
+            auction.startBlockOrTimestamp,
             auction.highestBidder,
             auction.highestBidBps,
             transferredAmount,
@@ -307,62 +297,62 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
         auction.status = AuctionStatus.ENDED;
 
-        emit AuctionRestarted(comptroller, auction.startBlock);
+        emit AuctionRestarted(comptroller, auction.startBlockOrTimestamp);
         _startAuction(comptroller);
     }
 
     /**
-     * @notice Update next bidder block limit which is used determine when an auction can be closed
-     * @param _nextBidderBlockLimit  New next bidder block limit
+     * @notice Update next bidder block or timestamp limit which is used determine when an auction can be closed
+     * @param nextBidderBlockOrTimestampLimit_  New next bidder slot (block or second) limit
      * @custom:event Emits NextBidderBlockLimitUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateNextBidderBlockLimit(uint256 _nextBidderBlockLimit) external {
+    function updateNextBidderBlockLimit(uint256 nextBidderBlockOrTimestampLimit_) external {
         _checkAccessAllowed("updateNextBidderBlockLimit(uint256)");
-        require(_nextBidderBlockLimit != 0, "_nextBidderBlockLimit must not be 0");
-        uint256 oldNextBidderBlockLimit = nextBidderBlockLimit;
-        nextBidderBlockLimit = _nextBidderBlockLimit;
-        emit NextBidderBlockLimitUpdated(oldNextBidderBlockLimit, _nextBidderBlockLimit);
+        require(nextBidderBlockOrTimestampLimit_ != 0, "nextBidderBlockOrTimestampLimit_ must not be 0");
+
+        emit NextBidderBlockLimitUpdated(nextBidderBlockLimit, nextBidderBlockOrTimestampLimit_);
+        nextBidderBlockLimit = nextBidderBlockOrTimestampLimit_;
     }
 
     /**
      * @notice Updates the incentive BPS
-     * @param _incentiveBps New incentive BPS
+     * @param incentiveBps_ New incentive BPS
      * @custom:event Emits IncentiveBpsUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateIncentiveBps(uint256 _incentiveBps) external {
+    function updateIncentiveBps(uint256 incentiveBps_) external {
         _checkAccessAllowed("updateIncentiveBps(uint256)");
-        require(_incentiveBps != 0, "incentiveBps must not be 0");
+        require(incentiveBps_ != 0, "incentiveBps must not be 0");
         uint256 oldIncentiveBps = incentiveBps;
-        incentiveBps = _incentiveBps;
-        emit IncentiveBpsUpdated(oldIncentiveBps, _incentiveBps);
+        incentiveBps = incentiveBps_;
+        emit IncentiveBpsUpdated(oldIncentiveBps, incentiveBps_);
     }
 
     /**
      * @notice Update minimum pool bad debt to start auction
-     * @param _minimumPoolBadDebt Minimum bad debt in the base asset for a pool to start auction
+     * @param minimumPoolBadDebt_ Minimum bad debt in the base asset for a pool to start auction
      * @custom:event Emits MinimumPoolBadDebtUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateMinimumPoolBadDebt(uint256 _minimumPoolBadDebt) external {
+    function updateMinimumPoolBadDebt(uint256 minimumPoolBadDebt_) external {
         _checkAccessAllowed("updateMinimumPoolBadDebt(uint256)");
         uint256 oldMinimumPoolBadDebt = minimumPoolBadDebt;
-        minimumPoolBadDebt = _minimumPoolBadDebt;
-        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, _minimumPoolBadDebt);
+        minimumPoolBadDebt = minimumPoolBadDebt_;
+        emit MinimumPoolBadDebtUpdated(oldMinimumPoolBadDebt, minimumPoolBadDebt_);
     }
 
     /**
-     * @notice Update wait for first bidder block count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
-     * @param _waitForFirstBidder  New wait for first bidder block count
+     * @notice Update wait for first bidder block or timestamp count. If the first bid is not made within this limit, the auction is closed and needs to be restarted
+     * @param waitForFirstBidder_  New wait for first bidder block or timestamp count
      * @custom:event Emits WaitForFirstBidderUpdated on success
      * @custom:access Restricted by ACM
      */
-    function updateWaitForFirstBidder(uint256 _waitForFirstBidder) external {
+    function updateWaitForFirstBidder(uint256 waitForFirstBidder_) external {
         _checkAccessAllowed("updateWaitForFirstBidder(uint256)");
         uint256 oldWaitForFirstBidder = waitForFirstBidder;
-        waitForFirstBidder = _waitForFirstBidder;
-        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, _waitForFirstBidder);
+        waitForFirstBidder = waitForFirstBidder_;
+        emit WaitForFirstBidderUpdated(oldWaitForFirstBidder, waitForFirstBidder_);
     }
 
     /**
@@ -421,7 +411,7 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         );
 
         auction.highestBidBps = 0;
-        auction.highestBidBlock = 0;
+        auction.highestBidBlockOrTimestamp = 0;
 
         uint256 marketsCount = auction.markets.length;
         for (uint256 i; i < marketsCount; ++i) {
@@ -473,13 +463,13 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
         }
 
         auction.seizedRiskFund = riskFundBalance - remainingRiskFundBalance;
-        auction.startBlock = block.number;
+        auction.startBlockOrTimestamp = getBlockNumberOrTimestamp();
         auction.status = AuctionStatus.STARTED;
         auction.highestBidder = address(0);
 
         emit AuctionStarted(
             comptroller,
-            auction.startBlock,
+            auction.startBlockOrTimestamp,
             auction.auctionType,
             auction.markets,
             marketsDebt,
@@ -517,12 +507,12 @@ contract Shortfall is Ownable2StepUpgradeable, AccessControlledV8, ReentrancyGua
 
     /**
      * @dev Checks if the auction is stale, i.e. there's no bidder and the auction
-     *   was started more than waitForFirstBidder blocks ago.
+     *   was started more than waitForFirstBidder blocks or seconds ago.
      * @param auction The auction to query the status for
      * @return True if the auction is stale
      */
     function _isStale(Auction storage auction) internal view returns (bool) {
         bool noBidder = auction.highestBidder == address(0);
-        return noBidder && (block.number > auction.startBlock + waitForFirstBidder);
+        return noBidder && (getBlockNumberOrTimestamp() > auction.startBlockOrTimestamp + waitForFirstBidder);
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
@@ -54,12 +54,6 @@ contract VTokenStorage {
      */
     address payable public protocolShareReserve;
 
-    // Maximum borrow rate that can ever be applied (.0005% / block)
-    uint256 internal constant MAX_BORROW_RATE_MANTISSA = 0.0005e16;
-
-    // Maximum fraction of interest that can be set aside for reserves
-    uint256 internal constant MAX_RESERVE_FACTOR_MANTISSA = 1e18;
-
     /**
      * @notice Contract which oversees inter-vToken operations
      */
@@ -79,7 +73,7 @@ contract VTokenStorage {
     uint256 public reserveFactorMantissa;
 
     /**
-     * @notice Block number that interest was last accrued at
+     * @notice Slot(block or second) number that interest was last accrued at
      */
     uint256 public accrualBlockNumber;
 
@@ -128,12 +122,12 @@ contract VTokenStorage {
     address public shortfall;
 
     /**
-     * @notice delta block after which reserves will be reduced
+     * @notice delta slot (block or second) after which reserves will be reduced
      */
     uint256 public reduceReservesBlockDelta;
 
     /**
-     * @notice last block number at which reserves were reduced
+     * @notice last slot (block or second) number at which reserves were reduced
      */
     uint256 public reduceReservesBlockNumber;
 
@@ -282,9 +276,12 @@ abstract contract VTokenInterface is VTokenStorage {
     event SweepToken(address indexed token);
 
     /**
-     * @notice Event emitted when reduce reserves block delta is changed
+     * @notice Event emitted when reduce reserves slot (block or second) delta is changed
      */
-    event NewReduceReservesBlockDelta(uint256 oldReduceReservesBlockDelta, uint256 newReduceReservesBlockDelta);
+    event NewReduceReservesBlockDelta(
+        uint256 oldReduceReservesBlockOrTimestampDelta,
+        uint256 newReduceReservesBlockOrTimestampDelta
+    );
 
     /**
      * @notice Event emitted when liquidation reserves are reduced
@@ -299,9 +296,15 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function redeem(uint256 redeemTokens) external virtual returns (uint256);
 
+    function redeemBehalf(address redeemer, uint256 redeemTokens) external virtual returns (uint256);
+
     function redeemUnderlying(uint256 redeemAmount) external virtual returns (uint256);
 
+    function redeemUnderlyingBehalf(address redeemer, uint256 redeemAmount) external virtual returns (uint256);
+
     function borrow(uint256 borrowAmount) external virtual returns (uint256);
+
+    function borrowBehalf(address borrwwer, uint256 borrowAmount) external virtual returns (uint256);
 
     function repayBorrow(uint256 repayAmount) external virtual returns (uint256);
 

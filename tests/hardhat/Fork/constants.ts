@@ -37,7 +37,7 @@ export const contractAddresses = {
     PSR: PsrSepTestnet.contracts.ProtocolShareReserve.address,
     SHORTFALL: "",
     RISKFUND: "",
-    REWARD_DISTRIBUTOR1: SepoliaContracts.RewardsDistributor_Core_3.address,
+    REWARD_DISTRIBUTOR1: SepoliaContracts.RewardsDistributor_Core_1.address,
     POOL_REGISTRY: SepoliaContracts.PoolRegistry.address,
     CHAINLINK_ORACLE: OracleSepTestnet.contracts.ChainlinkOracle.address,
     RESILIENT_ORACLE: OracleSepTestnet.contracts.ResilientOracle.address,

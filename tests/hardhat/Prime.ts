@@ -162,7 +162,11 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const xvsStoreScenario: XVSStoreScenario = (await xvsStoreScenarioFactory.deploy()) as XVSStoreScenario;
 
   const xvsVaultScenarioFactory = await ethers.getContractFactory("XVSVaultScenario");
-  const xvsVaultScenario: XVSVaultScenario = (await xvsVaultScenarioFactory.deploy()) as XVSVaultScenario;
+  const blocksPerYear = 10512000;
+  const xvsVaultScenario: XVSVaultScenario = (await xvsVaultScenarioFactory.deploy(
+    false,
+    blocksPerYear,
+  )) as XVSVaultScenario;
 
   await xvsStoreScenario.setNewOwner(xvsVaultScenario.address);
   await xvsVaultScenario.setXvsStore(xvs.address, xvsStoreScenario.address);
@@ -192,7 +196,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
       10,
     ],
     {
-      constructorArgs: [false, 10512000],
+      constructorArgs: [false, blocksPerYear],
       unsafeAllow: "constructor",
     },
   );

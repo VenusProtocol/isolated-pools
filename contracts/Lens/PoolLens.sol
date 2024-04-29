@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -7,10 +7,11 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
-import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { Action, ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
+import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
 /**
  * @title PoolLens
@@ -25,7 +26,7 @@ import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 - the underlying asset price of a vToken;
 - the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
  */
-contract PoolLens is ExponentialNoError {
+contract PoolLens is ExponentialNoError, TimeManagerV8 {
     /**
      * @dev Struct for PoolDetails.
      */
@@ -51,8 +52,8 @@ contract PoolLens is ExponentialNoError {
     struct VTokenMetadata {
         address vToken;
         uint256 exchangeRateCurrent;
-        uint256 supplyRatePerBlock;
-        uint256 borrowRatePerBlock;
+        uint256 supplyRatePerBlockOrTimestamp;
+        uint256 borrowRatePerBlockOrTimestamp;
         uint256 reserveFactorMantissa;
         uint256 supplyCaps;
         uint256 borrowCaps;
@@ -65,6 +66,8 @@ contract PoolLens is ExponentialNoError {
         address underlyingAssetAddress;
         uint256 vTokenDecimals;
         uint256 underlyingDecimals;
+        uint256 pausedActions;
+        bool isTimeBased;
     }
 
     /**
@@ -111,10 +114,10 @@ contract PoolLens is ExponentialNoError {
     struct RewardTokenState {
         // The market's last updated rewardTokenBorrowIndex or rewardTokenSupplyIndex
         uint224 index;
-        // The block number the index was last updated at
-        uint32 block;
-        // The block number at which to stop rewards
-        uint32 lastRewardingBlock;
+        // The block number or timestamp the index was last updated at
+        uint256 blockOrTimestamp;
+        // The block number or timestamp at which to stop rewards
+        uint256 lastRewardingBlockOrTimestamp;
     }
 
     /**
@@ -133,6 +136,13 @@ contract PoolLens is ExponentialNoError {
         uint256 totalBadDebtUsd;
         BadDebt[] badDebts;
     }
+
+    /**
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param blocksPerYear_ The number of blocks per year
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {}
 
     /**
      * @notice Queries the user's supply/borrow balances in vTokens
@@ -380,12 +390,18 @@ contract PoolLens is ExponentialNoError {
         address underlyingAssetAddress = vToken.underlying();
         uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
 
+        uint256 pausedActions;
+        for (uint8 i; i <= uint8(type(Action).max); ++i) {
+            uint256 paused = ComptrollerInterface(comptrollerAddress).actionPaused(address(vToken), Action(i)) ? 1 : 0;
+            pausedActions |= paused << i;
+        }
+
         return
             VTokenMetadata({
                 vToken: address(vToken),
                 exchangeRateCurrent: exchangeRateCurrent,
-                supplyRatePerBlock: vToken.supplyRatePerBlock(),
-                borrowRatePerBlock: vToken.borrowRatePerBlock(),
+                supplyRatePerBlockOrTimestamp: vToken.supplyRatePerBlock(),
+                borrowRatePerBlockOrTimestamp: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
                 supplyCaps: comptroller.supplyCaps(address(vToken)),
                 borrowCaps: comptroller.borrowCaps(address(vToken)),
@@ -397,7 +413,9 @@ contract PoolLens is ExponentialNoError {
                 collateralFactorMantissa: collateralFactorMantissa,
                 underlyingAssetAddress: underlyingAssetAddress,
                 vTokenDecimals: vToken.decimals(),
-                underlyingDecimals: underlyingDecimals
+                underlyingDecimals: underlyingDecimals,
+                pausedActions: pausedActions,
+                isTimeBased: vToken.isTimeBased()
             });
     }
 
@@ -437,14 +455,39 @@ contract PoolLens is ExponentialNoError {
         RewardsDistributor rewardsDistributor
     ) internal view returns (PendingReward[] memory) {
         PendingReward[] memory pendingRewards = new PendingReward[](markets.length);
+
+        bool _isTimeBased = rewardsDistributor.isTimeBased();
+        require(_isTimeBased == isTimeBased, "Inconsistent Reward mode");
+
         for (uint256 i; i < markets.length; ++i) {
             // Market borrow and supply state we will modify update in-memory, in order to not modify storage
             RewardTokenState memory borrowState;
-            (borrowState.index, borrowState.block, borrowState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenBorrowState(address(markets[i]));
             RewardTokenState memory supplyState;
-            (supplyState.index, supplyState.block, supplyState.lastRewardingBlock) = rewardsDistributor
-                .rewardTokenSupplyState(address(markets[i]));
+
+            if (_isTimeBased) {
+                (
+                    borrowState.index,
+                    borrowState.blockOrTimestamp,
+                    borrowState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenBorrowStateTimeBased(address(markets[i]));
+                (
+                    supplyState.index,
+                    supplyState.blockOrTimestamp,
+                    supplyState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenSupplyStateTimeBased(address(markets[i]));
+            } else {
+                (
+                    borrowState.index,
+                    borrowState.blockOrTimestamp,
+                    borrowState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenBorrowState(address(markets[i]));
+                (
+                    supplyState.index,
+                    supplyState.blockOrTimestamp,
+                    supplyState.lastRewardingBlockOrTimestamp
+                ) = rewardsDistributor.rewardTokenSupplyState(address(markets[i]));
+            }
+
             Exp memory marketBorrowIndex = Exp({ mantissa: markets[i].borrowIndex() });
 
             // Update market supply and borrow index in-memory
@@ -481,23 +524,26 @@ contract PoolLens is ExponentialNoError {
         Exp memory marketBorrowIndex
     ) internal view {
         uint256 borrowSpeed = rewardsDistributor.rewardTokenBorrowSpeeds(vToken);
-        uint256 blockNumber = block.number;
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
 
-        if (borrowState.lastRewardingBlock > 0 && blockNumber > borrowState.lastRewardingBlock) {
-            blockNumber = borrowState.lastRewardingBlock;
+        if (
+            borrowState.lastRewardingBlockOrTimestamp > 0 &&
+            blockNumberOrTimestamp > borrowState.lastRewardingBlockOrTimestamp
+        ) {
+            blockNumberOrTimestamp = borrowState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumber, uint256(borrowState.block));
-        if (deltaBlocks > 0 && borrowSpeed > 0) {
+        uint256 deltaBlocksOrTimestamp = sub_(blockNumberOrTimestamp, borrowState.blockOrTimestamp);
+        if (deltaBlocksOrTimestamp > 0 && borrowSpeed > 0) {
             // Remove the total earned interest rate since the opening of the market from total borrows
             uint256 borrowAmount = div_(VToken(vToken).totalBorrows(), marketBorrowIndex);
-            uint256 tokensAccrued = mul_(deltaBlocks, borrowSpeed);
+            uint256 tokensAccrued = mul_(deltaBlocksOrTimestamp, borrowSpeed);
             Double memory ratio = borrowAmount > 0 ? fraction(tokensAccrued, borrowAmount) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: borrowState.index }), ratio);
             borrowState.index = safe224(index.mantissa, "new index overflows");
-            borrowState.block = safe32(blockNumber, "block number overflows");
-        } else if (deltaBlocks > 0) {
-            borrowState.block = safe32(blockNumber, "block number overflows");
+            borrowState.blockOrTimestamp = blockNumberOrTimestamp;
+        } else if (deltaBlocksOrTimestamp > 0) {
+            borrowState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }
 
@@ -507,22 +553,25 @@ contract PoolLens is ExponentialNoError {
         RewardTokenState memory supplyState
     ) internal view {
         uint256 supplySpeed = rewardsDistributor.rewardTokenSupplySpeeds(vToken);
-        uint256 blockNumber = block.number;
+        uint256 blockNumberOrTimestamp = getBlockNumberOrTimestamp();
 
-        if (supplyState.lastRewardingBlock > 0 && blockNumber > supplyState.lastRewardingBlock) {
-            blockNumber = supplyState.lastRewardingBlock;
+        if (
+            supplyState.lastRewardingBlockOrTimestamp > 0 &&
+            blockNumberOrTimestamp > supplyState.lastRewardingBlockOrTimestamp
+        ) {
+            blockNumberOrTimestamp = supplyState.lastRewardingBlockOrTimestamp;
         }
 
-        uint256 deltaBlocks = sub_(blockNumber, uint256(supplyState.block));
-        if (deltaBlocks > 0 && supplySpeed > 0) {
+        uint256 deltaBlocksOrTimestamp = sub_(blockNumberOrTimestamp, supplyState.blockOrTimestamp);
+        if (deltaBlocksOrTimestamp > 0 && supplySpeed > 0) {
             uint256 supplyTokens = VToken(vToken).totalSupply();
-            uint256 tokensAccrued = mul_(deltaBlocks, supplySpeed);
+            uint256 tokensAccrued = mul_(deltaBlocksOrTimestamp, supplySpeed);
             Double memory ratio = supplyTokens > 0 ? fraction(tokensAccrued, supplyTokens) : Double({ mantissa: 0 });
             Double memory index = add_(Double({ mantissa: supplyState.index }), ratio);
             supplyState.index = safe224(index.mantissa, "new index overflows");
-            supplyState.block = safe32(blockNumber, "block number overflows");
-        } else if (deltaBlocks > 0) {
-            supplyState.block = safe32(blockNumber, "block number overflows");
+            supplyState.blockOrTimestamp = blockNumberOrTimestamp;
+        } else if (deltaBlocksOrTimestamp > 0) {
+            supplyState.blockOrTimestamp = blockNumberOrTimestamp;
         }
     }
 

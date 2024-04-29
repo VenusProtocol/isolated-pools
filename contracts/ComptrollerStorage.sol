@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
+import { Action } from "./ComptrollerInterface.sol";
 
 /**
  * @title ComptrollerStorage
@@ -47,18 +48,6 @@ contract ComptrollerStorage {
         uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
-    }
-
-    enum Action {
-        MINT,
-        REDEEM,
-        BORROW,
-        REPAY,
-        SEIZE,
-        LIQUIDATE,
-        TRANSFER,
-        ENTER_MARKET,
-        EXIT_MARKET
     }
 
     /**
@@ -125,10 +114,14 @@ contract ComptrollerStorage {
     /// Prime token address
     IPrime public prime;
 
+    /// @notice Whether the delegate is allowed to borrow or redeem on behalf of the user
+    //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
+    mapping(address => mapping(address => bool)) public approvedDelegates;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }

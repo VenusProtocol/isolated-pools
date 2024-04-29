@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity ^0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
+
+enum Action {
+    MINT,
+    REDEEM,
+    BORROW,
+    REPAY,
+    SEIZE,
+    LIQUIDATE,
+    TRANSFER,
+    ENTER_MARKET,
+    EXIT_MARKET
+}
 
 /**
  * @title ComptrollerInterface
@@ -89,6 +101,8 @@ interface ComptrollerInterface {
     ) external view returns (uint256, uint256);
 
     function getAllMarkets() external view returns (VToken[] memory);
+
+    function actionPaused(address market, Action action) external view returns (bool);
 }
 
 /**
@@ -116,4 +130,6 @@ interface ComptrollerViewInterface {
     function borrowCaps(address) external view returns (uint256);
 
     function supplyCaps(address) external view returns (uint256);
+
+    function approvedDelegates(address user, address delegate) external view returns (bool);
 }
