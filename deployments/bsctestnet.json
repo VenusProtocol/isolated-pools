@@ -12270,7 +12270,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0xD6B3A3e73860A5b75C130bE1AfB9D76C2E572373",
+      "address": "0xdba6A250027049c4033970e224E61EDCD84eA630",
       "abi": [
         {
           "inputs": [
@@ -12469,11 +12469,6 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
-                    },
-                    {
-                      "internalType": "bool",
-                      "name": "isTimeBased",
-                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -12771,11 +12766,6 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
-                    },
-                    {
-                      "internalType": "bool",
-                      "name": "isTimeBased",
-                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -12981,11 +12971,6 @@
                       "internalType": "uint256",
                       "name": "pausedActions",
                       "type": "uint256"
-                    },
-                    {
-                      "internalType": "bool",
-                      "name": "isTimeBased",
-                      "type": "bool"
                     }
                   ],
                   "internalType": "struct PoolLens.VTokenMetadata[]",
@@ -13275,11 +13260,6 @@
                   "internalType": "uint256",
                   "name": "pausedActions",
                   "type": "uint256"
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isTimeBased",
-                  "type": "bool"
                 }
               ],
               "internalType": "struct PoolLens.VTokenMetadata",
@@ -13386,11 +13366,6 @@
                   "internalType": "uint256",
                   "name": "pausedActions",
                   "type": "uint256"
-                },
-                {
-                  "internalType": "bool",
-                  "name": "isTimeBased",
-                  "type": "bool"
                 }
               ],
               "internalType": "struct PoolLens.VTokenMetadata[]",
