@@ -2,7 +2,6 @@ import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
@@ -161,9 +160,12 @@ if (FORK) {
       const reduceAmount = totalReservesOld.mul(50).div(100);
       const protocolShareBalanceOld = await token1.balanceOf(PSR);
 
+      const psrBalanceBefore = await token1.balanceOf(PSR);
       await vTOKEN1.reduceReserves(reduceAmount);
+      const psrBalanceAfter = await token1.balanceOf(PSR);
+
       totalReservesCurrent = await vTOKEN1.totalReserves();
-      expect(totalReservesOld.sub(totalReservesCurrent)).to.closeTo(reduceAmount, parseUnits("0.0000002", 19));
+      expect(psrBalanceAfter.sub(psrBalanceBefore)).to.be.equal(reduceAmount);
 
       const protocolShareBalanceNew = await token1.balanceOf(PSR);
       expect(protocolShareBalanceNew.sub(protocolShareBalanceOld)).equals(reduceAmount);
