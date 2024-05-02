@@ -2462,8 +2462,8 @@ export const globalConfig: NetworkConfig = {
         name: "Staked FRAX",
         symbol: "sFRAX",
         decimals: 18,
-        tokenAddress: "0xd85FfECdB4287587BC53c1934D548bF7480F11C4"
-      }
+        tokenAddress: "0xd85FfECdB4287587BC53c1934D548bF7480F11C4",
+      },
     ],
     poolConfig: [
       {
@@ -2647,7 +2647,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit(5000, 18), // 5000 FRAX
+            initialSupply: convertToUnit(4800, 18), // 4800 sFRAX
             supplyCap: convertToUnit(10_000_000, 18),
             borrowCap: convertToUnit(1_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
@@ -2677,6 +2677,18 @@ export const globalConfig: NetworkConfig = {
             markets: ["crvUSD"],
             supplySpeeds: ["771604938271604"], // 500 CRV over 90 days (648000 blocks)
             borrowSpeeds: ["1157407407407407"], // 750 CRV over 90 days (648000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["FRAX"],
+            supplySpeeds: ["1481481481481481"], // 960 XVS over 90 days (648000 blocks)
+            borrowSpeeds: ["2222222222222222"], // 1440 CRV over 90 days (648000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["sFRAX"],
+            supplySpeeds: ["2222222222222222"], // 1440 CRV over 90 days (648000 blocks)
+            borrowSpeeds: ["1481481481481481"], // 960 XVS over 90 days (648000 blocks)
           },
         ],
       },
