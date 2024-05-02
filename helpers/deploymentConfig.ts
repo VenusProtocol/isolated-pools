@@ -2456,6 +2456,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "FRAX",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Staked FRAX",
+        symbol: "sFRAX",
+        decimals: 18,
+        tokenAddress: "0xd85FfECdB4287587BC53c1934D548bF7480F11C4"
       }
     ],
     poolConfig: [
