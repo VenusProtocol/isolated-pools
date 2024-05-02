@@ -53,7 +53,10 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbtestnet",
         ],
-        arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
+        arbitrumsepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia",
+        ],
       },
     };
   }
