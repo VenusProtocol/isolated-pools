@@ -2666,29 +2666,37 @@ export const globalConfig: NetworkConfig = {
           //          81 XVS for Borrowers
           // crvUSD:  24 XVS for Suppliers
           //          36 XVS for Borrowers
+          // FRAX:    960 XVS for Suppliers
+          //          1440 XVS for Borrowers
+          // sFRAX:   1440 XVS for Suppliers
+          //          2160 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
-            supplySpeeds: ["27777777777777", "83333333333333", "83333333333333", "83333333333333", "37037037037036"],
-            borrowSpeeds: ["41666666666666", "125000000000000", "125000000000000", "125000000000000", "55555555555555"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
+            supplySpeeds: [
+              "27777777777777",
+              "83333333333333",
+              "83333333333333",
+              "83333333333333",
+              "37037037037036",
+              "1481481481481481",
+              "2222222222222222",
+            ],
+            borrowSpeeds: [
+              "41666666666666",
+              "125000000000000",
+              "125000000000000",
+              "125000000000000",
+              "55555555555555",
+              "2222222222222222",
+              "1481481481481481",
+            ],
           },
           {
             asset: "CRV",
             markets: ["crvUSD"],
             supplySpeeds: ["771604938271604"], // 500 CRV over 90 days (648000 blocks)
             borrowSpeeds: ["1157407407407407"], // 750 CRV over 90 days (648000 blocks)
-          },
-          {
-            asset: "XVS",
-            markets: ["FRAX"],
-            supplySpeeds: ["1481481481481481"], // 960 XVS over 90 days (648000 blocks)
-            borrowSpeeds: ["2222222222222222"], // 1440 CRV over 90 days (648000 blocks)
-          },
-          {
-            asset: "XVS",
-            markets: ["sFRAX"],
-            supplySpeeds: ["2222222222222222"], // 1440 CRV over 90 days (648000 blocks)
-            borrowSpeeds: ["1481481481481481"], // 960 XVS over 90 days (648000 blocks)
           },
         ],
       },
