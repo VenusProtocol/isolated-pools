@@ -1,3 +1,18 @@
+## [3.2.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.1.0...v3.2.0-dev.1) (2024-05-03)
+
+
+### Features
+
+* add deployment of NativeTokenGateway for WETH core pool on arbitrum sepolia ([32aa382](https://github.com/VenusProtocol/isolated-pools/commit/32aa382d7fe7b5a2d4b2a7bd80f908e97ac38e6f))
+* updating deployment files ([e319d30](https://github.com/VenusProtocol/isolated-pools/commit/e319d30e1e09ae3725845ff9ed2f636e79f05f91))
+* updating deployment files ([9450d80](https://github.com/VenusProtocol/isolated-pools/commit/9450d80f62f8e24e69883dd6d5664a5065672691))
+* updating deployment files ([147a0a5](https://github.com/VenusProtocol/isolated-pools/commit/147a0a50bf4bed4bfa8366472b57316b292bc172))
+
+
+### Bug Fixes
+
+* integration tests for time-based contracts ([3d41ff5](https://github.com/VenusProtocol/isolated-pools/commit/3d41ff5c4a53275ad31cf29f1d71ce0f102c1401))
+
 ## [3.1.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.0.0...v3.1.0) (2024-04-26)
 
 
