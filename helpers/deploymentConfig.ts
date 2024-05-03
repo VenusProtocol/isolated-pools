@@ -2669,7 +2669,7 @@ export const globalConfig: NetworkConfig = {
           // FRAX:    960 XVS for Suppliers
           //          1440 XVS for Borrowers
           // sFRAX:   1440 XVS for Suppliers
-          //          2160 XVS for Borrowers
+          //          960 XVS for Borrowers
           {
             asset: "XVS",
             markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
