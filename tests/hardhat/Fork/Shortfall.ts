@@ -1,13 +1,12 @@
 import { smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
+import { BigNumber } from "ethers";
 import { parseEther, parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
 import {
-  AccessControlManager,
-  AccessControlManager__factory,
   ChainlinkOracle,
   ChainlinkOracle__factory,
   Comptroller,
@@ -31,17 +30,16 @@ const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
-  ACM,
   PSR,
   ADMIN,
-  TOKEN1,
   TOKEN2,
-  VTOKEN1,
+  USDT,
+  VUSDT,
   VTOKEN2,
   RISKFUND,
   SHORTFALL,
   COMPTROLLER,
-  TOKEN1_HOLDER,
+  USDT_HOLDER,
   TOKEN2_HOLDER,
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
@@ -64,38 +62,35 @@ let liquidator: SignerWithAddress;
 let impersonatedTimelock: SignerWithAddress;
 let resilientOracle: MockPriceOracle;
 let chainlinkOracle: ChainlinkOracle;
-let accessControlManager: AccessControlManager;
 let protocolShareReserve: ProtocolShareReserve;
 
 const configureTimelock = async () => {
   impersonatedTimelock = await initMainnetUser(ADMIN, parseEther("2"));
 };
 
+let usdtDecimals: BigNumber;
+let oldPoolAsetReserves: BigNumber;
+
 const grabTokensTo = async (userAddress: string) => {
   const token2Holder = await initMainnetUser(TOKEN2_HOLDER, parseEther("2"));
-  const token1Holder = await initMainnetUser(TOKEN1_HOLDER, parseEther("2"));
+  const token1Holder = await initMainnetUser(USDT_HOLDER, parseEther("2"));
 
-  await token2.connect(token2Holder).transfer(userAddress, parseUnits("10000", 18));
-  await token1.connect(token1Holder).transfer(userAddress, parseUnits("10000", 18));
+  await token2.connect(token2Holder).transfer(userAddress, parseUnits("500", 18));
+  await token1.connect(token1Holder).transfer(userAddress, parseUnits("500", usdtDecimals));
 };
 
 const setupRiskManagementContracts = async () => {
-  accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-  await accessControlManager.giveCallPermission(RISKFUND, "setConvertibleBaseAsset(address)", ADMIN);
-  await accessControlManager.giveCallPermission(SHORTFALL, "updateMinimumPoolBadDebt(uint256)", ADMIN);
-
   riskFund = RiskFund__factory.connect(RISKFUND, impersonatedTimelock);
-  await riskFund.connect(impersonatedTimelock).setConvertibleBaseAsset(TOKEN1);
-
   protocolShareReserve = ProtocolShareReserve__factory.connect(PSR, impersonatedTimelock);
 
   shortfall = Shortfall__factory.connect(SHORTFALL, impersonatedTimelock);
-  await shortfall.updateMinimumPoolBadDebt(parseUnits("50", 18));
+  await shortfall.updateMinimumPoolBadDebt(parseUnits("50", 18)); // --------------------------------------------
 };
 
 const setupTokens = async () => {
   token2 = await ethers.getContractAt<IERC20__factory>("MockToken", TOKEN2);
-  token1 = await ethers.getContractAt<IERC20__factory>("MockToken", TOKEN1);
+  token1 = await ethers.getContractAt<IERC20__factory>("MockToken", USDT);
+  usdtDecimals = await token1.decimals();
 
   await grabTokensTo(manager.address);
   await grabTokensTo(user1.address);
@@ -104,6 +99,7 @@ const setupTokens = async () => {
   comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
   chainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
   resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
+
   let tokenConfig = {
     asset: token2.address,
     oracles: [chainlinkOracle.address, ethers.constants.AddressZero, ethers.constants.AddressZero],
@@ -119,18 +115,12 @@ const setupTokens = async () => {
   await resilientOracle.connect(impersonatedTimelock).setTokenConfig(tokenConfig);
 
   vTOKEN2 = await ethers.getContractAt<VToken__factory>("VToken", VTOKEN2);
-  vTOKEN1 = await ethers.getContractAt<VToken__factory>("VToken", VTOKEN1);
-
-  await vTOKEN1.connect(impersonatedTimelock).setShortfallContract(SHORTFALL);
-  await vTOKEN2.connect(impersonatedTimelock).setShortfallContract(SHORTFALL);
-  await vTOKEN1.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
-  await vTOKEN2.connect(impersonatedTimelock).setProtocolShareReserve(PSR);
+  vTOKEN1 = await ethers.getContractAt<VToken__factory>("VToken", VUSDT);
 };
 
 const generateToken1BadDebt = async () => {
-  await chainlinkOracle.setDirectPrice(token2.address, parseUnits("100", 18));
   const token2SupplyAmount = parseUnits("500", 18);
-  const token1BorrowAmount = parseUnits("100", 18);
+  const token1BorrowAmount = parseUnits("100", usdtDecimals);
 
   await token1.connect(manager).approve(vTOKEN1.address, token1BorrowAmount);
   await vTOKEN1.connect(manager).mint(token1BorrowAmount);
@@ -143,14 +133,14 @@ const generateToken1BadDebt = async () => {
 
   await chainlinkOracle.setDirectPrice(token2.address, "1");
 
-  await token1.connect(liquidator).approve(vTOKEN1.address, parseUnits("100", 18));
+  await token1.connect(liquidator).approve(vTOKEN1.address, parseUnits("100", usdtDecimals));
   await comptroller.connect(liquidator).healAccount(user1.address);
 
   // Restoring original price
   await chainlinkOracle.setDirectPrice(token2.address, parseUnits("100", 18));
 
   const shortfallSigner = await initMainnetUser(shortfall.address, parseEther("1"));
-  const dust = (await vTOKEN1.badDebt()).sub(parseUnits("100", 18));
+  const dust = (await vTOKEN1.badDebt()).sub(parseUnits("100", usdtDecimals));
   await vTOKEN1.connect(shortfallSigner).badDebtRecovered(dust);
 };
 
@@ -172,11 +162,13 @@ const setup = async () => {
   await configureTimelock();
   await setupRiskManagementContracts();
   await setupTokens();
+  oldPoolAsetReserves = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER);
+
   await chainlinkOracle.setDirectPrice(token2.address, parseUnits("100", 18));
   await chainlinkOracle.setDirectPrice(token1.address, parseUnits("100", 18));
 
   await generateToken1BadDebt();
-  await pretendRiskFundAccumulatedBaseAsset(parseUnits("100", 18));
+  await pretendRiskFundAccumulatedBaseAsset(parseUnits("100", usdtDecimals));
 };
 
 enum AuctionType {
@@ -184,19 +176,21 @@ enum AuctionType {
   LARGE_RISK_FUND = 1,
 }
 
-if (FORK) {
+if (FORK && (FORKED_NETWORK === "bscmainnet" || FORKED_NETWORK === "bsctestnet")) {
   describe("Shortfall fork tests", async () => {
-    const token1BadDebt = parseUnits("100", 18);
-    const token2RiskFund = parseUnits("40", 18);
-
     beforeEach(async () => {
       await loadFixture(setup);
     });
 
     it("initializes as expected", async () => {
-      expect(await vTOKEN1.badDebt()).to.equal(token1BadDebt);
+      const newPoolAssetReserves = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER);
+
+      expect(await vTOKEN1.badDebt()).to.equal(parseUnits("100", usdtDecimals));
       expect(await vTOKEN2.badDebt()).to.equal(0);
-      expect(await riskFund.getPoolsBaseAssetReserves(COMPTROLLER)).to.closeTo(token2RiskFund, parseUnits("2", 18));
+      expect(newPoolAssetReserves.sub(oldPoolAsetReserves)).to.closeTo(
+        parseUnits("40", usdtDecimals),
+        parseUnits("5", usdtDecimals),
+      );
     });
 
     describe("startAuction", async () => {
@@ -208,7 +202,7 @@ if (FORK) {
       });
 
       it("starts a LARGE_RISK_FUND auction if risk fund reserve ($) > bad debt plus incentive ($)", async () => {
-        await pretendRiskFundAccumulatedBaseAsset(parseUnits("200", 18));
+        await pretendRiskFundAccumulatedBaseAsset(parseUnits("200", usdtDecimals));
 
         await shortfall.startAuction(COMPTROLLER);
 
@@ -225,14 +219,17 @@ if (FORK) {
         const badDebtPlusIncentive = (await vTOKEN1.badDebt())
           .mul(parseUnits("1.1", 18))
           .mul(token1Price)
-          .div(parseUnits("1", 36));
-        expect(badDebtPlusIncentive).to.equal(parseUnits("121", 18));
+          .div(parseUnits("1", 18 + 36 - usdtDecimals));
+        expect(badDebtPlusIncentive).to.equal(parseUnits("121", usdtDecimals));
 
         const token2Price = await resilientOracle.getPrice(token2.address);
         const riskFundReserve = await riskFund.getPoolsBaseAssetReserves(COMPTROLLER);
         const riskFundReserveInUsd = riskFundReserve.mul(token2Price).div(parseUnits("1", 18));
 
-        expect(riskFundReserveInUsd).to.closeTo(parseUnits("40", 18), parseUnits("2", 18));
+        expect(riskFundReserveInUsd.sub(oldPoolAsetReserves)).to.closeTo(
+          parseUnits("40", usdtDecimals),
+          parseUnits("5", usdtDecimals),
+        );
 
         await shortfall.startAuction(COMPTROLLER);
 

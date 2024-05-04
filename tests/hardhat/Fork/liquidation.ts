@@ -2,7 +2,7 @@ import { smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -18,6 +18,8 @@ import {
   MockPriceOracle__factory,
   VToken,
   VToken__factory,
+  WrappedNative,
+  WrappedNative__factory,
 } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
@@ -47,7 +49,7 @@ const {
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 
-let token1: IERC20;
+let token1: IERC20 | WrappedNative;
 let token2: IERC20;
 let vTOKEN1: VToken;
 let vTOKEN2: VToken;
@@ -57,7 +59,7 @@ let token2Holder: Signer;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let impersonatedTimelock: Signer;
-let priceOracle: ChainlinkOracle;
+let chainlinkOracle: ChainlinkOracle;
 let resilientOracle: MockPriceOracle;
 let accessControlManager: AccessControlManager;
 
@@ -72,33 +74,18 @@ async function configureVToken(vTokenAddress: string) {
 
 async function grantPermissions() {
   accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-
-  let tx = await accessControlManager
+  const tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketSupplyCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketBorrowCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(CHAINLINK_ORACLE, "setDirectPrice(address,uint256)", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMinLiquidatableCollateral(uint256)", ADMIN);
+    .giveCallPermission(chainlinkOracle.address, "setDirectPrice(address,uint256)", ADMIN);
   await tx.wait();
 }
+
 if (FORK) {
   describe("Liquidation", async () => {
     async function setupBeforeEach(mintAmount: BigNumberish, token2BorrowAmount: BigNumberish) {
       await setup();
-      await priceOracle.setDirectPrice(token1.address, "159990000000000000000");
-      await priceOracle.setDirectPrice(token2.address, "208000000000000000");
+      await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, "159990000000000000000");
+      await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token2.address, "208000000000000000");
 
       await token2.connect(token2Holder).transfer(ACC1, mintAmount);
       await token2.connect(acc1Signer).approve(vTOKEN2.address, mintAmount);
@@ -120,35 +107,44 @@ if (FORK) {
 
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
-      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2000000"));
 
-      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
-      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       vTOKEN2 = await configureVToken(VTOKEN2);
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
-      priceOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
+      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
+      token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+        token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
+        await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
+      }
 
-      const tupleForToken2 = {
-        asset: TOKEN2,
-        oracles: [CHAINLINK_ORACLE, AddressZero, AddressZero],
-        enableFlagsForOracles: [true, false, false],
-      };
+      if (FORKED_NETWORK == "opbnbmainnet" || FORKED_NETWORK == "opbnbtestnet") {
+        const chainlinkOracleFactory = await ethers.getContractFactory("ChainlinkOracle");
+        chainlinkOracle = await upgrades.deployProxy(chainlinkOracleFactory, [ACM], { impersonatedTimelock });
+      } else {
+        chainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
+      }
+      await grantPermissions();
 
       const tupleForToken1 = {
         asset: TOKEN1,
-        oracles: [CHAINLINK_ORACLE, AddressZero, AddressZero],
+        oracles: [chainlinkOracle.address, AddressZero, AddressZero],
+        enableFlagsForOracles: [true, false, false],
+      };
+
+      const tupleForToken2 = {
+        asset: TOKEN2,
+        oracles: [chainlinkOracle.address, AddressZero, AddressZero],
         enableFlagsForOracles: [true, false, false],
       };
 
       resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
-      await resilientOracle.setTokenConfig(tupleForToken2);
       await resilientOracle.setTokenConfig(tupleForToken1);
-      await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 18));
-      await priceOracle.setDirectPrice(token2.address, convertToUnit("1", 18));
-
-      await grantPermissions();
+      await resilientOracle.setTokenConfig(tupleForToken2);
+      await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 18));
+      await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token2.address, convertToUnit("1", 18));
 
       await comptroller.setMarketSupplyCaps(
         [vTOKEN2.address, vTOKEN1.address],
@@ -204,7 +200,7 @@ if (FORK) {
 
       it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
         await comptroller.setMinLiquidatableCollateral(0);
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 5));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 5));
 
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
         const closeFactor = await comptroller.closeFactorMantissa();
@@ -226,7 +222,7 @@ if (FORK) {
         await expect(vTOKEN1.connect(acc2Signer).mint(underlyingMintAmount)).to.emit(vTOKEN1, "Mint");
 
         // price manipulation to put user underwater
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 5));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 5));
 
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
         const closeFactor = await comptroller.closeFactorMantissa();
@@ -241,7 +237,7 @@ if (FORK) {
 
       it("liquidate user", async () => {
         await comptroller.setMinLiquidatableCollateral(0);
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 6));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 6));
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
 
         const [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(ACC2);
@@ -259,8 +255,8 @@ if (FORK) {
         const closeFactor = await comptroller.closeFactorMantissa();
         const maxClose = (borrowBalance * closeFactor) / 1e18;
 
-        const priceBorrowed = await priceOracle.getPrice(TOKEN2);
-        const priceCollateral = await priceOracle.getPrice(TOKEN1);
+        const priceBorrowed = await chainlinkOracle.getPrice(TOKEN2);
+        const priceCollateral = await chainlinkOracle.getPrice(TOKEN1);
         const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
         const exchangeRateCollateralPrev = await vTOKEN1.callStatic.exchangeRateCurrent();
         const num = (liquidationIncentive * priceBorrowed) / 1e18;
@@ -315,7 +311,7 @@ if (FORK) {
           vTokenBorrowed: vTOKEN2.address,
           repayAmount: repayAmount,
         };
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("100", 12));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("100", 12));
         await expect(comptroller.connect(acc1Signer).liquidateAccount(ACC2, [param])).to.be.revertedWithCustomError(
           comptroller,
           "InsufficientCollateral",
@@ -328,8 +324,8 @@ if (FORK) {
           .setCollateralFactor(vTOKEN1.address, convertToUnit(7, 17), convertToUnit(8, 17));
         await comptroller.connect(impersonatedTimelock).setLiquidationIncentive(convertToUnit(1, 18));
 
-        await priceOracle.setDirectPrice(token1.address, convertToUnit("1", 12));
-        await priceOracle.setDirectPrice(token2.address, convertToUnit("1", 12));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 12));
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token2.address, convertToUnit("1", 12));
 
         const [err, liquidity, shortfall] = await comptroller.getAccountLiquidity(ACC2);
         expect(err).equals(0);
@@ -339,8 +335,8 @@ if (FORK) {
         const totalReservesToken1Prev = await vTOKEN1.totalReserves();
         const vTOKEN1BalAcc1Prev = await vTOKEN1.balanceOf(ACC1);
         const vTOKEN1BalAcc2Prev = await vTOKEN1.balanceOf(ACC2);
-        const priceBorrowed = await priceOracle.getPrice(TOKEN2);
-        const priceCollateral = await priceOracle.getPrice(TOKEN1);
+        const priceBorrowed = await chainlinkOracle.getPrice(TOKEN2);
+        const priceCollateral = await chainlinkOracle.getPrice(TOKEN1);
         const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
         const exchangeRateCollateralPrev = await vTOKEN1.callStatic.exchangeRateCurrent();
 
@@ -353,10 +349,13 @@ if (FORK) {
 
         // repayAmount will be calculated after accruing interest and then using borrowBalanceStored to get the repayAmount.
         const NetworkRespectiveRepayAmounts = {
-          bsctestnet: 1000000048189327,
-          sepolia: 1000000138102913,
+          bsctestnet: 1000000048189326,
+          sepolia: 1000000138102911,
           bscmainnet: 1000000020807824,
-          ethereum: 1000000262400462,
+          ethereum: 1000000262400450,
+          opbnbtestnet: 1000000000288189,
+          opbnbmainnet: 1000000008986559,
+          arbitrumsepolia: 1000000000046406,
         };
 
         const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
@@ -399,19 +398,19 @@ if (FORK) {
 
       it("Should success on healing and forgive borrow account", async function () {
         // Increase price of borrowed underlying tokens to surpass available collateral
-        await priceOracle.setDirectPrice(token2.address, convertToUnit(1, 25)); // 25
-        await priceOracle.setDirectPrice(token1.address, convertToUnit(1, 15)); // 15
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token2.address, convertToUnit(1, 25)); // 25
+        await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit(1, 15)); // 15
 
-        const TOKEN1Price = await priceOracle.getPrice(TOKEN1);
-        const TOKEN2Price = await priceOracle.getPrice(TOKEN2);
+        const token1Price = await chainlinkOracle.getPrice(TOKEN1);
+        const token2Price = await chainlinkOracle.getPrice(TOKEN2);
 
         const collateralBal = await vTOKEN1.balanceOf(ACC2);
         const exchangeRateCollateral = await vTOKEN1.callStatic.exchangeRateCurrent();
         const borrowBalanceCurrent = await vTOKEN2.callStatic.borrowBalanceCurrent(ACC2);
 
-        const vTokenCollateralPrice = TOKEN1Price.mul(exchangeRateCollateral).div(convertToUnit(1, 18));
+        const vTokenCollateralPrice = token1Price.mul(exchangeRateCollateral).div(convertToUnit(1, 18));
         const totalCollateral = vTokenCollateralPrice.mul(collateralBal).div(convertToUnit(1, 18));
-        const scaledBorrows = TOKEN2Price.mul(borrowBalanceCurrent).div(convertToUnit(1, 18));
+        const scaledBorrows = token2Price.mul(borrowBalanceCurrent).div(convertToUnit(1, 18));
 
         const percentageOfRepay = totalCollateral.mul(convertToUnit(11, 18)).div(scaledBorrows);
         const repayAmount = percentageOfRepay.mul(borrowBalanceCurrent).div(convertToUnit(1, 18));

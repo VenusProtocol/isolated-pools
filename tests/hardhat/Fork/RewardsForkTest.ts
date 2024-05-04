@@ -7,10 +7,9 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
-  AccessControlManager,
-  AccessControlManager__factory,
   BinanceOracle,
   BinanceOracle__factory,
+  ChainlinkOracle__factory,
   Comptroller,
   Comptroller__factory,
   IERC20,
@@ -29,7 +28,6 @@ const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
 const {
-  ACM,
   ACC1,
   ACC2,
   ADMIN,
@@ -38,6 +36,7 @@ const {
   COMPTROLLER,
   TOKEN2_HOLDER,
   BINANCE_ORACLE,
+  CHAINLINK_ORACLE,
   REWARD_DISTRIBUTOR1,
   BLOCK_NUMBER,
 } = getContractAddresses(FORKED_NETWORK as string);
@@ -53,10 +52,10 @@ let token2Holder: Signer;
 let comptrollerSigner: Signer;
 let impersonatedTimelock: Signer;
 let binanceOracle: BinanceOracle;
+let chainlinkOracle: ChainlinkOracle;
 let mintAmount: BigNumberish;
 let bswBorrowAmount: BigNumberish;
 let rewardDistributor1: RewardsDistributor;
-let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -64,20 +63,6 @@ async function configureTimelock() {
 
 async function configureVToken(vTokenAddress: string) {
   return VToken__factory.connect(vTokenAddress, impersonatedTimelock);
-}
-
-async function grantPermissions() {
-  accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-
-  let tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketSupplyCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketBorrowCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
 }
 
 if (FORK) {
@@ -99,17 +84,27 @@ if (FORK) {
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       rewardDistributor1 = RewardsDistributor__factory.connect(REWARD_DISTRIBUTOR1, impersonatedTimelock);
 
-      await grantPermissions();
-
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN2.address]);
       await comptroller.connect(acc2Signer).enterMarkets([vTOKEN2.address]);
 
       await comptroller.setMarketSupplyCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
       await comptroller.setMarketBorrowCaps([vTOKEN2.address], [convertToUnit(1, 50)]);
 
-      if (FORKED_NETWORK != "sepolia") {
+      if (FORKED_NETWORK == "bscmainnet" || FORKED_NETWORK == "bsctestnet") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
+        await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("lisUSD", 31536000);
         await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
+      }
+
+      if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+        chainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
+        let tuple = await chainlinkOracle.tokenConfigs(TOKEN2);
+        tuple = {
+          asset: tuple[0],
+          feed: tuple[1],
+          maxStalePeriod: "90000000000000000",
+        };
+        await chainlinkOracle.setTokenConfig(tuple);
       }
     }
 
@@ -128,7 +123,10 @@ if (FORK) {
       const supplierAccruedOld = await rewardDistributor.rewardTokenAccrued(user);
       await rewardDistributor.connect(comptrollerSigner).updateRewardTokenSupplyIndex(vTokenAddress);
 
-      const supplyState = await rewardDistributor.rewardTokenSupplyState(vTokenAddress);
+      let supplyState = await rewardDistributor.rewardTokenSupplyState(vTokenAddress);
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+        supplyState = await rewardDistributor.rewardTokenSupplyStateTimeBased(vTokenAddress);
+      }
       const supplyIndex = supplyState.index;
       let supplierIndex = await rewardDistributor.rewardTokenSupplierIndex(vTokenAddress, user);
 
@@ -158,7 +156,10 @@ if (FORK) {
         .connect(comptrollerSigner)
         .updateRewardTokenBorrowIndex(vTokenAddress, { mantissa: marketBorrowIndex });
 
-      const borrowState = await rewardDistributor.rewardTokenBorrowState(vTokenAddress);
+      let borrowState = await rewardDistributor.rewardTokenBorrowState(vTokenAddress);
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+        borrowState = await rewardDistributor.rewardTokenBorrowStateTimeBased(vTokenAddress);
+      }
       const borrowIndex = borrowState.index;
       let borrowerIndex = await rewardDistributor.rewardTokenBorrowerIndex(vTokenAddress, user);
 
@@ -217,7 +218,7 @@ if (FORK) {
       // Reward1 calculations for user 1
       let borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       let borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
-      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000079", 18));
+      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.0000000000000079", 18));
 
       // Repay
       const borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC1);
@@ -228,7 +229,7 @@ if (FORK) {
       // Reward1 calculations for user 1
       borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
-      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.000000000000000006", 18));
+      expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.0000000000000006", 18));
     });
   });
 }

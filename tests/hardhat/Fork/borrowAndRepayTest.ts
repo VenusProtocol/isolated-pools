@@ -6,8 +6,6 @@ import { ethers } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
-  AccessControlManager,
-  AccessControlManager__factory,
   BinanceOracle,
   BinanceOracle__factory,
   ChainlinkOracle__factory,
@@ -19,6 +17,8 @@ import {
   ResilientOracleInterface__factory,
   VToken,
   VToken__factory,
+  WrappedNative,
+  WrappedNative__factory,
 } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
@@ -28,13 +28,12 @@ chai.use(smock.matchers);
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
-console.log("fork tests are running on network: ", FORKED_NETWORK);
+if (FORK) console.log(`fork tests are running on ${FORKED_NETWORK}`);
 
 const {
   ACC1,
   ACC2,
   ADMIN,
-  ACM,
   TOKEN1,
   TOKEN2,
   VTOKEN1,
@@ -47,7 +46,7 @@ const {
   BLOCK_NUMBER,
 } = getContractAddresses(FORKED_NETWORK as string);
 
-let token1: IERC20;
+let token1: IERC20 | WrappedNative;
 let token2: IERC20;
 let vTOKEN1: VToken;
 let vTOKEN2: VToken;
@@ -61,7 +60,6 @@ let mintAmount: BigNumber;
 let TOKEN2BorrowAmount: BigNumberish;
 let binanceOracle: BinanceOracle;
 let priceOracle: ResilientOracleInterface;
-let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -69,20 +67,6 @@ async function configureTimelock() {
 
 async function configureVToken(vTokenAddress: string) {
   return VToken__factory.connect(vTokenAddress, impersonatedTimelock);
-}
-
-async function grantPermissions() {
-  accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
-
-  let tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketSupplyCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
-
-  tx = await accessControlManager
-    .connect(impersonatedTimelock)
-    .giveCallPermission(comptroller.address, "setMarketBorrowCaps(address[],uint256[])", ADMIN);
-  await tx.wait();
 }
 
 if (FORK) {
@@ -97,16 +81,16 @@ if (FORK) {
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
       // it will be the depositor
-      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2000000"));
 
       if (FORKED_NETWORK == "bscmainnet") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
-        await binanceOracle.setMaxStalePeriod("HAY", BigInt(150000000000000000));
+        await binanceOracle.setMaxStalePeriod("lisUSD", BigInt(150000000000000000));
         await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));
       }
 
-      if (FORKED_NETWORK == "ethereum") {
+      if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
         const ChainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
         const token1Config = await ChainlinkOracle.tokenConfigs(TOKEN1);
         const token2Config = await ChainlinkOracle.tokenConfigs(TOKEN2);
@@ -125,16 +109,19 @@ if (FORK) {
         await ChainlinkOracle.setTokenConfig(token2NewConfig);
       }
 
-      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
+      token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+        token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
+        await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
+      }
 
       vTOKEN2 = await configureVToken(VTOKEN2);
       vTOKEN1 = await configureVToken(VTOKEN1);
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
+
       const oracle = await comptroller.oracle();
       priceOracle = ResilientOracleInterface__factory.connect(oracle, impersonatedTimelock);
-
-      await grantPermissions();
 
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN1.address]);
       await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
