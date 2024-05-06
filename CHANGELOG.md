@@ -1,3 +1,16 @@
+## [3.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.2...v3.2.0-dev.3) (2024-05-06)
+
+
+### Features
+
+* add archive of old Pool lens deployments ([ab510e8](https://github.com/VenusProtocol/isolated-pools/commit/ab510e88666cec2296f8a29843d4d12c27464c15))
+* updating deployment files ([aa2ad32](https://github.com/VenusProtocol/isolated-pools/commit/aa2ad32043eb38bff75a22dc68f9712c81075359))
+
+
+### Bug Fixes
+
+* create bsc account from private key instead of mnemonic ([ea1ce8d](https://github.com/VenusProtocol/isolated-pools/commit/ea1ce8dd51bd2de7e675e509e4ff498f240dd5c5))
+
 ## [3.2.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.1...v3.2.0-dev.2) (2024-05-06)
 
 
