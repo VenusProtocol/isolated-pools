@@ -1,3 +1,30 @@
+## [3.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.3...v3.2.0-dev.4) (2024-05-06)
+
+
+### Features
+
+* updating deployment files ([c0e00ab](https://github.com/VenusProtocol/isolated-pools/commit/c0e00abb8282e85ca48c7d508c48fd3d4d74f219))
+* updating deployment files ([a57e51d](https://github.com/VenusProtocol/isolated-pools/commit/a57e51d96090026982ecddb8922a15a5aae04cb3))
+* updating deployment files ([e17c9e5](https://github.com/VenusProtocol/isolated-pools/commit/e17c9e50e2927ca7c654b664dcaac7dff7522fe1))
+* updating deployment files ([84caa4f](https://github.com/VenusProtocol/isolated-pools/commit/84caa4f12bd6269510749af6321559de4233bed5))
+
+
+### Bug Fixes
+
+* added mock sFrax token ([d4c1e55](https://github.com/VenusProtocol/isolated-pools/commit/d4c1e55234e5eb25d4ce99756d51c40d1eece3d0))
+* added rewards distributor ([4d0c10c](https://github.com/VenusProtocol/isolated-pools/commit/4d0c10cb771e6ded404b7cd34c272de1d0d591a7))
+* deployed mock Frax token ([8dc80b4](https://github.com/VenusProtocol/isolated-pools/commit/8dc80b44d20253f6f91183cef8a18b53cba51f0e))
+* deployed vTokens ([dfe5c51](https://github.com/VenusProtocol/isolated-pools/commit/dfe5c5141a43871fd84b809369ab5bce92378284))
+* fix xvs amount ([c1e1408](https://github.com/VenusProtocol/isolated-pools/commit/c1e1408132d25b3653cb0577891478304395c513))
+* rebased ([789f3a7](https://github.com/VenusProtocol/isolated-pools/commit/789f3a700d959741421ce4ff2d64923f63194943))
+* removed addresses of rewards distributor ([178fe43](https://github.com/VenusProtocol/isolated-pools/commit/178fe4368b0ee7448f02c17f52cf3e34e03f482e))
+* removed rewards distributor ([0fb7c7c](https://github.com/VenusProtocol/isolated-pools/commit/0fb7c7c7264362d85ecefd04d57b99cc6dc504ed))
+* reuse rewards distributor ([95f2e81](https://github.com/VenusProtocol/isolated-pools/commit/95f2e8114e18fe16be16fe079b5670de32497db5))
+* reuse rewards distributor ([91c1456](https://github.com/VenusProtocol/isolated-pools/commit/91c14567b0c5da01a7af6ab73ea54ca1c81be2cc))
+* revert - removed addresses of rewards distributor ([8429cbb](https://github.com/VenusProtocol/isolated-pools/commit/8429cbbeaad6d075f599c7d7ba19b5aa3096e118))
+* revert - reuse rewards distributor ([27141bd](https://github.com/VenusProtocol/isolated-pools/commit/27141bd1583bf712ea25f461e9397abdfcf653c6))
+* reverted configx ([0cf1d98](https://github.com/VenusProtocol/isolated-pools/commit/0cf1d98fb595107cda8731c6b2533e0d89678f0e))
+
 ## [3.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.2...v3.2.0-dev.3) (2024-05-06)
 
 
