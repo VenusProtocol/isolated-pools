@@ -3702,7 +3702,14 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          {
+            asset: "USDT",
+            markets: ["USDT"],
+            supplySpeeds: ["2893"], // 250 USDT per day
+            borrowSpeeds: ["2893"], // 250 USDT per day
+          },
+        ],
       },
     ],
     accessControlConfig: [
