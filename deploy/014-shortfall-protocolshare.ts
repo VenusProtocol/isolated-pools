@@ -3,10 +3,13 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { toAddress } from "../helpers/deploymentUtils";
+import { getBlockOrTimestampBasedDeploymentInfo, toAddress } from "../helpers/deploymentUtils";
 import { convertToUnit } from "../helpers/utils";
 
 const MIN_POOL_BAD_DEBT = convertToUnit(1000, 18);
+
+const nextBidderBlockOrTimestampLimit = 100; // for block based contracts
+const waitForFirstBidder = 100; // for block based contracts
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -23,11 +26,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
 
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+
   const riskFund = await ethers.getContract("RiskFundV2");
 
   await deploy("Shortfall", {
     from: deployer,
     contract: "Shortfall",
+    args: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
     proxy: {
       owner: owner,
       proxyContract: "OpenZeppelinTransparentProxy",
