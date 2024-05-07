@@ -3284,7 +3284,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/solidity-utilities@npm:2.0.0, @venusprotocol/solidity-utilities@npm:^2.0.0":
+"@venusprotocol/solidity-utilities@npm:2.0.0":
   version: 2.0.0
   resolution: "@venusprotocol/solidity-utilities@npm:2.0.0"
   checksum: 87a2ce2fd1d702bc04c4e98d675b904176c7f2489476e8da586d1782b48faae92aa4f2ba894737773d189ba72a6b274f1464cf2e0308e62758303d0adde749e6
@@ -3305,9 +3305,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/token-bridge@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@venusprotocol/token-bridge@npm:1.0.0"
+"@venusprotocol/token-bridge@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "@venusprotocol/token-bridge@npm:1.1.0"
   dependencies:
     "@layerzerolabs/solidity-examples": ^1.0.0
     "@openzeppelin/contracts": ^4.8.3
@@ -3316,7 +3316,7 @@ __metadata:
     "@solidity-parser/parser": ^0.13.2
     ethers: ^5.7.0
     module-alias: ^2.2.2
-  checksum: fa494157cc2493bcb4b2824fd545f2093b459404a449da6710c3c62ebd2638abc42cd15a06f60a7d537eb30e7e2efeab90961e34a60ecfef5d9c33c8e26b9405
+  checksum: 86c0e758491b63ce7da57aacf764a4d040a54fdc89994c92a79363e4cbb33b84cd1db38630e76cbcc26f6f7a5a676b3ac96871ad98486701982ea4699bdc15f1
   languageName: node
   linkType: hard
 
