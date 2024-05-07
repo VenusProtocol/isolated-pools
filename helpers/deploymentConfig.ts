@@ -3211,7 +3211,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(10_000_000, 18),
             borrowCap: convertToUnit(1_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury, // TBD
+            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
         ],
         rewards: [
