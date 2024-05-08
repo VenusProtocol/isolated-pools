@@ -1,3 +1,18 @@
+## [3.2.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.4...v3.2.0-dev.5) (2024-05-08)
+
+
+### Features
+
+* updating deployment files ([46d3170](https://github.com/VenusProtocol/isolated-pools/commit/46d3170b0bdf39b63e76f4f95f7afb31fe71fe1f))
+
+
+### Bug Fixes
+
+* change address of vTokenReceiver ([be6a504](https://github.com/VenusProtocol/isolated-pools/commit/be6a50486711324929aec07f3ef397039df0fdd9))
+* change address of vTokenReceiver ([256844b](https://github.com/VenusProtocol/isolated-pools/commit/256844bc8e6922913cdb67896c2a99b1548bf649))
+* deployed vtoken proxies on ethereum ([c51c50f](https://github.com/VenusProtocol/isolated-pools/commit/c51c50fd79defa4830a70596e5e1a9de97739ad6))
+* reverted hardhat config ([c47bc6f](https://github.com/VenusProtocol/isolated-pools/commit/c47bc6f258d4e387f371b5a783a1f214cc0a9158))
+
 ## [3.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.3...v3.2.0-dev.4) (2024-05-06)
 
 
