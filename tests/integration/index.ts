@@ -1,6 +1,6 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
-import { ProtocolShareReserve, RiskFundV2 } from "@venusprotocol/protocol-reserve/typechain";
+import { ProtocolShareReserve } from "@venusprotocol/protocol-reserve/typechain";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
@@ -10,6 +10,7 @@ import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
+  IRiskFund,
   MockPriceOracle,
   MockToken,
   PoolRegistry,
@@ -42,7 +43,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
-  const RiskFund = await smock.fake<RiskFundV2>("RiskFundV2");
+  const RiskFund = await smock.fake<IRiskFund>("IRiskFund");
 
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
@@ -789,7 +790,7 @@ describe("Risk Fund and Auction related scenarios", function () {
   let acc2: string;
   let deployer: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  let RiskFund: FakeContract<RiskFundV2>;
+  let RiskFund: FakeContract<IRiskFund>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
@@ -824,7 +825,7 @@ describe("Risk Fund and Auction related scenarios", function () {
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
 
-      const fakeProtocolIncome = await smock.fake<RiskFundV2>("RiskFundV2");
+      const fakeProtocolIncome = await smock.fake<IRiskFund>("IRiskFund");
       await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
         {
           schema: 0,
