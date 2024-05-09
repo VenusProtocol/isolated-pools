@@ -11,7 +11,7 @@
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x48C8a6A591f8f0943bF5FeEFB5E1Cbc803Eda89e",
     "JumpRateModel_base0bps_slope1000bps_jump25000bps_kink8000bps": "0xaf6862b20280818FA24fA6D17097517608Fe65d4",
     "NativeTokenGateway_vWBNB_Core": "0x7bAf6019C90B93aD30f8aD6a2EcCD2B11427b29f",
-    "PoolLens": "0x2Ed744F6E722aa5E41E67267774b386D244e5e4e",
+    "PoolLens": "0x94B41D400F8baF1FBDc30BEA525ee99Ed3D60F51",
     "PoolRegistry": "0x345a030Ad22e2317ac52811AC41C1A63cfa13aEe",
     "PoolRegistry_Implementation": "0xc5A64235ff4aad92b71eC69a925224b60aede1aa",
     "PoolRegistry_Proxy": "0x345a030Ad22e2317ac52811AC41C1A63cfa13aEe",
