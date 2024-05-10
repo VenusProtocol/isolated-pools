@@ -71,6 +71,8 @@
     "RewardsDistributor_LiquidStakedBNB_3_Proxy": "0x37fA1e5613455223F09e179DFAEBba61d7505C97",
     "RewardsDistributor_LiquidStakedBNB_4": "0xc1Ea6292C49D6B6E952baAC6673dE64701bB88cB",
     "RewardsDistributor_LiquidStakedBNB_4_Proxy": "0xc1Ea6292C49D6B6E952baAC6673dE64701bB88cB",
+    "RewardsDistributor_Meme_0": "0x34e14e4A5f5de28f8e58aeD296068ce5c3C25C4c",
+    "RewardsDistributor_Meme_0_Proxy": "0x34e14e4A5f5de28f8e58aeD296068ce5c3C25C4c",
     "RewardsDistributor_StableCoins_0": "0xb0269d68CfdCc30Cb7Cd2E0b52b08Fa7Ffd3079b",
     "RewardsDistributor_StableCoins_0_Proxy": "0xb0269d68CfdCc30Cb7Cd2E0b52b08Fa7Ffd3079b",
     "RewardsDistributor_StableCoins_1": "0x2aBEf3602B688493fe698EF11D27DCa43a0CE4BE",
