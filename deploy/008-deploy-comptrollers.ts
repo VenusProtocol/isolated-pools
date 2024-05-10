@@ -26,6 +26,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [poolRegistry.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const comptrollerBeacon: DeployResult = await deploy("ComptrollerBeacon", {
@@ -34,6 +35,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [comptrollerImpl.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const unregisteredPools = await getUnregisteredPools(poolConfig, hre);
@@ -51,6 +53,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
       log: true,
       autoMine: true,
+      skipIfAlreadyDeployed: true,
     });
   }
 };
