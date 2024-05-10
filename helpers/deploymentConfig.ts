@@ -1549,8 +1549,8 @@ export const globalConfig: NetworkConfig = {
           {
             asset: "BabyDoge",
             markets: ["BabyDoge"],
-            supplySpeeds: [convertToUnit("12,134,623.477230768", 9)], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
-            borrowSpeeds: [convertToUnit("12,134,623.477230768", 9)], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
+            supplySpeeds: ["12134623477230768"], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
+            borrowSpeeds: ["12134623477230768"], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
           },
         ],
       },
