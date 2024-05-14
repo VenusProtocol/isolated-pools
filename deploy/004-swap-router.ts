@@ -10,6 +10,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  console.log(deployer);
+
   const comptrollerDeFiAddresses = (await deployments.get("Comptroller_DeFi")).address;
   const wBNBAddress = (await deployments.get("WBNB")).address;
 
@@ -26,6 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [wBNBAddress, pancakeFactoryAddress, comptrollerDeFiAddresses, vbnbAddress],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const comptrollerGameFiAddresses = (await deployments.get("Comptroller_GameFi")).address;
@@ -35,6 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [wBNBAddress, pancakeFactoryAddress, comptrollerGameFiAddresses, vbnbAddress],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const comptrollerLiquidStakedBNBAddresses = (await deployments.get("Comptroller_LiquidStakedBNB")).address;
@@ -44,6 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [wBNBAddress, pancakeFactoryAddress, comptrollerLiquidStakedBNBAddresses, vbnbAddress],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const comptrollerStablecoinsAddresses = (await deployments.get("Comptroller_Stablecoins")).address;
@@ -53,6 +58,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [wBNBAddress, pancakeFactoryAddress, comptrollerStablecoinsAddresses, vbnbAddress],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const comptrollerTronAddresses = (await deployments.get("Comptroller_Tron")).address;
@@ -62,6 +68,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [wBNBAddress, pancakeFactoryAddress, comptrollerTronAddresses, vbnbAddress],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
+  });
+
+  const comptrollerMemeAddresses = (await deployments.get("Comptroller_Meme")).address;
+  await deploy("SwapRouter_Meme", {
+    contract: "SwapRouter",
+    from: deployer,
+    args: [wBNBAddress, pancakeFactoryAddress, comptrollerMemeAddresses, vbnbAddress],
+    log: true,
+    autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 };
 
