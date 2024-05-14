@@ -137,6 +137,7 @@ export const getUnregisteredRewardsDistributors = async (
 
 export const getBlockOrTimestampBasedDeploymentInfo = (network: string): DeploymentInfo => {
   const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+
   const blocksPerYearKey = isTimeBased ? "isTimeBased" : network;
 
   return { isTimeBased: isTimeBased, blocksPerYear: blocksPerYear[blocksPerYearKey] };

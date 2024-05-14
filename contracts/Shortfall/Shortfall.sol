@@ -12,7 +12,7 @@ import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeM
 
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
-import { IRiskFund } from "../RiskFund/IRiskFund.sol";
+import { IRiskFund } from "./IRiskFund.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";

@@ -1,9 +1,11 @@
+import { contracts as governanceArbitrumSepolia } from "@venusprotocol/governance-contracts/deployments/arbitrumsepolia.json";
 import { contracts as governanceBscMainnet } from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import { contracts as governanceBscTestnet } from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import { contracts as governanceEthereum } from "@venusprotocol/governance-contracts/deployments/ethereum.json";
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
 import { contracts as venusProtocolBscTestnet } from "@venusprotocol/venus-protocol/deployments/bsctestnet.json";
 import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protocol/deployments/ethereum.json";
@@ -24,6 +26,7 @@ export type NetworkConfig = {
   ethereum: DeploymentConfig;
   opbnbtestnet: DeploymentConfig;
   opbnbmainnet: DeploymentConfig;
+  arbitrumsepolia: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -126,17 +129,22 @@ export const blocksPerYear: BlocksPerYear = {
   ethereum: ETH_BLOCKS_PER_YEAR,
   opbnbtestnet: OPBNB_BLOCKS_PER_YEAR,
   opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
-  isTimeBased: 0,
+  arbitrumsepolia: 0, // for time based contracts
+  arbitrumone: 0, // for time based contracts
+  isTimeBased: 0, // for time based contracts
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
 export const ETHEREUM_MULTISIG = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
 export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf";
 export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207";
+export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A61C2";
+export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -199,6 +207,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: OPBNBMAINNET_MULTISIG,
     CriticalTimelock: OPBNBMAINNET_MULTISIG,
     AccessControlManager: governanceOpbnbMainnet.AccessControlManager.address,
+  },
+  arbitrumsepolia: {
+    VTreasury: venusProtocolArbitrumSepolia.VTreasuryV8.address,
+    NormalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    FastTrackTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    CriticalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
+    AccessControlManager: governanceArbitrumSepolia.AccessControlManager.address,
   },
 };
 
@@ -2429,6 +2444,27 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "TrueUSD",
+        symbol: "TUSD",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Frax",
+        symbol: "FRAX",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Staked FRAX",
+        symbol: "sFRAX",
+        decimals: 18,
+        tokenAddress: "0xd85FfECdB4287587BC53c1934D548bF7480F11C4",
+      },
     ],
     poolConfig: [
       {
@@ -2564,6 +2600,60 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus TUSD (Core)",
+            asset: "TUSD",
+            symbol: "vTUSD_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
+            supplyCap: convertToUnit(2_000_000, 18),
+            borrowCap: convertToUnit(1_800_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
+          },
+          {
+            name: "Venus Frax (Core)",
+            asset: "FRAX",
+            symbol: "vFRAX_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 FRAX
+            supplyCap: convertToUnit(10_000_000, 18),
+            borrowCap: convertToUnit(8_000_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
+          },
+          {
+            name: "Venus Staked FRAX (Core)",
+            asset: "sFRAX",
+            symbol: "vsFRAX_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(4800, 18), // 4800 sFRAX
+            supplyCap: convertToUnit(10_000_000, 18),
+            borrowCap: convertToUnit(1_000_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2577,11 +2667,31 @@ export const globalConfig: NetworkConfig = {
           //          81 XVS for Borrowers
           // crvUSD:  24 XVS for Suppliers
           //          36 XVS for Borrowers
+          // FRAX:    960 XVS for Suppliers
+          //          1440 XVS for Borrowers
+          // sFRAX:   1440 XVS for Suppliers
+          //          960 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
-            supplySpeeds: ["27777777777777", "83333333333333", "83333333333333", "83333333333333", "37037037037036"],
-            borrowSpeeds: ["41666666666666", "125000000000000", "125000000000000", "125000000000000", "55555555555555"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
+            supplySpeeds: [
+              "27777777777777",
+              "83333333333333",
+              "83333333333333",
+              "83333333333333",
+              "37037037037036",
+              "1481481481481481",
+              "2222222222222222",
+            ],
+            borrowSpeeds: [
+              "41666666666666",
+              "125000000000000",
+              "125000000000000",
+              "125000000000000",
+              "55555555555555",
+              "2222222222222222",
+              "1481481481481481",
+            ],
           },
           {
             asset: "CRV",
@@ -2913,6 +3023,27 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "TrueUSD",
+        symbol: "TUSD",
+        decimals: 18,
+        tokenAddress: "0x0000000000085d4780B73119b644AE5ecd22b376",
+      },
+      {
+        isMock: false,
+        name: "Frax",
+        symbol: "FRAX",
+        decimals: 18,
+        tokenAddress: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
+      },
+      {
+        isMock: false,
+        name: "Staked FRAX",
+        symbol: "sFRAX",
+        decimals: 18,
+        tokenAddress: "0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32",
+      },
+      {
+        isMock: false,
         name: "PT ether.fi weETH 26DEC2024",
         symbol: "PT-weETH-26DEC2024",
         decimals: 18,
@@ -3035,6 +3166,60 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
+          {
+            name: "Venus TUSD (Core)",
+            asset: "TUSD",
+            symbol: "vTUSD_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 TUSD
+            supplyCap: convertToUnit(2_000_000, 18),
+            borrowCap: convertToUnit(1_800_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
+          },
+          {
+            name: "Venus Frax (Core)",
+            asset: "FRAX",
+            symbol: "vFRAX_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5000, 18), // 5000 FRAX
+            supplyCap: convertToUnit(10_000_000, 18),
+            borrowCap: convertToUnit(8_000_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
+          {
+            name: "Venus Staked FRAX (Core)",
+            asset: "sFRAX",
+            symbol: "vsFRAX_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(4800, 18), // 4800 sFRAX
+            supplyCap: convertToUnit(10_000_000, 18),
+            borrowCap: convertToUnit(1_000_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3048,15 +3233,21 @@ export const globalConfig: NetworkConfig = {
           //          8100 XVS for Borrowers
           // crvUSD:  2400 XVS for Suppliers
           //          3600 XVS for Borrowers
+          // FRAX:    960 XVS for Suppliers
+          //          1440 XVS for Borrowers
+          // sFRAX:   1440 XVS for Suppliers
+          //          960 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
             supplySpeeds: [
               "2777777777777777",
               "8333333333333333",
               "8333333333333333",
               "8333333333333333",
               "3703703703703703",
+              "1481481481481481",
+              "2222222222222222",
             ],
             borrowSpeeds: [
               "4166666666666666",
@@ -3064,6 +3255,8 @@ export const globalConfig: NetworkConfig = {
               "12500000000000000",
               "12500000000000000",
               "5555555555555555",
+              "2222222222222222",
+              "1481481481481481",
             ],
           },
           {
@@ -3525,6 +3718,159 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.opbnbmainnet,
   },
+  arbitrumsepolia: {
+    tokensConfig: [
+      {
+        isMock: true,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
+      },
+      {
+        isMock: true,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Arbitrum",
+        symbol: "ARB",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+    ],
+    poolConfig: [
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus WBTC (Core)",
+            asset: "WBTC",
+            symbol: "vWBTC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.03553143", 8), // 0.03553143 WBTC
+            supplyCap: convertToUnit(1, 8),
+            borrowCap: convertToUnit("0.55", 8),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
+          },
+          {
+            name: "Venus WETH (Core)",
+            asset: "WETH",
+            symbol: "vWETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 WETH
+            supplyCap: convertToUnit(25, 18),
+            borrowCap: convertToUnit(16, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
+          },
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDC
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
+          },
+          {
+            name: "Venus USDT (Core)",
+            asset: "USDT",
+            symbol: "vUSDT_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDT
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
+          },
+          {
+            name: "Venus ARB (Core)",
+            asset: "ARB",
+            symbol: "vARB_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 ARB
+            supplyCap: convertToUnit(25, 18),
+            borrowCap: convertToUnit(16, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
+          },
+        ],
+        rewards: [
+          {
+            asset: "USDT",
+            markets: ["USDT"],
+            supplySpeeds: ["2893"], // 250 USDT per day
+            borrowSpeeds: ["2893"], // 250 USDT per day
+          },
+        ],
+      },
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.arbitrumsepolia.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.arbitrumsepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -3543,6 +3889,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opbnbtestnet;
     case "opbnbmainnet":
       return globalConfig.opbnbmainnet;
+    case "arbitrumsepolia":
+      return globalConfig.arbitrumsepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:

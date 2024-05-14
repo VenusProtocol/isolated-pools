@@ -45,6 +45,7 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
         ],
         opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
+        arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
       },
     };
   }
@@ -222,9 +223,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
       timeout: 1200000,
-      accounts: {
-        mnemonic: process.env.MNEMONIC || "",
-      },
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     ethereum: {
       url: process.env.ARCHIVE_NODE_ethereum || "https://ethereum.blockpi.network/v1/rpc/public",
@@ -248,6 +247,18 @@ const config: HardhatUserConfig = {
     opbnbmainnet: {
       url: process.env.ARCHIVE_NODE_opbnbmainnet || "https://opbnb-mainnet-rpc.bnbchain.org",
       chainId: 204,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    arbitrumsepolia: {
+      url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    arbitrumone: {
+      url: process.env.ARCHIVE_NODE_arbitrumone || "https://arb1.arbitrum.io/rpc",
+      chainId: 42161,
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
@@ -314,6 +325,22 @@ const config: HardhatUserConfig = {
           browserURL: "https://etherscan.io",
         },
       },
+      {
+        network: "arbitrumsepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: `https://api-sepolia.arbiscan.io/api`,
+          browserURL: "https://sepolia.arbiscan.io/",
+        },
+      },
+      {
+        network: "arbitrumone",
+        chainId: 42161,
+        urls: {
+          apiURL: `https://api.arbiscan.io/api/`,
+          browserURL: "https://arbiscan.io/",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
@@ -322,6 +349,8 @@ const config: HardhatUserConfig = {
       sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
