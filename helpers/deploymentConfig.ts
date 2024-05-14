@@ -3212,7 +3212,7 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.20", 18),
             initialSupply: convertToUnit("1.799618792392372642", 18),
-            supplyCap: convertToUnit(3750, 18),
+            supplyCap: convertToUnit(1200, 18),
             borrowCap: convertToUnit(375, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
