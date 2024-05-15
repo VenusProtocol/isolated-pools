@@ -4337,7 +4337,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_Core": {
-      "address": "0xa9D6d0dc76a9f0B87E52df1326F2f0E4e422BC52",
+      "address": "0x196b19C2037863409C65CbF63592ae2a3CD2Dc2C",
       "abi": [
         {
           "inputs": [
