@@ -1726,6 +1726,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xca6d678e74f553f0e59cccc03ae644a3c2c5ee7d",
       },
+      {
+        isMock: false,
+        name: "Baby Doge Coin",
+        symbol: "BabyDoge",
+        decimals: 9,
+        tokenAddress: "0xc748673057861a797275CD8A068AbB95A902e8de",
+      },
     ],
     poolConfig: [
       {
@@ -2406,6 +2413,59 @@ export const globalConfig: NetworkConfig = {
             markets: ["USDD"],
             supplySpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
             borrowSpeeds: ["14467592592592592"], // 12500 USDD over 30 days (864000 blocks)
+          },
+        ],
+      },
+      {
+        id: "Meme",
+        name: "Meme",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus BabyDoge (Meme)",
+            asset: "BabyDoge",
+            symbol: "vBabyDoge_Meme",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.3", 18),
+            liquidationThreshold: convertToUnit("0.4", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("27917365987868.178893572", 9),
+            supplyCap: convertToUnit("1600000000000000", 9),
+            borrowCap: convertToUnit("800000000000000", 9),
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
+            reduceReservesBlockDelta: "100",
+          },
+          {
+            name: "Venus USDT (Meme)",
+            asset: "USDT",
+            symbol: "vUSDT_Meme",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0", 18),
+            multiplierPerYear: convertToUnit("0.175", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 6),
+            supplyCap: convertToUnit("1000000", 6),
+            borrowCap: convertToUnit("900000", 6),
+            vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
+            reduceReservesBlockDelta: "100",
+          },
+        ],
+        rewards: [
+          {
+            asset: "BabyDoge",
+            markets: ["BabyDoge"],
+            supplySpeeds: ["12134623477230768"], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
+            borrowSpeeds: ["12134623477230768"], // 7,863,236,013,245.53792216 BabyDoge over 90 days (648000 blocks)
           },
         ],
       },
