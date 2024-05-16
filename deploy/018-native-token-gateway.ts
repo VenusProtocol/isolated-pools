@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
@@ -63,7 +64,7 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
   arbitrumsepolia: [
     {
       name: "vWETH_Core",
-      address: "0xef6DF2bE5d6Ad0291eDb1160fEf7a4ED2528fAfb",
+      address: ilArbSepolia.VToken_vWETH_Core.address,
     },
   ],
 };

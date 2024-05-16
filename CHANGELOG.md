@@ -1,3 +1,42 @@
+## [3.2.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.6...v3.2.0-dev.7) (2024-05-16)
+
+
+### Features
+
+* updating deployment files ([1d22924](https://github.com/VenusProtocol/isolated-pools/commit/1d22924eedd39432a89bfb900e4b817cc5f96f50))
+* updating deployment files ([f7bbd05](https://github.com/VenusProtocol/isolated-pools/commit/f7bbd05f891748062b31044725489e676ba12cfa))
+
+## [3.2.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.5...v3.2.0-dev.6) (2024-05-09)
+
+
+### Features
+
+* updating deployment files ([16a9b3a](https://github.com/VenusProtocol/isolated-pools/commit/16a9b3a80b032b1a4fd97c83edd89b96ae888506))
+
+
+### Bug Fixes
+
+* failing integration test ([9a12b29](https://github.com/VenusProtocol/isolated-pools/commit/9a12b29e23f579db6c8b7429977ea3d74b86907f))
+* IRiskFund import ([8df8a7a](https://github.com/VenusProtocol/isolated-pools/commit/8df8a7a6bd418d95de5f3b68fd3b916fa61d639e))
+* shortfall deployment ([58bd85c](https://github.com/VenusProtocol/isolated-pools/commit/58bd85c43e70c5494a0789fde9cd257cc5a3460e))
+* yarn lock ([62593da](https://github.com/VenusProtocol/isolated-pools/commit/62593da3db26291d359dc4b028a34113a866cdeb))
+* yarn.lock ([f2f5c95](https://github.com/VenusProtocol/isolated-pools/commit/f2f5c950e74e71f7782afb3c2d16e758cf06ac47))
+
+## [3.2.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.4...v3.2.0-dev.5) (2024-05-08)
+
+
+### Features
+
+* updating deployment files ([46d3170](https://github.com/VenusProtocol/isolated-pools/commit/46d3170b0bdf39b63e76f4f95f7afb31fe71fe1f))
+
+
+### Bug Fixes
+
+* change address of vTokenReceiver ([be6a504](https://github.com/VenusProtocol/isolated-pools/commit/be6a50486711324929aec07f3ef397039df0fdd9))
+* change address of vTokenReceiver ([256844b](https://github.com/VenusProtocol/isolated-pools/commit/256844bc8e6922913cdb67896c2a99b1548bf649))
+* deployed vtoken proxies on ethereum ([c51c50f](https://github.com/VenusProtocol/isolated-pools/commit/c51c50fd79defa4830a70596e5e1a9de97739ad6))
+* reverted hardhat config ([c47bc6f](https://github.com/VenusProtocol/isolated-pools/commit/c47bc6f258d4e387f371b5a783a1f214cc0a9158))
+
 ## [3.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.3...v3.2.0-dev.4) (2024-05-06)
 
 

@@ -3,7 +3,7 @@
   "chainId": "421614",
   "contracts": {
     "ComptrollerBeacon": {
-      "address": "0x1847A284f4E4d2467964b17c78f6548d17156FFe",
+      "address": "0x12Dcb8D9F1eE7Ad7410F5B36B07bcC7891ab4cEf",
       "abi": [
         {
           "inputs": [
@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x263Fa11D8D6A7869e3696BaC29954addE2670497",
+      "address": "0x77AF9c816b0Ef51A64CF8731f77eDf65872b0973",
       "abi": [
         {
           "inputs": [
@@ -2142,7 +2142,7 @@
       ]
     },
     "Comptroller_Core": {
-      "address": "0xA198909e8432f262f6978F2C81B04b32c55eb063",
+      "address": "0x006D44b6f5927b3eD83bD0c1C36Fb1A3BaCaC208",
       "abi": [
         {
           "inputs": [
@@ -2381,7 +2381,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": {
-      "address": "0xaE38205BEF83c18F006Bf2B8C92e3B7d69076166",
+      "address": "0xBbb522fCA8f5955942515D8EAa2222251a070a17",
       "abi": [
         {
           "inputs": [
@@ -2741,7 +2741,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
-      "address": "0x1719cc45F774e1C944B70F31EDA1E8dCCDaE65EA",
+      "address": "0x50e8FF8748684F5DbDAEc5554c7FE3E82Cdc19e1",
       "abi": [
         {
           "inputs": [
@@ -4337,7 +4337,7 @@
       ]
     },
     "NativeTokenGateway_vWETH_Core": {
-      "address": "0xa9D6d0dc76a9f0B87E52df1326F2f0E4e422BC52",
+      "address": "0x196b19C2037863409C65CbF63592ae2a3CD2Dc2C",
       "abi": [
         {
           "inputs": [
@@ -5887,7 +5887,7 @@
       ]
     },
     "PoolRegistry": {
-      "address": "0x6866b2BDaaEf6648ddd5b678B3e9f3352bF3d2A5",
+      "address": "0xf93Df3135e0D555185c0BC888073374cA551C5fE",
       "abi": [
         {
           "anonymous": false,
@@ -6709,7 +6709,7 @@
       ]
     },
     "PoolRegistry_Implementation": {
-      "address": "0x1B052EdDD0a0072875cD3CECBf9D78E95a2aa078",
+      "address": "0x0C30416C994874E15057d19940139B071A3e457E",
       "abi": [
         {
           "inputs": [],
@@ -7392,7 +7392,7 @@
       ]
     },
     "PoolRegistry_Proxy": {
-      "address": "0x6866b2BDaaEf6648ddd5b678B3e9f3352bF3d2A5",
+      "address": "0xf93Df3135e0D555185c0BC888073374cA551C5fE",
       "abi": [
         {
           "inputs": [
@@ -7541,7 +7541,7 @@
       ]
     },
     "RewardsDistributorImpl": {
-      "address": "0xe62f332340E09c152feaAA462341Eb4686c06346",
+      "address": "0x352AFB1fB169A426b9fea9c1B8804912d15D2826",
       "abi": [
         {
           "inputs": [
@@ -8700,7 +8700,7 @@
       ]
     },
     "RewardsDistributor_Core_0": {
-      "address": "0x8E73FE3F7E29100Ad9d1C7F35fba2D2c823c8579",
+      "address": "0x6c65135d102e2Dfa1b0852351cF9b2cbc1788972",
       "abi": [
         {
           "anonymous": false,
@@ -9987,7 +9987,7 @@
       ]
     },
     "RewardsDistributor_Core_0_Proxy": {
-      "address": "0x8E73FE3F7E29100Ad9d1C7F35fba2D2c823c8579",
+      "address": "0x6c65135d102e2Dfa1b0852351cF9b2cbc1788972",
       "abi": [
         {
           "inputs": [
@@ -10136,7 +10136,7 @@
       ]
     },
     "VTokenBeacon": {
-      "address": "0x0044263D597087f3fE884C318c10720cD21d1459",
+      "address": "0x74ae9919F5866cE148c81331a5FCdE71b81c4056",
       "abi": [
         {
           "inputs": [
@@ -10243,7 +10243,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0x5b3CF6fD8c8240a38486BfD7685eF290238402e0",
+      "address": "0x6CDe40D8AC0d0c70f2775DF5eBa7852062446dCe",
       "abi": [
         {
           "inputs": [
@@ -12312,7 +12312,7 @@
       ]
     },
     "VToken_vARB_Core": {
-      "address": "0x09522549a45767093F8b044a6CcA86E34Bf52396",
+      "address": "0x292Ec2b45C549Bc2c6B31937dBd511beaAEabea8",
       "abi": [
         {
           "inputs": [
@@ -12386,7 +12386,7 @@
       ]
     },
     "VToken_vUSDC_Core": {
-      "address": "0xf34F869da124Ae9b6b45EcB1787d0559Efa5DFA8",
+      "address": "0xd9d1e754464eFc7493B177d2c7be04816E089b4C",
       "abi": [
         {
           "inputs": [
@@ -12460,7 +12460,7 @@
       ]
     },
     "VToken_vUSDT_Core": {
-      "address": "0xFf3a9fD8d4f208Ed98f56A5F771AD470258866D7",
+      "address": "0xdEFbf0F9Ab6CdDd0a1FdDC894b358D0c0a39B052",
       "abi": [
         {
           "inputs": [
@@ -12534,7 +12534,7 @@
       ]
     },
     "VToken_vWBTC_Core": {
-      "address": "0x86bA857556ce8Ea25175e844E11ee413B7A73a25",
+      "address": "0x49FB90A5815904649C44B87001a160C1301D6a2C",
       "abi": [
         {
           "inputs": [
@@ -12608,7 +12608,7 @@
       ]
     },
     "VToken_vWETH_Core": {
-      "address": "0xef6DF2bE5d6Ad0291eDb1160fEf7a4ED2528fAfb",
+      "address": "0x807dCB6946dDF4C5C6446B1B07ACd248B08F45e2",
       "abi": [
         {
           "inputs": [
