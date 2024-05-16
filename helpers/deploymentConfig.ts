@@ -3408,7 +3408,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(1200, 18),
             borrowCap: convertToUnit(0, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
