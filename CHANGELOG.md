@@ -1,3 +1,20 @@
+## [3.2.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.7...v3.2.0-dev.8) (2024-05-17)
+
+
+### Features
+
+* updating deployment files ([055e2d9](https://github.com/VenusProtocol/isolated-pools/commit/055e2d90042382ae0f6f5e5fc9bb9c7547987e41))
+* updating deployment files ([4357bb2](https://github.com/VenusProtocol/isolated-pools/commit/4357bb2bbcbcb455d476db7c0f60a87f8c08dd8d))
+* updating deployment files ([5d5f606](https://github.com/VenusProtocol/isolated-pools/commit/5d5f60638aba61df8f3dbba8d62fd13fa0eebb9e))
+* updating deployment files ([dce31af](https://github.com/VenusProtocol/isolated-pools/commit/dce31af5201f5ea35606e0685dc4a785e1c1cf95))
+* updating deployment files ([2a334b8](https://github.com/VenusProtocol/isolated-pools/commit/2a334b8e7d379bb56baa4d43765bee9761651e6e))
+
+
+### Bug Fixes
+
+* pool lens contract ([b770f4d](https://github.com/VenusProtocol/isolated-pools/commit/b770f4d7e6e8b1bdf5cf75b8cf8ee7f9a0e24355))
+* resolved conflicts ([4d3a5ef](https://github.com/VenusProtocol/isolated-pools/commit/4d3a5effe82160140b51aaf3e731d278a2e9378e))
+
 ## [3.2.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.6...v3.2.0-dev.7) (2024-05-16)
 
 
