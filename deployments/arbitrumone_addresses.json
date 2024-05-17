@@ -1,5 +1,7 @@
 {
   "name": "arbitrumone",
   "chainId": "42161",
-  "addresses": {}
+  "addresses": {
+    "PoolLens": "0x53F34FF95367B2A4542461a6A63fD321F8da22AD"
+  }
 }

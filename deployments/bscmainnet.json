@@ -6439,8 +6439,47 @@
       ]
     },
     "PoolLens": {
-      "address": "0x0461c613433d42C06831C8e60Bf0C86FC9495072",
+      "address": "0xcD170B0638332242F7307a1Bc75E872738CEF7Cc",
       "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "bool",
+              "name": "timeBased_",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blocksPerYear_",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBlocksPerYear",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidTimeBasedConfiguration",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "blocksOrSecondsPerYear",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
         {
           "inputs": [
             {
@@ -6527,12 +6566,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -6609,6 +6648,19 @@
               "internalType": "struct PoolLens.PoolData[]",
               "name": "",
               "type": "tuple[]"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getBlockNumberOrTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
           ],
           "stateMutability": "view",
@@ -6811,12 +6863,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -7016,12 +7068,12 @@
                     },
                     {
                       "internalType": "uint256",
-                      "name": "supplyRatePerBlock",
+                      "name": "supplyRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
                       "internalType": "uint256",
-                      "name": "borrowRatePerBlock",
+                      "name": "borrowRatePerBlockOrTimestamp",
                       "type": "uint256"
                     },
                     {
@@ -7151,6 +7203,19 @@
               "internalType": "address",
               "name": "",
               "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isTimeBased",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
             }
           ],
           "stateMutability": "view",
@@ -7292,12 +7357,12 @@
                 },
                 {
                   "internalType": "uint256",
-                  "name": "supplyRatePerBlock",
+                  "name": "supplyRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "borrowRatePerBlock",
+                  "name": "borrowRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
@@ -7398,12 +7463,12 @@
                 },
                 {
                   "internalType": "uint256",
-                  "name": "supplyRatePerBlock",
+                  "name": "supplyRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
                   "internalType": "uint256",
-                  "name": "borrowRatePerBlock",
+                  "name": "borrowRatePerBlockOrTimestamp",
                   "type": "uint256"
                 },
                 {
