@@ -3162,6 +3162,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xA663B02CF0a4b149d2aD41910CB81e23e1c41c32",
       },
+      {
+        isMock: false,
+        name: "PT ether.fi weETH 26DEC2024",
+        symbol: "PT-weETH-26DEC2024",
+        decimals: 18,
+        tokenAddress: "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
+      },
     ],
     poolConfig: [
       {
@@ -3504,6 +3511,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(750, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: `0xF6C612c745Ba4546075DB62902c1Eb3255CdAe28`,
+          },
+          {
+            name: "Venus PT-wETH-26DEC2024 (Liquid Staked ETH)",
+            asset: "PT-weETH-26DEC2024",
+            symbol: "vPT-weETH-26DEC2024_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.80", 18),
+            reserveFactor: convertToUnit("0.20", 18),
+            initialSupply: convertToUnit("1.799618792392372642", 18),
+            supplyCap: convertToUnit(1200, 18),
+            borrowCap: convertToUnit(0, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
