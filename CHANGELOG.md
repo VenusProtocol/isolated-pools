@@ -1,3 +1,15 @@
+## [3.2.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.9...v3.2.0-dev.10) (2024-05-23)
+
+
+### Features
+
+* updating deployment files ([64d9d20](https://github.com/VenusProtocol/isolated-pools/commit/64d9d2026c54e14b9c3ce46331f8993ae360a502))
+
+
+### Bug Fixes
+
+* deployment script for IRM ([b36a7d3](https://github.com/VenusProtocol/isolated-pools/commit/b36a7d381ff09ce903109f2a1ad1ba7376fded83))
+
 ## [3.2.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0-dev.8...v3.2.0-dev.9) (2024-05-20)
 
 
