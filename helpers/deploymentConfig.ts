@@ -2781,6 +2781,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
+          {
+            name: "Venus sfrxETH (Liquid Staked ETH)",
+            asset: "sfrxETH",
+            symbol: "vsfrxETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.40", 18),
+            collateralFactor: convertToUnit("0.9", 18),
+            liquidationThreshold: convertToUnit("0.93", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("1", 18),
+            supplyCap: convertToUnit(28_000, 18),
+            borrowCap: convertToUnit(2_800, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2798,9 +2816,11 @@ export const globalConfig: NetworkConfig = {
           //          1440 XVS for Borrowers
           // sFRAX:   1440 XVS for Suppliers
           //          960 XVS for Borrowers
+          // sfrxETH: 2400 XVS for Suppliers
+          //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX", "sfrxETH"],
             supplySpeeds: [
               "27777777777777",
               "83333333333333",
@@ -2809,6 +2829,7 @@ export const globalConfig: NetworkConfig = {
               "37037037037036",
               "1481481481481481",
               "2222222222222222",
+              "3703703703703703",
             ],
             borrowSpeeds: [
               "41666666666666",
@@ -2818,6 +2839,7 @@ export const globalConfig: NetworkConfig = {
               "55555555555555",
               "2222222222222222",
               "1481481481481481",
+              "0",
             ],
           },
           {
