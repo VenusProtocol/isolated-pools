@@ -2,6 +2,7 @@
   "name": "arbitrumone",
   "chainId": "42161",
   "addresses": {
+    "NativeTokenGateway_vWETH_Core": "0xc8e51418cadc001157506b306C6d0b878f1ff755",
     "PoolLens": "0x53F34FF95367B2A4542461a6A63fD321F8da22AD"
   }
 }
