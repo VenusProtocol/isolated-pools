@@ -67,6 +67,12 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
       address: ilArbSepolia.VToken_vWETH_Core.address,
     },
   ],
+  arbitrumone: [
+    {
+      name: "vWETH_Core",
+      address: "0x68a34332983f4Bf866768DD6D6E638b02eF5e1f0",
+    },
+  ],
 };
 
 const getVWNativeTokens = (networkName: string): VTokenConfig[] => {
