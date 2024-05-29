@@ -47,6 +47,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           ],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
       } else {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
@@ -58,6 +59,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
           log: true,
           autoMine: true,
+          skipIfAlreadyDeployed: true,
         });
       }
       console.log(`-----------------------------------------`);
