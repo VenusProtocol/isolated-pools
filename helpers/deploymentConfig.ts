@@ -2173,7 +2173,7 @@ export const globalConfig: NetworkConfig = {
             symbol: "vWBNB_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.09", 18),
+            multiplierPerYear: convertToUnit("0.009", 18),
             jumpMultiplierPerYear: convertToUnit("3", 18),
             kink_: convertToUnit("0.9", 18),
             collateralFactor: convertToUnit("0.45", 18),
