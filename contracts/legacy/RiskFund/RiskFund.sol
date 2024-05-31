@@ -5,18 +5,18 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-import { ComptrollerInterface } from "../ComptrollerInterface.sol";
-import { IRiskFund } from "./IRiskFund.sol";
+import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
+import { IRiskFundV1 } from "./IRiskFund.sol";
 import { ReserveHelpers } from "./ReserveHelpers.sol";
-import { ExponentialNoError } from "../ExponentialNoError.sol";
-import { VToken } from "../VToken.sol";
-import { ComptrollerViewInterface } from "../ComptrollerInterface.sol";
-import { Comptroller } from "../Comptroller.sol";
-import { PoolRegistry } from "../Pool/PoolRegistry.sol";
-import { IPancakeswapV2Router } from "../IPancakeswapV2Router.sol";
-import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
-import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
+import { ExponentialNoError } from "../../ExponentialNoError.sol";
+import { VToken } from "../../VToken.sol";
+import { ComptrollerViewInterface } from "../../ComptrollerInterface.sol";
+import { Comptroller } from "../../Comptroller.sol";
+import { PoolRegistry } from "../../Pool/PoolRegistry.sol";
+import { IPancakeswapV2Router } from "../../IPancakeswapV2Router.sol";
+import { MaxLoopsLimitHelper } from "../../MaxLoopsLimitHelper.sol";
+import { ensureNonzeroAddress } from "../../lib/validators.sol";
+import { ApproveOrRevert } from "../../lib/ApproveOrRevert.sol";
 
 /**
  * @title RiskFund
@@ -24,7 +24,7 @@ import { ApproveOrRevert } from "../lib/ApproveOrRevert.sol";
  * @notice Contract with basic features to track/hold different assets for different Comptrollers.
  * @dev This contract does not support BNB.
  */
-contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFund {
+contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, MaxLoopsLimitHelper, IRiskFundV1 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using ApproveOrRevert for IERC20Upgradeable;
 
@@ -193,15 +193,12 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
             PoolRegistry.VenusPool memory pool = PoolRegistry(poolRegistry_).getPoolByComptroller(comptroller);
             require(pool.comptroller == comptroller, "comptroller doesn't exist pool registry");
             require(Comptroller(comptroller).isMarketListed(VToken(markets[i])), "market is not listed");
-
             uint256 swappedTokens = _swapAsset(VToken(markets[i]), comptroller, amountsOutMin[i], paths[i]);
             _poolsAssetsReserves[comptroller][convertibleBaseAsset] += swappedTokens;
             assetsReserves[convertibleBaseAsset] += swappedTokens;
             totalAmount = totalAmount + swappedTokens;
         }
-
         emit SwappedPoolsAssets(markets, amountsOutMin, totalAmount);
-
         return totalAmount;
     }
 
@@ -229,10 +226,8 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
         unchecked {
             assetsReserves[convertibleBaseAsset] = assetsReserves[convertibleBaseAsset] - amount;
         }
-
         emit TransferredReserveForAuction(comptroller, amount);
         IERC20Upgradeable(convertibleBaseAsset).safeTransfer(shortfall_, amount);
-
         return amount;
     }
 
@@ -259,7 +254,7 @@ contract RiskFund is AccessControlledV8, ExponentialNoError, ReserveHelpers, Max
      * @param comptroller  Comptroller address(pool).
      * @param asset Asset address.
      */
-    function updateAssetsState(address comptroller, address asset) public override(IRiskFund, ReserveHelpers) {
+    function updateAssetsState(address comptroller, address asset) public override(IRiskFundV1, ReserveHelpers) {
         super.updateAssetsState(comptroller, asset);
     }
 

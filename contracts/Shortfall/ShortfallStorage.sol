@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import { VToken } from "../VToken.sol";
-import { IRiskFund } from "../RiskFund/IRiskFund.sol";
+import { IRiskFund } from "../Shortfall/IRiskFund.sol";
 
 /**
  * @title ShortfallStorage

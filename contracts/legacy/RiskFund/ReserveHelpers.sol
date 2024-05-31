@@ -5,10 +5,10 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { ensureNonzeroAddress } from "../lib/validators.sol";
-import { ComptrollerInterface } from "../ComptrollerInterface.sol";
-import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
-import { VToken } from "../VToken.sol";
+import { ensureNonzeroAddress } from "../../lib/validators.sol";
+import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
+import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
+import { VToken } from "../../VToken.sol";
 
 contract ReserveHelpers is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -127,7 +127,6 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         address poolRegistry_ = poolRegistry;
         require(poolRegistry_ != address(0), "ReserveHelpers: Pool Registry address is not set");
         require(ensureAssetListed(comptroller, asset), "ReserveHelpers: The pool doesn't support the asset");
-
         uint256 currentBalance = IERC20Upgradeable(asset).balanceOf(address(this));
         uint256 assetReserve = assetsReserves[asset];
         if (currentBalance > assetReserve) {
@@ -143,12 +142,10 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
 
     function isAssetListedInCore(address tokenAddress) internal view returns (bool isAssetListed) {
         VToken[] memory coreMarkets = ComptrollerInterface(CORE_POOL_COMPTROLLER).getAllMarkets();
-
         for (uint256 i; i < coreMarkets.length; ++i) {
             isAssetListed = (VBNB == address(coreMarkets[i]))
                 ? (tokenAddress == NATIVE_WRAPPED)
                 : (coreMarkets[i].underlying() == tokenAddress);
-
             if (isAssetListed) {
                 break;
             }
@@ -162,7 +159,6 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
         if (comptroller == CORE_POOL_COMPTROLLER) {
             return isAssetListedInCore(asset);
         }
-
         return PoolRegistryInterface(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0);
     }
 }
