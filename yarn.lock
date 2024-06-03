@@ -3188,9 +3188,9 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": 2.1.0
     "@venusprotocol/oracle": 2.0.0
-    "@venusprotocol/protocol-reserve": 2.1.0
+    "@venusprotocol/protocol-reserve": 2.2.0
     "@venusprotocol/solidity-utilities": ^2.0.0
-    "@venusprotocol/venus-protocol": 9.0.0-dev.9
+    "@venusprotocol/venus-protocol": 9.0.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3241,9 +3241,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:2.1.0":
-  version: 2.1.0
-  resolution: "@venusprotocol/protocol-reserve@npm:2.1.0"
+"@venusprotocol/protocol-reserve@npm:2.2.0":
+  version: 2.2.0
+  resolution: "@venusprotocol/protocol-reserve@npm:2.2.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3255,7 +3255,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: f817dc28232fb37e11d5e87d68b0dfca867916b6b17b30288c132c3025fe5700764fdb162befbaffaf8d9cba16990507690e811d0079982687688c94c6a0437c
+  checksum: ae875b95c1adabcc73ca52f74bf3f875c15e8a29cc6cbdf08038542692e5c397d986424194f1e1819659b0bc17d53770e75e7f74304ecbee24e9e84dd4ef79ed
   languageName: node
   linkType: hard
 
@@ -3353,9 +3353,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:9.0.0-dev.9":
-  version: 9.0.0-dev.9
-  resolution: "@venusprotocol/venus-protocol@npm:9.0.0-dev.9"
+"@venusprotocol/venus-protocol@npm:9.0.0":
+  version: 9.0.0
+  resolution: "@venusprotocol/venus-protocol@npm:9.0.0"
   dependencies:
     "@nomicfoundation/hardhat-ethers": ^3.0.0
     "@openzeppelin/contracts": 4.9.3
@@ -3367,7 +3367,7 @@ __metadata:
     bignumber.js: ^9.1.2
     dotenv: ^16.0.1
     module-alias: ^2.2.2
-  checksum: 9b32f1cb0e128f2afd30559b29e92b76d92eb430cfc5c0350cd378b7adbb4b0ab26cd157120a2914f3bb7a71ea12f0cd8270040c4378e627c7f5628913464ecb
+  checksum: 792f7497f186575bf8c7ce11840ec22ebf1dac548cb91d114fc539e0be5e5d635f8ff6d20d115c415871d725f953712b4d53eea3eabb2e5fbac4922e71b0661b
   languageName: node
   linkType: hard
 
