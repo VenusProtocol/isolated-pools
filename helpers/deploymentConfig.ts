@@ -4060,7 +4060,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.03", 8), // 0.03 WBTC
+            initialSupply: convertToUnit("0.0731263", 8), // 0.0731263 WBTC
             supplyCap: convertToUnit("900", 8),
             borrowCap: convertToUnit("500", 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
@@ -4078,7 +4078,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.6", 18), // 0.6 WETH
+            initialSupply: convertToUnit("1.317651", 18), // 1.317651 WETH
             supplyCap: convertToUnit("26000", 18),
             borrowCap: convertToUnit("23500", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
@@ -4096,7 +4096,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.78", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("2000", 6), // 2,000 USDC
+            initialSupply: convertToUnit("5000", 6), // 5,000 USDC
             supplyCap: convertToUnit("54000000", 6),
             borrowCap: convertToUnit("49000000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
@@ -4114,7 +4114,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.78", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("2000", 6), // 2,000 USDT
+            initialSupply: convertToUnit("4999.994418", 6), // 4,999.994418 USDT
             supplyCap: convertToUnit("20000000", 6),
             borrowCap: convertToUnit("18000000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
@@ -4132,7 +4132,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.55", 18),
             liquidationThreshold: convertToUnit("0.60", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("1000", 18), // 1,000 ARB
+            initialSupply: convertToUnit("4453.694805", 18), // 4,453.694805 ARB
             supplyCap: convertToUnit("16000000", 18),
             borrowCap: convertToUnit("9000000", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
