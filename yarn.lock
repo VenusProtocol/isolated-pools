@@ -3131,6 +3131,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@venusprotocol/governance-contracts@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@venusprotocol/governance-contracts@npm:2.1.0"
+  dependencies:
+    "@venusprotocol/solidity-utilities": 2.0.0
+    hardhat-deploy-ethers: ^0.3.0-beta.13
+    module-alias: ^2.2.2
+  checksum: af3f5e8705e54c99a86f47007ce67a04bb1f110c679ad2f9d722f548883b1eb14a28b54c46ee8340d7fa1ba097e1e4d788c98850ee046abe4d91a0315879ec9f
+  languageName: node
+  linkType: hard
+
 "@venusprotocol/isolated-pools@npm:^2.3.0":
   version: 2.8.0
   resolution: "@venusprotocol/isolated-pools@npm:2.8.0"
@@ -3179,7 +3190,7 @@ __metadata:
     "@venusprotocol/oracle": 2.0.0
     "@venusprotocol/protocol-reserve": 2.1.0
     "@venusprotocol/solidity-utilities": ^2.0.0
-    "@venusprotocol/venus-protocol": 8.0.0
+    "@venusprotocol/venus-protocol": 9.1.0-dev.2
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3305,6 +3316,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@venusprotocol/solidity-utilities@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "@venusprotocol/solidity-utilities@npm:2.0.3"
+  checksum: 5f196d61989e1b276b6f2d515c0410f3af07deee9bec58a6657e61d46b1810b2da6e2880d1ec737fd410f23a035c2db47b6a3ab2274cac229cabfcf03d4424ac
+  languageName: node
+  linkType: hard
+
 "@venusprotocol/token-bridge@npm:^1.1.0":
   version: 1.1.0
   resolution: "@venusprotocol/token-bridge@npm:1.1.0"
@@ -3320,20 +3338,36 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:8.0.0":
-  version: 8.0.0
-  resolution: "@venusprotocol/venus-protocol@npm:8.0.0"
+"@venusprotocol/token-bridge@npm:^2.0.0":
+  version: 2.1.0
+  resolution: "@venusprotocol/token-bridge@npm:2.1.0"
   dependencies:
+    "@layerzerolabs/solidity-examples": ^1.0.0
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    ethers: ^5.7.0
+    module-alias: ^2.2.2
+  checksum: 022163873126822b7cd84bd470b2f7bdb439cad1ac78136a5956418803bdc873360de28ab8d1e50f28ab80add900d56660c8273ac132ba47bbd3c3890b67b046
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/venus-protocol@npm:9.1.0-dev.2":
+  version: 9.1.0-dev.2
+  resolution: "@venusprotocol/venus-protocol@npm:9.1.0-dev.2"
+  dependencies:
+    "@nomicfoundation/hardhat-ethers": ^3.0.0
     "@openzeppelin/contracts": 4.9.3
     "@openzeppelin/contracts-upgradeable": ^4.8.0
-    "@venusprotocol/governance-contracts": ^2.0.0
+    "@venusprotocol/governance-contracts": ^2.1.0
     "@venusprotocol/protocol-reserve": ^2.0.0
-    "@venusprotocol/solidity-utilities": ^2.0.0
-    "@venusprotocol/token-bridge": ^1.1.0
+    "@venusprotocol/solidity-utilities": ^2.0.3
+    "@venusprotocol/token-bridge": ^2.0.0
     bignumber.js: ^9.1.2
     dotenv: ^16.0.1
     module-alias: ^2.2.2
-  checksum: 4f271dd8d8a4d2b8c2d220fbb22075a54a35402487574f261f730b1ba040d8a38c27d6fffa5a4f489a521100370f61867b7921d6ba09cc80592810f242bb8ed9
+  checksum: c64fb0e46f90215d018798d0bc78a5423aaa3e4319c072b39dc4d812de438bf2b60195793efb0bb399fee2fab04704b8d8db78072ce911f568cab6a6242f66e0
   languageName: node
   linkType: hard
 

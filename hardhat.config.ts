@@ -262,6 +262,16 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    xlayertestnet: {
+      url: process.env.ARCHIVE_NODE_xlayertestnet || "https://testrpc.xlayer.tech/",
+      chainId: 195,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    xlayermainnet: {
+      url: process.env.ARCHIVE_NODE_xlayermainnet || "https://rpc.xlayer.tech/",
+      chainId: 196,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -341,6 +351,22 @@ const config: HardhatUserConfig = {
           browserURL: "https://arbiscan.io/",
         },
       },
+      {
+        network: "xlayertestnet",
+        chainId: 195,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER_TESTNET",
+          browserURL: "https://www.oklink.com/xlayer-test",
+        },
+      },
+      {
+        network: "xlayermainnet",
+        chainId: 196,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER",
+          browserURL: "https://www.oklink.com/xlayer",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
@@ -351,6 +377,8 @@ const config: HardhatUserConfig = {
       opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      xlayertestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      xlayermainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {

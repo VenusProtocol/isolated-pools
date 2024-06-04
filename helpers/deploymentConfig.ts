@@ -12,6 +12,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { contracts as venusProtcolXlayerTestnet } from "@venusprotocol/venus-protocol/deployments/xlayertestnet.json";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
@@ -27,6 +28,7 @@ export type NetworkConfig = {
   opbnbtestnet: DeploymentConfig;
   opbnbmainnet: DeploymentConfig;
   arbitrumsepolia: DeploymentConfig;
+  xlayertestnet: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -132,6 +134,7 @@ export const blocksPerYear: BlocksPerYear = {
   arbitrumsepolia: 0, // for time based contracts
   arbitrumone: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
+  xlayertestnet: 0, // for time based contracts
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
@@ -140,6 +143,7 @@ export const OPBNBTESTNET_MULTISIG = "0xb15f6EfEbC276A3b9805df81b5FB3D50C2A62BDf
 export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207";
 export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A61C2";
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
+export const XLAYER_TESTNET_MULTISIG = "0x5961449d63149035aCfC0714D5155f24C9819004";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
@@ -214,6 +218,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: ARBITRUM_SEPOLIA_MULTISIG,
     CriticalTimelock: ARBITRUM_SEPOLIA_MULTISIG,
     AccessControlManager: governanceArbitrumSepolia.AccessControlManager.address,
+  },
+  xlayertestnet: {
+    VTreasury: venusProtcolXlayerTestnet.VTreasuryV8.address,
+    NormalTimelock: XLAYER_TESTNET_MULTISIG,
+    FastTrackTimelock: XLAYER_TESTNET_MULTISIG,
+    CriticalTimelock: XLAYER_TESTNET_MULTISIG,
+    AccessControlManager: "0x6dB7eC37a0fb4d97F9a292C47e5C938763Da861F",
   },
 };
 
@@ -3991,6 +4002,56 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.arbitrumsepolia,
   },
+  xlayertestnet: {
+    tokensConfig: [
+      {
+        isMock: false,
+        name: "Wrapped OKB",
+        symbol: "WOKB",
+        decimals: 18,
+        tokenAddress: "0xa7b9c3a116b20bedddbe4d90ff97157f67f0bd97",
+      },
+      {
+        isMock: true,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Wrapped ETH",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+
+      {
+        isMock: true,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "",
+      },
+    ],
+    poolConfig: [],
+    accessControlConfig: [],
+    preconfiguredAddresses: preconfiguredAddresses.xlayertestnet,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -4011,6 +4072,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opbnbmainnet;
     case "arbitrumsepolia":
       return globalConfig.arbitrumsepolia;
+    case "xlayertestnet":
+      return globalConfig.xlayertestnet;
     case "development":
       return globalConfig.bsctestnet;
     default:
