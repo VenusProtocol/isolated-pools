@@ -1,3 +1,10 @@
+## [3.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0-dev.2...v3.3.0-dev.3) (2024-06-04)
+
+
+### Features
+
+* updating deployment files ([1992fdf](https://github.com/VenusProtocol/isolated-pools/commit/1992fdf202ed54fff5c2ebff6984eccc1611145b))
+
 ## [3.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0-dev.1...v3.3.0-dev.2) (2024-06-04)
 
 
