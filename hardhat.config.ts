@@ -46,6 +46,7 @@ extendConfig((config: HardhatConfig) => {
         ],
         opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
         arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
+        arbitrumone: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone"],
       },
     };
   }
