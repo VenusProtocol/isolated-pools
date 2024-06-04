@@ -1,3 +1,23 @@
+## [3.3.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0...v3.3.0) (2024-06-04)
+
+
+### Features
+
+* updating deployment files ([7186a8f](https://github.com/VenusProtocol/isolated-pools/commit/7186a8f8000a13e0d6ef7ec5ce7c21e434f5dbca))
+* updating deployment files ([85677c7](https://github.com/VenusProtocol/isolated-pools/commit/85677c7320cb7196f4687a70183dd3afae33d712))
+* updating deployment files ([1992fdf](https://github.com/VenusProtocol/isolated-pools/commit/1992fdf202ed54fff5c2ebff6984eccc1611145b))
+* updating deployment files ([83c3358](https://github.com/VenusProtocol/isolated-pools/commit/83c3358fa37a11ed77150b3684e815de82774e39))
+
+
+### Bug Fixes
+
+* deployed IR model ([6f907fd](https://github.com/VenusProtocol/isolated-pools/commit/6f907fd8e134e17a1e80f1d2f747597132deee01))
+* fixed lint ([ee593a8](https://github.com/VenusProtocol/isolated-pools/commit/ee593a8b8e7df71ab2868476a4b526eacfa3ae2d))
+* fixed multiplier and removed deployment ([b75c500](https://github.com/VenusProtocol/isolated-pools/commit/b75c500d6c43c7674d9d1a5b9a8927d3fb788560))
+* redeployed ir ([35956ef](https://github.com/VenusProtocol/isolated-pools/commit/35956ef7bc99063fd69f2448e6056b49b8bbaf2f))
+* Revert update deployment config ([1ec1528](https://github.com/VenusProtocol/isolated-pools/commit/1ec1528e6334d1773129015461602d31eccbce04))
+* update deployment config ([a17d115](https://github.com/VenusProtocol/isolated-pools/commit/a17d115d7059d4da9896834b3f666ae2550a9bbb))
+
 ## [3.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0-dev.2...v3.3.0-dev.3) (2024-06-04)
 
 
