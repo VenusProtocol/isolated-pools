@@ -4045,7 +4045,7 @@ export const globalConfig: NetworkConfig = {
         name: "Venus",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: "",
+        tokenAddress: "0x702A73f85F9302D7A7D8Cd4ab81E37D62AA2974E",
       },
     ],
     poolConfig: [],
