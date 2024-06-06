@@ -1,0 +1,31 @@
+{
+  "name": "arbitrumsepolia",
+  "chainId": "421614",
+  "addresses": {
+    "ComptrollerBeacon": "0x12Dcb8D9F1eE7Ad7410F5B36B07bcC7891ab4cEf",
+    "ComptrollerImpl": "0x77AF9c816b0Ef51A64CF8731f77eDf65872b0973",
+    "Comptroller_Core": "0x006D44b6f5927b3eD83bD0c1C36Fb1A3BaCaC208",
+    "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
+    "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": "0xBbb522fCA8f5955942515D8EAa2222251a070a17",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x50e8FF8748684F5DbDAEc5554c7FE3E82Cdc19e1",
+    "MockARB": "0x4371bb358aB5cC192E481543417D2F67b8781731",
+    "MockUSDC": "0x86f096B1D970990091319835faF3Ee011708eAe8",
+    "MockUSDT": "0xf3118a17863996B9F2A073c9A66Faaa664355cf8",
+    "MockWBTC": "0xFb8d93FD3Cf18386a5564bb5619cD1FdB130dF7D",
+    "NativeTokenGateway_vWETH_Core": "0x196b19C2037863409C65CbF63592ae2a3CD2Dc2C",
+    "PoolLens": "0xd08422A9A7b19404cC01FB970a247d19CE4EA7fE",
+    "PoolRegistry": "0xf93Df3135e0D555185c0BC888073374cA551C5fE",
+    "PoolRegistry_Implementation": "0x0C30416C994874E15057d19940139B071A3e457E",
+    "PoolRegistry_Proxy": "0xf93Df3135e0D555185c0BC888073374cA551C5fE",
+    "RewardsDistributorImpl": "0x352AFB1fB169A426b9fea9c1B8804912d15D2826",
+    "RewardsDistributor_Core_0": "0x6c65135d102e2Dfa1b0852351cF9b2cbc1788972",
+    "RewardsDistributor_Core_0_Proxy": "0x6c65135d102e2Dfa1b0852351cF9b2cbc1788972",
+    "VTokenBeacon": "0x74ae9919F5866cE148c81331a5FCdE71b81c4056",
+    "VTokenImpl": "0x6CDe40D8AC0d0c70f2775DF5eBa7852062446dCe",
+    "VToken_vARB_Core": "0x292Ec2b45C549Bc2c6B31937dBd511beaAEabea8",
+    "VToken_vUSDC_Core": "0xd9d1e754464eFc7493B177d2c7be04816E089b4C",
+    "VToken_vUSDT_Core": "0xdEFbf0F9Ab6CdDd0a1FdDC894b358D0c0a39B052",
+    "VToken_vWBTC_Core": "0x49FB90A5815904649C44B87001a160C1301D6a2C",
+    "VToken_vWETH_Core": "0x807dCB6946dDF4C5C6446B1B07ACd248B08F45e2"
+  }
+}

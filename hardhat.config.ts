@@ -40,8 +40,13 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
-        bscmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet"],
+        bscmainnet: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+        ],
         opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
+        arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
+        arbitrumone: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone"],
       },
     };
   }
@@ -146,7 +151,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.13",
+        version: "0.8.25",
         settings: {
           optimizer: {
             enabled: true,
@@ -154,22 +159,7 @@ const config: HardhatUserConfig = {
               yul: !process.env.CI,
             },
           },
-          outputSelection: {
-            "*": {
-              "*": ["storageLayout"],
-            },
-          },
-        },
-      },
-      {
-        version: "0.8.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            details: {
-              yul: !process.env.CI,
-            },
-          },
+          evmVersion: "paris",
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
@@ -233,8 +223,7 @@ const config: HardhatUserConfig = {
     bscmainnet: {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
-      live: true,
-      timeout: 1200000, // 20 minutes
+      timeout: 1200000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     ethereum: {
@@ -262,6 +251,18 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
+    arbitrumsepolia: {
+      url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    arbitrumone: {
+      url: process.env.ARCHIVE_NODE_arbitrumone || "https://arb1.arbitrum.io/rpc",
+      chainId: 42161,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -283,6 +284,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.bscscan.com/api",
           browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "ethereum",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io",
         },
       },
       {
@@ -309,14 +326,32 @@ const config: HardhatUserConfig = {
           browserURL: "https://etherscan.io",
         },
       },
+      {
+        network: "arbitrumsepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: `https://api-sepolia.arbiscan.io/api`,
+          browserURL: "https://sepolia.arbiscan.io/",
+        },
+      },
+      {
+        network: "arbitrumone",
+        chainId: 42161,
+        urls: {
+          apiURL: `https://api.arbiscan.io/api/`,
+          browserURL: "https://arbiscan.io/",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
@@ -345,6 +380,9 @@ const config: HardhatUserConfig = {
       },
       {
         artifacts: "node_modules/@venusprotocol/protocol-reserve/artifacts",
+      },
+      {
+        artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
     ],
   },

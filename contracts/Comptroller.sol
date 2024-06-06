@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity 0.8.13;
+pragma solidity 0.8.25;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
@@ -1209,7 +1209,7 @@ contract Comptroller is
 
     /**
      * @notice Add a new RewardsDistributor and initialize it with all markets. We can add several RewardsDistributor
-     * contracts with the same rewardToken, and there could be overlaping among them considering the last reward block
+     * contracts with the same rewardToken, and there could be overlaping among them considering the last reward slot (block or second)
      * @dev Only callable by the admin
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance

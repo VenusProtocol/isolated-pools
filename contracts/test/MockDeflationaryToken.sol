@@ -1,4 +1,5 @@
-pragma solidity 0.8.13;
+// SPDX-License-Identifier: BSD-3-Clause
+pragma solidity 0.8.25;
 
 contract MockDeflatingToken {
     string public constant NAME = "Deflating Test Token";

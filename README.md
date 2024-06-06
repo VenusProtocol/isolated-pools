@@ -88,7 +88,7 @@ The `Comptroller` also includes two functions `liquidateAccount()` and `healAcco
 ## Prerequisites
 
 - NodeJS - 12.x
-- Solc - v0.8.13 (https://github.com/ethereum/solidity/releases/tag/v0.8.13)
+- Solc - v0.8.25 (https://github.com/ethereum/solidity/releases/tag/v0.8.25)
 
 ## Installing
 
@@ -110,7 +110,7 @@ REPORT_GAS=true npx hardhat test
 
 ```
 
-- To run fork tests add FORK_MAINNET=true and QUICK_NODE_KEY in the .env file.
+- To run fork tests add FORK=true, FORKED_NETWORK and one ARCHIVE_NODE var in the .env file.
 
 ## Deployment
 

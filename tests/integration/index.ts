@@ -1,27 +1,34 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { ProtocolShareReserve } from "@venusprotocol/protocol-reserve/typechain";
 import BigNumber from "bignumber.js";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
-import { ethers, network } from "hardhat";
-import { deployments } from "hardhat";
+import { deployments, ethers, network } from "hardhat";
 
 import { convertToUnit, scaleDownBy } from "../../helpers/utils";
 import {
   AccessControlManager,
   Comptroller,
+  IRiskFund,
   MockPriceOracle,
   MockToken,
   PoolRegistry,
-  ProtocolShareReserve,
   RewardsDistributor,
-  RiskFund,
   VToken,
 } from "../../typechain";
 import { Error } from "../hardhat/util/Errors";
 
 const { expect } = chai;
 chai.use(smock.matchers);
+
+const timeBasedIntegrationTests = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+let description: string = "block-based contracts";
+
+if (timeBasedIntegrationTests) {
+  description = "time-based contracts";
+}
+console.log(`integration tests are running for ${description}`);
 
 const toggleMining = async (status: boolean) => {
   if (!status) {
@@ -31,12 +38,13 @@ const toggleMining = async (status: boolean) => {
   }
 };
 
-const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }: any) => {
+const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }) => {
   await deployments.fixture();
   const { deployer, acc1, acc2, acc3 } = await getNamedAccounts();
   const PoolRegistry: PoolRegistry = await ethers.getContract("PoolRegistry");
   const AccessControlManager = await ethers.getContract("AccessControlManager");
-  const RiskFund = await ethers.getContract("RiskFund");
+  const RiskFund = await smock.fake<IRiskFund>("IRiskFund");
+
   const ProtocolShareReserve = await ethers.getContract("ProtocolShareReserve");
   const shortfall = await ethers.getContract("Shortfall");
 
@@ -49,7 +57,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const BTCB = await ethers.getContract("MockBTCB");
   const BUSD = await ethers.getContract("MockBUSD");
 
-  await RiskFund.setPoolRegistry(PoolRegistry.address);
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
   // Set Oracle
@@ -110,8 +117,6 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   const vBTCBPrice: BigNumber = new BigNumber(
     scaleDownBy((await priceOracle.getUnderlyingPrice(vBTCB.address)).toString(), 18),
   );
-
-  await RiskFund.setPoolRegistry(PoolRegistry.address);
 
   await ProtocolShareReserve.setPoolRegistry(PoolRegistry.address);
 
@@ -377,7 +382,11 @@ describe("Positive Cases", function () {
       await vBTCB.connect(acc2Signer).borrow(BTCBBorrowAmount);
 
       // Mining blocks
-      await mine(300000000);
+      if (timeBasedIntegrationTests) {
+        await mine(700000000);
+      } else {
+        await mine(300000000);
+      }
 
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
       await Comptroller.connect(acc1Signer).healAccount(acc2);
@@ -497,7 +506,9 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const repayAmount = convertToUnit("1000000000007133", 0);
+
+      let repayAmount = 1000000000007133;
+      if (timeBasedIntegrationTests) repayAmount = 1000000000002377;
       const param = {
         vTokenCollateral: vBNX.address,
         vTokenBorrowed: vBTCB.address,
@@ -779,13 +790,11 @@ describe("Risk Fund and Auction related scenarios", function () {
   let acc2: string;
   let deployer: string;
   let ProtocolShareReserve: ProtocolShareReserve;
-  let RiskFund: RiskFund;
-  let PoolRegistry: PoolRegistry;
+  let RiskFund: FakeContract<IRiskFund>;
 
   beforeEach(async () => {
     ({ fixture } = await setupTest());
-    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, deployer, ProtocolShareReserve, RiskFund, PoolRegistry } =
-      fixture);
+    ({ Comptroller, vBNX, vBTCB, BNX, BTCB, acc1, acc2, deployer, ProtocolShareReserve, RiskFund } = fixture);
   });
 
   describe("Generate risk fund swap it to base asset", () => {
@@ -815,10 +824,8 @@ describe("Risk Fund and Auction related scenarios", function () {
       // Approve more assets for liquidation
       await BTCB.connect(acc1Signer).faucet(convertToUnit("1", 18));
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit("1", 18));
-      await RiskFund.setPoolRegistry(PoolRegistry.address);
 
-      const fakeProtocolIncome = await smock.fake<RiskFund>("RiskFund");
-
+      const fakeProtocolIncome = await smock.fake<IRiskFund>("IRiskFund");
       await ProtocolShareReserve.connect(deployerSigner).addOrUpdateDistributionConfigs([
         {
           schema: 0,
@@ -857,6 +864,7 @@ describe("Risk Fund and Auction related scenarios", function () {
       const expectedTotalReserves = protocolSeizeTokens.mul(exchangeRateStored).div(convertToUnit(1, 18));
 
       await Comptroller.connect(acc1Signer).healAccount(acc2);
+
       expect(await BNX.balanceOf(ProtocolShareReserve.address)).to.be.equal(expectedTotalReserves);
       expect(await BNX.balanceOf(deployer)).to.be.equal(0);
       // Reduce reserves, transfer 50% to protocol income and rest 50% to riskFund
