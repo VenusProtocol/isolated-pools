@@ -3,7 +3,7 @@
   "chainId": "421614",
   "addresses": {
     "ComptrollerBeacon": "0x12Dcb8D9F1eE7Ad7410F5B36B07bcC7891ab4cEf",
-    "ComptrollerImpl": "0x77AF9c816b0Ef51A64CF8731f77eDf65872b0973",
+    "ComptrollerImpl": "0x3cE617FCeb5e9Ed622F73b483aC7c94053795197",
     "Comptroller_Core": "0x006D44b6f5927b3eD83bD0c1C36Fb1A3BaCaC208",
     "DefaultProxyAdmin": "0xA78A1Df376c3CEeBC5Fab574fe6EdDbbF76fd03e",
     "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": "0xBbb522fCA8f5955942515D8EAa2222251a070a17",
