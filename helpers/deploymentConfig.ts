@@ -2596,6 +2596,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xd85FfECdB4287587BC53c1934D548bF7480F11C4",
       },
+      {
+        isMock: true,
+        name: "rsETH",
+        symbol: "rsETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -3039,6 +3046,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus rsETH (Liquid Staked ETH)",
+            asset: "rsETH",
+            symbol: "vrsETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: "", // to be provided
+            supplyCap: convertToUnit(8_000, 18),
+            borrowCap: convertToUnit(3_600, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: "", // TBD
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3179,6 +3204,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "PT-weETH-26DEC2024",
         decimals: 18,
         tokenAddress: "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
+      },
+      {
+        isMock: false,
+        name: "rsETH",
+        symbol: "rsETH",
+        decimals: 18,
+        tokenAddress: "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
       },
     ],
     poolConfig: [
@@ -3540,6 +3572,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(0, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
+          },
+          {
+            name: "Venus rsETH (Liquid Staked ETH)",
+            asset: "rsETH",
+            symbol: "vrsETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: "", // to be provided
+            supplyCap: convertToUnit(8_000, 18),
+            borrowCap: convertToUnit(3_600, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: "", // TBD
           },
         ],
         rewards: [
