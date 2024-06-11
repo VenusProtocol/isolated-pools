@@ -3058,11 +3058,11 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.8", 18),
             liquidationThreshold: convertToUnit("0.85", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: "", // to be provided
+            initialSupply: convertToUnit(2, 18),
             supplyCap: convertToUnit(8_000, 18),
             borrowCap: convertToUnit(3_600, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: "", // TBD
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
         rewards: [
