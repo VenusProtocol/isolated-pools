@@ -4006,6 +4006,13 @@ export const globalConfig: NetworkConfig = {
     tokensConfig: [
       {
         isMock: false,
+        name: "Venus XVS",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0xc1Eb7689147C81aC840d4FF0D298489fc7986d52",
+      },
+      {
+        isMock: false,
         name: "Wrapped BTC",
         symbol: "WBTC",
         decimals: 8,
@@ -4137,6 +4144,25 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("9000000", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
+          },
+        ],
+        rewards: [
+          // XVS Rewards Over 90 days (7776000 seconds)
+          // WETH:    510 XVS for Suppliers
+          //          765 XVS for Borrowers
+          // WBTC:    1020 XVS for Suppliers
+          //          1530 XVS for Borrowers
+          // USDT:    1020 XVS for Suppliers
+          //          1530 XVS for Borrowers
+          // USDC:    1020 XVS for Suppliers
+          //          1530 XVS for Borrowers
+          // ARB:     510 XVS for Suppliers
+          //          765 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["WETH", "WBTC", "USDT", "USDC", "ARB"],
+            supplySpeeds: ["65586419753086", "131172839506172", "131172839506172", "131172839506172", "65586419753086"],
+            borrowSpeeds: ["98379629629629", "196759259259258", "196759259259258", "196759259259258", "98379629629629"],
           },
         ],
       },
