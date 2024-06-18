@@ -15,6 +15,7 @@
     "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps": "0x07a912CD58CbB5736d015608F424c43B2CAd0B5e",
     "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps": "0x0F84aF9A902dbb5a0986e5D5003189cF2B80A760",
     "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": "0xD9D3E7adA04993Cf06dE1A5c9C7f101BD1DefBF4",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x17F987e09896F19584799e3FFD10679b9C7C35f0",
     "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink4500bps": "0xae838dEB13Ff67681704AA69e31Da304918Ee43D",
     "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink7500bps": "0xa4f048254631119f4E899359711fB282589c4ED8",
     "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink8000bps": "0x694536cbCe185f8549Ca56cDFeE4531593762686",
@@ -57,6 +58,7 @@
     "VToken_vWETH_LiquidStakedETH": "0xc82780Db1257C788F262FBbDA960B3706Dfdcaf2",
     "VToken_vcrvUSD_Core": "0x672208C10aaAA2F9A6719F449C4C8227bc0BC202",
     "VToken_vcrvUSD_Curve": "0x2d499800239C4CD3012473Cb1EAE33562F0A6933",
+    "VToken_vrsETH_LiquidStakedETH": "0xDB6C345f864883a8F4cae87852Ac342589E76D1B",
     "VToken_vsFRAX_Core": "0x17142a05fe678e9584FA1d88EfAC1bF181bF7ABe",
     "VToken_vweETH_LiquidStakedETH": "0xb4933AF59868986316Ed37fa865C829Eba2df0C7",
     "VToken_vwstETH_LiquidStakedETH": "0x4a240F0ee138697726C8a3E43eFE6Ac3593432CB"
