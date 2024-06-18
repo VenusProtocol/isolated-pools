@@ -1,3 +1,19 @@
+## [3.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0...v3.4.0-dev.1) (2024-06-18)
+
+
+### Features
+
+* add bootstrap liquidity and vtoken receiver for rsETH on Ethereum ([562a165](https://github.com/VenusProtocol/isolated-pools/commit/562a165994dd223b7cc677546d0422382efe0f77))
+* add rsETH market deployment on Ethereum ([1fc4580](https://github.com/VenusProtocol/isolated-pools/commit/1fc45803e14c9169678e51bd6ca503bb325e7142))
+* add rsETH market on sepolia ([7d91a18](https://github.com/VenusProtocol/isolated-pools/commit/7d91a1871605680b38647dfa5bfd39ee340c45b4))
+* updating deployment files ([dfbba43](https://github.com/VenusProtocol/isolated-pools/commit/dfbba43b86c992aacd570acfc37f31a9400ae7c9))
+* updating deployment files ([cbb3af0](https://github.com/VenusProtocol/isolated-pools/commit/cbb3af087b74d855d320c884b7348b15746bf82b))
+
+
+### Bug Fixes
+
+* add initial supply & vTokenReceiver on sepolia ([5d4cbf2](https://github.com/VenusProtocol/isolated-pools/commit/5d4cbf21469d7a0d5b92e3ddf11c2adf0e257e5b))
+
 ## [3.3.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0...v3.3.0) (2024-06-04)
 
 
