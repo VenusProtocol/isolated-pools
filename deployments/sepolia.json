@@ -4516,8 +4516,8 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
-      "address": "0x9Fafd82fE0623B286FEbe02c82C9428AD6b0e420",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4000bps": {
+      "address": "0x0F2F036067BBFc5841d394Aee78F611C64f7c759",
       "abi": [
         {
           "inputs": [
@@ -4876,8 +4876,8 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4000bps": {
-      "address": "0x0F2F036067BBFc5841d394Aee78F611C64f7c759",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+      "address": "0x9Fafd82fE0623B286FEbe02c82C9428AD6b0e420",
       "abi": [
         {
           "inputs": [
