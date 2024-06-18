@@ -3431,11 +3431,11 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.9", 18),
             liquidationThreshold: convertToUnit("0.93", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("1", 18),
+            initialSupply: convertToUnit("1.2", 18),
             supplyCap: convertToUnit(10_000, 18),
             borrowCap: convertToUnit(1_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
+            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
         ],
         rewards: [
