@@ -1,3 +1,29 @@
+## [3.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.2...v3.4.0-dev.3) (2024-06-20)
+
+
+### Features
+
+* updating deployment files ([ee77794](https://github.com/VenusProtocol/isolated-pools/commit/ee7779431e194d8f464412fcebeeb0f3af5ca5aa))
+* updating deployment files ([0133f57](https://github.com/VenusProtocol/isolated-pools/commit/0133f579dafe2a87ce4aac33d5488eba1466bbcd))
+
+
+### Bug Fixes
+
+* added vtoken config ([ae481dd](https://github.com/VenusProtocol/isolated-pools/commit/ae481ddb84ae4833c95e37ff518c312056e3cb07))
+* deployed IR on ethereum ([7d9e2b5](https://github.com/VenusProtocol/isolated-pools/commit/7d9e2b52fd3ec302edf88d6476cf6ad2bfa62067))
+* deployed mock sfrxETH ([a4bf7ac](https://github.com/VenusProtocol/isolated-pools/commit/a4bf7ac0dfb8aa1b6abd4457f28388bf2f5726f4))
+* deployed vtoken on ethereum ([07407d2](https://github.com/VenusProtocol/isolated-pools/commit/07407d22594a07cfb0f30c4f41a75233065b3815))
+* deployed vtoken` ([1484602](https://github.com/VenusProtocol/isolated-pools/commit/1484602c70ceeba7b6cab50c64bba076f1585ab6))
+* fixed initialSupply ([4f1b80c](https://github.com/VenusProtocol/isolated-pools/commit/4f1b80cfacc35f24fd7680ad8d29072076d96564))
+* fixed vTokenReceiver ([f255cfe](https://github.com/VenusProtocol/isolated-pools/commit/f255cfee601107c6bb8842694e173a5002531f01))
+* remove commented code ([cf718f3](https://github.com/VenusProtocol/isolated-pools/commit/cf718f30ed005d1aef35738a9383850794a012a1))
+* resolved conflict ([6d95945](https://github.com/VenusProtocol/isolated-pools/commit/6d959459c8839fca35107516b470469de85fa593))
+* resolved conflict ([f04433e](https://github.com/VenusProtocol/isolated-pools/commit/f04433e6460b87d687a1f74a8396ce071acfe06b))
+* resolved conflict ([0b82507](https://github.com/VenusProtocol/isolated-pools/commit/0b82507d2803bda2c66347ca62803cf6bc95d913))
+* uncommented code ([fcae00f](https://github.com/VenusProtocol/isolated-pools/commit/fcae00f928bdc0079675b0df93679ce38f97ef2b))
+* uncommented code ([706ea77](https://github.com/VenusProtocol/isolated-pools/commit/706ea77d97215b195d0855e359b4f6ea2f9f6b4a))
+* updated caps ([8ecf76f](https://github.com/VenusProtocol/isolated-pools/commit/8ecf76f8dcd681380db6386ff38658678b5bf931))
+
 ## [3.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.1...v3.4.0-dev.2) (2024-06-18)
 
 
