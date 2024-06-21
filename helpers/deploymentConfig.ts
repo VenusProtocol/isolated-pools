@@ -145,6 +145,7 @@ export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
+const REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
@@ -2799,24 +2800,6 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
-          {
-            name: "Venus sfrxETH (Liquid Staked ETH)",
-            asset: "sfrxETH",
-            symbol: "vsfrxETH_LiquidStakedETH",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.09", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.40", 18),
-            collateralFactor: convertToUnit("0.9", 18),
-            liquidationThreshold: convertToUnit("0.93", 18),
-            reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("1", 18),
-            supplyCap: convertToUnit(10_000, 18),
-            borrowCap: convertToUnit(1_000, 18),
-            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
-          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -2834,11 +2817,9 @@ export const globalConfig: NetworkConfig = {
           //          1440 XVS for Borrowers
           // sFRAX:   1440 XVS for Suppliers
           //          960 XVS for Borrowers
-          // sfrxETH: 2400 XVS for Suppliers
-          //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX", "sfrxETH"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
             supplySpeeds: [
               "27777777777777",
               "83333333333333",
@@ -2847,7 +2828,6 @@ export const globalConfig: NetworkConfig = {
               "37037037037036",
               "1481481481481481",
               "2222222222222222",
-              "3703703703703703",
             ],
             borrowSpeeds: [
               "41666666666666",
@@ -2857,7 +2837,6 @@ export const globalConfig: NetworkConfig = {
               "55555555555555",
               "2222222222222222",
               "1481481481481481",
-              "0",
             ],
           },
           {
@@ -3093,6 +3072,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus sfrxETH (Liquid Staked ETH)",
+            asset: "sfrxETH",
+            symbol: "vsfrxETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.40", 18),
+            collateralFactor: convertToUnit("0.9", 18),
+            liquidationThreshold: convertToUnit("0.93", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("1.2", 18),
+            supplyCap: convertToUnit(10_000, 18),
+            borrowCap: convertToUnit(1_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3100,11 +3097,13 @@ export const globalConfig: NetworkConfig = {
           //          0 XVS for Borrowers
           // WETH:    165 XVS for Suppliers
           //          385 XVS for Borrowers
+          // sfrxETH: 24 XVS for Suppliers
+          //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["wstETH", "WETH"],
-            supplySpeeds: ["222222222222222", "254629629629629"],
-            borrowSpeeds: ["0", "594135802469135"],
+            markets: ["wstETH", "WETH", "sfrxETH"],
+            supplySpeeds: ["222222222222222", "254629629629629", "3703703703703"],
+            borrowSpeeds: ["0", "594135802469135", "0"],
           },
           {
             asset: "wstETH",
@@ -3419,24 +3418,6 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
-          {
-            name: "Venus sfrxETH (Liquid Staked ETH)",
-            asset: "sfrxETH",
-            symbol: "vsfrxETH_LiquidStakedETH",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.09", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.40", 18),
-            collateralFactor: convertToUnit("0.9", 18),
-            liquidationThreshold: convertToUnit("0.93", 18),
-            reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("1.2", 18),
-            supplyCap: convertToUnit(10_000, 18),
-            borrowCap: convertToUnit(1_000, 18),
-            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
-            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
-          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3454,11 +3435,9 @@ export const globalConfig: NetworkConfig = {
           //          1440 XVS for Borrowers
           // sFRAX:   1440 XVS for Suppliers
           //          960 XVS for Borrowers
-          // sfrxETH: 2400 XVS for Suppliers
-          //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX", "sfrxETH"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
             supplySpeeds: [
               "2777777777777777",
               "8333333333333333",
@@ -3467,7 +3446,6 @@ export const globalConfig: NetworkConfig = {
               "3703703703703703",
               "1481481481481481",
               "2222222222222222",
-              "3703703703703703",
             ],
             borrowSpeeds: [
               "4166666666666666",
@@ -3477,7 +3455,6 @@ export const globalConfig: NetworkConfig = {
               "5555555555555555",
               "2222222222222222",
               "1481481481481481",
-              "0",
             ],
           },
           {
@@ -3649,6 +3626,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7AAd74b7f0d60D5867B59dbD377a71783425af47",
           },
+          {
+            name: "Venus sfrxETH (Liquid Staked ETH)",
+            asset: "sfrxETH",
+            symbol: "vsfrxETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.40", 18),
+            collateralFactor: convertToUnit("0.9", 18),
+            liquidationThreshold: convertToUnit("0.93", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("1.2", 18),
+            supplyCap: convertToUnit(10_000, 18),
+            borrowCap: convertToUnit(1_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
+            vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3656,11 +3651,13 @@ export const globalConfig: NetworkConfig = {
           //          0 XVS for Borrowers
           // WETH:    16500 XVS for Suppliers
           //          38500 XVS for Borrowers
+          // sfrxETH: 2400 XVS for Suppliers
+          //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["wstETH", "WETH"],
-            supplySpeeds: ["22222222222222222", "25462962962962962"],
-            borrowSpeeds: ["0", "59413580246913580"],
+            markets: ["wstETH", "WETH", "sfrxETH"],
+            supplySpeeds: ["22222222222222222", "25462962962962962", "3703703703703703"],
+            borrowSpeeds: ["0", "59413580246913580", "0"],
           },
           {
             asset: "wstETH",
