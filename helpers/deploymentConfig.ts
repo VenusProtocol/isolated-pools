@@ -3097,12 +3097,12 @@ export const globalConfig: NetworkConfig = {
           //          0 XVS for Borrowers
           // WETH:    165 XVS for Suppliers
           //          385 XVS for Borrowers
-          // sfrxETH: 2400 XVS for Suppliers
+          // sfrxETH: 24 XVS for Suppliers
           //          0 XVS for Borrowers
           {
             asset: "XVS",
             markets: ["wstETH", "WETH", "sfrxETH"],
-            supplySpeeds: ["222222222222222", "254629629629629", "3703703703703703"],
+            supplySpeeds: ["222222222222222", "254629629629629", "3703703703703"],
             borrowSpeeds: ["0", "594135802469135", "0"],
           },
           {
