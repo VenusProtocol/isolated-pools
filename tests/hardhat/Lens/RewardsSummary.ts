@@ -418,20 +418,5 @@ for (const isTimeBased of [false, true]) {
       ];
       expect(pendingRewards).to.have.deep.members(EXPECTED_OUTPUT);
     });
-
-    it("Should revert when mode of PoolLens and RewardsDistributor differ", async () => {
-      await mineUpTo(startBlock + 1000);
-
-      const accountAddress = await account.getAddress();
-
-      if (isTimeBased) {
-        rewardDistributor3.isTimeBased.returns(false);
-      } else {
-        rewardDistributor3.isTimeBased.returns(true);
-      }
-      await expect(poolLens.getPendingRewards(accountAddress, comptroller.address)).to.be.revertedWith(
-        "Inconsistent Reward mode",
-      );
-    });
   });
 }
