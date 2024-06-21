@@ -145,6 +145,7 @@ export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
+const REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET = "300";
 const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
@@ -3436,7 +3437,7 @@ export const globalConfig: NetworkConfig = {
           //          960 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX", "sfrxETH"],
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD", "FRAX", "sFRAX"],
             supplySpeeds: [
               "2777777777777777",
               "8333333333333333",
@@ -3640,7 +3641,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("1.2", 18),
             supplyCap: convertToUnit(10_000, 18),
             borrowCap: convertToUnit(1_000, 18),
-            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
         ],
@@ -3654,7 +3655,7 @@ export const globalConfig: NetworkConfig = {
           //          0 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["wstETH", "WETH"],
+            markets: ["wstETH", "WETH", "sfrxETH"],
             supplySpeeds: ["22222222222222222", "25462962962962962", "3703703703703703"],
             borrowSpeeds: ["0", "59413580246913580", "0"],
           },
