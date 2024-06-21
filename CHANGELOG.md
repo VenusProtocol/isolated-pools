@@ -1,3 +1,20 @@
+## [3.4.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.3...v3.4.0-dev.4) (2024-06-21)
+
+
+### Features
+
+* updating deployment files ([387bb21](https://github.com/VenusProtocol/isolated-pools/commit/387bb214d8f61544eb8f09e71d7e1fed68ffd02b))
+
+
+### Bug Fixes
+
+* deployed vtokens ([dd85cb7](https://github.com/VenusProtocol/isolated-pools/commit/dd85cb7b3e91ed3bda181c0ace3c097673ff4555))
+* fixed initial supply ([c7b0f18](https://github.com/VenusProtocol/isolated-pools/commit/c7b0f188ddf6abd8c805c754e807f58666962552))
+* fixed rewards ([9ea00ee](https://github.com/VenusProtocol/isolated-pools/commit/9ea00ee01dd3f783629b1db658c6b59ff7412153))
+* fixed speed ([00afcb9](https://github.com/VenusProtocol/isolated-pools/commit/00afcb9415e5735fa13dc9dc532a00cee8ca4fdf))
+* removed deployments ([10b53e6](https://github.com/VenusProtocol/isolated-pools/commit/10b53e6db9af2a7a234affbbf670e7bdd62e139a))
+* updated deployment config ([87483bd](https://github.com/VenusProtocol/isolated-pools/commit/87483bdda3171a71e5b6b8f16993adc1f590301f))
+
 ## [3.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.2...v3.4.0-dev.3) (2024-06-20)
 
 
