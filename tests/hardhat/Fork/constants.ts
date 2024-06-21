@@ -1,3 +1,4 @@
+import GovernanceArbOne from "@venusprotocol/governance-contracts/deployments/arbitrumone.json";
 import GovernanceArbSep from "@venusprotocol/governance-contracts/deployments/arbitrumsepolia.json";
 import GovernanceBscMainnet from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import GovernanceBscTestnet from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
@@ -5,6 +6,7 @@ import GovernanceEthMainnet from "@venusprotocol/governance-contracts/deployment
 import GovernanceOpBnbMainnet from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import GovernanceOpBnbTestnet from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import GovernanceSepTestnet from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import OracleArbOne from "@venusprotocol/oracle/deployments/arbitrumone.json";
 import OracleArbSep from "@venusprotocol/oracle/deployments/arbitrumsepolia.json";
 import OracleBscMainnet from "@venusprotocol/oracle/deployments/bscmainnet.json";
 import OracleBscTestnet from "@venusprotocol/oracle/deployments/bsctestnet.json";
@@ -12,6 +14,7 @@ import OracleEthMainnet from "@venusprotocol/oracle/deployments/ethereum.json";
 import OracleOpBnbMainnet from "@venusprotocol/oracle/deployments/opbnbmainnet.json";
 import OracleOpBnbTestnet from "@venusprotocol/oracle/deployments/opbnbtestnet.json";
 import OracleSepTestnet from "@venusprotocol/oracle/deployments/sepolia.json";
+import PsrArbOne from "@venusprotocol/protocol-reserve/deployments/arbitrumone.json";
 import PsrArbSep from "@venusprotocol/protocol-reserve/deployments/arbitrumsepolia.json";
 import PsrBscMainnet from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
 import PsrBscTestnet from "@venusprotocol/protocol-reserve/deployments/bsctestnet.json";
@@ -19,6 +22,7 @@ import PsrEthereum from "@venusprotocol/protocol-reserve/deployments/ethereum.js
 import PsrOpBnbTestnet from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet/ProtocolShareReserve.json";
 import PsrSepTestnet from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
 
+import { contracts as ArbOneContracts } from "../../../deployments/arbitrumone.json";
 import { contracts as ArbSepContracts } from "../../../deployments/arbitrumsepolia.json";
 import { contracts as MainnetContracts } from "../../../deployments/bscmainnet.json";
 import { contracts as TestnetContracts } from "../../../deployments/bsctestnet.json";
@@ -78,7 +82,7 @@ export const contractAddresses = {
     COMPTROLLER: TestnetContracts.Comptroller_StableCoins.address,
     PSR: PsrBscTestnet.contracts.ProtocolShareReserve.address,
     SHORTFALL: TestnetContracts.Shortfall.address,
-    RISKFUND: TestnetContracts.RiskFund.address,
+    RISKFUND: PsrBscTestnet.contracts.RiskFundV2.address,
     REWARD_DISTRIBUTOR1: TestnetContracts.RewardsDistributor_StableCoins_0.address,
     POOL_REGISTRY: TestnetContracts.PoolRegistry.address,
     RESILIENT_ORACLE: OracleBscTestnet.contracts.ResilientOracle.address,
@@ -102,7 +106,7 @@ export const contractAddresses = {
     COMPTROLLER: MainnetContracts.Comptroller_Stablecoins.address,
     PSR: PsrBscMainnet.contracts.ProtocolShareReserve.address,
     SHORTFALL: MainnetContracts.Shortfall.address,
-    RISKFUND: MainnetContracts.RiskFund.address,
+    RISKFUND: PsrBscMainnet.contracts.RiskFundV2.address,
     REWARD_DISTRIBUTOR1: MainnetContracts.RewardsDistributor_Stablecoins_0.address,
     POOL_REGISTRY: MainnetContracts.PoolRegistry.address,
     RESILIENT_ORACLE: OracleBscMainnet.contracts.ResilientOracle.address,
@@ -166,7 +170,7 @@ export const contractAddresses = {
     VTOKEN2: ArbSepContracts.VToken_vARB_Core.address,
     COMPTROLLER: ArbSepContracts.Comptroller_Core.address,
     PSR: PsrArbSep.contracts.ProtocolShareReserve.address,
-    REWARD_DISTRIBUTOR1: "0x8E73FE3F7E29100Ad9d1C7F35fba2D2c823c8579",
+    REWARD_DISTRIBUTOR1: ArbSepContracts.RewardsDistributor_Core_0.address,
     POOL_REGISTRY: ArbSepContracts.PoolRegistry.address,
     RESILIENT_ORACLE: OracleArbSep.contracts.ResilientOracle.address,
     CHAINLINK_ORACLE: OracleArbSep.contracts.ChainlinkOracle.address,
@@ -178,5 +182,25 @@ export const contractAddresses = {
     ACC2: "0xce0180B3B992649CBc3C8e1cF95b4A52Be9bA3AF",
     ACC3: "0x13E0a421c17Ff1e7FFccFa05714957cF530b3aa4",
     BLOCK_NUMBER: 40468900,
+  },
+  arbitrumone: {
+    ADMIN: "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0",
+    ACM: GovernanceArbOne.contracts.AccessControlManager.address,
+    VTOKEN1: ArbOneContracts.VToken_vWETH_Core.address,
+    VTOKEN2: ArbOneContracts.VToken_vARB_Core.address,
+    COMPTROLLER: ArbOneContracts.Comptroller_Core.address,
+    PSR: PsrArbOne.contracts.ProtocolShareReserve.address,
+    REWARD_DISTRIBUTOR1: ArbOneContracts.RewardsDistributor_Core_0.address,
+    POOL_REGISTRY: ArbOneContracts.PoolRegistry.address,
+    RESILIENT_ORACLE: OracleArbOne.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: OracleArbOne.contracts.SequencerChainlinkOracle.address,
+    TOKEN1: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", // WETH
+    TOKEN2: "0x912ce59144191c1204e64559fe8253a0e49e6548", // ARB
+    TOKEN1_HOLDER: "0xf3fc178157fb3c87548baa86f9d24ba38e649b58",
+    TOKEN2_HOLDER: "0xf3fc178157fb3c87548baa86f9d24ba38e649b58",
+    ACC1: "0x32B701d3957fee432664cFA57FB44b0fE8496659",
+    ACC2: "0xB09F16F625B363875e39ADa56C03682088471523",
+    ACC3: "0x4A2339eE9c4fD4c99DE1d3AeB513B53ab42Db5ca",
+    BLOCK_NUMBER: 224198807,
   },
 };
