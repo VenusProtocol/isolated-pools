@@ -98,6 +98,8 @@ contract Comptroller is
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
 
+    /// @notice Emitted when a market is unlisted
+    event MarketUnlisted(address indexed vToken);
     /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
@@ -124,6 +126,42 @@ contract Comptroller is
 
     /// @notice Thrown when user is not member of market
     error MarketNotCollateral(address vToken, address user);
+
+    /// @notice Thrown when borrow action is not paused
+    error BorrowActionNotPaused();
+
+    /// @notice Thrown when mint action is not paused
+    error MintActionNotPaused();
+
+    /// @notice Thrown when redeem action is not paused
+    error RedeemActionNotPaused();
+
+    /// @notice Thrown when repay action is not paused
+    error RepayActionNotPaused();
+
+    /// @notice Thrown when seize action is not paused
+    error SeizeActionNotPaused();
+
+    /// @notice Thrown when exit market action is not paused
+    error ExitMarketActionNotPaused();
+
+    /// @notice Thrown when transfer action is not paused
+    error TransferActionNotPaused();
+
+    /// @notice Thrown when enter market action is not paused
+    error EnterMarketActionNotPaused();
+
+    /// @notice Thrown when liquidate action is not paused
+    error LiquidateActionNotPaused();
+
+    /// @notice Thrown when borrow cap is not zero
+    error BorrowCapIsNotZero();
+
+    /// @notice Thrown when supply cap is not zero
+    error SupplyCapIsNotZero();
+
+    /// @notice Thrown when collateral factor is not zero
+    error CollateralFactorIsNotZero();
 
     /**
      * @notice Thrown during the liquidation if user's total collateral amount is lower than
@@ -203,6 +241,86 @@ contract Comptroller is
         }
 
         return results;
+    }
+
+    /**
+     * @notice Unlist a market by setting isListed to false
+     * @dev Checks if all actions are paused, borrow/supply caps is set to 0 and collateral factor is to 0.
+     * @param market The address of the market (token) to unlist
+     * @return uint256 Always NO_ERROR for compatibility with Venus core tooling
+     * @custom:event MarketUnlisted is emitted on success
+     * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error BorrowActionNotPaused error is thrown if borrow action is not paused
+     * @custom:error MintActionNotPaused error is thrown if mint action is not paused
+     * @custom:error RedeemActionNotPaused error is thrown if redeem action is not paused
+     * @custom:error RepayActionNotPaused error is thrown if repay action is not paused
+     * @custom:error EnterMarketActionNotPaused error is thrown if enter market action is not paused
+     * @custom:error LiquidateActionNotPaused error is thrown if liquidate action is not paused
+     * @custom:error BorrowCapIsNotZero error is thrown if borrow cap is not zero
+     * @custom:error SupplyCapIsNotZero error is thrown if supply cap is not zero
+     * @custom:error CollateralFactorIsNotZero error is thrown if collateral factor is not zero
+     */
+    function unlistMarket(address market) external returns (uint256) {
+        _checkAccessAllowed("unlistMarket(address)");
+
+        Market storage _market = markets[market];
+
+        if (!_market.isListed) {
+            revert MarketNotListed(market);
+        }
+
+        if (!actionPaused(market, Action.BORROW)) {
+            revert BorrowActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.MINT)) {
+            revert MintActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.REDEEM)) {
+            revert RedeemActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.REPAY)) {
+            revert RepayActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.SEIZE)) {
+            revert SeizeActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.ENTER_MARKET)) {
+            revert EnterMarketActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.LIQUIDATE)) {
+            revert LiquidateActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.TRANSFER)) {
+            revert TransferActionNotPaused();
+        }
+
+        if (!actionPaused(market, Action.EXIT_MARKET)) {
+            revert ExitMarketActionNotPaused();
+        }
+
+        if (borrowCaps[market] != 0) {
+            revert BorrowCapIsNotZero();
+        }
+
+        if (supplyCaps[market] != 0) {
+            revert SupplyCapIsNotZero();
+        }
+
+        if (_market.collateralFactorMantissa != 0) {
+            revert CollateralFactorIsNotZero();
+        }
+
+        _market.isListed = false;
+        emit MarketUnlisted(market);
+
+        return NO_ERROR;
     }
 
     /**
@@ -749,7 +867,7 @@ contract Comptroller is
      * @custom:access Not restricted
      */
     function healAccount(address user) external {
-        VToken[] memory userAssets = accountAssets[user];
+        VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
 
         address liquidator = msg.sender;
@@ -860,7 +978,7 @@ contract Comptroller is
             );
         }
 
-        VToken[] memory borrowMarkets = accountAssets[borrower];
+        VToken[] memory borrowMarkets = getAssetsIn(borrower);
         uint256 marketsCount = borrowMarkets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
@@ -1245,17 +1363,6 @@ contract Comptroller is
     /*** Assets You Are In ***/
 
     /**
-     * @notice Returns the assets an account has entered
-     * @param account The address of the account to pull assets for
-     * @return A list with the assets the account has entered
-     */
-    function getAssetsIn(address account) external view returns (VToken[] memory) {
-        VToken[] memory assetsIn = accountAssets[account];
-
-        return assetsIn;
-    }
-
-    /**
      * @notice Returns whether the given account is entered in a given market
      * @param account The address of the account to check
      * @param vToken The vToken to check
@@ -1346,7 +1453,7 @@ contract Comptroller is
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
-        VToken[] memory vTokens = accountAssets[account];
+        VToken[] memory vTokens = getAssetsIn(account);
         uint256 vTokensCount = vTokens.length;
 
         ResilientOracleInterface oracle_ = oracle;
@@ -1364,6 +1471,33 @@ contract Comptroller is
      */
     function actionPaused(address market, Action action) public view returns (bool) {
         return _actionPaused[market][action];
+    }
+
+    /**
+     * @notice Returns the assets an account has entered
+     * @param account The address of the account to pull assets for
+     * @return A list with the assets the account has entered
+     */
+    function getAssetsIn(address account) public view returns (VToken[] memory) {
+        uint256 len;
+        VToken[] memory _accountAssets = accountAssets[account];
+        uint256 _accountAssetsLength = _accountAssets.length;
+
+        VToken[] memory assetsIn = new VToken[](_accountAssetsLength);
+
+        for (uint256 i; i < _accountAssetsLength; ++i) {
+            Market storage market = markets[address(_accountAssets[i])];
+            if (market.isListed) {
+                assetsIn[len] = _accountAssets[i];
+                ++len;
+            }
+        }
+
+        assembly {
+            mstore(assetsIn, len)
+        }
+
+        return assetsIn;
     }
 
     /**
@@ -1495,7 +1629,7 @@ contract Comptroller is
         function(VToken) internal view returns (Exp memory) weight
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         // For each asset the account is in
-        VToken[] memory assets = accountAssets[account];
+        VToken[] memory assets = getAssetsIn(account);
         uint256 assetsCount = assets.length;
 
         for (uint256 i; i < assetsCount; ++i) {
