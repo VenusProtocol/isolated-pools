@@ -219,8 +219,8 @@ const config: HardhatUserConfig = {
       gasPrice: 20000000000,
       // accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
       accounts: {
-        mnemonic: process.env.MNEMONIC || ""
-      }
+        mnemonic: process.env.MNEMONIC || "",
+      },
     },
     // Mainnet deployments are done through Frame wallet RPC
     bscmainnet: {
