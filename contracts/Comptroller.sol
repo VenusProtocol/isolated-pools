@@ -1115,6 +1115,22 @@ contract Comptroller is
         emit NewRewardsDistributor(address(_rewardsDistributor), address(_rewardsDistributor.rewardToken()));
     }
 
+    function removeRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
+        require(rewardsDistributorExists[address(_rewardsDistributor)], "not exists");
+
+        uint256 rewardsDistributorsLen = rewardsDistributors.length;
+
+        for (uint256 i; i < rewardsDistributorsLen; ++i) {
+            if (rewardsDistributors[i] == _rewardsDistributor) {
+                rewardsDistributors[i] = rewardsDistributors[rewardsDistributorsLen - 1];
+                rewardsDistributors.pop();
+                break;
+            }
+        }
+
+        rewardsDistributorExists[address(_rewardsDistributor)] = false;
+    }
+
     /**
      * @notice Sets a new price oracle for the Comptroller
      * @dev Only callable by the admin

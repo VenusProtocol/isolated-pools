@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x2CF0e211c99dFd28892cf80D142aA27a9042Dbf4",
+      "address": "0x6F16a377323ab1e34a9a7a06a4E68EbcCeB10A72",
       "abi": [
         {
           "inputs": [
@@ -131,7 +131,7 @@
               "type": "address"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             }
@@ -393,7 +393,7 @@
             },
             {
               "indexed": false,
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             },
@@ -845,7 +845,7 @@
               "type": "address"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             }
@@ -1772,6 +1772,19 @@
           "type": "function"
         },
         {
+          "inputs": [
+            {
+              "internalType": "contract RewardsDistributor",
+              "name": "_rewardsDistributor",
+              "type": "address"
+            }
+          ],
+          "name": "removeRewardsDistributor",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
           "inputs": [],
           "name": "renounceOwnership",
           "outputs": [],
@@ -1865,7 +1878,7 @@
               "type": "address[]"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action[]",
+              "internalType": "enum Action[]",
               "name": "actionsList",
               "type": "uint8[]"
             },
