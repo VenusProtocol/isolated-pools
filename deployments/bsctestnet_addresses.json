@@ -3,7 +3,7 @@
   "chainId": "97",
   "addresses": {
     "ComptrollerBeacon": "0xdDDD7725C073105fB2AbfCbdeC16708fC4c24B74",
-    "ComptrollerImpl": "0x2CF0e211c99dFd28892cf80D142aA27a9042Dbf4",
+    "ComptrollerImpl": "0x6F16a377323ab1e34a9a7a06a4E68EbcCeB10A72",
     "Comptroller_DeFi": "0x23a73971A6B9f6580c048B9CB188869B2A2aA2aD",
     "Comptroller_GameFi": "0x1F4f0989C51f12DAcacD4025018176711f3Bf289",
     "Comptroller_LiquidStakedBNB": "0x596B11acAACF03217287939f88d63b51d3771704",
