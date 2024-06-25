@@ -109,7 +109,7 @@ if (FORK) {
       // Calculation of reserves
       let currBlockOrTimestamp = await ethers.provider.getBlockNumber();
 
-      if (FORKED_NETWORK == "arbitrumsepolia") {
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
         currBlockOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
       }
       const blockDelta = BigNumber.from(currBlockOrTimestamp).sub(BigNumber.from(accrualBlockNumberPrior));

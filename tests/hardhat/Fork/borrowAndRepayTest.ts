@@ -28,7 +28,7 @@ chai.use(smock.matchers);
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
-if (FORK) console.log(`fork tests are running on ${FORKED_NETWORK}`);
+if (FORK) console.log(`fork tests are running on: ${FORKED_NETWORK}`);
 
 const {
   ACC1,

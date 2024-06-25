@@ -356,6 +356,7 @@ if (FORK) {
           opbnbtestnet: 1000000000288189,
           opbnbmainnet: 1000000008986559,
           arbitrumsepolia: 1000000000046406,
+          arbitrumone: 1000000032216389,
         };
 
         const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
