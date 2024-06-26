@@ -7,83 +7,82 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title TwoKinksInterestRateModel
- * @author Venus 
+ * @author Venus
  * @notice An interest rate model with two different steep increase each after a certain utilization threshold called **kink** is reached.
  */
 contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
-
     ////////////////////// SLOPE 1 //////////////////////
 
     /**
      * @notice The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate
      */
-    uint256 public immutable multiplierPerBlockOrTimestamp;
+    int256 public immutable MULTIPLIER_PER_BLOCK_OR_TIMESTAMP;
 
     /**
      * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0
      */
-    uint256 public immutable baseRatePerBlockOrTimestamp;
+    int256 public immutable BASE_RATE_PER_BLOCK_OR_TIMESTAMP;
 
     ////////////////////// SLOPE 2 //////////////////////
 
     /**
      * @notice The utilization point at which the multiplier2 is applied
      */
-    uint256 public immutable kink1;
- 
+    int256 public immutable KINK_1;
+
     /**
      * @notice The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate
      */
-    uint256 public immutable multiplier2PerBlockOrTimestamp;
+    int256 public immutable MULTIPLIER_2_PER_BLOCK_OR_TIMESTAMP;
 
     /**
-     * @notice The base interest rate per block or second which is the y-intercept when utilization rate hits kink1
+     * @notice The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1
      */
-    uint256 public immutable baseRate2PerBlockOrTimestamp;
+    int256 public immutable BASE_RATE_2_PER_BLOCK_OR_TIMESTAMP;
 
     ////////////////////// SLOPE 3 //////////////////////
 
     /**
      * @notice The utilization point at which the jump multiplier is applied
      */
-    uint256 public immutable kink2;
-
+    int256 public immutable KINK_2;
 
     /**
-     * @notice The multiplier per block or second after hitting kink2
+     * @notice The multiplier per block or second after hitting KINK_2
      */
-    uint256 public jumpMultiplierPerBlockOrTimestamp;
-    
+    int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_TIMESTAMP;
+
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
      * @param kink1_ The utilization point at which the multiplier2 is applied
-     * @param multiplier2PerYear_ The rate of increase in interest rate wrt utilization after hitting kink1 (scaled by EXP_SCALE)
-     * @param baseRate2PerYear_ The approximate target base APR after hitting kink1, as a mantissa (scaled by EXP_SCALE)
+     * @param multiplier2PerYear_ The rate of increase in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)
+     * @param baseRate2PerYear_ The approximate target base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)
      * @param kink2_ The utilization point at which the jump multiplier is applied
-     * @param jumpMultiplierPerYear_ The multiplier after hitting kink2
+     * @param jumpMultiplierPerYear_ The multiplier after hitting KINK_2
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
      * @param blocksPerYear_ The number of blocks per year
      */
     constructor(
-        uint256 baseRatePerYear_,
-        uint256 multiplierPerYear_,
-        uint256 kink1_,
-        uint256 multiplier2PerYear_,
-        uint256 baseRate2PerYear_,
-        uint256 kink2_,
-        uint256 jumpMultiplierPerYear_,
+        int256 baseRatePerYear_,
+        int256 multiplierPerYear_,
+        int256 kink1_,
+        int256 multiplier2PerYear_,
+        int256 baseRate2PerYear_,
+        int256 kink2_,
+        int256 jumpMultiplierPerYear_,
         bool timeBased_,
         uint256 blocksPerYear_
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
-        baseRatePerBlockOrTimestamp = baseRatePerYear_ / blocksOrSecondsPerYear;
-        multiplierPerBlockOrTimestamp = multiplierPerYear_ / blocksOrSecondsPerYear;
-        kink1 = kink1_;
-        multiplier2PerBlockOrTimestamp = multiplier2PerYear_ / blocksOrSecondsPerYear;
-        baseRate2PerBlockOrTimestamp = baseRate2PerYear_ / blocksOrSecondsPerYear;
-        kink2 = kink2_;
-        jumpMultiplierPerBlockOrTimestamp = jumpMultiplierPerYear_ / blocksOrSecondsPerYear;
+        int256 blocksOrSecondsPerYear_ = int256(blocksOrSecondsPerYear);
+        BASE_RATE_PER_BLOCK_OR_TIMESTAMP = baseRatePerYear_ / blocksOrSecondsPerYear_;
+        MULTIPLIER_PER_BLOCK_OR_TIMESTAMP = multiplierPerYear_ / blocksOrSecondsPerYear_;
+        KINK_1 = kink1_;
+        MULTIPLIER_2_PER_BLOCK_OR_TIMESTAMP = multiplier2PerYear_ / blocksOrSecondsPerYear_;
+        BASE_RATE_2_PER_BLOCK_OR_TIMESTAMP = baseRate2PerYear_ / blocksOrSecondsPerYear_;
+        KINK_2 = kink2_;
+        JUMP_MULTIPLIER_PER_BLOCK_OR_TIMESTAMP = jumpMultiplierPerYear_ / blocksOrSecondsPerYear_;
     }
 
     /**
@@ -169,19 +168,34 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         uint256 reserves,
         uint256 badDebt
     ) internal view returns (uint256) {
-        uint256 util = utilizationRate(cash, borrows, reserves, badDebt);
+        int256 util = int256(utilizationRate(cash, borrows, reserves, badDebt));
+        int256 expScale = int256(EXP_SCALE);
 
-        if (util < kink1) {
-            return ((util * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp;
-        } else if (util < kink2) {
-            uint256 rate1 = (((kink1 * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp);
-            uint256 rate2 = (((util - kink1) * multiplier2PerBlockOrTimestamp) / EXP_SCALE) + baseRate2PerBlockOrTimestamp;
-            return rate1 + rate2;
+        if (util < KINK_1) {
+            return _max(0, ((util * MULTIPLIER_PER_BLOCK_OR_TIMESTAMP) / expScale) + BASE_RATE_PER_BLOCK_OR_TIMESTAMP);
+        } else if (util < KINK_2) {
+            int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_TIMESTAMP) / expScale) +
+                BASE_RATE_PER_BLOCK_OR_TIMESTAMP);
+            int256 rate2 = (((util - KINK_1) * MULTIPLIER_2_PER_BLOCK_OR_TIMESTAMP) / expScale) +
+                BASE_RATE_2_PER_BLOCK_OR_TIMESTAMP;
+            return _max(0, rate1 + rate2);
         } else {
-            uint256 rate1 = (((kink1 * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp);
-            uint256 rate2 = (((kink2 - kink1) * multiplier2PerBlockOrTimestamp) / EXP_SCALE) + baseRate2PerBlockOrTimestamp;
-            uint256 rate3 = (((util - kink2) * jumpMultiplierPerBlockOrTimestamp) / EXP_SCALE);
-            return rate1 + rate2 + rate3;
+            int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_TIMESTAMP) / expScale) +
+                BASE_RATE_PER_BLOCK_OR_TIMESTAMP);
+            int256 rate2 = (((KINK_2 - KINK_1) * MULTIPLIER_2_PER_BLOCK_OR_TIMESTAMP) / expScale) +
+                BASE_RATE_2_PER_BLOCK_OR_TIMESTAMP;
+            int256 rate3 = (((util - KINK_2) * JUMP_MULTIPLIER_PER_BLOCK_OR_TIMESTAMP) / expScale);
+            return _max(0, rate1 + rate2 + rate3);
         }
+    }
+
+    /**
+     * @notice Returns the larger of two numbers
+     * @param a The first number
+     * @param b The second number
+     * @return The larger of the two numbers
+     */
+    function _max(int256 a, int256 b) internal pure returns (uint256) {
+        return uint256(a > b ? a : b);
     }
 }
