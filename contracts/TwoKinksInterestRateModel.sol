@@ -157,28 +157,6 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     }
 
     /**
-     * @notice Internal function to update the parameters of the interest rate model
-     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
-     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
-     * @param kink1_ The utilization point at which the multiplier2 is applied
-     * @param multiplier2PerYear The rate of increase in interest rate wrt utilization after hitting kink1 (scaled by EXP_SCALE)
-     * @param baseRate2PerYear The approximate target base APR after hitting kink1, as a mantissa (scaled by EXP_SCALE)
-     * @param kink2_ The utilization point at which the jump multiplier is applied
-     * @param jumpMultiplierPerYear The multiplier after hitting kink2
-     */
-    function _updateJumpRateModel(
-        uint256 baseRatePerYear,
-        uint256 multiplierPerYear,
-        uint256 kink1_,
-        uint256 multiplier2PerYear,
-        uint256 baseRate2PerYear,
-        uint256 kink2_,
-        uint256 jumpMultiplierPerYear
-    ) internal {
-        
-    }
-
-    /**
      * @notice Calculates the current borrow rate per slot (block or second), with the error code expected by the market
      * @param cash The amount of cash in the market
      * @param borrows The amount of borrows in the market
