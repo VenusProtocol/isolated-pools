@@ -54,18 +54,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
      * @notice The multiplier per block or second after hitting kink2
      */
     uint256 public jumpMultiplierPerBlockOrTimestamp;
-
     
-    event NewInterestParams(
-        uint256 baseRatePerBlockOrTimestamp,
-        uint256 multiplierPerBlockOrTimestamp,
-        uint256 kink1,
-        uint256 multiplier2PerBlockOrTimestamp,
-        uint256 baseRate2PerBlockOrTimestamp,
-        uint256 kink2,
-        uint256 jumpMultiplierPerBlockOrTimestamp
-    );
-
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
@@ -89,85 +78,83 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         bool timeBased_,
         uint256 blocksPerYear_
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
-        _updateJumpRateModel(
-            baseRatePerYear_,
-            multiplierPerYear_,
-            kink1_,
-            multiplier2PerYear_,
-            baseRate2PerYear_,
-            kink2_,
-            jumpMultiplierPerYear_
-        );
+        baseRatePerBlockOrTimestamp = baseRatePerYear_ / blocksOrSecondsPerYear;
+        multiplierPerBlockOrTimestamp = multiplierPerYear_ / blocksOrSecondsPerYear;
+        kink1 = kink1_;
+        multiplier2PerBlockOrTimestamp = multiplier2PerYear_ / blocksOrSecondsPerYear;
+        baseRate2PerBlockOrTimestamp = baseRate2PerYear_ / blocksOrSecondsPerYear;
+        kink2 = kink2_;
+        jumpMultiplierPerBlockOrTimestamp = jumpMultiplierPerYear_ / blocksOrSecondsPerYear;
     }
 
-    // /**
-    //  * @notice Calculates the current borrow rate per slot (block or second)
-    //  * @param cash The amount of cash in the market
-    //  * @param borrows The amount of borrows in the market
-    //  * @param reserves The amount of reserves in the market
-    //  * @param badDebt The amount of badDebt in the market
-    //  * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)
-    //  */
-    // function getBorrowRate(
-    //     uint256 cash,
-    //     uint256 borrows,
-    //     uint256 reserves,
-    //     uint256 badDebt
-    // ) external view override returns (uint256) {
-    //     return _getBorrowRate(cash, borrows, reserves, badDebt);
-    // }
+    /**
+     * @notice Calculates the current borrow rate per slot (block or second)
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market
+     * @param badDebt The amount of badDebt in the market
+     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)
+     */
+    function getBorrowRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 badDebt
+    ) external view override returns (uint256) {
+        return _getBorrowRate(cash, borrows, reserves, badDebt);
+    }
 
-    // /**
-    //  * @notice Calculates the current supply rate per slot (block or second)
-    //  * @param cash The amount of cash in the market
-    //  * @param borrows The amount of borrows in the market
-    //  * @param reserves The amount of reserves in the market
-    //  * @param reserveFactorMantissa The current reserve factor for the market
-    //  * @param badDebt The amount of badDebt in the market
-    //  * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
-    //  */
-    // function getSupplyRate(
-    //     uint256 cash,
-    //     uint256 borrows,
-    //     uint256 reserves,
-    //     uint256 reserveFactorMantissa,
-    //     uint256 badDebt
-    // ) public view virtual override returns (uint256) {
-    //     uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
-    //     uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);
-    //     uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
-    //     uint256 incomeToDistribute = borrows * rateToPool;
-    //     uint256 supply = cash + borrows + badDebt - reserves;
-    //     return incomeToDistribute / supply;
-    // }
+    /**
+     * @notice Calculates the current supply rate per slot (block or second)
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market
+     * @param reserveFactorMantissa The current reserve factor for the market
+     * @param badDebt The amount of badDebt in the market
+     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
+     */
+    function getSupplyRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 reserveFactorMantissa,
+        uint256 badDebt
+    ) public view virtual override returns (uint256) {
+        uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;
+        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);
+        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;
+        uint256 incomeToDistribute = borrows * rateToPool;
+        uint256 supply = cash + borrows + badDebt - reserves;
+        return incomeToDistribute / supply;
+    }
 
-    // /**
-    //  * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
-    //  * @param cash The amount of cash in the market
-    //  * @param borrows The amount of borrows in the market
-    //  * @param reserves The amount of reserves in the market (currently unused)
-    //  * @param badDebt The amount of badDebt in the market
-    //  * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
-    //  */
-    // function utilizationRate(
-    //     uint256 cash,
-    //     uint256 borrows,
-    //     uint256 reserves,
-    //     uint256 badDebt
-    // ) public pure returns (uint256) {
-    //     // Utilization rate is 0 when there are no borrows and badDebt
-    //     if ((borrows + badDebt) == 0) {
-    //         return 0;
-    //     }
+    /**
+     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market (currently unused)
+     * @param badDebt The amount of badDebt in the market
+     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
+     */
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 badDebt
+    ) public pure returns (uint256) {
+        // Utilization rate is 0 when there are no borrows and badDebt
+        if ((borrows + badDebt) == 0) {
+            return 0;
+        }
 
-    //     uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
+        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);
 
-    //     if (rate > EXP_SCALE) {
-    //         rate = EXP_SCALE;
-    //     }
+        if (rate > EXP_SCALE) {
+            rate = EXP_SCALE;
+        }
 
-    //     return rate;
-    // }
+        return rate;
+    }
 
     /**
      * @notice Internal function to update the parameters of the interest rate model
@@ -188,50 +175,36 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         uint256 kink2_,
         uint256 jumpMultiplierPerYear
     ) internal {
-        baseRatePerBlockOrTimestamp = baseRatePerYear / blocksOrSecondsPerYear;
-        multiplierPerBlockOrTimestamp = multiplierPerYear / blocksOrSecondsPerYear;
-        kink1 = kink1_;
-        multiplier2PerBlockOrTimestamp = multiplier2PerYear / blocksOrSecondsPerYear;
-        baseRate2PerBlockOrTimestamp = baseRate2PerYear / blocksOrSecondsPerYear;
-        kink2 = kink2_;
-        jumpMultiplierPerBlockOrTimestamp = jumpMultiplierPerYear / blocksOrSecondsPerYear;
-
-        emit NewInterestParams(
-            baseRatePerBlockOrTimestamp,
-            multiplierPerBlockOrTimestamp,
-            kink1,
-            multiplier2PerBlockOrTimestamp,
-            baseRate2PerBlockOrTimestamp,
-            kink2,
-            jumpMultiplierPerBlockOrTimestamp
-        );
+        
     }
 
-    // /**
-    //  * @notice Calculates the current borrow rate per slot (block or second), with the error code expected by the market
-    //  * @param cash The amount of cash in the market
-    //  * @param borrows The amount of borrows in the market
-    //  * @param reserves The amount of reserves in the market
-    //  * @param badDebt The amount of badDebt in the market
-    //  * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
-    //  */
-    // function _getBorrowRate(
-    //     uint256 cash,
-    //     uint256 borrows,
-    //     uint256 reserves,
-    //     uint256 badDebt
-    // ) internal view returns (uint256) {
-    //     uint256 util = utilizationRate(cash, borrows, reserves, badDebt);
-    //     uint256 kink_ = kink;
+    /**
+     * @notice Calculates the current borrow rate per slot (block or second), with the error code expected by the market
+     * @param cash The amount of cash in the market
+     * @param borrows The amount of borrows in the market
+     * @param reserves The amount of reserves in the market
+     * @param badDebt The amount of badDebt in the market
+     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
+     */
+    function _getBorrowRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 badDebt
+    ) internal view returns (uint256) {
+        uint256 util = utilizationRate(cash, borrows, reserves, badDebt);
 
-    //     if (util <= kink_) {
-    //         return ((util * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
-    //     }
-    //     uint256 normalRate = ((kink_ * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;
-    //     uint256 excessUtil;
-    //     unchecked {
-    //         excessUtil = util - kink_;
-    //     }
-    //     return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;
-    // }
+        if (util < kink1) {
+            return ((util * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp;
+        } else if (util < kink2) {
+            uint256 rate1 = (((kink1 * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp);
+            uint256 rate2 = (((util - kink1) * multiplier2PerBlockOrTimestamp) / EXP_SCALE) + baseRate2PerBlockOrTimestamp;
+            return rate1 + rate2;
+        } else {
+            uint256 rate1 = (((kink1 * multiplierPerBlockOrTimestamp) / EXP_SCALE) + baseRatePerBlockOrTimestamp);
+            uint256 rate2 = (((kink2 - kink1) * multiplier2PerBlockOrTimestamp) / EXP_SCALE) + baseRate2PerBlockOrTimestamp;
+            uint256 rate3 = (((util - kink2) * jumpMultiplierPerBlockOrTimestamp) / EXP_SCALE);
+            return rate1 + rate2 + rate3;
+        }
+    }
 }
