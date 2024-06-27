@@ -30,7 +30,7 @@ for (const isTimeBased of [false, true]) {
   const expScale = convertToUnit(1, 18);
 
   const description = getDescription(isTimeBased);
-  let slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
+  const slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
 
   describe(`${description}Two Kinks Interest Rate Model Tests`, async () => {
     const fixture = async () => {
@@ -52,7 +52,6 @@ for (const isTimeBased of [false, true]) {
 
     before(async () => {
       await loadFixture(fixture);
-      slotsPerYear = (await twoKinksInterestRateModel.blocksOrSecondsPerYear()).toNumber();
     });
 
     it("Utilization rate: borrows and badDebt is zero", async () => {
@@ -60,6 +59,7 @@ for (const isTimeBased of [false, true]) {
     });
 
     it("Should return correct number of blocks", async () => {
+      const slotsPerYear = (await twoKinksInterestRateModel.blocksOrSecondsPerYear()).toNumber();
       expect(await twoKinksInterestRateModel.blocksOrSecondsPerYear()).to.equal(slotsPerYear);
     });
 
@@ -180,6 +180,73 @@ for (const isTimeBased of [false, true]) {
       expect(await twoKinksInterestRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).equal(
         new BigNumber(rate1).plus(rate2).plus(rate3).toString(),
       );
+    });
+
+    it("Borrow Rate: above kink2 utilization and negative multipliers", async () => {
+      const multiplierPerYear = convertToUnit(-0.225, 18);
+      const multiplier2PerYear = convertToUnit(-0.625, 18);
+      const jumpMultiplierPerYear = convertToUnit(-6.8, 18);
+
+      const TwoKinksInterestRateModelFactory = await ethers.getContractFactory("TwoKinksInterestRateModel");
+
+      twoKinksInterestRateModel = await TwoKinksInterestRateModelFactory.deploy(
+        baseRatePerYear,
+        multiplierPerYear,
+        kink1,
+        multiplier2PerYear,
+        baseRate2PerYear,
+        kink2,
+        jumpMultiplierPerYear,
+        isTimeBased,
+        slotsPerYear,
+      );
+      await twoKinksInterestRateModel.deployed();
+
+      const cash = convertToUnit(12, 19);
+      const borrows = convertToUnit(21, 19);
+      const reserves = convertToUnit(1, 19);
+      const badDebt = convertToUnit(24, 19);
+
+      const multiplierPerBlockOrTimestamp = (
+        await twoKinksInterestRateModel.MULTIPLIER_PER_BLOCK_OR_SECOND()
+      ).toString();
+      const multiplier2PerBlockOrTimestamp = (
+        await twoKinksInterestRateModel.MULTIPLIER_2_PER_BLOCK_OR_SECOND()
+      ).toString();
+      const baseRatePerBlockOrTimestamp = (await twoKinksInterestRateModel.BASE_RATE_PER_BLOCK_OR_SECOND()).toString();
+      const baseRate2PerBlockOrTimestamp = (
+        await twoKinksInterestRateModel.BASE_RATE_2_PER_BLOCK_OR_SECOND()
+      ).toString();
+      const jumpMultiplierPerBlockOrTimestamp = (
+        await twoKinksInterestRateModel.JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND()
+      ).toString();
+      const utilizationRate = (
+        await twoKinksInterestRateModel.utilizationRate(cash, borrows, reserves, badDebt)
+      ).toString();
+
+      expect(new BigNumber(utilizationRate).toNumber()).to.be.gt(new BigNumber(kink2).toNumber());
+
+      const rate1 = new BigNumber(kink1)
+        .multipliedBy(multiplierPerBlockOrTimestamp)
+        .dividedBy(expScale)
+        .plus(baseRatePerBlockOrTimestamp)
+        .toFixed(0);
+      const rate2 = new BigNumber(new BigNumber(kink2).minus(kink1))
+        .multipliedBy(multiplier2PerBlockOrTimestamp)
+        .dividedBy(expScale)
+        .plus(baseRate2PerBlockOrTimestamp)
+        .toFixed(0);
+      const rate3 = new BigNumber(new BigNumber(utilizationRate).minus(kink2))
+        .multipliedBy(jumpMultiplierPerBlockOrTimestamp)
+        .dividedBy(expScale)
+        .toFixed(0);
+
+      let finalRate = new BigNumber(rate1).plus(rate2).plus(rate3).toNumber();
+      if (finalRate < 0) {
+        finalRate = 0;
+      }
+
+      expect(await twoKinksInterestRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).equal(finalRate);
     });
 
     it("Supply Rate", async () => {
