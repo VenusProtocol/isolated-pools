@@ -53,6 +53,11 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND;
 
     /**
+     * @notice Thrown when a negative value is not allowed
+     */
+    error NegativeValueNotAllowed();
+
+    /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
@@ -75,6 +80,10 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         bool timeBased_,
         uint256 blocksPerYear_
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        if (baseRatePerYear_ < 0 || baseRate2PerYear_ < 0 || kink1_ < 0 || kink2_ < 0) {
+            revert NegativeValueNotAllowed();
+        }
+
         int256 blocksOrSecondsPerYear_ = int256(blocksOrSecondsPerYear);
         BASE_RATE_PER_BLOCK_OR_SECOND = baseRatePerYear_ / blocksOrSecondsPerYear_;
         MULTIPLIER_PER_BLOCK_OR_SECOND = multiplierPerYear_ / blocksOrSecondsPerYear_;
