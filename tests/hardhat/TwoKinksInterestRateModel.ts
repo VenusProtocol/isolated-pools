@@ -1,7 +1,7 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import BigNumber from "bignumber.js";
-import chai from "chai";
+import chai, { util } from "chai";
 import { ethers } from "hardhat";
 
 import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
@@ -79,9 +79,11 @@ for (const isTimeBased of [false, true]) {
       const reserves = convertToUnit(2, 19);
       const badDebt = convertToUnit(1, 19);
       
-      const multiplierPerBlockOrTimestamp = (await twoKinksInterestRateModel.MULTIPLIER_PER_BLOCK_OR_TIMESTAMP()).toString();
-      const baseRatePerBlockOrTimestamp = (await twoKinksInterestRateModel.BASE_RATE_PER_BLOCK_OR_TIMESTAMP()).toString();
+      const multiplierPerBlockOrTimestamp = (await twoKinksInterestRateModel.MULTIPLIER_PER_BLOCK_OR_SECOND()).toString();
+      const baseRatePerBlockOrTimestamp = (await twoKinksInterestRateModel.BASE_RATE_PER_BLOCK_OR_SECOND()).toString();
       const utilizationRate = (await twoKinksInterestRateModel.utilizationRate(cash, borrows, reserves, badDebt)).toString();
+
+      expect((new BigNumber(utilizationRate)).toNumber()).to.be.lt((new BigNumber(kink1)).toNumber())
 
       const value = new BigNumber(utilizationRate)
         .multipliedBy(multiplierPerBlockOrTimestamp)
@@ -93,40 +95,42 @@ for (const isTimeBased of [false, true]) {
       );
     });
 
-    // it("Borrow Rate: above kink utilization", async () => {
-    //   const multiplierPerBlockOrTimestamp = (await jumpRateModel.multiplierPerBlock()).toString();
-    //   const jumpMultiplierPerBlockOrTimestamp = (await jumpRateModel.jumpMultiplierPerBlock()).toString();
-    //   const baseRatePerBlockOrTimestamp = (await jumpRateModel.baseRatePerBlock()).toString();
-    //   const utilizationRate = (
-    //     await jumpRateModel.utilizationRate(convertToUnit(6, 19), convertToUnit(16, 19), reserves, badDebt)
-    //   ).toString();
+    it("Borrow Rate: above kink1 and below kink2 utilization", async () => {
+      const cash = convertToUnit(12, 19);
+      const borrows = convertToUnit(3, 19);
+      const reserves = convertToUnit(1, 19);
+      const badDebt = convertToUnit(1, 19);
 
-    //   const value = new BigNumber(kink).multipliedBy(multiplierPerBlockOrTimestamp).dividedBy(expScale).toFixed(0);
+      const multiplierPerBlockOrTimestamp = (await twoKinksInterestRateModel.MULTIPLIER_PER_BLOCK_OR_SECOND()).toString();
+      const multiplier2PerBlockOrTimestamp = (await twoKinksInterestRateModel.MULTIPLIER_2_PER_BLOCK_OR_SECOND()).toString();
+      const baseRatePerBlockOrTimestamp = (await twoKinksInterestRateModel.BASE_RATE_PER_BLOCK_OR_SECOND()).toString();
+      const baseRate2PerBlockOrTimestamp = (await twoKinksInterestRateModel.BASE_RATE_2_PER_BLOCK_OR_SECOND()).toString();
+      const utilizationRate = (
+        await twoKinksInterestRateModel.utilizationRate(cash, borrows, reserves, badDebt)
+      ).toString();
 
-    //   const normalRate = Number(value) + Number(baseRatePerBlockOrTimestamp);
-    //   const excessUtil = Number(utilizationRate) - Number(kink);
+      expect((new BigNumber(utilizationRate)).toNumber()).to.be.gt((new BigNumber(kink1)).toNumber())
+      expect((new BigNumber(utilizationRate)).toNumber()).to.be.lt((new BigNumber(kink2)).toNumber())
 
-    //   const jumpValue = new BigNumber(excessUtil)
-    //     .multipliedBy(jumpMultiplierPerBlockOrTimestamp)
-    //     .dividedBy(expScale)
-    //     .toFixed(0);
+      const rate1 = new BigNumber(kink1).multipliedBy(multiplierPerBlockOrTimestamp).dividedBy(expScale).plus(baseRatePerBlockOrTimestamp).toFixed(0);
+      const rate2 = new BigNumber((new BigNumber(utilizationRate)).minus(kink1)).multipliedBy(multiplier2PerBlockOrTimestamp).dividedBy(expScale).plus(baseRate2PerBlockOrTimestamp).toFixed(0);
+      
+      expect(await twoKinksInterestRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).equal(
+        Number(rate1) + Number(rate2),
+      );
+    });
 
-    //   expect(await jumpRateModel.getBorrowRate(convertToUnit(6, 19), convertToUnit(16, 19), reserves, badDebt)).equal(
-    //     Number(jumpValue) + Number(normalRate),
-    //   );
-    // });
+    it("Supply Rate", async () => {
+      const reserveMantissa = convertToUnit(1, 17);
+      const oneMinusReserveFactor = Number(expScale) - Number(reserveMantissa);
+      const borrowRate = (await twoKinksInterestRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).toString();
+      const rateToPool = new BigNumber(borrowRate).multipliedBy(oneMinusReserveFactor).dividedBy(expScale).toFixed(0);
+      const rate = new BigNumber(borrows)
+        .multipliedBy(expScale)
+        .dividedBy(Number(cash) + Number(borrows) + Number(badDebt) - Number(reserves));
+      const supplyRate = new BigNumber(rateToPool).multipliedBy(rate).dividedBy(expScale).toFixed(0);
 
-    // it("Supply Rate", async () => {
-    //   const reserveMantissa = convertToUnit(1, 17);
-    //   const oneMinusReserveFactor = Number(expScale) - Number(reserveMantissa);
-    //   const borrowRate = (await jumpRateModel.getBorrowRate(cash, borrows, reserves, badDebt)).toString();
-    //   const rateToPool = new BigNumber(borrowRate).multipliedBy(oneMinusReserveFactor).dividedBy(expScale).toFixed(0);
-    //   const rate = new BigNumber(borrows)
-    //     .multipliedBy(expScale)
-    //     .dividedBy(Number(cash) + Number(borrows) + Number(badDebt) - Number(reserves));
-    //   const supplyRate = new BigNumber(rateToPool).multipliedBy(rate).dividedBy(expScale).toFixed(0);
-
-    //   expect(await jumpRateModel.getSupplyRate(cash, borrows, reserves, reserveMantissa, badDebt)).equal(supplyRate);
-    // });
+      expect(await twoKinksInterestRateModel.getSupplyRate(cash, borrows, reserves, reserveMantissa, badDebt)).equal(supplyRate);
+    });
   });
 }
