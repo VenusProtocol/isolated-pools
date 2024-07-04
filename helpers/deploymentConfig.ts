@@ -3463,6 +3463,24 @@ export const globalConfig: NetworkConfig = {
             supplySpeeds: ["77160493827160493"], // 50000 CRV over 90 days (648000 blocks)
             borrowSpeeds: ["115740740740740740"], // 75000 CRV over 90 days (648000 blocks)
           },
+          {
+            asset: "XVS",
+            markets: ["WETH", "WBTC", "USDT", "USDC", "crvUSD"],
+            supplySpeeds: [
+              "2083333333333333",
+              "6250000000000000",
+              "6250000000000000",
+              "6250000000000000",
+              "2777777777777777",
+            ],
+            borrowSpeeds: [
+              "3125000000000000",
+              "9375000000000000",
+              "9375000000000000",
+              "9375000000000000",
+              "4166666666666666",
+            ],
+          },
         ],
       },
       {
@@ -3526,6 +3544,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["crvUSD"],
             supplySpeeds: ["77160493827160493"], // 50000 CRV over 90 days (648000 blocks)
             borrowSpeeds: ["115740740740740740"], // 75000 CRV over 90 days (648000 blocks)
+          },
+          {
+            asset: "XVS",
+            markets: ["vCRV", "crvUSD"],
+            supplySpeeds: ["694444444444444", "694444444444444"],
+            borrowSpeeds: ["1041666666666666", "1041666666666666"],
           },
         ],
       },
@@ -3670,6 +3694,12 @@ export const globalConfig: NetworkConfig = {
             markets: ["weETH"],
             supplySpeeds: ["23148"], // 5,000 USDC for 30 days (216000 blocks)
             borrowSpeeds: ["0"],
+          },
+          {
+            asset: "XVS",
+            markets: ["wstETH", "WETH"],
+            supplySpeeds: ["22222222222222222", "25462962962962962"],
+            borrowSpeeds: ["0", "59413580246913580"],
           },
         ],
       },
