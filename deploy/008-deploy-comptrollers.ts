@@ -19,16 +19,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const maxLoopsLimit = 100;
 
-  // Comptroller Beacon
   const comptrollerImpl: DeployResult = await deploy("ComptrollerImpl", {
     contract: "Comptroller",
     from: deployer,
     args: [poolRegistry.address],
     log: true,
     autoMine: true,
-    skipIfAlreadyDeployed: true,
   });
 
+  // Comptroller Beacon
   const comptrollerBeacon: DeployResult = await deploy("ComptrollerBeacon", {
     contract: "UpgradeableBeacon",
     from: deployer,
