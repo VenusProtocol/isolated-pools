@@ -1,3 +1,11 @@
+## [3.4.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.4...v3.4.0-dev.5) (2024-07-05)
+
+
+### Features
+
+* deploy new ETH rewards distributors ([5b08633](https://github.com/VenusProtocol/isolated-pools/commit/5b08633e4bb66c2b5ccf88ae9b851e93fc08e985))
+* updating deployment files ([9eea189](https://github.com/VenusProtocol/isolated-pools/commit/9eea189c69dc9357d9ea35bbd0cfe9eb5d844a6a))
+
 ## [3.4.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.3...v3.4.0-dev.4) (2024-06-21)
 
 
