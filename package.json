@@ -72,9 +72,9 @@
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "2.1.0",
-    "@venusprotocol/oracle": "2.0.0",
-    "@venusprotocol/protocol-reserve": "2.2.0",
-    "@venusprotocol/venus-protocol": "9.0.0",
+    "@venusprotocol/oracle": "https://github.com/VenusProtocol/oracle#e80102610bbf3beac2d4c1c09f37e7aca1388d10",
+    "@venusprotocol/protocol-reserve": "https://github.com/VenusProtocol/protocol-reserve#27b47ff4fc84ce30654f317f22749a5f5d93aaa6",
+    "@venusprotocol/venus-protocol": "https://github.com/VenusProtocol/venus-protocol#880d57785edab22661976f60ad1f0f6fe5b2698e",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
     "dotenv": "^10.0.0",
@@ -99,6 +99,11 @@
     "ts-node": "^10.7.0",
     "typechain": "^5.2.0",
     "typescript": "^4.6.3"
+  },
+  "peerDependencies": {
+    "@venusprotocol/oracle": "",
+    "@venusprotocol/protocol-reserve": "",
+    "@venusprotocol/venus-protocol": ""
   },
   "resolutions": {
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
