@@ -1,3 +1,24 @@
+## [3.4.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.5...v3.4.0-dev.6) (2024-07-15)
+
+
+### Features
+
+* deploy comptroller implementation to ethereum ([9f7a7f0](https://github.com/VenusProtocol/isolated-pools/commit/9f7a7f09c587626980270e3d9e6798ae6f09913d))
+* deploy comptroller implementation to sepolia ([63b8f77](https://github.com/VenusProtocol/isolated-pools/commit/63b8f77c56eed2484e30580e2376c85dcbb39d06))
+* updating deployment files ([56c1ca4](https://github.com/VenusProtocol/isolated-pools/commit/56c1ca4a82e807b1c2cb3fe5857c1c1047899928))
+
+
+### Bug Fixes
+
+* add id to configuration deployment script setting pool ownership ([68937b6](https://github.com/VenusProtocol/isolated-pools/commit/68937b666bf0977fe286c4cef99a0cb6f08285b0))
+* deploy new implementation when implementation contract changes ([5d40422](https://github.com/VenusProtocol/isolated-pools/commit/5d404229cb612c1558bb107e5cbb1a08efea23d1))
+* skip non existant comptroller on bsctestnet ([d3b0581](https://github.com/VenusProtocol/isolated-pools/commit/d3b058163c6a0609c813af7b45613e9185635908))
+
+
+### Reverts
+
+* Revert "fix: remove initial liquidity commands from deploymets" ([3d2002f](https://github.com/VenusProtocol/isolated-pools/commit/3d2002f9cfa5f89b670c222b5b575df01b60857a))
+
 ## [3.4.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.4...v3.4.0-dev.5) (2024-07-05)
 
 
