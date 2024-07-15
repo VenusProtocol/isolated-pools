@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x13B3f65C0e2C64528F678B3C78ccac7341a2A66C",
+      "address": "0x25973b6BF39298D87B5498760a6c24CA06C3B40a",
       "abi": [
         {
           "inputs": [
@@ -131,7 +131,7 @@
               "type": "address"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             }
@@ -393,7 +393,7 @@
             },
             {
               "indexed": false,
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             },
@@ -845,7 +845,7 @@
               "type": "address"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action",
+              "internalType": "enum Action",
               "name": "action",
               "type": "uint8"
             }
@@ -1865,7 +1865,7 @@
               "type": "address[]"
             },
             {
-              "internalType": "enum ComptrollerStorage.Action[]",
+              "internalType": "enum Action[]",
               "name": "actionsList",
               "type": "uint8[]"
             },
