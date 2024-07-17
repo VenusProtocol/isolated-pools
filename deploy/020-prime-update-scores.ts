@@ -42,9 +42,11 @@ const func: DeployFunction = async function () {
 
   const markets = await prime.getAllMarkets();
 
+  // Ignore WETH market
+  const skipMarkets = [(await ethers.getContract(`VToken_vWETH_LiquidStakedETH`)).address];
+
   for (const market of markets) {
-    // Ignore WETH market
-    if (market == markets[markets.length - 1]) {
+    if (skipMarkets.includes(market)) {
       continue;
     }
 
