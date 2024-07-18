@@ -48,16 +48,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
-
-  const comptrollerStablecoinsAddresses = (await deployments.get("Comptroller_Stablecoins")).address;
-  await deploy("SwapRouter_Stablecoins", {
-    contract: "SwapRouter",
-    from: deployer,
-    args: [wBNBAddress, pancakeFactoryAddress, comptrollerStablecoinsAddresses, vbnbAddress],
-    log: true,
-    autoMine: true,
-    skipIfAlreadyDeployed: true,
-  });
+  if (hre.network.name !== "bsctestnet") {
+    const comptrollerStablecoinsAddresses = (await deployments.get("Comptroller_Stablecoins")).address;
+    await deploy("SwapRouter_Stablecoins", {
+      contract: "SwapRouter",
+      from: deployer,
+      args: [wBNBAddress, pancakeFactoryAddress, comptrollerStablecoinsAddresses, vbnbAddress],
+      log: true,
+      autoMine: true,
+      skipIfAlreadyDeployed: true,
+    });
+  }
 
   const comptrollerTronAddresses = (await deployments.get("Comptroller_Tron")).address;
   await deploy("SwapRouter_Tron", {

@@ -109,7 +109,7 @@ contract ComptrollerStorage {
     uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18; // 0.9
 
     // No collateralFactorMantissa may exceed this value
-    uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.9e18; // 0.9
+    uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.95e18; // 0.95
 
     /// Prime token address
     IPrime public prime;

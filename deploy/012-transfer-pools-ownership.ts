@@ -71,4 +71,5 @@ const transferSingleStepOwnerships = async (contractNames: string[], targetOwner
 };
 
 func.tags = ["TransferPoolsOwnership", "il"];
+func.id = "transfer_pools_ownership"; // id required to prevent re-execution
 export default func;

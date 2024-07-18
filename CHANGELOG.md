@@ -1,3 +1,98 @@
+## [3.4.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.5...v3.4.0-dev.6) (2024-07-15)
+
+
+### Features
+
+* deploy comptroller implementation to ethereum ([9f7a7f0](https://github.com/VenusProtocol/isolated-pools/commit/9f7a7f09c587626980270e3d9e6798ae6f09913d))
+* deploy comptroller implementation to sepolia ([63b8f77](https://github.com/VenusProtocol/isolated-pools/commit/63b8f77c56eed2484e30580e2376c85dcbb39d06))
+* updating deployment files ([56c1ca4](https://github.com/VenusProtocol/isolated-pools/commit/56c1ca4a82e807b1c2cb3fe5857c1c1047899928))
+
+
+### Bug Fixes
+
+* add id to configuration deployment script setting pool ownership ([68937b6](https://github.com/VenusProtocol/isolated-pools/commit/68937b666bf0977fe286c4cef99a0cb6f08285b0))
+* deploy new implementation when implementation contract changes ([5d40422](https://github.com/VenusProtocol/isolated-pools/commit/5d404229cb612c1558bb107e5cbb1a08efea23d1))
+* skip non existant comptroller on bsctestnet ([d3b0581](https://github.com/VenusProtocol/isolated-pools/commit/d3b058163c6a0609c813af7b45613e9185635908))
+
+
+### Reverts
+
+* Revert "fix: remove initial liquidity commands from deploymets" ([3d2002f](https://github.com/VenusProtocol/isolated-pools/commit/3d2002f9cfa5f89b670c222b5b575df01b60857a))
+
+## [3.4.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.4...v3.4.0-dev.5) (2024-07-05)
+
+
+### Features
+
+* deploy new ETH rewards distributors ([5b08633](https://github.com/VenusProtocol/isolated-pools/commit/5b08633e4bb66c2b5ccf88ae9b851e93fc08e985))
+* updating deployment files ([9eea189](https://github.com/VenusProtocol/isolated-pools/commit/9eea189c69dc9357d9ea35bbd0cfe9eb5d844a6a))
+
+## [3.4.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.3...v3.4.0-dev.4) (2024-06-21)
+
+
+### Features
+
+* updating deployment files ([387bb21](https://github.com/VenusProtocol/isolated-pools/commit/387bb214d8f61544eb8f09e71d7e1fed68ffd02b))
+
+
+### Bug Fixes
+
+* deployed vtokens ([dd85cb7](https://github.com/VenusProtocol/isolated-pools/commit/dd85cb7b3e91ed3bda181c0ace3c097673ff4555))
+* fixed initial supply ([c7b0f18](https://github.com/VenusProtocol/isolated-pools/commit/c7b0f188ddf6abd8c805c754e807f58666962552))
+* fixed rewards ([9ea00ee](https://github.com/VenusProtocol/isolated-pools/commit/9ea00ee01dd3f783629b1db658c6b59ff7412153))
+* fixed speed ([00afcb9](https://github.com/VenusProtocol/isolated-pools/commit/00afcb9415e5735fa13dc9dc532a00cee8ca4fdf))
+* removed deployments ([10b53e6](https://github.com/VenusProtocol/isolated-pools/commit/10b53e6db9af2a7a234affbbf670e7bdd62e139a))
+* updated deployment config ([87483bd](https://github.com/VenusProtocol/isolated-pools/commit/87483bdda3171a71e5b6b8f16993adc1f590301f))
+
+## [3.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.2...v3.4.0-dev.3) (2024-06-20)
+
+
+### Features
+
+* updating deployment files ([ee77794](https://github.com/VenusProtocol/isolated-pools/commit/ee7779431e194d8f464412fcebeeb0f3af5ca5aa))
+* updating deployment files ([0133f57](https://github.com/VenusProtocol/isolated-pools/commit/0133f579dafe2a87ce4aac33d5488eba1466bbcd))
+
+
+### Bug Fixes
+
+* added vtoken config ([ae481dd](https://github.com/VenusProtocol/isolated-pools/commit/ae481ddb84ae4833c95e37ff518c312056e3cb07))
+* deployed IR on ethereum ([7d9e2b5](https://github.com/VenusProtocol/isolated-pools/commit/7d9e2b52fd3ec302edf88d6476cf6ad2bfa62067))
+* deployed mock sfrxETH ([a4bf7ac](https://github.com/VenusProtocol/isolated-pools/commit/a4bf7ac0dfb8aa1b6abd4457f28388bf2f5726f4))
+* deployed vtoken on ethereum ([07407d2](https://github.com/VenusProtocol/isolated-pools/commit/07407d22594a07cfb0f30c4f41a75233065b3815))
+* deployed vtoken` ([1484602](https://github.com/VenusProtocol/isolated-pools/commit/1484602c70ceeba7b6cab50c64bba076f1585ab6))
+* fixed initialSupply ([4f1b80c](https://github.com/VenusProtocol/isolated-pools/commit/4f1b80cfacc35f24fd7680ad8d29072076d96564))
+* fixed vTokenReceiver ([f255cfe](https://github.com/VenusProtocol/isolated-pools/commit/f255cfee601107c6bb8842694e173a5002531f01))
+* remove commented code ([cf718f3](https://github.com/VenusProtocol/isolated-pools/commit/cf718f30ed005d1aef35738a9383850794a012a1))
+* resolved conflict ([6d95945](https://github.com/VenusProtocol/isolated-pools/commit/6d959459c8839fca35107516b470469de85fa593))
+* resolved conflict ([f04433e](https://github.com/VenusProtocol/isolated-pools/commit/f04433e6460b87d687a1f74a8396ce071acfe06b))
+* resolved conflict ([0b82507](https://github.com/VenusProtocol/isolated-pools/commit/0b82507d2803bda2c66347ca62803cf6bc95d913))
+* uncommented code ([fcae00f](https://github.com/VenusProtocol/isolated-pools/commit/fcae00f928bdc0079675b0df93679ce38f97ef2b))
+* uncommented code ([706ea77](https://github.com/VenusProtocol/isolated-pools/commit/706ea77d97215b195d0855e359b4f6ea2f9f6b4a))
+* updated caps ([8ecf76f](https://github.com/VenusProtocol/isolated-pools/commit/8ecf76f8dcd681380db6386ff38658678b5bf931))
+
+## [3.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0-dev.1...v3.4.0-dev.2) (2024-06-18)
+
+
+### Features
+
+* updating deployment files ([24e06de](https://github.com/VenusProtocol/isolated-pools/commit/24e06de57d1b281a9f7278ee8917903f9f17cc66))
+
+## [3.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0...v3.4.0-dev.1) (2024-06-18)
+
+
+### Features
+
+* add bootstrap liquidity and vtoken receiver for rsETH on Ethereum ([562a165](https://github.com/VenusProtocol/isolated-pools/commit/562a165994dd223b7cc677546d0422382efe0f77))
+* add rsETH market deployment on Ethereum ([1fc4580](https://github.com/VenusProtocol/isolated-pools/commit/1fc45803e14c9169678e51bd6ca503bb325e7142))
+* add rsETH market on sepolia ([7d91a18](https://github.com/VenusProtocol/isolated-pools/commit/7d91a1871605680b38647dfa5bfd39ee340c45b4))
+* updating deployment files ([dfbba43](https://github.com/VenusProtocol/isolated-pools/commit/dfbba43b86c992aacd570acfc37f31a9400ae7c9))
+* updating deployment files ([cbb3af0](https://github.com/VenusProtocol/isolated-pools/commit/cbb3af087b74d855d320c884b7348b15746bf82b))
+
+
+### Bug Fixes
+
+* add initial supply & vTokenReceiver on sepolia ([5d4cbf2](https://github.com/VenusProtocol/isolated-pools/commit/5d4cbf21469d7a0d5b92e3ddf11c2adf0e257e5b))
+
 ## [3.3.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.2.0...v3.3.0) (2024-06-04)
 
 
