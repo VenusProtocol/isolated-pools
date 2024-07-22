@@ -1,10 +1,8 @@
 import "module-alias/register";
 
+import "@matterlabs/hardhat-zksync";
 import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-etherscan";
-import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
 import "hardhat-deploy";
@@ -201,6 +199,9 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  zksolc: {
+    version: "1.5.0",
+  },
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
@@ -262,6 +263,14 @@ const config: HardhatUserConfig = {
       chainId: 42161,
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    zksyncsepolia: {
+      url: process.env.ARCHIVE_NODE_zksyncsepolia || "https://sepolia.era.zksync.dev",
+      ethNetwork: "sepolia",
+      verifyURL: "https://explorer.sepolia.era.zksync.dev/contract_verification",
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      zksync: true,
+      live: true,
     },
   },
   gasReporter: {
