@@ -1,0 +1,9 @@
+{
+  "name": "zksyncsepolia",
+  "chainId": "300",
+  "addresses": {
+    "MockUSDC": "0x71ff1d2598035C401ED36C97f6cC4DFb05cd9495",
+    "MockUSDT": "0x9Bf62C9C6AaB7AB8e01271f0d7A401306579709B",
+    "MockWBTC": "0xeF891B3FA37FfD83Ce8cC7b682E4CADBD8fFc6F0"
+  }
+}
