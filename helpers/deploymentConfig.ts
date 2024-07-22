@@ -135,7 +135,7 @@ export const blocksPerYear: BlocksPerYear = {
   opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
   arbitrumsepolia: 0, // for time based contracts
   arbitrumone: 0, // for time based contracts
-  zksyncsepolia:0, // for time based contracts
+  zksyncsepolia: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
