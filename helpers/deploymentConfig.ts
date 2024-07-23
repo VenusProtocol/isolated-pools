@@ -2611,6 +2611,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Renzo Restaked ETH",
+        symbol: "ezETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
