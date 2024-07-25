@@ -8,7 +8,7 @@ import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 /**
  * @title TwoKinksInterestRateModel
  * @author Venus
- * @notice An interest rate model with two different steep increase each after a certain utilization threshold called **kink** is reached.
+ * @notice An interest rate model with two different slope increase or decrease each after a certain utilization threshold called **kink** is reached.
  */
 contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     ////////////////////// SLOPE 1 //////////////////////
@@ -48,7 +48,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     int256 public immutable KINK_2;
 
     /**
-     * @notice The multiplier per block or second after hitting KINK_2
+     * @notice The multiplier of utilization rate per block or second that gives the slope 3 of interest rate
      */
     int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND;
 
@@ -65,10 +65,10 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
-     * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
+     * @param multiplierPerYear_ The rate of increase or decrease in interest rate wrt utilization (scaled by EXP_SCALE)
      * @param kink1_ The utilization point at which the multiplier2 is applied
-     * @param multiplier2PerYear_ The rate of increase in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)
-     * @param baseRate2PerYear_ The approximate target base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)
+     * @param multiplier2PerYear_ The rate of increase or decrease in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)
+     * @param baseRate2PerYear_ The additonal base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)
      * @param kink2_ The utilization point at which the jump multiplier is applied
      * @param jumpMultiplierPerYear_ The multiplier after hitting KINK_2
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
@@ -109,7 +109,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
      * @param borrows The amount of borrows in the market
      * @param reserves The amount of reserves in the market
      * @param badDebt The amount of badDebt in the market
-     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)
+     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)
      */
     function getBorrowRate(
         uint256 cash,
