@@ -58,6 +58,11 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     error NegativeValueNotAllowed();
 
     /**
+     * @notice Thrown when the kink points are not in the correct order
+     */
+    error InvalidKink();
+
+    /**
      * @notice Construct an interest rate model
      * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)
      * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)
@@ -82,6 +87,10 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
         if (baseRatePerYear_ < 0 || baseRate2PerYear_ < 0 || kink1_ < 0 || kink2_ < 0) {
             revert NegativeValueNotAllowed();
+        }
+
+        if (kink2_ <= kink1_ || kink1_ <= 0) {
+            revert InvalidKink();
         }
 
         int256 blocksOrSecondsPerYear_ = int256(blocksOrSecondsPerYear);
