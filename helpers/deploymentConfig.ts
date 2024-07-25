@@ -4350,11 +4350,18 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
+        isMock: true,
+        name: "ZKsync",
+        symbol: "ZK",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
         isMock: false,
         name: "Venus",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: "",
+        tokenAddress: "0x3AeCac43A2ebe5D8184e650403bf9F656F9D1cfA",
       },
     ],
     poolConfig: [
