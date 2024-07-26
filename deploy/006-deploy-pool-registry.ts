@@ -15,20 +15,30 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
 
+  const defaultProxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
+
   await deploy("PoolRegistry", {
     from: deployer,
     contract: "PoolRegistry",
     proxy: {
       owner: proxyOwnerAddress,
-      proxyContract: "OpenZeppelinTransparentProxy",
+      proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
         args: [accessControlManagerAddress],
+      },
+      viaAdminContract: {
+        name: "DefaultProxyAdmin",
+        artifact: defaultProxyAdmin,
       },
       upgradeIndex: 0,
     },
     autoMine: true,
     log: true,
+    skipIfAlreadyDeployed: true,
+    // maxFeePerGas: "200000000"  // Needed for zksync
   });
 };
 

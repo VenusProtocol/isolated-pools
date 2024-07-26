@@ -15,6 +15,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [isTimeBased, blocksPerYear],
     log: true,
     autoMine: true,
+    // maxFeePerGas: "200000000"  // for zksync
   });
 };
 

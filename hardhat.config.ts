@@ -1,10 +1,13 @@
 import "module-alias/register";
 
-import "@matterlabs/hardhat-zksync";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-etherscan";
+import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
+import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
@@ -39,11 +42,22 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
         bscmainnet: [
-          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
           "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
         ],
-        opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
-        arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
+        opbnbmainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbmainnet",
+        ],
+        opbnbtestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbtestnet",
+        ],
+        arbitrumsepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia",
+        ],
         arbitrumone: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone"],
       },
     };
@@ -199,9 +213,6 @@ const config: HardhatUserConfig = {
       },
     ],
   },
-  zksolc: {
-    version: "1.5.0",
-  },
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
@@ -263,14 +274,6 @@ const config: HardhatUserConfig = {
       chainId: 42161,
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
-    },
-    zksyncsepolia: {
-      url: process.env.ARCHIVE_NODE_zksyncsepolia || "https://sepolia.era.zksync.dev",
-      ethNetwork: "sepolia",
-      verifyURL: "https://explorer.sepolia.era.zksync.dev/contract_verification",
-      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
-      zksync: true,
-      live: true,
     },
   },
   gasReporter: {
@@ -393,6 +396,12 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
+    ],
+  },
+  dependencyCompiler: {
+    paths: [
+      "hardhat-deploy/solc_0.8/proxy/OptimizedTransparentUpgradeableProxy.sol",
+      "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
     ],
   },
 };
