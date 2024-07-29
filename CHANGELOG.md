@@ -1,3 +1,19 @@
+## [3.5.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2024-07-29)
+
+
+### Features
+
+* updating deployment files ([8aceb7a](https://github.com/VenusProtocol/isolated-pools/commit/8aceb7a9fbc12b8b335d0b74560a471c4b7bba8f))
+* updating deployment files ([56ac0dc](https://github.com/VenusProtocol/isolated-pools/commit/56ac0dc822efbd87c8fb21044d00483ed43b3bdc))
+
+
+### Bug Fixes
+
+* deploy mock exETH ([0fe8e51](https://github.com/VenusProtocol/isolated-pools/commit/0fe8e51a11110e79ea66a96c770fd8a636e60225))
+* deployed on eth ([7fc2913](https://github.com/VenusProtocol/isolated-pools/commit/7fc2913accb19c90c768ae5794163a2248ed9dc7))
+* deployed vtoken on sepolia ([f7726a0](https://github.com/VenusProtocol/isolated-pools/commit/f7726a0a09b89434c1f0aa347a7f7f4502b91ec4))
+* fixed lint ([cc97eb0](https://github.com/VenusProtocol/isolated-pools/commit/cc97eb0f7067bc50d3f17ac363b06b4379558b81))
+
 ## [3.5.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0...v3.5.0-dev.1) (2024-07-26)
 
 
