@@ -4337,8 +4337,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        name: "USD Coin",
-        symbol: "USDC",
+        name: "Bridged USDC (zkSync)",
+        symbol: "USDC.e",
         decimals: 6,
         tokenAddress: ethers.constants.AddressZero,
       },
@@ -4427,9 +4427,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
           },
           {
-            name: "Venus USDC (Core)",
-            asset: "USDC",
-            symbol: "vUSDC_Core",
+            name: "Venus USDC.e (Core)",
+            asset: "USDC.e",
+            symbol: "vUSDC.e_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.0875", 18),
