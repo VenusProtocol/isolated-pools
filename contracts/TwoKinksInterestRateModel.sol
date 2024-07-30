@@ -190,7 +190,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         int256 expScale = int256(EXP_SCALE);
 
         if (util < KINK_1) {
-            return _max(0, ((util * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
+            return _max(((util * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
         } else if (util < KINK_2) {
             int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
             int256 slope2Util;
@@ -200,7 +200,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
             int256 rate2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) +
                 BASE_RATE_2_PER_BLOCK_OR_SECOND;
 
-            return _max(0, rate1 + rate2);
+            return _max(rate1 + rate2);
         } else {
             int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
             int256 slope2Util;
@@ -215,17 +215,17 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
             }
             int256 rate3 = ((slope3Util * JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale);
 
-            return _max(0, rate1 + rate2 + rate3);
+            return _max(rate1 + rate2 + rate3);
         }
     }
 
     /**
-     * @notice Returns the larger of two numbers
-     * @param a The first number
-     * @param b The second number
-     * @return The larger of the two numbers
+     * @notice Returns 0 if number is less than 0, otherwise returns the input
+     * @param number The first number
+     * @return The maximum of 0 and input number
      */
-    function _max(int256 a, int256 b) internal pure returns (uint256) {
-        return uint256(a > b ? a : b);
+    function _max(int256 number) internal pure returns (uint256) {
+        int256 zero;
+        return uint256(number > zero ? number : zero);
     }
 }
