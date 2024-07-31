@@ -85,7 +85,7 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         bool timeBased_,
         uint256 blocksPerYear_
     ) TimeManagerV8(timeBased_, blocksPerYear_) {
-        if (baseRatePerYear_ < 0 || baseRate2PerYear_ < 0 || kink1_ < 0 || kink2_ < 0) {
+        if (baseRatePerYear_ < 0 || baseRate2PerYear_ < 0) {
             revert NegativeValueNotAllowed();
         }
 
