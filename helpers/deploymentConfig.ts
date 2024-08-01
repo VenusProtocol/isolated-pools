@@ -6,6 +6,7 @@ import { contracts as governanceEthereum } from "@venusprotocol/governance-contr
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as governanceZkSyncSepolia } from "@venusprotocol/governance-contracts/deployments/zksyncsepolia.json";
 import { contracts as venusProtocolArbitrumOne } from "@venusprotocol/venus-protocol/deployments/arbitrumone.json";
 import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
@@ -14,6 +15,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { contracts as venusProtocolZkSyncSepolia } from "@venusprotocol/venus-protocol/deployments/zksyncsepolia.json";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
@@ -232,11 +234,11 @@ export const preconfiguredAddresses = {
     AccessControlManager: governanceArbitrumOne.AccessControlManager.address,
   },
   zksyncsepolia: {
-    VTreasury: "0x943eBE4460a12F551D60A68f510Ea10CD8d564BA", // To-do: fetch address from node modules
+    VTreasury: venusProtocolZkSyncSepolia.VTreasuryV8.address,
     NormalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     FastTrackTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     CriticalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
-    AccessControlManager: "0xD07f543d47c3a8997D6079958308e981AC14CD01",
+    AccessControlManager: governanceZkSyncSepolia.AccessControlManager.address,
   },
 };
 
