@@ -1,3 +1,38 @@
+## [3.5.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2024-07-29)
+
+
+### Features
+
+* updating deployment files ([8aceb7a](https://github.com/VenusProtocol/isolated-pools/commit/8aceb7a9fbc12b8b335d0b74560a471c4b7bba8f))
+* updating deployment files ([56ac0dc](https://github.com/VenusProtocol/isolated-pools/commit/56ac0dc822efbd87c8fb21044d00483ed43b3bdc))
+
+
+### Bug Fixes
+
+* deploy mock exETH ([0fe8e51](https://github.com/VenusProtocol/isolated-pools/commit/0fe8e51a11110e79ea66a96c770fd8a636e60225))
+* deployed on eth ([7fc2913](https://github.com/VenusProtocol/isolated-pools/commit/7fc2913accb19c90c768ae5794163a2248ed9dc7))
+* deployed vtoken on sepolia ([f7726a0](https://github.com/VenusProtocol/isolated-pools/commit/f7726a0a09b89434c1f0aa347a7f7f4502b91ec4))
+* fixed lint ([cc97eb0](https://github.com/VenusProtocol/isolated-pools/commit/cc97eb0f7067bc50d3f17ac363b06b4379558b81))
+
+## [3.5.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0...v3.5.0-dev.1) (2024-07-26)
+
+
+### Features
+
+* add ethereum addresses ([cfdcf00](https://github.com/VenusProtocol/isolated-pools/commit/cfdcf00f7aa2b39aac751c67c0c1f2777deeb825))
+* updating deployment files ([f6b23d2](https://github.com/VenusProtocol/isolated-pools/commit/f6b23d23a9a7c8ff292e35e2425f69ac0af3fa6f))
+* updating deployment files ([fd00e09](https://github.com/VenusProtocol/isolated-pools/commit/fd00e09b0e5621f68ba45b0f0314a76b2e308495))
+
+
+### Bug Fixes
+
+* fork tests for all chains ([5beeda7](https://github.com/VenusProtocol/isolated-pools/commit/5beeda7490c7a1e03a4d0fe04bd66651516ccf65))
+* fork tests for all networks ([230e80e](https://github.com/VenusProtocol/isolated-pools/commit/230e80e0ac31ebc24bd06995be9a82335a8ae118))
+* nativeTokenGateway, liquidation and reduceReserves fork tests ([a47277f](https://github.com/VenusProtocol/isolated-pools/commit/a47277fa5a37d39f9c94b32519345946984064ff))
+* resolved conflicts ([dbc5584](https://github.com/VenusProtocol/isolated-pools/commit/dbc5584fbb40f3dad5c7196b466021d0541c23e2))
+* tests ([3e943c3](https://github.com/VenusProtocol/isolated-pools/commit/3e943c383af65feca87ceda58443a5311f993c00))
+* tests ([51b66c9](https://github.com/VenusProtocol/isolated-pools/commit/51b66c9c48b0771a96ecb4a1903a53332f5e2203))
+
 ## [3.4.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.3.0...v3.4.0) (2024-07-18)
 
 
