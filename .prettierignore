@@ -1,6 +1,8 @@
 node_modules
 artifacts
+artifacts-zk
 cache
+cache-zk
 coverage*
 gasReporterOutput.json
 dist

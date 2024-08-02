@@ -1,6 +1,8 @@
 node_modules
 artifacts
+artifacts-zk
 cache
+cache-zk
 coverage
 dist
 # ignoring scenario dir because it contains deprecated saddle code and will be removed
