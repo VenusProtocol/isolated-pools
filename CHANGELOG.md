@@ -1,3 +1,23 @@
+## [3.5.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.2...v3.5.0-dev.3) (2024-08-02)
+
+
+### Features
+
+* add ZK token ([fc33b47](https://github.com/VenusProtocol/isolated-pools/commit/fc33b47e8491df31551417b1b4b8dab58b5d2fcb))
+* deploy mock tokens on zksync sepolia ([6f4f70e](https://github.com/VenusProtocol/isolated-pools/commit/6f4f70e4a7a2725ec5489d62bc81719f4a217172))
+* IL deployment on zksync sepolia ([2bc1be0](https://github.com/VenusProtocol/isolated-pools/commit/2bc1be0fe0954906923d0d05270958748eba519a))
+* updating deployment files ([68021c9](https://github.com/VenusProtocol/isolated-pools/commit/68021c97695548e0c776b3c2dad64e0574642691))
+* updating deployment files ([4516940](https://github.com/VenusProtocol/isolated-pools/commit/4516940822a6d5cdf41a9d71b700ae7172cd5950))
+* updating deployment files ([f99a7f8](https://github.com/VenusProtocol/isolated-pools/commit/f99a7f85c891a18f2abd45ef78dde28c0236fedf))
+* updating deployment files ([b1c4131](https://github.com/VenusProtocol/isolated-pools/commit/b1c4131d531c1b88ed37642544521802e468ea01))
+
+
+### Bug Fixes
+
+* ci.yaml ([4ff3df8](https://github.com/VenusProtocol/isolated-pools/commit/4ff3df8f69fabcde59219d8f782610c1a679f229))
+* rename USDC to USDC.e ([97ceecb](https://github.com/VenusProtocol/isolated-pools/commit/97ceecbacd5e991f8703fa6cd39bae6e252742dd))
+* run prettier ([f6011c7](https://github.com/VenusProtocol/isolated-pools/commit/f6011c708c449ac843dd388584063c7b30ef1810))
+
 ## [3.5.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.1...v3.5.0-dev.2) (2024-07-29)
 
 
