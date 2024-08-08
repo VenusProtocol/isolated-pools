@@ -3460,8 +3460,8 @@
         }
       ]
     },
-    "MockUSDC": {
-      "address": "0x71ff1d2598035C401ED36C97f6cC4DFb05cd9495",
+    "MockUSDC.e": {
+      "address": "0xF98780C8a0843829f98e624d83C3FfDDf43BE984",
       "abi": [
         {
           "inputs": [
@@ -10050,8 +10050,8 @@
         }
       ]
     },
-    "VToken_vUSDC_Core": {
-      "address": "0x0766c92F2780022167bcF3Aebba9F2d5Dd9DEdb2",
+    "VToken_vUSDC.e_Core": {
+      "address": "0x58b0b248BB11DCAA9336bBf8a81914201fD49461",
       "abi": [
         {
           "inputs": [

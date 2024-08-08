@@ -6,6 +6,7 @@ import { contracts as governanceEthereum } from "@venusprotocol/governance-contr
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as governanceZkSyncSepolia } from "@venusprotocol/governance-contracts/deployments/zksyncsepolia.json";
 import { contracts as venusProtocolArbitrumOne } from "@venusprotocol/venus-protocol/deployments/arbitrumone.json";
 import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
@@ -14,6 +15,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { contracts as venusProtocolZkSyncSepolia } from "@venusprotocol/venus-protocol/deployments/zksyncsepolia.json";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
@@ -232,11 +234,11 @@ export const preconfiguredAddresses = {
     AccessControlManager: governanceArbitrumOne.AccessControlManager.address,
   },
   zksyncsepolia: {
-    VTreasury: "0x943eBE4460a12F551D60A68f510Ea10CD8d564BA", // To-do: fetch address from node modules
+    VTreasury: venusProtocolZkSyncSepolia.VTreasuryV8.address,
     NormalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     FastTrackTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     CriticalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
-    AccessControlManager: "0xD07f543d47c3a8997D6079958308e981AC14CD01",
+    AccessControlManager: governanceZkSyncSepolia.AccessControlManager.address,
   },
 };
 
@@ -2622,6 +2624,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Renzo Restaked ETH",
+        symbol: "ezETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -3101,6 +3110,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
+          {
+            name: "Venus ezETH (Liquid Staked ETH)",
+            asset: "ezETH",
+            symbol: "vezETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit(2, 18),
+            supplyCap: convertToUnit(14_000, 18),
+            borrowCap: convertToUnit(1_400, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3257,6 +3284,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "rsETH",
         decimals: 18,
         tokenAddress: "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
+      },
+      {
+        isMock: false,
+        name: "Renzo Restaked ETH",
+        symbol: "ezETH",
+        decimals: 18,
+        tokenAddress: "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
       },
     ],
     poolConfig: [
@@ -3678,6 +3712,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(1_000, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
+          {
+            name: "Venus ezETH (Liquid Staked ETH)",
+            asset: "ezETH",
+            symbol: "vezETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("0.75", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("1.41", 18),
+            supplyCap: convertToUnit(14_000, 18),
+            borrowCap: convertToUnit(1_400, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
+            vTokenReceiver: "0x1E3233E8d972cfFc7D0f83aFAE4354a0Db74e34E",
           },
         ],
         rewards: [
@@ -4337,8 +4389,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        name: "USD Coin",
-        symbol: "USDC",
+        name: "Bridged USDC (zkSync)",
+        symbol: "USDC.e",
         decimals: 6,
         tokenAddress: ethers.constants.AddressZero,
       },
@@ -4427,9 +4479,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
           },
           {
-            name: "Venus USDC (Core)",
-            asset: "USDC",
-            symbol: "vUSDC_Core",
+            name: "Venus USDC.e (Core)",
+            asset: "USDC.e",
+            symbol: "vUSDC.e_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.0875", 18),
