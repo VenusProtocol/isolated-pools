@@ -107,7 +107,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       autoMine: true,
       skipIfAlreadyDeployed: true,
-      // maxFeePerGas: "200000000"  // Needed for zksync
     });
 
     const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);

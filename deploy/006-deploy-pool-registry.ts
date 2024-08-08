@@ -38,7 +38,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     log: true,
     skipIfAlreadyDeployed: true,
-    // maxFeePerGas: "200000000"  // Needed for zksync
   });
 };
 
