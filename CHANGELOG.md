@@ -1,3 +1,16 @@
+## [3.5.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.3...v3.5.0-dev.4) (2024-08-08)
+
+
+### Features
+
+* NTG deployment on zksync sepolia ([c41ce20](https://github.com/VenusProtocol/isolated-pools/commit/c41ce20b5dab0526bbc7e99a3b6bdc4eb550a4f8))
+* updating deployment files ([f725336](https://github.com/VenusProtocol/isolated-pools/commit/f7253365e4bbc6504fb0341527225bb0d2d6b7ea))
+
+
+### Bug Fixes
+
+* remove maxFeePerGas param, as needed occasionally ([310033a](https://github.com/VenusProtocol/isolated-pools/commit/310033ab2e08ddde1bc2bd8f807b76f1cf0e57ed))
+
 ## [3.5.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.2...v3.5.0-dev.3) (2024-08-02)
 
 
