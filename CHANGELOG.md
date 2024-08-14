@@ -1,3 +1,11 @@
+## [3.5.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.4...v3.5.0-dev.5) (2024-08-14)
+
+
+### Features
+
+* add deployments of Reward distributor ([3dfba03](https://github.com/VenusProtocol/isolated-pools/commit/3dfba033de819f7c1daeaaca29f245b5d011bf4e))
+* updating deployment files ([cbde010](https://github.com/VenusProtocol/isolated-pools/commit/cbde01099f52872024736ad41efb9003b7b262e1))
+
 ## [3.5.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.3...v3.5.0-dev.4) (2024-08-08)
 
 
