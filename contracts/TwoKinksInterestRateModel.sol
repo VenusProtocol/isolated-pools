@@ -14,12 +14,12 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     ////////////////////// SLOPE 1 //////////////////////
 
     /**
-     * @notice The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate
+     * @notice The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate scaled by EXP_SCALE
      */
     int256 public immutable MULTIPLIER_PER_BLOCK_OR_SECOND;
 
     /**
-     * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0
+     * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0 scaled by EXP_SCALE
      */
     int256 public immutable BASE_RATE_PER_BLOCK_OR_SECOND;
 
@@ -31,17 +31,17 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     int256 public immutable KINK_1;
 
     /**
-     * @notice The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate
+     * @notice The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate scaled by EXP_SCALE
      */
     int256 public immutable MULTIPLIER_2_PER_BLOCK_OR_SECOND;
 
     /**
-     * @notice The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1
+     * @notice The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1 scaled by EXP_SCALE
      */
     int256 public immutable BASE_RATE_2_PER_BLOCK_OR_SECOND;
 
     /**
-     * @notice The maximum kink interest rate
+     * @notice The maximum kink interest rate scaled by EXP_SCALE
      */
     int256 public immutable RATE_1;
 
@@ -53,12 +53,12 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     int256 public immutable KINK_2;
 
     /**
-     * @notice The multiplier of utilization rate per block or second that gives the slope 3 of interest rate
+     * @notice The multiplier of utilization rate per block or second that gives the slope 3 of interest rate scaled by EXP_SCALE
      */
     int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND;
 
     /**
-     * @notice The maximum kink interest rate
+     * @notice The maximum kink interest rate scaled by EXP_SCALE
      */
     int256 public immutable RATE_2;
 
