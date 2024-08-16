@@ -10,14 +10,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const { preconfiguredAddresses } = await getConfig(hre.network.name);
   const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
-
+  const defaultProxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
   await catchUnknownSigner(
     deploy("PoolRegistry", {
       from: deployer,
       contract: "PoolRegistry",
       proxy: {
         owner: proxyOwnerAddress,
-        proxyContract: "OpenZeppelinTransparentProxy",
+        proxyContract: "OptimizedTransparentUpgradeableProxy",
+        viaAdminContract: {
+          name: "DefaultProxyAdmin",
+          artifact: defaultProxyAdmin,
+        },
       },
       autoMine: true,
       log: true,

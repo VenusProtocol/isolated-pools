@@ -23,6 +23,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     hre,
   );
   const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
+  const defaultProxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
 
   const pools = await getUnregisteredRewardsDistributors(poolConfig, hre);
 
@@ -51,10 +54,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         proxy: {
           implementationName: `RewardsDistributorImpl`,
           owner: proxyOwnerAddress,
-          proxyContract: "OpenZeppelinTransparentProxy",
+          proxyContract: "OptimizedTransparentUpgradeableProxy",
           execute: {
             methodName: "initialize",
             args: [comptrollerProxy.address, rewardTokenAddress, maxLoopsLimit, accessControlAddress],
+          },
+          viaAdminContract: {
+            name: "DefaultProxyAdmin",
+            artifact: defaultProxyAdmin,
           },
           upgradeIndex: 0,
         },
@@ -65,7 +72,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       });
 
       const rewardsDistributor = await ethers.getContract(contractName);
-      if ((await rewardsDistributor.owner()) === deployer) {
+      if (
+        (await rewardsDistributor.owner()) === deployer &&
+        (await rewardsDistributor.pendingOwner()) === ethers.constants.AddressZero
+      ) {
         await rewardsDistributor.transferOwnership(proxyOwnerAddress);
       }
     }
