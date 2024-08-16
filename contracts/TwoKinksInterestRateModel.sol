@@ -40,6 +40,11 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
      */
     int256 public immutable BASE_RATE_2_PER_BLOCK_OR_SECOND;
 
+    /**
+     * @notice The maximum kink interest rate
+     */
+    int256 public immutable RATE_1;
+
     ////////////////////// SLOPE 3 //////////////////////
 
     /**
@@ -51,6 +56,11 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
      * @notice The multiplier of utilization rate per block or second that gives the slope 3 of interest rate
      */
     int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND;
+
+    /**
+     * @notice The maximum kink interest rate
+     */
+    int256 public immutable RATE_2;
 
     /**
      * @notice Thrown when a negative value is not allowed
@@ -101,6 +111,15 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         BASE_RATE_2_PER_BLOCK_OR_SECOND = baseRate2PerYear_ / blocksOrSecondsPerYear_;
         KINK_2 = kink2_;
         JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND = jumpMultiplierPerYear_ / blocksOrSecondsPerYear_;
+
+        int256 expScale = int256(EXP_SCALE);
+        RATE_1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
+
+        int256 slope2Util;
+        unchecked {
+            slope2Util = KINK_2 - KINK_1;
+        }
+        RATE_2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_2_PER_BLOCK_OR_SECOND;
     }
 
     /**
@@ -192,7 +211,6 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
         if (util < KINK_1) {
             return _minCap(((util * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
         } else if (util < KINK_2) {
-            int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
             int256 slope2Util;
             unchecked {
                 slope2Util = util - KINK_1;
@@ -200,22 +218,15 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
             int256 rate2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) +
                 BASE_RATE_2_PER_BLOCK_OR_SECOND;
 
-            return _minCap(rate1 + rate2);
+            return _minCap(RATE_1 + rate2);
         } else {
-            int256 rate1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);
-            int256 slope2Util;
-            unchecked {
-                slope2Util = KINK_2 - KINK_1;
-            }
-            int256 rate2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) +
-                BASE_RATE_2_PER_BLOCK_OR_SECOND;
             int256 slope3Util;
             unchecked {
                 slope3Util = util - KINK_2;
             }
             int256 rate3 = ((slope3Util * JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale);
 
-            return _minCap(rate1 + rate2 + rate3);
+            return _minCap(RATE_1 + RATE_2 + rate3);
         }
     }
 
