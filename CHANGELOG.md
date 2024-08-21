@@ -1,3 +1,28 @@
+## [3.5.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.6...v3.5.0-dev.7) (2024-08-21)
+
+
+### Bug Fixes
+
+* added checks for negative value ([686e170](https://github.com/VenusProtocol/isolated-pools/commit/686e1702e15a83b17ef4c3b4640990c117cf34bf))
+* added test for negative values ([5a93f4d](https://github.com/VenusProtocol/isolated-pools/commit/5a93f4d1b4d23d93b33b027f3aa72bd47e05d987))
+* added tests for above kink2 utilization rate ([43bf1e8](https://github.com/VenusProtocol/isolated-pools/commit/43bf1e896dfe9775b31baaa6fb838a1a7f231292))
+* below kink1 test ([852760c](https://github.com/VenusProtocol/isolated-pools/commit/852760c73b9fb4a6e85490937696a05efe06c43e))
+* negative multiplier ([5e7f6e5](https://github.com/VenusProtocol/isolated-pools/commit/5e7f6e5617af70b3a0793754f2c9ff9d0f77f31e))
+* remove unused func ([147e6d0](https://github.com/VenusProtocol/isolated-pools/commit/147e6d0ff168dc193049840aced2188b48887187))
+* removed update and acm ([9a10ba0](https://github.com/VenusProtocol/isolated-pools/commit/9a10ba031d82156a0efa7a9a8195d122f9e844e1))
+* test above kink1 and below kink2 ([5d01bb0](https://github.com/VenusProtocol/isolated-pools/commit/5d01bb0dc462b6dc2c68ed090b8d99687bba850a))
+* updated borrow rate ([3225de5](https://github.com/VenusProtocol/isolated-pools/commit/3225de5968fd4f2dbe7e9ae070e74e7576d9147c))
+* updated comment ([8492092](https://github.com/VenusProtocol/isolated-pools/commit/8492092f6276bcc46671e6bf23fdb42085142416))
+* updated vars ([b0242c7](https://github.com/VenusProtocol/isolated-pools/commit/b0242c7bf86e2f29a4f17b8d255c894a266035f4))
+* ven-s2 ([499a6bb](https://github.com/VenusProtocol/isolated-pools/commit/499a6bb3f52ef6df174f1e5f4bec51455801227f))
+* ven-s3 ([2044826](https://github.com/VenusProtocol/isolated-pools/commit/2044826425fbf80d1e6877741c260c49707a68f6))
+* vpb-01 ([455533e](https://github.com/VenusProtocol/isolated-pools/commit/455533e0eb2213fc8ec29a983389868e25f42038))
+* vpb-01 ([66662d1](https://github.com/VenusProtocol/isolated-pools/commit/66662d1338ad5e46dbb0c2090296d4b705b1d7d2))
+* vpb-02 ([00fdcdb](https://github.com/VenusProtocol/isolated-pools/commit/00fdcdbbe86608a8c8d4783a4818c0c94e2c7bf8))
+* vpb-03 ([ece3379](https://github.com/VenusProtocol/isolated-pools/commit/ece33796e826a15b70df06a5a1d2385e80feaa92))
+* vpb-03 alleviation ([37ffc79](https://github.com/VenusProtocol/isolated-pools/commit/37ffc7963b209a61d2afc92bd061398268f163ae))
+* vpb-05 ([dd52dc9](https://github.com/VenusProtocol/isolated-pools/commit/dd52dc9e40ddd60af5246a0eb65c52cbf27ce7fd))
+
 ## [3.5.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.5...v3.5.0-dev.6) (2024-08-16)
 
 
