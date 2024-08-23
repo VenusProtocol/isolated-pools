@@ -1,3 +1,12 @@
+## [3.5.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.9...v3.5.0-dev.10) (2024-08-23)
+
+
+### Features
+
+* add config for Liquid Staked ETH pool for arbitrum sepolia ([a25a43c](https://github.com/VenusProtocol/isolated-pools/commit/a25a43ca3a15d82bec1cd3620865c5eb0d783572))
+* add deployment files for Liquid Staked ETH pool for arbitrum sepolia ([9028873](https://github.com/VenusProtocol/isolated-pools/commit/90288734f6ec58c6d1fb45c0d3b1b56db209f6b0))
+* updating deployment files ([f1c5e80](https://github.com/VenusProtocol/isolated-pools/commit/f1c5e808ae3b202e772eb2c4f2f3f39c09a930b2))
+
 ## [3.5.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.8...v3.5.0-dev.9) (2024-08-23)
 
 
