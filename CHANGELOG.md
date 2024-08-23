@@ -1,3 +1,11 @@
+## [3.5.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.7...v3.5.0-dev.8) (2024-08-23)
+
+
+### Features
+
+* add interest rate model deployments for Chaos recs ([3205565](https://github.com/VenusProtocol/isolated-pools/commit/32055654b94088fa92c1b61a5a7a0ba72af8df4e))
+* updating deployment files ([20b8086](https://github.com/VenusProtocol/isolated-pools/commit/20b8086a7da7cf14e58a9d057bfca90d846cf7b3))
+
 ## [3.5.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.6...v3.5.0-dev.7) (2024-08-21)
 
 
