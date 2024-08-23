@@ -4344,7 +4344,6 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
           },
-         
         ],
         rewards: [
           // XVS Rewards Over 90 days (7776000 seconds)
@@ -4429,7 +4428,7 @@ export const globalConfig: NetworkConfig = {
           },
         ],
         rewards: [],
-      }
+      },
     ],
     accessControlConfig: [
       ...poolRegistryPermissions(),
