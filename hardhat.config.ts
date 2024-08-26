@@ -7,6 +7,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
+import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
@@ -395,6 +396,12 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
+    ],
+  },
+  dependencyCompiler: {
+    paths: [
+      "hardhat-deploy/solc_0.8/proxy/OptimizedTransparentUpgradeableProxy.sol",
+      "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
     ],
   },
 };
