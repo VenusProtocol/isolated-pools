@@ -2,6 +2,12 @@ import { impersonateAccount, setBalance } from "@nomicfoundation/hardhat-network
 import { NumberLike } from "@nomicfoundation/hardhat-network-helpers/dist/src/types";
 import { ethers, network } from "hardhat";
 
+import { contractAddresses } from "./constants";
+
+export function getContractAddresses(name: string) {
+  return contractAddresses[name];
+}
+
 export const forking = (blockNumber: number, fn: () => void) => {
   describe(`At block #${blockNumber}`, () => {
     before(async () => {

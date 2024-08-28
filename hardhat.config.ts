@@ -7,6 +7,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
+import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
@@ -41,11 +42,22 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
         ],
         bscmainnet: [
-          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
           "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
         ],
-        opbnbmainnet: ["node_modules/@venusprotocol/oracle/deployments/opbnbmainnet"],
-        arbitrumsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia"],
+        opbnbmainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbmainnet",
+        ],
+        opbnbtestnet: [
+          "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbtestnet",
+        ],
+        arbitrumsepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia",
+        ],
         arbitrumone: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone"],
       },
     };
@@ -384,6 +396,12 @@ const config: HardhatUserConfig = {
       {
         artifacts: "node_modules/@venusprotocol/governance-contracts/artifacts",
       },
+    ],
+  },
+  dependencyCompiler: {
+    paths: [
+      "hardhat-deploy/solc_0.8/proxy/OptimizedTransparentUpgradeableProxy.sol",
+      "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
     ],
   },
 };

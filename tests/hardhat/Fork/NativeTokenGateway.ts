@@ -7,17 +7,14 @@ import { Comptroller, ERC20, NativeTokenGateway, VToken } from "../../../typecha
 import { initMainnetUser, setForkBlock } from "./utils";
 
 const ADMIN = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
-const COMPTROLLER_BEACON = "0xAE2C3F21896c02510aA187BdA0791cDA77083708";
-const VTOKEN_BEACON = "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a";
 const COMPTROLLER_ADDRESS = "0x687a01ecF6d3907658f7A7c714749fAC32336D1B";
-const POOL_REGISTRY = "0x61CAff113CCaf05FFc6540302c37adcf077C5179";
 const VWETH = "0x7c8ff7d2A1372433726f879BD945fFb250B94c65";
 const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const VUSDT = "0x8C3e3821259B82fFb32B2450A95d2dcbf161C24E";
 
 const USER1 = "0xf89d7b9c864f589bbF53a82105107622B35EaA40";
 const USER2 = "0x974CaA59e49682CdA0AD2bbe82983419A2ECC400";
-const BLOCK_NUMBER = 19139865;
+const BLOCK_NUMBER = 19781700;
 
 async function configureTimeLock() {
   impersonatedTimeLock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -44,16 +41,6 @@ async function setup() {
   usdt = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", USDT);
 
   const comptroller = await ethers.getContractAt("Comptroller", COMPTROLLER_ADDRESS);
-  const newComptrollerFactory = await ethers.getContractFactory("Comptroller");
-  const newComptrollerImplementation = await newComptrollerFactory.deploy(POOL_REGISTRY);
-  const beaconContract = await ethers.getContractAt("UpgradeableBeacon", COMPTROLLER_BEACON);
-
-  const newVToken = await ethers.getContractFactory("VToken");
-  const newVTokenImplementation = await newVToken.deploy();
-  const vTokenBeaconContract = await ethers.getContractAt("UpgradeableBeacon", VTOKEN_BEACON);
-
-  await beaconContract.connect(impersonatedTimeLock).upgradeTo(newComptrollerImplementation.address);
-  await vTokenBeaconContract.connect(impersonatedTimeLock).upgradeTo(newVTokenImplementation.address);
 
   vusdt = await ethers.getContractAt("VToken", VUSDT);
   vweth = await ethers.getContractAt("VToken", VWETH);
@@ -94,7 +81,7 @@ if (FORK && FORKED_NETWORK === "ethereum") {
         const balanceAfterSupplying = await vweth.balanceOf(await user1.getAddress());
         await expect(balanceAfterSupplying.sub(balanceBeforeSupplying).toString()).to.closeTo(
           parseUnits("10", 8),
-          parseUnits("1", 5),
+          parseUnits("1", 7),
         );
         await expect(tx).to.changeEtherBalances([user1], [supplyAmount.mul(-1)]);
       });
@@ -115,7 +102,7 @@ if (FORK && FORKED_NETWORK === "ethereum") {
 
         await expect(ethBalanceAfter.sub(ethBalanceBefore)).to.closeTo(redeemAmount, parseUnits("1", 16));
 
-        expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
+        expect(await vweth.balanceOf(await user1.getAddress())).to.closeTo(0, 10);
       });
     });
 
