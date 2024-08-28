@@ -1,0 +1,25 @@
+{
+  "name": "zksyncmainnet",
+  "chainId": "324",
+  "addresses": {
+    "ComptrollerBeacon": "0x52Eb8B33DFDa74748A12F2BaB59b4742B3447528",
+    "ComptrollerImpl": "0x037C370Cbe262422Ea16c13F540F78A0354d2727",
+    "Comptroller_Core": "0xF06eC097C735fA4A6eFe2F6467fE7e8DaFff33Cb",
+    "DefaultProxyAdmin": "0x8Ea1A989B036f7Ef21bb95CE4E7961522Ca00287",
+    "JumpRateModelV2_base0bps_slope425bps_jump8000bps_kink8000bps": "0xbFA2400c5E1C219325462Bb76D392FB5dd64a4f7",
+    "JumpRateModelV2_base0bps_slope875bps_jump8000bps_kink8000bps": "0xb3d2aA830F2269052841170B2be2e9fAA1cc9023",
+    "JumpRateModelV2_base0bps_slope900bps_jump20000bps_kink4500bps": "0xD65abA53394dA704Ba63Ff6dBcCcc110b0b1A827",
+    "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": "0x4E19c35c94A622d7FfaB9D97dCD264Aa560F37e8",
+    "PoolLens": "0x7a9023E183a17c4Cc24c64B425aEf0e44F3383Ef",
+    "PoolRegistry": "0x675075620eAaC74D7cFDAd8D0d8561bC865cDCe9",
+    "PoolRegistry_Implementation": "0xb2a99630e5855e8B5Ee75bdC7ebA00624e7e002e",
+    "PoolRegistry_Proxy": "0x675075620eAaC74D7cFDAd8D0d8561bC865cDCe9",
+    "VTokenBeacon": "0xed428BD0b7eEA7a1ec726530Fda68EB8578CfCB0",
+    "VTokenImpl": "0xde1aC1d70D53cDa4d08f2DD451876CEe4dCdBea5",
+    "VToken_vUSDC.e_Core": "0xD1c61717A7155670216Da69CF7Dfc255084d355D",
+    "VToken_vUSDT_Core": "0x52D2fDb7799B35C66F89352329304D3d23Fb6112",
+    "VToken_vWBTC_Core": "0xe1F5e4085Cd9C36cbde8Dd726cA87C3C4d142189",
+    "VToken_vWETH_Core": "0xa85323aE38be6f2f2EDF5206d5Cbcad1f230F552",
+    "VToken_vZK_Core": "0x0da4dCfC09C445985ce62aFC618BC2222ae1C513"
+  }
+}
