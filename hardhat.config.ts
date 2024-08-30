@@ -367,7 +367,7 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    tests: "./tests",
+    tests: "./tests/hardhat/Fork",
   },
   // Hardhat deploy
   namedAccounts: {

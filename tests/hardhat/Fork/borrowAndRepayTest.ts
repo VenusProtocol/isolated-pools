@@ -90,7 +90,12 @@ if (FORK) {
         await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));
       }
 
-      if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "ethereum" ||
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia"
+      ) {
         const ChainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
         const token1Config = await ChainlinkOracle.tokenConfigs(TOKEN1);
         const token2Config = await ChainlinkOracle.tokenConfigs(TOKEN2);
@@ -111,7 +116,7 @@ if (FORK) {
 
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }

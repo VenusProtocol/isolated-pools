@@ -8,13 +8,16 @@ export function getContractAddresses(name: string) {
   return contractAddresses[name];
 }
 
-export const forking = (blockNumber: number, fn: () => void) => {
-  describe(`At block #${blockNumber}`, () => {
-    before(async () => {
+export const forking = (blockNumber: number, fn: () => Promise<void>) => {
+  (async () => {
+    try {
+      console.log(`At block #${blockNumber}`);
       await setForkBlock(blockNumber);
-    });
-    fn();
-  });
+      await fn();
+    } catch (e) {
+      console.error(e);
+    }
+  })();
 };
 
 export async function setForkBlock(blockNumber: number) {
