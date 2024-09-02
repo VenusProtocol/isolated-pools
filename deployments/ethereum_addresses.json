@@ -3,7 +3,7 @@
   "chainId": "1",
   "addresses": {
     "ComptrollerBeacon": "0xAE2C3F21896c02510aA187BdA0791cDA77083708",
-    "ComptrollerImpl": "0x25973b6BF39298D87B5498760a6c24CA06C3B40a",
+    "ComptrollerImpl": "0xC910F2B196C516253e88b2097ba5D7d5fC9fa84e",
     "Comptroller_Core": "0x687a01ecF6d3907658f7A7c714749fAC32336D1B",
     "Comptroller_Curve": "0x67aA3eCc5831a65A5Ba7be76BED3B5dc7DB60796",
     "Comptroller_Liquid Staked ETH": "0xF522cd0360EF8c2FF48B648d53EA1717Ec0F3Ac3",
