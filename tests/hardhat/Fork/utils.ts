@@ -20,7 +20,9 @@ export const forking = (blockNumber: number, fn: () => Promise<void>) => {
   })();
 };
 
-export async function setForkBlock(blockNumber: number) {
+export async function setForkBlock(_blockNumber: number) {
+  // const _blockNumber = config.networks.hardhat.zksync ? _blockNumber.toString(16) : _blockNumber;
+  const blockNumber = _blockNumber.toString(16);
   await network.provider.request({
     method: "hardhat_reset",
     params: [
@@ -35,7 +37,50 @@ export async function setForkBlock(blockNumber: number) {
 }
 
 export const initMainnetUser = async (user: string, balance: NumberLike) => {
-  await impersonateAccount(user);
-  await setBalance(user, balance);
+  await network.provider.send("hardhat_impersonateAccount", [user]);
+  const balanceHex = toRpcQuantity(balance);
+  await network.provider.send("hardhat_setBalance", [user, balanceHex]);
+
   return ethers.getSigner(user);
 };
+
+const toRpcQuantity = (x: NumberLike): string => {
+  let hex: string;
+  if (typeof x === "number" || typeof x === "bigint") {
+    // TODO: check that number is safe
+    hex = `0x${x.toString(16)}`;
+  } else if (typeof x === "string") {
+    if (!x.startsWith("0x")) {
+      throw new Error("Only 0x-prefixed hex-encoded strings are accepted");
+    }
+    hex = x;
+  } else if ("toHexString" in x) {
+    hex = x.toHexString();
+  } else if ("toString" in x) {
+    hex = x.toString(16);
+  } else {
+    throw new Error(`${x as any} cannot be converted to an RPC quantity`);
+  }
+
+  if (hex === "0x0") return hex;
+
+  return hex.startsWith("0x") ? hex.replace(/0x0+/, "0x") : `0x${hex}`;
+};
+
+export const mineOnZksync = async (blocks: number) => {
+  const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+  const targetTimestamp = blockTimestamp + blocks;
+  await ethers.provider.send("evm_setNextBlockTimestamp", [targetTimestamp]);
+  await mineBlocks();
+};
+
+export async function mineBlocks(blocks: NumberLike = 1, options: { interval?: NumberLike } = {}): Promise<void> {
+  const interval = options.interval ?? 1;
+  const blocksHex = toRpcQuantity(blocks);
+  const intervalHex = toRpcQuantity(interval);
+
+  await network.provider.request({
+    method: "hardhat_mine",
+    params: [blocksHex, intervalHex],
+  });
+}
