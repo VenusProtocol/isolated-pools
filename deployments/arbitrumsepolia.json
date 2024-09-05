@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x6b9C91d7310BC19A9ce8a0AD7F926A72cEeb3b1D",
+      "address": "0x3b8b6E96e57f0d1cD366AaCf4CcC68413aF308D0",
       "abi": [
         {
           "inputs": [
@@ -140,6 +140,11 @@
           "type": "error"
         },
         {
+          "inputs": [],
+          "name": "BorrowActionNotPaused",
+          "type": "error"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
@@ -153,6 +158,11 @@
             }
           ],
           "name": "BorrowCapExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "BorrowCapIsNotZero",
           "type": "error"
         },
         {
@@ -173,12 +183,27 @@
         },
         {
           "inputs": [],
+          "name": "CollateralFactorIsNotZero",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "ComptrollerMismatch",
           "type": "error"
         },
         {
           "inputs": [],
           "name": "DelegationStatusUnchanged",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EnterMarketActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ExitMarketActionNotPaused",
           "type": "error"
         },
         {
@@ -215,6 +240,11 @@
         {
           "inputs": [],
           "name": "InvalidLiquidationThreshold",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "LiquidateActionNotPaused",
           "type": "error"
         },
         {
@@ -289,6 +319,11 @@
         },
         {
           "inputs": [],
+          "name": "MintActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "NonzeroBorrowBalance",
           "type": "error"
         },
@@ -301,6 +336,21 @@
             }
           ],
           "name": "PriceError",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "RedeemActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "RepayActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "SeizeActionNotPaused",
           "type": "error"
         },
         {
@@ -337,7 +387,17 @@
         },
         {
           "inputs": [],
+          "name": "SupplyCapIsNotZero",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "TooMuchRepay",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "TransferActionNotPaused",
           "type": "error"
         },
         {
@@ -513,6 +573,19 @@
             }
           ],
           "name": "MarketSupported",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            }
+          ],
+          "name": "MarketUnlisted",
           "type": "event"
         },
         {
@@ -2105,6 +2178,25 @@
           ],
           "name": "transferVerify",
           "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "market",
+              "type": "address"
+            }
+          ],
+          "name": "unlistMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
           "stateMutability": "nonpayable",
           "type": "function"
         },
