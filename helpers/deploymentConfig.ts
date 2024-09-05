@@ -4575,7 +4575,21 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 90 days (7776000 seconds)
+          // wstETH:  2550 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // weETH:   2550 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // WETH:    3060 XVS for Suppliers
+          //          7140 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["wstETH", "weETH", "WETH"],
+            supplySpeeds: ["327932098765432", "327932098765432", "393518518518518"],
+            borrowSpeeds: ["0", "0", "918209876543209"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
