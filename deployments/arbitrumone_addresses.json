@@ -22,6 +22,8 @@
     "RewardsDistributorImpl": "0xc4F087E39ACe29A03cacfd16e35d2e78cD524F87",
     "RewardsDistributor_Core_0": "0x53b488baA4052094495b6De9E5505FE1Ee3EAc7a",
     "RewardsDistributor_Core_0_Proxy": "0x53b488baA4052094495b6De9E5505FE1Ee3EAc7a",
+    "RewardsDistributor_Liquid Staked ETH_0": "0x6204Bae72dE568384Ca4dA91735dc343a0C7bD6D",
+    "RewardsDistributor_Liquid Staked ETH_0_Proxy": "0x6204Bae72dE568384Ca4dA91735dc343a0C7bD6D",
     "VTokenBeacon": "0xE9381D8CA7006c12Ae9eB97890575E705996fa66",
     "VTokenImpl": "0xfC0df4d5b0FCEb410985a13fC2be7df793453649",
     "VToken_vARB_Core": "0xAeB0FEd69354f34831fe1D16475D9A83ddaCaDA6",
