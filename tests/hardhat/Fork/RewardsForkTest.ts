@@ -3,7 +3,7 @@ import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -19,7 +19,7 @@ import {
   VToken,
   VToken__factory,
 } from "../../../typechain";
-import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -124,7 +124,7 @@ if (FORK) {
       await rewardDistributor.connect(comptrollerSigner).updateRewardTokenSupplyIndex(vTokenAddress);
 
       let supplyState = await rewardDistributor.rewardTokenSupplyState(vTokenAddress);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
         supplyState = await rewardDistributor.rewardTokenSupplyStateTimeBased(vTokenAddress);
       }
       const supplyIndex = supplyState.index;
@@ -157,7 +157,7 @@ if (FORK) {
         .updateRewardTokenBorrowIndex(vTokenAddress, { mantissa: marketBorrowIndex });
 
       let borrowState = await rewardDistributor.rewardTokenBorrowState(vTokenAddress);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
         borrowState = await rewardDistributor.rewardTokenBorrowStateTimeBased(vTokenAddress);
       }
       const borrowIndex = borrowState.index;
@@ -185,7 +185,11 @@ if (FORK) {
 
     it("Rewards for suppliers", async function () {
       await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
-      await mine(3000000);
+      if (FORKED_NETWORK == "zksyncsepolia") {
+        await mineOnZksync(3000000);
+      } else {
+        await mine(3000000);
+      }
       await vTOKEN2.accrueInterest();
 
       // Reward1 calculations for user 1
@@ -207,12 +211,18 @@ if (FORK) {
       supplierAccruedExpected = await computeSupplyRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC2);
       supplierAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC2);
       expect(supplierAccruedExpected).equals(supplierAccruedCurrent);
+      await network.provider.request({ method: "hardhat_reset" });
     });
 
     it("Rewards for borrowers", async function () {
       await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
       await vTOKEN2.connect(acc1Signer).borrow(bswBorrowAmount);
-      await mine(3000000);
+
+      if (FORKED_NETWORK == "zksyncsepolia") {
+        await mineOnZksync(3000000);
+      } else {
+        await mine(3000000);
+      }
       await vTOKEN2.accrueInterest();
 
       // Reward1 calculations for user 1
@@ -230,6 +240,7 @@ if (FORK) {
       borrowerAccruedExpected = await computeBorrowRewards(rewardDistributor1, VTOKEN2, vTOKEN2, ACC1);
       borrowerAccruedCurrent = await rewardDistributor1.rewardTokenAccrued(ACC1);
       expect(borrowerAccruedExpected).to.closeTo(borrowerAccruedCurrent, parseUnits("0.0000000000000006", 18));
+      await network.provider.request({ method: "hardhat_reset" });
     });
   });
 }

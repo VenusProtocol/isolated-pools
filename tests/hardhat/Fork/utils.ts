@@ -1,4 +1,3 @@
-import { impersonateAccount, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { NumberLike } from "@nomicfoundation/hardhat-network-helpers/dist/src/types";
 import { ethers, network } from "hardhat";
 
@@ -21,8 +20,7 @@ export const forking = (blockNumber: number, fn: () => Promise<void>) => {
 };
 
 export async function setForkBlock(_blockNumber: number) {
-  // const _blockNumber = config.networks.hardhat.zksync ? _blockNumber.toString(16) : _blockNumber;
-  const blockNumber = _blockNumber.toString(16);
+  const blockNumber = process.env.FORKED_NETWORK == "zksyncsepolia" ? _blockNumber.toString(16) : _blockNumber;
   await network.provider.request({
     method: "hardhat_reset",
     params: [
@@ -69,7 +67,9 @@ const toRpcQuantity = (x: NumberLike): string => {
 
 export const mineOnZksync = async (blocks: number) => {
   const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
-  const targetTimestamp = blockTimestamp + blocks;
+  // Actual timestamp on which block will get mine (assuming 1 sec/block)
+  const timestampOfBlocks = blocks * 1;
+  const targetTimestamp = blockTimestamp + timestampOfBlocks;
   await ethers.provider.send("evm_setNextBlockTimestamp", [targetTimestamp]);
   await mineBlocks();
 };

@@ -2,7 +2,7 @@ import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -20,7 +20,7 @@ import {
   WrappedNative,
   WrappedNative__factory,
 } from "../../../typechain";
-import { getContractAddresses, initMainnetUser, mineBlocks, mineOnZksync, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -285,7 +285,7 @@ if (FORK) {
       borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC1);
 
       expect(borrowIndexCurrent.mul(TOKEN2BorrowAmount).div(borrowIndexAcc1Prev)).equals(borrowBalanceStored);
-      console.log("end", borrowIndexCurrent.mul(TOKEN2BorrowAmount).div(borrowIndexAcc1Prev), borrowBalanceStored);
+      await network.provider.request({ method: "hardhat_reset" });
     });
 
     it("Attempt to borrow over set cap", async function () {
@@ -322,11 +322,12 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // **************************Set borrow caap zero***********************************/
-      await comptroller.setMarketBorrowCaps([VTOKEN2], [0]);
+      await comptroller.setMarketBorrowCaps([VTOKEN2], [1]);
       await expect(vTOKEN2.connect(acc1Signer).borrow(TOKEN2BorrowAmount)).to.be.revertedWithCustomError(
         comptroller,
         "BorrowCapExceeded",
       );
+      await network.provider.request({ method: "hardhat_reset" });
     });
   });
 }
