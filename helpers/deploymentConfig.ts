@@ -4554,7 +4554,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(4_600, 18),
             borrowCap: convertToUnit(2_300, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
-            vTokenReceiver: "0x5A9d695c518e95CD6Ea101f2f25fC2AE18486A61",
+            vTokenReceiver: "0x46cba1e9b1e5db32da28428f2fb85587bcb785e7",
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -4572,7 +4572,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit(14_000, 18),
             borrowCap: convertToUnit(12_500, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
-            vTokenReceiver: "0x5A9d695c518e95CD6Ea101f2f25fC2AE18486A61",
+            vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
           },
         ],
         rewards: [
