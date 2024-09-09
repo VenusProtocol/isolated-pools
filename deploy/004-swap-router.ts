@@ -79,6 +79,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
+
+  const comptrollerLiquidStakedETHAddresses = (await deployments.get("Comptroller_LiquidStakedETH")).address;
+  await deploy("SwapRouter_LiquidStakedETH", {
+    contract: "SwapRouter",
+    from: deployer,
+    args: [wBNBAddress, pancakeFactoryAddress, comptrollerLiquidStakedETHAddresses, vbnbAddress],
+    log: true,
+    autoMine: true,
+    skipIfAlreadyDeployed: true,
+  });
 };
 
 func.tags = ["SwapRouter", "il"];
