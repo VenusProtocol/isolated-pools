@@ -33,6 +33,7 @@ export type NetworkConfig = {
   arbitrumsepolia: DeploymentConfig;
   arbitrumone: DeploymentConfig;
   zksyncsepolia: DeploymentConfig;
+  opsepolia: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -138,6 +139,8 @@ export const blocksPerYear: BlocksPerYear = {
   arbitrumsepolia: 0, // for time based contracts
   arbitrumone: 0, // for time based contracts
   zksyncsepolia: 0, // for time based contracts
+  opsepolia: 0, // for time based contracts
+  opmainnet: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
@@ -148,6 +151,7 @@ export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207
 export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A61C2";
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 export const ZKSYNC_SEPOLIA_MULTISIG = "0xa2f83de95E9F28eD443132C331B6a9C9B7a9F866";
+export const OP_SEPOLIA_MULTISIG = "0xd57365EE4E850e881229e2F8Aa405822f289e78d";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM = "7200";
@@ -156,6 +160,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -239,6 +244,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     CriticalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     AccessControlManager: governanceZkSyncSepolia.AccessControlManager.address,
+  },
+  opsepolia: {
+    VTreasury: "0x5A1a12F47FA7007C9e23cf5e025F3f5d3aC7d755",
+    NormalTimelock: OP_SEPOLIA_MULTISIG,
+    FastTrackTimelock: OP_SEPOLIA_MULTISIG,
+    CriticalTimelock: OP_SEPOLIA_MULTISIG,
+    AccessControlManager: "0x1652E12C8ABE2f0D84466F0fc1fA4286491B3BC1",
   },
 };
 
@@ -4678,6 +4690,61 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.zksyncsepolia,
   },
+  opsepolia: {
+    tokensConfig: [
+      {
+        isMock: true,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: "0x4200000000000000000000000000000000000006",
+      },
+      {
+        isMock: true,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Optimism",
+        symbol: "OP",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+    ],
+
+    poolConfig: [
+   
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.opsepolia.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.opsepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -4702,6 +4769,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.arbitrumone;
     case "zksyncsepolia":
       return globalConfig.zksyncsepolia;
+    case "opsepolia":
+      return globalConfig.opsepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:
