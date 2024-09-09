@@ -4828,7 +4828,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.7", 18),
             liquidationThreshold: convertToUnit("0.75", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 ARB
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 OP
             supplyCap: convertToUnit(25, 18),
             borrowCap: convertToUnit(16, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
