@@ -9,6 +9,8 @@ import * as dotenv from "dotenv";
 import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
+import { subtask } from "hardhat/config";
 import { HardhatUserConfig, extendConfig, task } from "hardhat/config";
 import { HardhatConfig } from "hardhat/types";
 import "solidity-docgen";
@@ -39,7 +41,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   zksolc: {
-    version: "1.5.0",
+    version: "1.5.3",
   },
   solidity: {
     compilers: [
@@ -149,5 +151,16 @@ const config: HardhatUserConfig = {
     ],
   },
 };
+
+// Added a subtask to exclude some solidity files from compilation due to limitation in zksync compiler, https://docs.zksync.io/zk-stack/components/compiler/toolchain/solidity#limitations
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
+  const paths = await runSuper();
+  // List the files to exclude that are not being deployed on zkSync
+  const filesToExclude = ["WrappedNative"];
+
+  return paths.filter(p => {
+    return !filesToExclude.some(file => p.includes(file));
+  });
+});
 
 export default config;

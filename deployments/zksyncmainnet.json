@@ -3,7 +3,7 @@
   "chainId": "324",
   "contracts": {
     "ComptrollerBeacon": {
-      "address": "0x52Eb8B33DFDa74748A12F2BaB59b4742B3447528",
+      "address": "0x0221415aF47FD261dD39B72018423dADe5d937c5",
       "abi": [
         {
           "inputs": [
@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x037C370Cbe262422Ea16c13F540F78A0354d2727",
+      "address": "0xB2B58B15667e39dc09A0e29f1863eee7FD495541",
       "abi": [
         {
           "inputs": [
@@ -140,6 +140,11 @@
           "type": "error"
         },
         {
+          "inputs": [],
+          "name": "BorrowActionNotPaused",
+          "type": "error"
+        },
+        {
           "inputs": [
             {
               "internalType": "address",
@@ -153,6 +158,11 @@
             }
           ],
           "name": "BorrowCapExceeded",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "BorrowCapIsNotZero",
           "type": "error"
         },
         {
@@ -173,12 +183,27 @@
         },
         {
           "inputs": [],
+          "name": "CollateralFactorIsNotZero",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "ComptrollerMismatch",
           "type": "error"
         },
         {
           "inputs": [],
           "name": "DelegationStatusUnchanged",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EnterMarketActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ExitMarketActionNotPaused",
           "type": "error"
         },
         {
@@ -215,6 +240,11 @@
         {
           "inputs": [],
           "name": "InvalidLiquidationThreshold",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "LiquidateActionNotPaused",
           "type": "error"
         },
         {
@@ -289,6 +319,11 @@
         },
         {
           "inputs": [],
+          "name": "MintActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "NonzeroBorrowBalance",
           "type": "error"
         },
@@ -301,6 +336,21 @@
             }
           ],
           "name": "PriceError",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "RedeemActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "RepayActionNotPaused",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "SeizeActionNotPaused",
           "type": "error"
         },
         {
@@ -337,7 +387,17 @@
         },
         {
           "inputs": [],
+          "name": "SupplyCapIsNotZero",
+          "type": "error"
+        },
+        {
+          "inputs": [],
           "name": "TooMuchRepay",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "TransferActionNotPaused",
           "type": "error"
         },
         {
@@ -513,6 +573,19 @@
             }
           ],
           "name": "MarketSupported",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "vToken",
+              "type": "address"
+            }
+          ],
+          "name": "MarketUnlisted",
           "type": "event"
         },
         {
@@ -2112,6 +2185,25 @@
           "inputs": [
             {
               "internalType": "address",
+              "name": "market",
+              "type": "address"
+            }
+          ],
+          "name": "unlistMarket",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
               "name": "delegate",
               "type": "address"
             },
@@ -2142,7 +2234,7 @@
       ]
     },
     "Comptroller_Core": {
-      "address": "0xF06eC097C735fA4A6eFe2F6467fE7e8DaFff33Cb",
+      "address": "0xddE4D098D9995B659724ae6d5E3FB9681Ac941B1",
       "abi": [
         {
           "inputs": [
@@ -2381,7 +2473,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope425bps_jump8000bps_kink8000bps": {
-      "address": "0xbFA2400c5E1C219325462Bb76D392FB5dd64a4f7",
+      "address": "0xd8b4c9574e80376Ce4687EAc57D594C560Dc7c3F",
       "abi": [
         {
           "inputs": [
@@ -2741,7 +2833,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope875bps_jump8000bps_kink8000bps": {
-      "address": "0xb3d2aA830F2269052841170B2be2e9fAA1cc9023",
+      "address": "0x6e0f830e7fc78a296B0EbD5694573C2D9f0994B1",
       "abi": [
         {
           "inputs": [
@@ -3101,7 +3193,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope900bps_jump20000bps_kink4500bps": {
-      "address": "0xD65abA53394dA704Ba63Ff6dBcCcc110b0b1A827",
+      "address": "0xDe0DdC53BE71B2C67808392088A922AdC4ec3114",
       "abi": [
         {
           "inputs": [
@@ -3461,7 +3553,7 @@
       ]
     },
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": {
-      "address": "0x4E19c35c94A622d7FfaB9D97dCD264Aa560F37e8",
+      "address": "0xab2A687A02F5EE7A5b3B52E929705cCA470A0844",
       "abi": [
         {
           "inputs": [
@@ -4200,7 +4292,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0x7a9023E183a17c4Cc24c64B425aEf0e44F3383Ef",
+      "address": "0x69FC4232959131B4992597B739cEC97Ee898aA68",
       "abi": [
         {
           "inputs": [
@@ -5371,7 +5463,7 @@
       ]
     },
     "PoolRegistry": {
-      "address": "0x675075620eAaC74D7cFDAd8D0d8561bC865cDCe9",
+      "address": "0xFD96B926298034aed9bBe0Cca4b651E41eB87Bc4",
       "abi": [
         {
           "anonymous": false,
@@ -6180,7 +6272,7 @@
       ]
     },
     "PoolRegistry_Implementation": {
-      "address": "0xb2a99630e5855e8B5Ee75bdC7ebA00624e7e002e",
+      "address": "0x204Dfdbb0F066dAfaD8C7fc07B04751A973ADCFb",
       "abi": [
         {
           "inputs": [],
@@ -6863,7 +6955,7 @@
       ]
     },
     "PoolRegistry_Proxy": {
-      "address": "0x675075620eAaC74D7cFDAd8D0d8561bC865cDCe9",
+      "address": "0xFD96B926298034aed9bBe0Cca4b651E41eB87Bc4",
       "abi": [
         {
           "inputs": [
@@ -6999,7 +7091,7 @@
       ]
     },
     "VTokenBeacon": {
-      "address": "0xed428BD0b7eEA7a1ec726530Fda68EB8578CfCB0",
+      "address": "0x53523537aa330640B80400EB8B309fF5896E7eb5",
       "abi": [
         {
           "inputs": [
@@ -7106,7 +7198,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xde1aC1d70D53cDa4d08f2DD451876CEe4dCdBea5",
+      "address": "0x6829fF2937F780eD01A4CE3FDa3d0bA63B1BD771",
       "abi": [
         {
           "inputs": [
@@ -9175,7 +9267,7 @@
       ]
     },
     "VToken_vUSDC.e_Core": {
-      "address": "0xD1c61717A7155670216Da69CF7Dfc255084d355D",
+      "address": "0x1aF23bD57c62A99C59aD48236553D0Dd11e49D2D",
       "abi": [
         {
           "inputs": [
@@ -9249,7 +9341,7 @@
       ]
     },
     "VToken_vUSDT_Core": {
-      "address": "0x52D2fDb7799B35C66F89352329304D3d23Fb6112",
+      "address": "0x69cDA960E3b20DFD480866fFfd377Ebe40bd0A46",
       "abi": [
         {
           "inputs": [
@@ -9323,7 +9415,7 @@
       ]
     },
     "VToken_vWBTC_Core": {
-      "address": "0xe1F5e4085Cd9C36cbde8Dd726cA87C3C4d142189",
+      "address": "0xAF8fD83cFCbe963211FAaf1847F0F217F80B4719",
       "abi": [
         {
           "inputs": [
@@ -9397,7 +9489,7 @@
       ]
     },
     "VToken_vWETH_Core": {
-      "address": "0xa85323aE38be6f2f2EDF5206d5Cbcad1f230F552",
+      "address": "0x1Fa916C27c7C2c4602124A14C77Dbb40a5FF1BE8",
       "abi": [
         {
           "inputs": [
@@ -9471,7 +9563,7 @@
       ]
     },
     "VToken_vZK_Core": {
-      "address": "0x0da4dCfC09C445985ce62aFC618BC2222ae1C513",
+      "address": "0x697a70779C1A03Ba2BD28b7627a902BFf831b616",
       "abi": [
         {
           "inputs": [

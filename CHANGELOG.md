@@ -1,3 +1,51 @@
+## [3.5.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.10...v3.5.0-dev.11) (2024-09-05)
+
+
+### Features
+
+* updating deployment files ([581c592](https://github.com/VenusProtocol/isolated-pools/commit/581c5922096da418c99ae928251660e8c7d0fe98))
+* updating deployment files ([7d25caf](https://github.com/VenusProtocol/isolated-pools/commit/7d25caf803e48480368515edc5d0805136ed194f))
+* updating deployment files ([2e64131](https://github.com/VenusProtocol/isolated-pools/commit/2e64131d2ec1f322161ded7d243b67d851fbfe10))
+* updating deployment files ([43cda83](https://github.com/VenusProtocol/isolated-pools/commit/43cda8306281f2613bb0e2cf3815399ce349c44b))
+* updating deployment files ([a4d470c](https://github.com/VenusProtocol/isolated-pools/commit/a4d470ca4cf846e1ea651482573ec110128fea9b))
+* updating deployment files ([6ee64eb](https://github.com/VenusProtocol/isolated-pools/commit/6ee64eb1026d55b22813514dfdeb9be2b9f5f78e))
+* updating deployment files ([5959aed](https://github.com/VenusProtocol/isolated-pools/commit/5959aeddbda41018d8b7af2ac74073183abbe02c))
+
+
+### Bug Fixes
+
+* added indexed to event ([622cb17](https://github.com/VenusProtocol/isolated-pools/commit/622cb1736374703865ea0fa7ca5f9ce677b8dd9a))
+* added missing solcinputs ([0d4f2e3](https://github.com/VenusProtocol/isolated-pools/commit/0d4f2e39454bec903890238e414ba5deefd995bf))
+* added unlist function ([9999eda](https://github.com/VenusProtocol/isolated-pools/commit/9999eda0633ae52f1562355d442fa13207eee02b))
+* change storage to memory ([9584519](https://github.com/VenusProtocol/isolated-pools/commit/95845196dc97f66ed44469113848e47551a5221b))
+* CVP-01 ([9fd7543](https://github.com/VenusProtocol/isolated-pools/commit/9fd7543e8dd541f4a29c8cf76ef574ec573a3f7a))
+* deployed comptroller in bsctestnet ([ac789d2](https://github.com/VenusProtocol/isolated-pools/commit/ac789d2536753dc22942e61f97642ff9e3724daa))
+* deployed on arb sepolia ([e25fc16](https://github.com/VenusProtocol/isolated-pools/commit/e25fc16bbd28bd38e5b71138c56de40e548d3b34))
+* deployed on ethereum and arbitrumone ([c5d4db7](https://github.com/VenusProtocol/isolated-pools/commit/c5d4db72cbb9eba1f50f861be8ad980d7ba0b77d))
+* deployed on sepolia and opbnb testnet ([e36b799](https://github.com/VenusProtocol/isolated-pools/commit/e36b799cadae975a78f9668081a18d29fec00b62))
+* deployment on testnets - wip ([ebed4aa](https://github.com/VenusProtocol/isolated-pools/commit/ebed4aaa4ea7feeb885eed55e56bcea42c74ff65))
+* fix CI ([dddcd83](https://github.com/VenusProtocol/isolated-pools/commit/dddcd832ce777aa40c719255c8efc7806b8c415f))
+* fixed compile error ([bba744b](https://github.com/VenusProtocol/isolated-pools/commit/bba744b2241123867debe7cefaaf7285b26599f8))
+* fixed lint ([3e957f1](https://github.com/VenusProtocol/isolated-pools/commit/3e957f159f27f17828018af849c036bfe8722bf1))
+* fixed yarn.lock ([b03cb62](https://github.com/VenusProtocol/isolated-pools/commit/b03cb62c9c2dd9bc5f792b31a574ee35ecb8c8d5))
+* only unlist without updating state ([0b3a26b](https://github.com/VenusProtocol/isolated-pools/commit/0b3a26bb23a359af6435f3d3b95a116bd1301a88))
+* optimised getAssetsIn ([7e1902a](https://github.com/VenusProtocol/isolated-pools/commit/7e1902aecbf7afc9842bcb15c2dbf6e0deb25d63))
+* rebased ([6dacce2](https://github.com/VenusProtocol/isolated-pools/commit/6dacce26423d08c47f681163f96922bcb30f7add))
+* redeployed contracts ([03519d6](https://github.com/VenusProtocol/isolated-pools/commit/03519d63dede56dc0b7be184bd1262ddf492626b))
+* removed deployments ([5fd036c](https://github.com/VenusProtocol/isolated-pools/commit/5fd036c73d95e67b2c638ba59427e24f9bc11caf))
+* removed unwanted deployment file ([cb1826e](https://github.com/VenusProtocol/isolated-pools/commit/cb1826ea8ff6919f2dd4eaa57d0ef17ac630ae6c))
+* resolved conflict ([54ad9ee](https://github.com/VenusProtocol/isolated-pools/commit/54ad9ee304deabeae268c13442e93b28fef27949))
+* resolved conflict ([89dc5f4](https://github.com/VenusProtocol/isolated-pools/commit/89dc5f446c5a008b1ec8b8b6154b81222427791d))
+* resolved conflict ([26070c2](https://github.com/VenusProtocol/isolated-pools/commit/26070c23795862f7249c787b9f101888ca1a0464))
+* resolved conflict ([f85f96e](https://github.com/VenusProtocol/isolated-pools/commit/f85f96e85b571ba2ec6103c2217640c2be001ab8))
+* resolved conflict ([1b21f05](https://github.com/VenusProtocol/isolated-pools/commit/1b21f05afd655d3e2c9e6db3da9d1fea03c60f30))
+* test description ([97871b8](https://github.com/VenusProtocol/isolated-pools/commit/97871b8c0cdf7f7e310ea0d90350242713c072d1))
+* tests for unlist ([8ad5761](https://github.com/VenusProtocol/isolated-pools/commit/8ad5761ad04247c9888cc19ceb16a08a13858f63))
+* updated yarn lock ([d2a0403](https://github.com/VenusProtocol/isolated-pools/commit/d2a0403b683aa93e8c9c2410f8494d815ad4f536))
+* updates getAssetsIn ([99e8dd8](https://github.com/VenusProtocol/isolated-pools/commit/99e8dd8f44dc56b8ba41fa50900f7f5f1b77f3b3))
+* VPB-01 ([144cb97](https://github.com/VenusProtocol/isolated-pools/commit/144cb9761cc3da4215dda2240b68d939c2e586f7))
+* VPB-05 ([f038e3e](https://github.com/VenusProtocol/isolated-pools/commit/f038e3edbfae79b2c5fa9eafbf8f7f2b1767cec7))
+
 ## [3.5.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.9...v3.5.0-dev.10) (2024-08-23)
 
 
