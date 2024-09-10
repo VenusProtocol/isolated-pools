@@ -1,3 +1,18 @@
+## [3.5.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.12...v3.5.0-dev.13) (2024-09-10)
+
+
+### Features
+
+* add IL deployments on zksync mainnet ([ec7303f](https://github.com/VenusProtocol/isolated-pools/commit/ec7303fe8eb63fe31b0237085d5c5c551753bd27))
+* deployments of NTG on zksync ([9e78b8d](https://github.com/VenusProtocol/isolated-pools/commit/9e78b8d892b45c1f33cfda8804bae46d417b8b2f))
+* export deployment ([d4bdbe2](https://github.com/VenusProtocol/isolated-pools/commit/d4bdbe2752d181b9b20f621ec57430adc5f06962))
+* redeploy IL with updated zksolc & new comptroller implementation ([8ef42d6](https://github.com/VenusProtocol/isolated-pools/commit/8ef42d62c2b01158c8af7a7982ba055aa70fa8eb))
+* redeploy NTG with updated zksolc version ([b93f63e](https://github.com/VenusProtocol/isolated-pools/commit/b93f63e67d6f1f556085b0ee56ad672eaf6ebcd8))
+* updating deployment files ([e87caaa](https://github.com/VenusProtocol/isolated-pools/commit/e87caaad46b3774774e7f8d499f4cdca69f20637))
+* updating deployment files ([74c4112](https://github.com/VenusProtocol/isolated-pools/commit/74c4112ab0e25b00a51598a610bb9c8a1e2cea05))
+* updating deployment files ([1286259](https://github.com/VenusProtocol/isolated-pools/commit/12862592d7193e7c85391d45a2fa4a892740e778))
+* updating deployment files ([d9873c5](https://github.com/VenusProtocol/isolated-pools/commit/d9873c55961f9c930ebee07272ae11caf3bb966d))
+
 ## [3.5.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.11...v3.5.0-dev.12) (2024-09-10)
 
 
