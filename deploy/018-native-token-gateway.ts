@@ -10,6 +10,7 @@ import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { contracts as ilOpbnbMainnet } from "../deployments/opbnbmainnet.json";
 import { contracts as ilOpbnbTestnet } from "../deployments/opbnbtestnet.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
+import { contracts as ilZkMainnet } from "../deployments/zksyncmainnet.json";
 import { contracts as ilZkSepolia } from "../deployments/zksyncsepolia.json";
 import { getConfig } from "../helpers/deploymentConfig";
 
@@ -87,6 +88,12 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilZkSepolia.VToken_vWETH_Core.address,
+    },
+  ],
+  zksyncmainnet: [
+    {
+      name: "vWETH_Core",
+      address: ilZkMainnet.VToken_vWETH_Core.address,
     },
   ],
 };

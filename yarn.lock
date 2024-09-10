@@ -3368,14 +3368,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@npm:2.3.0-dev.1":
-  version: 2.3.0-dev.1
-  resolution: "@venusprotocol/governance-contracts@npm:2.3.0-dev.1"
+"@venusprotocol/governance-contracts@npm:2.3.0-dev.5":
+  version: 2.3.0-dev.5
+  resolution: "@venusprotocol/governance-contracts@npm:2.3.0-dev.5"
   dependencies:
     "@venusprotocol/solidity-utilities": 2.0.0
     hardhat-deploy-ethers: ^0.3.0-beta.13
     module-alias: ^2.2.2
-  checksum: e58de20ec84c33727c632370844dfb47740c32cfb45b8ad8dd4a5d3294bb6fbefaa445797bc99f590d8a6f6e512a0bdff5678e3ac185d4f5a9b7e53541cb8297
+  checksum: 71f9e1cd9de9ff5d26153b6c1dcbf60368d21e76ee09163a5a1bfc1f24e7cb86a9ae95a0cc99f04010144ad0b7bf9f88b1cf5a1240ea607d49eebaad4c968125
   languageName: node
   linkType: hard
 
@@ -3433,11 +3433,11 @@ __metadata:
     "@types/node": ^12.20.50
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
-    "@venusprotocol/governance-contracts": 2.3.0-dev.1
+    "@venusprotocol/governance-contracts": 2.3.0-dev.5
     "@venusprotocol/oracle": 2.3.0
     "@venusprotocol/protocol-reserve": 2.2.0
     "@venusprotocol/solidity-utilities": ^2.0.0
-    "@venusprotocol/venus-protocol": 9.2.0-dev.6
+    "@venusprotocol/venus-protocol": 9.2.0-dev.11
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3576,9 +3576,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:9.2.0-dev.6":
-  version: 9.2.0-dev.6
-  resolution: "@venusprotocol/venus-protocol@npm:9.2.0-dev.6"
+"@venusprotocol/venus-protocol@npm:9.2.0-dev.11":
+  version: 9.2.0-dev.11
+  resolution: "@venusprotocol/venus-protocol@npm:9.2.0-dev.11"
   dependencies:
     "@nomicfoundation/hardhat-ethers": ^3.0.0
     "@openzeppelin/contracts": 4.9.3
@@ -3590,7 +3590,7 @@ __metadata:
     bignumber.js: ^9.1.2
     dotenv: ^16.0.1
     module-alias: ^2.2.2
-  checksum: d954781be99e1c149cf6820741c8c9f4e74f53631751a12e7fd58fafcb0895771b9829d8a48869dcf4e1ea854c02204b53fee399d7a0faa9e961bffbbbb8a002
+  checksum: 2427ad1fe991d8f4fd12e877880d6bb122f2db2239d3d5427618796df4d82086be16aaf277a36904cce1f398b344ee2d8a4971e894007eaddb80e4426599e093
   languageName: node
   linkType: hard
 
