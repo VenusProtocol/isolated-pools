@@ -1,3 +1,10 @@
+## [3.5.0-dev.14](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.13...v3.5.0-dev.14) (2024-09-10)
+
+
+### Features
+
+* bump dependencies with venus packages ([8d71a4d](https://github.com/VenusProtocol/isolated-pools/commit/8d71a4d72b59f8076245b5f68875631dd1e105c4))
+
 ## [3.5.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.12...v3.5.0-dev.13) (2024-09-10)
 
 
