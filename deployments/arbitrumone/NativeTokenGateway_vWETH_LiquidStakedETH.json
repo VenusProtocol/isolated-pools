@@ -1,0 +1,599 @@
+{
+  "address": "0xD1e89806BAB8Cd7680DFc7425D1fA6d7D5F0C3FE",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IVToken",
+          "name": "vWrappedNativeToken",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "NativeTokenTransferFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAddressNotAllowed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroValueNotAllowed",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SweepNative",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SweepToken",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "TokensBorrowedAndUnwrapped",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "TokensRedeemedAndUnwrapped",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "TokensWrappedAndRepaid",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "vToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "TokensWrappedAndSupplied",
+      "type": "event"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "inputs": [],
+      "name": "acceptOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "borrowAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "borrowAndUnwrap",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingOwner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "redeemTokens",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemAndUnwrap",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "redeemAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemUnderlyingAndUnwrap",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "sweepNative",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "sweepToken",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "vWNativeToken",
+      "outputs": [
+        {
+          "internalType": "contract IVToken",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wNativeToken",
+      "outputs": [
+        {
+          "internalType": "contract IWrappedNative",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wrapAndRepay",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "minter",
+          "type": "address"
+        }
+      ],
+      "name": "wrapAndSupply",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    }
+  ],
+  "transactionHash": "0xb3058637e88fc461255bc311f3b725af3b762355d0117bba5293b8db70bfa2c3",
+  "receipt": {
+    "to": null,
+    "from": "0x2A94EAb15be8557e6dDAE87eCeCf69ba58aAE2AD",
+    "contractAddress": "0xD1e89806BAB8Cd7680DFc7425D1fA6d7D5F0C3FE",
+    "transactionIndex": 5,
+    "gasUsed": "2063847",
+    "logsBloom": "0x00040000000000000000000000000004000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000020000000000000000000800000000000000000000000010000000400000000000000000000000000000000000000000000080002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000800000000000000000000000",
+    "blockHash": "0xd7a4d5596ffa02e4b0f50c99f857289a56fc7710d89042ef243ccf0fa4e5c052",
+    "transactionHash": "0xb3058637e88fc461255bc311f3b725af3b762355d0117bba5293b8db70bfa2c3",
+    "logs": [
+      {
+        "transactionIndex": 5,
+        "blockNumber": 250042240,
+        "transactionHash": "0xb3058637e88fc461255bc311f3b725af3b762355d0117bba5293b8db70bfa2c3",
+        "address": "0xD1e89806BAB8Cd7680DFc7425D1fA6d7D5F0C3FE",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000002a94eab15be8557e6ddae87ececf69ba58aae2ad"
+        ],
+        "data": "0x",
+        "logIndex": 13,
+        "blockHash": "0xd7a4d5596ffa02e4b0f50c99f857289a56fc7710d89042ef243ccf0fa4e5c052"
+      }
+    ],
+    "blockNumber": 250042240,
+    "cumulativeGasUsed": "2936656",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": ["0x39D6d13Ea59548637104E40e729E4aABE27FE106"],
+  "numDeployments": 1,
+  "solcInputHash": "3688ad0b9c5aa96bd2e711a0711cac24",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IVToken\",\"name\":\"vWrappedNativeToken\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"NativeTokenTransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddressNotAllowed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroValueNotAllowed\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"SweepNative\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"SweepToken\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"TokensBorrowedAndUnwrapped\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"TokensRedeemedAndUnwrapped\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"TokensWrappedAndRepaid\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"vToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"TokensWrappedAndSupplied\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[],\"name\":\"acceptOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"borrowAmount\",\"type\":\"uint256\"}],\"name\":\"borrowAndUnwrap\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pendingOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"redeemTokens\",\"type\":\"uint256\"}],\"name\":\"redeemAndUnwrap\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"redeemAmount\",\"type\":\"uint256\"}],\"name\":\"redeemUnderlyingAndUnwrap\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sweepNative\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"sweepToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vWNativeToken\",\"outputs\":[{\"internalType\":\"contract IVToken\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wNativeToken\",\"outputs\":[{\"internalType\":\"contract IWrappedNative\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wrapAndRepay\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"minter\",\"type\":\"address\"}],\"name\":\"wrapAndSupply\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Venus\",\"events\":{\"SweepNative(address,uint256)\":{\"details\":\"Emitted when native asset is swept from the contract\"},\"SweepToken(address,address,uint256)\":{\"details\":\"Emitted when token is swept from the contract\"},\"TokensBorrowedAndUnwrapped(address,address,uint256)\":{\"details\":\"Emitted when native tokens are borrowed and unwrapped\"},\"TokensRedeemedAndUnwrapped(address,address,uint256)\":{\"details\":\"Emitted when tokens are redeemed and then unwrapped to be sent to user\"},\"TokensWrappedAndRepaid(address,address,uint256)\":{\"details\":\"Emitted when native currency is wrapped and repaid\"},\"TokensWrappedAndSupplied(address,address,uint256)\":{\"details\":\"Emitted when native currency is supplied\"}},\"kind\":\"dev\",\"methods\":{\"acceptOwnership()\":{\"details\":\"The new owner accepts the ownership transfer.\"},\"borrowAndUnwrap(uint256)\":{\"custom:error\":\"ZeroValueNotAllowed is thrown if borrowAmount is zero\",\"custom:event\":\"TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped\",\"details\":\"Borrow wNativeToken, unwrap to Native, and send to the user\",\"params\":{\"borrowAmount\":\"The amount of underlying tokens to borrow\"}},\"constructor\":{\"params\":{\"vWrappedNativeToken\":\"Address of wrapped native token market\"}},\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"pendingOwner()\":{\"details\":\"Returns the address of the pending owner.\"},\"redeemAndUnwrap(uint256)\":{\"custom:error\":\"ZeroValueNotAllowed is thrown if redeemTokens is zero\",\"custom:event\":\"TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped\",\"params\":{\"redeemTokens\":\"The amount of vWNative tokens to redeem\"}},\"redeemUnderlyingAndUnwrap(uint256)\":{\"custom:error\":\"ZeroValueNotAllowed is thrown if redeemAmount is zero\",\"custom:event\":\"TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped\",\"params\":{\"redeemAmount\":\"The amount of underlying tokens to redeem\"}},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"sweepNative()\":{\"custom:access\":\"Controlled by Governance\",\"custom:event\":\"SweepNative is emitted when assets are swept from the contract\"},\"sweepToken(address)\":{\"custom:access\":\"Controlled by Governance\",\"custom:event\":\"SweepToken emits on success\",\"params\":{\"token\":\"Address of the token\"}},\"transferOwnership(address)\":{\"details\":\"Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one. Can only be called by the current owner.\"},\"wrapAndRepay()\":{\"custom:error\":\"ZeroValueNotAllowed is thrown if repayAmount is zero\",\"custom:event\":\"TokensWrappedAndRepaid is emitted when assets are repaid to a market and unwrapped\"},\"wrapAndSupply(address)\":{\"custom:error\":\"ZeroAddressNotAllowed is thrown if address of minter is zero addressZeroValueNotAllowed is thrown if mintAmount is zero\",\"custom:event\":\"TokensWrappedAndSupplied is emitted when assets are supplied to the market\",\"params\":{\"minter\":\"The address on behalf of whom the supply is performed.\"}}},\"title\":\"NativeTokenGateway\",\"version\":1},\"userdoc\":{\"errors\":{\"NativeTokenTransferFailed()\":[{\"notice\":\"Thrown if transfer of native token fails\"}],\"ZeroAddressNotAllowed()\":[{\"notice\":\"Thrown if the supplied address is a zero address where it is not allowed\"}],\"ZeroValueNotAllowed()\":[{\"notice\":\"Thrown if the supplied value is 0 where it is not allowed\"}]},\"kind\":\"user\",\"methods\":{\"constructor\":{\"notice\":\"Constructor for NativeTokenGateway\"},\"redeemAndUnwrap(uint256)\":{\"notice\":\"Redeem vWNativeToken, unwrap to Native Token, and send to the user\"},\"redeemUnderlyingAndUnwrap(uint256)\":{\"notice\":\"Redeem vWNativeToken, unwrap to Native Token, and send to the user\"},\"sweepNative()\":{\"notice\":\"Sweeps native assets (Native) from the contract and sends them to the owner\"},\"sweepToken(address)\":{\"notice\":\"Sweeps the input token address tokens from the contract and sends them to the owner\"},\"vWNativeToken()\":{\"notice\":\"Address of wrapped native token market\"},\"wNativeToken()\":{\"notice\":\"Address of wrapped native token contract\"},\"wrapAndRepay()\":{\"notice\":\"Wrap Native, repay borrow in the market, and send remaining Native to the user\"},\"wrapAndSupply(address)\":{\"notice\":\"Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market.\"}},\"notice\":\"NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wNativeToken)\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/Gateway/NativeTokenGateway.sol\":\"NativeTokenGateway\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/access/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../utils/Context.sol\\\";\\n\\n/**\\n * @dev Contract module which provides a basic access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership}.\\n *\\n * This module is used through inheritance. It will make available the modifier\\n * `onlyOwner`, which can be applied to your functions to restrict their use to\\n * the owner.\\n */\\nabstract contract Ownable is Context {\\n    address private _owner;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Initializes the contract setting the deployer as the initial owner.\\n     */\\n    constructor() {\\n        _transferOwnership(_msgSender());\\n    }\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        _checkOwner();\\n        _;\\n    }\\n\\n    /**\\n     * @dev Returns the address of the current owner.\\n     */\\n    function owner() public view virtual returns (address) {\\n        return _owner;\\n    }\\n\\n    /**\\n     * @dev Throws if the sender is not the owner.\\n     */\\n    function _checkOwner() internal view virtual {\\n        require(owner() == _msgSender(), \\\"Ownable: caller is not the owner\\\");\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby disabling any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        _transferOwnership(address(0));\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), \\\"Ownable: new owner is the zero address\\\");\\n        _transferOwnership(newOwner);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Internal function without access restriction.\\n     */\\n    function _transferOwnership(address newOwner) internal virtual {\\n        address oldOwner = _owner;\\n        _owner = newOwner;\\n        emit OwnershipTransferred(oldOwner, newOwner);\\n    }\\n}\\n\",\"keccak256\":\"0xba43b97fba0d32eb4254f6a5a297b39a19a247082a02d6e69349e071e2946218\",\"license\":\"MIT\"},\"@openzeppelin/contracts/access/Ownable2Step.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable2Step.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"./Ownable.sol\\\";\\n\\n/**\\n * @dev Contract module which provides access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership} and {acceptOwnership}.\\n *\\n * This module is used through inheritance. It will make available all functions\\n * from parent (Ownable).\\n */\\nabstract contract Ownable2Step is Ownable {\\n    address private _pendingOwner;\\n\\n    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Returns the address of the pending owner.\\n     */\\n    function pendingOwner() public view virtual returns (address) {\\n        return _pendingOwner;\\n    }\\n\\n    /**\\n     * @dev Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one.\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual override onlyOwner {\\n        _pendingOwner = newOwner;\\n        emit OwnershipTransferStarted(owner(), newOwner);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`) and deletes any pending owner.\\n     * Internal function without access restriction.\\n     */\\n    function _transferOwnership(address newOwner) internal virtual override {\\n        delete _pendingOwner;\\n        super._transferOwnership(newOwner);\\n    }\\n\\n    /**\\n     * @dev The new owner accepts the ownership transfer.\\n     */\\n    function acceptOwnership() public virtual {\\n        address sender = _msgSender();\\n        require(pendingOwner() == sender, \\\"Ownable2Step: caller is not the new owner\\\");\\n        _transferOwnership(sender);\\n    }\\n}\\n\",\"keccak256\":\"0xde231558366826d7cb61725af8147965a61c53b77a352cc8c9af38fc5a92ac3c\",\"license\":\"MIT\"},\"@openzeppelin/contracts/security/ReentrancyGuard.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (security/ReentrancyGuard.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Contract module that helps prevent reentrant calls to a function.\\n *\\n * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier\\n * available, which can be applied to functions to make sure there are no nested\\n * (reentrant) calls to them.\\n *\\n * Note that because there is a single `nonReentrant` guard, functions marked as\\n * `nonReentrant` may not call one another. This can be worked around by making\\n * those functions `private`, and then adding `external` `nonReentrant` entry\\n * points to them.\\n *\\n * TIP: If you would like to learn more about reentrancy and alternative ways\\n * to protect against it, check out our blog post\\n * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].\\n */\\nabstract contract ReentrancyGuard {\\n    // Booleans are more expensive than uint256 or any type that takes up a full\\n    // word because each write operation emits an extra SLOAD to first read the\\n    // slot's contents, replace the bits taken up by the boolean, and then write\\n    // back. This is the compiler's defense against contract upgrades and\\n    // pointer aliasing, and it cannot be disabled.\\n\\n    // The values being non-zero value makes deployment a bit more expensive,\\n    // but in exchange the refund on every call to nonReentrant will be lower in\\n    // amount. Since refunds are capped to a percentage of the total\\n    // transaction's gas, it is best to keep them low in cases like this one, to\\n    // increase the likelihood of the full refund coming into effect.\\n    uint256 private constant _NOT_ENTERED = 1;\\n    uint256 private constant _ENTERED = 2;\\n\\n    uint256 private _status;\\n\\n    constructor() {\\n        _status = _NOT_ENTERED;\\n    }\\n\\n    /**\\n     * @dev Prevents a contract from calling itself, directly or indirectly.\\n     * Calling a `nonReentrant` function from another `nonReentrant`\\n     * function is not supported. It is possible to prevent this from happening\\n     * by making the `nonReentrant` function external, and making it call a\\n     * `private` function that does the actual work.\\n     */\\n    modifier nonReentrant() {\\n        _nonReentrantBefore();\\n        _;\\n        _nonReentrantAfter();\\n    }\\n\\n    function _nonReentrantBefore() private {\\n        // On the first call to nonReentrant, _status will be _NOT_ENTERED\\n        require(_status != _ENTERED, \\\"ReentrancyGuard: reentrant call\\\");\\n\\n        // Any calls to nonReentrant after this point will fail\\n        _status = _ENTERED;\\n    }\\n\\n    function _nonReentrantAfter() private {\\n        // By storing the original value once again, a refund is triggered (see\\n        // https://eips.ethereum.org/EIPS/eip-2200)\\n        _status = _NOT_ENTERED;\\n    }\\n\\n    /**\\n     * @dev Returns true if the reentrancy guard is currently set to \\\"entered\\\", which indicates there is a\\n     * `nonReentrant` function in the call stack.\\n     */\\n    function _reentrancyGuardEntered() internal view returns (bool) {\\n        return _status == _ENTERED;\\n    }\\n}\\n\",\"keccak256\":\"0xa535a5df777d44e945dd24aa43a11e44b024140fc340ad0dfe42acf4002aade1\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\\n}\\n\",\"keccak256\":\"0x287b55befed2961a7eabd7d7b1b2839cbca8a5b80ef8dcbb25ed3d4c2002c305\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.4) (token/ERC20/extensions/IERC20Permit.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in\\n * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].\\n *\\n * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by\\n * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't\\n * need to send a transaction, and thus is not required to hold Ether at all.\\n *\\n * ==== Security Considerations\\n *\\n * There are two important considerations concerning the use of `permit`. The first is that a valid permit signature\\n * expresses an allowance, and it should not be assumed to convey additional meaning. In particular, it should not be\\n * considered as an intention to spend the allowance in any specific way. The second is that because permits have\\n * built-in replay protection and can be submitted by anyone, they can be frontrun. A protocol that uses permits should\\n * take this into consideration and allow a `permit` call to fail. Combining these two aspects, a pattern that may be\\n * generally recommended is:\\n *\\n * ```solidity\\n * function doThingWithPermit(..., uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public {\\n *     try token.permit(msg.sender, address(this), value, deadline, v, r, s) {} catch {}\\n *     doThing(..., value);\\n * }\\n *\\n * function doThing(..., uint256 value) public {\\n *     token.safeTransferFrom(msg.sender, address(this), value);\\n *     ...\\n * }\\n * ```\\n *\\n * Observe that: 1) `msg.sender` is used as the owner, leaving no ambiguity as to the signer intent, and 2) the use of\\n * `try/catch` allows the permit to fail and makes the code tolerant to frontrunning. (See also\\n * {SafeERC20-safeTransferFrom}).\\n *\\n * Additionally, note that smart contract wallets (such as Argent or Safe) are not able to produce permit signatures, so\\n * contracts should have entry points that don't rely on permit.\\n */\\ninterface IERC20Permit {\\n    /**\\n     * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,\\n     * given ``owner``'s signed approval.\\n     *\\n     * IMPORTANT: The same issues {IERC20-approve} has related to transaction\\n     * ordering also apply here.\\n     *\\n     * Emits an {Approval} event.\\n     *\\n     * Requirements:\\n     *\\n     * - `spender` cannot be the zero address.\\n     * - `deadline` must be a timestamp in the future.\\n     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`\\n     * over the EIP712-formatted function arguments.\\n     * - the signature must use ``owner``'s current nonce (see {nonces}).\\n     *\\n     * For more information on the signature format, see the\\n     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP\\n     * section].\\n     *\\n     * CAUTION: See Security Considerations above.\\n     */\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n\\n    /**\\n     * @dev Returns the current nonce for `owner`. This value must be\\n     * included whenever a signature is generated for {permit}.\\n     *\\n     * Every successful call to {permit} increases ``owner``'s nonce by one. This\\n     * prevents a signature from being used multiple times.\\n     */\\n    function nonces(address owner) external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.\\n     */\\n    // solhint-disable-next-line func-name-mixedcase\\n    function DOMAIN_SEPARATOR() external view returns (bytes32);\\n}\\n\",\"keccak256\":\"0xb264c03a3442eb37a68ad620cefd1182766b58bee6cec40343480392d6b14d69\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.3) (token/ERC20/utils/SafeERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../IERC20.sol\\\";\\nimport \\\"../extensions/IERC20Permit.sol\\\";\\nimport \\\"../../../utils/Address.sol\\\";\\n\\n/**\\n * @title SafeERC20\\n * @dev Wrappers around ERC20 operations that throw on failure (when the token\\n * contract returns false). Tokens that return no value (and instead revert or\\n * throw on failure) are also supported, non-reverting calls are assumed to be\\n * successful.\\n * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,\\n * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.\\n */\\nlibrary SafeERC20 {\\n    using Address for address;\\n\\n    /**\\n     * @dev Transfer `value` amount of `token` from the calling contract to `to`. If `token` returns no value,\\n     * non-reverting calls are assumed to be successful.\\n     */\\n    function safeTransfer(IERC20 token, address to, uint256 value) internal {\\n        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));\\n    }\\n\\n    /**\\n     * @dev Transfer `value` amount of `token` from `from` to `to`, spending the approval given by `from` to the\\n     * calling contract. If `token` returns no value, non-reverting calls are assumed to be successful.\\n     */\\n    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {\\n        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));\\n    }\\n\\n    /**\\n     * @dev Deprecated. This function has issues similar to the ones found in\\n     * {IERC20-approve}, and its usage is discouraged.\\n     *\\n     * Whenever possible, use {safeIncreaseAllowance} and\\n     * {safeDecreaseAllowance} instead.\\n     */\\n    function safeApprove(IERC20 token, address spender, uint256 value) internal {\\n        // safeApprove should only be called when setting an initial allowance,\\n        // or when resetting it to zero. To increase and decrease it, use\\n        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'\\n        require(\\n            (value == 0) || (token.allowance(address(this), spender) == 0),\\n            \\\"SafeERC20: approve from non-zero to non-zero allowance\\\"\\n        );\\n        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));\\n    }\\n\\n    /**\\n     * @dev Increase the calling contract's allowance toward `spender` by `value`. If `token` returns no value,\\n     * non-reverting calls are assumed to be successful.\\n     */\\n    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {\\n        uint256 oldAllowance = token.allowance(address(this), spender);\\n        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, oldAllowance + value));\\n    }\\n\\n    /**\\n     * @dev Decrease the calling contract's allowance toward `spender` by `value`. If `token` returns no value,\\n     * non-reverting calls are assumed to be successful.\\n     */\\n    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {\\n        unchecked {\\n            uint256 oldAllowance = token.allowance(address(this), spender);\\n            require(oldAllowance >= value, \\\"SafeERC20: decreased allowance below zero\\\");\\n            _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, oldAllowance - value));\\n        }\\n    }\\n\\n    /**\\n     * @dev Set the calling contract's allowance toward `spender` to `value`. If `token` returns no value,\\n     * non-reverting calls are assumed to be successful. Meant to be used with tokens that require the approval\\n     * to be set to zero before setting it to a non-zero value, such as USDT.\\n     */\\n    function forceApprove(IERC20 token, address spender, uint256 value) internal {\\n        bytes memory approvalCall = abi.encodeWithSelector(token.approve.selector, spender, value);\\n\\n        if (!_callOptionalReturnBool(token, approvalCall)) {\\n            _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, 0));\\n            _callOptionalReturn(token, approvalCall);\\n        }\\n    }\\n\\n    /**\\n     * @dev Use a ERC-2612 signature to set the `owner` approval toward `spender` on `token`.\\n     * Revert on invalid signature.\\n     */\\n    function safePermit(\\n        IERC20Permit token,\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) internal {\\n        uint256 nonceBefore = token.nonces(owner);\\n        token.permit(owner, spender, value, deadline, v, r, s);\\n        uint256 nonceAfter = token.nonces(owner);\\n        require(nonceAfter == nonceBefore + 1, \\\"SafeERC20: permit did not succeed\\\");\\n    }\\n\\n    /**\\n     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement\\n     * on the return value: the return value is optional (but if data is returned, it must not be false).\\n     * @param token The token targeted by the call.\\n     * @param data The call data (encoded using abi.encode or one of its variants).\\n     */\\n    function _callOptionalReturn(IERC20 token, bytes memory data) private {\\n        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since\\n        // we're implementing it ourselves. We use {Address-functionCall} to perform this call, which verifies that\\n        // the target address contains contract code and also asserts for success in the low-level call.\\n\\n        bytes memory returndata = address(token).functionCall(data, \\\"SafeERC20: low-level call failed\\\");\\n        require(returndata.length == 0 || abi.decode(returndata, (bool)), \\\"SafeERC20: ERC20 operation did not succeed\\\");\\n    }\\n\\n    /**\\n     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement\\n     * on the return value: the return value is optional (but if data is returned, it must not be false).\\n     * @param token The token targeted by the call.\\n     * @param data The call data (encoded using abi.encode or one of its variants).\\n     *\\n     * This is a variant of {_callOptionalReturn} that silents catches all reverts and returns a bool instead.\\n     */\\n    function _callOptionalReturnBool(IERC20 token, bytes memory data) private returns (bool) {\\n        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since\\n        // we're implementing it ourselves. We cannot use {Address-functionCall} here since this should return false\\n        // and not revert is the subcall reverts.\\n\\n        (bool success, bytes memory returndata) = address(token).call(data);\\n        return\\n            success && (returndata.length == 0 || abi.decode(returndata, (bool))) && Address.isContract(address(token));\\n    }\\n}\\n\",\"keccak256\":\"0xabefac93435967b4d36a4fabcbdbb918d1f0b7ae3c3d85bc30923b326c927ed1\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Address.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)\\n\\npragma solidity ^0.8.1;\\n\\n/**\\n * @dev Collection of functions related to the address type\\n */\\nlibrary Address {\\n    /**\\n     * @dev Returns true if `account` is a contract.\\n     *\\n     * [IMPORTANT]\\n     * ====\\n     * It is unsafe to assume that an address for which this function returns\\n     * false is an externally-owned account (EOA) and not a contract.\\n     *\\n     * Among others, `isContract` will return false for the following\\n     * types of addresses:\\n     *\\n     *  - an externally-owned account\\n     *  - a contract in construction\\n     *  - an address where a contract will be created\\n     *  - an address where a contract lived, but was destroyed\\n     *\\n     * Furthermore, `isContract` will also return true if the target contract within\\n     * the same transaction is already scheduled for destruction by `SELFDESTRUCT`,\\n     * which only has an effect at the end of a transaction.\\n     * ====\\n     *\\n     * [IMPORTANT]\\n     * ====\\n     * You shouldn't rely on `isContract` to protect against flash loan attacks!\\n     *\\n     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets\\n     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract\\n     * constructor.\\n     * ====\\n     */\\n    function isContract(address account) internal view returns (bool) {\\n        // This method relies on extcodesize/address.code.length, which returns 0\\n        // for contracts in construction, since the code is only stored at the end\\n        // of the constructor execution.\\n\\n        return account.code.length > 0;\\n    }\\n\\n    /**\\n     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to\\n     * `recipient`, forwarding all available gas and reverting on errors.\\n     *\\n     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost\\n     * of certain opcodes, possibly making contracts go over the 2300 gas limit\\n     * imposed by `transfer`, making them unable to receive funds via\\n     * `transfer`. {sendValue} removes this limitation.\\n     *\\n     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].\\n     *\\n     * IMPORTANT: because control is transferred to `recipient`, care must be\\n     * taken to not create reentrancy vulnerabilities. Consider using\\n     * {ReentrancyGuard} or the\\n     * https://solidity.readthedocs.io/en/v0.8.0/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].\\n     */\\n    function sendValue(address payable recipient, uint256 amount) internal {\\n        require(address(this).balance >= amount, \\\"Address: insufficient balance\\\");\\n\\n        (bool success, ) = recipient.call{value: amount}(\\\"\\\");\\n        require(success, \\\"Address: unable to send value, recipient may have reverted\\\");\\n    }\\n\\n    /**\\n     * @dev Performs a Solidity function call using a low level `call`. A\\n     * plain `call` is an unsafe replacement for a function call: use this\\n     * function instead.\\n     *\\n     * If `target` reverts with a revert reason, it is bubbled up by this\\n     * function (like regular Solidity function calls).\\n     *\\n     * Returns the raw returned data. To convert to the expected return value,\\n     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].\\n     *\\n     * Requirements:\\n     *\\n     * - `target` must be a contract.\\n     * - calling `target` with `data` must not revert.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCall(address target, bytes memory data) internal returns (bytes memory) {\\n        return functionCallWithValue(target, data, 0, \\\"Address: low-level call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with\\n     * `errorMessage` as a fallback revert reason when `target` reverts.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCall(\\n        address target,\\n        bytes memory data,\\n        string memory errorMessage\\n    ) internal returns (bytes memory) {\\n        return functionCallWithValue(target, data, 0, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but also transferring `value` wei to `target`.\\n     *\\n     * Requirements:\\n     *\\n     * - the calling contract must have an ETH balance of at least `value`.\\n     * - the called Solidity function must be `payable`.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {\\n        return functionCallWithValue(target, data, value, \\\"Address: low-level call with value failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but\\n     * with `errorMessage` as a fallback revert reason when `target` reverts.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCallWithValue(\\n        address target,\\n        bytes memory data,\\n        uint256 value,\\n        string memory errorMessage\\n    ) internal returns (bytes memory) {\\n        require(address(this).balance >= value, \\\"Address: insufficient balance for call\\\");\\n        (bool success, bytes memory returndata) = target.call{value: value}(data);\\n        return verifyCallResultFromTarget(target, success, returndata, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but performing a static call.\\n     *\\n     * _Available since v3.3._\\n     */\\n    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {\\n        return functionStaticCall(target, data, \\\"Address: low-level static call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],\\n     * but performing a static call.\\n     *\\n     * _Available since v3.3._\\n     */\\n    function functionStaticCall(\\n        address target,\\n        bytes memory data,\\n        string memory errorMessage\\n    ) internal view returns (bytes memory) {\\n        (bool success, bytes memory returndata) = target.staticcall(data);\\n        return verifyCallResultFromTarget(target, success, returndata, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but performing a delegate call.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {\\n        return functionDelegateCall(target, data, \\\"Address: low-level delegate call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],\\n     * but performing a delegate call.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function functionDelegateCall(\\n        address target,\\n        bytes memory data,\\n        string memory errorMessage\\n    ) internal returns (bytes memory) {\\n        (bool success, bytes memory returndata) = target.delegatecall(data);\\n        return verifyCallResultFromTarget(target, success, returndata, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling\\n     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.\\n     *\\n     * _Available since v4.8._\\n     */\\n    function verifyCallResultFromTarget(\\n        address target,\\n        bool success,\\n        bytes memory returndata,\\n        string memory errorMessage\\n    ) internal view returns (bytes memory) {\\n        if (success) {\\n            if (returndata.length == 0) {\\n                // only check isContract if the call was successful and the return data is empty\\n                // otherwise we already know that it was a contract\\n                require(isContract(target), \\\"Address: call to non-contract\\\");\\n            }\\n            return returndata;\\n        } else {\\n            _revert(returndata, errorMessage);\\n        }\\n    }\\n\\n    /**\\n     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the\\n     * revert reason or using the provided one.\\n     *\\n     * _Available since v4.3._\\n     */\\n    function verifyCallResult(\\n        bool success,\\n        bytes memory returndata,\\n        string memory errorMessage\\n    ) internal pure returns (bytes memory) {\\n        if (success) {\\n            return returndata;\\n        } else {\\n            _revert(returndata, errorMessage);\\n        }\\n    }\\n\\n    function _revert(bytes memory returndata, string memory errorMessage) private pure {\\n        // Look for revert reason and bubble it up if present\\n        if (returndata.length > 0) {\\n            // The easiest way to bubble the revert reason is using memory via assembly\\n            /// @solidity memory-safe-assembly\\n            assembly {\\n                let returndata_size := mload(returndata)\\n                revert(add(32, returndata), returndata_size)\\n            }\\n        } else {\\n            revert(errorMessage);\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x006dd67219697fe68d7fbfdea512e7c4cb64a43565ed86171d67e844982da6fa\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.9.4) (utils/Context.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes calldata) {\\n        return msg.data;\\n    }\\n\\n    function _contextSuffixLength() internal view virtual returns (uint256) {\\n        return 0;\\n    }\\n}\\n\",\"keccak256\":\"0xa92e4fa126feb6907daa0513ddd816b2eb91f30a808de54f63c17d0e162c3439\",\"license\":\"MIT\"},\"contracts/Gateway/INativeTokenGateway.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\nimport { IERC20 } from \\\"@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol\\\";\\n\\n/**\\n * @title INativeTokenGateway\\n * @author Venus\\n * @notice Interface for NativeTokenGateway contract\\n */\\ninterface INativeTokenGateway {\\n    /**\\n     * @dev Emitted when native currency is supplied\\n     */\\n    event TokensWrappedAndSupplied(address indexed sender, address indexed vToken, uint256 amount);\\n\\n    /**\\n     * @dev Emitted when tokens are redeemed and then unwrapped to be sent to user\\n     */\\n    event TokensRedeemedAndUnwrapped(address indexed sender, address indexed vToken, uint256 amount);\\n\\n    /**\\n     * @dev Emitted when native tokens are borrowed and unwrapped\\n     */\\n    event TokensBorrowedAndUnwrapped(address indexed sender, address indexed vToken, uint256 amount);\\n\\n    /**\\n     * @dev Emitted when native currency is wrapped and repaid\\n     */\\n    event TokensWrappedAndRepaid(address indexed sender, address indexed vToken, uint256 amount);\\n\\n    /**\\n     * @dev Emitted when token is swept from the contract\\n     */\\n    event SweepToken(address indexed token, address indexed receiver, uint256 amount);\\n\\n    /**\\n     * @dev Emitted when native asset is swept from the contract\\n     */\\n    event SweepNative(address indexed receiver, uint256 amount);\\n\\n    /**\\n     * @notice Thrown if transfer of native token fails\\n     */\\n    error NativeTokenTransferFailed();\\n\\n    /**\\n     * @notice Thrown if the supplied address is a zero address where it is not allowed\\n     */\\n    error ZeroAddressNotAllowed();\\n\\n    /**\\n     * @notice Thrown if the supplied value is 0 where it is not allowed\\n     */\\n    error ZeroValueNotAllowed();\\n\\n    /**\\n     * @dev Wrap Native Token, get wNativeToken, mint vWNativeTokens, and supply to the market\\n     * @param minter The address on behalf of whom the supply is performed\\n     */\\n    function wrapAndSupply(address minter) external payable;\\n\\n    /**\\n     * @dev Redeem vWNativeTokens, unwrap to Native Token, and send to the user\\n     * @param redeemAmount The amount of underlying tokens to redeem\\n     */\\n    function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external;\\n\\n    /**\\n     * @dev Redeem vWNativeTokens, unwrap to Native Token, and send to the user\\n     * @param redeemTokens The amount of vWNative tokens to redeem\\n     */\\n    function redeemAndUnwrap(uint256 redeemTokens) external;\\n\\n    /**\\n     * @dev Borrow wNativeToken, unwrap to Native Token, and send to the user\\n     * @param amount The amount of underlying tokens to borrow\\n     */\\n    function borrowAndUnwrap(uint256 amount) external;\\n\\n    /**\\n     * @dev Wrap Native Token, repay borrow in the market, and send remaining Native Token to the user\\n     */\\n    function wrapAndRepay() external payable;\\n\\n    /**\\n     * @dev Sweeps input token address tokens from the contract and sends them to the owner\\n     */\\n    function sweepToken(IERC20 token) external;\\n\\n    /**\\n     * @dev Sweeps native assets (Native Token) from the contract and sends them to the owner\\n     */\\n    function sweepNative() external;\\n}\\n\",\"keccak256\":\"0xbb97f05167348ef8510421f8530de125d83982f8ae1df5bf8167cfb3c8bf7fb9\",\"license\":\"BSD-3-Clause\"},\"contracts/Gateway/Interfaces/IVToken.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\ninterface IVToken {\\n    function mintBehalf(address receiver, uint256 mintAmount) external returns (uint256);\\n\\n    function redeemUnderlyingBehalf(address redeemer, uint256 redeemAmount) external returns (uint256);\\n\\n    function redeemBehalf(address redeemer, uint256 redeemTokens) external returns (uint256);\\n\\n    function repayBorrowBehalf(address borrower, uint256 repayAmount) external returns (uint256);\\n\\n    function borrowBehalf(address borrower, uint256 borrowAmount) external returns (uint256);\\n\\n    function borrowBalanceCurrent(address account) external returns (uint256);\\n\\n    function underlying() external returns (address);\\n\\n    function exchangeRateCurrent() external returns (uint256);\\n\\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\\n\\n    function redeem(uint256 redeemTokens) external returns (uint256);\\n}\\n\",\"keccak256\":\"0xbb2bca2f551d9859daba74a6f30a75b960edd392edbfe658008813cb3a630939\",\"license\":\"BSD-3-Clause\"},\"contracts/Gateway/Interfaces/IWrappedNative.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\ninterface IWrappedNative {\\n    function deposit() external payable;\\n\\n    function withdraw(uint256) external;\\n\\n    function approve(address guy, uint256 wad) external returns (bool);\\n\\n    function transferFrom(address src, address dst, uint256 wad) external returns (bool);\\n\\n    function transfer(address dst, uint256 wad) external returns (bool);\\n\\n    function balanceOf(address account) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x71e46aaa5ca7af98667bcf399b704c1af9f051af8842abb2c4d26632dd40b9e7\",\"license\":\"BSD-3-Clause\"},\"contracts/Gateway/NativeTokenGateway.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\nimport { Ownable2Step } from \\\"@openzeppelin/contracts/access/Ownable2Step.sol\\\";\\nimport { SafeERC20, IERC20 } from \\\"@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol\\\";\\nimport { ReentrancyGuard } from \\\"@openzeppelin/contracts/security/ReentrancyGuard.sol\\\";\\n\\nimport { IWrappedNative } from \\\"./Interfaces/IWrappedNative.sol\\\";\\nimport { INativeTokenGateway } from \\\"./INativeTokenGateway.sol\\\";\\nimport { IVToken } from \\\"./Interfaces/IVToken.sol\\\";\\n\\n/**\\n * @title NativeTokenGateway\\n * @author Venus\\n * @notice NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wNativeToken)\\n */\\ncontract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuard {\\n    using SafeERC20 for IERC20;\\n\\n    /**\\n     * @notice Address of wrapped native token contract\\n     */\\n    IWrappedNative public immutable wNativeToken;\\n\\n    /**\\n     * @notice Address of wrapped native token market\\n     */\\n    IVToken public immutable vWNativeToken;\\n\\n    /**\\n     * @notice Constructor for NativeTokenGateway\\n     * @param vWrappedNativeToken Address of wrapped native token market\\n     */\\n    constructor(IVToken vWrappedNativeToken) {\\n        ensureNonzeroAddress(address(vWrappedNativeToken));\\n\\n        vWNativeToken = vWrappedNativeToken;\\n        wNativeToken = IWrappedNative(vWNativeToken.underlying());\\n    }\\n\\n    /**\\n     * @notice To receive Native when msg.data is empty\\n     */\\n    receive() external payable {}\\n\\n    /**\\n     * @notice To receive Native when msg.data is not empty\\n     */\\n    fallback() external payable {}\\n\\n    /**\\n     * @notice Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market.\\n     * @param minter The address on behalf of whom the supply is performed.\\n     * @custom:error ZeroAddressNotAllowed is thrown if address of minter is zero address\\n     * @custom:error ZeroValueNotAllowed is thrown if mintAmount is zero\\n     * @custom:event TokensWrappedAndSupplied is emitted when assets are supplied to the market\\n     */\\n    function wrapAndSupply(address minter) external payable nonReentrant {\\n        ensureNonzeroAddress(minter);\\n\\n        uint256 mintAmount = msg.value;\\n        ensureNonzeroValue(mintAmount);\\n\\n        wNativeToken.deposit{ value: mintAmount }();\\n        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), mintAmount);\\n\\n        vWNativeToken.mintBehalf(minter, mintAmount);\\n\\n        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), 0);\\n        emit TokensWrappedAndSupplied(minter, address(vWNativeToken), mintAmount);\\n    }\\n\\n    /**\\n     * @notice Redeem vWNativeToken, unwrap to Native Token, and send to the user\\n     * @param redeemAmount The amount of underlying tokens to redeem\\n     * @custom:error ZeroValueNotAllowed is thrown if redeemAmount is zero\\n     * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped\\n     */\\n    function redeemUnderlyingAndUnwrap(uint256 redeemAmount) external nonReentrant {\\n        _redeemAndUnwrap(redeemAmount, true);\\n    }\\n\\n    /**\\n     * @notice Redeem vWNativeToken, unwrap to Native Token, and send to the user\\n     * @param redeemTokens The amount of vWNative tokens to redeem\\n     * @custom:error ZeroValueNotAllowed is thrown if redeemTokens is zero\\n     * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped\\n     */\\n    function redeemAndUnwrap(uint256 redeemTokens) external nonReentrant {\\n        _redeemAndUnwrap(redeemTokens, false);\\n    }\\n\\n    /**\\n     * @dev Borrow wNativeToken, unwrap to Native, and send to the user\\n     * @param borrowAmount The amount of underlying tokens to borrow\\n     * @custom:error ZeroValueNotAllowed is thrown if borrowAmount is zero\\n     * @custom:event TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped\\n     */\\n    function borrowAndUnwrap(uint256 borrowAmount) external nonReentrant {\\n        ensureNonzeroValue(borrowAmount);\\n\\n        vWNativeToken.borrowBehalf(msg.sender, borrowAmount);\\n\\n        wNativeToken.withdraw(borrowAmount);\\n        _safeTransferNativeTokens(msg.sender, borrowAmount);\\n        emit TokensBorrowedAndUnwrapped(msg.sender, address(vWNativeToken), borrowAmount);\\n    }\\n\\n    /**\\n     * @notice Wrap Native, repay borrow in the market, and send remaining Native to the user\\n     * @custom:error ZeroValueNotAllowed is thrown if repayAmount is zero\\n     * @custom:event TokensWrappedAndRepaid is emitted when assets are repaid to a market and unwrapped\\n     */\\n    function wrapAndRepay() external payable nonReentrant {\\n        uint256 repayAmount = msg.value;\\n        ensureNonzeroValue(repayAmount);\\n\\n        wNativeToken.deposit{ value: repayAmount }();\\n        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), repayAmount);\\n\\n        uint256 borrowBalanceBefore = vWNativeToken.borrowBalanceCurrent(msg.sender);\\n        vWNativeToken.repayBorrowBehalf(msg.sender, repayAmount);\\n        uint256 borrowBalanceAfter = vWNativeToken.borrowBalanceCurrent(msg.sender);\\n\\n        IERC20(address(wNativeToken)).forceApprove(address(vWNativeToken), 0);\\n\\n        if (borrowBalanceAfter == 0 && (repayAmount > borrowBalanceBefore)) {\\n            uint256 dust;\\n            unchecked {\\n                dust = repayAmount - borrowBalanceBefore;\\n            }\\n\\n            wNativeToken.withdraw(dust);\\n            _safeTransferNativeTokens(msg.sender, dust);\\n        }\\n        emit TokensWrappedAndRepaid(msg.sender, address(vWNativeToken), borrowBalanceBefore - borrowBalanceAfter);\\n    }\\n\\n    /**\\n     * @notice Sweeps native assets (Native) from the contract and sends them to the owner\\n     * @custom:event SweepNative is emitted when assets are swept from the contract\\n     * @custom:access Controlled by Governance\\n     */\\n    function sweepNative() external onlyOwner {\\n        uint256 balance = address(this).balance;\\n\\n        if (balance > 0) {\\n            address owner_ = owner();\\n            _safeTransferNativeTokens(owner_, balance);\\n            emit SweepNative(owner_, balance);\\n        }\\n    }\\n\\n    /**\\n     * @notice Sweeps the input token address tokens from the contract and sends them to the owner\\n     * @param token Address of the token\\n     * @custom:event SweepToken emits on success\\n     * @custom:access Controlled by Governance\\n     */\\n    function sweepToken(IERC20 token) external onlyOwner {\\n        uint256 balance = token.balanceOf(address(this));\\n\\n        if (balance > 0) {\\n            address owner_ = owner();\\n            token.safeTransfer(owner_, balance);\\n            emit SweepToken(address(token), owner_, balance);\\n        }\\n    }\\n\\n    /**\\n     * @dev Redeems tokens, unwrap them to Native Token, and send to the user\\n     * This function is internally called by `redeemUnderlyingAndUnwrap` and `redeemAndUnwrap`\\n     * @param redeemTokens The amount of tokens to be redeemed. This can refer to either the underlying tokens directly or their equivalent vTokens\\n     * @param isUnderlying A boolean flag indicating whether the redemption is for underlying tokens directly (`true`) or for their equivalent vTokens (`false`).\\n     * @custom:error ZeroValueNotAllowed is thrown if redeemTokens is zero\\n     * @custom:event TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped\\n     */\\n    function _redeemAndUnwrap(uint256 redeemTokens, bool isUnderlying) internal {\\n        ensureNonzeroValue(redeemTokens);\\n\\n        uint256 balanceBefore = wNativeToken.balanceOf(address(this));\\n\\n        if (isUnderlying) {\\n            vWNativeToken.redeemUnderlyingBehalf(msg.sender, redeemTokens);\\n        } else {\\n            vWNativeToken.redeemBehalf(msg.sender, redeemTokens);\\n        }\\n\\n        uint256 balanceAfter = wNativeToken.balanceOf(address(this));\\n        uint256 redeemedAmount = balanceAfter - balanceBefore;\\n        wNativeToken.withdraw(redeemedAmount);\\n\\n        _safeTransferNativeTokens(msg.sender, redeemedAmount);\\n        emit TokensRedeemedAndUnwrapped(msg.sender, address(vWNativeToken), redeemedAmount);\\n    }\\n\\n    /**\\n     * @dev transfer Native tokens to an address, revert if it fails\\n     * @param to recipient of the transfer\\n     * @param value the amount to send\\n     * @custom:error NativeTokenTransferFailed is thrown if the Native token transfer fails\\n     */\\n    function _safeTransferNativeTokens(address to, uint256 value) internal {\\n        (bool success, ) = to.call{ value: value }(new bytes(0));\\n\\n        if (!success) {\\n            revert NativeTokenTransferFailed();\\n        }\\n    }\\n\\n    /**\\n     * @dev Checks if the provided address is nonzero, reverts otherwise\\n     * @param address_ Address to check\\n     * @custom:error ZeroAddressNotAllowed is thrown if the provided address is a zero address\\n     **/\\n    function ensureNonzeroAddress(address address_) internal pure {\\n        if (address_ == address(0)) {\\n            revert ZeroAddressNotAllowed();\\n        }\\n    }\\n\\n    /**\\n     * @dev Checks if the provided value is nonzero, reverts otherwise\\n     * @param value_ Value to check\\n     * @custom:error ZeroValueNotAllowed is thrown if the provided value is 0\\n     */\\n    function ensureNonzeroValue(uint256 value_) internal pure {\\n        if (value_ == 0) {\\n            revert ZeroValueNotAllowed();\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x090d7e1a6ac1d54f45685f76febdb01c8e89587b13cd5cd3f7016301bf66d2e0\",\"license\":\"BSD-3-Clause\"}},\"version\":1}",
+  "bytecode": "0x60c060405234801561001057600080fd5b50604051611a01380380611a0183398101604081905261002f91610170565b610038336100c8565b6001600255610046816100e4565b6001600160a01b03811660a081905260408051636f307dc360e01b81529051636f307dc39160048082019260209290919082900301816000875af1158015610092573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906100b69190610170565b6001600160a01b031660805250610194565b600180546001600160a01b03191690556100e18161010b565b50565b6001600160a01b0381166100e1576040516342bcdf7f60e11b815260040160405180910390fd5b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6001600160a01b03811681146100e157600080fd5b60006020828403121561018257600080fd5b815161018d8161015b565b9392505050565b60805160a05161179261026f6000396000818161011001528181610479015281816105830152818161069c015281816106e901528181610786015281816107ae015281816109b7015281816109f601528181610a8a01528181610b1801528181610bbe01528181610c8a01528181610edd01528181610f74015261111b01526000818161016001528181610505015281816105fa0152818161067801528181610764015281816109150152818161099301528181610b9c01528181610c1001528181610e4601528181611003015261109d01526117926000f3fe6080604052600436106100d55760003560e01c80638da5cb5b11610079578063ab803a7611610056578063ab803a761461023d578063e30c397814610252578063f2fde38b14610270578063ff0f4abd1461029057005b80638da5cb5b146101ec5780639cc60d441461020a578063a86f82211461022a57005b8063715018a6116100b2578063715018a61461018257806379ba50971461019757806385ceb1e4146101ac57806389f1cf38146101cc57005b80631be19560146100de57806355a490a7146100fe57806359c91f191461014e57005b366100dc57005b005b3480156100ea57600080fd5b506100dc6100f9366004611650565b610298565b34801561010a57600080fd5b506101327f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b03909116815260200160405180910390f35b34801561015a57600080fd5b506101327f000000000000000000000000000000000000000000000000000000000000000081565b34801561018e57600080fd5b506100dc610389565b3480156101a357600080fd5b506100dc61039d565b3480156101b857600080fd5b506100dc6101c7366004611674565b61041c565b3480156101d857600080fd5b506100dc6101e7366004611674565b610439565b3480156101f857600080fd5b506000546001600160a01b0316610132565b34801561021657600080fd5b506100dc610225366004611674565b61044c565b6100dc610238366004611650565b6105dd565b34801561024957600080fd5b506100dc610824565b34801561025e57600080fd5b506001546001600160a01b0316610132565b34801561027c57600080fd5b506100dc61028b366004611650565b610890565b6100dc610901565b6102a0610cf3565b6040516370a0823160e01b81523060048201526000906001600160a01b038316906370a0823190602401602060405180830381865afa1580156102e7573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061030b919061168d565b9050801561038557600080546001600160a01b031690506103366001600160a01b0384168284610d4d565b806001600160a01b0316836001600160a01b03167f6d25be279134f4ecaa4770aff0c3d916d9e7c5ef37b65ed95dbdba411f5d54d58460405161037b91815260200190565b60405180910390a3505b5050565b610391610cf3565b61039b6000610db5565b565b60015433906001600160a01b031681146104105760405162461bcd60e51b815260206004820152602960248201527f4f776e61626c6532537465703a2063616c6c6572206973206e6f7420746865206044820152683732bb9037bbb732b960b91b60648201526084015b60405180910390fd5b61041981610db5565b50565b610424610dce565b61042f816001610e25565b6104196001600255565b610441610dce565b61042f816000610e25565b610454610dce565b61045d81611172565b60405163856e5bb360e01b8152336004820152602481018290527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063856e5bb3906044016020604051808303816000875af11580156104ca573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104ee919061168d565b50604051632e1a7d4d60e01b8152600481018290527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b15801561055157600080fd5b505af1158015610565573d6000803e3d6000fd5b505050506105733382611193565b6040518181526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169033907f3b325d03ea6fc2aa5ba54c0fd65bb0febe127cb8c7ff01f190fcddf2893b80699060200160405180910390a36104196001600255565b6105e5610dce565b6105ee81611221565b346105f881611172565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561065357600080fd5b505af1158015610667573d6000803e3d6000fd5b506106c39350506001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001691507f0000000000000000000000000000000000000000000000000000000000000000905083611248565b6040516323323e0360e01b81526001600160a01b038381166004830152602482018390527f000000000000000000000000000000000000000000000000000000000000000016906323323e03906044016020604051808303816000875af1158015610732573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610756919061168d565b506107ac6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000167f00000000000000000000000000000000000000000000000000000000000000006000611248565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316826001600160a01b03167ffc54dd2cff8bcf58b0746818b1d9aac56525760131df031a96427ecd6e5612448360405161081191815260200190565b60405180910390a3506104196001600255565b61082c610cf3565b478015610419576000546001600160a01b03166108498183611193565b806001600160a01b03167f0a1dd7c5bdc40ecbdefc1bfda22f1dfb98c8fc3e3940aab73ad7fba37720d0a08360405161088491815260200190565b60405180910390a25050565b610898610cf3565b600180546001600160a01b0383166001600160a01b031990911681179091556108c96000546001600160a01b031690565b6001600160a01b03167f38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e2270060405160405180910390a350565b610909610dce565b3461091381611172565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561096e57600080fd5b505af1158015610982573d6000803e3d6000fd5b506109de9350506001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001691507f0000000000000000000000000000000000000000000000000000000000000000905083611248565b6040516305eff7ef60e21b81523360048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906317bfdfbc906024016020604051808303816000875af1158015610a47573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6b919061168d565b6040516304c11f0360e31b8152336004820152602481018490529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632608f818906044016020604051808303816000875af1158015610adb573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610aff919061168d565b506040516305eff7ef60e21b81523360048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906317bfdfbc906024016020604051808303816000875af1158015610b69573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b8d919061168d565b9050610be46001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000167f00000000000000000000000000000000000000000000000000000000000000006000611248565b80158015610bf157508183115b15610c8057604051632e1a7d4d60e01b815282840360048201819052907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b158015610c5c57600080fd5b505af1158015610c70573d6000803e3d6000fd5b50505050610c7e3382611193565b505b6001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016337e2a489ca326b23ea0117956ee9d62960c53a81b8f57fafd608e56f57f324168610cd584866116a6565b60405190815260200160405180910390a350505061039b6001600255565b6000546001600160a01b0316331461039b5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610407565b6040516001600160a01b038316602482015260448101829052610db090849063a9059cbb60e01b906064015b60408051601f198184030181529190526020810180516001600160e01b03166001600160e01b0319909316929092179091526112dd565b505050565b600180546001600160a01b0319169055610419816113b2565b6002805403610e1f5760405162461bcd60e51b815260206004820152601f60248201527f5265656e7472616e637947756172643a207265656e7472616e742063616c6c006044820152606401610407565b60028055565b610e2e82611172565b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa158015610e95573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610eb9919061168d565b90508115610f5857604051636f9d28b760e11b8152336004820152602481018490527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063df3a516e906044016020604051808303816000875af1158015610f2e573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610f52919061168d565b50610feb565b604051631085e02960e11b8152336004820152602481018490527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063210bc052906044016020604051808303816000875af1158015610fc5573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610fe9919061168d565b505b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa158015611052573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611076919061168d565b9050600061108483836116a6565b604051632e1a7d4d60e01b8152600481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b1580156110e957600080fd5b505af11580156110fd573d6000803e3d6000fd5b5050505061110b3382611193565b6040518181526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169033907faf321c699f4cc4970eef3edf8fe2a0a395a3f5b62c6e91958cad3d424952436b9060200160405180910390a35050505050565b806000036104195760405163273e150360e21b815260040160405180910390fd5b604080516000808252602082019092526001600160a01b0384169083906040516111bd91906116eb565b60006040518083038185875af1925050503d80600081146111fa576040519150601f19603f3d011682016040523d82523d6000602084013e6111ff565b606091505b5050905080610db057604051630c08bcb960e21b815260040160405180910390fd5b6001600160a01b038116610419576040516342bcdf7f60e11b815260040160405180910390fd5b604080516001600160a01b038416602482015260448082018490528251808303909101815260649091019091526020810180516001600160e01b031663095ea7b360e01b1790526112998482611402565b6112d7576040516001600160a01b0384166024820152600060448201526112cd90859063095ea7b360e01b90606401610d79565b6112d784826112dd565b50505050565b6000611332826040518060400160405280602081526020017f5361666545524332303a206c6f772d6c6576656c2063616c6c206661696c6564815250856001600160a01b03166114ab9092919063ffffffff16565b90508051600014806113535750808060200190518101906113539190611707565b610db05760405162461bcd60e51b815260206004820152602a60248201527f5361666545524332303a204552433230206f7065726174696f6e20646964206e6044820152691bdd081cdd58d8d9595960b21b6064820152608401610407565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6000806000846001600160a01b03168460405161141f91906116eb565b6000604051808303816000865af19150503d806000811461145c576040519150601f19603f3d011682016040523d82523d6000602084013e611461565b606091505b509150915081801561148b57508051158061148b57508080602001905181019061148b9190611707565b80156114a057506001600160a01b0385163b15155b925050505b92915050565b60606114ba84846000856114c2565b949350505050565b6060824710156115235760405162461bcd60e51b815260206004820152602660248201527f416464726573733a20696e73756666696369656e742062616c616e636520666f6044820152651c8818d85b1b60d21b6064820152608401610407565b600080866001600160a01b0316858760405161153f91906116eb565b60006040518083038185875af1925050503d806000811461157c576040519150601f19603f3d011682016040523d82523d6000602084013e611581565b606091505b50915091506115928783838761159d565b979650505050505050565b6060831561160c578251600003611605576001600160a01b0385163b6116055760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610407565b50816114ba565b6114ba83838151156116215781518083602001fd5b8060405162461bcd60e51b81526004016104079190611729565b6001600160a01b038116811461041957600080fd5b60006020828403121561166257600080fd5b813561166d8161163b565b9392505050565b60006020828403121561168657600080fd5b5035919050565b60006020828403121561169f57600080fd5b5051919050565b818103818111156114a557634e487b7160e01b600052601160045260246000fd5b60005b838110156116e25781810151838201526020016116ca565b50506000910152565b600082516116fd8184602087016116c7565b9190910192915050565b60006020828403121561171957600080fd5b8151801515811461166d57600080fd5b60208152600082518060208401526117488160408501602087016116c7565b601f01601f1916919091016040019291505056fea264697066735822122026badf2c9a268d45d0fbf47886e68dcb2fd4bb21faa053e8488bb0723fcc866564736f6c63430008190033",
+  "deployedBytecode": "0x6080604052600436106100d55760003560e01c80638da5cb5b11610079578063ab803a7611610056578063ab803a761461023d578063e30c397814610252578063f2fde38b14610270578063ff0f4abd1461029057005b80638da5cb5b146101ec5780639cc60d441461020a578063a86f82211461022a57005b8063715018a6116100b2578063715018a61461018257806379ba50971461019757806385ceb1e4146101ac57806389f1cf38146101cc57005b80631be19560146100de57806355a490a7146100fe57806359c91f191461014e57005b366100dc57005b005b3480156100ea57600080fd5b506100dc6100f9366004611650565b610298565b34801561010a57600080fd5b506101327f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b03909116815260200160405180910390f35b34801561015a57600080fd5b506101327f000000000000000000000000000000000000000000000000000000000000000081565b34801561018e57600080fd5b506100dc610389565b3480156101a357600080fd5b506100dc61039d565b3480156101b857600080fd5b506100dc6101c7366004611674565b61041c565b3480156101d857600080fd5b506100dc6101e7366004611674565b610439565b3480156101f857600080fd5b506000546001600160a01b0316610132565b34801561021657600080fd5b506100dc610225366004611674565b61044c565b6100dc610238366004611650565b6105dd565b34801561024957600080fd5b506100dc610824565b34801561025e57600080fd5b506001546001600160a01b0316610132565b34801561027c57600080fd5b506100dc61028b366004611650565b610890565b6100dc610901565b6102a0610cf3565b6040516370a0823160e01b81523060048201526000906001600160a01b038316906370a0823190602401602060405180830381865afa1580156102e7573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061030b919061168d565b9050801561038557600080546001600160a01b031690506103366001600160a01b0384168284610d4d565b806001600160a01b0316836001600160a01b03167f6d25be279134f4ecaa4770aff0c3d916d9e7c5ef37b65ed95dbdba411f5d54d58460405161037b91815260200190565b60405180910390a3505b5050565b610391610cf3565b61039b6000610db5565b565b60015433906001600160a01b031681146104105760405162461bcd60e51b815260206004820152602960248201527f4f776e61626c6532537465703a2063616c6c6572206973206e6f7420746865206044820152683732bb9037bbb732b960b91b60648201526084015b60405180910390fd5b61041981610db5565b50565b610424610dce565b61042f816001610e25565b6104196001600255565b610441610dce565b61042f816000610e25565b610454610dce565b61045d81611172565b60405163856e5bb360e01b8152336004820152602481018290527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063856e5bb3906044016020604051808303816000875af11580156104ca573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906104ee919061168d565b50604051632e1a7d4d60e01b8152600481018290527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b15801561055157600080fd5b505af1158015610565573d6000803e3d6000fd5b505050506105733382611193565b6040518181526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169033907f3b325d03ea6fc2aa5ba54c0fd65bb0febe127cb8c7ff01f190fcddf2893b80699060200160405180910390a36104196001600255565b6105e5610dce565b6105ee81611221565b346105f881611172565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561065357600080fd5b505af1158015610667573d6000803e3d6000fd5b506106c39350506001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001691507f0000000000000000000000000000000000000000000000000000000000000000905083611248565b6040516323323e0360e01b81526001600160a01b038381166004830152602482018390527f000000000000000000000000000000000000000000000000000000000000000016906323323e03906044016020604051808303816000875af1158015610732573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610756919061168d565b506107ac6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000167f00000000000000000000000000000000000000000000000000000000000000006000611248565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316826001600160a01b03167ffc54dd2cff8bcf58b0746818b1d9aac56525760131df031a96427ecd6e5612448360405161081191815260200190565b60405180910390a3506104196001600255565b61082c610cf3565b478015610419576000546001600160a01b03166108498183611193565b806001600160a01b03167f0a1dd7c5bdc40ecbdefc1bfda22f1dfb98c8fc3e3940aab73ad7fba37720d0a08360405161088491815260200190565b60405180910390a25050565b610898610cf3565b600180546001600160a01b0383166001600160a01b031990911681179091556108c96000546001600160a01b031690565b6001600160a01b03167f38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e2270060405160405180910390a350565b610909610dce565b3461091381611172565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031663d0e30db0826040518263ffffffff1660e01b81526004016000604051808303818588803b15801561096e57600080fd5b505af1158015610982573d6000803e3d6000fd5b506109de9350506001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001691507f0000000000000000000000000000000000000000000000000000000000000000905083611248565b6040516305eff7ef60e21b81523360048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906317bfdfbc906024016020604051808303816000875af1158015610a47573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6b919061168d565b6040516304c11f0360e31b8152336004820152602481018490529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632608f818906044016020604051808303816000875af1158015610adb573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610aff919061168d565b506040516305eff7ef60e21b81523360048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906317bfdfbc906024016020604051808303816000875af1158015610b69573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b8d919061168d565b9050610be46001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000167f00000000000000000000000000000000000000000000000000000000000000006000611248565b80158015610bf157508183115b15610c8057604051632e1a7d4d60e01b815282840360048201819052907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b158015610c5c57600080fd5b505af1158015610c70573d6000803e3d6000fd5b50505050610c7e3382611193565b505b6001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016337e2a489ca326b23ea0117956ee9d62960c53a81b8f57fafd608e56f57f324168610cd584866116a6565b60405190815260200160405180910390a350505061039b6001600255565b6000546001600160a01b0316331461039b5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610407565b6040516001600160a01b038316602482015260448101829052610db090849063a9059cbb60e01b906064015b60408051601f198184030181529190526020810180516001600160e01b03166001600160e01b0319909316929092179091526112dd565b505050565b600180546001600160a01b0319169055610419816113b2565b6002805403610e1f5760405162461bcd60e51b815260206004820152601f60248201527f5265656e7472616e637947756172643a207265656e7472616e742063616c6c006044820152606401610407565b60028055565b610e2e82611172565b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa158015610e95573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610eb9919061168d565b90508115610f5857604051636f9d28b760e11b8152336004820152602481018490527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063df3a516e906044016020604051808303816000875af1158015610f2e573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610f52919061168d565b50610feb565b604051631085e02960e11b8152336004820152602481018490527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063210bc052906044016020604051808303816000875af1158015610fc5573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610fe9919061168d565b505b6040516370a0823160e01b81523060048201526000907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906370a0823190602401602060405180830381865afa158015611052573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611076919061168d565b9050600061108483836116a6565b604051632e1a7d4d60e01b8152600481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690632e1a7d4d90602401600060405180830381600087803b1580156110e957600080fd5b505af11580156110fd573d6000803e3d6000fd5b5050505061110b3382611193565b6040518181526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169033907faf321c699f4cc4970eef3edf8fe2a0a395a3f5b62c6e91958cad3d424952436b9060200160405180910390a35050505050565b806000036104195760405163273e150360e21b815260040160405180910390fd5b604080516000808252602082019092526001600160a01b0384169083906040516111bd91906116eb565b60006040518083038185875af1925050503d80600081146111fa576040519150601f19603f3d011682016040523d82523d6000602084013e6111ff565b606091505b5050905080610db057604051630c08bcb960e21b815260040160405180910390fd5b6001600160a01b038116610419576040516342bcdf7f60e11b815260040160405180910390fd5b604080516001600160a01b038416602482015260448082018490528251808303909101815260649091019091526020810180516001600160e01b031663095ea7b360e01b1790526112998482611402565b6112d7576040516001600160a01b0384166024820152600060448201526112cd90859063095ea7b360e01b90606401610d79565b6112d784826112dd565b50505050565b6000611332826040518060400160405280602081526020017f5361666545524332303a206c6f772d6c6576656c2063616c6c206661696c6564815250856001600160a01b03166114ab9092919063ffffffff16565b90508051600014806113535750808060200190518101906113539190611707565b610db05760405162461bcd60e51b815260206004820152602a60248201527f5361666545524332303a204552433230206f7065726174696f6e20646964206e6044820152691bdd081cdd58d8d9595960b21b6064820152608401610407565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6000806000846001600160a01b03168460405161141f91906116eb565b6000604051808303816000865af19150503d806000811461145c576040519150601f19603f3d011682016040523d82523d6000602084013e611461565b606091505b509150915081801561148b57508051158061148b57508080602001905181019061148b9190611707565b80156114a057506001600160a01b0385163b15155b925050505b92915050565b60606114ba84846000856114c2565b949350505050565b6060824710156115235760405162461bcd60e51b815260206004820152602660248201527f416464726573733a20696e73756666696369656e742062616c616e636520666f6044820152651c8818d85b1b60d21b6064820152608401610407565b600080866001600160a01b0316858760405161153f91906116eb565b60006040518083038185875af1925050503d806000811461157c576040519150601f19603f3d011682016040523d82523d6000602084013e611581565b606091505b50915091506115928783838761159d565b979650505050505050565b6060831561160c578251600003611605576001600160a01b0385163b6116055760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610407565b50816114ba565b6114ba83838151156116215781518083602001fd5b8060405162461bcd60e51b81526004016104079190611729565b6001600160a01b038116811461041957600080fd5b60006020828403121561166257600080fd5b813561166d8161163b565b9392505050565b60006020828403121561168657600080fd5b5035919050565b60006020828403121561169f57600080fd5b5051919050565b818103818111156114a557634e487b7160e01b600052601160045260246000fd5b60005b838110156116e25781810151838201526020016116ca565b50506000910152565b600082516116fd8184602087016116c7565b9190910192915050565b60006020828403121561171957600080fd5b8151801515811461166d57600080fd5b60208152600082518060208401526117488160408501602087016116c7565b601f01601f1916919091016040019291505056fea264697066735822122026badf2c9a268d45d0fbf47886e68dcb2fd4bb21faa053e8488bb0723fcc866564736f6c63430008190033",
+  "devdoc": {
+    "author": "Venus",
+    "events": {
+      "SweepNative(address,uint256)": {
+        "details": "Emitted when native asset is swept from the contract"
+      },
+      "SweepToken(address,address,uint256)": {
+        "details": "Emitted when token is swept from the contract"
+      },
+      "TokensBorrowedAndUnwrapped(address,address,uint256)": {
+        "details": "Emitted when native tokens are borrowed and unwrapped"
+      },
+      "TokensRedeemedAndUnwrapped(address,address,uint256)": {
+        "details": "Emitted when tokens are redeemed and then unwrapped to be sent to user"
+      },
+      "TokensWrappedAndRepaid(address,address,uint256)": {
+        "details": "Emitted when native currency is wrapped and repaid"
+      },
+      "TokensWrappedAndSupplied(address,address,uint256)": {
+        "details": "Emitted when native currency is supplied"
+      }
+    },
+    "kind": "dev",
+    "methods": {
+      "acceptOwnership()": {
+        "details": "The new owner accepts the ownership transfer."
+      },
+      "borrowAndUnwrap(uint256)": {
+        "custom:error": "ZeroValueNotAllowed is thrown if borrowAmount is zero",
+        "custom:event": "TokensBorrowedAndUnwrapped is emitted when assets are borrowed from a market and unwrapped",
+        "details": "Borrow wNativeToken, unwrap to Native, and send to the user",
+        "params": {
+          "borrowAmount": "The amount of underlying tokens to borrow"
+        }
+      },
+      "constructor": {
+        "params": {
+          "vWrappedNativeToken": "Address of wrapped native token market"
+        }
+      },
+      "owner()": {
+        "details": "Returns the address of the current owner."
+      },
+      "pendingOwner()": {
+        "details": "Returns the address of the pending owner."
+      },
+      "redeemAndUnwrap(uint256)": {
+        "custom:error": "ZeroValueNotAllowed is thrown if redeemTokens is zero",
+        "custom:event": "TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped",
+        "params": {
+          "redeemTokens": "The amount of vWNative tokens to redeem"
+        }
+      },
+      "redeemUnderlyingAndUnwrap(uint256)": {
+        "custom:error": "ZeroValueNotAllowed is thrown if redeemAmount is zero",
+        "custom:event": "TokensRedeemedAndUnwrapped is emitted when assets are redeemed from a market and unwrapped",
+        "params": {
+          "redeemAmount": "The amount of underlying tokens to redeem"
+        }
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."
+      },
+      "sweepNative()": {
+        "custom:access": "Controlled by Governance",
+        "custom:event": "SweepNative is emitted when assets are swept from the contract"
+      },
+      "sweepToken(address)": {
+        "custom:access": "Controlled by Governance",
+        "custom:event": "SweepToken emits on success",
+        "params": {
+          "token": "Address of the token"
+        }
+      },
+      "transferOwnership(address)": {
+        "details": "Starts the ownership transfer of the contract to a new account. Replaces the pending transfer if there is one. Can only be called by the current owner."
+      },
+      "wrapAndRepay()": {
+        "custom:error": "ZeroValueNotAllowed is thrown if repayAmount is zero",
+        "custom:event": "TokensWrappedAndRepaid is emitted when assets are repaid to a market and unwrapped"
+      },
+      "wrapAndSupply(address)": {
+        "custom:error": "ZeroAddressNotAllowed is thrown if address of minter is zero addressZeroValueNotAllowed is thrown if mintAmount is zero",
+        "custom:event": "TokensWrappedAndSupplied is emitted when assets are supplied to the market",
+        "params": {
+          "minter": "The address on behalf of whom the supply is performed."
+        }
+      }
+    },
+    "title": "NativeTokenGateway",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "NativeTokenTransferFailed()": [
+        {
+          "notice": "Thrown if transfer of native token fails"
+        }
+      ],
+      "ZeroAddressNotAllowed()": [
+        {
+          "notice": "Thrown if the supplied address is a zero address where it is not allowed"
+        }
+      ],
+      "ZeroValueNotAllowed()": [
+        {
+          "notice": "Thrown if the supplied value is 0 where it is not allowed"
+        }
+      ]
+    },
+    "kind": "user",
+    "methods": {
+      "constructor": {
+        "notice": "Constructor for NativeTokenGateway"
+      },
+      "redeemAndUnwrap(uint256)": {
+        "notice": "Redeem vWNativeToken, unwrap to Native Token, and send to the user"
+      },
+      "redeemUnderlyingAndUnwrap(uint256)": {
+        "notice": "Redeem vWNativeToken, unwrap to Native Token, and send to the user"
+      },
+      "sweepNative()": {
+        "notice": "Sweeps native assets (Native) from the contract and sends them to the owner"
+      },
+      "sweepToken(address)": {
+        "notice": "Sweeps the input token address tokens from the contract and sends them to the owner"
+      },
+      "vWNativeToken()": {
+        "notice": "Address of wrapped native token market"
+      },
+      "wNativeToken()": {
+        "notice": "Address of wrapped native token contract"
+      },
+      "wrapAndRepay()": {
+        "notice": "Wrap Native, repay borrow in the market, and send remaining Native to the user"
+      },
+      "wrapAndSupply(address)": {
+        "notice": "Wrap Native, get wNativeToken, mint vWNativeToken, and supply to the market."
+      }
+    },
+    "notice": "NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wNativeToken)",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 3501,
+        "contract": "contracts/Gateway/NativeTokenGateway.sol:NativeTokenGateway",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 3614,
+        "contract": "contracts/Gateway/NativeTokenGateway.sol:NativeTokenGateway",
+        "label": "_pendingOwner",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 4238,
+        "contract": "contracts/Gateway/NativeTokenGateway.sol:NativeTokenGateway",
+        "label": "_status",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_uint256"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

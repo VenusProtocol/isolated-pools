@@ -68,11 +68,19 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
       name: "vWETH_Core",
       address: ilArbSepolia.VToken_vWETH_Core.address,
     },
+    {
+      name: "vWETH_LiquidStakedETH",
+      address: ilArbSepolia.VToken_vWETH_LiquidStakedETH.address,
+    },
   ],
   arbitrumone: [
     {
       name: "vWETH_Core",
       address: ilArbOne.VToken_vWETH_Core.address,
+    },
+    {
+      name: "vWETH_LiquidStakedETH",
+      address: ilArbOne.VToken_vWETH_LiquidStakedETH.address,
     },
   ],
   zksyncsepolia: [
