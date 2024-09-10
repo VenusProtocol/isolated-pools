@@ -4728,11 +4728,11 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
-        isMock: true,
+        isMock: false,
         name: "Venus",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: "0x789482e37218f9b26d8D9115E356462fA9A37116",
       },
     ],
 
