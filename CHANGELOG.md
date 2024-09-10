@@ -1,3 +1,24 @@
+## [3.5.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.11...v3.5.0-dev.12) (2024-09-10)
+
+
+### Features
+
+* add config for liquid staked ETH pool for arbitrum one ([a9fb3d7](https://github.com/VenusProtocol/isolated-pools/commit/a9fb3d7e8544ed2690571315d118c9705f80856c))
+* add deployment files for NTG on arbitrum one for liquid staked ETH pool ([3849676](https://github.com/VenusProtocol/isolated-pools/commit/3849676704951138f870d109f4ea211fecbd259d))
+* add deployment files for NTG on arbitrum sepolia for liquid staked ETH pool ([44f17e0](https://github.com/VenusProtocol/isolated-pools/commit/44f17e0f2b3e80a4898224ae1a291b85817500f4))
+* deployment files for liquid staked ETH for arbitrum one ([2ce558a](https://github.com/VenusProtocol/isolated-pools/commit/2ce558ab6e622e8951c48152340b9ac2f62c09a9))
+* deployment files for the reward distributor for LSETH pool on arbitrumone ([8c41986](https://github.com/VenusProtocol/isolated-pools/commit/8c419866f346c7a0c9cdf0949743292ec9fe8de8))
+* updating deployment files ([537def1](https://github.com/VenusProtocol/isolated-pools/commit/537def123109e667a26c02af052b4c3002255ace))
+* updating deployment files ([4665e93](https://github.com/VenusProtocol/isolated-pools/commit/4665e93e2905abf0ef50f81cbcbf558bb2e04360))
+* updating deployment files ([89b9e3f](https://github.com/VenusProtocol/isolated-pools/commit/89b9e3f7807cd73be3373fae673f4871df45533b))
+
+
+### Bug Fixes
+
+* pr comments ([3dc571e](https://github.com/VenusProtocol/isolated-pools/commit/3dc571e86438747cd2695b1adca4f8f916ffdaad))
+* prettier and linter ([f051ad1](https://github.com/VenusProtocol/isolated-pools/commit/f051ad1e89bb00f2069c23ee654482c61c5bec79))
+* update vToken receiver addresses for the arbitrumone LSETH pool ([636f717](https://github.com/VenusProtocol/isolated-pools/commit/636f717b9383755ad65f7ae8ccbdb79f7614a3f7))
+
 ## [3.5.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0-dev.10...v3.5.0-dev.11) (2024-09-05)
 
 
