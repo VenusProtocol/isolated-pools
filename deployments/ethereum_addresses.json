@@ -3,7 +3,7 @@
   "chainId": "1",
   "addresses": {
     "ComptrollerBeacon": "0xAE2C3F21896c02510aA187BdA0791cDA77083708",
-    "ComptrollerImpl": "0x25973b6BF39298D87B5498760a6c24CA06C3B40a",
+    "ComptrollerImpl": "0xC910F2B196C516253e88b2097ba5D7d5fC9fa84e",
     "Comptroller_Core": "0x687a01ecF6d3907658f7A7c714749fAC32336D1B",
     "Comptroller_Curve": "0x67aA3eCc5831a65A5Ba7be76BED3B5dc7DB60796",
     "Comptroller_Liquid Staked ETH": "0xF522cd0360EF8c2FF48B648d53EA1717Ec0F3Ac3",
@@ -12,6 +12,7 @@
     "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink8000bps": "0x244dBE6d11Ae9AadBaD552E6BD8901B680028E31",
     "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": "0x01E002C218D70dD374566cc40D9fCA1429AB7E65",
     "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps": "0xFCaBF5b76968e010b8BC310486bE418b9d16fEb2",
+    "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink9000bps": "0x834078D691d431aAdC80197f7a61239F9F89547b",
     "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps": "0x07a912CD58CbB5736d015608F424c43B2CAd0B5e",
     "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps": "0x0F84aF9A902dbb5a0986e5D5003189cF2B80A760",
     "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": "0xD9D3E7adA04993Cf06dE1A5c9C7f101BD1DefBF4",
@@ -65,10 +66,12 @@
     "VToken_vWETH_LiquidStakedETH": "0xc82780Db1257C788F262FBbDA960B3706Dfdcaf2",
     "VToken_vcrvUSD_Core": "0x672208C10aaAA2F9A6719F449C4C8227bc0BC202",
     "VToken_vcrvUSD_Curve": "0x2d499800239C4CD3012473Cb1EAE33562F0A6933",
+    "VToken_vezETH_LiquidStakedETH": "0xA854D35664c658280fFf27B6eDC6C4195c3229B3",
     "VToken_vrsETH_LiquidStakedETH": "0xDB6C345f864883a8F4cae87852Ac342589E76D1B",
     "VToken_vsFRAX_Core": "0x17142a05fe678e9584FA1d88EfAC1bF181bF7ABe",
     "VToken_vsfrxETH_LiquidStakedETH": "0xF9E9Fe17C00a8B96a8ac20c4E344C8688D7b947E",
     "VToken_vweETH_LiquidStakedETH": "0xb4933AF59868986316Ed37fa865C829Eba2df0C7",
+    "VToken_vweETHs_LiquidStakedETH": "0xEF26C64bC06A8dE4CA5D31f119835f9A1d9433b9",
     "VToken_vwstETH_LiquidStakedETH": "0x4a240F0ee138697726C8a3E43eFE6Ac3593432CB"
   }
 }

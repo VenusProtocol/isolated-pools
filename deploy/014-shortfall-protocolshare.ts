@@ -25,6 +25,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
+  const defaultProxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
 
@@ -36,10 +39,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
     proxy: {
       owner: owner,
-      proxyContract: "OpenZeppelinTransparentProxy",
+      proxyContract: "OptimizedTransparentUpgradeableProxy",
       execute: {
         methodName: "initialize",
         args: [riskFund.address, MIN_POOL_BAD_DEBT, accessControlManagerAddress],
+      },
+      viaAdminContract: {
+        name: "DefaultProxyAdmin",
+        artifact: defaultProxyAdmin,
       },
       upgradeIndex: 0,
     },
