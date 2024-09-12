@@ -6,6 +6,7 @@ import { contracts as governanceEthereum } from "@venusprotocol/governance-contr
 import { contracts as governanceOpbnbMainnet } from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import { contracts as governanceZkSyncMainnet } from "@venusprotocol/governance-contracts/deployments/zksyncmainnet.json";
 import { contracts as governanceZkSyncSepolia } from "@venusprotocol/governance-contracts/deployments/zksyncsepolia.json";
 import { contracts as venusProtocolArbitrumOne } from "@venusprotocol/venus-protocol/deployments/arbitrumone.json";
 import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
@@ -15,6 +16,7 @@ import { contracts as venusProtocolEthereum } from "@venusprotocol/venus-protoco
 import { contracts as venusProtocolOpbnbMainnet } from "@venusprotocol/venus-protocol/deployments/opbnbmainnet.json";
 import { contracts as venusProtocolOpbnbTestnet } from "@venusprotocol/venus-protocol/deployments/opbnbtestnet.json";
 import { contracts as venusProtocolSepolia } from "@venusprotocol/venus-protocol/deployments/sepolia.json";
+import { contracts as venusProtocolZkSyncMainnet } from "@venusprotocol/venus-protocol/deployments/zksyncmainnet.json";
 import { contracts as venusProtocolZkSyncSepolia } from "@venusprotocol/venus-protocol/deployments/zksyncsepolia.json";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
@@ -33,6 +35,7 @@ export type NetworkConfig = {
   arbitrumsepolia: DeploymentConfig;
   arbitrumone: DeploymentConfig;
   zksyncsepolia: DeploymentConfig;
+  zksyncmainnet: DeploymentConfig;
   opsepolia: DeploymentConfig;
 };
 
@@ -139,6 +142,7 @@ export const blocksPerYear: BlocksPerYear = {
   arbitrumsepolia: 0, // for time based contracts
   arbitrumone: 0, // for time based contracts
   zksyncsepolia: 0, // for time based contracts
+  zksyncmainnet: 0, // for time based contracts
   opsepolia: 0, // for time based contracts
   opmainnet: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
@@ -151,6 +155,7 @@ export const OPBNBMAINNET_MULTISIG = "0xC46796a21a3A9FAB6546aF3434F2eBfFd0604207
 export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A61C2";
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 export const ZKSYNC_SEPOLIA_MULTISIG = "0xa2f83de95E9F28eD443132C331B6a9C9B7a9F866";
+export const ZKSYNC_MAINNET_MULTISIG = "0x751Aa759cfBB6CE71A43b48e40e1cCcFC66Ba4aa";
 export const OP_SEPOLIA_MULTISIG = "0xd57365EE4E850e881229e2F8Aa405822f289e78d";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
@@ -161,6 +166,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -244,6 +250,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     CriticalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
     AccessControlManager: governanceZkSyncSepolia.AccessControlManager.address,
+  },
+  zksyncmainnet: {
+    VTreasury: venusProtocolZkSyncMainnet.VTreasuryV8.address,
+    NormalTimelock: ZKSYNC_MAINNET_MULTISIG,
+    FastTrackTimelock: ZKSYNC_MAINNET_MULTISIG,
+    CriticalTimelock: ZKSYNC_MAINNET_MULTISIG,
+    AccessControlManager: governanceZkSyncMainnet.AccessControlManager.address,
   },
   opsepolia: {
     VTreasury: "0x5A1a12F47FA7007C9e23cf5e025F3f5d3aC7d755",
@@ -4391,6 +4404,20 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x912ce59144191c1204e64559fe8253a0e49e6548",
       },
+      {
+        isMock: false,
+        name: "Wrapped liquid staked Ether 2.0.",
+        symbol: "wstETH",
+        decimals: 18,
+        tokenAddress: "0x5979D7b546E38E414F7E9822514be443A4800529",
+      },
+      {
+        isMock: false,
+        name: "Wrapped eETH",
+        symbol: "weETH",
+        decimals: 18,
+        tokenAddress: "0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe",
+      },
     ],
     poolConfig: [
       {
@@ -4508,6 +4535,84 @@ export const globalConfig: NetworkConfig = {
             markets: ["WETH", "WBTC", "USDT", "USDC", "ARB"],
             supplySpeeds: ["65586419753086", "131172839506172", "131172839506172", "131172839506172", "65586419753086"],
             borrowSpeeds: ["98379629629629", "196759259259258", "196759259259258", "196759259259258", "98379629629629"],
+          },
+        ],
+      },
+      {
+        id: "Liquid Staked ETH",
+        name: "Liquid Staked ETH",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.02", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus wstETH (Liquid Staked ETH)",
+            asset: "wstETH",
+            symbol: "vwstETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.93", 18),
+            liquidationThreshold: convertToUnit("0.95", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit(3.55, 18),
+            supplyCap: convertToUnit(8_000, 18),
+            borrowCap: convertToUnit(800, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
+            vTokenReceiver: "0x5A9d695c518e95CD6Ea101f2f25fC2AE18486A61",
+          },
+          {
+            name: "Venus weETH (Liquid Staked ETH)",
+            asset: "weETH",
+            symbol: "vweETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit(3, 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.93", 18),
+            liquidationThreshold: convertToUnit("0.95", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit(4, 18),
+            supplyCap: convertToUnit(4_600, 18),
+            borrowCap: convertToUnit(2_300, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
+            vTokenReceiver: "0x46cba1e9b1e5db32da28428f2fb85587bcb785e7",
+          },
+          {
+            name: "Venus WETH (Liquid Staked ETH)",
+            asset: "WETH",
+            symbol: "vWETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.035", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit(1.9678, 18),
+            supplyCap: convertToUnit(14_000, 18),
+            borrowCap: convertToUnit(12_500, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
+            vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
+          },
+        ],
+        rewards: [
+          // XVS Rewards Over 90 days (7776000 seconds)
+          // wstETH:  2550 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // weETH:   2550 XVS for Suppliers
+          //          0 XVS for Borrowers
+          // WETH:    3060 XVS for Suppliers
+          //          7140 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["wstETH", "weETH", "WETH"],
+            supplySpeeds: ["327932098765432", "327932098765432", "393518518518518"],
+            borrowSpeeds: ["0", "0", "918209876543209"],
           },
         ],
       },
@@ -4690,6 +4795,159 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.zksyncsepolia,
   },
+  zksyncmainnet: {
+    tokensConfig: [
+      {
+        isMock: false,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: "0xbbeb516fb02a01611cbbe0453fe3c580d7281011",
+      },
+      {
+        isMock: false,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
+      },
+      {
+        isMock: false,
+        name: "Bridged USDC (zkSync)",
+        symbol: "USDC.e",
+        decimals: 6,
+        tokenAddress: "0x3355df6d4c9c3035724fd0e3914de96a5a83aaf4",
+      },
+      {
+        isMock: false,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: "0x493257fd37edb34451f62edf8d2a0c418852ba4c",
+      },
+      {
+        isMock: false,
+        name: "ZKsync",
+        symbol: "ZK",
+        decimals: 18,
+        tokenAddress: "0x5a7d6b2f92c77fad6ccabd7ee0624e64907eaf3e",
+      },
+      {
+        isMock: false,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0xD78ABD81a3D57712a3af080dc4185b698Fe9ac5A",
+      },
+    ],
+    poolConfig: [
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus WETH (Core)",
+            asset: "WETH",
+            symbol: "vWETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0425", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.77", 18),
+            liquidationThreshold: convertToUnit("0.8", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("1.5", 18), // 1.5 WETH
+            supplyCap: convertToUnit(2_000, 18),
+            borrowCap: convertToUnit(1_700, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+          {
+            name: "Venus WBTC (Core)",
+            asset: "WBTC",
+            symbol: "vWBTC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.77", 18),
+            liquidationThreshold: convertToUnit("0.8", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.075", 8), // 0.075 WBTC
+            supplyCap: convertToUnit(40, 8),
+            borrowCap: convertToUnit(20, 8),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+          {
+            name: "Venus USDT (Core)",
+            asset: "USDT",
+            symbol: "vUSDT_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.77", 18),
+            liquidationThreshold: convertToUnit("0.8", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 6), // 5,000 USDT
+            supplyCap: convertToUnit(4_000_000, 6),
+            borrowCap: convertToUnit(3_300_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+          {
+            name: "Venus USDC.e (Core)",
+            asset: "USDC.e",
+            symbol: "vUSDC.e_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.72", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 6), // 5,000 USDC
+            supplyCap: convertToUnit(5_000_000, 6),
+            borrowCap: convertToUnit(4_200_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+
+          {
+            name: "Venus ZK (Core)",
+            asset: "ZK",
+            symbol: "vZK_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.2", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.35", 18),
+            liquidationThreshold: convertToUnit("0.4", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("25000", 18), // 25,000 ZK
+            supplyCap: convertToUnit(25_000_000, 18),
+            borrowCap: convertToUnit(12_500_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+        ],
+      },
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.zksyncmainnet.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.zksyncmainnet,
+  },
   opsepolia: {
     tokensConfig: [
       {
@@ -4868,6 +5126,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.arbitrumone;
     case "zksyncsepolia":
       return globalConfig.zksyncsepolia;
+    case "zksyncmainnet":
+      return globalConfig.zksyncmainnet;
     case "opsepolia":
       return globalConfig.opsepolia;
     case "development":
