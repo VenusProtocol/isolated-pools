@@ -1,3 +1,18 @@
+## [3.6.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0...v3.6.0-dev.1) (2024-09-13)
+
+
+### Features
+
+* deployment files for the NTG ([711894d](https://github.com/VenusProtocol/isolated-pools/commit/711894d7da85c76c9b61cc6005b99285085cccb3))
+* deployment files for the pool registry on opsepolia: ([e9148ef](https://github.com/VenusProtocol/isolated-pools/commit/e9148ef6be1792a1e786d3f371af9afb955eb6ba))
+* deployment files of  pool lens on op sepolia ([24b25b4](https://github.com/VenusProtocol/isolated-pools/commit/24b25b42c408bc241c6ab1f4f2584e2fd28adafe))
+* deployment files of mock tokens on opsepolia ([20370ea](https://github.com/VenusProtocol/isolated-pools/commit/20370ea429e29579d24829dda8f33344dd55b003))
+* deployment files of the vTokens of core pool on opsepolia ([c1fbaf7](https://github.com/VenusProtocol/isolated-pools/commit/c1fbaf79557c4ae195d8ca7f0f0bc74aabc59cd1))
+* deplyment config and files for the core pool on opsepolia ([fe14b03](https://github.com/VenusProtocol/isolated-pools/commit/fe14b033ea563ba0f4f7ddf7a93e620571111031))
+* updating deployment files ([17d0f17](https://github.com/VenusProtocol/isolated-pools/commit/17d0f178ff1e9252670c9f428f85240d401734bb))
+* updating deployment files ([1bf4b12](https://github.com/VenusProtocol/isolated-pools/commit/1bf4b125c894af05396d88ad1c10d7679b43e60a))
+* updating deployment files ([4010ada](https://github.com/VenusProtocol/isolated-pools/commit/4010ada1068459023eb5d6a8e7fe2bebe83b9c2c))
+
 ## [3.5.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0...v3.5.0) (2024-09-10)
 
 
