@@ -36,6 +36,7 @@ export type NetworkConfig = {
   arbitrumone: DeploymentConfig;
   zksyncsepolia: DeploymentConfig;
   zksyncmainnet: DeploymentConfig;
+  opsepolia: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -142,6 +143,8 @@ export const blocksPerYear: BlocksPerYear = {
   arbitrumone: 0, // for time based contracts
   zksyncsepolia: 0, // for time based contracts
   zksyncmainnet: 0, // for time based contracts
+  opsepolia: 0, // for time based contracts
+  opmainnet: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
@@ -153,6 +156,7 @@ export const ARBITRUM_SEPOLIA_MULTISIG = "0x1426A5Ae009c4443188DA8793751024E358A
 export const ARBITRUM_ONE_MULTISIG = "0x14e0E151b33f9802b3e75b621c1457afc44DcAA0";
 export const ZKSYNC_SEPOLIA_MULTISIG = "0xa2f83de95E9F28eD443132C331B6a9C9B7a9F866";
 export const ZKSYNC_MAINNET_MULTISIG = "0x751Aa759cfBB6CE71A43b48e40e1cCcFC66Ba4aa";
+export const OP_SEPOLIA_MULTISIG = "0xd57365EE4E850e881229e2F8Aa405822f289e78d";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM = "7200";
@@ -161,6 +165,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET = "86400";
 
 export const preconfiguredAddresses = {
@@ -252,6 +257,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: ZKSYNC_MAINNET_MULTISIG,
     CriticalTimelock: ZKSYNC_MAINNET_MULTISIG,
     AccessControlManager: governanceZkSyncMainnet.AccessControlManager.address,
+  },
+  opsepolia: {
+    VTreasury: "0x5A1a12F47FA7007C9e23cf5e025F3f5d3aC7d755",
+    NormalTimelock: OP_SEPOLIA_MULTISIG,
+    FastTrackTimelock: OP_SEPOLIA_MULTISIG,
+    CriticalTimelock: OP_SEPOLIA_MULTISIG,
+    AccessControlManager: "0x1652E12C8ABE2f0D84466F0fc1fA4286491B3BC1",
   },
 };
 
@@ -4936,6 +4948,160 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.zksyncmainnet,
   },
+  opsepolia: {
+    tokensConfig: [
+      {
+        isMock: true,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Tether USD",
+        symbol: "USDT",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: "0x4200000000000000000000000000000000000006",
+      },
+      {
+        isMock: true,
+        name: "Wrapped BTC",
+        symbol: "WBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Optimism",
+        symbol: "OP",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: false,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0x789482e37218f9b26d8D9115E356462fA9A37116",
+      },
+    ],
+
+    poolConfig: [
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus WBTC (Core)",
+            asset: "WBTC",
+            symbol: "vWBTC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.03553143", 8), // 0.03553143 WBTC
+            supplyCap: convertToUnit(1, 8),
+            borrowCap: convertToUnit("0.55", 8),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
+          },
+          {
+            name: "Venus WETH (Core)",
+            asset: "WETH",
+            symbol: "vWETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 WETH
+            supplyCap: convertToUnit(25, 18),
+            borrowCap: convertToUnit(16, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
+          },
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDC
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
+          },
+          {
+            name: "Venus USDT (Core)",
+            asset: "USDT",
+            symbol: "vUSDT_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.075", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.77", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("1800", 6), // 1,800 USDT
+            supplyCap: convertToUnit(150_000, 6),
+            borrowCap: convertToUnit(130_000, 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
+          },
+          {
+            name: "Venus OP (Core)",
+            asset: "OP",
+            symbol: "vOP_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.610978879332136515", 18), // 0.610978879332136515 OP
+            supplyCap: convertToUnit(25, 18),
+            borrowCap: convertToUnit(16, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
+          },
+        ],
+        rewards: [],
+      },
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.opsepolia.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.opsepolia,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -4962,6 +5128,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.zksyncsepolia;
     case "zksyncmainnet":
       return globalConfig.zksyncmainnet;
+    case "opsepolia":
+      return globalConfig.opsepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:
