@@ -1,3 +1,11 @@
+## [3.6.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.1...v3.6.0-dev.2) (2024-09-19)
+
+
+### Features
+
+* add reward distributor to core pool on opsepolia ([bf235af](https://github.com/VenusProtocol/isolated-pools/commit/bf235af6f4f5509d6d8309c003cebad416f1c731))
+* updating deployment files ([021a787](https://github.com/VenusProtocol/isolated-pools/commit/021a78770d28c6e2aeaafaec1a4996d56c9fcdb8))
+
 ## [3.6.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0...v3.6.0-dev.1) (2024-09-13)
 
 
