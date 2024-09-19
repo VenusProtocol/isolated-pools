@@ -5093,7 +5093,25 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 120 months (311040000 seconds)
+          // WETH:    360 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // WBTC:    360 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // USDT:    360 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // USDC:    360 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // OP:      360 XVS for Suppliers
+          //          360 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["WETH", "WBTC", "USDT", "USDC", "OP"],
+            supplySpeeds: ["1157407407407", "1157407407407", "1157407407407", "1157407407407", "1157407407407"],
+            borrowSpeeds: ["1157407407407", "1157407407407", "1157407407407", "1157407407407", "1157407407407"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
