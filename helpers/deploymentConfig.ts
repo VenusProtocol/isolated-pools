@@ -4941,28 +4941,35 @@ export const globalConfig: NetworkConfig = {
           },
         ],
         rewards: [
-          // XVS Rewards Over 4 months (10368000 seconds)
-          // WETH:    3840 XVS for Suppliers (80%)
-          //          960 XVS for Borrowers (20%)
-          // WBTC:    3840 XVS for Suppliers
-          //          960 XVS for Borrowers
-          // USDT:    2880 XVS for Suppliers
+          // XVS Rewards Over 1 month (2,592,000 seconds)
+
+          // WETH:    1920 XVS for Suppliers (80%)
+          //          480 XVS for Borrowers (20%)
+          // WBTC:    1920 XVS for Suppliers
+          //          480 XVS for Borrowers
+          // USDT:    1440 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // USDC.e:  2880 XVS for Suppliers
           //          720 XVS for Borrowers
-          // USDC.e:  5760 XVS for Suppliers
-          //          1440 XVS for Borrowers
-          // ZK:      2880 XVS for Suppliers
-          //          720 XVS for Borrowers
+          // ZK:      1440 XVS for Suppliers
+          //          360 XVS for Borrowers
           {
             asset: "XVS",
             markets: ["WETH", "WBTC", "USDT", "USDC.e", "ZK"],
             supplySpeeds: [
-              "370370370370370",
-              "370370370370370",
-              "277777777777777",
-              "555555555555555",
-              "277777777777777",
+              "740740740740740",
+              "740740740740740",
+              "555555555555554",
+              "1111111111111110",
+              "555555555555554",
             ],
-            borrowSpeeds: ["92592592592592", "92592592592592", "69444444444444", "138888888888888", "69444444444444"],
+            borrowSpeeds: [
+              "185185185185184",
+              "185185185185184",
+              "138888888888888",
+              "277777777777776",
+              "138888888888888",
+            ],
           },
         ],
       },
