@@ -4940,6 +4940,38 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
           },
         ],
+        rewards: [
+          // XVS Rewards Over 1 month (2,592,000 seconds)
+
+          // WETH:    1920 XVS for Suppliers (80%)
+          //          480 XVS for Borrowers (20%)
+          // WBTC:    1920 XVS for Suppliers
+          //          480 XVS for Borrowers
+          // USDT:    1440 XVS for Suppliers
+          //          360 XVS for Borrowers
+          // USDC.e:  2880 XVS for Suppliers
+          //          720 XVS for Borrowers
+          // ZK:      1440 XVS for Suppliers
+          //          360 XVS for Borrowers
+          {
+            asset: "XVS",
+            markets: ["WETH", "WBTC", "USDT", "USDC.e", "ZK"],
+            supplySpeeds: [
+              "740740740740740",
+              "740740740740740",
+              "555555555555554",
+              "1111111111111110",
+              "555555555555554",
+            ],
+            borrowSpeeds: [
+              "185185185185184",
+              "185185185185184",
+              "138888888888888",
+              "277777777777776",
+              "138888888888888",
+            ],
+          },
+        ],
       },
     ],
     accessControlConfig: [
