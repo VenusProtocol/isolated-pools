@@ -1,3 +1,11 @@
+## [3.6.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.2...v3.6.0-dev.3) (2024-09-23)
+
+
+### Features
+
+* add deployments of Rewards distributor on zksync mainnet ([4654b32](https://github.com/VenusProtocol/isolated-pools/commit/4654b3216369dd80fad8c41a129cb2499de8bbcd))
+* updating deployment files ([8bc19ee](https://github.com/VenusProtocol/isolated-pools/commit/8bc19ee888877ca1b05df58ec6e77f98a34511e8))
+
 ## [3.6.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.1...v3.6.0-dev.2) (2024-09-19)
 
 
