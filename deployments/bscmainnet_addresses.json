@@ -7,6 +7,7 @@
     "Comptroller_DeFi": "0x3344417c9360b963ca93A4e8305361AEde340Ab9",
     "Comptroller_GameFi": "0x1b43ea8622e76627B81665B1eCeBB4867566B963",
     "Comptroller_LiquidStakedBNB": "0xd933909A4a2b7A4638903028f44D1d38ce27c352",
+    "Comptroller_LiquidStakedETH": "0xBE609449Eb4D76AD8545f957bBE04b596E8fC529",
     "Comptroller_Meme": "0x33B6fa34cd23e5aeeD1B112d5988B026b8A5567d",
     "Comptroller_Stablecoins": "0x94c1495cD4c557f1560Cbd68EAB0d197e6291571",
     "Comptroller_Tron": "0x23b4404E4E5eC5FF5a6FFb70B7d14E3FabF237B0",
@@ -14,7 +15,9 @@
     "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps": "0x2ba0F45f7368d2A56d0c9e5a29af363987BE1d02",
     "JumpRateModelV2_base0bps_slope1250bps_jump25000bps_kink8000bps": "0x5E0dB1e8a6D6181aa39B3317179CDF91FBa4Ac51",
     "JumpRateModelV2_base0bps_slope1750bps_jump25000bps_kink8000bps": "0xDdeb3556b325D5578575c6eF0F855b73D2323E34",
+    "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": "0xf03DAB984aCC5761df5f71Cc67fEA8F185f578fd",
     "JumpRateModelV2_base0bps_slope375bps_jump25000bps_kink8000bps": "0xb36b273601Ac5e0CaBD0845b7B8caa3426611Ca0",
+    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink4500bps": "0x7DE84548C2BaDC047C5e7F0B7f9a4ba660d10dAD",
     "JumpRateModelV2_base0bps_slope90bps_jump30000bps_kink9000bps": "0x8037f793A298789736fc1cb7e3154573647CDD11",
     "JumpRateModelV2_base200bps_slope1000bps_jump25000bps_kink5000bps": "0x0820d5DA817Ac2eAf3757829B255B56354188bd1",
     "JumpRateModelV2_base200bps_slope1000bps_jump30000bps_kink8000bps": "0x4021Da92B4e64126Cd5A2d6B305FB0e9e4ed2024",
@@ -76,6 +79,7 @@
     "SwapRouter_DeFi": "0x47bEe99BD8Cf5D8d7e815e2D2a3E2985CBCcC04b",
     "SwapRouter_GameFi": "0x9B15462a79D0948BdDF679E0E5a9841C44aAFB7A",
     "SwapRouter_LiquidStakedBNB": "0x5f0ce69Aa564468492e860e8083BB001e4eb8d56",
+    "SwapRouter_LiquidStakedETH": "0xfb4A3c6D25B4f66C103B4CD0C0D58D24D6b51dC1",
     "SwapRouter_Meme": "0x9Db0CBD9A73339949f98C5E6a51e036d0dEaFf21",
     "SwapRouter_Stablecoins": "0xBBd8E2b5d69fcE9Aaa599c50F0f0960AA58B32aA",
     "SwapRouter_Tron": "0xacD270Ed7DFd4466Bd931d84fe5B904080E28Bfc",
@@ -87,6 +91,7 @@
     "VToken_vBSW_DeFi": "0x8f657dFD3a1354DEB4545765fE6840cc54AFd379",
     "VToken_vBTT_Tron": "0x49c26e12959345472E2Fd95E5f79F8381058d3Ee",
     "VToken_vBabyDoge_Meme": "0x52eD99Cd0a56d60451dD4314058854bc0845bbB5",
+    "VToken_vETH_LiquidStakedETH": "0xeCCACF760FEA7943C5b0285BD09F601505A29c05",
     "VToken_vFLOKI_GameFi": "0xc353B7a1E13dDba393B5E120D4169Da7185aA2cb",
     "VToken_vHAY_Stablecoins": "0xCa2D81AA7C09A1a025De797600A7081146dceEd9",
     "VToken_vNFT_Tron": "0x85baA9CD6186B416Ef92c0587Cd9E9Be3BCe2a4D",
@@ -111,6 +116,8 @@
     "VToken_vagEUR_Stablecoins": "0x795DE779Be00Ea46eA97a28BDD38d9ED570BCF0F",
     "VToken_vankrBNB_DeFi": "0x53728FD51060a85ac41974C6C3Eb1DaE42776723",
     "VToken_vankrBNB_LiquidStakedBNB": "0xBfe25459BA784e70E2D7a718Be99a1f3521cA17f",
-    "VToken_vstkBNB_LiquidStakedBNB": "0xcc5D9e502574cda17215E70bC0B4546663785227"
+    "VToken_vstkBNB_LiquidStakedBNB": "0xcc5D9e502574cda17215E70bC0B4546663785227",
+    "VToken_vweETH_LiquidStakedETH": "0xc5b24f347254bD8cF8988913d1fd0F795274900F",
+    "VToken_vwstETH_LiquidStakedETH": "0x94180a3948296530024Ef7d60f60B85cfe0422c8"
   }
 }
