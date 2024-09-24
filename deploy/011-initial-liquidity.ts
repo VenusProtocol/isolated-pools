@@ -43,14 +43,14 @@ const faucetTokens = async (deploymentConfig: DeploymentConfig) => {
     const tx = await tokenContract.faucet(amount, { gasLimit: 5000000 });
     await tx.wait(1);
   }
-  return vTokensToFaucet
+  return vTokensToFaucet;
 };
 
 const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig, tokensToFaucet: VTokenConfig[]) => {
   if (getNetworkName() == "bscmainnet" || getNetworkName() == "ethereum") {
     return;
   }
-  
+
   const { tokensConfig, preconfiguredAddresses } = deploymentConfig;
 
   const amounts = tokensToFaucet.map((token: VTokenConfig) => ({

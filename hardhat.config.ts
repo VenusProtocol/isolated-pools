@@ -22,20 +22,18 @@ dotenv.config();
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
 const getRpcUrl = (networkName: string): string => {
-  let uri
+  let uri;
   if (networkName) {
     uri = process.env[`ARCHIVE_NODE_${networkName}`];
   }
   if (!uri) {
-    throw new Error(
-      `invalid uri or network not supported by node provider : ${uri}`
-    );
+    throw new Error(`invalid uri or network not supported by node provider : ${uri}`);
   }
   return uri;
-}
+};
 
-extendEnvironment((hre) => {
-  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name
+extendEnvironment(hre => {
+  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name;
 });
 
 extendConfig((config: HardhatConfig) => {
@@ -104,7 +102,7 @@ extendConfig((config: HardhatConfig) => {
         `node_modules/@venusprotocol/venus-protocol/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
         `node_modules/@venusprotocol/protocol-reserve/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
         `node_modules/@venusprotocol/governance-contracts/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
-      ]
+      ];
     }
   }
 });
@@ -265,11 +263,9 @@ const config: HardhatUserConfig = {
       live: !!process.env.HARDHAT_FORK_NETWORK,
       forking: process.env.HARDHAT_FORK_NETWORK
         ? {
-          url: getRpcUrl(process.env.HARDHAT_FORK_NETWORK),
-          blockNumber: process.env.HARDHAT_FORK_NUMBER
-            ? parseInt(process.env.HARDHAT_FORK_NUMBER)
-            : undefined,
-        }
+            url: getRpcUrl(process.env.HARDHAT_FORK_NETWORK),
+            blockNumber: process.env.HARDHAT_FORK_NUMBER ? parseInt(process.env.HARDHAT_FORK_NUMBER) : undefined,
+          }
         : undefined,
     },
     development: {

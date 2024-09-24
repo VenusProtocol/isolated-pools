@@ -76,5 +76,4 @@ func.skip = async hre =>
   hre.getNetworkName() === "opbnbmainnet" ||
   hre.getNetworkName() === "ethereum";
 
-
 export default func;
