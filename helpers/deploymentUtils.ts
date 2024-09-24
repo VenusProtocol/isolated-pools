@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, getNamedAccounts, deployments } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
@@ -12,9 +12,7 @@ import {
   getTokenConfig,
 } from "./deploymentConfig";
 
-export const toAddress = async (addressOrAlias: string, hre: HardhatRuntimeEnvironment): Promise<string> => {
-  const { getNamedAccounts } = hre;
-  const { deployments } = hre;
+export const toAddress = async (addressOrAlias: string): Promise<string> => {
   if (addressOrAlias.startsWith("0x")) {
     return addressOrAlias;
   }

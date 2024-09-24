@@ -6,7 +6,7 @@ import { PoolConfig, getConfig } from "../helpers/deploymentConfig";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
-  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
   const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
 
   const rewardsDistributors = poolConfig

@@ -139,9 +139,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
-  const vWNativesInfo = getVWNativeTokens(hre.network.name);
+  const vWNativesInfo = getVWNativeTokens(hre.getNetworkName());
   for (const vWNativeInfo of vWNativesInfo) {
     await deploy(`NativeTokenGateway_${vWNativeInfo.name}`, {
       contract: "NativeTokenGateway",

@@ -10,12 +10,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const deploymentConfig = await getConfig(hre.network.name);
+  const deploymentConfig = await getConfig(hre.getNetworkName());
   const { poolConfig, preconfiguredAddresses } = deploymentConfig;
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
   const maxLoopsLimit = 100;
 
