@@ -19,14 +19,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
-  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.getNetworkName());
 
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
 
   // VToken Beacon

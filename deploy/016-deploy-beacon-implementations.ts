@@ -11,10 +11,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
-  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.getNetworkName());
 
   // Comptroller Implementation
   await deploy("ComptrollerImpl", {

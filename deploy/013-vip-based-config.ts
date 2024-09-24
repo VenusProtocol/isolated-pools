@@ -229,11 +229,10 @@ const addMarket = async (
   poolRegistry: PoolRegistry,
   vTokenAddress: string,
   vTokenConfig: VTokenConfig,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand> => {
   const { name, collateralFactor, liquidationThreshold, initialSupply, supplyCap, borrowCap } = vTokenConfig;
   console.log("Adding a command to register " + name + " to PoolRegistry");
-  const receiver = await toAddress(vTokenConfig.vTokenReceiver, hre);
+  const receiver = await toAddress(vTokenConfig.vTokenReceiver);
   return {
     contract: poolRegistry.address,
     signature: "addMarket((address,uint256,uint256,uint256,address,uint256,uint256))",
@@ -316,7 +315,6 @@ const configureAccessControls = async (
   const { accessControlConfig, preconfiguredAddresses } = deploymentConfig;
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
   const accessControlManager = await ethers.getContractAt<AccessControlManager>(
     "AccessControlManager",
@@ -325,8 +323,8 @@ const configureAccessControls = async (
   const commands = await Promise.all(
     accessControlConfig.map(async (entry: AccessControlEntry) => {
       const { caller, target, method } = entry;
-      const callerAddress = await toAddress(caller, hre);
-      const targetAddress = await toAddress(target, hre);
+      const callerAddress = await toAddress(caller);
+      const targetAddress = await toAddress(target);
       if (await hasPermission(accessControlManager, targetAddress, method, callerAddress, hre)) {
         return [];
       }
@@ -371,7 +369,7 @@ const executeCommands = async (commands: GovernanceCommand[], hre: HardhatRuntim
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { getNamedAccounts } = hre;
   const { deployer } = await getNamedAccounts();
-  const deploymentConfig = await getConfig(hre.network.name);
+  const deploymentConfig = await getConfig(hre.getNetworkName());
   const { poolConfig, preconfiguredAddresses } = deploymentConfig;
 
   const unregisteredPools = await getUnregisteredPools(poolConfig, hre);

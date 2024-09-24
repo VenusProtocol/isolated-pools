@@ -45,7 +45,7 @@ const faucetTokens = async (deploymentConfig: DeploymentConfig, hre: HardhatRunt
 };
 
 const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig, hre: HardhatRuntimeEnvironment) => {
-  if (hre.network.name == "bscmainnet" || hre.network.name == "ethereum") {
+  if (hre.getNetworkName() == "bscmainnet" || hre.getNetworkName() == "ethereum") {
     return;
   }
   const { poolConfig, tokensConfig, preconfiguredAddresses } = deploymentConfig;
@@ -62,7 +62,7 @@ const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig
     console.log(`Sending ${amount} ${symbol} to VTreasury`);
     console.log(`Token Contract: ${tokenContract.address}`);
     console.log(`Token Contract: ${amount.toString()}`);
-    const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury", hre);
+    const treasuryAddress = await toAddress(preconfiguredAddresses.VTreasury || "VTreasury");
     console.log(`Token Contract: ${treasuryAddress}`);
 
     const tx = await tokenContract.transfer(treasuryAddress, amount, { gasLimit: 5000000 });
@@ -71,7 +71,7 @@ const sendInitialLiquidityToTreasury = async (deploymentConfig: DeploymentConfig
 };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const deploymentConfig = await getConfig(hre.network.name);
+  const deploymentConfig = await getConfig(hre.getNetworkName());
   await faucetTokens(deploymentConfig, hre);
   await sendInitialLiquidityToTreasury(deploymentConfig, hre);
 };
