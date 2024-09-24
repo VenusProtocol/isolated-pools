@@ -80,7 +80,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
@@ -101,7 +100,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       } else {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
@@ -113,7 +111,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         rateModelAddress = result.address;
       }
 
-      console.log(`Deploying VToken proxy for ${symbol}`);
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;

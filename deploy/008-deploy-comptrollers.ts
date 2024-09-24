@@ -38,10 +38,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const unregisteredPools = await getUnregisteredPools(poolConfig, hre);
   for (const pool of unregisteredPools) {
-    // Deploying a proxy for Comptroller
-    console.log(`Deploying a proxy for Comptroller of the pool ${pool.name}`);
     const Comptroller = await ethers.getContractFactory("Comptroller");
-
+    
+    // Deploying a proxy for Comptroller
     await deploy(`Comptroller_${pool.id}`, {
       from: deployer,
       contract: "BeaconProxy",

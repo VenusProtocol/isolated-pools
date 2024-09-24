@@ -1,5 +1,4 @@
 import { ethers, getNamedAccounts, deployments } from "hardhat";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
 import {
@@ -39,9 +38,7 @@ export const getUnderlyingToken = async (assetSymbol: string, tokensConfig: Toke
 
 export const getUnregisteredPools = async (
   poolConfig: PoolConfig[],
-  hre: HardhatRuntimeEnvironment,
 ): Promise<PoolConfig[]> => {
-  const { deployments } = hre;
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = (await registry.getAllPools()).map((p: { comptroller: string }) => p.comptroller);
   const isRegistered = await Promise.all(
@@ -59,9 +56,7 @@ export const getUnregisteredPools = async (
 
 export const getUnregisteredVTokens = async (
   poolConfig: PoolConfig[],
-  hre: HardhatRuntimeEnvironment,
 ): Promise<PoolConfig[]> => {
-  const { deployments } = hre;
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(
@@ -96,9 +91,7 @@ export const getUnregisteredVTokens = async (
 
 export const getUnregisteredRewardsDistributors = async (
   poolConfig: PoolConfig[],
-  hre: HardhatRuntimeEnvironment,
 ): Promise<PoolConfig[]> => {
-  const { deployments } = hre;
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(

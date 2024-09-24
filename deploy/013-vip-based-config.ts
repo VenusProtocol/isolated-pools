@@ -1,6 +1,6 @@
 import { BigNumberish } from "ethers";
 import { defaultAbiCoder, parseEther } from "ethers/lib/utils";
-import { ethers } from "hardhat";
+import { ethers, network, deployments } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -76,7 +76,6 @@ const setRewardSpeed = async (
 const configureRewards = async (
   unregisteredRewardDistributors: PoolConfig[],
   owner: string,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const commands = await Promise.all(
     unregisteredRewardDistributors.map(async (pool: PoolConfig) => {
@@ -86,7 +85,7 @@ const configureRewards = async (
           const contractName = `RewardsDistributor_${pool.id}_${idx}`;
           const rewardsDistributor = await ethers.getContract<RewardsDistributor>(contractName);
           return [
-            ...(await acceptOwnership(contractName, owner, hre)),
+            ...(await acceptOwnership(contractName, owner)),
             await addRewardsDistributor(rewardsDistributor, pool, rewardConfig),
             await setRewardSpeed(pool, rewardsDistributor, rewardConfig),
           ];
@@ -101,13 +100,12 @@ const configureRewards = async (
 const acceptOwnership = async (
   contractName: string,
   targetOwner: string,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
-  if (!hre.network.live) {
+  if (!network.live) {
     return [];
   }
   const abi = ["function owner() view returns (address)"];
-  const deployment = await hre.deployments.get(contractName);
+  const deployment = await deployments.get(contractName);
   const contract = await ethers.getContractAt(abi, deployment.address);
   if ((await contract.owner()) === targetOwner) {
     return [];
@@ -156,14 +154,13 @@ const addPool = (poolRegistry: PoolRegistry, comptroller: Comptroller, pool: Poo
 const addPools = async (
   unregisteredPools: PoolConfig[],
   poolsOwner: string,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const commands = await Promise.all(
     unregisteredPools.map(async (pool: PoolConfig) => {
       const comptroller = await ethers.getContract<Comptroller>(`Comptroller_${pool.id}`);
       return [
-        ...(await acceptOwnership(`Comptroller_${pool.id}`, poolsOwner, hre)),
+        ...(await acceptOwnership(`Comptroller_${pool.id}`, poolsOwner)),
         await setOracle(comptroller, pool),
         addPool(poolRegistry, comptroller, pool),
       ];
@@ -175,7 +172,6 @@ const addPools = async (
 const transferInitialLiquidity = async (
   vTokenConfig: VTokenConfig,
   deploymentConfig: DeploymentConfig,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   if (!hre.network.live) {
     return [];
@@ -262,7 +258,6 @@ const setReduceReservesBlockDelta = async (
 const addMarkets = async (
   unregisteredVTokens: PoolConfig[],
   deploymentConfig: DeploymentConfig,
-  hre: HardhatRuntimeEnvironment,
 ) => {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const poolCommands = await Promise.all(
@@ -275,10 +270,10 @@ const addMarkets = async (
 
           console.log("Adding market " + name + " to pool " + pool.name);
           return [
-            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig, hre)),
+            ...(await transferInitialLiquidity(vTokenConfig, deploymentConfig)),
             ...(await approvePoolRegistry(poolRegistry, vTokenConfig, deploymentConfig)),
             await setReduceReservesBlockDelta(vToken.address, vTokenConfig),
-            await addMarket(poolRegistry, vToken.address, vTokenConfig, hre),
+            await addMarket(poolRegistry, vToken.address, vTokenConfig),
           ];
         }),
       );
@@ -302,15 +297,13 @@ const hasPermission = async (
   targetContract: string,
   method: string,
   caller: string,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<boolean> => {
-  const role = makeRole(hre.network.live, targetContract, method);
+  const role = makeRole(network.live, targetContract, method);
   return accessControl.hasRole(role, caller);
 };
 
 const configureAccessControls = async (
   deploymentConfig: DeploymentConfig,
-  hre: HardhatRuntimeEnvironment,
 ): Promise<GovernanceCommand[]> => {
   const { accessControlConfig, preconfiguredAddresses } = deploymentConfig;
   const accessControlManagerAddress = await toAddress(
@@ -325,7 +318,7 @@ const configureAccessControls = async (
       const { caller, target, method } = entry;
       const callerAddress = await toAddress(caller);
       const targetAddress = await toAddress(target);
-      if (await hasPermission(accessControlManager, targetAddress, method, callerAddress, hre)) {
+      if (await hasPermission(accessControlManager, targetAddress, method, callerAddress)) {
         return [];
       }
       return [
@@ -372,16 +365,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deploymentConfig = await getConfig(hre.getNetworkName());
   const { poolConfig, preconfiguredAddresses } = deploymentConfig;
 
-  const unregisteredPools = await getUnregisteredPools(poolConfig, hre);
-  const unregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
-  const unregisteredRewardsDistributors = await getUnregisteredRewardsDistributors(poolConfig, hre);
+  const unregisteredPools = await getUnregisteredPools(poolConfig);
+  const unregisteredVTokens = await getUnregisteredVTokens(poolConfig);
+  const unregisteredRewardsDistributors = await getUnregisteredRewardsDistributors(poolConfig);
   const owner = preconfiguredAddresses.NormalTimelock || deployer;
   const commands = [
-    ...(await configureAccessControls(deploymentConfig, hre)),
-    ...(await acceptOwnership("PoolRegistry", owner, hre)),
-    ...(await addPools(unregisteredPools, owner, hre)),
-    ...(await addMarkets(unregisteredVTokens, deploymentConfig, hre)),
-    ...(await configureRewards(unregisteredRewardsDistributors, owner, hre)),
+    ...(await configureAccessControls(deploymentConfig)),
+    ...(await acceptOwnership("PoolRegistry", owner)),
+    ...(await addPools(unregisteredPools, owner)),
+    ...(await addMarkets(unregisteredVTokens, deploymentConfig)),
+    ...(await configureRewards(unregisteredRewardsDistributors, owner)),
   ];
 
   if (hre.network.live) {
