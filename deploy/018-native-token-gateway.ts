@@ -154,7 +154,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);
     const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-    if (hre.network.live) {
+    if (hre.network.live && await nativeTokenGateway.owner() !== targetOwner) {
       const tx = await nativeTokenGateway.transferOwnership(targetOwner);
       await tx.wait();
       console.log(`Transferred ownership of NativeTokenGateway_${vWNativeInfo.name} to Timelock`);
