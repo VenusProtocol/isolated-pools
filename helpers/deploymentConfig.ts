@@ -4021,7 +4021,7 @@ export const globalConfig: NetworkConfig = {
           //          3600 XVS for Borrowers
           {
             asset: "XVS",
-            markets: ["vCRV", "crvUSD"],
+            markets: ["CRV", "crvUSD"],
             supplySpeeds: ["925925925925925", "3703703703703703"],
             borrowSpeeds: ["1388888888888888", "5555555555555555"],
           },
@@ -4033,7 +4033,7 @@ export const globalConfig: NetworkConfig = {
           },
           {
             asset: "XVS",
-            markets: ["vCRV", "crvUSD"],
+            markets: ["CRV", "crvUSD"],
             supplySpeeds: ["694444444444444", "694444444444444"],
             borrowSpeeds: ["1041666666666666", "1041666666666666"],
           },
