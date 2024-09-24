@@ -1,4 +1,4 @@
-import { ethers, getNamedAccounts, deployments } from "hardhat";
+import { deployments, ethers, getNamedAccounts } from "hardhat";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
 import {
@@ -36,9 +36,7 @@ export const getUnderlyingToken = async (assetSymbol: string, tokensConfig: Toke
   return ethers.getContractAt<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", underlyingAddress);
 };
 
-export const getUnregisteredPools = async (
-  poolConfig: PoolConfig[],
-): Promise<PoolConfig[]> => {
+export const getUnregisteredPools = async (poolConfig: PoolConfig[]): Promise<PoolConfig[]> => {
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = (await registry.getAllPools()).map((p: { comptroller: string }) => p.comptroller);
   const isRegistered = await Promise.all(
@@ -54,9 +52,7 @@ export const getUnregisteredPools = async (
   return poolConfig.filter((_, idx: number) => !isRegistered[idx]);
 };
 
-export const getUnregisteredVTokens = async (
-  poolConfig: PoolConfig[],
-): Promise<PoolConfig[]> => {
+export const getUnregisteredVTokens = async (poolConfig: PoolConfig[]): Promise<PoolConfig[]> => {
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(
@@ -89,9 +85,7 @@ export const getUnregisteredVTokens = async (
   );
 };
 
-export const getUnregisteredRewardsDistributors = async (
-  poolConfig: PoolConfig[],
-): Promise<PoolConfig[]> => {
+export const getUnregisteredRewardsDistributors = async (poolConfig: PoolConfig[]): Promise<PoolConfig[]> => {
   const registry = await ethers.getContract("PoolRegistry");
   const registeredPools = await registry.getAllPools();
   const comptrollers = await Promise.all(

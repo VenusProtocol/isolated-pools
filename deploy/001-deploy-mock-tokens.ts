@@ -27,6 +27,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.tags = ["MockTokens"];
 
-func.skip = async hre => hre.network.live
+func.skip = async hre => hre.network.live;
 
 export default func;

@@ -1,6 +1,6 @@
 import { BigNumberish } from "ethers";
 import { defaultAbiCoder, parseEther } from "ethers/lib/utils";
-import { ethers, network, deployments } from "hardhat";
+import { deployments, ethers, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -97,10 +97,7 @@ const configureRewards = async (
   return commands.flat();
 };
 
-const acceptOwnership = async (
-  contractName: string,
-  targetOwner: string,
-): Promise<GovernanceCommand[]> => {
+const acceptOwnership = async (contractName: string, targetOwner: string): Promise<GovernanceCommand[]> => {
   if (!network.live) {
     return [];
   }
@@ -151,10 +148,7 @@ const addPool = (poolRegistry: PoolRegistry, comptroller: Comptroller, pool: Poo
   };
 };
 
-const addPools = async (
-  unregisteredPools: PoolConfig[],
-  poolsOwner: string,
-): Promise<GovernanceCommand[]> => {
+const addPools = async (unregisteredPools: PoolConfig[], poolsOwner: string): Promise<GovernanceCommand[]> => {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const commands = await Promise.all(
     unregisteredPools.map(async (pool: PoolConfig) => {
@@ -173,7 +167,7 @@ const transferInitialLiquidity = async (
   vTokenConfig: VTokenConfig,
   deploymentConfig: DeploymentConfig,
 ): Promise<GovernanceCommand[]> => {
-  if (!hre.network.live) {
+  if (!network.live) {
     return [];
   }
   const { preconfiguredAddresses, tokensConfig } = deploymentConfig;
@@ -255,10 +249,7 @@ const setReduceReservesBlockDelta = async (
   };
 };
 
-const addMarkets = async (
-  unregisteredVTokens: PoolConfig[],
-  deploymentConfig: DeploymentConfig,
-) => {
+const addMarkets = async (unregisteredVTokens: PoolConfig[], deploymentConfig: DeploymentConfig) => {
   const poolRegistry = await ethers.getContract<PoolRegistry>("PoolRegistry");
   const poolCommands = await Promise.all(
     unregisteredVTokens.map(async (pool: PoolConfig) => {
@@ -302,9 +293,7 @@ const hasPermission = async (
   return accessControl.hasRole(role, caller);
 };
 
-const configureAccessControls = async (
-  deploymentConfig: DeploymentConfig,
-): Promise<GovernanceCommand[]> => {
+const configureAccessControls = async (deploymentConfig: DeploymentConfig): Promise<GovernanceCommand[]> => {
   const { accessControlConfig, preconfiguredAddresses } = deploymentConfig;
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
