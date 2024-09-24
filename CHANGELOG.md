@@ -1,3 +1,16 @@
+## [3.6.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.3...v3.6.0-dev.4) (2024-09-24)
+
+
+### Features
+
+* add LST ETH pool deployment on BNB chain ([4e94bff](https://github.com/VenusProtocol/isolated-pools/commit/4e94bff85b3aa42547695e7b1d90eb95ad9bdae2))
+* updating deployment files ([56e0d44](https://github.com/VenusProtocol/isolated-pools/commit/56e0d449ab624d9d326a51a3e8c45265d2a7b569))
+
+
+### Bug Fixes
+
+* use correct risk parameters ([fbf2584](https://github.com/VenusProtocol/isolated-pools/commit/fbf25843f3adea0630814aabbb3ad326e25539ee))
+
 ## [3.6.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.2...v3.6.0-dev.3) (2024-09-23)
 
 
