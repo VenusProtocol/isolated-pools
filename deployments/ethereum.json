@@ -26166,10 +26166,26 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xE5A008B6A0bAB405343B3ABe8895966EAaFb5790",
+      "address": "0xefdf5CcC12d8cff4a7ed4e421b95F8f69Cf2F766",
       "abi": [
         {
-          "inputs": [],
+          "inputs": [
+            {
+              "internalType": "bool",
+              "name": "timeBased_",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blocksPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxBorrowRateMantissa_",
+              "type": "uint256"
+            }
+          ],
           "stateMutability": "nonpayable",
           "type": "constructor"
         },
@@ -26207,6 +26223,16 @@
         {
           "inputs": [],
           "name": "HealBorrowUnauthorized",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBlocksPerYear",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidTimeBasedConfiguration",
           "type": "error"
         },
         {
@@ -26680,13 +26706,13 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "oldReduceReservesBlockDelta",
+              "name": "oldReduceReservesBlockOrTimestampDelta",
               "type": "uint256"
             },
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "newReduceReservesBlockDelta",
+              "name": "newReduceReservesBlockOrTimestampDelta",
               "type": "uint256"
             }
           ],
@@ -27135,6 +27161,19 @@
           "type": "function"
         },
         {
+          "inputs": [],
+          "name": "blocksOrSecondsPerYear",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
           "inputs": [
             {
               "internalType": "uint256",
@@ -27386,6 +27425,19 @@
         },
         {
           "inputs": [],
+          "name": "getBlockNumberOrTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "getCash",
           "outputs": [
             {
@@ -27527,6 +27579,19 @@
               "internalType": "contract InterestRateModel",
               "name": "",
               "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isTimeBased",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
             }
           ],
           "stateMutability": "view",
@@ -27949,7 +28014,7 @@
           "inputs": [
             {
               "internalType": "uint256",
-              "name": "_newReduceReservesBlockDelta",
+              "name": "_newReduceReservesBlockOrTimestampDelta",
               "type": "uint256"
             }
           ],
