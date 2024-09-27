@@ -29,6 +29,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     hre,
   );
 
+  console.log(deployer)
+
   // VToken Beacon
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
@@ -36,125 +38,125 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
     log: true,
     autoMine: true,
-    skipIfAlreadyDeployed: true,
+    skipIfAlreadyDeployed: false,
   });
 
-  const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
-    contract: "UpgradeableBeacon",
-    from: deployer,
-    args: [vTokenImpl.address],
-    log: true,
-    autoMine: true,
-    skipIfAlreadyDeployed: true,
-  });
+  // const vTokenBeacon: DeployResult = await deploy("VTokenBeacon", {
+  //   contract: "UpgradeableBeacon",
+  //   from: deployer,
+  //   args: [vTokenImpl.address],
+  //   log: true,
+  //   autoMine: true,
+  //   skipIfAlreadyDeployed: true,
+  // });
 
-  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
-  for (const pool of poolsWithUnregisteredVTokens) {
-    const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
+  // const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
+  // for (const pool of poolsWithUnregisteredVTokens) {
+  //   const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
 
-    // Deploy Markets
-    for (const vtoken of pool.vtokens) {
-      const {
-        name,
-        asset,
-        symbol,
-        rateModel,
-        baseRatePerYear,
-        multiplierPerYear,
-        jumpMultiplierPerYear,
-        kink_,
-        reserveFactor,
-      } = vtoken;
+  //   // Deploy Markets
+  //   for (const vtoken of pool.vtokens) {
+  //     const {
+  //       name,
+  //       asset,
+  //       symbol,
+  //       rateModel,
+  //       baseRatePerYear,
+  //       multiplierPerYear,
+  //       jumpMultiplierPerYear,
+  //       kink_,
+  //       reserveFactor,
+  //     } = vtoken;
 
-      const token = getTokenConfig(asset, tokensConfig);
-      let tokenContract;
-      if (token.isMock) {
-        tokenContract = await ethers.getContract(`Mock${token.symbol}`);
-      } else {
-        tokenContract = await ethers.getContractAt(
-          "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20",
-          token.tokenAddress,
-        );
-      }
+  //     const token = getTokenConfig(asset, tokensConfig);
+  //     let tokenContract;
+  //     if (token.isMock) {
+  //       tokenContract = await ethers.getContract(`Mock${token.symbol}`);
+  //     } else {
+  //       tokenContract = await ethers.getContractAt(
+  //         "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20",
+  //         token.tokenAddress,
+  //       );
+  //     }
 
-      let rateModelAddress: string;
-      if (rateModel === InterestRateModels.JumpRate.toString()) {
-        const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
-        const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
-        const result: DeployResult = await deploy(rateModelName, {
-          from: deployer,
-          contract: "JumpRateModelV2",
-          args: [
-            baseRatePerYear,
-            multiplierPerYear,
-            jumpMultiplierPerYear,
-            kink_,
-            accessControlManagerAddress,
-            isTimeBased,
-            blocksPerYear,
-          ],
-          log: true,
-          autoMine: true,
-          skipIfAlreadyDeployed: true,
-        });
-        rateModelAddress = result.address;
-      } else {
-        const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
-        const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
-        const result: DeployResult = await deploy(rateModelName, {
-          from: deployer,
-          contract: "WhitePaperInterestRateModel",
-          args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
-          log: true,
-          autoMine: true,
-          skipIfAlreadyDeployed: true,
-        });
-        rateModelAddress = result.address;
-      }
+  //     let rateModelAddress: string;
+  //     if (rateModel === InterestRateModels.JumpRate.toString()) {
+  //       const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
+  //       const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
+  //       console.log(`Deploying interest rate model ${rateModelName}`);
+  //       const result: DeployResult = await deploy(rateModelName, {
+  //         from: deployer,
+  //         contract: "JumpRateModelV2",
+  //         args: [
+  //           baseRatePerYear,
+  //           multiplierPerYear,
+  //           jumpMultiplierPerYear,
+  //           kink_,
+  //           accessControlManagerAddress,
+  //           isTimeBased,
+  //           blocksPerYear,
+  //         ],
+  //         log: true,
+  //         autoMine: true,
+  //         skipIfAlreadyDeployed: true,
+  //       });
+  //       rateModelAddress = result.address;
+  //     } else {
+  //       const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
+  //       const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
+  //       console.log(`Deploying interest rate model ${rateModelName}`);
+  //       const result: DeployResult = await deploy(rateModelName, {
+  //         from: deployer,
+  //         contract: "WhitePaperInterestRateModel",
+  //         args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
+  //         log: true,
+  //         autoMine: true,
+  //         skipIfAlreadyDeployed: true,
+  //       });
+  //       rateModelAddress = result.address;
+  //     }
 
-      console.log(`Deploying VToken proxy for ${symbol}`);
-      const VToken = await ethers.getContractFactory("VToken");
-      const underlyingDecimals = Number(await tokenContract.decimals());
-      const vTokenDecimals = 8;
-      let protocolShareReserveAddress;
-      try {
-        protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
-      } catch (e) {
-        if (!hre.network.live) {
-          console.warn("ProtocolShareReserve contract not found. Deploying address");
-          await deployProtocolShareReserve(hre);
-          protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
-        } else {
-          throw e;
-        }
-      }
+  //     console.log(`Deploying VToken proxy for ${symbol}`);
+  //     const VToken = await ethers.getContractFactory("VToken");
+  //     const underlyingDecimals = Number(await tokenContract.decimals());
+  //     const vTokenDecimals = 8;
+  //     let protocolShareReserveAddress;
+  //     try {
+  //       protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+  //     } catch (e) {
+  //       if (!hre.network.live) {
+  //         console.warn("ProtocolShareReserve contract not found. Deploying address");
+  //         await deployProtocolShareReserve(hre);
+  //         protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
+  //       } else {
+  //         throw e;
+  //       }
+  //     }
 
-      const args = [
-        tokenContract.address,
-        comptrollerProxy.address,
-        rateModelAddress,
-        parseUnits("1", underlyingDecimals + 18 - vTokenDecimals),
-        name,
-        symbol,
-        vTokenDecimals,
-        preconfiguredAddresses.NormalTimelock || deployer, // admin
-        accessControlManagerAddress,
-        [AddressOne, protocolShareReserveAddress],
-        reserveFactor,
-      ];
-      await deploy(`VToken_${symbol}`, {
-        from: deployer,
-        contract: "BeaconProxy",
-        args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
-        log: true,
-        autoMine: true,
-        skipIfAlreadyDeployed: true,
-      });
-      console.log(`-----------------------------------------`);
-    }
-  }
+  //     const args = [
+  //       tokenContract.address,
+  //       comptrollerProxy.address,
+  //       rateModelAddress,
+  //       parseUnits("1", underlyingDecimals + 18 - vTokenDecimals),
+  //       name,
+  //       symbol,
+  //       vTokenDecimals,
+  //       preconfiguredAddresses.NormalTimelock || deployer, // admin
+  //       accessControlManagerAddress,
+  //       [AddressOne, protocolShareReserveAddress],
+  //       reserveFactor,
+  //     ];
+  //     await deploy(`VToken_${symbol}`, {
+  //       from: deployer,
+  //       contract: "BeaconProxy",
+  //       args: [vTokenBeacon.address, VToken.interface.encodeFunctionData("initialize", args)],
+  //       log: true,
+  //       autoMine: true,
+  //       skipIfAlreadyDeployed: true,
+  //     });
+  //     console.log(`-----------------------------------------`);
+  //   }
+  // }
 };
 
 func.tags = ["VTokens", "il"];
