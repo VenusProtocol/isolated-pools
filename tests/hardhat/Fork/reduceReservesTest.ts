@@ -95,7 +95,7 @@ if (FORK) {
       expect(totalCashOld.sub(totalCashNew)).equals(borrowAmount);
 
       // MINE 300000 BLOCKS
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(300000);
       } else {
         await mine(300000);
@@ -107,20 +107,38 @@ if (FORK) {
       const totalBorrowsPrior = await vToken.totalBorrows();
       const reserveBefore = await vToken.totalReserves();
       const psrBalancePrior = await token.balanceOf(PSR);
+      const tx = await vToken.accrueInterest();
+      const accrueInterestReceipt = await tx.wait();
 
-      await vToken.accrueInterest();
+      let totalReservesNew = await vToken.totalReserves();
 
       // Calculation of reserves
       let currBlockOrTimestamp = await ethers.provider.getBlockNumber();
 
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         currBlockOrTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
       }
 
       let blockDelta = BigNumber.from(currBlockOrTimestamp).sub(BigNumber.from(accrualBlockNumberPrior));
       // Hardhat mine one extra block in mineOnZksync for Zksync
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         blockDelta = blockDelta.sub(1);
+
+        // Sometimes era test node gives wrong state values, so we need to check the event value
+        if (
+          !accrueInterestReceipt.events ||
+          accrueInterestReceipt.events.length < 3 ||
+          !accrueInterestReceipt.events[2].args ||
+          !accrueInterestReceipt.events[2].args["newTotalReserves"]
+        ) {
+          throw new Error("Event newTotalReserves not found in accrueInterestReceipt");
+        }
+        totalReservesNew = BigNumber.from(accrueInterestReceipt.events[2].args["newTotalReserves"]);
       }
       const simpleInterestFactor = borrowRatePrior.mul(blockDelta);
       const interestAccumulated = simpleInterestFactor.mul(totalBorrowsPrior).div(convertToUnit(1, 18));
@@ -128,7 +146,7 @@ if (FORK) {
       const totalReservesExpected = reserveFactorMantissa.mul(interestAccumulated).div(convertToUnit(1, 18));
       const psrBalanceNew = await token.balanceOf(PSR);
       const psrBalanceDiff = psrBalanceNew.sub(psrBalancePrior);
-      let totalReservesCurrent = BigNumber.from((await vToken.totalReserves()).add(psrBalanceDiff)).sub(reserveBefore);
+      let totalReservesCurrent = BigNumber.from(totalReservesNew.add(psrBalanceDiff)).sub(reserveBefore);
 
       expect(totalReservesExpected).equals(totalReservesCurrent);
       // Calculation of exchange rate

@@ -100,7 +100,12 @@ if (FORK) {
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -198,7 +203,7 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
 
       // Mining  300,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -220,7 +225,7 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc2Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -236,7 +241,7 @@ if (FORK) {
       await vTOKEN2.connect(acc2Signer).repayBorrow(TOKEN2BorrowAmount);
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -279,7 +284,7 @@ if (FORK) {
       await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -312,7 +317,7 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc1Signer).redeem(totalBal)).to.emit(vTOKEN2, "Redeem");
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -346,7 +351,7 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc3Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);
@@ -359,7 +364,7 @@ if (FORK) {
       await assertRedeemAmount(convertToUnit(5, 7), balanceBefore);
 
       // Mine 30,000 blocks
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(blocksToMine);
       } else {
         await mine(blocksToMine);

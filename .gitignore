@@ -9,6 +9,7 @@ cache
 cache-zk
 artifacts
 artifacts-zk
+.log
 
 #Compound
 allFiredEvents

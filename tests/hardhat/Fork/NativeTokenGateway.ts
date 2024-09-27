@@ -5,21 +5,13 @@ import { Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, network } from "hardhat";
 
-import {
-  ChainlinkOracle__factory,
-  Comptroller,
-  ERC20,
-  NativeTokenGateway,
-  NativeTokenGateway__factory,
-  VToken,
-  WrappedNative__factory,
-} from "../../../typechain";
+import { Comptroller, ERC20, NativeTokenGateway, VToken } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } from "./utils";
 
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK;
 
-const { ADMIN, BLOCK_NUMBER, CHAINLINK_ORACLE } = getContractAddresses(FORKED_NETWORK as string);
+const { ADMIN, BLOCK_NUMBER } = getContractAddresses(FORKED_NETWORK as string);
 
 let VWETH: string;
 let USDT: string;
@@ -37,6 +29,16 @@ if (FORKED_NETWORK === "zksyncsepolia") {
   USER1 = "0xEF4B807f9442b0EbD8a051C2cAEA81e5e7BAcFBD";
   USER2 = "0xE8C6Cf867CF962d289305ECE9b139a4116674541";
   COMPTROLLER = "0xC527DE08E43aeFD759F7c0e6aE85433923064669";
+}
+
+if (FORKED_NETWORK === "zksyncmainnet") {
+  VWETH = "0x1Fa916C27c7C2c4602124A14C77Dbb40a5FF1BE8";
+  USDT = "0x493257fd37edb34451f62edf8d2a0c418852ba4c";
+  VUSDT = "0x69cDA960E3b20DFD480866fFfd377Ebe40bd0A46";
+  NTG = "0xeEDE4e1BDaC489BD851970bE3952B729C4238A68";
+  USER1 = "0xE0B015E54d54fc84a6cB9B666099c46adE9335FF";
+  USER2 = "0x4bBa932E9792A2b917D47830C93a9BC79320E4f7";
+  COMPTROLLER = "0xddE4D098D9995B659724ae6d5E3FB9681Ac941B1";
 }
 
 if (FORKED_NETWORK === "ethereum") {
@@ -77,7 +79,7 @@ async function setup() {
     .setMarketSupplyCaps([VUSDT, VWETH], [parseUnits("10000", 18), parseUnits("10000", 18)]);
   await comptroller.connect(user1).enterMarkets([vusdt.address, vweth.address]);
   await comptroller.connect(user2).enterMarkets([vusdt.address, vweth.address]);
-  if (FORKED_NETWORK === "zksyncsepolia") {
+  if (FORKED_NETWORK === "zksyncsepolia" || FORKED_NETWORK === "zksyncmainnet") {
     nativeTokenGateway = await ethers.getContractAt("NativeTokenGateway", NTG);
   } else {
     const nativeTokenGatewayFactory = await ethers.getContractFactory("NativeTokenGateway");
@@ -92,7 +94,10 @@ async function setup() {
   };
 }
 
-if (FORK && (FORKED_NETWORK === "ethereum" || FORKED_NETWORK === "zksyncsepolia")) {
+if (
+  FORK &&
+  (FORKED_NETWORK === "ethereum" || FORKED_NETWORK === "zksyncsepolia" || FORKED_NETWORK === "zksyncmainnet")
+) {
   describe("NativeTokenGateway", async () => {
     const supplyAmount = parseUnits("10", 18);
     beforeEach("setup", async () => {
@@ -120,12 +125,12 @@ if (FORK && (FORKED_NETWORK === "ethereum" || FORKED_NETWORK === "zksyncsepolia"
       beforeEach(async () => {
         await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
 
-        await usdt.connect(user2).approve(VUSDT, parseUnits("5000", 6));
-        await expect(vusdt.connect(user2).mint(parseUnits("5000", 6))).to.emit(vusdt, "Mint");
+        await usdt.connect(user2).approve(VUSDT, parseUnits("2000", 6));
+        await expect(vusdt.connect(user2).mint(parseUnits("2000", 6))).to.emit(vusdt, "Mint");
 
-        await vweth.connect(user2).borrow(ethers.utils.parseEther("1"));
+        await vweth.connect(user2).borrow(ethers.utils.parseEther("0.5"));
 
-        if (FORKED_NETWORK == "zksyncsepolia") {
+        if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK === "zksyncmainnet") {
           await mineOnZksync(1000);
         } else {
           await mine(1000);
@@ -178,9 +183,9 @@ if (FORK && (FORKED_NETWORK === "ethereum" || FORKED_NETWORK === "zksyncsepolia"
         const balanceBefore = await user2.getBalance();
         await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
 
-        await usdt.connect(user2).approve(vusdt.address, parseUnits("5000", 6));
+        await usdt.connect(user2).approve(vusdt.address, parseUnits("2000", 6));
 
-        await vusdt.connect(user2).mint(parseUnits("5000", 6));
+        await vusdt.connect(user2).mint(parseUnits("2000", 6));
 
         await comptroller.connect(user2).updateDelegate(nativeTokenGateway.address, true);
 
@@ -194,17 +199,17 @@ if (FORK && (FORKED_NETWORK === "ethereum" || FORKED_NETWORK === "zksyncsepolia"
 
     describe("wrapAndRepay", () => {
       it("should wrap and repay", async () => {
-        const borrowAmount = parseUnits("1", 18);
-        const repayAmount = parseUnits("10", 18);
-        await usdt.connect(user2).approve(vusdt.address, parseUnits("5000", 6));
-        await vusdt.connect(user2).mint(parseUnits("5000", 6));
+        const borrowAmount = parseUnits("0.5", 18);
+        const repayAmount = parseUnits("0.5", 18);
+        await usdt.connect(user2).approve(vusdt.address, parseUnits("2000", 6));
+        await vusdt.connect(user2).mint(parseUnits("2000", 6));
         await vweth.connect(user2).borrow(borrowAmount);
 
         const ethBalanceBefore = await user2.getBalance();
         await nativeTokenGateway.connect(user2).wrapAndRepay({ value: repayAmount });
         const ethBalanceAfter = await user2.getBalance();
 
-        expect(ethBalanceBefore.sub(ethBalanceAfter)).to.closeTo(borrowAmount, parseUnits("1", 18));
+        expect(ethBalanceBefore.sub(ethBalanceAfter)).equals(borrowAmount);
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
         await network.provider.request({ method: "hardhat_reset" });
       });

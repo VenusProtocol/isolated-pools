@@ -94,7 +94,8 @@ if (FORK) {
         FORKED_NETWORK == "ethereum" ||
         FORKED_NETWORK == "arbitrumsepolia" ||
         FORKED_NETWORK == "arbitrumone" ||
-        FORKED_NETWORK == "zksyncsepolia"
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
       ) {
         const ChainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
         const token1Config = await ChainlinkOracle.tokenConfigs(TOKEN1);
@@ -107,7 +108,7 @@ if (FORK) {
         };
         await ChainlinkOracle.setTokenConfig(token1NewConfig);
 
-        // Direct price is set for ZK token
+        // Direct price is set for ZK token on zksyncsepolia
         if (FORKED_NETWORK != "zksyncsepolia") {
           const token2NewConfig = {
             asset: token2Config.asset,
@@ -120,7 +121,12 @@ if (FORK) {
 
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -225,7 +231,7 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // ********************************Mine 30000 blocks***********************************/
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(30000);
       } else {
         await mine(30000);
@@ -250,7 +256,7 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // ********************************Mine 300000 blocks***********************************/
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(30000);
       } else {
         await mine(300000);
@@ -299,7 +305,6 @@ if (FORK) {
       const weightedPriceTOKEN1 = vTokenPrice
         .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
-
       const expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(await vTOKEN1.exchangeRateStored());
 
       // checks

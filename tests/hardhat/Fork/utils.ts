@@ -20,7 +20,10 @@ export const forking = (blockNumber: number, fn: () => Promise<void>) => {
 };
 
 export async function setForkBlock(_blockNumber: number) {
-  const blockNumber = process.env.FORKED_NETWORK == "zksyncsepolia" ? _blockNumber.toString(16) : _blockNumber;
+  const blockNumber =
+    process.env.FORKED_NETWORK == "zksyncsepolia" || process.env.FORKED_NETWORK == "zksyncmainnet"
+      ? _blockNumber.toString(16)
+      : _blockNumber;
   await network.provider.request({
     method: "hardhat_reset",
     params: [
@@ -70,7 +73,7 @@ export const mineOnZksync = async (blocks: number) => {
   // Actual timestamp on which block will get mine (assuming 1 sec/block)
   const timestampOfBlocks = blocks * 1;
   const targetTimestamp = blockTimestamp + timestampOfBlocks;
-  await ethers.provider.send("evm_setNextBlockTimestamp", [targetTimestamp]);
+  await ethers.provider.send("evm_setNextBlockTimestamp", [targetTimestamp.toString(16)]);
   await mineBlocks();
 };
 

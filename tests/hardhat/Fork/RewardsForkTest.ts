@@ -96,7 +96,12 @@ if (FORK) {
         await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
       }
 
-      if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "ethereum" ||
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         chainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
         let tuple = await chainlinkOracle.tokenConfigs(TOKEN2);
         tuple = {
@@ -124,7 +129,12 @@ if (FORK) {
       await rewardDistributor.connect(comptrollerSigner).updateRewardTokenSupplyIndex(vTokenAddress);
 
       let supplyState = await rewardDistributor.rewardTokenSupplyState(vTokenAddress);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         supplyState = await rewardDistributor.rewardTokenSupplyStateTimeBased(vTokenAddress);
       }
       const supplyIndex = supplyState.index;
@@ -157,7 +167,12 @@ if (FORK) {
         .updateRewardTokenBorrowIndex(vTokenAddress, { mantissa: marketBorrowIndex });
 
       let borrowState = await rewardDistributor.rewardTokenBorrowState(vTokenAddress);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         borrowState = await rewardDistributor.rewardTokenBorrowStateTimeBased(vTokenAddress);
       }
       const borrowIndex = borrowState.index;
@@ -185,7 +200,7 @@ if (FORK) {
 
     it("Rewards for suppliers", async function () {
       await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(3000000);
       } else {
         await mine(3000000);
@@ -218,7 +233,7 @@ if (FORK) {
       await mintVTokens(acc1Signer, token2, vTOKEN2, mintAmount);
       await vTOKEN2.connect(acc1Signer).borrow(bswBorrowAmount);
 
-      if (FORKED_NETWORK == "zksyncsepolia") {
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
         await mineOnZksync(3000000);
       } else {
         await mine(3000000);

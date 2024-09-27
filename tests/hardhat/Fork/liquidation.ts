@@ -115,7 +115,12 @@ if (FORK) {
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone" || FORKED_NETWORK == "zksyncsepolia") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -359,6 +364,7 @@ if (FORK) {
           arbitrumsepolia: 1000000000046406,
           arbitrumone: 1000000032216389,
           zksyncsepolia: 1000000000000000,
+          zksyncmainnet: 1000000012685933,
         };
 
         const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
