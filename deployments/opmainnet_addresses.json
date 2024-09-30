@@ -2,6 +2,10 @@
   "name": "opmainnet",
   "chainId": "10",
   "addresses": {
-    "PoolLens": "0x142160A2E699e33af337741f157D96aAd6bC72aA"
+    "DefaultProxyAdmin": "0xeaF9490cBEA6fF9bA1D23671C39a799CeD0DCED2",
+    "PoolLens": "0x142160A2E699e33af337741f157D96aAd6bC72aA",
+    "PoolRegistry": "0x147780799840d541C1d7c998F0cbA996d11D62bb",
+    "PoolRegistry_Implementation": "0x6a166fcd39BA9c4ACc1b98eC45Adcdc4926E7967",
+    "PoolRegistry_Proxy": "0x147780799840d541C1d7c998F0cbA996d11D62bb"
   }
 }
