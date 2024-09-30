@@ -1,5 +1,7 @@
 {
   "name": "opmainnet",
   "chainId": "10",
-  "addresses": {}
+  "addresses": {
+    "PoolLens": "0x142160A2E699e33af337741f157D96aAd6bC72aA"
+  }
 }
