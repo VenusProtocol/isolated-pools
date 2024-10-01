@@ -1,3 +1,11 @@
+## [3.6.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.4...v3.6.0-dev.5) (2024-10-01)
+
+
+### Features
+
+* add new interest rate model for weth with  .3% multiplier ([def6496](https://github.com/VenusProtocol/isolated-pools/commit/def6496707d02b2f6734c1ad35e39cea6c35cbfb))
+* updating deployment files ([7f21e24](https://github.com/VenusProtocol/isolated-pools/commit/7f21e2427523bfabc2074e6d52ea68dbd266323e))
+
 ## [3.6.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.3...v3.6.0-dev.4) (2024-09-24)
 
 
