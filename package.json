@@ -59,7 +59,6 @@
     "@defi-wonderland/smock": "^2.2.0",
     "@matterlabs/hardhat-zksync": "^0.2.0",
     "@matterlabs/hardhat-zksync-deploy": "^0.11.0",
-    "@matterlabs/hardhat-zksync-node": "^1.1.1",
     "@matterlabs/hardhat-zksync-solc": "^1.2.1",
     "@matterlabs/hardhat-zksync-verify": "0.7.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",

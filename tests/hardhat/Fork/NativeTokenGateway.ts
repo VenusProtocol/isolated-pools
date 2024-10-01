@@ -11,8 +11,6 @@ import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } fro
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK;
 
-const { ADMIN, BLOCK_NUMBER } = getContractAddresses(FORKED_NETWORK as string);
-
 let VWETH: string;
 let USDT: string;
 let VUSDT: string;
@@ -20,6 +18,8 @@ let NTG: string;
 let USER1: string;
 let USER2: string;
 let COMPTROLLER: string;
+let ADMIN: string;
+let BLOCK_NUMBER: number;
 
 if (FORKED_NETWORK === "zksyncsepolia") {
   VWETH = "0x31eb7305f9fE281027028D0ba0d7f57ddA836d49";
@@ -29,6 +29,8 @@ if (FORKED_NETWORK === "zksyncsepolia") {
   USER1 = "0xEF4B807f9442b0EbD8a051C2cAEA81e5e7BAcFBD";
   USER2 = "0xE8C6Cf867CF962d289305ECE9b139a4116674541";
   COMPTROLLER = "0xC527DE08E43aeFD759F7c0e6aE85433923064669";
+  ADMIN = getContractAddresses(FORKED_NETWORK as string).ADMIN;
+  BLOCK_NUMBER = getContractAddresses(FORKED_NETWORK as string).BLOCK_NUMBER;
 }
 
 if (FORKED_NETWORK === "zksyncmainnet") {
@@ -39,6 +41,8 @@ if (FORKED_NETWORK === "zksyncmainnet") {
   USER1 = "0xE0B015E54d54fc84a6cB9B666099c46adE9335FF";
   USER2 = "0x4bBa932E9792A2b917D47830C93a9BC79320E4f7";
   COMPTROLLER = "0xddE4D098D9995B659724ae6d5E3FB9681Ac941B1";
+  ADMIN = getContractAddresses(FORKED_NETWORK as string).ADMIN;
+  BLOCK_NUMBER = getContractAddresses(FORKED_NETWORK as string).BLOCK_NUMBER;
 }
 
 if (FORKED_NETWORK === "ethereum") {
@@ -48,6 +52,8 @@ if (FORKED_NETWORK === "ethereum") {
   USER1 = "0xf89d7b9c864f589bbF53a82105107622B35EaA40";
   USER2 = "0x974CaA59e49682CdA0AD2bbe82983419A2ECC400";
   COMPTROLLER = "0x687a01ecF6d3907658f7A7c714749fAC32336D1B";
+  ADMIN = getContractAddresses(FORKED_NETWORK as string).ADMIN;
+  BLOCK_NUMBER = getContractAddresses(FORKED_NETWORK as string).BLOCK_NUMBER;
 }
 
 async function configureTimeLock() {
