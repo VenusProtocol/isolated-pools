@@ -1,3 +1,23 @@
+## [3.6.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.5...v3.6.0-dev.6) (2024-10-02)
+
+
+### Features
+
+* updating deployment files ([6fe7fe8](https://github.com/VenusProtocol/isolated-pools/commit/6fe7fe8f9955fd083df358d9a7df36aa3c9fffb4))
+* updating deployment files ([c9d88f3](https://github.com/VenusProtocol/isolated-pools/commit/c9d88f3f93501842af9e504561ab67a837f4c4a4))
+* updating deployment files ([d9d08d7](https://github.com/VenusProtocol/isolated-pools/commit/d9d08d74f544d4f3a8f186ee65fcc1833c1d0f7e))
+* updating deployment files ([990e608](https://github.com/VenusProtocol/isolated-pools/commit/990e6085bd8edaa65a45094dd4dd5d2b7950b271))
+
+
+### Bug Fixes
+
+* added op config ([d012a2a](https://github.com/VenusProtocol/isolated-pools/commit/d012a2a29df50a6860ed52069d799fce47e16194))
+* deployed on bnb and opbnb ([8b49ed8](https://github.com/VenusProtocol/isolated-pools/commit/8b49ed8e7fbf6badb16a00e1f11a8c3c2c24e308))
+* deployed on bsctestnet and opbnbtestnet ([8d8b5e9](https://github.com/VenusProtocol/isolated-pools/commit/8d8b5e907910ab60e8535b8e6b36219c7b061ade))
+* deployed on ethereum ([07ea2f2](https://github.com/VenusProtocol/isolated-pools/commit/07ea2f2586eacbd4f1b1226a65060e89a18d601e))
+* deployed on sepolia ([33cd49a](https://github.com/VenusProtocol/isolated-pools/commit/33cd49a659f9c39932242b17c5b2feafeac87a20))
+* revert changes ([7ed8c8a](https://github.com/VenusProtocol/isolated-pools/commit/7ed8c8a2def9a0d98fdc035daabec1e4bc24f86b))
+
 ## [3.6.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.4...v3.6.0-dev.5) (2024-10-01)
 
 
