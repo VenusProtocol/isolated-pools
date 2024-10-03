@@ -2,7 +2,7 @@ import { smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -115,7 +115,12 @@ if (FORK) {
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -180,6 +185,7 @@ if (FORK) {
 
       it("Should revert when liquidation is called through vToken and does not met minCollateral Criteria", async function () {
         await comptroller.setMinLiquidatableCollateral(convertToUnit("1", 25));
+
         await expect(
           vTOKEN2.connect(acc1Signer).liquidateBorrow(ACC2, token2BorrowAmount, vTOKEN1.address),
         ).to.be.revertedWithCustomError(comptroller, "MinimalCollateralViolated");
@@ -199,7 +205,7 @@ if (FORK) {
       });
 
       it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
-        await comptroller.setMinLiquidatableCollateral(0);
+        await comptroller.setMinLiquidatableCollateral(1);
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 5));
 
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
@@ -213,8 +219,8 @@ if (FORK) {
       });
 
       it("Should revert when liquidation is called through vToken and trying to pay too much", async function () {
-        // Mint and Incrrease collateral of the user
-        await comptroller.setMinLiquidatableCollateral(0);
+        // Mint and Increase collateral of the user
+        await comptroller.setMinLiquidatableCollateral(1);
         const underlyingMintAmount = convertToUnit("1", 18);
         await token1.connect(token1Holder).transfer(ACC2, underlyingMintAmount);
         await token1.connect(acc2Signer).approve(vTOKEN1.address, underlyingMintAmount);
@@ -236,7 +242,8 @@ if (FORK) {
       });
 
       it("liquidate user", async () => {
-        await comptroller.setMinLiquidatableCollateral(0);
+        await comptroller.setMinLiquidatableCollateral(1);
+
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 6));
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
 
@@ -339,7 +346,6 @@ if (FORK) {
         const priceCollateral = await chainlinkOracle.getPrice(TOKEN1);
         const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
         const exchangeRateCollateralPrev = await vTOKEN1.callStatic.exchangeRateCurrent();
-
         const num = (liquidationIncentive * priceBorrowed) / 1e18;
         const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
         const ratio = num / den;
@@ -357,6 +363,8 @@ if (FORK) {
           opbnbmainnet: 1000000008986559,
           arbitrumsepolia: 1000000000046406,
           arbitrumone: 1000000032216389,
+          zksyncsepolia: 1000000000000000,
+          zksyncmainnet: 1000000012685933,
         };
 
         const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
@@ -366,10 +374,10 @@ if (FORK) {
           vTokenBorrowed: vTOKEN2.address,
           repayAmount: repayAmount,
         };
-        const result = comptroller.connect(acc1Signer).liquidateAccount(ACC2, [param]);
+
+        const result = await comptroller.connect(acc1Signer).liquidateAccount(ACC2, [param]);
         await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
         expect(await vTOKEN2.borrowBalanceStored(ACC2)).equals(0);
-
         const vTOKEN1BalAcc1New = await vTOKEN1.balanceOf(ACC1);
         const vTOKEN1BalAcc2New = await vTOKEN1.balanceOf(ACC2);
         const totalReservesToken1New = await vTOKEN1.totalReserves();
@@ -386,6 +394,7 @@ if (FORK) {
           parseUnits("1", 17),
         );
       });
+      await network.provider.request({ method: "hardhat_reset" });
     });
 
     describe("Heal Borrow and Forgive account", () => {

@@ -2,7 +2,7 @@ import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, Signer } from "ethers";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -21,7 +21,7 @@ import {
   WrappedNative,
   WrappedNative__factory,
 } from "../../../typechain";
-import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -92,7 +92,7 @@ if (FORK) {
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
       acc3Signer = await initMainnetUser(ACC3, ethers.utils.parseUnits("2"));
-      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2"));
+      token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2000000"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2000000"));
 
       vTOKEN2 = VToken__factory.connect(VTOKEN2, impersonatedTimelock);
@@ -100,7 +100,12 @@ if (FORK) {
       comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -198,8 +203,11 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc1Signer).mint(convertToUnit(1, 18))).to.emit(vTOKEN2, "Mint");
 
       // Mining  300,000 blocks
-      await mine(300000);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Assert current exchange rate
       await assertExchangeRate();
 
@@ -217,8 +225,11 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc2Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Accural all the interest till latest block
       await vTOKEN2.accrueInterest();
 
@@ -230,8 +241,11 @@ if (FORK) {
       await vTOKEN2.connect(acc2Signer).repayBorrow(TOKEN2BorrowAmount);
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Accural all the interest till latest block
       await vTOKEN2.accrueInterest();
 
@@ -239,7 +253,7 @@ if (FORK) {
       await assertExchangeRate();
 
       // setup to liquidate the second account(ACC2) with first account(ACC1)
-      await comptroller.setMinLiquidatableCollateral(0);
+      await comptroller.setMinLiquidatableCollateral(1);
       const tuple1 = {
         asset: TOKEN1,
         feed: chainlinkOracle.address,
@@ -270,7 +284,11 @@ if (FORK) {
       await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
 
       // Accural all the interest till latest block
       await vTOKEN2.accrueInterest();
@@ -299,13 +317,17 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc1Signer).redeem(totalBal)).to.emit(vTOKEN2, "Redeem");
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Accural all the interest till latest block
       await vTOKEN2.accrueInterest();
 
       // Assert current exchange rate
       await assertExchangeRate();
+      await network.provider.request({ method: "hardhat_reset" });
     });
 
     it("Three users Mint, one redeems", async () => {
@@ -329,8 +351,11 @@ if (FORK) {
       await expect(vTOKEN2.connect(acc3Signer).borrow(TOKEN2BorrowAmount)).to.be.emit(vTOKEN2, "Borrow");
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Partial redeem for first account(ACC1)
       let balanceBefore = await token2.balanceOf(ACC1);
       await vTOKEN2.connect(acc1Signer).redeem(convertToUnit(5, 7));
@@ -339,8 +364,11 @@ if (FORK) {
       await assertRedeemAmount(convertToUnit(5, 7), balanceBefore);
 
       // Mine 30,000 blocks
-      await mine(blocksToMine);
-
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(blocksToMine);
+      } else {
+        await mine(blocksToMine);
+      }
       // Complete redeem for first account(ACC1)
       const accountBalance = await vTOKEN2.balanceOf(ACC1);
       balanceBefore = await token2.balanceOf(ACC1);
@@ -348,6 +376,7 @@ if (FORK) {
 
       // Assert undelying after complete redeem
       await assertRedeemAmount(accountBalance, balanceBefore);
+      await network.provider.request({ method: "hardhat_reset" });
     });
   });
 }

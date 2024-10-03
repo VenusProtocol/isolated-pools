@@ -6,6 +6,8 @@ import GovernanceEthMainnet from "@venusprotocol/governance-contracts/deployment
 import GovernanceOpBnbMainnet from "@venusprotocol/governance-contracts/deployments/opbnbmainnet.json";
 import GovernanceOpBnbTestnet from "@venusprotocol/governance-contracts/deployments/opbnbtestnet.json";
 import GovernanceSepTestnet from "@venusprotocol/governance-contracts/deployments/sepolia.json";
+import GovernanceZksyncMainnet from "@venusprotocol/governance-contracts/deployments/zksyncmainnet.json";
+import GovernanceZksyncSepolia from "@venusprotocol/governance-contracts/deployments/zksyncsepolia.json";
 import OracleArbOne from "@venusprotocol/oracle/deployments/arbitrumone.json";
 import OracleArbSep from "@venusprotocol/oracle/deployments/arbitrumsepolia.json";
 import OracleBscMainnet from "@venusprotocol/oracle/deployments/bscmainnet.json";
@@ -14,6 +16,8 @@ import OracleEthMainnet from "@venusprotocol/oracle/deployments/ethereum.json";
 import OracleOpBnbMainnet from "@venusprotocol/oracle/deployments/opbnbmainnet.json";
 import OracleOpBnbTestnet from "@venusprotocol/oracle/deployments/opbnbtestnet.json";
 import OracleSepTestnet from "@venusprotocol/oracle/deployments/sepolia.json";
+import OracleZksyncMainnet from "@venusprotocol/oracle/deployments/zksyncmainnet.json";
+import OracleZksyncsepolia from "@venusprotocol/oracle/deployments/zksyncsepolia.json";
 import PsrArbOne from "@venusprotocol/protocol-reserve/deployments/arbitrumone.json";
 import PsrArbSep from "@venusprotocol/protocol-reserve/deployments/arbitrumsepolia.json";
 import PsrBscMainnet from "@venusprotocol/protocol-reserve/deployments/bscmainnet.json";
@@ -21,6 +25,8 @@ import PsrBscTestnet from "@venusprotocol/protocol-reserve/deployments/bsctestne
 import PsrEthereum from "@venusprotocol/protocol-reserve/deployments/ethereum.json";
 import PsrOpBnbTestnet from "@venusprotocol/protocol-reserve/deployments/opbnbtestnet/ProtocolShareReserve.json";
 import PsrSepTestnet from "@venusprotocol/protocol-reserve/deployments/sepolia.json";
+import PsrZksyncMainnet from "@venusprotocol/protocol-reserve/deployments/zksyncmainnet.json";
+import PsrZksyncSepolia from "@venusprotocol/protocol-reserve/deployments/zksyncsepolia.json";
 
 import { contracts as ArbOneContracts } from "../../../deployments/arbitrumone.json";
 import { contracts as ArbSepContracts } from "../../../deployments/arbitrumsepolia.json";
@@ -30,6 +36,8 @@ import { contracts as EthereumContracts } from "../../../deployments/ethereum.js
 import { contracts as OpBnbMainnetContracts } from "../../../deployments/opbnbmainnet.json";
 import { contracts as OpBnbTestnetContracts } from "../../../deployments/opbnbtestnet.json";
 import { contracts as SepoliaContracts } from "../../../deployments/sepolia.json";
+import { contracts as ZksyncMainnetContracts } from "../../../deployments/zksyncmainnet.json";
+import { contracts as ZksyncSepoliaContracts } from "../../../deployments/zksyncsepolia.json";
 
 export const contractAddresses = {
   sepolia: {
@@ -202,5 +210,45 @@ export const contractAddresses = {
     ACC2: "0xB09F16F625B363875e39ADa56C03682088471523",
     ACC3: "0x4A2339eE9c4fD4c99DE1d3AeB513B53ab42Db5ca",
     BLOCK_NUMBER: 224198807,
+  },
+  zksyncsepolia: {
+    ADMIN: "0xa2f83de95E9F28eD443132C331B6a9C9B7a9F866",
+    ACM: GovernanceZksyncSepolia.contracts.AccessControlManager.address,
+    VTOKEN1: ZksyncSepoliaContracts.VToken_vWETH_Core.address,
+    VTOKEN2: ZksyncSepoliaContracts.VToken_vZK_Core.address,
+    COMPTROLLER: ZksyncSepoliaContracts.Comptroller_Core.address,
+    PSR: PsrZksyncSepolia.contracts.ProtocolShareReserve.address,
+    REWARD_DISTRIBUTOR1: ZksyncSepoliaContracts.RewardsDistributor_Core_0.address,
+    POOL_REGISTRY: ZksyncSepoliaContracts.PoolRegistry.address,
+    RESILIENT_ORACLE: OracleZksyncsepolia.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: OracleZksyncsepolia.contracts.ChainlinkOracle.address,
+    TOKEN1: "0x53F7e72C7ac55b44c7cd73cC13D4EF4b121678e6", // WETH
+    TOKEN2: "0x8A2E9048F5d658E88D6eD89DdD1F3B5cA0250B9F", // ZK
+    TOKEN1_HOLDER: "0xEF4B807f9442b0EbD8a051C2cAEA81e5e7BAcFBD",
+    TOKEN2_HOLDER: "0xE8C6Cf867CF962d289305ECE9b139a4116674541",
+    ACC1: "0x32B701d3957fee432664cFA57FB44b0fE8496659",
+    ACC2: "0xB09F16F625B363875e39ADa56C03682088471523",
+    ACC3: "0x4A2339eE9c4fD4c99DE1d3AeB513B53ab42Db5ca",
+    BLOCK_NUMBER: 3728913,
+  },
+  zksyncmainnet: {
+    ADMIN: "0x751Aa759cfBB6CE71A43b48e40e1cCcFC66Ba4aa",
+    ACM: GovernanceZksyncMainnet.contracts.AccessControlManager.address,
+    VTOKEN1: ZksyncMainnetContracts.VToken_vWETH_Core.address,
+    VTOKEN2: ZksyncMainnetContracts.VToken_vZK_Core.address,
+    COMPTROLLER: ZksyncMainnetContracts.Comptroller_Core.address,
+    PSR: PsrZksyncMainnet.contracts.ProtocolShareReserve.address,
+    REWARD_DISTRIBUTOR1: "0x7C7846A74AB38A8d554Bc5f7652eCf8Efb58c894",
+    POOL_REGISTRY: ZksyncMainnetContracts.PoolRegistry.address,
+    RESILIENT_ORACLE: OracleZksyncMainnet.contracts.ResilientOracle.address,
+    CHAINLINK_ORACLE: OracleZksyncMainnet.contracts.ChainlinkOracle.address,
+    TOKEN1: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91", // WETH
+    TOKEN2: "0x5a7d6b2f92c77fad6ccabd7ee0624e64907eaf3e", // ZK
+    TOKEN1_HOLDER: "0xE0B015E54d54fc84a6cB9B666099c46adE9335FF",
+    TOKEN2_HOLDER: "0x4bBa932E9792A2b917D47830C93a9BC79320E4f7",
+    ACC1: "0x32B701d3957fee432664cFA57FB44b0fE8496659",
+    ACC2: "0xB09F16F625B363875e39ADa56C03682088471523",
+    ACC3: "0x4A2339eE9c4fD4c99DE1d3AeB513B53ab42Db5ca",
+    BLOCK_NUMBER: 44664480,
   },
 };

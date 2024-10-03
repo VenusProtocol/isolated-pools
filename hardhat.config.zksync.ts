@@ -150,6 +150,9 @@ const config: HardhatUserConfig = {
       "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
     ],
   },
+  mocha: {
+    timeout: 200000000,
+  },
 };
 
 // Added a subtask to exclude some solidity files from compilation due to limitation in zksync compiler, https://docs.zksync.io/zk-stack/components/compiler/toolchain/solidity#limitations

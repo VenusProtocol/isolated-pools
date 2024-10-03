@@ -2,7 +2,7 @@ import { smock } from "@defi-wonderland/smock";
 import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { convertToUnit } from "../../../helpers/utils";
 import {
@@ -20,7 +20,7 @@ import {
   WrappedNative,
   WrappedNative__factory,
 } from "../../../typechain";
-import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
+import { getContractAddresses, initMainnetUser, mineOnZksync, setForkBlock } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -90,7 +90,13 @@ if (FORK) {
         await binanceOracle.setMaxStalePeriod("USDD", BigInt(150000000000000000));
       }
 
-      if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "ethereum" ||
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         const ChainlinkOracle = ChainlinkOracle__factory.connect(CHAINLINK_ORACLE, impersonatedTimelock);
         const token1Config = await ChainlinkOracle.tokenConfigs(TOKEN1);
         const token2Config = await ChainlinkOracle.tokenConfigs(TOKEN2);
@@ -100,18 +106,27 @@ if (FORK) {
           feed: token1Config.feed,
           maxStalePeriod: BigNumber.from(1000000000),
         };
-        const token2NewConfig = {
-          asset: token2Config.asset,
-          feed: token2Config.feed,
-          maxStalePeriod: BigNumber.from(1000000000),
-        };
         await ChainlinkOracle.setTokenConfig(token1NewConfig);
-        await ChainlinkOracle.setTokenConfig(token2NewConfig);
+
+        // Direct price is set for ZK token on zksyncsepolia
+        if (FORKED_NETWORK != "zksyncsepolia") {
+          const token2NewConfig = {
+            asset: token2Config.asset,
+            feed: token2Config.feed,
+            maxStalePeriod: BigNumber.from(1000000000),
+          };
+          await ChainlinkOracle.setTokenConfig(token2NewConfig);
+        }
       }
 
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
-      if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
+      if (
+        FORKED_NETWORK == "arbitrumsepolia" ||
+        FORKED_NETWORK == "arbitrumone" ||
+        FORKED_NETWORK == "zksyncsepolia" ||
+        FORKED_NETWORK == "zksyncmainnet"
+      ) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
@@ -141,7 +156,6 @@ if (FORK) {
       // Allocate reserves to market from ACC3 to the TOKEN2 market
       await token2.connect(token2Holder).approve(vTOKEN2.address, convertToUnit(10000, 18));
       await expect(vTOKEN2.connect(token2Holder).mint(convertToUnit(10000, 18))).to.emit(vTOKEN2, "Mint");
-
       // Increase collateral for ACC
       await token1.connect(token1Holder).transfer(ACC1, mintAmount);
       await token1.connect(acc1Signer).approve(vTOKEN1.address, mintAmount);
@@ -154,14 +168,12 @@ if (FORK) {
     it("Total Borrow Balance with Two Borrowers", async function () {
       // common factors
       const vTOKEN1CollateralFactor = await comptroller.markets(VTOKEN1);
-
       await expect(vTOKEN1.connect(acc1Signer).mint(mintAmount)).to.emit(vTOKEN1, "Mint");
 
       let exchangeRateCollateral = await vTOKEN1.exchangeRateStored();
 
       let TOKEN1Price = await priceOracle.getUnderlyingPrice(VTOKEN1);
       let TOKEN2Price = await priceOracle.getUnderlyingPrice(VTOKEN2);
-
       let vTokenPrice = exchangeRateCollateral.mul(TOKEN1Price).div(convertToUnit(1, 18));
 
       let weightedPriceTOKEN1 = vTokenPrice
@@ -192,7 +204,6 @@ if (FORK) {
       expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(await vTOKEN1.exchangeRateStored());
 
       expectedLiquidityAcc1 = weightedPriceTOKEN1.mul(await vTOKEN1.balanceOf(ACC1)).div(convertToUnit(1, 18));
-
       [err, liquidity, shortfall] = await comptroller.getBorrowingPower(ACC2);
 
       let expectedLiquidityAcc2 = weightedPriceTOKEN1.mul(expectedMintAmount).div(convertToUnit(1, 18));
@@ -220,7 +231,11 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // ********************************Mine 30000 blocks***********************************/
-      await mine(30000);
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(30000);
+      } else {
+        await mine(30000);
+      }
       await vTOKEN2.accrueInterest();
       let borrowIndexCurrent = await vTOKEN2.borrowIndex();
 
@@ -241,8 +256,14 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // ********************************Mine 300000 blocks***********************************/
-      await mine(300000);
+      if (FORKED_NETWORK == "zksyncsepolia" || FORKED_NETWORK == "zksyncmainnet") {
+        await mineOnZksync(30000);
+      } else {
+        await mine(300000);
+      }
+
       await vTOKEN2.accrueInterest();
+
       borrowIndexCurrent = await vTOKEN2.borrowIndex();
 
       // Change borrow balance of ACC1
@@ -252,17 +273,14 @@ if (FORK) {
       // Change borrow balance of ACC2
       borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC2);
       expect(borrowIndexCurrent.mul(TOKEN2BorrowAmount).div(borrowIndexAcc2Prev)).equals(borrowBalanceStored);
-
       // *************************Repay ACC2**************************************************/
 
       // Allocate some funds to repay debt
       await vTOKEN2.accrueInterest();
       borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC2);
-
       await token2.connect(token2Holder).transfer(ACC2, borrowBalanceStored.add(convertToUnit(1, 20)));
       await token2.connect(acc2Signer).approve(vTOKEN2.address, borrowBalanceStored.add(convertToUnit(1, 20)));
       await vTOKEN2.connect(acc2Signer).repayBorrow(borrowBalanceStored.add(convertToUnit(1, 20)));
-
       // Full debt repaid acc2
       borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC2);
       expect(borrowBalanceStored).equals(0);
@@ -271,7 +289,9 @@ if (FORK) {
       await vTOKEN2.accrueInterest();
       borrowIndexCurrent = await vTOKEN2.borrowIndex();
       borrowBalanceStored = await vTOKEN2.borrowBalanceStored(ACC1);
+
       expect(borrowIndexCurrent.mul(TOKEN2BorrowAmount).div(borrowIndexAcc1Prev)).equals(borrowBalanceStored);
+      await network.provider.request({ method: "hardhat_reset" });
     });
 
     it("Attempt to borrow over set cap", async function () {
@@ -285,7 +305,6 @@ if (FORK) {
       const weightedPriceTOKEN1 = vTokenPrice
         .mul(vTOKEN1CollateralFactor.collateralFactorMantissa)
         .div(convertToUnit(1, 18));
-
       const expectedMintAmount = mintAmount.mul(convertToUnit(1, 18)).div(await vTOKEN1.exchangeRateStored());
 
       // checks
@@ -308,11 +327,12 @@ if (FORK) {
       expect(shortfall).equals(0);
 
       // **************************Set borrow caap zero***********************************/
-      await comptroller.setMarketBorrowCaps([VTOKEN2], [0]);
+      await comptroller.setMarketBorrowCaps([VTOKEN2], [1]);
       await expect(vTOKEN2.connect(acc1Signer).borrow(TOKEN2BorrowAmount)).to.be.revertedWithCustomError(
         comptroller,
         "BorrowCapExceeded",
       );
+      await network.provider.request({ method: "hardhat_reset" });
     });
   });
 }
