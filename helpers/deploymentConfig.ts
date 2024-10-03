@@ -5339,7 +5339,7 @@ export const globalConfig: NetworkConfig = {
         name: "USD Coin",
         symbol: "USDC",
         decimals: 6,
-        tokenAddress: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+        tokenAddress: "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
       },
       {
         isMock: false,
@@ -5455,6 +5455,24 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("2641.144058375767936110", 18), // 2,641.144058375767936110 OP
             supplyCap: convertToUnit("3000000", 18),
             borrowCap: convertToUnit("1500000", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
+          },
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.06875", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.78", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 18), // 5,000 USDC
+            supplyCap: convertToUnit("10000000", 18),
+            borrowCap: convertToUnit("9000000", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
           },
