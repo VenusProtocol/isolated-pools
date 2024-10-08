@@ -5434,7 +5434,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.78", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("4998.602725	", 6), // 4,998.602725 USDT
+            initialSupply: convertToUnit("4998.602725", 6), // 4,998.602725 USDT
             supplyCap: convertToUnit("4000000", 6),
             borrowCap: convertToUnit("3600000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
@@ -5470,9 +5470,9 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.75", 18),
             liquidationThreshold: convertToUnit("0.78", 18),
             reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("5000", 18), // 5,000 USDC
-            supplyCap: convertToUnit("10000000", 18),
-            borrowCap: convertToUnit("9000000", 18),
+            initialSupply: convertToUnit("5000", 6), // 5,000 USDC
+            supplyCap: convertToUnit("10000000", 6),
+            borrowCap: convertToUnit("9000000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
           },
