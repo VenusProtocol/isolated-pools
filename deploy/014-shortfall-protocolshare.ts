@@ -15,13 +15,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const deployerSigner = ethers.provider.getSigner(deployer);
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
   const proxyAdmin = await ethers.getContract("DefaultProxyAdmin");
   const owner = await proxyAdmin.owner();
@@ -29,7 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
 
   const riskFund = await ethers.getContract("RiskFundV2");
 
@@ -69,5 +68,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 };
 func.tags = ["Shortfall", "il"];
+
+// RiskFund not deployed on these networks
+func.skip = async hre =>
+  hre.getNetworkName() === "sepolia" ||
+  hre.getNetworkName() === "opbnbtestnet" ||
+  hre.getNetworkName() === "opbnbmainnet" ||
+  hre.getNetworkName() === "ethereum";
 
 export default func;

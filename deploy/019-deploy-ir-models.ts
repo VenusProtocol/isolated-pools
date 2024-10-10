@@ -15,13 +15,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
 
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
 
   for (const pool of poolConfig) {
@@ -32,7 +31,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
@@ -52,7 +50,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       } else {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
