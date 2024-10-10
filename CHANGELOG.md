@@ -1,3 +1,99 @@
+## [3.6.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.6...v3.6.0-dev.7) (2024-10-10)
+
+
+### Features
+
+* add core pool config for opmainnet ([54ee35a](https://github.com/VenusProtocol/isolated-pools/commit/54ee35a69136cddd21daec53365816cecdf2a30d))
+* deployment file for USDC vtoken for core pool on opmainnet ([b6a89d3](https://github.com/VenusProtocol/isolated-pools/commit/b6a89d32d517a4bc918294585f0dcb8468d60694))
+* deployment files for pool registry on opmainnet ([9c21206](https://github.com/VenusProtocol/isolated-pools/commit/9c21206dc6694d9aa93877c66658e0e373c59c6e))
+* deployment files for the pool lens on the op mainnet ([c6ef501](https://github.com/VenusProtocol/isolated-pools/commit/c6ef501c2ad64ec9a9d0af772a60ccf84b410e2b))
+* deployment files of core comptroller on opmainnet ([0ee2bd2](https://github.com/VenusProtocol/isolated-pools/commit/0ee2bd2260cc1051a106c99955049c9cb3dfee6d))
+* deployment files of core pool vtokens on opmainnet ([4b120ae](https://github.com/VenusProtocol/isolated-pools/commit/4b120aee48483226c263378c09682d6ad6cdab92))
+* deployment files of NTG for core pool on opmainnet ([a30718a](https://github.com/VenusProtocol/isolated-pools/commit/a30718a92b0792c919ae3b83bdc6d5b864f0324f))
+* updating deployment files ([86e7f82](https://github.com/VenusProtocol/isolated-pools/commit/86e7f829c9906629934d5d88998490ba77441e2c))
+* updating deployment files ([4ba011e](https://github.com/VenusProtocol/isolated-pools/commit/4ba011e97798cda1cf2cba43d8f2d28fd8eb1377))
+* updating deployment files ([3bacef9](https://github.com/VenusProtocol/isolated-pools/commit/3bacef9392c30266d17cedb357509b166a4b3b12))
+* updating deployment files ([75180af](https://github.com/VenusProtocol/isolated-pools/commit/75180af22e0ba363896c2e2fde7c01234e01994a))
+* updating deployment files ([1bb27b7](https://github.com/VenusProtocol/isolated-pools/commit/1bb27b7008b48df6ff0e3df8e10cd1d54e450930))
+* use packages that include the Optimism deployment ([f22e450](https://github.com/VenusProtocol/isolated-pools/commit/f22e45033a6bac637ee1073bb568d85f690ccccd))
+
+
+### Bug Fixes
+
+* use the right decimals for USDC on Optimism ([b83fbc3](https://github.com/VenusProtocol/isolated-pools/commit/b83fbc322ab2093f3264ab06f7db730b17c31b15))
+
+## [3.6.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.5...v3.6.0-dev.6) (2024-10-02)
+
+
+### Features
+
+* updating deployment files ([6fe7fe8](https://github.com/VenusProtocol/isolated-pools/commit/6fe7fe8f9955fd083df358d9a7df36aa3c9fffb4))
+* updating deployment files ([c9d88f3](https://github.com/VenusProtocol/isolated-pools/commit/c9d88f3f93501842af9e504561ab67a837f4c4a4))
+* updating deployment files ([d9d08d7](https://github.com/VenusProtocol/isolated-pools/commit/d9d08d74f544d4f3a8f186ee65fcc1833c1d0f7e))
+* updating deployment files ([990e608](https://github.com/VenusProtocol/isolated-pools/commit/990e6085bd8edaa65a45094dd4dd5d2b7950b271))
+
+
+### Bug Fixes
+
+* added op config ([d012a2a](https://github.com/VenusProtocol/isolated-pools/commit/d012a2a29df50a6860ed52069d799fce47e16194))
+* deployed on bnb and opbnb ([8b49ed8](https://github.com/VenusProtocol/isolated-pools/commit/8b49ed8e7fbf6badb16a00e1f11a8c3c2c24e308))
+* deployed on bsctestnet and opbnbtestnet ([8d8b5e9](https://github.com/VenusProtocol/isolated-pools/commit/8d8b5e907910ab60e8535b8e6b36219c7b061ade))
+* deployed on ethereum ([07ea2f2](https://github.com/VenusProtocol/isolated-pools/commit/07ea2f2586eacbd4f1b1226a65060e89a18d601e))
+* deployed on sepolia ([33cd49a](https://github.com/VenusProtocol/isolated-pools/commit/33cd49a659f9c39932242b17c5b2feafeac87a20))
+* revert changes ([7ed8c8a](https://github.com/VenusProtocol/isolated-pools/commit/7ed8c8a2def9a0d98fdc035daabec1e4bc24f86b))
+
+## [3.6.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.4...v3.6.0-dev.5) (2024-10-01)
+
+
+### Features
+
+* add new interest rate model for weth with  .3% multiplier ([def6496](https://github.com/VenusProtocol/isolated-pools/commit/def6496707d02b2f6734c1ad35e39cea6c35cbfb))
+* updating deployment files ([7f21e24](https://github.com/VenusProtocol/isolated-pools/commit/7f21e2427523bfabc2074e6d52ea68dbd266323e))
+
+## [3.6.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.3...v3.6.0-dev.4) (2024-09-24)
+
+
+### Features
+
+* add LST ETH pool deployment on BNB chain ([4e94bff](https://github.com/VenusProtocol/isolated-pools/commit/4e94bff85b3aa42547695e7b1d90eb95ad9bdae2))
+* updating deployment files ([56e0d44](https://github.com/VenusProtocol/isolated-pools/commit/56e0d449ab624d9d326a51a3e8c45265d2a7b569))
+
+
+### Bug Fixes
+
+* use correct risk parameters ([fbf2584](https://github.com/VenusProtocol/isolated-pools/commit/fbf25843f3adea0630814aabbb3ad326e25539ee))
+
+## [3.6.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.2...v3.6.0-dev.3) (2024-09-23)
+
+
+### Features
+
+* add deployments of Rewards distributor on zksync mainnet ([4654b32](https://github.com/VenusProtocol/isolated-pools/commit/4654b3216369dd80fad8c41a129cb2499de8bbcd))
+* updating deployment files ([8bc19ee](https://github.com/VenusProtocol/isolated-pools/commit/8bc19ee888877ca1b05df58ec6e77f98a34511e8))
+
+## [3.6.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.1...v3.6.0-dev.2) (2024-09-19)
+
+
+### Features
+
+* add reward distributor to core pool on opsepolia ([bf235af](https://github.com/VenusProtocol/isolated-pools/commit/bf235af6f4f5509d6d8309c003cebad416f1c731))
+* updating deployment files ([021a787](https://github.com/VenusProtocol/isolated-pools/commit/021a78770d28c6e2aeaafaec1a4996d56c9fcdb8))
+
+## [3.6.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0...v3.6.0-dev.1) (2024-09-13)
+
+
+### Features
+
+* deployment files for the NTG ([711894d](https://github.com/VenusProtocol/isolated-pools/commit/711894d7da85c76c9b61cc6005b99285085cccb3))
+* deployment files for the pool registry on opsepolia: ([e9148ef](https://github.com/VenusProtocol/isolated-pools/commit/e9148ef6be1792a1e786d3f371af9afb955eb6ba))
+* deployment files of  pool lens on op sepolia ([24b25b4](https://github.com/VenusProtocol/isolated-pools/commit/24b25b42c408bc241c6ab1f4f2584e2fd28adafe))
+* deployment files of mock tokens on opsepolia ([20370ea](https://github.com/VenusProtocol/isolated-pools/commit/20370ea429e29579d24829dda8f33344dd55b003))
+* deployment files of the vTokens of core pool on opsepolia ([c1fbaf7](https://github.com/VenusProtocol/isolated-pools/commit/c1fbaf79557c4ae195d8ca7f0f0bc74aabc59cd1))
+* deplyment config and files for the core pool on opsepolia ([fe14b03](https://github.com/VenusProtocol/isolated-pools/commit/fe14b033ea563ba0f4f7ddf7a93e620571111031))
+* updating deployment files ([17d0f17](https://github.com/VenusProtocol/isolated-pools/commit/17d0f178ff1e9252670c9f428f85240d401734bb))
+* updating deployment files ([1bf4b12](https://github.com/VenusProtocol/isolated-pools/commit/1bf4b125c894af05396d88ad1c10d7679b43e60a))
+* updating deployment files ([4010ada](https://github.com/VenusProtocol/isolated-pools/commit/4010ada1068459023eb5d6a8e7fe2bebe83b9c2c))
+
 ## [3.5.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.4.0...v3.5.0) (2024-09-10)
 
 
