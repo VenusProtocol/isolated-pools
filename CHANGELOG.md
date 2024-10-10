@@ -1,3 +1,27 @@
+## [3.6.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.6...v3.6.0-dev.7) (2024-10-10)
+
+
+### Features
+
+* add core pool config for opmainnet ([54ee35a](https://github.com/VenusProtocol/isolated-pools/commit/54ee35a69136cddd21daec53365816cecdf2a30d))
+* deployment file for USDC vtoken for core pool on opmainnet ([b6a89d3](https://github.com/VenusProtocol/isolated-pools/commit/b6a89d32d517a4bc918294585f0dcb8468d60694))
+* deployment files for pool registry on opmainnet ([9c21206](https://github.com/VenusProtocol/isolated-pools/commit/9c21206dc6694d9aa93877c66658e0e373c59c6e))
+* deployment files for the pool lens on the op mainnet ([c6ef501](https://github.com/VenusProtocol/isolated-pools/commit/c6ef501c2ad64ec9a9d0af772a60ccf84b410e2b))
+* deployment files of core comptroller on opmainnet ([0ee2bd2](https://github.com/VenusProtocol/isolated-pools/commit/0ee2bd2260cc1051a106c99955049c9cb3dfee6d))
+* deployment files of core pool vtokens on opmainnet ([4b120ae](https://github.com/VenusProtocol/isolated-pools/commit/4b120aee48483226c263378c09682d6ad6cdab92))
+* deployment files of NTG for core pool on opmainnet ([a30718a](https://github.com/VenusProtocol/isolated-pools/commit/a30718a92b0792c919ae3b83bdc6d5b864f0324f))
+* updating deployment files ([86e7f82](https://github.com/VenusProtocol/isolated-pools/commit/86e7f829c9906629934d5d88998490ba77441e2c))
+* updating deployment files ([4ba011e](https://github.com/VenusProtocol/isolated-pools/commit/4ba011e97798cda1cf2cba43d8f2d28fd8eb1377))
+* updating deployment files ([3bacef9](https://github.com/VenusProtocol/isolated-pools/commit/3bacef9392c30266d17cedb357509b166a4b3b12))
+* updating deployment files ([75180af](https://github.com/VenusProtocol/isolated-pools/commit/75180af22e0ba363896c2e2fde7c01234e01994a))
+* updating deployment files ([1bb27b7](https://github.com/VenusProtocol/isolated-pools/commit/1bb27b7008b48df6ff0e3df8e10cd1d54e450930))
+* use packages that include the Optimism deployment ([f22e450](https://github.com/VenusProtocol/isolated-pools/commit/f22e45033a6bac637ee1073bb568d85f690ccccd))
+
+
+### Bug Fixes
+
+* use the right decimals for USDC on Optimism ([b83fbc3](https://github.com/VenusProtocol/isolated-pools/commit/b83fbc322ab2093f3264ab06f7db730b17c31b15))
+
 ## [3.6.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0-dev.5...v3.6.0-dev.6) (2024-10-02)
 
 
