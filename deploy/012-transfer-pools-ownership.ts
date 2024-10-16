@@ -4,29 +4,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { PoolConfig, getConfig } from "../helpers/deploymentConfig";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployer } = await getNamedAccounts();
-  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
-  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-
-  const rewardsDistributors = poolConfig
-    .map((pool: PoolConfig) => {
-      const rewards = pool.rewards || [];
-      return rewards.map((_, idx: number) => `RewardsDistributor_${pool.id}_${idx}`);
-    })
-    .flat();
-
-  const comptrollers = poolConfig.map((pool: PoolConfig) => `Comptroller_${pool.id}`);
-
-  const contracts = {
-    singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon"],
-    twoStepOwnership: ["PoolRegistry", ...comptrollers, ...rewardsDistributors],
-  };
-
-  await transferSingleStepOwnerships(contracts.singleStepOwnership, targetOwner);
-  await transfer2StepOwnerships(contracts.twoStepOwnership, targetOwner);
-};
-
 const transfer2StepOwnerships = async (contractNames: string[], targetOwner: string) => {
   const abi = [
     "function owner() view returns (address)",
@@ -68,6 +45,29 @@ const transferSingleStepOwnerships = async (contractNames: string[], targetOwner
       console.error(`${contractName} owner ${owner} is equal to target ownership address ${targetOwner}`);
     }
   }
+};
+
+const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { deployer } = await getNamedAccounts();
+  const { poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
+  const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
+
+  const rewardsDistributors = poolConfig
+    .map((pool: PoolConfig) => {
+      const rewards = pool.rewards || [];
+      return rewards.map((_, idx: number) => `RewardsDistributor_${pool.id}_${idx}`);
+    })
+    .flat();
+
+  const comptrollers = poolConfig.map((pool: PoolConfig) => `Comptroller_${pool.id}`);
+
+  const contracts = {
+    singleStepOwnership: ["ComptrollerBeacon", "VTokenBeacon"],
+    twoStepOwnership: ["PoolRegistry", ...comptrollers, ...rewardsDistributors],
+  };
+
+  await transferSingleStepOwnerships(contracts.singleStepOwnership, targetOwner);
+  await transfer2StepOwnerships(contracts.twoStepOwnership, targetOwner);
 };
 
 func.tags = ["TransferPoolsOwnership", "il"];
