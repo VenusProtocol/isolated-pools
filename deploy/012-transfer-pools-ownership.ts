@@ -17,7 +17,7 @@ const transfer2StepOwnerships = async (contractNames: string[], targetOwner: str
     const pendingOwner = await contract.pendingOwner();
 
     let tx;
-    if (owner.toLowerCase() !== targetOwner.toLowerCase() && pendingOwner.toLowerCase() !== targetOwner.toLowerCase()) {
+    if (owner !== targetOwner && pendingOwner !== targetOwner) {
       tx = await contract.transferOwnership(targetOwner);
       await tx.wait(1);
       const pendingOwner = await contract.pendingOwner();
@@ -36,7 +36,7 @@ const transferSingleStepOwnerships = async (contractNames: string[], targetOwner
     const owner = await contract.owner();
 
     let tx;
-    if (owner.toLowerCase() !== targetOwner.toLowerCase()) {
+    if (owner !== targetOwner) {
       tx = await contract.transferOwnership(targetOwner);
       await tx.wait(1);
       const newOwner = await contract.owner();
