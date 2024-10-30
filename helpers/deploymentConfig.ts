@@ -3554,6 +3554,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
       },
+      {
+        isMock: false,
+        name: "ether.fi BTC",
+        symbol: "eBTC",
+        decimals: 8,
+        tokenAddress: "0x657e8C867D8B37dCC18fA4Caead9C45EB088C642",
+      },
     ],
     poolConfig: [
       {
@@ -3724,6 +3731,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(1_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
+          {
+            name: "Venus eBTC",
+            asset: "eBTC",
+            symbol: "veBTC",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.68", 18),
+            liquidationThreshold: convertToUnit("0.72", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.14471345", 8),
+            supplyCap: convertToUnit("25", 8),
+            borrowCap: convertToUnit("12.5", 8),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
