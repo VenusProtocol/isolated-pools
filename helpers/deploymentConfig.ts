@@ -3554,13 +3554,6 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
       },
-      {
-        isMock: false,
-        name: "Super Symbiotic LRT",
-        symbol: "weETHs",
-        decimals: 18,
-        tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
-      },
     ],
     poolConfig: [
       {
