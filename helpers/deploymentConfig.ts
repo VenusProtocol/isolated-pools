@@ -3039,6 +3039,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
+          {
+            name: "Venus eBTC",
+            asset: "eBTC",
+            symbol: "veBTC",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.68", 18),
+            liquidationThreshold: convertToUnit("0.72", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.1", 8),
+            supplyCap: convertToUnit("25", 8),
+            borrowCap: convertToUnit("12.5", 8),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 90 days (648000 blocks)
@@ -3528,6 +3546,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "ezETH",
         decimals: 18,
         tokenAddress: "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
+      },
+      {
+        isMock: false,
+        name: "Super Symbiotic LRT",
+        symbol: "weETHs",
+        decimals: 18,
+        tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
       },
       {
         isMock: false,
