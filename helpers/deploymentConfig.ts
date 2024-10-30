@@ -2843,6 +2843,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "ether.fi BTC",
+        symbol: "eBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
