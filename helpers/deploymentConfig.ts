@@ -5044,6 +5044,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xD78ABD81a3D57712a3af080dc4185b698Fe9ac5A",
       },
+      {
+        isMock: false,
+        name: "USDC",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: "0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4",
+      },
     ],
     poolConfig: [
       {
@@ -5141,6 +5148,24 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("25000", 18), // 25,000 ZK
             supplyCap: convertToUnit(25_000_000, 18),
             borrowCap: convertToUnit(12_500_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
+          },
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.72", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5_000, 6), // 5,000 USDC
+            supplyCap: convertToUnit(1_250_000, 6),
+            borrowCap: convertToUnit(1_000_000, 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
           },
