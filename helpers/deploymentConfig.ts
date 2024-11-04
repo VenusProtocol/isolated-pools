@@ -4841,6 +4841,13 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
+        isMock: true,
+        name: "USDC",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
         isMock: false,
         name: "Venus",
         symbol: "XVS",
@@ -4944,6 +4951,24 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("25000", 18), // 25,000 ZK
             supplyCap: convertToUnit(2_500_000, 18),
             borrowCap: convertToUnit(2_350_000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
+          },
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.72", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit(5_000, 6), // 5,000 USDC
+            supplyCap: convertToUnit(1_250_000, 6),
+            borrowCap: convertToUnit(1_000_000, 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
           },
