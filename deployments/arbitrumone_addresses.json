@@ -8,6 +8,7 @@
     "Comptroller_Liquid Staked ETH": "0x52bAB1aF7Ff770551BD05b9FC2329a0Bf5E23F16",
     "DefaultProxyAdmin": "0xF6fF3e9459227f0cDE8B102b90bE25960317b216",
     "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": "0x390D1C248217615D79f74f2453D682906Bd2dD20",
+    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": "0x425dde630be832195619a06175ba45C827Dd3DCa",
     "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": "0x305f960b00594200ed80373B61b38e669651469E",
     "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": "0x5123645b47f0c526Bf1e772CC68319C6d9C0d156",
     "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps": "0x42888177eB8FcdEa0884De66c7E0f7638125914A",
