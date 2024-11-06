@@ -3586,6 +3586,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xec53bF9167f50cDEB3Ae105f56099aaaB9061F83",
       },
+      {
+        isMock: false,
+        name: "pufETH",
+        symbol: "pufETH",
+        decimals: 18,
+        tokenAddress: "0xD9A442856C234a39a81a089C06451EBAa4306a72",
+      },
     ],
     poolConfig: [
       {
@@ -4060,6 +4067,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(0, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x86fBaEB3D6b5247F420590D303a6ffC9cd523790",
+          },
+          {
+            name: "Venus pufETH (Liquid Staked ETH)",
+            asset: "pufETH",
+            symbol: "vpufETH_LiquidStakedETH",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.045", 18),
+            jumpMultiplierPerYear: convertToUnit("2", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.85", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("5", 18),
+            supplyCap: convertToUnit("3000", 18),
+            borrowCap: convertToUnit("300", 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
