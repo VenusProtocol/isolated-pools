@@ -1,3 +1,13 @@
+## [3.7.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0...v3.7.0-dev.1) (2024-11-06)
+
+
+### Features
+
+* add USDC market deployment on zksync mainnet ([5d55389](https://github.com/VenusProtocol/isolated-pools/commit/5d5538985f310c3380624fc03580d306fd1bf61f))
+* add USDC market deployments on zksync sepolia ([f698c78](https://github.com/VenusProtocol/isolated-pools/commit/f698c78476049ff34b373e47397da9dc97b70ef7))
+* updating deployment files ([5f1c239](https://github.com/VenusProtocol/isolated-pools/commit/5f1c2398f6e7ca5e3da4b2d05eabd6dd529471b5))
+* updating deployment files ([bc3500a](https://github.com/VenusProtocol/isolated-pools/commit/bc3500a894c92ada8ea4f9c16307b6568e092982))
+
 ## [3.6.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0...v3.6.0) (2024-10-10)
 
 
