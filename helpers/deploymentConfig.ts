@@ -2843,6 +2843,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Eigen",
+        symbol: "EIGEN",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -3031,6 +3038,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(1_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
+          },
+          {
+            name: "Venus EIGEN",
+            asset: "EIGEN",
+            symbol: "vEIGEN",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.5", 18),
+            liquidationThreshold: convertToUnit("0.6", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit(500, 18),
+            supplyCap: convertToUnit(3_000_000, 18),
+            borrowCap: convertToUnit(1_500_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
         ],
         rewards: [
@@ -3529,6 +3554,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
       },
+      {
+        isMock: false,
+        name: "Eigen",
+        symbol: "EIGEN",
+        decimals: 18,
+        tokenAddress: "0xec53bF9167f50cDEB3Ae105f56099aaaB9061F83",
+      },
     ],
     poolConfig: [
       {
@@ -3699,6 +3731,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(1_000_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+          },
+          {
+            name: "Venus EIGEN",
+            asset: "EIGEN",
+            symbol: "vEIGEN",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: convertToUnit("0.02", 18),
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.5", 18),
+            liquidationThreshold: convertToUnit("0.6", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit(500, 18),
+            supplyCap: convertToUnit(3_000_000, 18),
+            borrowCap: convertToUnit(1_500_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
         ],
         rewards: [
