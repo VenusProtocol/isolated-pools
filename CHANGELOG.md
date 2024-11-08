@@ -1,3 +1,27 @@
+## [3.7.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.1...v3.7.0-dev.2) (2024-11-07)
+
+
+### Features
+
+* updating deployment files ([5a30371](https://github.com/VenusProtocol/isolated-pools/commit/5a30371b786a40d35280c4a08a5ddc5a48f2ec03))
+* updating deployment files ([f4b5a2d](https://github.com/VenusProtocol/isolated-pools/commit/f4b5a2da84de27f33406d05aa3fc31bfc8857937))
+
+
+### Bug Fixes
+
+* deployed eigen mock and vtoken ([d72cb6b](https://github.com/VenusProtocol/isolated-pools/commit/d72cb6b31495936d85db09cb55eef0266914036a))
+* deployed vEIGEN on ethereum ([e4bcee9](https://github.com/VenusProtocol/isolated-pools/commit/e4bcee9f611acbef5964b09c68c70b94f902a246))
+
+## [3.7.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0...v3.7.0-dev.1) (2024-11-06)
+
+
+### Features
+
+* add USDC market deployment on zksync mainnet ([5d55389](https://github.com/VenusProtocol/isolated-pools/commit/5d5538985f310c3380624fc03580d306fd1bf61f))
+* add USDC market deployments on zksync sepolia ([f698c78](https://github.com/VenusProtocol/isolated-pools/commit/f698c78476049ff34b373e47397da9dc97b70ef7))
+* updating deployment files ([5f1c239](https://github.com/VenusProtocol/isolated-pools/commit/5f1c2398f6e7ca5e3da4b2d05eabd6dd529471b5))
+* updating deployment files ([bc3500a](https://github.com/VenusProtocol/isolated-pools/commit/bc3500a894c92ada8ea4f9c16307b6568e092982))
+
 ## [3.6.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.5.0...v3.6.0) (2024-10-10)
 
 
