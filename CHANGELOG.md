@@ -1,3 +1,23 @@
+## [3.7.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.2...v3.7.0-dev.3) (2024-11-08)
+
+
+### Features
+
+* updating deployment files ([448ce1b](https://github.com/VenusProtocol/isolated-pools/commit/448ce1b338250be5bbf2e1d73ab0a03e66ba8f41))
+* updating deployment files ([2f7ee12](https://github.com/VenusProtocol/isolated-pools/commit/2f7ee12778fb5340cd9da2bce23459a19a81dc72))
+* updating deployment files ([e5050d7](https://github.com/VenusProtocol/isolated-pools/commit/e5050d712ce1c15dcacfc23424ff1d757a52af24))
+
+
+### Bug Fixes
+
+* deployed mock eBTC ([8dcf6c3](https://github.com/VenusProtocol/isolated-pools/commit/8dcf6c3d67698d17ab66a5128a4ff831160b5734))
+* deployed veBTC ([7353436](https://github.com/VenusProtocol/isolated-pools/commit/7353436302f0586c3b01e80d391812c578be3f9a))
+* deployed vtoken  on ethereum ([e095560](https://github.com/VenusProtocol/isolated-pools/commit/e095560090e5d4fd90f2ab959b2134d1b6124f92))
+* fixed lint ([f77f214](https://github.com/VenusProtocol/isolated-pools/commit/f77f21444c91c4f108ea12705ad542364bb8a47f))
+* merge conflict ([f96817f](https://github.com/VenusProtocol/isolated-pools/commit/f96817fdf93c8e0f300ae842278c8a0256d48f38))
+* remove duplicate config ([fd58eb0](https://github.com/VenusProtocol/isolated-pools/commit/fd58eb00e41830937b47ea217c52cdddbcdc769b))
+* updated initial supply ([d6a46eb](https://github.com/VenusProtocol/isolated-pools/commit/d6a46ebe9e789ae2f410cf2304394b0dda593bb0))
+
 ## [3.7.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.1...v3.7.0-dev.2) (2024-11-07)
 
 
