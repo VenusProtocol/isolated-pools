@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
@@ -283,7 +283,7 @@ describe("NativeTokenGateway", () => {
     });
 
     it("should execute successfully", async () => {
-      await user1.sendTransaction({ to: nativeTokenGateway.address, value: ethers.utils.parseEther("10") });
+      await setBalance(nativeTokenGateway.address, 10n ** 18n);
 
       const previousBalance = await deployer.getBalance();
       await nativeTokenGateway.sweepNative();

@@ -103,7 +103,6 @@ function configureVToken({
 }
 
 describe("Comptroller", () => {
-  let root: Signer;
   let accounts: Signer[];
   let accessControl: FakeContract<AccessControlManager>;
   let comptroller: MockContract<Comptroller>;
@@ -111,15 +110,11 @@ describe("Comptroller", () => {
   let poolRegistry: FakeContract<PoolRegistry>;
 
   beforeEach(async () => {
-    [root, ...accounts] = await ethers.getSigners();
+    [, ...accounts] = await ethers.getSigners();
     ({ accessControl, comptroller, oracle, poolRegistry } = await loadFixture(makeComptroller));
     const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
     if (poolRegistryBalance.isZero()) {
-      await setBalance(await root.getAddress(), 100n ** 18n);
-      await root.sendTransaction({
-        to: poolRegistry.address,
-        value: ethers.utils.parseEther("1"),
-      });
+      await setBalance(poolRegistry.address, 10n ** 18n);
     }
   });
 

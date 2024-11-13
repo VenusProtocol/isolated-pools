@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { Signer } from "ethers";
@@ -63,7 +63,7 @@ describe("setters", async () => {
     poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
 
     // Sending transaction cost
-    await owner.sendTransaction({ to: poolRegistry.address, value: ethers.utils.parseEther("1") });
+    await setBalance(poolRegistry.address, 10n ** 18n);
   });
 
   describe("setPriceOracle", async () => {
