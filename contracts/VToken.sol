@@ -14,6 +14,7 @@ import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
+import { ReentrancyGuardTransient } from "./lib/ReentrancyGuardTransient.sol";
 
 /**
  * @title VToken
@@ -47,7 +48,8 @@ contract VToken is
     VTokenInterface,
     ExponentialNoError,
     TokenErrorReporter,
-    TimeManagerV8
+    TimeManagerV8,
+    ReentrancyGuardTransient
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -59,20 +61,6 @@ contract VToken is
     // Maximum borrow rate that can ever be applied per slot(block or second)
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 internal immutable MAX_BORROW_RATE_MANTISSA;
-
-    /**
-     * Reentrancy Guard **
-     */
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     */
-    modifier nonReentrant() {
-        require(_notEntered, "re-entered");
-        _notEntered = false;
-        _;
-        _notEntered = true; // get a gas-refund post-Istanbul
-    }
 
     /**
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
