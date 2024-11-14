@@ -1,3 +1,19 @@
+## [3.7.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.4...v3.7.0-dev.5) (2024-11-14)
+
+
+### Features
+
+* updating deployment files ([d74c45f](https://github.com/VenusProtocol/isolated-pools/commit/d74c45f31e4f1f47901a06ec305a404304382ece))
+* updating deployment files ([e5f4fba](https://github.com/VenusProtocol/isolated-pools/commit/e5f4fbad7a10142adcab0b2d09181277627c7871))
+
+
+### Bug Fixes
+
+* deployed irm for ethereum ([be05ef4](https://github.com/VenusProtocol/isolated-pools/commit/be05ef44b30d15b7a858b49b57db41f5a98dfb11))
+* deployed on arbitrum ([938d5bf](https://github.com/VenusProtocol/isolated-pools/commit/938d5bf6ec9bc42f801e8e4238be2c5bdf4d81da))
+* deployed on opbnb and ethereym ([34d05b6](https://github.com/VenusProtocol/isolated-pools/commit/34d05b66f98327c9b16edd45289a77937d84b597))
+* updated IRM params ([240682f](https://github.com/VenusProtocol/isolated-pools/commit/240682ff502323adaf6b0397252abc4e542eca35))
+
 ## [3.7.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.3...v3.7.0-dev.4) (2024-11-14)
 
 
