@@ -1,3 +1,12 @@
+## [3.7.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.3...v3.7.0-dev.4) (2024-11-14)
+
+
+### Features
+
+* add eth mainnet deployment for pufETH ([38495fb](https://github.com/VenusProtocol/isolated-pools/commit/38495fbae103e446d9edd3de03d6a17a24d1d8cf))
+* add sepolia deployment for pufETH support ([22c566c](https://github.com/VenusProtocol/isolated-pools/commit/22c566ce2c10e465defbe54550d6d45f76783565))
+* updating deployment files ([12f030e](https://github.com/VenusProtocol/isolated-pools/commit/12f030e29314375d5ccd3a15c977eb3c4e95ba11))
+
 ## [3.7.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.2...v3.7.0-dev.3) (2024-11-08)
 
 
