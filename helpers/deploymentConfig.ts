@@ -147,6 +147,7 @@ export const blocksPerYear: BlocksPerYear = {
   zksyncmainnet: 0, // for time based contracts
   opsepolia: 0, // for time based contracts
   opmainnet: 0, // for time based contracts
+  basesepolia: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
@@ -5766,7 +5767,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.7", 18),
             liquidationThreshold: convertToUnit("0.75", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.6", 18), 
+            initialSupply: convertToUnit("0.6", 18),
             supplyCap: convertToUnit(25, 18),
             borrowCap: convertToUnit(16, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
@@ -5784,7 +5785,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0.7", 18),
             liquidationThreshold: convertToUnit("0.75", 18),
             reserveFactor: convertToUnit("0.2", 18),
-            initialSupply: convertToUnit("0.6", 8), 
+            initialSupply: convertToUnit("0.6", 8),
             supplyCap: convertToUnit(25, 8),
             borrowCap: convertToUnit(16, 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
