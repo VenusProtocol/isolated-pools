@@ -1,0 +1,26 @@
+{
+  "name": "basesepolia",
+  "chainId": "84532",
+  "addresses": {
+    "ComptrollerBeacon": "0xE33E456458B021C7e76477f21fB2017084c671eA",
+    "ComptrollerImpl": "0x33e5C5ED9C0CF0FbC310418C2CB539A2De61C1DC",
+    "Comptroller_Core": "0x7f19DAF5Cf873182284DA7b19841e7a07804B6aB",
+    "DefaultProxyAdmin": "0xB85dD19112c4BF1240FeD0f26E8D0b0576a82546",
+    "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": "0xD0b2ca2934732aA34fAf4B769ddbDFad704cc6ea",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x7099599D0819017E16d64c94B6D5fc95cdf7EA4f",
+    "MockUSDC": "0xFa264c13d657180e65245a9C3ac8d08b9F5Fc54D",
+    "MockcbBTC": "0x0948001047A07e38F685f9a11ea1ddB16B234af9",
+    "PoolLens": "0x968E60E2Aaf7a99d1FB33825E7a58EdA7841C7a6",
+    "PoolRegistry": "0xD5D9f24a5EB83e81F2188b1F2a8c217EEf56dFa5",
+    "PoolRegistry_Implementation": "0xa4FBB372173f669E2C1cC1BAcD016DAe003Cb3E3",
+    "PoolRegistry_Proxy": "0xD5D9f24a5EB83e81F2188b1F2a8c217EEf56dFa5",
+    "RewardsDistributorImpl": "0x3FD524bBbb122eB85c3a6DB874650F10Dce6CA47",
+    "RewardsDistributor_Core_0": "0x230Db7B4DC6a49c29D73C119112547266D0666Fd",
+    "RewardsDistributor_Core_0_Proxy": "0x230Db7B4DC6a49c29D73C119112547266D0666Fd",
+    "VTokenBeacon": "0xFE464F815a4491d23a41Ebcd252891F80edBCe49",
+    "VTokenImpl": "0xC57e317AA447b4748C7Ea2C5d18725C4DaeC5C9c",
+    "VToken_vUSDC_Core": "0xa9beA75098F55EE8415bf6E1B451512964D70e4b",
+    "VToken_vWETH_Core": "0x970C62d7A32B88EC678419d88800A9993460671d",
+    "VToken_vcbBTC_Core": "0xCb4FDEDEe788201cD9E91AD99078aC3e684cB3a0"
+  }
+}
