@@ -5849,6 +5849,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opsepolia;
     case "opmainnet":
       return globalConfig.opmainnet;
+    case "basesepolia":
+      return globalConfig.basesepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:
@@ -5954,6 +5956,8 @@ export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
     case "opbnbtestnet":
       return BigNumber.from(0.0005e16);
     case "opbnbmainnet":
+      return BigNumber.from(0.0005e16);
+    case "basesepolia":
       return BigNumber.from(0.0005e16);
     case "development":
       return BigNumber.from(0.0005e16);
