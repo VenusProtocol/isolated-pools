@@ -387,9 +387,7 @@
           "userdoc",
           "evm.gasEstimates"
         ],
-        "": [
-          "ast"
-        ]
+        "": ["ast"]
       }
     },
     "metadata": {
