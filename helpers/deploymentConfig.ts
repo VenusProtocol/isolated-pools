@@ -284,7 +284,7 @@ export const preconfiguredAddresses = {
     NormalTimelock: BASE_SEPOLIA_MULTISIG,
     FastTrackTimelock: BASE_SEPOLIA_MULTISIG,
     CriticalTimelock: BASE_SEPOLIA_MULTISIG,
-    AccessControlManager: "0x1652E12C8ABE2f0D84466F0fc1fA4286491B3BC1",
+    AccessControlManager: "0x724138223D8F76b519fdE715f60124E7Ce51e051",
   },
 };
 

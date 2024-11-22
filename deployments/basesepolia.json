@@ -3,7 +3,7 @@
   "chainId": "84532",
   "contracts": {
     "ComptrollerBeacon": {
-      "address": "0xE33E456458B021C7e76477f21fB2017084c671eA",
+      "address": "0x5c06f1FBCE587f64752c037cA83262F08d9Cb648",
       "abi": [
         {
           "inputs": [
@@ -110,7 +110,7 @@
       ]
     },
     "ComptrollerImpl": {
-      "address": "0x33e5C5ED9C0CF0FbC310418C2CB539A2De61C1DC",
+      "address": "0xb0fC2283175aC271AF37cda4217817837891c875",
       "abi": [
         {
           "inputs": [
@@ -2234,7 +2234,7 @@
       ]
     },
     "Comptroller_Core": {
-      "address": "0x7f19DAF5Cf873182284DA7b19841e7a07804B6aB",
+      "address": "0x272795dd6c5355CF25765F36043F34014454Eb5b",
       "abi": [
         {
           "inputs": [
@@ -2473,7 +2473,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": {
-      "address": "0xD0b2ca2934732aA34fAf4B769ddbDFad704cc6ea",
+      "address": "0x37a3e7951795d3aF33D606A9591B8EBd5F84DA08",
       "abi": [
         {
           "inputs": [
@@ -2833,7 +2833,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
-      "address": "0x7099599D0819017E16d64c94B6D5fc95cdf7EA4f",
+      "address": "0x43B1cF9AFA734F04d395Db87c593c75c2701Ea49",
       "abi": [
         {
           "inputs": [
@@ -3807,385 +3807,6 @@
           ],
           "stateMutability": "nonpayable",
           "type": "function"
-        }
-      ]
-    },
-    "NativeTokenGateway_vWETH_Core": {
-      "address": "0xbb5211eF838EE04d5010aAdD8946D92e11da91Ac",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "contract IVToken",
-              "name": "vWrappedNativeToken",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "nonpayable",
-          "type": "constructor"
-        },
-        {
-          "inputs": [],
-          "name": "NativeTokenTransferFailed",
-          "type": "error"
-        },
-        {
-          "inputs": [],
-          "name": "ZeroAddressNotAllowed",
-          "type": "error"
-        },
-        {
-          "inputs": [],
-          "name": "ZeroValueNotAllowed",
-          "type": "error"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "previousOwner",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "newOwner",
-              "type": "address"
-            }
-          ],
-          "name": "OwnershipTransferStarted",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "previousOwner",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "newOwner",
-              "type": "address"
-            }
-          ],
-          "name": "OwnershipTransferred",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "receiver",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "SweepNative",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "token",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "receiver",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "SweepToken",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "sender",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "vToken",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "TokensBorrowedAndUnwrapped",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "sender",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "vToken",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "TokensRedeemedAndUnwrapped",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "sender",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "vToken",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "TokensWrappedAndRepaid",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "sender",
-              "type": "address"
-            },
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "vToken",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "amount",
-              "type": "uint256"
-            }
-          ],
-          "name": "TokensWrappedAndSupplied",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "inputs": [],
-          "name": "acceptOwnership",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "uint256",
-              "name": "borrowAmount",
-              "type": "uint256"
-            }
-          ],
-          "name": "borrowAndUnwrap",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "owner",
-          "outputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "pendingOwner",
-          "outputs": [
-            {
-              "internalType": "address",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "uint256",
-              "name": "redeemTokens",
-              "type": "uint256"
-            }
-          ],
-          "name": "redeemAndUnwrap",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "uint256",
-              "name": "redeemAmount",
-              "type": "uint256"
-            }
-          ],
-          "name": "redeemUnderlyingAndUnwrap",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "renounceOwnership",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "sweepNative",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "contract IERC20",
-              "name": "token",
-              "type": "address"
-            }
-          ],
-          "name": "sweepToken",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "newOwner",
-              "type": "address"
-            }
-          ],
-          "name": "transferOwnership",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "vWNativeToken",
-          "outputs": [
-            {
-              "internalType": "contract IVToken",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "wNativeToken",
-          "outputs": [
-            {
-              "internalType": "contract IWrappedNative",
-              "name": "",
-              "type": "address"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "wrapAndRepay",
-          "outputs": [],
-          "stateMutability": "payable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "minter",
-              "type": "address"
-            }
-          ],
-          "name": "wrapAndSupply",
-          "outputs": [],
-          "stateMutability": "payable",
-          "type": "function"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
         }
       ]
     },
@@ -5361,7 +4982,7 @@
       ]
     },
     "PoolRegistry": {
-      "address": "0xD5D9f24a5EB83e81F2188b1F2a8c217EEf56dFa5",
+      "address": "0xCa330282BEeb07a81963336d0bf8f5f34317916c",
       "abi": [
         {
           "anonymous": false,
@@ -6853,7 +6474,7 @@
       ]
     },
     "PoolRegistry_Proxy": {
-      "address": "0xD5D9f24a5EB83e81F2188b1F2a8c217EEf56dFa5",
+      "address": "0xCa330282BEeb07a81963336d0bf8f5f34317916c",
       "abi": [
         {
           "inputs": [
@@ -8148,7 +7769,7 @@
       ]
     },
     "RewardsDistributor_Core_0": {
-      "address": "0x230Db7B4DC6a49c29D73C119112547266D0666Fd",
+      "address": "0x5d38fa166224D19c660145938db45ed798b3E283",
       "abi": [
         {
           "anonymous": false,
@@ -9422,7 +9043,7 @@
       ]
     },
     "RewardsDistributor_Core_0_Proxy": {
-      "address": "0x230Db7B4DC6a49c29D73C119112547266D0666Fd",
+      "address": "0x5d38fa166224D19c660145938db45ed798b3E283",
       "abi": [
         {
           "inputs": [
@@ -9558,7 +9179,7 @@
       ]
     },
     "VTokenBeacon": {
-      "address": "0xFE464F815a4491d23a41Ebcd252891F80edBCe49",
+      "address": "0x72F924aeE730395576764422C277c964f558351D",
       "abi": [
         {
           "inputs": [
@@ -11734,7 +11355,7 @@
       ]
     },
     "VToken_vUSDC_Core": {
-      "address": "0xa9beA75098F55EE8415bf6E1B451512964D70e4b",
+      "address": "0xA31D67c056Aadc2501535f2776bF1157904f810e",
       "abi": [
         {
           "inputs": [
@@ -11808,7 +11429,7 @@
       ]
     },
     "VToken_vWETH_Core": {
-      "address": "0x970C62d7A32B88EC678419d88800A9993460671d",
+      "address": "0x436E5A07F58AAA86277e8b992bC3e596eC423d09",
       "abi": [
         {
           "inputs": [
@@ -11882,7 +11503,7 @@
       ]
     },
     "VToken_vcbBTC_Core": {
-      "address": "0xCb4FDEDEe788201cD9E91AD99078aC3e684cB3a0",
+      "address": "0x776f14D624aBdAfa912d6Cd0864976DdaF5Ca4a7",
       "abi": [
         {
           "inputs": [
