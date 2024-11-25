@@ -18,10 +18,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
 
-  const accessControlAddress = await toAddress(
-    preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
-  );
+  const accessControlAddress = "0x854C064EA6b503A97980F481FA3B7279012fdeDd"//await toAddress(
+  //   preconfiguredAddresses.AccessControlManager || "AccessControlManager",
+  //   hre,
+  // );
   const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
