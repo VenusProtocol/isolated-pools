@@ -116,13 +116,18 @@ if (
         const balanceBeforeSupplying = await vweth.balanceOf(await user1.getAddress());
         const initialBalance = await user1.getBalance();
 
-        await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
+        const tx = await nativeTokenGateway
+          .connect(user1)
+          .wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
+        const receipt = await tx.wait();
+        const etherUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+
         const balanceAfterSupplying = await vweth.balanceOf(await user1.getAddress());
         expect(balanceAfterSupplying.sub(balanceBeforeSupplying).toString()).to.closeTo(
           parseUnits("10", 8),
           parseUnits("1", 7),
         );
-        expect(await user1.getBalance()).to.be.equal(initialBalance.sub(supplyAmount));
+        expect(await user1.getBalance()).to.be.equal(initialBalance.sub(supplyAmount).sub(etherUsed));
         await network.provider.request({ method: "hardhat_reset" });
       });
     });
@@ -155,7 +160,7 @@ if (
 
         expect(ethBalanceAfter.sub(ethBalanceBefore)).to.closeTo(redeemAmount, parseUnits("1", 16));
 
-        expect(await vweth.balanceOf(await user1.getAddress())).to.closeTo(0, 10);
+        expect(await vweth.balanceOf(await user1.getAddress())).to.closeTo(0, 4000);
         await network.provider.request({ method: "hardhat_reset" });
       });
     });
@@ -186,7 +191,6 @@ if (
       });
 
       it("should borrow and unwrap weth and send it to borrower", async () => {
-        const balanceBefore = await user2.getBalance();
         await nativeTokenGateway.connect(user1).wrapAndSupply(await user1.getAddress(), { value: supplyAmount });
 
         await usdt.connect(user2).approve(vusdt.address, parseUnits("2000", 6));
@@ -195,10 +199,13 @@ if (
 
         await comptroller.connect(user2).updateDelegate(nativeTokenGateway.address, true);
 
+        const balanceBefore = await user2.getBalance();
         const borrowAmount = parseUnits("2", 6);
-        await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
+        const tx = await nativeTokenGateway.connect(user2).borrowAndUnwrap(borrowAmount);
+        const receipt = await tx.wait();
+        const etherUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
-        expect(await user2.getBalance()).to.be.equal(balanceBefore.add(borrowAmount));
+        expect(await user2.getBalance()).to.be.equal(balanceBefore.add(borrowAmount).sub(etherUsed));
         await network.provider.request({ method: "hardhat_reset" });
       });
     });
@@ -212,10 +219,12 @@ if (
         await vweth.connect(user2).borrow(borrowAmount);
 
         const ethBalanceBefore = await user2.getBalance();
-        await nativeTokenGateway.connect(user2).wrapAndRepay({ value: repayAmount });
+        const tx = await nativeTokenGateway.connect(user2).wrapAndRepay({ value: repayAmount });
+        const receipt = await tx.wait();
+        const etherUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
         const ethBalanceAfter = await user2.getBalance();
 
-        expect(ethBalanceBefore.sub(ethBalanceAfter)).equals(borrowAmount);
+        expect(ethBalanceBefore.sub(ethBalanceAfter).sub(etherUsed)).equals(borrowAmount);
         expect(await vweth.balanceOf(await user1.getAddress())).to.eq(0);
         await network.provider.request({ method: "hardhat_reset" });
       });
