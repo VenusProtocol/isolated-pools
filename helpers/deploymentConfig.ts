@@ -280,7 +280,7 @@ export const preconfiguredAddresses = {
     AccessControlManager: "0xD71b1F33f6B0259683f11174EE4Ddc2bb9cE4eD6",
   },
   basesepolia: {
-    VTreasury: "0x724138223D8F76b519fdE715f60124E7Ce51e051",
+    VTreasury: "0x07e880DaA6572829cE8ABaaf0f5323A4eFC417A6",
     NormalTimelock: BASE_SEPOLIA_MULTISIG,
     FastTrackTimelock: BASE_SEPOLIA_MULTISIG,
     CriticalTimelock: BASE_SEPOLIA_MULTISIG,
