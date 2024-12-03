@@ -4,11 +4,13 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { contracts as ilArbOne } from "../deployments/arbitrumone.json";
 import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
+import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { contracts as ilOpbnbMainnet } from "../deployments/opbnbmainnet.json";
 import { contracts as ilOpbnbTestnet } from "../deployments/opbnbtestnet.json";
+import { contracts as ilOpMainnet } from "../deployments/opmainnet.json";
 import { contracts as ilOpSepolia } from "../deployments/opsepolia.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
 import { contracts as ilZkMainnet } from "../deployments/zksyncmainnet.json";
@@ -101,6 +103,18 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilOpSepolia.VToken_vWETH_Core.address,
+    },
+  ],
+  opmainnet: [
+    {
+      name: "vWETH_Core",
+      address: ilOpMainnet.VToken_vWETH_Core.address,
+    },
+  ],
+  basesepolia: [
+    {
+      name: "vWETH_Core",
+      address: ilBaseSepolia.VToken_vWETH_Core.address,
     },
   ],
 };
