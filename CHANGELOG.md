@@ -1,3 +1,22 @@
+## [3.7.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.5...v3.7.0-dev.6) (2024-12-03)
+
+
+### Features
+
+* deployed pool lens ([4dc31e4](https://github.com/VenusProtocol/isolated-pools/commit/4dc31e40ecb143122ce8d857ecba8735f6f8f8aa))
+* updating deployment files ([4316e93](https://github.com/VenusProtocol/isolated-pools/commit/4316e93d24ff9869a119d913a52935de9a19ab07))
+* updating deployment files ([fe9af55](https://github.com/VenusProtocol/isolated-pools/commit/fe9af55b0e94416cee6af63c3c73dbb06cb5acc1))
+* updating deployment files ([609d94f](https://github.com/VenusProtocol/isolated-pools/commit/609d94f428d69c20c3a552054a95eb89f19b692f))
+
+
+### Bug Fixes
+
+* added config ([8ce8d9c](https://github.com/VenusProtocol/isolated-pools/commit/8ce8d9cd7dcfe98c3352e104c7d361a26af2193e))
+* deployed il contracts ([9dbfa8c](https://github.com/VenusProtocol/isolated-pools/commit/9dbfa8c2aef6004080616afb704ded732335ee01))
+* deployed native token gateway ([bc3fcdc](https://github.com/VenusProtocol/isolated-pools/commit/bc3fcdcb6e1912710430ce984b8b5f4f9bf76f5f))
+* revert hardhat config ([62499d7](https://github.com/VenusProtocol/isolated-pools/commit/62499d7f24e8136cddbc5166a275dbd22a7b66db))
+* set right address for VTreasury at basesepolia and add missing config for opmainnet ([2716f39](https://github.com/VenusProtocol/isolated-pools/commit/2716f39b648ad3853e20496225712f7cd5620dff))
+
 ## [3.7.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.4...v3.7.0-dev.5) (2024-11-14)
 
 
