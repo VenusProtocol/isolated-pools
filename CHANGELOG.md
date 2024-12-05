@@ -1,3 +1,11 @@
+## [3.7.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.6...v3.7.0-dev.7) (2024-12-05)
+
+
+### Features
+
+* add LBTC deployments ([f7f2934](https://github.com/VenusProtocol/isolated-pools/commit/f7f2934deb47305553286b1d411190919ddb0632))
+* updating deployment files ([204fe1d](https://github.com/VenusProtocol/isolated-pools/commit/204fe1d103cd3b0c95a474dc53a80bebdecdf2c4))
+
 ## [3.7.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0-dev.5...v3.7.0-dev.6) (2024-12-03)
 
 
