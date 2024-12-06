@@ -5983,7 +5983,7 @@ export const globalConfig: NetworkConfig = {
       ...normalTimelockPermissions(preconfiguredAddresses.basemainnet.NormalTimelock),
     ],
     preconfiguredAddresses: preconfiguredAddresses.basemainnet,
-  }
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
