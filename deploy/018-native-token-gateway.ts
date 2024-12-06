@@ -4,8 +4,8 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { contracts as ilArbOne } from "../deployments/arbitrumone.json";
 import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
-import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
 import { contracts as ilBaseMainnet } from "../deployments/basemainnet.json";
+import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
@@ -123,7 +123,7 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
       name: "vWETH_Core",
       address: ilBaseMainnet.VToken_vWETH_Core.address,
     },
-  ]
+  ],
 };
 
 const getVWNativeTokens = (networkName: string): VTokenConfig[] => {
