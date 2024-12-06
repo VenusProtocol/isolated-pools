@@ -63,6 +63,10 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/oracle/deployments/basesepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/basesepolia",
         ],
+        basemainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/basemainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/basemainnet",
+        ],
       },
     };
   }
@@ -301,7 +305,10 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_basemainnet || "https://mainnet.base.org",
       chainId: 8453,
       live: true,
-      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      // accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      }
     },
   },
   gasReporter: {

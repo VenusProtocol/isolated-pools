@@ -6016,6 +6016,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opmainnet;
     case "basesepolia":
       return globalConfig.basesepolia;
+    case "basemainnet":
+      return globalConfig.basemainnet;
     case "development":
       return globalConfig.bsctestnet;
     default:
