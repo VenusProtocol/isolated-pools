@@ -3554,7 +3554,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus PT-sUSDE-27MAR2025 (Ethena)",
             asset: "PT-sUSDE-27MAR2025",
-            symbol: "vPT-sUSDE-27MAR2025_Ethen",
+            symbol: "vPT-sUSDE-27MAR2025_Ethena",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.07", 18),
