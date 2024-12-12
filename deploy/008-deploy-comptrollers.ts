@@ -25,6 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [poolRegistry.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   // Comptroller Beacon
