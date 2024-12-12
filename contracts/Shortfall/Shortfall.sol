@@ -18,6 +18,8 @@ import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
 import { TokenDebtTracker } from "../lib/TokenDebtTracker.sol";
 import { ShortfallStorage } from "./ShortfallStorage.sol";
 import { EXP_SCALE } from "../lib/constants.sol";
+import { oldReentrancyGuardStorage } from "./oldReentrancyGuardStorage.sol";
+import { ReentrancyGuardTransient } from "../lib/ReentrancyGuardTransient.sol";
 
 /**
  * @title Shortfall
@@ -32,10 +34,11 @@ import { EXP_SCALE } from "../lib/constants.sol";
 contract Shortfall is
     Ownable2StepUpgradeable,
     AccessControlledV8,
-    ReentrancyGuardUpgradeable,
+    oldReentrancyGuardStorage,
     TokenDebtTracker,
     ShortfallStorage,
-    TimeManagerV8
+    TimeManagerV8,
+    ReentrancyGuardTransient
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

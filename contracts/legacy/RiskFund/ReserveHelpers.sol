@@ -9,8 +9,9 @@ import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
 import { VToken } from "../../VToken.sol";
+import { ReentrancyGuardTransient } from "../../lib/ReentrancyGuardTransient.sol";
 
-contract ReserveHelpers is Ownable2StepUpgradeable {
+contract ReserveHelpers is Ownable2StepUpgradeable, ReentrancyGuardTransient {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 private constant NOT_ENTERED = 1;
@@ -58,16 +59,6 @@ contract ReserveHelpers is Ownable2StepUpgradeable {
 
     /// @notice event emitted on sweep token success
     event SweepToken(address indexed token, address indexed to, uint256 amount);
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     */
-    modifier nonReentrant() {
-        require(status != ENTERED, "re-entered");
-        status = ENTERED;
-        _;
-        status = NOT_ENTERED;
-    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address corePoolComptroller_, address vbnb_, address nativeWrapped_) {

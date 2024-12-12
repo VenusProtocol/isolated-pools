@@ -3,18 +3,19 @@ pragma solidity 0.8.25;
 
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import { IWrappedNative } from "./Interfaces/IWrappedNative.sol";
 import { INativeTokenGateway } from "./INativeTokenGateway.sol";
 import { IVToken } from "./Interfaces/IVToken.sol";
+import { ReentrancyGuardTransient } from "../lib/ReentrancyGuardTransient.sol";
+import { ReentrancyGuardStorage } from "./ReentrancyGuardStorage.sol";
 
 /**
  * @title NativeTokenGateway
  * @author Venus
  * @notice NativeTokenGateway contract facilitates interactions with a vToken market for native tokens (Native or wNativeToken)
  */
-contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuard {
+contract NativeTokenGateway is INativeTokenGateway, Ownable2Step, ReentrancyGuardStorage, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     /**

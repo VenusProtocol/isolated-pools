@@ -74,10 +74,7 @@ describe("assetListTest", () => {
           const poolRegistryBalance = await poolRegistry.provider.getBalance(poolRegistry.address);
           if (poolRegistryBalance.isZero()) {
             await setBalance(root.address, 100n ** 18n);
-            await root.sendTransaction({
-              to: poolRegistry.address,
-              value: ethers.utils.parseEther("1"),
-            });
+            await setBalance(poolRegistry.address, 10n ** 18n);
           }
           const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
           await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
