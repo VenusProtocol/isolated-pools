@@ -3598,7 +3598,7 @@ export const globalConfig: NetworkConfig = {
             kink_: convertToUnit("0.92", 18),
             collateralFactor: convertToUnit("0", 18),
             liquidationThreshold: convertToUnit("0", 18),
-            reserveFactor: convertToUnit("0", 18), // To-Do
+            reserveFactor: convertToUnit("0.1", 18),
             initialSupply: convertToUnit(100, 6),
             supplyCap: convertToUnit(50_000_000, 6),
             borrowCap: convertToUnit(46_000_000, 6),
