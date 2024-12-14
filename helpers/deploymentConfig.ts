@@ -5935,7 +5935,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("5000", 6),
             supplyCap: convertToUnit("30000000", 6),
             borrowCap: convertToUnit("27000000", 6),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
           },
           {
@@ -5953,8 +5953,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("2", 18),
             supplyCap: convertToUnit(10000, 18),
             borrowCap: convertToUnit(9000, 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
-            vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
           },
           {
             name: "Venus cbBTC (Core)",
@@ -5971,8 +5971,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("0.05", 8),
             supplyCap: convertToUnit(400, 8),
             borrowCap: convertToUnit(200, 8),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
-            vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
           },
         ],
         rewards: [],
@@ -6123,8 +6123,6 @@ export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
     case "opbnbtestnet":
       return BigNumber.from(0.0005e16);
     case "opbnbmainnet":
-      return BigNumber.from(0.0005e16);
-    case "basesepolia":
       return BigNumber.from(0.0005e16);
     case "development":
       return BigNumber.from(0.0005e16);
