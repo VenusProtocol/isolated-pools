@@ -2897,11 +2897,11 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
-        isMock: true,
+        isMock: false,
         name: "Staked USDe",
         symbol: "sUSDe",
         decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: "0xA3A3e5ecEA56940a4Ae32d0927bfd8821DdA848A",
       },
       {
         isMock: true,
