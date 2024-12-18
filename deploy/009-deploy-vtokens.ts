@@ -29,6 +29,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     hre,
   );
 
+  console.log("Is Time based", isTimeBased);
+
   // VToken Beacon
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
     contract: "VToken",
