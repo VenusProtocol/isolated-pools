@@ -8,8 +8,8 @@ interface IFlashloanSimpleReceiver {
      *      enough funds to repay and has to transfer the debt + premium to the VToken
      * @param asset The address of the flash-borrowed asset
      * @param amount The amount of the flash-borrowed asset
-     * @param premium The fee on flash-borrowed asset
-     * @param initiator The address of the flashloan initiator
+     * @param premium The premium (fee) associated with flash-borrowed asset.
+     * @param initiator The address that initiated the flashloan operation
      * @param param The byte-encoded param passed when initiating the flashloan
      * @return True if the execution of the operation succeeds, false otherwise
      */
