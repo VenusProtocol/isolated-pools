@@ -5,6 +5,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
+import { VTokenInterface } from "./VTokenInterfaces.sol";
 
 enum Action {
     MINT,
@@ -89,6 +90,8 @@ interface ComptrollerInterface {
     function transferVerify(address vToken, address src, address dst, uint transferTokens) external;
 
     function preTransferHook(address vToken, address src, address dst, uint256 transferTokens) external;
+
+    function executeFlashloan(address receiver, VTokenInterface[] calldata assets, uint256[] calldata amounts) external;
 
     function isComptroller() external view returns (bool);
 
