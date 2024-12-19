@@ -48,7 +48,7 @@
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "@solidity-parser/parser": "^0.13.2",
-    "@venusprotocol/solidity-utilities": "^2.0.0",
+    "@venusprotocol/solidity-utilities": "2.0.3",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14",
     "module-alias": "^2.2.2"
@@ -79,7 +79,7 @@
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "2.6.0",
     "@venusprotocol/oracle": "2.7.0",
-    "@venusprotocol/protocol-reserve": "2.4.0",
+    "@venusprotocol/protocol-reserve": "3.0.1",
     "@venusprotocol/venus-protocol": "9.4.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
@@ -113,7 +113,8 @@
     "ganache-core": "github:compound-finance/ganache-core.git#jflatow/unbreak-fork",
     "solidity-parser-antlr": "https://github.com/solidity-parser/parser#0.8.2",
     "@defi-wonderland/smock": "2.3.5",
-    "hardhat": "2.19.4"
+    "hardhat": "2.19.4",
+    "@venusprotocol/solidity-utilities": "2.0.3"
   },
   "publishConfig": {
     "access": "public",
