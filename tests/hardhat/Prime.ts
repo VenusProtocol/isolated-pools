@@ -197,7 +197,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     ],
     {
       constructorArgs: [false, blocksPerYear],
-      unsafeAllow: "constructor",
+      unsafeAllow: ["constructor", "internal-function-storage"],
     },
   );
 
@@ -226,7 +226,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
     ],
     {
       constructorArgs: [weth.address, vETH.address, 10512000, stakingPeriod, minimumXVS, maximumXVSCap, false],
-      unsafeAllow: "constructor",
+      unsafeAllow: ["constructor", "internal-function-storage"],
     },
   );
 
