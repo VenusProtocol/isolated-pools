@@ -39,6 +39,7 @@ export type NetworkConfig = {
   opsepolia: DeploymentConfig;
   opmainnet: DeploymentConfig;
   basesepolia: DeploymentConfig;
+  basemainnet: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -148,6 +149,7 @@ export const blocksPerYear: BlocksPerYear = {
   opsepolia: 0, // for time based contracts
   opmainnet: 0, // for time based contracts
   basesepolia: 0, // for time based contracts
+  basemainnet: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
@@ -162,6 +164,7 @@ export const ZKSYNC_MAINNET_MULTISIG = "0x751Aa759cfBB6CE71A43b48e40e1cCcFC66Ba4
 export const OP_SEPOLIA_MULTISIG = "0xd57365EE4E850e881229e2F8Aa405822f289e78d";
 export const OP_MAINNET_MULTISIG = "0x2e94dd14E81999CdBF5deDE31938beD7308354b3";
 export const BASE_SEPOLIA_MULTISIG = "0xdf3b635d2b535f906BB02abb22AED71346E36a00";
+export const BASE_MAINNET_MULTISIG = "0x1803Cf1D3495b43cC628aa1d8638A981F8CD341C";
 
 const DEFAULT_REDUCE_RESERVES_BLOCK_DELTA = "7200";
 const REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM = "7200";
@@ -174,6 +177,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -285,6 +289,13 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: BASE_SEPOLIA_MULTISIG,
     CriticalTimelock: BASE_SEPOLIA_MULTISIG,
     AccessControlManager: "0x724138223D8F76b519fdE715f60124E7Ce51e051",
+  },
+  basemainnet: {
+    VTreasury: "0xbefD8d06f403222dd5E8e37D2ba93320A97939D1",
+    NormalTimelock: BASE_MAINNET_MULTISIG,
+    FastTrackTimelock: BASE_MAINNET_MULTISIG,
+    CriticalTimelock: BASE_MAINNET_MULTISIG,
+    AccessControlManager: "0x9E6CeEfDC6183e4D0DF8092A9B90cDF659687daB",
   },
 };
 
@@ -6089,6 +6100,110 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.basesepolia,
   },
+  basemainnet: {
+    tokensConfig: [
+      {
+        isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      },
+      {
+        isMock: false,
+        name: "Wrapped Ether",
+        symbol: "WETH",
+        decimals: 18,
+        tokenAddress: "0x4200000000000000000000000000000000000006",
+      },
+      {
+        isMock: false,
+        name: "Coinbase Wrapped BTC",
+        symbol: "cbBTC",
+        decimals: 8,
+        tokenAddress: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+      },
+      {
+        isMock: false,
+        name: "Venus",
+        symbol: "XVS",
+        decimals: 18,
+        tokenAddress: "0xebB7873213c8d1d9913D8eA39Aa12d74cB107995",
+      },
+    ],
+
+    poolConfig: [
+      {
+        id: "Core",
+        name: "Core",
+        closeFactor: convertToUnit("0.5", 18),
+        liquidationIncentive: convertToUnit("1.1", 18),
+        minLiquidatableCollateral: convertToUnit("100", 18),
+        vtokens: [
+          {
+            name: "Venus USDC (Core)",
+            asset: "USDC",
+            symbol: "vUSDC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.08", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.75", 18),
+            liquidationThreshold: convertToUnit("0.78", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("5000", 6),
+            supplyCap: convertToUnit("30000000", 6),
+            borrowCap: convertToUnit("27000000", 6),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+          },
+          {
+            name: "Venus WETH (Core)",
+            asset: "WETH",
+            symbol: "vWETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.03", 18),
+            jumpMultiplierPerYear: convertToUnit("4.5", 18),
+            kink_: convertToUnit("0.9", 18),
+            collateralFactor: convertToUnit("0.8", 18),
+            liquidationThreshold: convertToUnit("0.83", 18),
+            reserveFactor: convertToUnit("0.15", 18),
+            initialSupply: convertToUnit("2", 18),
+            supplyCap: convertToUnit(10000, 18),
+            borrowCap: convertToUnit(9000, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+          },
+          {
+            name: "Venus cbBTC (Core)",
+            asset: "cbBTC",
+            symbol: "vcbBTC_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.73", 18),
+            liquidationThreshold: convertToUnit("0.78", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.05", 8),
+            supplyCap: convertToUnit(400, 8),
+            borrowCap: convertToUnit(200, 8),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+          },
+        ],
+        rewards: [],
+      },
+    ],
+    accessControlConfig: [
+      ...poolRegistryPermissions(),
+      ...normalTimelockPermissions(preconfiguredAddresses.basemainnet.NormalTimelock),
+    ],
+    preconfiguredAddresses: preconfiguredAddresses.basemainnet,
+  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -6121,6 +6236,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.opmainnet;
     case "basesepolia":
       return globalConfig.basesepolia;
+    case "basemainnet":
+      return globalConfig.basemainnet;
     case "development":
       return globalConfig.bsctestnet;
     default:
@@ -6226,8 +6343,6 @@ export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
     case "opbnbtestnet":
       return BigNumber.from(0.0005e16);
     case "opbnbmainnet":
-      return BigNumber.from(0.0005e16);
-    case "basesepolia":
       return BigNumber.from(0.0005e16);
     case "development":
       return BigNumber.from(0.0005e16);
