@@ -1,4 +1,4 @@
-import setupDeployment from "@venusprotocol/protocol-reserve/dist/deploy/000-1-setup";
+import timelocksDeployment from "@venusprotocol/governance-contracts/dist/deploy/001-source-timelocks";
 import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/000-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
@@ -24,7 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
-  await setupDeployment(hre);
+  await timelocksDeployment(hre);
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
     hre,
