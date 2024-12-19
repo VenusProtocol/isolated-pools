@@ -3432,7 +3432,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": 2.6.0
     "@venusprotocol/oracle": 2.7.0
-    "@venusprotocol/protocol-reserve": v3.0.1-dev.1
+    "@venusprotocol/protocol-reserve": v3.0.1
     "@venusprotocol/solidity-utilities": ^2.0.0
     "@venusprotocol/venus-protocol": 9.4.0
     bignumber.js: 9.0.0
@@ -3505,9 +3505,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:v3.0.1-dev.1":
-  version: 3.0.1-dev.1
-  resolution: "@venusprotocol/protocol-reserve@npm:3.0.1-dev.1"
+"@venusprotocol/protocol-reserve@npm:v3.0.1":
+  version: 3.0.1
+  resolution: "@venusprotocol/protocol-reserve@npm:3.0.1"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3522,7 +3522,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.14.0
     module-alias: ^2.2.2
-  checksum: d7fae5eeca4252d7394167413f356a5e5102a23a2f3ce7366098a2602b629caaaf760b1381a85050a9f44094f76ac25c4cb12c56c9f8a96bb1018fa4a32d17a0
+  checksum: 704e4b923ef8fae6840cb53b9eced0504778ba879e3930de26ceb79d65e017d598b71baeeba980fff2b01ca78d6745bd48d9bb7082cda4178c547078661ea594
   languageName: node
   linkType: hard
 

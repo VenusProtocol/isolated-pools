@@ -1,4 +1,4 @@
-import setupDeployment from '@venusprotocol/protocol-reserve/dist/deploy/000-1-setup';
+import setupDeployment from "@venusprotocol/protocol-reserve/dist/deploy/000-1-setup";
 import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/000-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
