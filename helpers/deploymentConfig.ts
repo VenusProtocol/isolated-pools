@@ -22,7 +22,6 @@ import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/types";
 
-import { TransparentUpgradeableProxy } from "../typechain";
 import { convertToUnit } from "./utils";
 
 export type NetworkConfig = {
@@ -915,6 +914,13 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
+        name: "SolvBTC Babylon",
+        symbol: "SolvBTC.BBN",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
         name: "PT SolvBTC Babylon 27MAR2025",
         symbol: "PT-SolvBTC.BBN-27MAR2025",
         decimals: 18,
@@ -1733,7 +1739,7 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus vBTCB (BTC)",
+            name: "Venus BTCB (BTC)",
             asset: "BTCB",
             symbol: "vBTCB_BTC",
             rateModel: InterestRateModels.JumpRate.toString(),
@@ -1970,6 +1976,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "ETH",
         decimals: 18,
         tokenAddress: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",
+      },
+      {
+        isMock: false,
+        name: "SolvBTC Babylon",
+        symbol: "SolvBTC.BBN",
+        decimals: 18,
+        tokenAddress: "0x1346b618dC92810EC74163e4c27004c921D446a5",
       },
       {
         isMock: false,
@@ -2793,7 +2806,7 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus vBTCB (BTC)",
+            name: "Venus BTCB (BTC)",
             asset: "BTCB",
             symbol: "vBTCB_BTC",
             rateModel: InterestRateModels.JumpRate.toString(),
@@ -2826,7 +2839,7 @@ export const globalConfig: NetworkConfig = {
             supplyCap: convertToUnit("80", 18),
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: "28800",
-            vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
+            vTokenReceiver: "0x63f6D9E7d3953106bCaf98832BD9C88A54AfCc9D",
           },
         ],
         rewards: [],
