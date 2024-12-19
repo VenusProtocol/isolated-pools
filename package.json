@@ -79,7 +79,7 @@
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "2.6.0",
     "@venusprotocol/oracle": "2.7.0",
-    "@venusprotocol/protocol-reserve": "2.4.0",
+    "@venusprotocol/protocol-reserve": "v3.0.1-dev.1",
     "@venusprotocol/venus-protocol": "9.4.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
