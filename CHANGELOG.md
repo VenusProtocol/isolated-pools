@@ -1,3 +1,11 @@
+## [3.7.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0...v3.7.1-dev.1) (2024-12-19)
+
+
+### Bug Fixes
+
+* support breaking changes in protocol reserve deployment scripts ([a30a86a](https://github.com/VenusProtocol/isolated-pools/commit/a30a86abe11cfec55bdf45829856d701db01e9b8))
+* support breaking changes in protocol reserve deployment scripts ([ca25f35](https://github.com/VenusProtocol/isolated-pools/commit/ca25f351f3f4bec3e02ffb47e35162bd50b81a73))
+
 ## [3.7.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.6.0...v3.7.0) (2024-12-18)
 
 
