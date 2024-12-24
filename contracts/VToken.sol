@@ -789,12 +789,12 @@ contract VToken is
     /**
      * @notice Update flashloan fee mantissa
      * @custom:access Only Governance
-     * @custom:event Emits FLashloanFeeUpdated event on success
+     * @custom:event Emits FlashloanFeeUpdated event on success
      */
     function setFlashloanFeeMantissa(uint256 fee) external override {
         _checkAccessAllowed("setFlashloanFeeMantissa(uint256)");
 
-        emit FLashloanFeeUpdated(flashloanFeeMantissa, fee);
+        emit FlashloanFeeUpdated(flashloanFeeMantissa, fee);
         flashloanFeeMantissa = fee;
     }
 
