@@ -3250,9 +3250,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
           {
-            name: "Venus eBTC",
+            name: "Venus eBTC (Core)",
             asset: "eBTC",
-            symbol: "veBTC",
+            symbol: "veBTC_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
@@ -3268,9 +3268,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
           {
-            name: "Venus EIGEN",
+            name: "Venus EIGEN (Core)",
             asset: "EIGEN",
-            symbol: "vEIGEN",
+            symbol: "vEIGEN_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.15", 18),
@@ -4134,9 +4134,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
           {
-            name: "Venus eBTC",
+            name: "Venus eBTC (Core)",
             asset: "eBTC",
-            symbol: "veBTC",
+            symbol: "veBTC_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
@@ -4152,9 +4152,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
           {
-            name: "Venus EIGEN",
+            name: "Venus EIGEN (Core)",
             asset: "EIGEN",
-            symbol: "vEIGEN",
+            symbol: "vEIGEN_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.15", 18),

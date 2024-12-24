@@ -31688,7 +31688,7 @@
         }
       ]
     },
-    "VToken_vEIGEN": {
+    "VToken_vEIGEN_Core": {
       "address": "0x256AdDBe0a387c98f487e44b85c29eb983413c5e",
       "abi": [
         {
@@ -32798,7 +32798,7 @@
         }
       ]
     },
-    "VToken_veBTC": {
+    "VToken_veBTC_Core": {
       "address": "0x325cEB02fe1C2fF816A83a5770eA0E88e2faEcF2",
       "abi": [
         {
