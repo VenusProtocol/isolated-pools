@@ -82,16 +82,19 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
         ],
         arbitrumone: [
+          "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
           "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone",
           "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
         ],
         basesepolia: [
           "node_modules/@venusprotocol/oracle/deployments/basesepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/basesepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
         ],
         basemainnet: [
           "node_modules/@venusprotocol/oracle/deployments/basemainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/basemainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
         ],
       },
     };
