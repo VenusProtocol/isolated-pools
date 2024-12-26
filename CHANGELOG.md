@@ -1,3 +1,18 @@
+## [3.8.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.1-dev.1...v3.8.0-dev.1) (2024-12-26)
+
+
+### Features
+
+* support deployment dry run on forked network ([1905f69](https://github.com/VenusProtocol/isolated-pools/commit/1905f69e0b6065309d3975f73626c8a576f6a566))
+
+
+### Bug Fixes
+
+* compare lowercase addresses ([6667a64](https://github.com/VenusProtocol/isolated-pools/commit/6667a645ac397938407bfbaf5cb5604f733aad45))
+* correct symbol in crv reward config ([b6adb16](https://github.com/VenusProtocol/isolated-pools/commit/b6adb1648d7d34d28053e5c65c99cabd2d4b1cee))
+* send to treasury only assets that were minted ([3370818](https://github.com/VenusProtocol/isolated-pools/commit/3370818fae202fd7a61fc8c389375a9bdd6a40ba))
+* skip networks where PSR hasnt been deployed yet ([b3b84ca](https://github.com/VenusProtocol/isolated-pools/commit/b3b84ca117e8869cb0886f2534e343e8db08280e))
+
 ## [3.7.1-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0...v3.7.1-dev.1) (2024-12-19)
 
 
