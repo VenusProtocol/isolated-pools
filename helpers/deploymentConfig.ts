@@ -124,7 +124,7 @@ export type AccessControlEntry = {
 export enum InterestRateModels {
   WhitePaper,
   JumpRate,
-  TwoKinks
+  TwoKinks,
 }
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
@@ -4894,11 +4894,14 @@ export const globalConfig: NetworkConfig = {
             name: "Venus USDT (Core)",
             asset: "USDT",
             symbol: "vUSDT_Core",
-            rateModel: InterestRateModels.JumpRate.toString(),
+            rateModel: InterestRateModels.TwoKinks.toString(),
             baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.08", 18),
-            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            multiplierPerYear: convertToUnit("0.15", 18),
+            multiplierPerYear2: convertToUnit("0.9", 18),
+            jumpMultiplierPerYear: convertToUnit("3.0", 18),
             kink_: convertToUnit("0.8", 18),
+            kink2_: convertToUnit("0.9", 18),
+            baseRatePerYear2: "0",
             collateralFactor: convertToUnit("0.78", 18),
             liquidationThreshold: convertToUnit("0.80", 18),
             reserveFactor: convertToUnit("0.1", 18),
