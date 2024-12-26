@@ -715,13 +715,17 @@ contract VToken is
      *      - Reverts with "Only Comptroller" if the caller is not the Comptroller.
      * @custom:event Emits FlashloanAmountTransferred event on successful transfer of amount to receiver
      */
-    function transferUnderlying(address to, uint256 amount) external override nonReentrant {
+    function transferUnderlying(
+        address to,
+        uint256 amount
+    ) external override nonReentrant returns (uint256 balanceBefore) {
         if (msg.sender != address(comptroller)) {
             revert InvalidComptroller(address(comptroller));
         }
 
         _doTransferOut(to, amount);
 
+        balanceBefore = _getCashPrior();
         emit FlashloanAmountTransferred(underlying, to, amount);
     }
 
@@ -744,13 +748,11 @@ contract VToken is
      * @custom:event Emits FlashloanExecuted event on success
      */
     function executeFlashloan(address receiver, uint256 amount) external override nonReentrant returns (uint256) {
-        if (!isFlashloanEnabled) revert FlashLoanNotEnabled(address(this));
-        ensureNonzeroAddress(receiver);
+        uint256 repaymentAmount;
+        uint256 fee;
+        (fee, repaymentAmount) = calculateFee(receiver, amount);
 
         IFlashloanSimpleReceiver receiverContract = IFlashloanSimpleReceiver(receiver);
-
-        uint256 fee = (amount * flashloanFeeMantissa) / MANTISSA_ONE;
-        uint256 totalRepayment = amount + fee;
 
         // Transfer the underlying asset to the receiver.
         _doTransferOut(receiver, amount);
@@ -762,12 +764,7 @@ contract VToken is
             revert ExecuteFlashloanFailed();
         }
 
-        uint256 balanceAfter = _getCashPrior();
-
-        // balanceAfter should be greater than the fee calculated
-        if ((balanceAfter - balanceBefore) < totalRepayment) {
-            revert InsufficientReypaymentBalance(underlying);
-        }
+        verifyBalance(balanceBefore, repaymentAmount);
 
         emit FlashloanExecuted(receiver, underlying, amount);
 
@@ -980,6 +977,43 @@ contract VToken is
 
         /* We emit an AccrueInterest event */
         emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
+
+        return NO_ERROR;
+    }
+
+    /**
+     * @notice Calculates the fee and repayment amount for a flash loan.
+     * @param receiver The address of the receiver of the flash loan.
+     * @param amount The amount of the flash loan.
+     * @return fee The calculated fee for the flash loan.
+     * @return repaymentAmount The total amount to be repaid (amount + fee).
+     * @dev This function reverts if flash loans are not enabled.
+     */
+    function calculateFee(
+        address receiver,
+        uint256 amount
+    ) public view override returns (uint256 fee, uint256 repaymentAmount) {
+        if (!isFlashloanEnabled) revert FlashLoanNotEnabled(address(this));
+        ensureNonzeroAddress(receiver);
+
+        fee = (amount * flashloanFeeMantissa) / MANTISSA_ONE;
+        repaymentAmount = amount + fee;
+    }
+
+    /**
+     * @notice Verifies that the balance after a flash loan is sufficient to cover the repayment amount.
+     * @param balanceBefore The balance before the flash loan.
+     * @param repaymentAmount The total amount to be repaid (amount + fee).
+     * @return NO_ERROR Indicates that the balance verification was successful.
+     * @dev This function reverts if the balance after the flash loan is insufficient to cover the repayment amount.
+     */
+    function verifyBalance(uint256 balanceBefore, uint256 repaymentAmount) public view override returns (uint256) {
+        uint256 balanceAfter = _getCashPrior();
+
+        // balanceAfter should be greater than the fee calculated
+        if ((balanceAfter - balanceBefore) < repaymentAmount) {
+            revert InsufficientReypaymentBalance(underlying);
+        }
 
         return NO_ERROR;
     }

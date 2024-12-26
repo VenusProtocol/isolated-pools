@@ -967,24 +967,15 @@ contract Comptroller is
             revert InvalidFlashloanParams();
         }
 
-        IFlashloanReceiver receiverContract = IFlashloanReceiver(receiver);
         uint256 len = assets.length;
         uint256[] memory fees = new uint256[](len);
         uint256[] memory balanceBefore = new uint256[](len);
 
         for (uint256 j; j < len; ) {
-            // Revert if flashloan is not enabled
-            if (!(assets[j]).isFlashloanEnabled()) {
-                revert FlashLoanNotEnabled(address(assets[j]));
-            }
-
-            uint256 assetFlashloanFee = (assets[j]).flashloanFeeMantissa();
-            fees[j] = (amounts[j] * assetFlashloanFee) / MANTISSA_ONE;
+            (fees[j], ) = (assets[j]).calculateFee(receiver, amounts[j]);
 
             // Transfer the asset
-            (assets[j]).transferUnderlying(receiver, amounts[j]);
-
-            balanceBefore[j] = (assets[j]).getCash();
+            (balanceBefore[j]) = (assets[j]).transferUnderlying(receiver, amounts[j]);
 
             unchecked {
                 ++j;
@@ -992,17 +983,12 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!receiverContract.executeOperation(assets, amounts, fees, receiver, "")) {
+        if (!IFlashloanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, "")) {
             revert ExecuteFlashloanFailed();
         }
 
         for (uint256 k; k < len; ) {
-            uint256 balanceAfter = (assets[k]).getCash();
-
-            // balanceAfter should be greater than the fee calculated
-            if ((balanceAfter - balanceBefore[k]) < (amounts[k] + fees[k])) {
-                revert InsufficientReypaymentBalance(address(assets[k]));
-            }
+            (assets[k]).verifyBalance(balanceBefore[k], amounts[k] + fees[k]);
 
             unchecked {
                 ++k;

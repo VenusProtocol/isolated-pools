@@ -366,7 +366,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function sweepToken(IERC20Upgradeable token) external virtual;
 
-    function transferUnderlying(address receiver, uint256 amount) external virtual;
+    function transferUnderlying(address receiver, uint256 amount) external virtual returns (uint256 balanceBefore);
 
     function executeFlashloan(address receiver, uint256 amount) external virtual returns (uint256);
 
@@ -421,4 +421,11 @@ abstract contract VTokenInterface is VTokenStorage {
     function isVToken() external pure virtual returns (bool) {
         return true;
     }
+
+    function calculateFee(
+        address receiver,
+        uint256 amount
+    ) public view virtual returns (uint256 fee, uint256 repaymentAmount);
+
+    function verifyBalance(uint256 balanceBefore, uint256 repaymentAmount) public view virtual returns (uint256);
 }
