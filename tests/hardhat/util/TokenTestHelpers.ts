@@ -38,7 +38,7 @@ interface VTokenParameters {
   isTimeBased: boolean;
   blocksPerYear: BigNumberish;
   maxBorrowRateMantissa: BigNumberish;
-  isFlashloanEnabled: boolean;
+  isFlashloanAllowed: boolean;
   flashloanFeeMantissa: BigNumberish;
 }
 
@@ -149,7 +149,7 @@ export const makeVToken = async <VTokenFactory extends AnyVTokenFactory = VToken
       protocolShareReserve: getAddress(params_.protocolShareReserve),
     },
     params_.reserveFactorMantissa,
-    params.isFlashloanEnabled || false,
+    params.isFlashloanAllowed || false,
     params.flashloanFeeMantissa || 0,
   ])) as DeployedContract<VTokenFactory>;
 

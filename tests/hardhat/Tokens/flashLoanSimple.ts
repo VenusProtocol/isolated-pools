@@ -23,7 +23,7 @@ chai.use(smock.matchers);
 const flashloanAmount = parseUnits("2", 18).toBigInt();
 const feeMantissa = parseUnits("0.01", 18);
 
-describe.only("Flashloan Simple", () => {
+describe("Flashloan Simple", () => {
   let minter: SignerWithAddress;
   let alice: SignerWithAddress;
   let receiver: SignerWithAddress;
