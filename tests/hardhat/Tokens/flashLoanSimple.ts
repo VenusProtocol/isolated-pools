@@ -37,7 +37,7 @@ describe.only("Flashloan Simple", () => {
   let comptrollerSigner: SignerWithAddress;
 
   beforeEach(async () => {
-    [admin, minter, alice, acmUser, receiver] = await ethers.getSigners();
+    [minter, alice, acmUser, receiver] = await ethers.getSigners();
     contracts = await loadFixture(vTokenTestFixture);
     ({ vToken, underlying, accessControlManager, comptroller } = contracts);
     comptrollerSigner = await initMainnetUser(comptroller.address, ethers.utils.parseUnits("2"));
