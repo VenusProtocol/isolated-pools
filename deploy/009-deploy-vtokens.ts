@@ -20,12 +20,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
+  const networkName = hre.getNetworkName();
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(networkName);
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
-  await timelocksDeployment(hre);
+
+
+  if (networkName === "bscmainnet" || networkName === "bsctestnet" || networkName === "hardhat") {
+    await timelocksDeployment(hre);
+  }
   const timelock = await toAddress(preconfiguredAddresses.NormalTimelock || "NormalTimelock");
+
+
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
   );
