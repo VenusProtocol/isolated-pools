@@ -1,3 +1,28 @@
+## [3.8.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.1...v3.8.0-dev.2) (2024-12-27)
+
+
+### Features
+
+*  deployed MockERC4626Token ([8d65088](https://github.com/VenusProtocol/isolated-pools/commit/8d650882a5582ea823ab7e3119693729750e8a4e))
+* add config of Ethena pool on ethereum ([c66c5b5](https://github.com/VenusProtocol/isolated-pools/commit/c66c5b5f6cee88fdb66575d0d9194fb91b2ed6a7))
+* add deployments for ethereum ([76f6597](https://github.com/VenusProtocol/isolated-pools/commit/76f6597dd266ee488532885c03981fc015ab6f05))
+* add MockUSDe deployment file ([f5f5be9](https://github.com/VenusProtocol/isolated-pools/commit/f5f5be977bfd4cc34b83bb854f12b818ec64ceeb))
+* Ethena pool on sepolia ([6a5a1c1](https://github.com/VenusProtocol/isolated-pools/commit/6a5a1c1185e3c55a9617499dde7e00b41a2e73e6))
+* update dependencies ([2622a1d](https://github.com/VenusProtocol/isolated-pools/commit/2622a1d1b11260863d9aeca40aa16fee4e6f015e))
+* updating deployment files ([65bf6d2](https://github.com/VenusProtocol/isolated-pools/commit/65bf6d27c8e6ceec880ff74776fc0b86f4f8ec2b))
+* updating deployment files ([5ce862b](https://github.com/VenusProtocol/isolated-pools/commit/5ce862bb1e774443cd5dfbddb9e87d9213dfb985))
+* updating deployment files ([7477de4](https://github.com/VenusProtocol/isolated-pools/commit/7477de43476c924cf6c9f90fb94d3367ee99f641))
+* updating deployment files ([9ddc742](https://github.com/VenusProtocol/isolated-pools/commit/9ddc74298592f622ea527db0f1b339925ca731af))
+* updating deployment files ([176c87a](https://github.com/VenusProtocol/isolated-pools/commit/176c87a16678b77c7826218082ae42e9715908cc))
+* updating deployment files ([be61772](https://github.com/VenusProtocol/isolated-pools/commit/be617727ce777e7bf486ebce2bc250d4329eeb46))
+* updating deployment files ([7f0605d](https://github.com/VenusProtocol/isolated-pools/commit/7f0605dfbe075b1f25ce90ae00a398fdc8296c27))
+
+
+### Bug Fixes
+
+* PR comments ([d1546b9](https://github.com/VenusProtocol/isolated-pools/commit/d1546b947ef23e23b6755a6ad44b7f139f9b8d70))
+* vtoken symbol ([1eca225](https://github.com/VenusProtocol/isolated-pools/commit/1eca2254ea75ffe85182824411d7bd0b3f926049))
+
 ## [3.8.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.1-dev.1...v3.8.0-dev.1) (2024-12-26)
 
 
