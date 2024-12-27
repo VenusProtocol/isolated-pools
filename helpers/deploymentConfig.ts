@@ -888,8 +888,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Synclub Staked BNB",
-        symbol: "SnBNB",
+        name: "Staked Lista BNB",
+        symbol: "slisBNB",
         decimals: 18,
         tokenAddress: "0xd2aF6A916Bc77764dc63742BC30f71AF4cF423F4",
       },
@@ -1436,9 +1436,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "100",
           },
           {
-            name: "Venus SnBNB (Liquid Staked BNB)",
-            asset: "SnBNB",
-            symbol: "vSnBNB_LiquidStakedBNB",
+            name: "Venus slisBNB (Liquid Staked BNB)",
+            asset: "slisBNB",
+            symbol: "vslisBNB_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.2", 18),
@@ -1481,7 +1481,7 @@ export const globalConfig: NetworkConfig = {
           },
           {
             asset: "HAY",
-            markets: ["SnBNB"],
+            markets: ["slisBNB"],
             supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
             borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
           },
@@ -1953,8 +1953,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Synclub Staked BNB",
-        symbol: "SnBNB",
+        name: "Staked Lista BNB",
+        symbol: "slisBNB",
         decimals: 18,
         tokenAddress: "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
       },
@@ -2503,9 +2503,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
           },
           {
-            name: "Venus SnBNB (Liquid Staked BNB)",
-            asset: "SnBNB",
-            symbol: "vSnBNB_LiquidStakedBNB",
+            name: "Venus slisBNB (Liquid Staked BNB)",
+            asset: "slisBNB",
+            symbol: "vslisBNB_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.2", 18),
@@ -2548,7 +2548,7 @@ export const globalConfig: NetworkConfig = {
           },
           {
             asset: "HAY",
-            markets: ["SnBNB"],
+            markets: ["slisBNB"],
             supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
             borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
           },
