@@ -1,3 +1,11 @@
+## [3.8.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.2...v3.8.0-dev.3) (2024-12-30)
+
+
+### Features
+
+* add BTC pool deployments on BNB chain ([7e2dce7](https://github.com/VenusProtocol/isolated-pools/commit/7e2dce7f0d06fcc7f1fadfa3bf7ccc813eea5833))
+* updating deployment files ([322b605](https://github.com/VenusProtocol/isolated-pools/commit/322b6052025144f27a5dbeb315400164f1e65970))
+
 ## [3.8.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.1...v3.8.0-dev.2) (2024-12-27)
 
 
