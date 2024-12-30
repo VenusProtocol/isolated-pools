@@ -9318,7 +9318,7 @@
         }
       ]
     },
-    "MockHAY": {
+    "MocklisUSD": {
       "address": "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
       "abi": [
         {
@@ -63368,7 +63368,7 @@
         }
       ]
     },
-    "VToken_vHAY_StableCoins": {
+    "VToken_vlisUSD_StableCoins": {
       "address": "0x170d3b2da05cc2124334240fB34ad1359e34C562",
       "abi": [
         {

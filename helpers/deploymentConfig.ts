@@ -741,8 +741,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "HAY",
-        symbol: "HAY",
+        name: "lisUSD",
+        symbol: "lisUSD",
         decimals: 18,
         tokenAddress: "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
         faucetInitialLiquidity: true,
@@ -959,9 +959,9 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus HAY (Stable Coins)",
-            asset: "HAY",
-            symbol: "vHAY_StableCoins",
+            name: "Venus lisUSD (Stable Coins)",
+            asset: "lisUSD",
+            symbol: "vlisUSD_StableCoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -1033,16 +1033,16 @@ export const globalConfig: NetworkConfig = {
         ],
         rewards: [
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
           },
           {
             asset: "ANGLE",
@@ -1480,10 +1480,10 @@ export const globalConfig: NetworkConfig = {
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
           },
           {
-            asset: "HAY",
+            asset: "lisUSD",
             markets: ["slisBNB"],
-            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
-            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            supplySpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
           },
         ],
       },
@@ -1820,8 +1820,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Hay Destablecoin",
-        symbol: "HAY",
+        name: "Lista USD",
+        symbol: "lisUSD",
         decimals: 18,
         tokenAddress: "0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5",
       },
@@ -2024,9 +2024,9 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus HAY (Stablecoins)",
-            asset: "HAY",
-            symbol: "vHAY_Stablecoins",
+            name: "Venus lisUSD (Stablecoins)",
+            asset: "lisUSD",
+            symbol: "vlisUSD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -2098,16 +2098,16 @@ export const globalConfig: NetworkConfig = {
         ],
         rewards: [
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
           },
           {
             asset: "ANGLE",
@@ -2547,10 +2547,10 @@ export const globalConfig: NetworkConfig = {
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
           },
           {
-            asset: "HAY",
+            asset: "lisUSD",
             markets: ["slisBNB"],
-            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
-            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            supplySpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
           },
         ],
       },

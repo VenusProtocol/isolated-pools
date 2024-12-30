@@ -93,7 +93,6 @@ if (FORK) {
       if (FORKED_NETWORK == "bscmainnet" || FORKED_NETWORK == "bsctestnet") {
         binanceOracle = BinanceOracle__factory.connect(BINANCE_ORACLE, impersonatedTimelock);
         await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("lisUSD", 31536000);
-        await binanceOracle.connect(impersonatedTimelock).setMaxStalePeriod("HAY", 31536000);
       }
 
       if (FORKED_NETWORK == "ethereum" || FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
