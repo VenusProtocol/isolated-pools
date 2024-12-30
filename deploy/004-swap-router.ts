@@ -89,6 +89,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
+
+  const comptrollerBTCAddresses = (await deployments.get("Comptroller_BTC")).address;
+  await deploy("SwapRouter_BTC", {
+    contract: "SwapRouter",
+    from: deployer,
+    args: [wBNBAddress, pancakeFactoryAddress, comptrollerBTCAddresses, vbnbAddress],
+    log: true,
+    autoMine: true,
+    skipIfAlreadyDeployed: true,
+  });
 };
 
 func.tags = ["SwapRouter", "il"];
