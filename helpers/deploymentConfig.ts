@@ -874,8 +874,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "agEUR",
-        symbol: "agEUR",
+        name: "EURA",
+        symbol: "EURA",
         decimals: 18,
         tokenAddress: "0x63061de4A25f24279AAab80400040684F92Ee319",
       },
@@ -1013,9 +1013,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "100",
           },
           {
-            name: "Venus agEUR (Stablecoins)",
-            asset: "agEUR",
-            symbol: "vagEUR_Stablecoins",
+            name: "Venus EURA (Stablecoins)",
+            asset: "EURA",
+            symbol: "vEURA_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -1046,7 +1046,7 @@ export const globalConfig: NetworkConfig = {
           },
           {
             asset: "ANGLE",
-            markets: ["agEUR"],
+            markets: ["EURA"],
             supplySpeeds: ["0"],
             borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
@@ -1939,8 +1939,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "agEUR",
-        symbol: "agEUR",
+        name: "EURA",
+        symbol: "EURA",
         decimals: 18,
         tokenAddress: "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
       },
@@ -2078,9 +2078,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
           },
           {
-            name: "Venus agEUR (Stablecoins)",
-            asset: "agEUR",
-            symbol: "vagEUR_Stablecoins",
+            name: "Venus EURA (Stablecoins)",
+            asset: "EURA",
+            symbol: "vEURA_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -2111,7 +2111,7 @@ export const globalConfig: NetworkConfig = {
           },
           {
             asset: "ANGLE",
-            markets: ["agEUR"],
+            markets: ["EURA"],
             supplySpeeds: ["0"],
             borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },

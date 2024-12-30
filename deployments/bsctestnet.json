@@ -13644,7 +13644,7 @@
         }
       ]
     },
-    "MockagEUR": {
+    "MockEURA": {
       "address": "0x63061de4A25f24279AAab80400040684F92Ee319",
       "abi": [
         {
@@ -64922,7 +64922,7 @@
         }
       ]
     },
-    "VToken_vagEUR_Stablecoins": {
+    "VToken_vEURA_Stablecoins": {
       "address": "0x4E1D35166776825402d50AfE4286c500027211D1",
       "abi": [
         {
