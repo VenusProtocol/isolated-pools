@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vbnbAddress = (await deployments.get("vBNB")).address;
   // Pancake Factory doesn't exist on hardhat so we are using the testnet address
   const pancakeFactoryAddress =
-    hre.network.name === "bscmainnet"
+    hre.getNetworkName() === "bscmainnet"
       ? Mainnet.contracts.pancakeFactory.address
       : Testnet.contracts.pancakeFactory.address;
 
@@ -48,7 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
-  if (hre.network.name !== "bsctestnet") {
+  if (hre.getNetworkName() !== "bsctestnet") {
     const comptrollerStablecoinsAddresses = (await deployments.get("Comptroller_Stablecoins")).address;
     await deploy("SwapRouter_Stablecoins", {
       contract: "SwapRouter",
@@ -89,16 +89,26 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
+
+  const comptrollerBTCAddresses = (await deployments.get("Comptroller_BTC")).address;
+  await deploy("SwapRouter_BTC", {
+    contract: "SwapRouter",
+    from: deployer,
+    args: [wBNBAddress, pancakeFactoryAddress, comptrollerBTCAddresses, vbnbAddress],
+    log: true,
+    autoMine: true,
+    skipIfAlreadyDeployed: true,
+  });
 };
 
 func.tags = ["SwapRouter", "il"];
 // deploySwapRouter.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.live;
 // Pancake Factory is not deployed on the local network
 func.skip = async hre =>
-  hre.network.name === "sepolia" ||
-  hre.network.name === "hardhat" ||
-  hre.network.name === "opbnbtestnet" ||
-  hre.network.name === "opbnbmainnet" ||
-  hre.network.name === "ethereum";
+  hre.getNetworkName() === "sepolia" ||
+  hre.getNetworkName() === "hardhat" ||
+  hre.getNetworkName() === "opbnbtestnet" ||
+  hre.getNetworkName() === "opbnbmainnet" ||
+  hre.getNetworkName() === "ethereum";
 
 export default func;

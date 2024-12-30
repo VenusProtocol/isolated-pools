@@ -20,15 +20,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
   await timelocksDeployment(hre);
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
+
+  console.log("Is Time based", isTimeBased);
 
   // VToken Beacon
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
@@ -49,7 +50,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     skipIfAlreadyDeployed: true,
   });
 
-  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
+  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig);
   for (const pool of poolsWithUnregisteredVTokens) {
     const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
 
@@ -85,7 +86,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
@@ -106,7 +106,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       } else if (rateModel === InterestRateModels.WhitePaper.toString()) {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
@@ -149,7 +148,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         rateModelAddress = result.address;
       }
 
-      console.log(`Deploying VToken proxy for ${symbol}`);
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
