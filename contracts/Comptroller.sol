@@ -168,6 +168,24 @@ contract Comptroller is
     /// @notice Thrown when collateral factor is not zero
     error CollateralFactorIsNotZero();
 
+    /// @notice Thrown when the close factor is invalid
+    error InvalidCloseFactor();
+
+    /// @notice Thrown when the liquidation incentive is invalid
+    error InvalidLiquidationIncentive();
+
+    /// @notice Thrown when the VToken is invalid
+    error InvalidVToken();
+
+    /// @notice Thrown when the input is invalid
+    error InvalidInput();
+
+    /// @notice Thrown when the rewards distributor already exists
+    error RewardsDistributorAlreadyExists();
+
+    /// @notice Thrown when the market does not exist
+    error MarketNotExist();
+
     /**
      * @notice Thrown during the liquidation if user's total collateral amount is lower than
      *   a predefined threshold. In this case only batch liquidations (either liquidateAccount
@@ -1062,7 +1080,10 @@ contract Comptroller is
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
-            require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
+            // require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
+            if (borrowBalance > 0) {
+                revert NonzeroBorrowBalance();
+            }
         }
     }
 
@@ -1074,8 +1095,11 @@ contract Comptroller is
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
-        require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
-        require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
+        if (MAX_CLOSE_FACTOR_MANTISSA < newCloseFactorMantissa || MIN_CLOSE_FACTOR_MANTISSA > newCloseFactorMantissa) {
+            revert InvalidCloseFactor();
+        }
+        // require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
+        // require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
@@ -1150,7 +1174,10 @@ contract Comptroller is
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
-        require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
+        if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
+            revert InvalidLiquidationIncentive();
+        }
+        // require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
@@ -1178,7 +1205,11 @@ contract Comptroller is
             revert MarketAlreadyListed(address(vToken));
         }
 
-        require(vToken.isVToken(), "Comptroller: Invalid vToken"); // Sanity check to make sure its really a VToken
+        if (!vToken.isVToken()) {
+            revert InvalidVToken();
+        }
+
+        // require(vToken.isVToken(), "Comptroller: Invalid vToken"); // Sanity check to make sure its really a VToken
 
         Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;
@@ -1212,7 +1243,10 @@ contract Comptroller is
         uint256 numMarkets = vTokens.length;
         uint256 numBorrowCaps = newBorrowCaps.length;
 
-        require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
+        if (numMarkets == 0 || numMarkets != numBorrowCaps) {
+            revert InvalidInput();
+        }
+        // require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
 
         _ensureMaxLoops(numMarkets);
 
@@ -1236,8 +1270,11 @@ contract Comptroller is
         _checkAccessAllowed("setMarketSupplyCaps(address[],uint256[])");
         uint256 vTokensCount = vTokens.length;
 
-        require(vTokensCount != 0, "invalid number of markets");
-        require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
+        if (vTokensCount == 0 || vTokensCount != newSupplyCaps.length) {
+            revert InvalidInput();
+        }
+        // require(vTokensCount != 0, "invalid number of markets");
+        // require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
 
         _ensureMaxLoops(vTokensCount);
 
@@ -1295,7 +1332,10 @@ contract Comptroller is
      * @custom:event Emits NewRewardsDistributor with distributor address
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
-        require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
+        if (rewardsDistributorExists[address(_rewardsDistributor)]) {
+            revert RewardsDistributorAlreadyExists();
+        }
+        // require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);
@@ -1633,7 +1673,10 @@ contract Comptroller is
      * @param paused The new paused state (true=paused, false=unpaused)
      */
     function _setActionPaused(address market, Action action, bool paused) internal {
-        require(markets[market].isListed, "cannot pause a market that is not listed");
+        if (!markets[market].isListed) {
+            revert MarketNotExist();
+        }
+        // require(markets[market].isListed, "cannot pause a market that is not listed");
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
     }

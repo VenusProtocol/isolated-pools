@@ -101,8 +101,9 @@ describe("Comptroller", () => {
     });
 
     it("reverts if the market is not listed", async () => {
-      await expect(comptroller.setActionsPaused([SKT.address], [1], true)).to.be.revertedWith(
-        "cannot pause a market that is not listed",
+      await expect(comptroller.setActionsPaused([SKT.address], [1], true)).to.be.revertedWithCustomError(
+        comptroller,
+        "MarketNotExist",
       );
     });
 
