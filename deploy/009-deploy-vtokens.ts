@@ -12,7 +12,7 @@ import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 import { AddressOne } from "../helpers/utils";
 
-const mantissaToBps = (num?: BigNumberish) => {
+const mantissaToBps = (num: BigNumberish) => {
   return BigNumber.from(num).div(parseUnits("1", 14)).toString();
 };
 
@@ -116,6 +116,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         });
         rateModelAddress = result.address;
       } else {
+        if (!multiplierPerYear2 || !baseRatePerYear2 || !kink2_) {
+          throw new Error(`Invalid IR model parameters for ${rateModel}`);
+        }
+
         const [b, m, k, m2, b2, k2, j] = [
           baseRatePerYear,
           multiplierPerYear,
