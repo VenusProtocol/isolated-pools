@@ -66,6 +66,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         jumpMultiplierPerYear,
         kink_,
         reserveFactor,
+        multiplierPerYear2,
+        baseRatePerYear2,
+        kink2_,
       } = vtoken;
 
       const token = getTokenConfig(asset, tokensConfig);
@@ -100,13 +103,48 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
-      } else {
+      } else if (rateModel === InterestRateModels.WhitePaper.toString()) {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
           args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
+          log: true,
+          autoMine: true,
+          skipIfAlreadyDeployed: true,
+        });
+        rateModelAddress = result.address;
+      } else {
+        if (!multiplierPerYear2 || !baseRatePerYear2 || !kink2_) {
+          throw new Error(`Invalid IR model parameters for ${rateModel}`);
+        }
+
+        const [b, m, k, m2, b2, k2, j] = [
+          baseRatePerYear,
+          multiplierPerYear,
+          kink_,
+          multiplierPerYear2,
+          baseRatePerYear2,
+          kink2_,
+          jumpMultiplierPerYear,
+        ].map(mantissaToBps);
+        const rateModelName = `TwoKinks_base${b}bps_slope${m}bps_kink${k}bps_slope2${m2}bps_base2${b2}bps_kink2${k2}bps_jump${j}bps`;
+        console.log(`Deploying interest rate model ${rateModelName}`);
+        const result: DeployResult = await deploy(rateModelName, {
+          from: deployer,
+          contract: "TwoKinksInterestRateModel",
+          args: [
+            baseRatePerYear,
+            multiplierPerYear,
+            kink_,
+            multiplierPerYear2,
+            baseRatePerYear2,
+            kink2_,
+            jumpMultiplierPerYear,
+            isTimeBased,
+            blocksPerYear,
+          ],
           log: true,
           autoMine: true,
           skipIfAlreadyDeployed: true,

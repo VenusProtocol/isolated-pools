@@ -26,7 +26,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   for (const pool of poolConfig) {
     // Deploy IR Models
     for (const vtoken of pool.vtokens) {
-      const { rateModel, baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_ } = vtoken;
+      const {
+        rateModel,
+        baseRatePerYear,
+        multiplierPerYear,
+        jumpMultiplierPerYear,
+        kink_,
+        kink2_,
+        multiplierPerYear2,
+        baseRatePerYear2,
+      } = vtoken;
 
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
@@ -47,13 +56,47 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           autoMine: true,
           skipIfAlreadyDeployed: true,
         });
-      } else {
+      } else if (rateModel === InterestRateModels.WhitePaper.toString()) {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
         await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
           args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
+          log: true,
+          autoMine: true,
+          skipIfAlreadyDeployed: true,
+        });
+      } else {
+        if (!multiplierPerYear2 || !baseRatePerYear2 || !kink2_) {
+          throw new Error(`Invalid IR model parameters for ${rateModel}`);
+        }
+
+        const [b, m, k, m2, b2, k2, j] = [
+          baseRatePerYear,
+          multiplierPerYear,
+          kink_,
+          multiplierPerYear2,
+          baseRatePerYear2,
+          kink2_,
+          jumpMultiplierPerYear,
+        ].map(mantissaToBps);
+        const rateModelName = `TwoKinks_base${b}bps_slope${m}bps_kink${k}bps_slope2${m2}bps_base2${b2}bps_kink2${k2}bps_jump${j}bps`;
+        console.log(`Deploying interest rate model ${rateModelName}`);
+        await deploy(rateModelName, {
+          from: deployer,
+          contract: "TwoKinksInterestRateModel",
+          args: [
+            baseRatePerYear,
+            multiplierPerYear,
+            kink_,
+            multiplierPerYear2,
+            baseRatePerYear2,
+            kink2_,
+            jumpMultiplierPerYear,
+            isTimeBased,
+            blocksPerYear,
+          ],
           log: true,
           autoMine: true,
           skipIfAlreadyDeployed: true,
