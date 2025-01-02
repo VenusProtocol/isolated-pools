@@ -1,3 +1,32 @@
+## [3.8.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.3...v3.8.0-dev.4) (2025-01-02)
+
+
+### Features
+
+* added arbitrum IRM ([3ff3310](https://github.com/VenusProtocol/isolated-pools/commit/3ff33101a782d2e863d36638fde64b3124b30e6e))
+* deployed arbitrum IRMs ([2188780](https://github.com/VenusProtocol/isolated-pools/commit/21887808706b7ce278e858c853f5476cfbcdfed4))
+* deployed bscmainnet IRMs ([c4f388c](https://github.com/VenusProtocol/isolated-pools/commit/c4f388c001ae6537136ea0a6cd5ffc1706feb733))
+* deployed ethereum IRM ([39249a0](https://github.com/VenusProtocol/isolated-pools/commit/39249a081e125216c1201af6dd8526af9e4e8433))
+* deployed ethereum IRMs ([e57d2be](https://github.com/VenusProtocol/isolated-pools/commit/e57d2be44aca87055eef949269dfae391c34b106))
+* deployed zksyncmainnet IRMs ([18d98e2](https://github.com/VenusProtocol/isolated-pools/commit/18d98e295af98a76d1748d94fe01b42d8e4423f1))
+* update multifiers for bscmainnet markets ([048996b](https://github.com/VenusProtocol/isolated-pools/commit/048996b9cec4075b4ec6e28806ef40d599b8ae9a))
+* updating deployment files ([3f418d0](https://github.com/VenusProtocol/isolated-pools/commit/3f418d03db1d1dcc5ae5ebe921852b78e47cf679))
+* updating deployment files ([ae189af](https://github.com/VenusProtocol/isolated-pools/commit/ae189af3fb012ec6886562708e11b0cafa49e8f7))
+* updating deployment files ([b92379b](https://github.com/VenusProtocol/isolated-pools/commit/b92379b1e734d44b11bac1cfe0047a26b1850b5a))
+* updating deployment files ([8ea645c](https://github.com/VenusProtocol/isolated-pools/commit/8ea645c50fc8d119993714020de8c25255917d1f))
+* updating deployment files ([fc1ada6](https://github.com/VenusProtocol/isolated-pools/commit/fc1ada665a46f42869a2521d121b489db2ca921c))
+* updating deployment files ([4da1b96](https://github.com/VenusProtocol/isolated-pools/commit/4da1b969d3cb61f7cf82ce5c788cceabf3b2363f))
+* updating deployment files ([5b1e29b](https://github.com/VenusProtocol/isolated-pools/commit/5b1e29b73ced945f0d0294d854fc895ad493d3db))
+
+
+### Bug Fixes
+
+* fixed lint ([f0945cd](https://github.com/VenusProtocol/isolated-pools/commit/f0945cd85521f10db1c6d7285f9af7883fbe91dd))
+* fixed mantissaToBps params ([6a1664c](https://github.com/VenusProtocol/isolated-pools/commit/6a1664c2947193299485c6e329b7a680de29c7c2))
+* merge conflict ([5d98ed0](https://github.com/VenusProtocol/isolated-pools/commit/5d98ed083fcbc416e74fef113d0c9359f6371221))
+* merge conflict ([9dc73dc](https://github.com/VenusProtocol/isolated-pools/commit/9dc73dc0a3cab4dc2efd2680d48bf558e1438d9f))
+* removed wrong deployments ([dfb6da3](https://github.com/VenusProtocol/isolated-pools/commit/dfb6da3c46fbcce70519aa73098469e54e386718))
+
 ## [3.8.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.2...v3.8.0-dev.3) (2024-12-30)
 
 
