@@ -10,8 +10,8 @@ import {
   AccessControlManager,
   Comptroller,
   ERC20Harness,
-  MockFlashloanSimpleReceiver,
-  MockFlashloanSimpleReceiver__factory,
+  MockFlashLoanSimpleReceiver,
+  MockFlashLoanSimpleReceiver__factory,
   VTokenHarness,
 } from "../../../typechain";
 import { initMainnetUser } from "../Fork/utils";
@@ -20,10 +20,10 @@ import { VTokenTestFixture, vTokenTestFixture } from "../util/TokenTestHelpers";
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const flashloanAmount = parseUnits("2", 18).toBigInt();
+const flashLoanAmount = parseUnits("2", 18).toBigInt();
 const feeMantissa = parseUnits("0.01", 18);
 
-describe("Flashloan Simple", () => {
+describe("FlashLoan Simple", () => {
   let minter: SignerWithAddress;
   let alice: SignerWithAddress;
   let receiver: SignerWithAddress;
@@ -31,7 +31,7 @@ describe("Flashloan Simple", () => {
   let contracts: VTokenTestFixture;
   let underlying: MockContract<ERC20Harness>;
   let vToken: VTokenHarness;
-  let mockReceiverSimple: MockFlashloanSimpleReceiver;
+  let mockReceiverSimple: MockFlashLoanSimpleReceiver;
   let accessControlManager: FakeContract<AccessControlManager>;
   let comptroller: FakeContract<Comptroller>;
   let comptrollerSigner: SignerWithAddress;
@@ -47,57 +47,57 @@ describe("Flashloan Simple", () => {
     it("Should have access to toggle falsh loan feature", async () => {
       accessControlManager.isAllowedToCall.returns(false);
 
-      expect(await vToken.isFlashloanEnabled()).to.be.false;
-      await expect(vToken.connect(acmUser).toggleFlashloan()).to.be.revertedWithCustomError(vToken, "Unauthorized");
-      expect(await vToken.isFlashloanEnabled()).to.be.false;
+      expect(await vToken.isFlashLoanEnabled()).to.be.false;
+      await expect(vToken.connect(acmUser).toggleFlashLoan()).to.be.revertedWithCustomError(vToken, "Unauthorized");
+      expect(await vToken.isFlashLoanEnabled()).to.be.false;
     });
 
-    it("Enable flashloan feature", async () => {
+    it("Enable flashLoan feature", async () => {
       accessControlManager.isAllowedToCall.returns(true);
 
-      expect(await vToken.isFlashloanEnabled()).to.be.false;
-      await vToken.connect(acmUser).toggleFlashloan();
-      expect(await vToken.isFlashloanEnabled()).to.be.true;
+      expect(await vToken.isFlashLoanEnabled()).to.be.false;
+      await vToken.connect(acmUser).toggleFlashLoan();
+      expect(await vToken.isFlashLoanEnabled()).to.be.true;
     });
 
-    it("Disable flashloan feature", async () => {
-      expect(await vToken.isFlashloanEnabled()).to.be.false;
-      await vToken.connect(acmUser).toggleFlashloan();
-      expect(await vToken.isFlashloanEnabled()).to.be.true;
+    it("Disable flashLoan feature", async () => {
+      expect(await vToken.isFlashLoanEnabled()).to.be.false;
+      await vToken.connect(acmUser).toggleFlashLoan();
+      expect(await vToken.isFlashLoanEnabled()).to.be.true;
 
-      await vToken.connect(acmUser).toggleFlashloan();
-      expect(await vToken.isFlashloanEnabled()).to.be.false;
+      await vToken.connect(acmUser).toggleFlashLoan();
+      expect(await vToken.isFlashLoanEnabled()).to.be.false;
     });
 
-    it("Emit ToggleFlashloanEnabled event on toggle flashloan feature", async () => {
-      let result = await vToken.connect(acmUser).toggleFlashloan();
-      await expect(result).to.emit(vToken, "ToggleFlashloanEnabled").withArgs(false, true);
+    it("Emit ToggleFlashLoanEnabled event on toggle flashLoan feature", async () => {
+      let result = await vToken.connect(acmUser).toggleFlashLoan();
+      await expect(result).to.emit(vToken, "ToggleFlashLoanEnabled").withArgs(false, true);
 
-      result = await vToken.connect(acmUser).toggleFlashloan();
-      await expect(result).to.emit(vToken, "ToggleFlashloanEnabled").withArgs(true, false);
+      result = await vToken.connect(acmUser).toggleFlashLoan();
+      await expect(result).to.emit(vToken, "ToggleFlashLoanEnabled").withArgs(true, false);
     });
   });
 
-  describe("Set fee on flashloan", () => {
-    it("Should have access to set fee on flashloan", async () => {
+  describe("Set fee on flashLoan", () => {
+    it("Should have access to set fee on flashLoan", async () => {
       accessControlManager.isAllowedToCall.returns(false);
 
-      await expect(vToken.connect(acmUser).setFlashloanFeeMantissa(feeMantissa)).to.be.revertedWithCustomError(
+      await expect(vToken.connect(acmUser).setFlashLoanFeeMantissa(feeMantissa)).to.be.revertedWithCustomError(
         vToken,
         "Unauthorized",
       );
     });
 
-    it("Set fee on flashloan", async () => {
+    it("Set fee on flashLoan", async () => {
       accessControlManager.isAllowedToCall.returns(true);
 
-      await vToken.connect(acmUser).setFlashloanFeeMantissa(feeMantissa);
-      expect(await vToken.flashloanFeeMantissa()).to.be.equal(feeMantissa);
+      await vToken.connect(acmUser).setFlashLoanFeeMantissa(feeMantissa);
+      expect(await vToken.flashLoanFeeMantissa()).to.be.equal(feeMantissa);
     });
 
-    it("Emit FlashloanFeeUpdated event on set fee on flashloan", async () => {
-      const result = await vToken.connect(acmUser).setFlashloanFeeMantissa(feeMantissa);
-      await expect(result).to.emit(vToken, "FlashloanFeeUpdated").withArgs(0, feeMantissa);
+    it("Emit FlashLoanFeeUpdated event on set fee on flashLoan", async () => {
+      const result = await vToken.connect(acmUser).setFlashLoanFeeMantissa(feeMantissa);
+      await expect(result).to.emit(vToken, "FlashLoanFeeUpdated").withArgs(0, feeMantissa);
     });
   });
 
@@ -120,44 +120,44 @@ describe("Flashloan Simple", () => {
     it("Emit TransferUnderlying event on transfer underlying assets to receiver contract", async () => {
       const result = await vToken.connect(comptrollerSigner).transferUnderlying(receiver.address, parseUnits("1", 18));
       await expect(result)
-        .to.emit(vToken, "FlashloanAmountTransferred")
+        .to.emit(vToken, "FlashLoanAmountTransferred")
         .withArgs(underlying.address, receiver.address, parseUnits("1", 18));
     });
   });
 
-  describe("Flashloan Single Asset", () => {
+  describe("FlashLoan Single Asset", () => {
     beforeEach(async () => {
-      const MockFlashloanSimpleReceiver = await ethers.getContractFactory<MockFlashloanSimpleReceiver__factory>(
-        "MockFlashloanSimpleReceiver",
+      const MockFlashLoanSimpleReceiver = await ethers.getContractFactory<MockFlashLoanSimpleReceiver__factory>(
+        "MockFlashLoanSimpleReceiver",
       );
-      mockReceiverSimple = await MockFlashloanSimpleReceiver.deploy(vToken.address);
+      mockReceiverSimple = await MockFlashLoanSimpleReceiver.deploy(vToken.address);
       await mockReceiverSimple.deployed();
 
-      await vToken.connect(acmUser).setFlashloanFeeMantissa(feeMantissa);
+      await vToken.connect(acmUser).setFlashLoanFeeMantissa(feeMantissa);
       await underlying.harnessSetBalance(mockReceiverSimple.address, parseUnits("1", 18));
       await underlying.harnessSetBalance(vToken.address, parseUnits("10", 18));
     });
 
-    it("Should revert if the flashloan is not enabled", async () => {
-      await expect(mockReceiverSimple.requestFlashloan(flashloanAmount)).to.be.revertedWithCustomError(
+    it("Should revert if the flashLoan is not enabled", async () => {
+      await expect(mockReceiverSimple.requestFlashLoan(flashLoanAmount)).to.be.revertedWithCustomError(
         vToken,
         "FlashLoanNotEnabled",
       );
     });
 
-    it("Flashloan for single underlying", async () => {
-      await vToken.connect(acmUser).toggleFlashloan();
+    it("FlashLoan for single underlying", async () => {
+      await vToken.connect(acmUser).toggleFlashLoan();
 
       const balanceBeforeflashLoan = await underlying.balanceOf(vToken.address);
-      const flashloan = await mockReceiverSimple.connect(alice).requestFlashloan(flashloanAmount);
+      const flashLoan = await mockReceiverSimple.connect(alice).requestFlashLoan(flashLoanAmount);
       const balanceAfterflashLoan = await underlying.balanceOf(vToken.address);
 
-      const fee = BigNumber.from(flashloanAmount).mul(feeMantissa).div(parseUnits("1", 18));
+      const fee = BigNumber.from(flashLoanAmount).mul(feeMantissa).div(parseUnits("1", 18));
 
       expect(balanceAfterflashLoan).to.be.equal(balanceBeforeflashLoan.add(fee));
-      await expect(flashloan)
-        .to.emit(vToken, "FlashloanExecuted")
-        .withArgs(mockReceiverSimple.address, underlying.address, flashloanAmount);
+      await expect(flashLoan)
+        .to.emit(vToken, "FlashLoanExecuted")
+        .withArgs(mockReceiverSimple.address, underlying.address, flashLoanAmount);
     });
   });
 });

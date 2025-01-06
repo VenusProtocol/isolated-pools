@@ -1,38 +1,38 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { FlashloanReceiverBase } from "../../Flashloan/base/FlashloanReceiverBase.sol";
+import { FlashLoanReceiverBase } from "../../FlashLoan/base/FlashLoanReceiverBase.sol";
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @title MockFlashloanReceiver
-/// @notice A mock implementation of a flashloan receiver contract that interacts with the Comptroller to request and handle flash loans.
-/// @dev This contract extends `FlashloanReceiverBase` and implements custom logic to request flash loans and repay them.
-contract MockFlashloanReceiver is FlashloanReceiverBase {
+/// @title MockFlashLoanReceiver
+/// @notice A mock implementation of a flashLoan receiver contract that interacts with the Comptroller to request and handle flash loans.
+/// @dev This contract extends `FlashLoanReceiverBase` and implements custom logic to request flash loans and repay them.
+contract MockFlashLoanReceiver is FlashLoanReceiverBase {
     /**
-     * @notice Constructor to initialize the flashloan receiver with the Comptroller contract.
+     * @notice Constructor to initialize the flashLoan receiver with the Comptroller contract.
      * @param comptroller The address of the Comptroller contract used to request flash loans.
      */
-    constructor(ComptrollerInterface comptroller) FlashloanReceiverBase(comptroller) {}
+    constructor(ComptrollerInterface comptroller) FlashLoanReceiverBase(comptroller) {}
 
     /**
      * @notice Requests a flash loan from the Comptroller contract.
-     * @dev This function calls the `executeFlashloan` function from the Comptroller to initiate a flash loan.
+     * @dev This function calls the `executeFlashLoan` function from the Comptroller to initiate a flash loan.
      * @param assets_ An array of VToken contracts that support flash loans.
      * @param amount_ An array of amounts to borrow in the flash loan for each corresponding asset.
      */
-    function requestFlashloan(VTokenInterface[] calldata assets_, uint256[] memory amount_) external {
+    function requestFlashLoan(VTokenInterface[] calldata assets_, uint256[] memory amount_) external {
         address receiver = address(this); // Receiver address is this contract itself
         uint256[] memory amount = amount_; // Set the requested amounts
 
-        // Request the flashloan from the Comptroller contract
-        COMPTROLLER.executeFlashloan(receiver, assets_, amount);
+        // Request the flashLoan from the Comptroller contract
+        COMPTROLLER.executeFlashLoan(receiver, assets_, amount);
     }
 
     /**
      * @notice Executes custom logic after receiving the flash loan.
-     * @dev This function is called by the Comptroller contract as part of the flashloan process.
+     * @dev This function is called by the Comptroller contract as part of the flashLoan process.
      *      It must repay the loan amount plus the premium for each borrowed asset.
      * @param assets The addresses of the VToken contracts for the flash-borrowed assets.
      * @param amounts The amounts of each asset borrowed.

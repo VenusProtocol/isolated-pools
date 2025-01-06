@@ -12,8 +12,8 @@ import {
   AccessControlManager__factory,
   IERC20,
   IERC20__factory,
-  MockFlashloanSimpleReceiver,
-  MockFlashloanSimpleReceiver__factory,
+  MockFlashLoanSimpleReceiver,
+  MockFlashLoanSimpleReceiver__factory,
   UpgradeableBeacon__factory,
   VToken,
   VToken__factory,
@@ -34,7 +34,7 @@ let ARB: IERC20;
 let vARB: VToken;
 let accessControlManager: AccessControlManager;
 let arbHolder: SignerWithAddress;
-let mockReceiverSimpleFlashloan: MockFlashloanSimpleReceiver;
+let mockReceiverSimpleFlashLoan: MockFlashLoanSimpleReceiver;
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const VTOKEN_BEACON_ARB = "0x74ae9919F5866cE148c81331a5FCdE71b81c4056";
@@ -45,8 +45,8 @@ const { VTOKEN2, ACM, ACC1, TOKEN2, ADMIN, BLOCK_NUMBER, TOKEN1_HOLDER } = getCo
   FORKED_NETWORK as string,
 );
 
-const flashloanFeeMantissa = parseUnits("0.01", 18);
-const flashloanAmount = parseUnits("100", 18);
+const flashLoanFeeMantissa = parseUnits("0.01", 18);
+const flashLoanAmount = parseUnits("100", 18);
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -57,17 +57,17 @@ async function grantPermissions() {
   accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
   let tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "toggleFlashloan()", ADMIN);
+    .giveCallPermission(vARB.address, "toggleFlashLoan()", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "setFlashloanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
   await tx.wait();
 }
 
 if (FORK) {
-  describe("Flashloan Fork Test", async () => {
+  describe("FlashLoan Fork Test", async () => {
     async function setup() {
       // Set the forked blockchain to a specific block number to create a consistent testing environment
       await setForkBlock(BLOCK_NUMBER);
@@ -100,54 +100,54 @@ if (FORK) {
       // Run setup before each test to reset the environment
       await setup();
 
-      // Deploy a mock flashloan receiver to test flashloan functionality
-      const MockFlashloanSimpleReceiver = await ethers.getContractFactory<MockFlashloanSimpleReceiver__factory>(
-        "MockFlashloanSimpleReceiver",
+      // Deploy a mock flashLoan receiver to test flashLoan functionality
+      const MockFlashLoanSimpleReceiver = await ethers.getContractFactory<MockFlashLoanSimpleReceiver__factory>(
+        "MockFlashLoanSimpleReceiver",
       );
-      mockReceiverSimpleFlashloan = await MockFlashloanSimpleReceiver.deploy(vARB.address);
+      mockReceiverSimpleFlashLoan = await MockFlashLoanSimpleReceiver.deploy(vARB.address);
     });
 
-    it("Should revert if flashloan not enabled", async () => {
-      // Attempt to take a flashloan when the flashloan feature is disabled should fail
+    it("Should revert if flashLoan not enabled", async () => {
+      // Attempt to take a flashLoan when the flashLoan feature is disabled should fail
       await expect(
-        vARB.connect(john).executeFlashloan(mockReceiverSimpleFlashloan.address, flashloanAmount),
+        vARB.connect(john).executeFlashLoan(mockReceiverSimpleFlashLoan.address, flashLoanAmount),
       ).to.be.revertedWithCustomError(vARB, "FlashLoanNotEnabled");
     });
 
     it("Should revert if receiver is zero address", async () => {
-      // Enable flashloan feature for testing
-      await vARB.connect(impersonatedTimelock).toggleFlashloan();
+      // Enable flashLoan feature for testing
+      await vARB.connect(impersonatedTimelock).toggleFlashLoan();
 
-      // Attempt to take a flashloan with zero address as receiver should fail
-      await expect(vARB.connect(john).executeFlashloan(AddressZero, flashloanAmount)).to.be.revertedWithCustomError(
+      // Attempt to take a flashLoan with zero address as receiver should fail
+      await expect(vARB.connect(john).executeFlashLoan(AddressZero, flashLoanAmount)).to.be.revertedWithCustomError(
         vARB,
         "ZeroAddressNotAllowed",
       );
     });
 
-    it("Should flashloan ARB", async () => {
-      // Transfer ARB tokens to test users for setting up the flashloan test
+    it("Should flashLoan ARB", async () => {
+      // Transfer ARB tokens to test users for setting up the flashLoan test
       await ARB.connect(arbHolder).transfer(vARB.address, parseUnits("1000", 18));
-      await ARB.connect(arbHolder).transfer(mockReceiverSimpleFlashloan.address, parseUnits("50", 18));
+      await ARB.connect(arbHolder).transfer(mockReceiverSimpleFlashLoan.address, parseUnits("50", 18));
 
-      // Record vARB contract's ARB balance before flashloan
+      // Record vARB contract's ARB balance before flashLoan
       const balanceBefore = await ARB.balanceOf(vARB.address);
 
       // Mine blocks if necessary for time-based operations
       await mine(blocksToMine);
 
-      // Enable flashloan feature by the admin
-      await vARB.connect(impersonatedTimelock).toggleFlashloan();
-      await vARB.connect(impersonatedTimelock).setFlashloanFeeMantissa(flashloanFeeMantissa);
+      // Enable flashLoan feature by the admin
+      await vARB.connect(impersonatedTimelock).toggleFlashLoan();
+      await vARB.connect(impersonatedTimelock).setFlashLoanFeeMantissa(flashLoanFeeMantissa);
 
-      // John initiates a flashloan of 2000 ARB through the mock receiver
-      await vARB.connect(john).executeFlashloan(mockReceiverSimpleFlashloan.address, parseUnits("100", 18));
+      // John initiates a flashLoan of 2000 ARB through the mock receiver
+      await vARB.connect(john).executeFlashLoan(mockReceiverSimpleFlashLoan.address, parseUnits("100", 18));
 
-      // Check if the ARB balance in vARB increased, validating flashloan repayment with fees
+      // Check if the ARB balance in vARB increased, validating flashLoan repayment with fees
       const balanceAfter = await ARB.balanceOf(vARB.address);
-      const totalFlashloanFee = flashloanAmount.mul(flashloanFeeMantissa).div(parseUnits("1", 18));
+      const totalFlashLoanFee = flashLoanAmount.mul(flashLoanFeeMantissa).div(parseUnits("1", 18));
 
-      expect(balanceAfter).to.be.equal(balanceBefore.add(totalFlashloanFee));
+      expect(balanceAfter).to.be.equal(balanceBefore.add(totalFlashLoanFee));
     });
   });
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-pragma solidity ^0.8.25;
+pragma solidity 0.8.25;
 
-interface IFlashloanSimpleReceiver {
+interface IFlashLoanSimpleReceiver {
     /**
      * @notice Executes an operation after receiving the flash-borrowed asset
      * @dev Ensure that the contract can return the debt + premium, e.g., has
@@ -9,8 +9,8 @@ interface IFlashloanSimpleReceiver {
      * @param asset The address of the flash-borrowed asset
      * @param amount The amount of the flash-borrowed asset
      * @param premium The premium (fee) associated with flash-borrowed asset.
-     * @param initiator The address that initiated the flashloan operation
-     * @param param The byte-encoded param passed when initiating the flashloan
+     * @param initiator The address that initiated the flashLoan operation
+     * @param param The byte-encoded param passed when initiating the flashLoan
      * @return True if the execution of the operation succeeds, false otherwise
      */
     function executeOperation(

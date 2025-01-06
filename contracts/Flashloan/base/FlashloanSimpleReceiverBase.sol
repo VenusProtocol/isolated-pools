@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { IFlashloanSimpleReceiver } from "../interfaces/IFlashloanSimpleReceiver.sol";
+import { IFlashLoanSimpleReceiver } from "../interfaces/IFlashLoanSimpleReceiver.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
 
 /**
- * @title FlashloanSimpleReceiverBase
+ * @title FlashLoanSimpleReceiverBase
  * @author Venus
- * @notice Base contract to develop a flashloan-receiver contract.
+ * @notice Base contract to develop a flashLoan-receiver contract.
  * @dev This contract serves as a foundational contract for implementing custom flash loan receiver logic.
- * Inheritors of this contract need to implement the `executeOperation` function defined in the `IFlashloanSimpleReceiver` interface.
+ * Inheritors of this contract need to implement the `executeOperation` function defined in the `IFlashLoanSimpleReceiver` interface.
  */
-abstract contract FlashloanSimpleReceiverBase is IFlashloanSimpleReceiver {
+abstract contract FlashLoanSimpleReceiverBase is IFlashLoanSimpleReceiver {
     /// @notice The VToken contract used to initiate and handle flash loan
     /// @dev This is an immutable reference to the VTokenInterface, which enables the flash loan functionality.
     VTokenInterface public immutable VTOKEN;

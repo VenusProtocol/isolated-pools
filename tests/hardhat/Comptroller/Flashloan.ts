@@ -12,8 +12,8 @@ import {
   Comptroller,
   ERC20Harness,
   InterestRateModel,
-  MockFlashloanReceiver,
-  MockFlashloanReceiver__factory,
+  MockFlashLoanReceiver,
+  MockFlashLoanReceiver__factory,
   PoolRegistry,
   ProtocolShareReserve,
   VTokenHarness,
@@ -26,13 +26,13 @@ chai.use(smock.matchers);
 
 const MAX_LOOP_LIMIT = 150;
 
-const flashloanAmount1 = parseUnits("20", 18);
-const flashloanAmount2 = parseUnits("30", 18);
+const flashLoanAmount1 = parseUnits("20", 18);
+const flashLoanAmount2 = parseUnits("30", 18);
 const feeMantissaTokenA = parseUnits("0.01", 18);
 const feeMantissaTokenB = parseUnits("0.02", 18);
 
 // Declare the types here
-type FlashloanContractsFixture = {
+type FlashLoanContractsFixture = {
   accessControlManager: FakeContract<AccessControlManager>;
   protocolShareReserve: FakeContract<ProtocolShareReserve>;
   interestRateModel: FakeContract<InterestRateModel>;
@@ -44,8 +44,8 @@ type FlashloanContractsFixture = {
   VTokenB: VTokenHarness;
 };
 
-// Create a fixture will deploy all the required contracts for flashloan
-const flashLoanTestFixture = async (): Promise<FlashloanContractsFixture> => {
+// Create a fixture will deploy all the required contracts for flashLoan
+const flashLoanTestFixture = async (): Promise<FlashLoanContractsFixture> => {
   const [admin] = await ethers.getSigners();
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
@@ -74,8 +74,8 @@ const flashLoanTestFixture = async (): Promise<FlashloanContractsFixture> => {
       admin,
       interestRateModel,
       protocolShareReserve,
-      isFlashloanAllowed: true,
-      flashloanFeeMantissa: feeMantissaTokenA,
+      isFlashLoanAllowed: true,
+      flashLoanFeeMantissa: feeMantissaTokenA,
     },
     { kind: "VTokenHarness" },
   );
@@ -88,8 +88,8 @@ const flashLoanTestFixture = async (): Promise<FlashloanContractsFixture> => {
       admin,
       interestRateModel,
       protocolShareReserve,
-      isFlashloanAllowed: true,
-      flashloanFeeMantissa: feeMantissaTokenB,
+      isFlashLoanAllowed: true,
+      flashLoanFeeMantissa: feeMantissaTokenB,
     },
     { kind: "VTokenHarness" },
   );
@@ -116,16 +116,16 @@ const flashLoanTestFixture = async (): Promise<FlashloanContractsFixture> => {
   };
 };
 
-describe("Flashloan", async () => {
+describe("FlashLoan", async () => {
   let alice: SignerWithAddress;
   let acmUser: SignerWithAddress;
-  let contracts: FlashloanContractsFixture;
+  let contracts: FlashLoanContractsFixture;
   let VTokenA: VTokenHarness;
   let VTokenB: VTokenHarness;
   let underlyingA: MockContract<ERC20Harness>;
   let underlyingB: MockContract<ERC20Harness>;
   let comptroller: Comptroller;
-  let mockReceiverContract: MockFlashloanReceiver;
+  let mockReceiverContract: MockFlashLoanReceiver;
 
   beforeEach(async () => {
     [alice, acmUser] = await ethers.getSigners();
@@ -133,64 +133,64 @@ describe("Flashloan", async () => {
     ({ comptroller, VTokenA, VTokenB, underlyingA, underlyingB } = contracts);
   });
 
-  describe("Flashloan Multi-Assets", async () => {
+  describe("FlashLoan Multi-Assets", async () => {
     beforeEach(async () => {
-      const MockFlashloanReceiver = await ethers.getContractFactory<MockFlashloanReceiver__factory>(
-        "MockFlashloanReceiver",
+      const MockFlashLoanReceiver = await ethers.getContractFactory<MockFlashLoanReceiver__factory>(
+        "MockFlashLoanReceiver",
       );
-      mockReceiverContract = await MockFlashloanReceiver.deploy(comptroller.address);
+      mockReceiverContract = await MockFlashLoanReceiver.deploy(comptroller.address);
       await mockReceiverContract.deployed();
     });
 
-    it("Should revert if flashloan is not enabled", async () => {
-      await VTokenA.connect(acmUser).toggleFlashloan();
-      expect(await VTokenA.isFlashloanEnabled()).to.be.false;
+    it("Should revert if flashLoan is not enabled", async () => {
+      await VTokenA.connect(acmUser).toggleFlashLoan();
+      expect(await VTokenA.isFlashLoanEnabled()).to.be.false;
 
       await expect(
-        mockReceiverContract.requestFlashloan(
+        mockReceiverContract.requestFlashLoan(
           [VTokenA.address.toString(), VTokenB.address.toString()],
-          [flashloanAmount1, flashloanAmount2],
+          [flashLoanAmount1, flashLoanAmount2],
         ),
       ).to.be.revertedWithCustomError(comptroller, "FlashLoanNotEnabled");
     });
 
-    it("Flashloan for multiple underlying", async () => {
+    it("FlashLoan for multiple underlying", async () => {
       // Admin Enable flashLoan for multiple vToken
-      expect(await VTokenA.isFlashloanEnabled()).to.be.true;
-      expect(await VTokenB.isFlashloanEnabled()).to.be.true;
+      expect(await VTokenA.isFlashLoanEnabled()).to.be.true;
+      expect(await VTokenB.isFlashLoanEnabled()).to.be.true;
 
-      // Set the balance of mockReceiver in order to pay for flashloan fee
+      // Set the balance of mockReceiver in order to pay for flashLoan fee
       await underlyingA.harnessSetBalance(mockReceiverContract.address, parseUnits("10", 18));
       await underlyingB.harnessSetBalance(mockReceiverContract.address, parseUnits("20", 18));
 
       await underlyingA.harnessSetBalance(VTokenA.address, parseUnits("50", 18));
       await underlyingB.harnessSetBalance(VTokenB.address, parseUnits("50", 18));
 
-      // Get the balance before the flashloan
+      // Get the balance before the flashLoan
       const beforeBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);
       const beforeBalanceVTokenB = await underlyingB.balanceOf(VTokenB.address);
 
-      // Execute the flashloan from the mockReceiverContract
-      const flashloan = await mockReceiverContract
+      // Execute the flashLoan from the mockReceiverContract
+      const flashLoan = await mockReceiverContract
         .connect(alice)
-        .requestFlashloan([VTokenA.address, VTokenB.address], [flashloanAmount1, flashloanAmount2]);
+        .requestFlashLoan([VTokenA.address, VTokenB.address], [flashLoanAmount1, flashLoanAmount2]);
 
-      // Get the balance after the flashloan
+      // Get the balance after the flashLoan
       const afterBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);
       const afterBalanceVTokenB = await underlyingB.balanceOf(VTokenB.address);
 
-      const feeOnFlashLoanTokenA = BigNumber.from(flashloanAmount1).mul(feeMantissaTokenA).div(parseUnits("1", 18));
-      const feeOnFlashLoanTokenB = BigNumber.from(flashloanAmount2).mul(feeMantissaTokenB).div(parseUnits("1", 18));
+      const feeOnFlashLoanTokenA = BigNumber.from(flashLoanAmount1).mul(feeMantissaTokenA).div(parseUnits("1", 18));
+      const feeOnFlashLoanTokenB = BigNumber.from(flashLoanAmount2).mul(feeMantissaTokenB).div(parseUnits("1", 18));
 
       expect(afterBalanceVTokenA).to.be.equal(beforeBalanceVTokenA.add(feeOnFlashLoanTokenA));
       expect(afterBalanceVTokenB).to.be.equal(beforeBalanceVTokenB.add(feeOnFlashLoanTokenB));
 
-      await expect(flashloan)
-        .to.emit(comptroller, "FlashloanExecuted")
+      await expect(flashLoan)
+        .to.emit(comptroller, "FlashLoanExecuted")
         .withArgs(
           mockReceiverContract.address,
           [VTokenA.address, VTokenB.address],
-          [flashloanAmount1, flashloanAmount2],
+          [flashLoanAmount1, flashLoanAmount2],
         );
     });
   });

@@ -64,8 +64,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         jumpMultiplierPerYear,
         kink_,
         reserveFactor,
-        isFlashloanAllowed,
-        flashloanFeeMantissa,
+        isFlashLoanAllowed,
+        flashLoanFeeMantissa,
       } = vtoken;
 
       const token = getTokenConfig(asset, tokensConfig);
@@ -145,8 +145,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         accessControlManagerAddress,
         [AddressOne, protocolShareReserveAddress],
         reserveFactor,
-        isFlashloanAllowed,
-        flashloanFeeMantissa,
+        isFlashLoanAllowed,
+        flashLoanFeeMantissa,
       ];
       await deploy(`VToken_${symbol}`, {
         from: deployer,

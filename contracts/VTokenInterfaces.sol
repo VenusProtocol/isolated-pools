@@ -132,14 +132,14 @@ contract VTokenStorage {
     uint256 public reduceReservesBlockNumber;
 
     /**
-     * @notice flashloan is enabled for this market or not
+     * @notice flashLoan is enabled for this market or not
      */
-    bool public isFlashloanEnabled;
+    bool public isFlashLoanEnabled;
 
     /**
-     * @notice fee percentage collected by protocol on flashloan
+     * @notice fee percentage collected by protocol on flashLoan
      */
-    uint256 public flashloanFeeMantissa;
+    uint256 public flashLoanFeeMantissa;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -299,24 +299,24 @@ abstract contract VTokenInterface is VTokenStorage {
     event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
     /**
-     * @notice Event emitted when flashloanEnabled status is changed
+     * @notice Event emitted when flashLoanEnabled status is changed
      */
-    event ToggleFlashloanEnabled(bool oldEnabled, bool enabled);
+    event ToggleFlashLoanEnabled(bool oldEnabled, bool enabled);
 
     /**
-     * @notice Event emitted when flashloan is executed
+     * @notice Event emitted when flashLoan is executed
      */
-    event FlashloanExecuted(address receiver, address underlying, uint256 amount);
+    event FlashLoanExecuted(address receiver, address underlying, uint256 amount);
 
     /**
      * @notice Event emitted when asset is transferred to receiver
      */
-    event FlashloanAmountTransferred(address asset, address receiver, uint256 amount);
+    event FlashLoanAmountTransferred(address asset, address receiver, uint256 amount);
 
     /**
-     * @notice Event emitted when flashloan fee mantissa is updated
+     * @notice Event emitted when flashLoan fee mantissa is updated
      */
-    event FlashloanFeeUpdated(uint256 oldFee, uint256 fee);
+    event FlashLoanFeeUpdated(uint256 oldFee, uint256 fee);
 
     /*** User Interface ***/
 
@@ -368,7 +368,7 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function transferUnderlying(address receiver, uint256 amount) external virtual returns (uint256 balanceBefore);
 
-    function executeFlashloan(address receiver, uint256 amount) external virtual returns (uint256);
+    function executeFlashLoan(address receiver, uint256 amount) external virtual returns (uint256);
 
     /*** Admin Functions ***/
 
@@ -384,9 +384,9 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function addReserves(uint256 addAmount) external virtual;
 
-    function toggleFlashloan() external virtual;
+    function toggleFlashLoan() external virtual;
 
-    function setFlashloanFeeMantissa(uint256 fee) external virtual;
+    function setFlashLoanFeeMantissa(uint256 fee) external virtual;
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 

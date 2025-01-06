@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { IFlashloanReceiver } from "../interfaces/IFlashloanReceiver.sol";
+import { IFlashLoanReceiver } from "../interfaces/IFlashLoanReceiver.sol";
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 
-/// @title FlashloanReceiverBase
-/// @notice A base contract for implementing flashloan receiver logic.
-/// @dev This abstract contract provides the necessary structure for inheriting contracts to implement the `IFlashloanReceiver` interface.
+/// @title FlashLoanReceiverBase
+/// @notice A base contract for implementing flashLoan receiver logic.
+/// @dev This abstract contract provides the necessary structure for inheriting contracts to implement the `IFlashLoanReceiver` interface.
 ///      It stores a reference to the Comptroller contract, which manages various aspects of the protocol.
-abstract contract FlashloanReceiverBase is IFlashloanReceiver {
+abstract contract FlashLoanReceiverBase is IFlashLoanReceiver {
     /// @notice The Comptroller contract that governs the protocol.
     /// @dev This immutable variable stores the address of the Comptroller contract, which cannot be changed after deployment.
     ComptrollerInterface public immutable COMPTROLLER;

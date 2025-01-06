@@ -13,8 +13,8 @@ import {
   Comptroller__factory,
   ERC20,
   ERC20__factory,
-  MockFlashloanReceiver,
-  MockFlashloanReceiver__factory,
+  MockFlashLoanReceiver,
+  MockFlashLoanReceiver__factory,
   UpgradeableBeacon__factory,
   VToken,
   VToken__factory,
@@ -35,32 +35,32 @@ const VTOKEN_BEACON = "0x74ae9919F5866cE148c81331a5FCdE71b81c4056";
 const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(network.name);
 const MAX_BORROW_RATE_MANTISSA = getMaxBorrowRateMantissa(network.name);
 
-const ARBFlashloanFeeMantissa = parseUnits("0.01", 18);
-const WETHFlashloanFeeMantissa = parseUnits("0.03", 18);
-const ARBFlashloanAmount = parseUnits("50", 18);
-const WETHFlashloanAmount = parseUnits("20", 18);
+const ARBFlashLoanFeeMantissa = parseUnits("0.01", 18);
+const WETHFlashLoanFeeMantissa = parseUnits("0.03", 18);
+const ARBFlashLoanAmount = parseUnits("50", 18);
+const WETHFlashLoanAmount = parseUnits("20", 18);
 
 // Giving permission to Timelock to call chainlink setDirectPrice and setTokenConfig
 async function grantPermissions() {
   accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
   let tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "toggleFlashloan()", ADMIN);
+    .giveCallPermission(vARB.address, "toggleFlashLoan()", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "setFlashloanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vWETH.address, "toggleFlashloan()", ADMIN);
+    .giveCallPermission(vWETH.address, "toggleFlashLoan()", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vWETH.address, "setFlashloanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vWETH.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
   await tx.wait();
 }
 
@@ -74,7 +74,7 @@ let ARB: ERC20;
 let WETH: ERC20;
 let vARB: VToken;
 let vWETH: VToken;
-let mockFlashloanReceiver: MockFlashloanReceiver;
+let mockFlashLoanReceiver: MockFlashLoanReceiver;
 
 async function setup() {
   await setForkBlock(BLOCK_NUMBER);
@@ -112,59 +112,59 @@ async function setup() {
 }
 
 if (FORK) {
-  describe("Flashloan Fork Test", async () => {
+  describe("FlashLoan Fork Test", async () => {
     beforeEach(async () => {
       // Run the setup function before each test to initialize the environment
       await setup();
 
-      // Deploy a mock flashloan receiver contract to simulate flashloan interactions in tests
-      const MockFlashloanReceiver = await ethers.getContractFactory<MockFlashloanReceiver__factory>(
-        "MockFlashloanReceiver",
+      // Deploy a mock flashLoan receiver contract to simulate flashLoan interactions in tests
+      const MockFlashLoanReceiver = await ethers.getContractFactory<MockFlashLoanReceiver__factory>(
+        "MockFlashLoanReceiver",
       );
-      mockFlashloanReceiver = await MockFlashloanReceiver.deploy(comptroller.address);
+      mockFlashLoanReceiver = await MockFlashLoanReceiver.deploy(comptroller.address);
     });
 
-    it("Should revert if flashloan not enabled", async () => {
-      // Attempt to execute a flashloan when the flashloan feature is disabled, which should revert
+    it("Should revert if flashLoan not enabled", async () => {
+      // Attempt to execute a flashLoan when the flashLoan feature is disabled, which should revert
       await expect(
         comptroller
           .connect(john)
-          .executeFlashloan(
-            mockFlashloanReceiver.address,
+          .executeFlashLoan(
+            mockFlashLoanReceiver.address,
             [vARB.address, vWETH.address],
-            [ARBFlashloanAmount, WETHFlashloanAmount],
+            [ARBFlashLoanAmount, WETHFlashLoanAmount],
           ),
       ).to.be.revertedWithCustomError(vARB, "FlashLoanNotEnabled");
     });
 
     it("Should revert if asset and amount arrays are mismatched", async () => {
-      // Attempt to execute a flashloan with mismatched arrays for assets and amounts, which should revert
+      // Attempt to execute a flashLoan with mismatched arrays for assets and amounts, which should revert
       await expect(
-        comptroller.connect(john).executeFlashloan(
-          mockFlashloanReceiver.address,
+        comptroller.connect(john).executeFlashLoan(
+          mockFlashLoanReceiver.address,
           [vARB.address], // Only one asset provided
-          [ARBFlashloanAmount, WETHFlashloanAmount], // Two loan amounts provided
+          [ARBFlashLoanAmount, WETHFlashLoanAmount], // Two loan amounts provided
         ),
-      ).to.be.revertedWithCustomError(comptroller, "InvalidFlashloanParams");
+      ).to.be.revertedWithCustomError(comptroller, "InvalidFlashLoanParams");
     });
 
     it("Should revert if receiver is zero address", async () => {
-      // Attempt to execute a flashloan with a zero address as the receiver, which should revert
+      // Attempt to execute a flashLoan with a zero address as the receiver, which should revert
       await expect(
-        comptroller.connect(john).executeFlashloan(
-          mockFlashloanReceiver.address,
+        comptroller.connect(john).executeFlashLoan(
+          mockFlashLoanReceiver.address,
           [AddressZero], // Zero address as an asset, which is invalid
-          [ARBFlashloanAmount, WETHFlashloanAmount],
+          [ARBFlashLoanAmount, WETHFlashLoanAmount],
         ),
-      ).to.be.revertedWithCustomError(comptroller, "InvalidFlashloanParams");
+      ).to.be.revertedWithCustomError(comptroller, "InvalidFlashLoanParams");
     });
 
-    it("Should be able to do flashloan for ARB & WETH", async () => {
+    it("Should be able to do flashLoan for ARB & WETH", async () => {
       // Transfer ARB and WETH tokens to Alice to set up initial balances
       await ARB.connect(arbHolder).transfer(vARB.address, parseUnits("100", 18));
-      await ARB.connect(arbHolder).transfer(mockFlashloanReceiver.address, parseUnits("10", 18));
+      await ARB.connect(arbHolder).transfer(mockFlashLoanReceiver.address, parseUnits("10", 18));
       await WETH.connect(wETHHolder).transfer(vWETH.address, parseUnits("50", 18));
-      await WETH.connect(wETHHolder).transfer(mockFlashloanReceiver.address, parseUnits("5", 18));
+      await WETH.connect(wETHHolder).transfer(mockFlashLoanReceiver.address, parseUnits("5", 18));
 
       // Mine blocks as required by the test setup
       await mine(blocksToMine);
@@ -172,32 +172,32 @@ if (FORK) {
       const balanceBeforeARB = await ARB.balanceOf(vARB.address);
       const balanceBeforeWETH = await WETH.balanceOf(vWETH.address);
 
-      // Enable the flashloan and set fee mantissa on vARB and vWETH contracts
-      await vARB.connect(impersonatedTimelock).toggleFlashloan();
-      await vWETH.connect(impersonatedTimelock).toggleFlashloan();
+      // Enable the flashLoan and set fee mantissa on vARB and vWETH contracts
+      await vARB.connect(impersonatedTimelock).toggleFlashLoan();
+      await vWETH.connect(impersonatedTimelock).toggleFlashLoan();
 
-      await vARB.connect(impersonatedTimelock).setFlashloanFeeMantissa(ARBFlashloanFeeMantissa);
-      await vWETH.connect(impersonatedTimelock).setFlashloanFeeMantissa(WETHFlashloanFeeMantissa);
+      await vARB.connect(impersonatedTimelock).setFlashLoanFeeMantissa(ARBFlashLoanFeeMantissa);
+      await vWETH.connect(impersonatedTimelock).setFlashLoanFeeMantissa(WETHFlashLoanFeeMantissa);
 
-      // John initiates a flashloan of ARB and WETH through the comptroller contract
+      // John initiates a flashLoan of ARB and WETH through the comptroller contract
       await comptroller
         .connect(john)
-        .executeFlashloan(
-          mockFlashloanReceiver.address,
+        .executeFlashLoan(
+          mockFlashLoanReceiver.address,
           [vARB.address, vWETH.address],
-          [ARBFlashloanAmount, WETHFlashloanAmount],
+          [ARBFlashLoanAmount, WETHFlashLoanAmount],
         );
 
-      // Record ARB and WETH balances in vARB and vWETH contracts after flashloan
+      // Record ARB and WETH balances in vARB and vWETH contracts after flashLoan
       const balanceAfterARB = await ARB.balanceOf(vARB.address);
       const balanceAfterWETH = await WETH.balanceOf(vWETH.address);
 
-      const ARBFlashloanFee = ARBFlashloanAmount.mul(ARBFlashloanFeeMantissa).div(parseUnits("1", 18));
-      const WETHFlashloanFee = WETHFlashloanAmount.mul(WETHFlashloanFeeMantissa).div(parseUnits("1", 18));
+      const ARBFlashLoanFee = ARBFlashLoanAmount.mul(ARBFlashLoanFeeMantissa).div(parseUnits("1", 18));
+      const WETHFlashLoanFee = WETHFlashLoanAmount.mul(WETHFlashLoanFeeMantissa).div(parseUnits("1", 18));
 
       // Validate that ARB and WETH balances in the contracts increased, confirming repayment plus fees
-      expect(balanceAfterARB).to.be.equal(balanceBeforeARB.add(ARBFlashloanFee));
-      expect(balanceAfterWETH).to.be.equal(balanceBeforeWETH.add(WETHFlashloanFee));
+      expect(balanceAfterARB).to.be.equal(balanceBeforeARB.add(ARBFlashLoanFee));
+      expect(balanceAfterWETH).to.be.equal(balanceBeforeWETH.add(WETHFlashLoanFee));
     });
   });
 }

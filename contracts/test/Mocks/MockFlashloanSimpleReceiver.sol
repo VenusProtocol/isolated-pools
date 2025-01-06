@@ -1,32 +1,32 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { FlashloanSimpleReceiverBase } from "../../Flashloan/base/FlashloanSimpleReceiverBase.sol";
+import { FlashLoanSimpleReceiverBase } from "../../FlashLoan/base/FlashLoanSimpleReceiverBase.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @title MockFlashloanSimpleReceiver
+/// @title MockFlashLoanSimpleReceiver
 /// @notice This contract serves as a mock implementation for a flash loan receiver, utilizing the
-///         FlashloanSimpleReceiverBase as a foundation. It provides the ability to request a flash loan and
+///         FlashLoanSimpleReceiverBase as a foundation. It provides the ability to request a flash loan and
 ///         defines how the loan is repaid by implementing custom logic in the `executeOperation` function.
-contract MockFlashloanSimpleReceiver is FlashloanSimpleReceiverBase {
+contract MockFlashLoanSimpleReceiver is FlashLoanSimpleReceiverBase {
     /**
-     * @notice Constructor that initializes the flashloan receiver with a reference to the VToken contract.
-     * @param vToken The address of the VTokenInterface contract that supports flashloan functionality.
+     * @notice Constructor that initializes the flashLoan receiver with a reference to the VToken contract.
+     * @param vToken The address of the VTokenInterface contract that supports flashLoan functionality.
      */
-    constructor(VTokenInterface vToken) FlashloanSimpleReceiverBase(vToken) {}
+    constructor(VTokenInterface vToken) FlashLoanSimpleReceiverBase(vToken) {}
 
     /**
      * @notice Requests a flash loan from the VToken contract.
      * @param amount_ The amount of tokens to borrow through the flash loan.
-     * @dev This function calls the `executeFlashloan` function of the VToken contract.
+     * @dev This function calls the `executeFlashLoan` function of the VToken contract.
      */
-    function requestFlashloan(uint256 amount_) external {
+    function requestFlashLoan(uint256 amount_) external {
         address receiver = address(this); // Receiver address is this contract itself
         uint256 amount = amount_; // Set the requested amount
 
-        // Request the flashloan from the VToken contract
-        VTOKEN.executeFlashloan(receiver, amount);
+        // Request the flashLoan from the VToken contract
+        VTOKEN.executeFlashLoan(receiver, amount);
     }
 
     /**

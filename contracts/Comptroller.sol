@@ -13,7 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
-import { IFlashloanReceiver } from "./Flashloan/interfaces/IFlashloanReceiver.sol";
+import { IFlashLoanReceiver } from "./FlashLoan/interfaces/IFlashLoanReceiver.sol";
 
 /**
  * @title Comptroller
@@ -106,7 +106,7 @@ contract Comptroller is
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
     /// @notice Emitted When the flash loan is successfully executed
-    event FlashloanExecuted(address receiver, VTokenInterface[] assets, uint256[] amounts);
+    event FlashLoanExecuted(address receiver, VTokenInterface[] assets, uint256[] amounts);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -222,17 +222,17 @@ contract Comptroller is
     /// @notice Thrown if delegate approval status is already set to the requested value
     error DelegationStatusUnchanged();
 
-    /// @notice Thrown if invalid flashloan params passed
-    error InvalidFlashloanParams();
+    /// @notice Thrown if invalid flashLoan params passed
+    error InvalidFlashLoanParams();
 
-    ///@notice Thrown if the flashloan is not enabled for a particular market
+    ///@notice Thrown if the flashLoan is not enabled for a particular market
     error FlashLoanNotEnabled(address market);
 
     ///@notice Thrown if repayment amount is insufficient
     error InsufficientReypaymentBalance(address tokenAddress);
 
     ///@notice Thrown if executeOperation failed
-    error ExecuteFlashloanFailed();
+    error ExecuteFlashLoanFailed();
 
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -955,34 +955,34 @@ contract Comptroller is
     }
 
     /**
-     * @notice Executes a flashloan operation with the specified assets and amounts.
+     * @notice Executes a flashLoan operation with the specified assets and amounts.
      * @dev Transfer the specified assets to the receiver contract and ensures that the total repayment (amount + fee)
      *      is returned by the receiver contract after the operation for each asset. The function performs checks to ensure the validity
-     *      of parameters, that flashloans are enabled for the given assets, and that the total repayment is sufficient.
-     *      Reverts on invalid parameters, disabled flashloans, or insufficient repayment.
-     * @param receiver The address of the contract that will receive the flashloan and execute the operation.
+     *      of parameters, that flashLoans are enabled for the given assets, and that the total repayment is sufficient.
+     *      Reverts on invalid parameters, disabled flashLoans, or insufficient repayment.
+     * @param receiver The address of the contract that will receive the flashLoan and execute the operation.
      * @param assets The addresses of the assets to be loaned.
      * @param amounts The amounts of each asset to be loaned.
      * @custom:requirements
      *      - `assets.length` must be equal to `amounts.length`.
      *      - `assets.length` and `amounts.length` must not be zero.
      *      - The `receiver` address must not be the zero address.
-     *      - Flashloans must be enabled for each asset.
+     *      - FlashLoans must be enabled for each asset.
      *      - The `receiver` contract must repay the loan with the appropriate fee.
      * @custom:reverts
-     *      - Reverts with `InvalidFlashloanParams()` if parameter checks fail.
-     *      - Reverts with `FlashLoanNotEnabled(asset)` if flashloans are disabled for any of the requested assets.
-     *      - Reverts with `ExecuteFlashloanFailed` if the receiver contract fails to execute the operation.
+     *      - Reverts with `InvalidFlashLoanParams()` if parameter checks fail.
+     *      - Reverts with `FlashLoanNotEnabled(asset)` if flashLoans are disabled for any of the requested assets.
+     *      - Reverts with `ExecuteFlashLoanFailed` if the receiver contract fails to execute the operation.
      *      - Reverts with `InsufficientReypaymentBalance(asset)` if the repayment (amount + fee) is insufficient after the operation.
      */
-    function executeFlashloan(
+    function executeFlashLoan(
         address receiver,
         VTokenInterface[] calldata assets,
         uint256[] calldata amounts
     ) external override {
         // Asset and amount length must be equals and not be zero
         if (assets.length != amounts.length || assets.length == 0 || receiver == address(0)) {
-            revert InvalidFlashloanParams();
+            revert InvalidFlashLoanParams();
         }
 
         uint256 len = assets.length;
@@ -1001,8 +1001,8 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!IFlashloanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, "")) {
-            revert ExecuteFlashloanFailed();
+        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, "")) {
+            revert ExecuteFlashLoanFailed();
         }
 
         for (uint256 k; k < len; ) {
@@ -1013,7 +1013,7 @@ contract Comptroller is
             }
         }
 
-        emit FlashloanExecuted(receiver, assets, amounts);
+        emit FlashLoanExecuted(receiver, assets, amounts);
     }
 
     /**

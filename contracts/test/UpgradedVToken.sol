@@ -58,8 +58,8 @@ contract UpgradedVToken is VToken {
         address accessControlManager_,
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_,
-        bool isFlashloanEnabled_,
-        uint256 flashloanFeeMantissa_
+        bool isFlashLoanEnabled_,
+        uint256 flashLoanFeeMantissa_
     ) public reinitializer(2) {
         super._initialize(
             underlying_,
@@ -73,8 +73,8 @@ contract UpgradedVToken is VToken {
             accessControlManager_,
             riskManagement,
             reserveFactorMantissa_,
-            isFlashloanEnabled_,
-            flashloanFeeMantissa_
+            isFlashLoanEnabled_,
+            flashLoanFeeMantissa_
         );
     }
 
