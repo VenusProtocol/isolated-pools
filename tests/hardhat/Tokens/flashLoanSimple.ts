@@ -44,7 +44,7 @@ describe("FlashLoan Simple", () => {
   });
 
   describe("Enable/disable flash loan feature", () => {
-    it("Should have access to toggle falsh loan feature", async () => {
+    it("Should have access to toggle flash loan feature", async () => {
       accessControlManager.isAllowedToCall.returns(false);
 
       expect(await vToken.isFlashLoanEnabled()).to.be.false;
