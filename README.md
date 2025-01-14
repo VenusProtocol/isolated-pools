@@ -127,6 +127,16 @@ npx hardhat deploy
   - In the deployment scripts you have added `tags` for example: - `func.tags = ["MockTokens"];`
   - Once this is done, adding `--tags "<tag_name>,<tag_name>..."` to the deployment command will execute only the scripts containing the tags.
 
+### Dry Run / Forked Deployments
+
+To simulate what contracts would be deployed on a given network the deployment scripts support running on a forked network. To run the deployment scripts on a forked network the `HARDHAT_FORK_NETWORK` env variable needs to be set.
+
+For example
+
+```bash
+HARDHAT_FORK_NETWORK=ethereum npx hardhat deploy
+```
+
 ### Deployed Contracts
 
 Deployed contract abis and addresses are exported in the `deployments` directory. To create a summary export of all contracts deployed to a network run

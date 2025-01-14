@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { IFlashLoanReceiver } from "../interfaces/IFlashLoanReceiver.sol";
+import { IFlashLoanReceiver } from "../interfaces/IFlashloanReceiver.sol";
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 
 /// @title FlashLoanReceiverBase

@@ -13,7 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
-import { IFlashLoanReceiver } from "./FlashLoan/interfaces/IFlashLoanReceiver.sol";
+import { IFlashLoanReceiver } from "./Flashloan/interfaces/IFlashloanReceiver.sol";
 
 /**
  * @title Comptroller

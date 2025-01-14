@@ -84,6 +84,7 @@ export const deployVTokenBeacon = async <VTokenFactory extends AnyVTokenFactory 
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
   const vTokenBeacon = (await upgrades.deployBeacon(VToken, {
     constructorArgs: [isTimeBased, blocksPerYear, maxBorrowRateMantissa],
+    unsafeAllow: ["internal-function-storage"],
   })) as UpgradeableBeacon;
   return vTokenBeacon;
 };

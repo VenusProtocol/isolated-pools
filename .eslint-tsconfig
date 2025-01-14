@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["jest.config.js", ".eslintrc.js", "tests", "scenario", "deploy", "docgen-templates", "commitlint.config.js", "./hardhat.config.zksync.ts"]
+  "include": ["jest.config.js", ".eslintrc.js", "tests", "scenario", "deploy", "docgen-templates", "commitlint.config.js", "./hardhat.config.zksync.ts", "type-extensions.ts"]
 }

@@ -14,7 +14,7 @@ import { InterestRateModel } from "./InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
-import { IFlashLoanSimpleReceiver } from "./FlashLoan/interfaces/IFlashLoanSimpleReceiver.sol";
+import { IFlashLoanSimpleReceiver } from "./Flashloan/interfaces/IFlashloanSimpleReceiver.sol";
 
 /**
  * @title VToken
