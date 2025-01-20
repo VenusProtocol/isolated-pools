@@ -63,6 +63,7 @@ type BidderDeploymentValues = {
 
 export type TokenConfig = {
   isMock: boolean;
+  standard?: "ERC-20" | "ERC-4626";
   name?: string;
   symbol: string;
   decimals?: number;
