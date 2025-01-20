@@ -10,10 +10,11 @@ import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
-import { subtask } from "hardhat/config";
-import { HardhatUserConfig, extendConfig, task } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, extendEnvironment, subtask, task } from "hardhat/config";
 import { HardhatConfig } from "hardhat/types";
 import "solidity-docgen";
+
+import "./type-extensions";
 
 dotenv.config();
 
@@ -29,6 +30,10 @@ extendConfig((config: HardhatConfig) => {
       },
     };
   }
+});
+
+extendEnvironment(hre => {
+  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name;
 });
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
