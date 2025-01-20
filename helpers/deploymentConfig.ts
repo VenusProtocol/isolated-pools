@@ -261,16 +261,16 @@ export const preconfiguredAddresses = {
   },
   zksyncsepolia: {
     VTreasury: venusProtocolZkSyncSepolia.VTreasuryV8.address,
-    NormalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
-    FastTrackTimelock: ZKSYNC_SEPOLIA_MULTISIG,
-    CriticalTimelock: ZKSYNC_SEPOLIA_MULTISIG,
+    NormalTimelock: governanceZkSyncSepolia.NormalTimelock.address,
+    FastTrackTimelock: governanceZkSyncSepolia.FastTrackTimelock.address,
+    CriticalTimelock: governanceZkSyncSepolia.CriticalTimelock.address,
     AccessControlManager: governanceZkSyncSepolia.AccessControlManager.address,
   },
   zksyncmainnet: {
     VTreasury: venusProtocolZkSyncMainnet.VTreasuryV8.address,
-    NormalTimelock: ZKSYNC_MAINNET_MULTISIG,
-    FastTrackTimelock: ZKSYNC_MAINNET_MULTISIG,
-    CriticalTimelock: ZKSYNC_MAINNET_MULTISIG,
+    NormalTimelock: governanceZkSyncMainnet.NormalTimelock.address,
+    FastTrackTimelock: governanceZkSyncMainnet.FastTrackTimelock.address,
+    CriticalTimelock: governanceZkSyncMainnet.CriticalTimelock.address,
     AccessControlManager: governanceZkSyncMainnet.AccessControlManager.address,
   },
   opsepolia: {

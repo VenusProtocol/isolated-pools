@@ -25,8 +25,14 @@ extendConfig((config: HardhatConfig) => {
     config.external = {
       ...config.external,
       deployments: {
-        zksyncsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/zksyncsepolia"],
-        zksyncmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/zksyncmainnet"],
+        zksyncsepolia: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/zksyncsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/zksyncsepolia",
+        ],
+        zksyncmainnet: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/zksyncmainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/zksyncmainnet",
+        ],
       },
     };
   }
