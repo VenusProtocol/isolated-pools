@@ -1,3 +1,19 @@
+## [3.8.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.4...v3.8.0-dev.5) (2025-01-22)
+
+
+### Features
+
+* add vwUSDM_Core deployment to zkSync ([feeb90c](https://github.com/VenusProtocol/isolated-pools/commit/feeb90c8c15b207a988b8acdd3e9ac309c84a545))
+* support ERC-4626 mock tokens ([37dac6b](https://github.com/VenusProtocol/isolated-pools/commit/37dac6b4319b37f4dd3a5cd32915605ce41bf285))
+* tag testnets and deploy mock tokens on testnets ([970486b](https://github.com/VenusProtocol/isolated-pools/commit/970486b17a31d99b33f8f43fa0a19b7e222c1adf))
+* updating deployment files ([b62c931](https://github.com/VenusProtocol/isolated-pools/commit/b62c9314ba83c74c311a96b037b0bb8161e5d8ce))
+* use timelocks instead of guardians for zkSync deployments ([b4d72dd](https://github.com/VenusProtocol/isolated-pools/commit/b4d72dd13a43e03486d0be238d72c8676f507de6))
+
+
+### Bug Fixes
+
+* support getNetworkName for zkSync ([3fda9a5](https://github.com/VenusProtocol/isolated-pools/commit/3fda9a55216b34db394b68627e430b5d43afffb4))
+
 ## [3.8.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.3...v3.8.0-dev.4) (2025-01-02)
 
 
