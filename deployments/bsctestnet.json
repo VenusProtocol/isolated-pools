@@ -9009,8 +9009,8 @@
         }
       ]
     },
-    "MockFLOKI": {
-      "address": "0xb22cF15FBc089d470f8e532aeAd2baB76bE87c88",
+    "MockEURA": {
+      "address": "0x63061de4A25f24279AAab80400040684F92Ee319",
       "abi": [
         {
           "inputs": [
@@ -9318,8 +9318,8 @@
         }
       ]
     },
-    "MocklisUSD": {
-      "address": "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
+    "MockFLOKI": {
+      "address": "0xb22cF15FBc089d470f8e532aeAd2baB76bE87c88",
       "abi": [
         {
           "inputs": [
@@ -13644,8 +13644,8 @@
         }
       ]
     },
-    "MockEURA": {
-      "address": "0x63061de4A25f24279AAab80400040684F92Ee319",
+    "MockankrBNB": {
+      "address": "0x167F1F9EF531b3576201aa3146b13c57dbEda514",
       "abi": [
         {
           "inputs": [
@@ -13953,8 +13953,8 @@
         }
       ]
     },
-    "MockankrBNB": {
-      "address": "0x167F1F9EF531b3576201aa3146b13c57dbEda514",
+    "MocklisUSD": {
+      "address": "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
       "abi": [
         {
           "inputs": [
@@ -63294,6 +63294,80 @@
         }
       ]
     },
+    "VToken_vEURA_Stablecoins": {
+      "address": "0x4E1D35166776825402d50AfE4286c500027211D1",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
     "VToken_vFLOKI_GameFi": {
       "address": "0xef470AbC365F88e4582D8027172a392C473A5B53",
       "abi": [
@@ -63368,7 +63442,7 @@
         }
       ]
     },
-    "VToken_vlisUSD_StableCoins": {
+    "VToken_vHAY_StableCoins": {
       "address": "0x170d3b2da05cc2124334240fB34ad1359e34C562",
       "abi": [
         {
@@ -63666,80 +63740,6 @@
     },
     "VToken_vRACA_GameFi": {
       "address": "0x1958035231E125830bA5d17D168cEa07Bb42184a",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
-        }
-      ]
-    },
-    "VToken_vslisBNB_LiquidStakedBNB": {
-      "address": "0xeffE7874C345aE877c1D893cd5160DDD359b24dA",
       "abi": [
         {
           "inputs": [
@@ -64922,80 +64922,6 @@
         }
       ]
     },
-    "VToken_vEURA_Stablecoins": {
-      "address": "0x4E1D35166776825402d50AfE4286c500027211D1",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
-        }
-      ]
-    },
     "VToken_vankrBNB_DeFi": {
       "address": "0xe507B30C41E9e375BCe05197c1e09fc9ee40c0f6",
       "abi": [
@@ -65072,6 +64998,154 @@
     },
     "VToken_vankrBNB_LiquidStakedBNB": {
       "address": "0x57a664Dd7f1dE19545fEE9c86C949e3BF43d6D47",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "VToken_vlisUSD_Stablecoins": {
+      "address": "0xbd7037aCB46Bc2fD45b4f1b3AaA857fa5105E5AB",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "VToken_vslisBNB_LiquidStakedBNB": {
+      "address": "0xeffE7874C345aE877c1D893cd5160DDD359b24dA",
       "abi": [
         {
           "inputs": [
