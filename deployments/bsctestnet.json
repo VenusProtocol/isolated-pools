@@ -2677,7 +2677,7 @@
         }
       ]
     },
-    "Comptroller_StableCoins": {
+    "Comptroller_Stablecoins": {
       "address": "0x10b57706AD2345e590c2eA4DC02faef0d9f5b08B",
       "abi": [
         {
@@ -35819,7 +35819,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_0": {
+    "RewardsDistributor_Stablecoins_0": {
       "address": "0xb0269d68CfdCc30Cb7Cd2E0b52b08Fa7Ffd3079b",
       "abi": [
         {
@@ -36951,7 +36951,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_0_Proxy": {
+    "RewardsDistributor_Stablecoins_0_Proxy": {
       "address": "0xb0269d68CfdCc30Cb7Cd2E0b52b08Fa7Ffd3079b",
       "abi": [
         {
@@ -37100,7 +37100,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_1": {
+    "RewardsDistributor_Stablecoins_1": {
       "address": "0x2aBEf3602B688493fe698EF11D27DCa43a0CE4BE",
       "abi": [
         {
@@ -38232,7 +38232,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_1_Proxy": {
+    "RewardsDistributor_Stablecoins_1_Proxy": {
       "address": "0x2aBEf3602B688493fe698EF11D27DCa43a0CE4BE",
       "abi": [
         {
@@ -38381,7 +38381,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_2": {
+    "RewardsDistributor_Stablecoins_2": {
       "address": "0x78d32FC46e5025c29e3BA03Fcf2840323351F26a",
       "abi": [
         {
@@ -39513,7 +39513,7 @@
         }
       ]
     },
-    "RewardsDistributor_StableCoins_2_Proxy": {
+    "RewardsDistributor_Stablecoins_2_Proxy": {
       "address": "0x78d32FC46e5025c29e3BA03Fcf2840323351F26a",
       "abi": [
         {
@@ -57126,7 +57126,7 @@
         }
       ]
     },
-    "SwapRouter_StableCoins": {
+    "SwapRouter_Stablecoins": {
       "address": "0x8Ff3c0a74b4CBD4dFA3A35Cca756490bE351F936",
       "abi": [
         {
@@ -63442,7 +63442,7 @@
         }
       ]
     },
-    "VToken_vHAY_StableCoins": {
+    "VToken_vHAY_Stablecoins": {
       "address": "0x170d3b2da05cc2124334240fB34ad1359e34C562",
       "abi": [
         {
@@ -64182,7 +64182,7 @@
         }
       ]
     },
-    "VToken_vUSDD_StableCoins": {
+    "VToken_vUSDD_Stablecoins": {
       "address": "0x899dDf81DfbbF5889a16D075c352F2b959Dd24A4",
       "abi": [
         {
@@ -64626,7 +64626,7 @@
         }
       ]
     },
-    "VToken_vUSDT_StableCoins": {
+    "VToken_vUSDT_Stablecoins": {
       "address": "0x3338988d0beb4419Acb8fE624218754053362D06",
       "abi": [
         {

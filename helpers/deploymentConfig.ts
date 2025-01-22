@@ -952,8 +952,8 @@ export const globalConfig: NetworkConfig = {
     ],
     poolConfig: [
       {
-        id: "StableCoins",
-        name: "Stable Coins",
+        id: "Stablecoins",
+        name: "Stablecoins",
         closeFactor: convertToUnit("0.5", 18),
         liquidationIncentive: convertToUnit("1.1", 18),
         minLiquidatableCollateral: convertToUnit("100", 18),
@@ -961,7 +961,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus lisUSD (Stable Coins)",
             asset: "lisUSD",
-            symbol: "vlisUSD_StableCoins",
+            symbol: "vlisUSD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -979,7 +979,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus USDT (Stable Coins)",
             asset: "USDT",
-            symbol: "vUSDT_StableCoins",
+            symbol: "vUSDT_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.05", 18),
@@ -997,7 +997,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus USDD (Stable Coins)",
             asset: "USDD",
-            symbol: "vUSDD_StableCoins",
+            symbol: "vUSDD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
