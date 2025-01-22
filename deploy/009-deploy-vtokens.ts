@@ -1,4 +1,5 @@
-import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/001-psr";
+import timelocksDeployment from "@venusprotocol/governance-contracts/dist/deploy/001-source-timelocks";
+import deployProtocolShareReserve from "@venusprotocol/protocol-reserve/dist/deploy/000-psr";
 import { BigNumber, BigNumberish } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
@@ -19,15 +20,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
-
+  await timelocksDeployment(hre);
+  const timelock = await toAddress(preconfiguredAddresses.NormalTimelock || "NormalTimelock");
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
+
+  let vTokenOwner = timelock;
+  if (!vTokenOwner || !hre.network.live) {
+    console.warn("Using deployer as vToken owner");
+    vTokenOwner = deployer;
+  } else {
+    console.warn("Using timelock as vToken owner");
+  }
+
+  console.log("Is Time based", isTimeBased);
 
   // VToken Beacon
   const vTokenImpl: DeployResult = await deploy("VTokenImpl", {
@@ -48,7 +59,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     skipIfAlreadyDeployed: true,
   });
 
-  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig, hre);
+  const poolsWithUnregisteredVTokens = await getUnregisteredVTokens(poolConfig);
   for (const pool of poolsWithUnregisteredVTokens) {
     const comptrollerProxy = await ethers.getContract(`Comptroller_${pool.id}`);
 
@@ -64,6 +75,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         jumpMultiplierPerYear,
         kink_,
         reserveFactor,
+        multiplierPerYear2,
+        baseRatePerYear2,
+        kink2_,
       } = vtoken;
 
       const token = getTokenConfig(asset, tokensConfig);
@@ -81,7 +95,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       if (rateModel === InterestRateModels.JumpRate.toString()) {
         const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
         const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
@@ -99,10 +112,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
-      } else {
+      } else if (rateModel === InterestRateModels.WhitePaper.toString()) {
         const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
         const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
         const result: DeployResult = await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
@@ -112,9 +124,43 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           skipIfAlreadyDeployed: true,
         });
         rateModelAddress = result.address;
+      } else {
+        if (!multiplierPerYear2 || !baseRatePerYear2 || !kink2_) {
+          throw new Error(`Invalid IR model parameters for ${rateModel}`);
+        }
+
+        const [b, m, k, m2, b2, k2, j] = [
+          baseRatePerYear,
+          multiplierPerYear,
+          kink_,
+          multiplierPerYear2,
+          baseRatePerYear2,
+          kink2_,
+          jumpMultiplierPerYear,
+        ].map(mantissaToBps);
+        const rateModelName = `TwoKinks_base${b}bps_slope${m}bps_kink${k}bps_slope2${m2}bps_base2${b2}bps_kink2${k2}bps_jump${j}bps`;
+        console.log(`Deploying interest rate model ${rateModelName}`);
+        const result: DeployResult = await deploy(rateModelName, {
+          from: deployer,
+          contract: "TwoKinksInterestRateModel",
+          args: [
+            baseRatePerYear,
+            multiplierPerYear,
+            kink_,
+            multiplierPerYear2,
+            baseRatePerYear2,
+            kink2_,
+            jumpMultiplierPerYear,
+            isTimeBased,
+            blocksPerYear,
+          ],
+          log: true,
+          autoMine: true,
+          skipIfAlreadyDeployed: true,
+        });
+        rateModelAddress = result.address;
       }
 
-      console.log(`Deploying VToken proxy for ${symbol}`);
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
@@ -139,7 +185,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         name,
         symbol,
         vTokenDecimals,
-        preconfiguredAddresses.NormalTimelock || deployer, // admin
+        vTokenOwner,
         accessControlManagerAddress,
         [AddressOne, protocolShareReserveAddress],
         reserveFactor,

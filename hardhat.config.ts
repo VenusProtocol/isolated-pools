@@ -11,7 +11,7 @@ import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
 import "hardhat-gas-reporter";
-import { HardhatUserConfig, extendConfig, task, types } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, extendEnvironment, task, types } from "hardhat/config";
 import { HardhatConfig } from "hardhat/types";
 import "solidity-coverage";
 import "solidity-docgen";
@@ -21,54 +21,92 @@ import { convertToUnit } from "./helpers/utils";
 dotenv.config();
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 
+const getRpcUrl = (networkName: string): string => {
+  let uri;
+  if (networkName) {
+    uri = process.env[`ARCHIVE_NODE_${networkName}`];
+  }
+  if (!uri) {
+    throw new Error(`invalid uri or network not supported by node provider : ${uri}`);
+  }
+  return uri;
+};
+
+extendEnvironment(hre => {
+  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name;
+});
+
 extendConfig((config: HardhatConfig) => {
   if (process.env.EXPORT !== "true") {
     config.external = {
       ...config.external,
       deployments: {
+        hardhat: [],
         bsctestnet: [
           "node_modules/@venusprotocol/oracle/deployments/bsctestnet",
           "node_modules/@venusprotocol/venus-protocol/deployments/bsctestnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/bsctestnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/bsctestnet",
         ],
         sepolia: [
           "node_modules/@venusprotocol/oracle/deployments/sepolia",
           "node_modules/@venusprotocol/venus-protocol/deployments/sepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/sepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/sepolia",
         ],
         ethereum: [
           "node_modules/@venusprotocol/oracle/deployments/ethereum",
           "node_modules/@venusprotocol/venus-protocol/deployments/ethereum",
           "node_modules/@venusprotocol/protocol-reserve/deployments/ethereum",
+          "node_modules/@venusprotocol/governance-contracts/deployments/ethereum",
         ],
         bscmainnet: [
           "node_modules/@venusprotocol/oracle/deployments/bscmainnet",
           "node_modules/@venusprotocol/venus-protocol/deployments/bscmainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/bscmainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/bscmainnet",
         ],
         opbnbmainnet: [
           "node_modules/@venusprotocol/oracle/deployments/opbnbmainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbmainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/opbnbmainnet",
         ],
         opbnbtestnet: [
           "node_modules/@venusprotocol/oracle/deployments/opbnbtestnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/opbnbtestnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/opbnbtestnet",
         ],
         arbitrumsepolia: [
           "node_modules/@venusprotocol/oracle/deployments/arbitrumsepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
         ],
-        arbitrumone: ["node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone"],
+        arbitrumone: [
+          "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone",
+          "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+        ],
         basesepolia: [
           "node_modules/@venusprotocol/oracle/deployments/basesepolia",
           "node_modules/@venusprotocol/protocol-reserve/deployments/basesepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/basesepolia",
         ],
         basemainnet: [
           "node_modules/@venusprotocol/oracle/deployments/basemainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/basemainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
         ],
       },
     };
+    if (process.env.HARDHAT_FORK_NETWORK) {
+      config.external.deployments!.hardhat = [
+        `./deployments/${process.env.HARDHAT_FORK_NETWORK}`,
+        `node_modules/@venusprotocol/oracle/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
+        `node_modules/@venusprotocol/venus-protocol/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
+        `node_modules/@venusprotocol/protocol-reserve/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
+        `node_modules/@venusprotocol/governance-contracts/deployments/${process.env.HARDHAT_FORK_NETWORK}`,
+      ];
+    }
   }
 });
 
@@ -225,7 +263,13 @@ const config: HardhatUserConfig = {
     hardhat: {
       allowUnlimitedContractSize: true,
       loggingEnabled: false,
-      live: false,
+      live: !!process.env.HARDHAT_FORK_NETWORK,
+      forking: process.env.HARDHAT_FORK_NETWORK
+        ? {
+            url: getRpcUrl(process.env.HARDHAT_FORK_NETWORK),
+            blockNumber: process.env.HARDHAT_FORK_NUMBER ? parseInt(process.env.HARDHAT_FORK_NUMBER) : undefined,
+          }
+        : undefined,
     },
     development: {
       url: "http://127.0.0.1:8545/",
@@ -236,6 +280,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: true,
+      tags: ["testnet"],
       gasPrice: 20000000000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
@@ -243,6 +288,7 @@ const config: HardhatUserConfig = {
     bscmainnet: {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
+      live: true,
       timeout: 1200000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
@@ -257,12 +303,14 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
       chainId: 11155111,
       live: true,
+      tags: ["testnet"],
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbtestnet: {
       url: process.env.ARCHIVE_NODE_opbnbtestnet || "https://opbnb-testnet-rpc.bnbchain.org",
       chainId: 5611,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbmainnet: {
@@ -275,6 +323,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
       chainId: 421614,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     arbitrumone: {
@@ -287,6 +336,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_opsepolia || "https://sepolia.optimism.io",
       chainId: 11155420,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opmainnet: {
@@ -299,6 +349,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_basesepolia || "https://sepolia.base.org",
       chainId: 84532,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     basemainnet: {

@@ -72,7 +72,10 @@ async function shortfallFixture() {
   shortfall = await upgrades.deployProxy(
     Shortfall,
     [fakeRiskFund.address, parseUnits(minimumPoolBadDebt, "18"), accessControlManager.address],
-    { constructorArgs: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder] },
+    {
+      constructorArgs: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
+      unsafeAllow: ["internal-function-storage"],
+    },
   );
 
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
@@ -207,6 +210,7 @@ async function timeBasedhortfallFixture() {
     [fakeRiskFund.address, parseUnits(minimumPoolBadDebt, "18"), accessControlManager.address],
     {
       constructorArgs: [isTimeBased, blocksPerYear, nextBidderBlockOrTimestampLimit, waitForFirstBidder],
+      unsafeAllow: ["internal-function-storage"],
     },
   );
   [owner, someone, bidder1, bidder2] = await ethers.getSigners();
