@@ -7,6 +7,7 @@
     "Comptroller_Core": "0xddE4D098D9995B659724ae6d5E3FB9681Ac941B1",
     "DefaultProxyAdmin": "0x8Ea1A989B036f7Ef21bb95CE4E7961522Ca00287",
     "JumpRateModelV2_base0bps_slope425bps_jump8000bps_kink8000bps": "0xd8b4c9574e80376Ce4687EAc57D594C560Dc7c3F",
+    "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps": "0x40a0DEC6AcA207F45212B14dE1312cEae6FB3E5A",
     "JumpRateModelV2_base0bps_slope875bps_jump8000bps_kink8000bps": "0x6e0f830e7fc78a296B0EbD5694573C2D9f0994B1",
     "JumpRateModelV2_base0bps_slope900bps_jump20000bps_kink4500bps": "0xDe0DdC53BE71B2C67808392088A922AdC4ec3114",
     "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": "0xab2A687A02F5EE7A5b3B52E929705cCA470A0844",
@@ -26,6 +27,7 @@
     "VToken_vUSDT_Core": "0x69cDA960E3b20DFD480866fFfd377Ebe40bd0A46",
     "VToken_vWBTC_Core": "0xAF8fD83cFCbe963211FAaf1847F0F217F80B4719",
     "VToken_vWETH_Core": "0x1Fa916C27c7C2c4602124A14C77Dbb40a5FF1BE8",
-    "VToken_vZK_Core": "0x697a70779C1A03Ba2BD28b7627a902BFf831b616"
+    "VToken_vZK_Core": "0x697a70779C1A03Ba2BD28b7627a902BFf831b616",
+    "VToken_vwUSDM_Core": "0x183dE3C349fCf546aAe925E1c7F364EA6FB4033c"
   }
 }
