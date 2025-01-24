@@ -5369,7 +5369,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("6000", 18),
             supplyCap: convertToUnit("2000000", 18),
             borrowCap: convertToUnit(0, 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: "0xe1f7c5209938780625E354dc546E28397F6Ce174",
           },
           {
@@ -5387,7 +5387,7 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("4800", 18),
             supplyCap: convertToUnit("2650000", 18),
             borrowCap: convertToUnit(0, 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: "0xe1f7c5209938780625E354dc546E28397F6Ce174",
           },
         ],
