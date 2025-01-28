@@ -6310,7 +6310,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus wsuperOETHb",
             asset: "wsuperOETHb",
-            symbol: "vwsuperOETHb",
+            symbol: "vwsuperOETHb_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
@@ -6457,7 +6457,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus wsuperOETHb",
             asset: "wsuperOETHb",
-            symbol: "vwsuperOETHb",
+            symbol: "vwsuperOETHb_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
