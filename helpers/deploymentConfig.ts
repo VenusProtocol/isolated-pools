@@ -6233,6 +6233,14 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xE657EDb5579B82135a274E85187927C42E38C021",
       },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "Wrapped Super OETH",
+        symbol: "wsuperOETHb",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
 
     poolConfig: [
