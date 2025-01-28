@@ -5238,14 +5238,14 @@ export const globalConfig: NetworkConfig = {
       {
         isMock: false,
         name: "GMX Market",
-        symbol: "gmETH",
+        symbol: "GM", // gmWETH-USDC
         decimals: 18,
         tokenAddress: "0x70d95587d40A2caf56bd97485aB3Eec10Bee6336",
       },
       {
         isMock: false,
         name: "GMX Market",
-        symbol: "gmBTC",
+        symbol: "GM", // gmBTC-USDC
         decimals: 18,
         tokenAddress: "0x47c031236e19d024b42f8AE6780E44A573170703",
       },
