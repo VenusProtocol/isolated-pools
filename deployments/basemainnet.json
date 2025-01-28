@@ -3553,7 +3553,7 @@
       ]
     },
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
-      "address": "0x280Ad0fDA768fA390e04AA61e22b3b0bDE640b13",
+      "address": "0x527c29aAfB367fAd5AFf97855EBFAa610AA514CA",
       "abi": [
         {
           "inputs": [
@@ -9489,7 +9489,7 @@
       ]
     },
     "VToken_vwsuperOETHb": {
-      "address": "0x5E3E2f511e4988D0e9d907f1ba7950009b68CBBF",
+      "address": "0x8Dcf936167fba65fA89719415D89Db33B8e46Ad3",
       "abi": [
         {
           "inputs": [
