@@ -8,6 +8,8 @@ import { contracts as governanceOpbnbTestnet } from "@venusprotocol/governance-c
 import { contracts as governanceSepolia } from "@venusprotocol/governance-contracts/deployments/sepolia.json";
 import { contracts as governanceZkSyncMainnet } from "@venusprotocol/governance-contracts/deployments/zksyncmainnet.json";
 import { contracts as governanceZkSyncSepolia } from "@venusprotocol/governance-contracts/deployments/zksyncsepolia.json";
+import { contracts as governanceBaseMainnet } from "@venusprotocol/governance-contracts/deployments/basemainnet.json";
+import { contracts as governanceBaseSepolia } from "@venusprotocol/governance-contracts/deployments/basesepolia.json";
 import { contracts as venusProtocolArbitrumOne } from "@venusprotocol/venus-protocol/deployments/arbitrumone.json";
 import { contracts as venusProtocolArbitrumSepolia } from "@venusprotocol/venus-protocol/deployments/arbitrumsepolia.json";
 import { contracts as venusProtocolBscMainnet } from "@venusprotocol/venus-protocol/deployments/bscmainnet.json";
@@ -290,16 +292,16 @@ export const preconfiguredAddresses = {
   },
   basesepolia: {
     VTreasury: "0x07e880DaA6572829cE8ABaaf0f5323A4eFC417A6",
-    NormalTimelock: BASE_SEPOLIA_MULTISIG,
-    FastTrackTimelock: BASE_SEPOLIA_MULTISIG,
-    CriticalTimelock: BASE_SEPOLIA_MULTISIG,
+    NormalTimelock: governanceBaseSepolia.NormalTimelock.address,
+    FastTrackTimelock: governanceBaseSepolia.FastTrackTimelock.address,
+    CriticalTimelock: governanceBaseSepolia.CriticalTimelock.address,
     AccessControlManager: "0x724138223D8F76b519fdE715f60124E7Ce51e051",
   },
   basemainnet: {
     VTreasury: "0xbefD8d06f403222dd5E8e37D2ba93320A97939D1",
-    NormalTimelock: BASE_MAINNET_MULTISIG,
-    FastTrackTimelock: BASE_MAINNET_MULTISIG,
-    CriticalTimelock: BASE_MAINNET_MULTISIG,
+    NormalTimelock: governanceBaseMainnet.NormalTimelock.address,
+    FastTrackTimelock: governanceBaseMainnet.FastTrackTimelock.address,
+    CriticalTimelock: governanceBaseMainnet.CriticalTimelock.address,
     AccessControlManager: "0x9E6CeEfDC6183e4D0DF8092A9B90cDF659687daB",
   },
 };
