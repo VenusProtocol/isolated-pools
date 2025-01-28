@@ -9,7 +9,6 @@
     "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": "0xd75065d8606460bC0BbDa5b2AbcaCc949a77842C",
     "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": "0x45458214fAD74C86E7DB7a51aE9D61d02BcdA6AF",
     "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps": "0xB7FCED42486F8DB8155fD509e726F9604fCdd41F",
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": "0x280Ad0fDA768fA390e04AA61e22b3b0bDE640b13",
     "NativeTokenGateway_vWETH_Core": "0x8e890ca3829c740895cdEACd4a3BE36ff9343643",
     "PoolLens": "0x89825677fb4845f5Fc0B227e387455ECa1200058",
     "PoolRegistry": "0xeef902918DdeCD773D4B422aa1C6e1673EB9136F",
@@ -19,7 +18,6 @@
     "VTokenImpl": "0x15976Af57CBDEA05aB1c338822E397519f096C67",
     "VToken_vUSDC_Core": "0x3cb752d175740043Ec463673094e06ACDa2F9a2e",
     "VToken_vWETH_Core": "0xEB8A79bD44cF4500943bf94a2b4434c95C008599",
-    "VToken_vcbBTC_Core": "0x7bBd1005bB24Ec84705b04e1f2DfcCad533b6D72",
-    "VToken_vwsuperOETHb": "0x5E3E2f511e4988D0e9d907f1ba7950009b68CBBF"
+    "VToken_vcbBTC_Core": "0x7bBd1005bB24Ec84705b04e1f2DfcCad533b6D72"
   }
 }
