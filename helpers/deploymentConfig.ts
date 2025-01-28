@@ -6308,7 +6308,7 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
           },
           {
-            name: "Venus wsuperOETHb",
+            name: "Venus wsuperOETHb (Core)",
             asset: "wsuperOETHb",
             symbol: "vwsuperOETHb_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
@@ -6455,7 +6455,7 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
           },
           {
-            name: "Venus wsuperOETHb",
+            name: "Venus wsuperOETHb (Core)",
             asset: "wsuperOETHb",
             symbol: "vwsuperOETHb_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
