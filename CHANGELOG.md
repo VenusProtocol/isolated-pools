@@ -1,3 +1,14 @@
+## [3.9.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0...v3.9.0-dev.1) (2025-01-28)
+
+
+### Features
+
+* added markets ([1840f67](https://github.com/VenusProtocol/isolated-pools/commit/1840f675943534845337c881b22e304a8be56f1d))
+* deployed on arb sepolia ([c7bcd0e](https://github.com/VenusProtocol/isolated-pools/commit/c7bcd0eb41cef5d10a3fad13ef05e830fd4a116e))
+* deployed on arbitrum one ([7aeac7b](https://github.com/VenusProtocol/isolated-pools/commit/7aeac7baced2ba3d2b8b56ec06bfe0eb48f955b1))
+* updating deployment files ([b7c48d8](https://github.com/VenusProtocol/isolated-pools/commit/b7c48d897b947af8c23bc2151a711486484cdb0e))
+* updating deployment files ([503bc70](https://github.com/VenusProtocol/isolated-pools/commit/503bc70ceabbbdc2ad45070345edf6df80a0c6e7))
+
 ## [3.8.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0...v3.8.0) (2025-01-22)
 
 
