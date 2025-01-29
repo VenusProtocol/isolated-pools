@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+
 jobs:
   lint:
     name: Lint
@@ -20,8 +21,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Check linting of solidity and typescript
         run: yarn lint
@@ -32,14 +32,16 @@ jobs:
     env:
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v2
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
         with:
           node-version: 18
           cache: "yarn"
 
-      - name: Install deps
+      - name: Install dependencies
         run: yarn
 
       - name: Run hardhat compile and tests coverage
@@ -66,6 +68,67 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Build
+        run: yarn build
+
+      - name: Set up Python environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+            pip install slither-analyzer
+
+      - name: Set up Solidity Compiler Version
+        run: |
+          source .venv/bin/activate
+          solc-select install 0.8.25
+          solc-select use 0.8.25
+
+      - name: Debug Environment
+        run: |
+          source .venv/bin/activate
+          echo "Python Version:"
+          python3 --version
+          echo "Pip Version:"
+          pip --version
+          echo "Installed Python Packages:"
+          pip list
+          echo "Node Version:"
+          node -v
+          echo "Yarn Version:"
+          yarn -v
+          echo "Solidity Compiler Version:"
+          solc --version
+
+      - name: Summary of static analysis
+        run: |
+          source .venv/bin/activate
+          slither contracts --print human-summary --solc-remaps "@openzeppelin=node_modules/@openzeppelin @venusprotocol=node_modules/@venusprotocol"
+        continue-on-error: true
+
+      - name: High/Med/Low issues
+        run: |
+          source .venv/bin/activate
+          slither contracts --ignore-compile --solc-remaps "@openzeppelin=node_modules/@openzeppelin @venusprotocol=node_modules/@venusprotocol"
+        continue-on-error: true
 
   deploy:
     name: Deploy
@@ -81,8 +144,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Build
         run: yarn build
@@ -91,16 +153,13 @@ jobs:
         run: yarn hardhat deploy
 
   export-deployments:
+    name: Export Deployments
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.VENUS_TOOLS_TOKEN }}
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v2
@@ -109,8 +168,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Export deployments
         run: |
