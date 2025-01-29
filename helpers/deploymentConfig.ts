@@ -1,5 +1,7 @@
 import { contracts as governanceArbitrumOne } from "@venusprotocol/governance-contracts/deployments/arbitrumone.json";
 import { contracts as governanceArbitrumSepolia } from "@venusprotocol/governance-contracts/deployments/arbitrumsepolia.json";
+import { contracts as governanceBaseMainnet } from "@venusprotocol/governance-contracts/deployments/basemainnet.json";
+import { contracts as governanceBaseSepolia } from "@venusprotocol/governance-contracts/deployments/basesepolia.json";
 import { contracts as governanceBscMainnet } from "@venusprotocol/governance-contracts/deployments/bscmainnet.json";
 import { contracts as governanceBscTestnet } from "@venusprotocol/governance-contracts/deployments/bsctestnet.json";
 import { contracts as governanceEthereum } from "@venusprotocol/governance-contracts/deployments/ethereum.json";
@@ -290,16 +292,16 @@ export const preconfiguredAddresses = {
   },
   basesepolia: {
     VTreasury: "0x07e880DaA6572829cE8ABaaf0f5323A4eFC417A6",
-    NormalTimelock: BASE_SEPOLIA_MULTISIG,
-    FastTrackTimelock: BASE_SEPOLIA_MULTISIG,
-    CriticalTimelock: BASE_SEPOLIA_MULTISIG,
+    NormalTimelock: governanceBaseSepolia.NormalTimelock.address,
+    FastTrackTimelock: governanceBaseSepolia.FastTrackTimelock.address,
+    CriticalTimelock: governanceBaseSepolia.CriticalTimelock.address,
     AccessControlManager: "0x724138223D8F76b519fdE715f60124E7Ce51e051",
   },
   basemainnet: {
     VTreasury: "0xbefD8d06f403222dd5E8e37D2ba93320A97939D1",
-    NormalTimelock: BASE_MAINNET_MULTISIG,
-    FastTrackTimelock: BASE_MAINNET_MULTISIG,
-    CriticalTimelock: BASE_MAINNET_MULTISIG,
+    NormalTimelock: governanceBaseMainnet.NormalTimelock.address,
+    FastTrackTimelock: governanceBaseMainnet.FastTrackTimelock.address,
+    CriticalTimelock: governanceBaseMainnet.CriticalTimelock.address,
     AccessControlManager: "0x9E6CeEfDC6183e4D0DF8092A9B90cDF659687daB",
   },
 };
@@ -6333,6 +6335,14 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xE657EDb5579B82135a274E85187927C42E38C021",
       },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "Wrapped Super OETH",
+        symbol: "wsuperOETHb",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
 
     poolConfig: [
@@ -6397,6 +6407,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
           },
+          {
+            name: "Venus wsuperOETHb (Core)",
+            asset: "wsuperOETHb",
+            symbol: "vwsuperOETHb_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.73", 18),
+            liquidationThreshold: convertToUnit("0.78", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.3", 18),
+            supplyCap: convertToUnit(2000, 18),
+            borrowCap: convertToUnit(0, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 120 months (311040000 seconds)
@@ -6454,6 +6482,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "XVS",
         decimals: 18,
         tokenAddress: "0xebB7873213c8d1d9913D8eA39Aa12d74cB107995",
+      },
+      {
+        isMock: false,
+        name: "Wrapped Super OETH",
+        symbol: "wsuperOETHb",
+        decimals: 18,
+        tokenAddress: "0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6",
       },
     ],
 
@@ -6518,6 +6553,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(200, 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+          },
+          {
+            name: "Venus wsuperOETHb (Core)",
+            asset: "wsuperOETHb",
+            symbol: "vwsuperOETHb_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.73", 18),
+            liquidationThreshold: convertToUnit("0.78", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("0.3", 18),
+            supplyCap: convertToUnit(2000, 18),
+            borrowCap: convertToUnit(0, 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
+            vTokenReceiver: "0x3c112E20141B65041C252a68a611EF145f58B7bc",
           },
         ],
         rewards: [],
