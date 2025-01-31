@@ -741,8 +741,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "HAY",
-        symbol: "HAY",
+        name: "lisUSD",
+        symbol: "lisUSD",
         decimals: 18,
         tokenAddress: "0xe73774DfCD551BF75650772dC2cC56a2B6323453",
         faucetInitialLiquidity: true,
@@ -874,8 +874,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "agEUR",
-        symbol: "agEUR",
+        name: "EURA",
+        symbol: "EURA",
         decimals: 18,
         tokenAddress: "0x63061de4A25f24279AAab80400040684F92Ee319",
       },
@@ -888,8 +888,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Synclub Staked BNB",
-        symbol: "SnBNB",
+        name: "Staked Lista BNB",
+        symbol: "slisBNB",
         decimals: 18,
         tokenAddress: "0xd2aF6A916Bc77764dc63742BC30f71AF4cF423F4",
       },
@@ -952,16 +952,16 @@ export const globalConfig: NetworkConfig = {
     ],
     poolConfig: [
       {
-        id: "StableCoins",
-        name: "Stable Coins",
+        id: "Stablecoins",
+        name: "Stablecoins",
         closeFactor: convertToUnit("0.5", 18),
         liquidationIncentive: convertToUnit("1.1", 18),
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus HAY (Stable Coins)",
-            asset: "HAY",
-            symbol: "vHAY_StableCoins",
+            name: "Venus lisUSD (Stable Coins)",
+            asset: "lisUSD",
+            symbol: "vlisUSD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -979,7 +979,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus USDT (Stable Coins)",
             asset: "USDT",
-            symbol: "vUSDT_StableCoins",
+            symbol: "vUSDT_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.05", 18),
@@ -997,7 +997,7 @@ export const globalConfig: NetworkConfig = {
           {
             name: "Venus USDD (Stable Coins)",
             asset: "USDD",
-            symbol: "vUSDD_StableCoins",
+            symbol: "vUSDD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -1013,9 +1013,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "100",
           },
           {
-            name: "Venus agEUR (Stablecoins)",
-            asset: "agEUR",
-            symbol: "vagEUR_Stablecoins",
+            name: "Venus EURA (Stablecoins)",
+            asset: "EURA",
+            symbol: "vEURA_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -1033,20 +1033,20 @@ export const globalConfig: NetworkConfig = {
         ],
         rewards: [
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
           },
           {
             asset: "ANGLE",
-            markets: ["agEUR"],
+            markets: ["EURA"],
             supplySpeeds: ["0"],
             borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
@@ -1436,9 +1436,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "100",
           },
           {
-            name: "Venus SnBNB (Liquid Staked BNB)",
-            asset: "SnBNB",
-            symbol: "vSnBNB_LiquidStakedBNB",
+            name: "Venus slisBNB (Liquid Staked BNB)",
+            asset: "slisBNB",
+            symbol: "vslisBNB_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.2", 18),
@@ -1480,10 +1480,10 @@ export const globalConfig: NetworkConfig = {
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["SnBNB"],
-            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
-            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            asset: "lisUSD",
+            markets: ["slisBNB"],
+            supplySpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
           },
         ],
       },
@@ -1820,8 +1820,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Hay Destablecoin",
-        symbol: "HAY",
+        name: "Lista USD",
+        symbol: "lisUSD",
         decimals: 18,
         tokenAddress: "0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5",
       },
@@ -1939,8 +1939,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "agEUR",
-        symbol: "agEUR",
+        name: "EURA",
+        symbol: "EURA",
         decimals: 18,
         tokenAddress: "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89",
       },
@@ -1953,8 +1953,8 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Synclub Staked BNB",
-        symbol: "SnBNB",
+        name: "Staked Lista BNB",
+        symbol: "slisBNB",
         decimals: 18,
         tokenAddress: "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
       },
@@ -2024,9 +2024,9 @@ export const globalConfig: NetworkConfig = {
         minLiquidatableCollateral: convertToUnit("100", 18),
         vtokens: [
           {
-            name: "Venus HAY (Stablecoins)",
-            asset: "HAY",
-            symbol: "vHAY_Stablecoins",
+            name: "Venus lisUSD (Stablecoins)",
+            asset: "lisUSD",
+            symbol: "vlisUSD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -2078,9 +2078,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
           },
           {
-            name: "Venus agEUR (Stablecoins)",
-            asset: "agEUR",
-            symbol: "vagEUR_Stablecoins",
+            name: "Venus EURA (Stablecoins)",
+            asset: "EURA",
+            symbol: "vEURA_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
@@ -2098,20 +2098,20 @@ export const globalConfig: NetworkConfig = {
         ],
         rewards: [
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1860119047619047"], // 1500 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1860119047619047"], // 1500 lisUSD over 28 days (806400 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["HAY"],
-            supplySpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
-            borrowSpeeds: ["1240079365079365"], // 1000 HAY over 28 days (806400 blocks)
+            asset: "lisUSD",
+            markets: ["lisUSD"],
+            supplySpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
+            borrowSpeeds: ["1240079365079365"], // 1000 lisUSD over 28 days (806400 blocks)
           },
           {
             asset: "ANGLE",
-            markets: ["agEUR"],
+            markets: ["EURA"],
             supplySpeeds: ["0"],
             borrowSpeeds: ["87549603174603174"], // 17650 ANGLE over 7 days (201600 blocks)
           },
@@ -2503,9 +2503,9 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
           },
           {
-            name: "Venus SnBNB (Liquid Staked BNB)",
-            asset: "SnBNB",
-            symbol: "vSnBNB_LiquidStakedBNB",
+            name: "Venus slisBNB (Liquid Staked BNB)",
+            asset: "slisBNB",
+            symbol: "vslisBNB_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.2", 18),
@@ -2547,10 +2547,10 @@ export const globalConfig: NetworkConfig = {
             borrowSpeeds: ["1157407407407407"], // 1000 SD over 30 days (864000 blocks)
           },
           {
-            asset: "HAY",
-            markets: ["SnBNB"],
-            supplySpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
-            borrowSpeeds: ["930059523809523"], // 1500 HAY over 56 days (1612800 blocks)
+            asset: "lisUSD",
+            markets: ["slisBNB"],
+            supplySpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
+            borrowSpeeds: ["930059523809523"], // 1500 lisUSD over 56 days (1612800 blocks)
           },
         ],
       },
@@ -3265,9 +3265,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
           },
           {
-            name: "Venus eBTC",
+            name: "Venus eBTC (Core)",
             asset: "eBTC",
-            symbol: "veBTC",
+            symbol: "veBTC_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
@@ -3283,9 +3283,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
           {
-            name: "Venus EIGEN",
+            name: "Venus EIGEN (Core)",
             asset: "EIGEN",
-            symbol: "vEIGEN",
+            symbol: "vEIGEN_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.15", 18),
@@ -4199,9 +4199,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
           },
           {
-            name: "Venus eBTC",
+            name: "Venus eBTC (Core)",
             asset: "eBTC",
-            symbol: "veBTC",
+            symbol: "veBTC_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: "0",
             multiplierPerYear: convertToUnit("0.09", 18),
@@ -4217,9 +4217,9 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
           },
           {
-            name: "Venus EIGEN",
+            name: "Venus EIGEN (Core)",
             asset: "EIGEN",
-            symbol: "vEIGEN",
+            symbol: "vEIGEN_Core",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.15", 18),
