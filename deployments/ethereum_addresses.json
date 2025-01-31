@@ -65,6 +65,7 @@
     "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps": "0x4A786e4653Ff7DBA74D6dA0861350F233f2dA73b",
     "VTokenBeacon": "0xfc08aADC7a1A93857f6296C3fb78aBA1d286533a",
     "VTokenImpl": "0xefdf5CcC12d8cff4a7ed4e421b95F8f69Cf2F766",
+    "VToken_vBAL_Core": "0x0Ec5488e4F8f319213a14cab188E01fB8517Faa8",
     "VToken_vCRV_Curve": "0x30aD10Bd5Be62CAb37863C2BfcC6E8fb4fD85BDa",
     "VToken_vDAI_Core": "0xd8AdD9B41D4E1cd64Edad8722AB0bA8D35536657",
     "VToken_vEIGEN": "0x256AdDBe0a387c98f487e44b85c29eb983413c5e",
