@@ -3060,6 +3060,38 @@ export const globalConfig: NetworkConfig = {
         decimals: 6,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "USDC-1 yVault",
+        symbol: "yvUSDC-1",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "USDT-1 yVault",
+        symbol: "yvUSDT-1",
+        decimals: 6,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "USDS-1 yVault",
+        symbol: "yvUSDS-1",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        standard: "ERC-4626",
+        name: "WETH-1 yVault",
+        symbol: "yvWETH-1",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
