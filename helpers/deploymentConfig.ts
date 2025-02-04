@@ -3075,6 +3075,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Balancer",
+        symbol: "BAL",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -3351,6 +3358,24 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("10_000", 18), // 10,000 sUSDS
             supplyCap: convertToUnit("30_000_000", 18),
             borrowCap: convertToUnit("0", 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+          },
+          {
+            name: "Venus BAL (Core)",
+            asset: "BAL",
+            symbol: "vBAL_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.57", 18),
+            liquidationThreshold: convertToUnit("0.59", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("4000", 18), // 4000 BAL
+            supplyCap: convertToUnit(1_500_000, 18),
+            borrowCap: convertToUnit(700_000, 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
           },
@@ -4021,6 +4046,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
       },
+      {
+        isMock: false,
+        name: "Balancer",
+        symbol: "BAL",
+        decimals: 18,
+        tokenAddress: "0xba100000625a3754423978a60c9317c58a424e3D",
+      },
     ],
     poolConfig: [
       {
@@ -4287,6 +4319,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x9c489E4efba90A67299C1097a8628e233C33BB7B",
+          },
+          {
+            name: "Venus BAL (Core)",
+            asset: "BAL",
+            symbol: "vBAL_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.57", 18),
+            liquidationThreshold: convertToUnit("0.59", 18),
+            reserveFactor: convertToUnit("0.2", 18),
+            initialSupply: convertToUnit("4000", 18), // 4000 BAL
+            supplyCap: convertToUnit(1_500_000, 18),
+            borrowCap: convertToUnit(700_000, 18),
+            reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
+            vTokenReceiver: "0x36cc7B13029B5DEe4034745FB4F24034f3F2ffc6",
           },
         ],
         rewards: [
