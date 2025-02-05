@@ -8,12 +8,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
-  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
+  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer");
 
   // The reason for this is that the contracts `OptimizedTransparentUpgradeableProxy` and `DefaultProxyAdmin` that the hardhat-deploy
   // plugin fetches from the artifact is not zk compatible causing the deployments to fail. So we bought it one level up to our repo,

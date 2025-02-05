@@ -10,10 +10,11 @@ import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
-import { subtask } from "hardhat/config";
-import { HardhatUserConfig, extendConfig, task } from "hardhat/config";
+import { HardhatUserConfig, extendConfig, extendEnvironment, subtask, task } from "hardhat/config";
 import { HardhatConfig } from "hardhat/types";
 import "solidity-docgen";
+
+import "./type-extensions";
 
 dotenv.config();
 
@@ -24,11 +25,21 @@ extendConfig((config: HardhatConfig) => {
     config.external = {
       ...config.external,
       deployments: {
-        zksyncsepolia: ["node_modules/@venusprotocol/protocol-reserve/deployments/zksyncsepolia"],
-        zksyncmainnet: ["node_modules/@venusprotocol/protocol-reserve/deployments/zksyncmainnet"],
+        zksyncsepolia: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/zksyncsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/zksyncsepolia",
+        ],
+        zksyncmainnet: [
+          "node_modules/@venusprotocol/protocol-reserve/deployments/zksyncmainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/zksyncmainnet",
+        ],
       },
     };
   }
+});
+
+extendEnvironment(hre => {
+  hre.getNetworkName = () => process.env.HARDHAT_FORK_NETWORK || hre.network.name;
 });
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -111,6 +122,7 @@ const config: HardhatUserConfig = {
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
       zksync: true,
       live: true,
+      tags: ["testnet"],
     },
     zksyncmainnet: {
       url: process.env.ARCHIVE_NODE_zksyncmainnet || "https://mainnet.era.zksync.io",
