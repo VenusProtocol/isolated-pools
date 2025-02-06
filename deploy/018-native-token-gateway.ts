@@ -4,11 +4,14 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { contracts as ilArbOne } from "../deployments/arbitrumone.json";
 import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
+import { contracts as ilBaseMainnet } from "../deployments/basemainnet.json";
+import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
 import { contracts as ilOpbnbMainnet } from "../deployments/opbnbmainnet.json";
 import { contracts as ilOpbnbTestnet } from "../deployments/opbnbtestnet.json";
+import { contracts as ilOpMainnet } from "../deployments/opmainnet.json";
 import { contracts as ilOpSepolia } from "../deployments/opsepolia.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
 import { contracts as ilUnichainSepolia } from "../deployments/unichainsepolia.json";
@@ -104,6 +107,24 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
       address: ilOpSepolia.VToken_vWETH_Core.address,
     },
   ],
+  opmainnet: [
+    {
+      name: "vWETH_Core",
+      address: ilOpMainnet.VToken_vWETH_Core.address,
+    },
+  ],
+  basesepolia: [
+    {
+      name: "vWETH_Core",
+      address: ilBaseSepolia.VToken_vWETH_Core.address,
+    },
+  ],
+  basemainnet: [
+    {
+      name: "vWETH_Core",
+      address: ilBaseMainnet.VToken_vWETH_Core.address,
+    },
+  ],
   unichainsepolia: [
     {
       name: "vWETH_Core",
@@ -125,9 +146,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const { preconfiguredAddresses } = await getConfig(hre.network.name);
+  const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
-  const vWNativesInfo = getVWNativeTokens(hre.network.name);
+  const vWNativesInfo = getVWNativeTokens(hre.getNetworkName());
   for (const vWNativeInfo of vWNativesInfo) {
     await deploy(`NativeTokenGateway_${vWNativeInfo.name}`, {
       contract: "NativeTokenGateway",
@@ -140,7 +161,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     const nativeTokenGateway = await ethers.getContract(`NativeTokenGateway_${vWNativeInfo.name}`);
     const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
-    if (hre.network.live) {
+    if (hre.network.live && (await nativeTokenGateway.owner()) !== targetOwner) {
       const tx = await nativeTokenGateway.transferOwnership(targetOwner);
       await tx.wait();
       console.log(`Transferred ownership of NativeTokenGateway_${vWNativeInfo.name} to Timelock`);

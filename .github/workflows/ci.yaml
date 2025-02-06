@@ -20,8 +20,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Check linting of solidity and typescript
         run: yarn lint
@@ -81,8 +80,7 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Build
         run: yarn build
@@ -109,12 +107,11 @@ jobs:
           cache: "yarn"
 
       - name: Install dependencies
-        # Hack to get around failing "ethereumjs-abi The remote archive doesn't match the expected checksum" error
-        run: YARN_CHECKSUM_BEHAVIOR=update yarn
+        run: yarn
 
       - name: Export deployments
         run: |
-          for NETWORK in bsctestnet bscmainnet ethereum sepolia opbnbtestnet opbnbmainnet arbitrumsepolia arbitrumone opsepolia opmainnet; do
+          for NETWORK in bsctestnet bscmainnet ethereum sepolia opbnbtestnet opbnbmainnet arbitrumsepolia arbitrumone opsepolia opmainnet basesepolia basemainnet; do
             EXPORT=true yarn hardhat export --network ${NETWORK} --export ./deployments/${NETWORK}.json
             jq -M '{name, chainId, addresses: .contracts | map_values(.address)}' ./deployments/${NETWORK}.json > ./deployments/${NETWORK}_addresses.json
           done

@@ -8,6 +8,7 @@
     "Comptroller_Liquid Staked ETH": "0x52bAB1aF7Ff770551BD05b9FC2329a0Bf5E23F16",
     "DefaultProxyAdmin": "0xF6fF3e9459227f0cDE8B102b90bE25960317b216",
     "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": "0x390D1C248217615D79f74f2453D682906Bd2dD20",
+    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": "0x425dde630be832195619a06175ba45C827Dd3DCa",
     "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": "0x305f960b00594200ed80373B61b38e669651469E",
     "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": "0x5123645b47f0c526Bf1e772CC68319C6d9C0d156",
     "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps": "0x42888177eB8FcdEa0884De66c7E0f7638125914A",
@@ -24,6 +25,7 @@
     "RewardsDistributor_Core_0_Proxy": "0x53b488baA4052094495b6De9E5505FE1Ee3EAc7a",
     "RewardsDistributor_Liquid Staked ETH_0": "0x6204Bae72dE568384Ca4dA91735dc343a0C7bD6D",
     "RewardsDistributor_Liquid Staked ETH_0_Proxy": "0x6204Bae72dE568384Ca4dA91735dc343a0C7bD6D",
+    "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps": "0x8fd05f11a175A9b7E6dDcA8Ee2713E2c7f94c011",
     "VTokenBeacon": "0xE9381D8CA7006c12Ae9eB97890575E705996fa66",
     "VTokenImpl": "0xfC0df4d5b0FCEb410985a13fC2be7df793453649",
     "VToken_vARB_Core": "0xAeB0FEd69354f34831fe1D16475D9A83ddaCaDA6",
@@ -32,6 +34,8 @@
     "VToken_vWBTC_Core": "0xaDa57840B372D4c28623E87FC175dE8490792811",
     "VToken_vWETH_Core": "0x68a34332983f4Bf866768DD6D6E638b02eF5e1f0",
     "VToken_vWETH_LiquidStakedETH": "0x39D6d13Ea59548637104E40e729E4aABE27FE106",
+    "VToken_vgmBTC-USDC_Core": "0x4f3a73f318C5EA67A86eaaCE24309F29f89900dF",
+    "VToken_vgmWETH-USDC_Core": "0x9bb8cEc9C0d46F53b4f2173BB2A0221F66c353cC",
     "VToken_vweETH_LiquidStakedETH": "0x246a35E79a3a0618535A469aDaF5091cAA9f7E88",
     "VToken_vwstETH_LiquidStakedETH": "0x9df6B5132135f14719696bBAe3C54BAb272fDb16"
   }
