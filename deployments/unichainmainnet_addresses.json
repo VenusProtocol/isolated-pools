@@ -1,0 +1,8 @@
+{
+  "name": "unichainmainnet",
+  "chainId": "130",
+  "addresses": {
+    "DefaultProxyAdmin": "0x78e9fff2ab8daAB8559070d897C399E5e1C5074c",
+    "PoolLens": "0xe192aeDBDBd235DBF33Ea1444f2B908Ea3E78419"
+  }
+}
