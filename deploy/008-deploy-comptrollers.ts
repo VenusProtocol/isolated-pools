@@ -10,12 +10,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const deploymentConfig = await getConfig(hre.network.name);
+  const deploymentConfig = await getConfig(hre.getNetworkName());
   const { poolConfig, preconfiguredAddresses } = deploymentConfig;
   const poolRegistry = await ethers.getContract("PoolRegistry");
   const accessControlManagerAddress = await toAddress(
     preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-    hre,
   );
   const maxLoopsLimit = 100;
 
@@ -25,6 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [poolRegistry.address],
     log: true,
     autoMine: true,
+    skipIfAlreadyDeployed: true,
   });
 
   // Comptroller Beacon
@@ -37,12 +37,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     skipIfAlreadyDeployed: true,
   });
 
-  const unregisteredPools = await getUnregisteredPools(poolConfig, hre);
+  const unregisteredPools = await getUnregisteredPools(poolConfig);
   for (const pool of unregisteredPools) {
-    // Deploying a proxy for Comptroller
-    console.log(`Deploying a proxy for Comptroller of the pool ${pool.name}`);
     const Comptroller = await ethers.getContractFactory("Comptroller");
 
+    // Deploying a proxy for Comptroller
     await deploy(`Comptroller_${pool.id}`, {
       from: deployer,
       contract: "BeaconProxy",

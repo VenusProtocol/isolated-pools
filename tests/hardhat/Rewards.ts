@@ -174,13 +174,13 @@ async function rewardsFixture(isTimeBased: boolean) {
   rewardsDistributor = (await upgrades.deployProxy(
     RewardsDistributor,
     [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
-    { constructorArgs: [isTimeBased, blocksPerYear] },
+    { constructorArgs: [isTimeBased, blocksPerYear], unsafeAllow: ["internal-function-storage"] },
   )) as RewardsDistributor;
 
   const rewardsDistributor2 = await upgrades.deployProxy(
     RewardsDistributor,
     [comptrollerProxy.address, mockDAI.address, maxLoopsLimit, fakeAccessControlManager.address],
-    { constructorArgs: [isTimeBased, blocksPerYear] },
+    { constructorArgs: [isTimeBased, blocksPerYear], unsafeAllow: ["internal-function-storage"] },
   );
   const initialXvs = convertToUnit(1000000, 18);
   await xvs.faucet(initialXvs);
@@ -296,7 +296,7 @@ for (const isTimeBased of [false, true]) {
       rewardsDistributor = (await upgrades.deployProxy(
         RewardsDistributor,
         [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
-        { constructorArgs: [isTimeBased, blocksPerYear] },
+        { constructorArgs: [isTimeBased, blocksPerYear], unsafeAllow: ["internal-function-storage"] },
       )) as RewardsDistributor;
 
       await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
@@ -309,7 +309,7 @@ for (const isTimeBased of [false, true]) {
       rewardsDistributor = (await upgrades.deployProxy(
         RewardsDistributor,
         [comptrollerProxy.address, mockWBTC.address, maxLoopsLimit, fakeAccessControlManager.address],
-        { constructorArgs: [isTimeBased, blocksPerYear] },
+        { constructorArgs: [isTimeBased, blocksPerYear], unsafeAllow: ["internal-function-storage"] },
       )) as RewardsDistributor;
 
       await expect(comptrollerProxy.addRewardsDistributor(rewardsDistributor.address))
@@ -370,7 +370,7 @@ for (const isTimeBased of [false, true]) {
       const newRewardsDistributor = (await upgrades.deployProxy(
         RewardsDistributor,
         [comptrollerProxy.address, xvs.address, maxLoopsLimit, fakeAccessControlManager.address],
-        { constructorArgs: [isTimeBased, blocksPerYear] },
+        { constructorArgs: [isTimeBased, blocksPerYear], unsafeAllow: ["internal-function-storage"] },
       )) as RewardsDistributor;
 
       await comptrollerProxy.addRewardsDistributor(newRewardsDistributor.address);

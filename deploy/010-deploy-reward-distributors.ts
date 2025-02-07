@@ -15,19 +15,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
   const maxLoopsLimit = 100;
 
-  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.network.name);
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(hre.getNetworkName());
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
 
-  const accessControlAddress = "0x854C064EA6b503A97980F481FA3B7279012fdeDd"//await toAddress(
-  //   preconfiguredAddresses.AccessControlManager || "AccessControlManager",
-  //   hre,
-  // );
-  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer", hre);
+  const accessControlAddress = await toAddress(preconfiguredAddresses.AccessControlManager || "AccessControlManager");
+  const proxyOwnerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer");
+
   const defaultProxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
 
-  const pools = await getUnregisteredRewardsDistributors(poolConfig, hre);
+  const pools = await getUnregisteredRewardsDistributors(poolConfig);
 
   await deploy("RewardsDistributorImpl", {
     contract: "RewardsDistributor",
