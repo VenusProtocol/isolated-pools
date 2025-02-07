@@ -1,3 +1,11 @@
+## [4.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.2...v4.0.0-dev.3) (2025-02-07)
+
+
+### Features
+
+* IL deployments on unichainsepolia ([6851fa9](https://github.com/VenusProtocol/isolated-pools/commit/6851fa90e369f1e80b35321ebb8498c1640ffcfe))
+* updating deployment files ([086657b](https://github.com/VenusProtocol/isolated-pools/commit/086657bcda77f88757ef47c011e6734852d5b04b))
+
 ## [4.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.1...v4.0.0-dev.2) (2025-02-05)
 
 
