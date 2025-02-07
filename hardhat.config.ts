@@ -96,6 +96,11 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/basemainnet",
           "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
         ],
+        unichainsepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/unichainsepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/unichainsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia",
+        ],
       },
     };
     if (process.env.HARDHAT_FORK_NETWORK) {

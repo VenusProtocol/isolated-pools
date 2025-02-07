@@ -3017,6 +3017,20 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
+        name: "ether.fi BTC",
+        symbol: "eBTC",
+        decimals: 8,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Eigen",
+        symbol: "EIGEN",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
         name: "pufETH",
         symbol: "pufETH",
         decimals: 18,
@@ -3972,6 +3986,20 @@ export const globalConfig: NetworkConfig = {
         symbol: "weETHs",
         decimals: 18,
         tokenAddress: "0x917ceE801a67f933F2e6b33fC0cD1ED2d5909D88",
+      },
+      {
+        isMock: false,
+        name: "ether.fi BTC",
+        symbol: "eBTC",
+        decimals: 8,
+        tokenAddress: "0x657e8C867D8B37dCC18fA4Caead9C45EB088C642",
+      },
+      {
+        isMock: false,
+        name: "Eigen",
+        symbol: "EIGEN",
+        decimals: 18,
+        tokenAddress: "0xec53bF9167f50cDEB3Ae105f56099aaaB9061F83",
       },
       {
         isMock: false,
