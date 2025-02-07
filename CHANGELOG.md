@@ -1,3 +1,10 @@
+## [4.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.4...v4.0.0-dev.5) (2025-02-07)
+
+
+### Features
+
+* update dependencies ([038ed0e](https://github.com/VenusProtocol/isolated-pools/commit/038ed0efa44af4bf5490146815934e5afbea65d7))
+
 ## [4.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.3...v4.0.0-dev.4) (2025-02-07)
 
 
