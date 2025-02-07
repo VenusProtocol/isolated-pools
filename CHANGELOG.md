@@ -1,3 +1,11 @@
+## [4.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.3...v4.0.0-dev.4) (2025-02-07)
+
+
+### Features
+
+* NTG deplyment on unichainsepolia ([6faebd3](https://github.com/VenusProtocol/isolated-pools/commit/6faebd3358f70ac8b36b091b25da24eb4262aed2))
+* updating deployment files ([ad493c5](https://github.com/VenusProtocol/isolated-pools/commit/ad493c5e3fe02f05d48be4f46e81b5ba71020a8f))
+
 ## [4.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.2...v4.0.0-dev.3) (2025-02-07)
 
 
