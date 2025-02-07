@@ -1,0 +1,26 @@
+{
+  "name": "unichainsepolia",
+  "chainId": "1301",
+  "addresses": {
+    "ComptrollerBeacon": "0x1f5f89b3C53b0b07dc0E7EF80864842E41Df480a",
+    "ComptrollerImpl": "0x89dFf06C851A7A31a47079aaEDE68dE2304c55d0",
+    "Comptroller_Core": "0xFeD3eAA668a6179c9E5E1A84e3A7d6883F06f7c1",
+    "DefaultProxyAdmin": "0x256735eFdfDf135bD6991854e0065909e57804aa",
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": "0x30EEAD47F3C63A9Fa179Ab6e263A8666f91B1764",
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": "0x5fC344E85E5950335a1cE717AC04247B485efB00",
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": "0x2f8263A8833C21b6B72AC55951756B41D4607e3F",
+    "MockUSDC": "0xf16d4774893eB578130a645d5c69E9c4d183F3A5",
+    "MockUSDT": "0x7bc1b67fde923fd3667Fde59684c6c354C8EbFdA",
+    "MockcbBTC": "0x2979ef1676bb28192ac304173C717D7322b3b586",
+    "PoolLens": "0xE32DD86fc8cc7984E453703Ef04Fe822aF411f74",
+    "PoolRegistry": "0x9027cF782515F3184bbF7A6cD7a33052dc52E439",
+    "PoolRegistry_Implementation": "0x8C4F774283b8CD051443182A6A92D3abbf2D36A9",
+    "PoolRegistry_Proxy": "0x9027cF782515F3184bbF7A6cD7a33052dc52E439",
+    "VTokenBeacon": "0x123AC6429C00333D5b2E140e54d9037E154b27E4",
+    "VTokenImpl": "0x747CFdF20d4257131Bf5731D2A79f570B71970E8",
+    "VToken_vUSDC_Core": "0x0CA7edfcCF5dbf8AFdeAFB2D918409d439E3320A",
+    "VToken_vUSDT_Core": "0x2d8814e1358D71B6B271295893F7409E3127CBBf",
+    "VToken_vWETH_Core": "0x3dEAcBe87e4B6333140a46aBFD12215f4130B132",
+    "VToken_vcbBTC_Core": "0x7d39496Ac9FdA5a336CB2A96FD5Eaa022Fd6Fb05"
+  }
+}
