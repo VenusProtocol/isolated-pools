@@ -1,3 +1,18 @@
+## [4.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.3...v4.1.0-dev.4) (2025-02-11)
+
+
+### Features
+
+* NTG deployment on unichain mainnet ([7207fd1](https://github.com/VenusProtocol/isolated-pools/commit/7207fd10bb14d02eea033dade355b838e7b0a7e8))
+* updating deployment files ([3df2be1](https://github.com/VenusProtocol/isolated-pools/commit/3df2be19d9628e5f9c856c973006763c5a699809))
+* updating deployment files ([e81c07f](https://github.com/VenusProtocol/isolated-pools/commit/e81c07fc211a7113ce04071a8aea5b88cbd2d429))
+* updating deployment files ([880bd6d](https://github.com/VenusProtocol/isolated-pools/commit/880bd6dda9063658c9de25f00375c0e56a50a5ae))
+
+
+### Bug Fixes
+
+* redeploy NTG on unichainmainnet ([b04ebb8](https://github.com/VenusProtocol/isolated-pools/commit/b04ebb8d48b6f26652aaed026f629512ff1235b9))
+
 ## [4.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.2...v4.1.0-dev.3) (2025-02-11)
 
 
