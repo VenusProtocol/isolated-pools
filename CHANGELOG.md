@@ -1,3 +1,23 @@
+## [4.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.2...v4.1.0-dev.3) (2025-02-11)
+
+
+### Features
+
+* add market deployments on unichain ([7e7f555](https://github.com/VenusProtocol/isolated-pools/commit/7e7f5551db23c91b9e246e8a7d9c700020f741bb))
+* deploy pool lens & configure markets on unichain ([de507ba](https://github.com/VenusProtocol/isolated-pools/commit/de507baf707529707395a37b5d57ac675a938626))
+* update config & redeploy contracts ([0f1f22f](https://github.com/VenusProtocol/isolated-pools/commit/0f1f22f77189c1788145231ff1da17b907cc2a72))
+* updating deployment files ([d0f946c](https://github.com/VenusProtocol/isolated-pools/commit/d0f946c9f6e714f339c24065ded38daef878af15))
+* updating deployment files ([f675856](https://github.com/VenusProtocol/isolated-pools/commit/f6758567ca8ff0462da9a43fe65235525b1b4ed1))
+* updating deployment files ([39da89c](https://github.com/VenusProtocol/isolated-pools/commit/39da89cc12947708f5dba5784303a45616083571))
+
+## [4.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.1...v4.1.0-dev.2) (2025-02-11)
+
+
+### Features
+
+* deployed on sepolia and ethereym ([ead1d0e](https://github.com/VenusProtocol/isolated-pools/commit/ead1d0eb3936717dbde6236b3cdd76c78e7aa319))
+* updating deployment files ([78b1ed7](https://github.com/VenusProtocol/isolated-pools/commit/78b1ed7e54302ef6dc91215e3d90074a5c7e8008))
+
 ## [4.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0...v4.1.0-dev.1) (2025-02-09)
 
 
