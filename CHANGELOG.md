@@ -1,3 +1,11 @@
+## [4.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.1...v4.1.0-dev.2) (2025-02-11)
+
+
+### Features
+
+* deployed on sepolia and ethereym ([ead1d0e](https://github.com/VenusProtocol/isolated-pools/commit/ead1d0eb3936717dbde6236b3cdd76c78e7aa319))
+* updating deployment files ([78b1ed7](https://github.com/VenusProtocol/isolated-pools/commit/78b1ed7e54302ef6dc91215e3d90074a5c7e8008))
+
 ## [4.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0...v4.1.0-dev.1) (2025-02-09)
 
 
