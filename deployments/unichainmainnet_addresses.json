@@ -1,0 +1,22 @@
+{
+  "name": "unichainmainnet",
+  "chainId": "130",
+  "addresses": {
+    "ComptrollerBeacon": "0xE57824ffF03fB19D7f93139A017a7E70f6F25166",
+    "ComptrollerImpl": "0xDa42d85AE7625eBDD3b5967F44c263565BD8fA40",
+    "Comptroller_Core": "0xe22af1e6b78318e1Fe1053Edbd7209b8Fc62c4Fe",
+    "DefaultProxyAdmin": "0x78e9fff2ab8daAB8559070d897C399E5e1C5074c",
+    "JumpRateModelV2_base0bps_slope1250bps_jump30000bps_kink8000bps": "0x2DAb0B51d7d899b66d4F16EA1c0cEB1767863523",
+    "JumpRateModelV2_base0bps_slope2000bps_jump25000bps_kink8000bps": "0x897aD981078d1dBA52069f4BdC7F9441B0B94B76",
+    "JumpRateModelV2_base0bps_slope300bps_jump30000bps_kink8000bps": "0x1cC9De442f893a0C4e1E6ffB1Ac404DDb9B67ab4",
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": "0xb41aDec3D6dCc376164D071Cb5ed70388335e471",
+    "PoolLens": "0xe192aeDBDBd235DBF33Ea1444f2B908Ea3E78419",
+    "PoolRegistry": "0x0C52403E16BcB8007C1e54887E1dFC1eC9765D7C",
+    "PoolRegistry_Implementation": "0xBAb8c229B6C19c443b942F228B076Ca0d4f2260E",
+    "PoolRegistry_Proxy": "0x0C52403E16BcB8007C1e54887E1dFC1eC9765D7C",
+    "VTokenBeacon": "0x42c1Efb9Dd9424c5ac8e6EcEa4eb03940c4a15Fc",
+    "VTokenImpl": "0x89368F746C6e96801cB92776E72a8948226072cc",
+    "VToken_vUSDC_Core": "0xB953f92B9f759d97d2F2Dec10A8A3cf75fcE3A95",
+    "VToken_vWETH_Core": "0xc219BC179C7cDb37eACB03f993f9fDc2495e3374"
+  }
+}
