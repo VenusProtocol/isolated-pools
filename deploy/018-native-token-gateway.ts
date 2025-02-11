@@ -14,6 +14,7 @@ import { contracts as ilOpbnbTestnet } from "../deployments/opbnbtestnet.json";
 import { contracts as ilOpMainnet } from "../deployments/opmainnet.json";
 import { contracts as ilOpSepolia } from "../deployments/opsepolia.json";
 import { contracts as ilSepolia } from "../deployments/sepolia.json";
+import { contracts as ilUnichainMainnet } from "../deployments/unichainmainnet.json";
 import { contracts as ilUnichainSepolia } from "../deployments/unichainsepolia.json";
 import { contracts as ilZkMainnet } from "../deployments/zksyncmainnet.json";
 import { contracts as ilZkSepolia } from "../deployments/zksyncsepolia.json";
@@ -129,6 +130,12 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilUnichainSepolia.VToken_vWETH_Core.address,
+    },
+  ],
+  unichainmainnet: [
+    {
+      name: "vWETH_Core",
+      address: ilUnichainMainnet.VToken_vWETH_Core.address,
     },
   ],
 };
