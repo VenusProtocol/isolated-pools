@@ -7147,7 +7147,7 @@ export const globalConfig: NetworkConfig = {
         name: "USD Coin",
         symbol: "USDC",
         decimals: 6,
-        tokenAddress: "0x078D782b760474a361dDA0AF3839290b0EF57AD6",  // to be confirmed
+        tokenAddress: "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
       },
       {
         isMock: false,
