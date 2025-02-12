@@ -68,7 +68,7 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
- 
+
   slither-analysis:
     runs-on: ubuntu-latest
     permissions:
