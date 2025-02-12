@@ -3376,14 +3376,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/governance-contracts@npm:2.6.0":
-  version: 2.6.0
-  resolution: "@venusprotocol/governance-contracts@npm:2.6.0"
+"@venusprotocol/governance-contracts@npm:2.9.0, @venusprotocol/governance-contracts@npm:^2.9.0":
+  version: 2.9.0
+  resolution: "@venusprotocol/governance-contracts@npm:2.9.0"
   dependencies:
     "@venusprotocol/solidity-utilities": 2.0.0
     hardhat-deploy-ethers: ^0.3.0-beta.13
     module-alias: ^2.2.2
-  checksum: 7b4e8034961d02a3ae1f33b9a771e98d1ae39576ae60222433c2d33d184b7f6d8e1368a050dfe1d40f4ce3a0341e6500f00dd6e64c58a35092c942c125247c77
+  checksum: 502f42064917867790f82b2026186457a973fe0a995b479bc25abe3b187674734eca65544e3ba060e5829ebc77b380b9e4e2bea7edbdba65ad94bf1ed30b01a2
   languageName: node
   linkType: hard
 
@@ -3399,8 +3399,8 @@ __metadata:
   linkType: hard
 
 "@venusprotocol/isolated-pools@npm:^3.4.0":
-  version: 3.8.0
-  resolution: "@venusprotocol/isolated-pools@npm:3.8.0"
+  version: 3.9.0
+  resolution: "@venusprotocol/isolated-pools@npm:3.9.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
@@ -3411,7 +3411,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.11.14
     module-alias: ^2.2.2
-  checksum: 2f1713fac1049d03456d46164673e8d1a3e222bb20daede6cf7162e414bbb5113fa1085ecdb63eb7161743b450e345fd64baa395ab0a77147cb154697a739b3c
+  checksum: f72d664e73667aff1ad773bf7464f07110f1a7a150efe31e59805ef92c58c94405cfcefef15983182c339f3812365b72f9ac8fdd13ddd6876e1c0ef9739cc4d2
   languageName: node
   linkType: hard
 
@@ -3447,11 +3447,11 @@ __metadata:
     "@types/node": ^12.20.50
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
-    "@venusprotocol/governance-contracts": 2.6.0
-    "@venusprotocol/oracle": 2.7.0
-    "@venusprotocol/protocol-reserve": 3.0.1
+    "@venusprotocol/governance-contracts": 2.9.0
+    "@venusprotocol/oracle": 2.10.0
+    "@venusprotocol/protocol-reserve": 3.2.0
     "@venusprotocol/solidity-utilities": 2.0.3
-    "@venusprotocol/venus-protocol": 9.4.0
+    "@venusprotocol/venus-protocol": 9.7.0
     bignumber.js: 9.0.0
     chai: ^4.3.6
     dotenv: ^10.0.0
@@ -3483,7 +3483,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@venusprotocol/oracle@npm:2.7.0, @venusprotocol/oracle@npm:^2.7.0":
+"@venusprotocol/oracle@npm:2.10.0":
+  version: 2.10.0
+  resolution: "@venusprotocol/oracle@npm:2.10.0"
+  dependencies:
+    "@chainlink/contracts": ^0.5.1
+    "@defi-wonderland/smock": 2.3.5
+    "@nomicfoundation/hardhat-network-helpers": ^1.0.8
+    "@openzeppelin/contracts": ^4.6.0
+    "@openzeppelin/contracts-upgradeable": ^4.7.3
+    "@venusprotocol/governance-contracts": ^2.9.0
+    "@venusprotocol/solidity-utilities": ^2.0.0
+    "@venusprotocol/venus-protocol": ^9.1.0
+    ethers: ^5.6.8
+    hardhat: 2.19.5
+    hardhat-deploy: ^0.12.4
+    module-alias: ^2.2.2
+    solidity-docgen: ^0.6.0-beta.29
+  checksum: 7fe12e7179504bd019cad1894db51e0b3ff1fe674222fd0ef49cc8a4627d88054ab7811b7d26dfab5bbb4fc13b14cb5f1e98783094ef3602cc4eb0a6a384c8dc
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/oracle@npm:^2.7.0":
   version: 2.7.0
   resolution: "@venusprotocol/oracle@npm:2.7.0"
   dependencies:
@@ -3504,16 +3525,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/protocol-reserve@npm:3.0.1":
-  version: 3.0.1
-  resolution: "@venusprotocol/protocol-reserve@npm:3.0.1"
+"@venusprotocol/protocol-reserve@npm:3.2.0, @venusprotocol/protocol-reserve@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "@venusprotocol/protocol-reserve@npm:3.2.0"
   dependencies:
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@openzeppelin/contracts": ^4.8.3
     "@openzeppelin/contracts-upgradeable": ^4.8.3
     "@openzeppelin/hardhat-upgrades": ^1.21.0
     "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/governance-contracts": ^2.6.0
+    "@venusprotocol/governance-contracts": ^2.9.0
     "@venusprotocol/isolated-pools": ^3.4.0
     "@venusprotocol/oracle": ^2.7.0
     "@venusprotocol/solidity-utilities": ^2.0.3
@@ -3521,7 +3542,7 @@ __metadata:
     ethers: ^5.7.0
     hardhat-deploy: ^0.14.0
     module-alias: ^2.2.2
-  checksum: 704e4b923ef8fae6840cb53b9eced0504778ba879e3930de26ceb79d65e017d598b71baeeba980fff2b01ca78d6745bd48d9bb7082cda4178c547078661ea594
+  checksum: 6f1c55c0cc748cbad4cd2fba4b95a3407af7c2701623ae552557d451ab0342db7d83a6df24eb697459a50e846d2466ee84d8035d63b20c5b31e12b59e10c2cc5
   languageName: node
   linkType: hard
 
@@ -3565,7 +3586,40 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/venus-protocol@npm:9.4.0, @venusprotocol/venus-protocol@npm:^9.1.0":
+"@venusprotocol/token-bridge@npm:^2.6.0":
+  version: 2.6.0
+  resolution: "@venusprotocol/token-bridge@npm:2.6.0"
+  dependencies:
+    "@layerzerolabs/solidity-examples": ^1.0.0
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    ethers: ^5.7.0
+    module-alias: ^2.2.2
+  checksum: 84c70eb608495392c09e825c025bbd796675354ddaa3bb1144b570dbc7e5f2b283b52086a014fccecf7bd679725ddd5a15edc65cfeed323e03d8b75548d6bc4a
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/venus-protocol@npm:9.7.0":
+  version: 9.7.0
+  resolution: "@venusprotocol/venus-protocol@npm:9.7.0"
+  dependencies:
+    "@nomicfoundation/hardhat-ethers": ^3.0.0
+    "@openzeppelin/contracts": 4.9.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.0
+    "@venusprotocol/governance-contracts": ^2.9.0
+    "@venusprotocol/protocol-reserve": ^3.2.0
+    "@venusprotocol/solidity-utilities": ^2.0.3
+    "@venusprotocol/token-bridge": ^2.6.0
+    bignumber.js: ^9.1.2
+    dotenv: ^16.0.1
+    module-alias: ^2.2.2
+  checksum: 3f58a0bea9d98647bdd799055e21c4612a08cc3f92a46f4b35b1b861d455c60c9f522d421bdcc0e17fa5f9509dfee9dae78f5f7dc9e508c0fb74e1bb91e05d7a
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/venus-protocol@npm:^9.1.0":
   version: 9.4.0
   resolution: "@venusprotocol/venus-protocol@npm:9.4.0"
   dependencies:

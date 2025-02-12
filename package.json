@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "3.9.0-dev.1",
+  "version": "4.1.0",
   "description": "",
   "files": [
     "artifacts",
@@ -77,10 +77,10 @@
     "@types/node": "^12.20.50",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
-    "@venusprotocol/governance-contracts": "2.6.0",
-    "@venusprotocol/oracle": "2.7.0",
-    "@venusprotocol/protocol-reserve": "3.0.1",
-    "@venusprotocol/venus-protocol": "9.4.0",
+    "@venusprotocol/governance-contracts": "2.9.0",
+    "@venusprotocol/oracle": "2.10.0",
+    "@venusprotocol/protocol-reserve": "3.2.0",
+    "@venusprotocol/venus-protocol": "9.7.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
     "dotenv": "^10.0.0",
