@@ -87,12 +87,10 @@ jobs:
 
       - name: 📦 Install dependencies
         run: |
-          cd packages/smart-contracts
           yarn install
 
       - name: 🏗️ Build project
         run: |
-          cd packages/smart-contracts
           yarn build
 
       - name: 🐍 Set up Python environment
