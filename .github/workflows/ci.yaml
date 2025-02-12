@@ -130,6 +130,50 @@ jobs:
           slither contracts --ignore-compile --solc-remaps "@openzeppelin=node_modules/@openzeppelin @venusprotocol=node_modules/@venusprotocol"
         continue-on-error: true
 
+  slither-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: 📥 Check out code
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Set up Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: 📦 Install dependencies
+        run: |
+          cd packages/smart-contracts
+          yarn install
+
+      - name: 🏗️ Build project
+        run: |
+          cd packages/smart-contracts
+          yarn build
+
+      - name: 🐍 Set up Python environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install slither-analyzer
+
+      - name: Set up Solidity Compiler Version
+        run: |
+          source .venv/bin/activate
+          solc-select install 0.8.25
+          solc-select use 0.8.25
+
+      - name: 🔍 Run Solidity Static Analysis
+        run: |
+          source .venv/bin/activate
+          chmod +x analyze.sh
+          bash analyze.sh
+
   deploy:
     name: Deploy
     runs-on: ubuntu-22.04
