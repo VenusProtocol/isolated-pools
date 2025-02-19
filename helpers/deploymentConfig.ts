@@ -66,15 +66,27 @@ type BidderDeploymentValues = {
   nextBidderBlockOrTimestampLimit: number;
 };
 
-export type TokenConfig = {
-  isMock: boolean;
-  standard?: "ERC-20" | "ERC-4626";
+export type MockTokenContractName = "MockERC4626Token" | "MockZkETHToken";
+
+type TokenConfigBase = {
   name?: string;
   symbol: string;
   decimals?: number;
-  tokenAddress: string;
   faucetInitialLiquidity?: boolean;
 };
+
+type MockTokenConfig = {
+  isMock: true;
+  mockContract?: MockTokenContractName;
+  tokenAddress: "0x0000000000000000000000000000000000000000";
+} & TokenConfigBase;
+
+type ProductionTokenConfig = {
+  isMock?: false;
+  tokenAddress: string;
+} & TokenConfigBase;
+
+export type TokenConfig = MockTokenConfig | ProductionTokenConfig;
 
 export type PoolConfig = {
   id: string;
@@ -3101,7 +3113,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "Savings USDS",
         symbol: "sUSDS",
         decimals: 18,
@@ -3109,7 +3121,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "USDC-1 yVault",
         symbol: "yvUSDC-1",
         decimals: 6,
@@ -3117,7 +3129,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "USDT-1 yVault",
         symbol: "yvUSDT-1",
         decimals: 6,
@@ -3125,7 +3137,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "USDS-1 yVault",
         symbol: "yvUSDS-1",
         decimals: 18,
@@ -3133,7 +3145,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "WETH-1 yVault",
         symbol: "yvWETH-1",
         decimals: 18,
@@ -5979,7 +5991,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "Wrapped Mountain Protocol USD",
         symbol: "wUSDM",
         decimals: 18,
@@ -5989,6 +6001,14 @@ export const globalConfig: NetworkConfig = {
         isMock: true,
         name: "Wrapped liquid staked Ether 2.0.",
         symbol: "wstETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        mockContract: "MockZkETHToken",
+        name: "ZK Liquid Staked Token",
+        symbol: "zkETH",
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
@@ -6145,6 +6165,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
           },
+          {
+            name: "Venus zkETH (Core)",
+            asset: "zkETH",
+            symbol: "vzkETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("3.734", 18),
+            supplyCap: convertToUnit("2400", 18),
+            borrowCap: "0",
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 3600 days (311040000 seconds)
@@ -6244,6 +6282,13 @@ export const globalConfig: NetworkConfig = {
         symbol: "wstETH",
         decimals: 18,
         tokenAddress: "0x703b52F2b28fEbcB60E1372858AF5b18849FE867",
+      },
+      {
+        isMock: false,
+        name: "ZK Liquid Staked Token",
+        symbol: "zkETH",
+        decimals: 18,
+        tokenAddress: "0xb72207E1FB50f341415999732A20B6D25d8127aa",
       },
     ],
     poolConfig: [
@@ -6407,6 +6452,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(35, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: "0x65B05f4fCa066316383b0FE196C76C873a4dFD02",
+          },
+          {
+            name: "Venus zkETH (Core)",
+            asset: "zkETH",
+            symbol: "vzkETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.0875", 18),
+            jumpMultiplierPerYear: convertToUnit("0.8", 18),
+            kink_: convertToUnit("0.8", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.1", 18),
+            initialSupply: convertToUnit("3.734", 18),
+            supplyCap: convertToUnit("2400", 18),
+            borrowCap: "0",
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
+            vTokenReceiver: "0x3d97E13A1D2bb4C9cE9EA9d424D83d3638F052ad",
           },
         ],
         rewards: [
@@ -6807,7 +6870,7 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: true,
-        standard: "ERC-4626",
+        mockContract: "MockERC4626Token",
         name: "Wrapped Super OETH",
         symbol: "wsuperOETHb",
         decimals: 18,
