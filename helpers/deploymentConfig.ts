@@ -7210,7 +7210,22 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
           },
         ],
-        rewards: [],
+        rewards: [
+          // XVS Rewards Over 30 days (2592000 seconds)
+
+          // WETH: 1500 XVS for Suppliers
+          //       500 XVS for Borrowers
+
+          // USDC: 1500 XVS for Suppliers
+          //       500 XVS for Borrowers
+
+          {
+            asset: "XVS",
+            markets: ["WETH", "USDC"],
+            supplySpeeds: ["578703703703704", "578703703703704"],
+            borrowSpeeds: ["192901234567901", "192901234567901"],
+          },
+        ],
       },
     ],
     accessControlConfig: [
