@@ -1,3 +1,11 @@
+## [4.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.2...v4.2.0-dev.3) (2025-02-20)
+
+
+### Features
+
+* deploy Reward distributor on unichain ([b3054b4](https://github.com/VenusProtocol/isolated-pools/commit/b3054b4001154c3538e543cf19bd80c832b40414))
+* updating deployment files ([509c44e](https://github.com/VenusProtocol/isolated-pools/commit/509c44ea8011266facd622fe444a827de2b53f76))
+
 ## [4.2.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.1...v4.2.0-dev.2) (2025-02-14)
 
 
