@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const contractName = `Mock${token.symbol}`;
       await deploy(contractName, {
         from: deployer,
-        contract: token.standard === "ERC-4626" ? "MockERC4626Token" : "MockToken",
+        contract: token.mockContract || "MockToken",
         args: [token.name, token.symbol, token.decimals],
         log: true,
         autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
