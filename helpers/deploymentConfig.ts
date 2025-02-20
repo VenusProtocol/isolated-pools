@@ -7030,6 +7030,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0xC0e51E865bc9Fed0a32Cc0B2A65449567Bc5c741",
       },
+      {
+        isMock: true,
+        name: "Uniswap",
+        symbol: "UNI",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -7112,6 +7119,24 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury,
           },
+          {
+            name: "Venus UNI (Core)",
+            asset: "UNI",
+            symbol: "vUNI_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.3", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("500", 18), // 500 UNI
+            supplyCap: convertToUnit("20000", 18),
+            borrowCap: convertToUnit("0", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 3600 days (311040000 seconds)
@@ -7163,6 +7188,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x81908BBaad3f6fC74093540Ab2E9B749BB62aA0d",
       },
+      {
+        isMock: false,
+        name: "Uniswap",
+        symbol: "UNI",
+        decimals: 18,
+        tokenAddress: "0x8f187aa05619a017077f5308904739877ce9ea21",
+      },
     ],
 
     poolConfig: [
@@ -7208,6 +7240,24 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("300", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
             vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
+          },
+          {
+            name: "Venus UNI (Core)",
+            asset: "UNI",
+            symbol: "vUNI_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.3", 18),
+            collateralFactor: convertToUnit("0", 18),
+            liquidationThreshold: convertToUnit("0", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("500", 18), // 500 UNI
+            supplyCap: convertToUnit("20000", 18),
+            borrowCap: convertToUnit("0", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury, // TBD
           },
         ],
         rewards: [
