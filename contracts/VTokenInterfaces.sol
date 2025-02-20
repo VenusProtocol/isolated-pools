@@ -132,11 +132,21 @@ contract VTokenStorage {
     uint256 public reduceReservesBlockNumber;
 
     /**
+     * @notice flashLoan is enabled for this market or not
+     */
+    bool public isFlashLoanEnabled;
+
+    /**
+     * @notice fee percentage collected by protocol on flashLoan
+     */
+    uint256 public flashLoanFeeMantissa;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[48] private __gap;
+    uint256[46] private __gap;
 }
 
 /**
@@ -288,6 +298,26 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
+    /**
+     * @notice Event emitted when flashLoanEnabled status is changed
+     */
+    event ToggleFlashLoanEnabled(bool oldEnabled, bool enabled);
+
+    /**
+     * @notice Event emitted when flashLoan is executed
+     */
+    event FlashLoanExecuted(address receiver, address underlying, uint256 amount);
+
+    /**
+     * @notice Event emitted when asset is transferred to receiver
+     */
+    event FlashLoanAmountTransferred(address asset, address receiver, uint256 amount);
+
+    /**
+     * @notice Event emitted when flashLoan fee mantissa is updated
+     */
+    event FlashLoanFeeUpdated(uint256 oldFee, uint256 fee);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
@@ -336,6 +366,10 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function sweepToken(IERC20Upgradeable token) external virtual;
 
+    function transferUnderlying(address receiver, uint256 amount) external virtual returns (uint256 balanceBefore);
+
+    function executeFlashLoan(address receiver, uint256 amount) external virtual returns (uint256);
+
     /*** Admin Functions ***/
 
     function setReserveFactor(uint256 newReserveFactorMantissa) external virtual;
@@ -349,6 +383,10 @@ abstract contract VTokenInterface is VTokenStorage {
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
 
     function addReserves(uint256 addAmount) external virtual;
+
+    function toggleFlashLoan() external virtual;
+
+    function setFlashLoanFeeMantissa(uint256 fee) external virtual;
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 
@@ -383,4 +421,11 @@ abstract contract VTokenInterface is VTokenStorage {
     function isVToken() external pure virtual returns (bool) {
         return true;
     }
+
+    function calculateFee(
+        address receiver,
+        uint256 amount
+    ) public view virtual returns (uint256 fee, uint256 repaymentAmount);
+
+    function verifyBalance(uint256 balanceBefore, uint256 repaymentAmount) public view virtual returns (uint256);
 }

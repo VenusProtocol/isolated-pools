@@ -46,4 +46,9 @@ contract TokenErrorReporter {
     error ReduceReservesCashValidation();
 
     error SetInterestRateModelFreshCheck();
+
+    error FlashLoanNotEnabled(address);
+    error ExecuteFlashLoanFailed();
+    error InvalidComptroller(address comptroller);
+    error InsufficientReypaymentBalance(address tokenAddress);
 }

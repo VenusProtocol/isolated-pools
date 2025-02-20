@@ -484,8 +484,9 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 12));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 12));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param])).to.be.revertedWith(
-        "Nonzero borrow balance after liquidation",
+      await expect(Comptroller.connect(acc1Signer).liquidateAccount(acc2, [param])).to.be.revertedWithCustomError(
+        Comptroller,
+        "NonzeroBorrowBalance",
       );
     });
 

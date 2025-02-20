@@ -105,8 +105,9 @@ describe("setters", async () => {
 
     it("reverts if re-adding same rewardDistributor", async () => {
       await comptroller.addRewardsDistributor(newRewardsDistributor.address);
-      await expect(comptroller.addRewardsDistributor(newRewardsDistributor.address)).to.be.revertedWith(
-        "already exists",
+      await expect(comptroller.addRewardsDistributor(newRewardsDistributor.address)).to.be.revertedWithCustomError(
+        comptroller,
+        "RewardsDistributorAlreadyExists",
       );
     });
   });
@@ -147,17 +148,24 @@ describe("setters", async () => {
 
   describe("SupplyAndBorrowCaps", async () => {
     it("reverts if token data is invalid", async () => {
-      await expect(comptroller.setMarketSupplyCaps([], [1, 2])).to.be.revertedWith("invalid number of markets");
+      await expect(comptroller.setMarketSupplyCaps([], [1, 2])).to.be.revertedWithCustomError(
+        comptroller,
+        "InvalidInput",
+      );
     });
 
     it("reverts if supply and token data is invalid", async () => {
-      await expect(comptroller.setMarketSupplyCaps([OMG.address], [1, 2])).to.be.revertedWith(
-        "invalid number of markets",
+      await expect(comptroller.setMarketSupplyCaps([OMG.address], [1, 2])).to.be.revertedWithCustomError(
+        comptroller,
+        "InvalidInput",
       );
     });
 
     it("reverts if borrow and token data is invalid", async () => {
-      await expect(comptroller.setMarketBorrowCaps([OMG.address], [1, 2])).to.be.revertedWith("invalid input");
+      await expect(comptroller.setMarketBorrowCaps([OMG.address], [1, 2])).to.be.revertedWithCustomError(
+        comptroller,
+        "InvalidInput",
+      );
     });
   });
 
