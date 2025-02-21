@@ -7131,7 +7131,7 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0", 18),
             liquidationThreshold: convertToUnit("0", 18),
             reserveFactor: convertToUnit("0.25", 18),
-            initialSupply: convertToUnit("500", 18), // 500 UNI
+            initialSupply: convertToUnit("529.463427983309919376", 18), // 529.463427983309919376 UNI
             supplyCap: convertToUnit("20000", 18),
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
@@ -7253,11 +7253,11 @@ export const globalConfig: NetworkConfig = {
             collateralFactor: convertToUnit("0", 18),
             liquidationThreshold: convertToUnit("0", 18),
             reserveFactor: convertToUnit("0.25", 18),
-            initialSupply: convertToUnit("500", 18), // 500 UNI
+            initialSupply: convertToUnit("529.463427983309919376", 18), // 529.463427983309919376 UNI
             supplyCap: convertToUnit("20000", 18),
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
-            vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury, // TBD
+            vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
           },
         ],
         rewards: [
