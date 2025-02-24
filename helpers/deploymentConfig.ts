@@ -7254,11 +7254,11 @@ export const globalConfig: NetworkConfig = {
         tokenAddress: ethers.constants.AddressZero,
       },
       {
-        isMock: false,
+        isMock: true,
         name: "Wrapped Ether",
         symbol: "WETH",
         decimals: 18,
-        tokenAddress: "0x6E1E9896e93F7A71ECB33d4386b49DeeD67a231A",
+        tokenAddress: ethers.constants.AddressZero,
       },
       {
         isMock: false,

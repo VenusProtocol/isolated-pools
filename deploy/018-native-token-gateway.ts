@@ -18,6 +18,7 @@ import { contracts as ilUnichainMainnet } from "../deployments/unichainmainnet.j
 import { contracts as ilUnichainSepolia } from "../deployments/unichainsepolia.json";
 import { contracts as ilZkMainnet } from "../deployments/zksyncmainnet.json";
 import { contracts as ilZkSepolia } from "../deployments/zksyncsepolia.json";
+import { contracts as ilBerachainbartio } from "../deployments/berachainbartio.json";
 import { getConfig } from "../helpers/deploymentConfig";
 
 interface VTokenConfig {
@@ -136,6 +137,12 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilUnichainMainnet.VToken_vWETH_Core.address,
+    },
+  ],
+  berachainbartio: [
+    {
+      name: "vWBERA_Core",
+      address: ilBerachainbartio.VToken_vWBERA_Core.address,
     },
   ],
 };
