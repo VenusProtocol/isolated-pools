@@ -3492,6 +3492,7 @@ __metadata:
     solhint: ^3.3.7
     solidity-coverage: ^0.8.4
     solidity-docgen: ^0.6.0-beta.29
+    solmate: ^6.8.0
     solparse: ^2.2.8
     ts-node: ^10.7.0
     typechain: ^5.2.0
@@ -12424,6 +12425,13 @@ __metadata:
   peerDependencies:
     hardhat: ^2.8.0
   checksum: 658204db9dc73904bf2e556015d36ca5d120c88b10ecd249f5822b75cb5ea259b039081018ad98d6d00423f0e7691c9a1bf515e640bb84fc51d0def9d80eca3a
+  languageName: node
+  linkType: hard
+
+"solmate@npm:^6.8.0":
+  version: 6.8.0
+  resolution: "solmate@npm:6.8.0"
+  checksum: 43d36bb2db67bf1345093c29e0dd6d6dedb8bdbb5b21db722f75457e63a22f2a8fd9c9d397e81e476b731823e9854cf8c3b9d922a680413932e6c5ce3c5a7d00
   languageName: node
   linkType: hard
 
