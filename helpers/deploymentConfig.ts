@@ -162,7 +162,7 @@ export const blocksPerYear: BlocksPerYear = {
   basemainnet: 0, // for time based contracts
   unichainsepolia: 0, // for time based contracts
   unichainmainnet: 0, // for time based contracts
-  beraChainBartio: 0, // for time based contracts
+  berachainbartio: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 

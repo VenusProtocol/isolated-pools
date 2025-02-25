@@ -6,6 +6,7 @@ import { contracts as ilArbOne } from "../deployments/arbitrumone.json";
 import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
 import { contracts as ilBaseMainnet } from "../deployments/basemainnet.json";
 import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
+import { contracts as ilBerachainbartio } from "../deployments/berachainbartio.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
@@ -18,7 +19,6 @@ import { contracts as ilUnichainMainnet } from "../deployments/unichainmainnet.j
 import { contracts as ilUnichainSepolia } from "../deployments/unichainsepolia.json";
 import { contracts as ilZkMainnet } from "../deployments/zksyncmainnet.json";
 import { contracts as ilZkSepolia } from "../deployments/zksyncsepolia.json";
-import { contracts as ilBerachainbartio } from "../deployments/berachainbartio.json";
 import { getConfig } from "../helpers/deploymentConfig";
 
 interface VTokenConfig {

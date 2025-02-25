@@ -106,6 +106,11 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/unichainmainnet",
           "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
         ],
+        berachainbartio: [
+          "node_modules/@venusprotocol/oracle/deployments/berachainbartio",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/berachainbartio",
+          "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",
+        ],
       },
     };
     if (process.env.HARDHAT_FORK_NETWORK) {
@@ -384,10 +389,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
       chainId: 80084,
       live: true,
-      // accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
-      accounts: {
-        mnemonic: process.env.MNEMONIC || ""
-      },
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
       tags: ["testnet"],
     },
   },
