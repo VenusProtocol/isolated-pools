@@ -1,3 +1,17 @@
+## [4.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.3...v4.2.0-dev.4) (2025-03-04)
+
+
+### Features
+
+* deployed contracts ([a8a9ac0](https://github.com/VenusProtocol/isolated-pools/commit/a8a9ac00ed670fd979ecd7ebe4e5d621219b2085))
+* updating deployment files ([40ea277](https://github.com/VenusProtocol/isolated-pools/commit/40ea2776b3d89fdbe718e39da304ef8539522392))
+* updating deployment files ([0b66d46](https://github.com/VenusProtocol/isolated-pools/commit/0b66d462ed0f8856b7b13b4bc2a08207d7a71896))
+
+
+### Bug Fixes
+
+* deploy NTG and weth ([42fa051](https://github.com/VenusProtocol/isolated-pools/commit/42fa051d7480292f3e86c91ecb90c201b646cc9f))
+
 ## [4.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.2...v4.2.0-dev.3) (2025-02-20)
 
 
