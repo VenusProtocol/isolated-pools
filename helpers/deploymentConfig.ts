@@ -6466,7 +6466,7 @@ export const globalConfig: NetworkConfig = {
             liquidationThreshold: convertToUnit("0.75", 18),
             reserveFactor: convertToUnit("0.1", 18),
             initialSupply: convertToUnit("3.734", 18),
-            supplyCap: convertToUnit("2400", 18),
+            supplyCap: convertToUnit("650", 18),
             borrowCap: "0",
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: "0x3d97E13A1D2bb4C9cE9EA9d424D83d3638F052ad",
