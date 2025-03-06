@@ -1,3 +1,15 @@
+## [4.2.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.4...v4.2.0-dev.5) (2025-03-06)
+
+
+### Features
+
+* deployment config for wstETH market on base and zksync chains ([85634ba](https://github.com/VenusProtocol/isolated-pools/commit/85634ba14ef4c153f6c0c9c3bafa3880542910d4))
+* updating deployment files ([3d35cc9](https://github.com/VenusProtocol/isolated-pools/commit/3d35cc959a34646ecf9f7f20de1833b9d93b0435))
+* vtoken and jump rate model deployment files for wstETH on zksync mainnet ([a9c4082](https://github.com/VenusProtocol/isolated-pools/commit/a9c4082d0e96d259eb5b5451aece326a4ae9518f))
+* vtoken and mock token deployment files for wstETH on base sepolia ([0edd3bc](https://github.com/VenusProtocol/isolated-pools/commit/0edd3bcd2e979dbdc52c419137129bb5961f94b5))
+* vtoken deployment files for wstETH on base mainnet ([4087415](https://github.com/VenusProtocol/isolated-pools/commit/4087415b8a127ec5874996f6777e89bc62ece8b5))
+* vtoken, jump rate model, and mock token deployment files for wstETH on zksync sepolia ([a02c78d](https://github.com/VenusProtocol/isolated-pools/commit/a02c78deca24bf06b016f305b4f864cdaa4df931))
+
 ## [4.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.3...v4.2.0-dev.4) (2025-03-04)
 
 
