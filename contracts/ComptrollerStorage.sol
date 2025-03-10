@@ -106,7 +106,7 @@ contract ComptrollerStorage {
     uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18; // 0.05
 
     // closeFactorMantissa must not exceed this value
-    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18; // 0.9
+    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 1e18; // 1.0, temporarily
 
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.95e18; // 0.95
