@@ -377,6 +377,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_unichainsepolia || "https://sepolia.unichain.org",
       chainId: 1301,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     unichainmainnet: {
