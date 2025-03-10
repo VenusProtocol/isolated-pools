@@ -1,3 +1,12 @@
+## [4.2.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.6...v4.2.0-dev.7) (2025-03-10)
+
+
+### Features
+
+* add zkETH market on zkSync ([85276ca](https://github.com/VenusProtocol/isolated-pools/commit/85276caf823d1b7c609f21795a17dc9b355ef08d))
+* reduce supply cap of zkETH following Chaos Labs recommendations ([946f19a](https://github.com/VenusProtocol/isolated-pools/commit/946f19a6718db6655f5e1f2557a4d9f30ac90238))
+* updating deployment files ([ec2017f](https://github.com/VenusProtocol/isolated-pools/commit/ec2017fb53f9d1f9121cf7cde4d78d8f781652e5))
+
 ## [4.2.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.5...v4.2.0-dev.6) (2025-03-10)
 
 
