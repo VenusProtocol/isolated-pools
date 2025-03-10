@@ -1,3 +1,13 @@
+## [4.2.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.5...v4.2.0-dev.6) (2025-03-10)
+
+
+### Features
+
+* add UNI deployments on unichain ([a9c6867](https://github.com/VenusProtocol/isolated-pools/commit/a9c6867cda1aa5765a031c4ae6227df7fe8e2be4))
+* add UNI deployments on unichain mainnet ([a331b36](https://github.com/VenusProtocol/isolated-pools/commit/a331b36bb3cf930d3b453073d2d847b4455c1275))
+* updating deployment files ([70fd1b7](https://github.com/VenusProtocol/isolated-pools/commit/70fd1b705848ca13c0bd7a006ae5483f964852fd))
+* updating deployment files ([c4aca78](https://github.com/VenusProtocol/isolated-pools/commit/c4aca78a13ce95dd0318aeb4523d84be4c5ffe8c))
+
 ## [4.2.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.4...v4.2.0-dev.5) (2025-03-06)
 
 
