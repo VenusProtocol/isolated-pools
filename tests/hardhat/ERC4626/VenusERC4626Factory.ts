@@ -22,8 +22,8 @@ describe("VenusERC4626Factory", function () {
   beforeEach(async function () {
     [deployer] = await ethers.getSigners();
 
-    asset = await smock.fake("solmate/src/tokens/ERC20.sol:ERC20");
-    xvs = await smock.fake("solmate/src/tokens/ERC20.sol:ERC20");
+    asset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
+    xvs = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake("VToken");
     comptroller = await smock.fake("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
     vBNBAddress = constants.AddressZero;
@@ -46,7 +46,7 @@ describe("VenusERC4626Factory", function () {
   });
 
   it("should revert if trying to createERC4626 for an asset without a VToken", async function () {
-    const fakeAsset = await smock.fake("solmate/src/tokens/ERC20.sol:ERC20");
+    const fakeAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     await expect(factory.createERC4626(fakeAsset.address)).to.be.revertedWithCustomError(
       factory,
       "VenusERC4626Factory__VTokenNonexistent",

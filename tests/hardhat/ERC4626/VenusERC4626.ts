@@ -23,8 +23,8 @@ describe("VenusERC4626", function () {
     [deployer, user] = await ethers.getSigners();
 
     // Create Smock Fake Contracts
-    asset = await smock.fake<ERC20>("solmate/src/tokens/ERC20.sol:ERC20");
-    xvs = await smock.fake<ERC20>("solmate/src/tokens/ERC20.sol:ERC20");
+    asset = await smock.fake<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
+    xvs = await smock.fake<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake<VToken>("VToken");
     comptroller = await smock.fake<IComptroller>("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
     rewardDistributor = await smock.fake<RewardDistributorInterface>("RewardDistributorInterface");
@@ -54,7 +54,7 @@ describe("VenusERC4626", function () {
   });
 
   it("should deposit assets into the vault", async function () {
-    const depositAmount = ethers.utils.parseEther("100");
+    const depositAmount = ethers.utils.parseEther("10");
 
     // Mock the asset transfer
     asset.transferFrom.returns(true);
@@ -62,6 +62,10 @@ describe("VenusERC4626", function () {
     // Mock the vToken mint
     vToken.mint.returns(0); // NO_ERROR
 
+    await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
+
+    const maxDeposit = await venusERC4626.maxDeposit(user.address);
+    console.log("Max Deposit Allowed:", ethers.utils.formatEther(maxDeposit)); // Should print 50
     // Deposit assets
     await expect(venusERC4626.connect(user).deposit(depositAmount, user.address))
       .to.emit(venusERC4626, "Deposit")
@@ -72,8 +76,8 @@ describe("VenusERC4626", function () {
   });
 
   it("should withdraw assets from the vault", async function () {
-    const depositAmount = ethers.utils.parseEther("100");
-    const withdrawAmount = ethers.utils.parseEther("50");
+    const depositAmount = ethers.utils.parseEther("10");
+    const withdrawAmount = ethers.utils.parseEther("5");
 
     asset.transferFrom.returns(true);
     asset.approve.returns(true);
@@ -81,9 +85,11 @@ describe("VenusERC4626", function () {
     vToken.redeemUnderlying.returns(0);
     asset.transfer.returns(true);
 
+    await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
     await venusERC4626.connect(user).deposit(depositAmount, user.address);
     await venusERC4626.setTotalAssets(depositAmount);
 
+    await venusERC4626.setMaxWithdraw(ethers.utils.parseEther("15"));
     await expect(venusERC4626.connect(user).withdraw(withdrawAmount, user.address, user.address))
       .to.emit(venusERC4626, "Withdraw")
       .withArgs(user.address, user.address, user.address, withdrawAmount, withdrawAmount);
@@ -124,6 +130,7 @@ describe("VenusERC4626", function () {
     vToken.mint.returns(1); // Error code 1
 
     // Attempt to deposit and expect a revert
+    await venusERC4626.setMaxDeposit(ethers.utils.parseEther("100"));
     await expect(venusERC4626.connect(user).deposit(depositAmount, user.address)).to.be.revertedWithCustomError(
       venusERC4626,
       "VenusERC4626__VenusError",
@@ -136,6 +143,7 @@ describe("VenusERC4626", function () {
     // Mock the vToken redeemUnderlying to fail
     vToken.redeemUnderlying.returns(1); // Error code 1
 
+    await venusERC4626.setMaxWithdraw(ethers.utils.parseEther("50"));
     // Attempt to withdraw and expect a revert
     await expect(
       venusERC4626.connect(user).withdraw(withdrawAmount, user.address, user.address),
