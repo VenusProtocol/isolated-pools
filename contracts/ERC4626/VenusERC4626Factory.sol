@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { ERC20 } from "solmate/src/tokens/ERC20.sol";
-import { ERC4626 } from "solmate/src/tokens/ERC4626.sol";
-import { VenusERC4626 } from "./VenusERC4626.sol"; // Venus-specific ERC4626 vault
-import { IComptroller } from "./Interfaces/IComptroller.sol"; // Venus Comptroller interface;
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { VenusERC4626 } from "./VenusERC4626.sol";
+import { IComptroller } from "./Interfaces/IComptroller.sol";
 import { ERC4626Factory } from "./Base/ERC4626Factory.sol";
 import { VToken } from "../VToken.sol";
 import { RewardDistributorInterface } from "./Interfaces/IRewardDistributor.sol"; // Interface for claiming rewards.
@@ -12,6 +13,8 @@ import { RewardDistributorInterface } from "./Interfaces/IRewardDistributor.sol"
 /// @title VenusERC4626Factory
 /// @notice Factory for creating VenusERC4626 contracts
 contract VenusERC4626Factory is ERC4626Factory {
+    using SafeERC20 for ERC20;
+
     /// -----------------------------------------------------------------------
     /// Immutable params
     /// -----------------------------------------------------------------------
@@ -48,7 +51,6 @@ contract VenusERC4626Factory is ERC4626Factory {
     /// -----------------------------------------------------------------------
     /// Constructor
     /// -----------------------------------------------------------------------
-
     constructor(IComptroller comptroller_, address vBNBAddress_, address rewardRecipient_, ERC20 xvs_) {
         comptroller = comptroller_;
         vBNBAddress = vBNBAddress_;

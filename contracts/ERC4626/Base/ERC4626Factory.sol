@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.13;
 
-import { ERC20 } from "solmate/src/tokens/ERC20.sol";
-import { ERC4626 } from "solmate/src/tokens/ERC4626.sol";
-import { Bytes32AddressLib } from "solmate/src/utils/Bytes32AddressLib.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 /// @title ERC4626Factory
-/// @author zefram.eth
 /// @notice Abstract base contract for deploying ERC4626 wrappers
 /// @dev Uses CREATE2 deterministic deployment, so there can only be a single
 /// vault for each asset.
 abstract contract ERC4626Factory {
-    /// -----------------------------------------------------------------------
-    /// Library usage
-    /// -----------------------------------------------------------------------
-
-    using Bytes32AddressLib for bytes32;
+    using Address for address;
 
     /// -----------------------------------------------------------------------
     /// Events
@@ -55,10 +50,9 @@ abstract contract ERC4626Factory {
     /// with the ABI-encoded constructor arguments.
     /// @return The address of the deployed contract
     function _computeCreate2Address(bytes32 bytecodeHash) internal view virtual returns (address) {
-        return keccak256(abi.encodePacked(bytes1(0xFF), address(this), bytes32(0), bytecodeHash)).fromLast20Bytes();
-        // Prefix:
-        // Creator:
-        // Salt:
-        // Bytecode hash: // Convert the CREATE2 hash into an address.
+        return
+            address(
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xFF), address(this), bytes32(0), bytecodeHash))))
+            );
     }
 }
