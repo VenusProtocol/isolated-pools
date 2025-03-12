@@ -20,19 +20,16 @@ contract VenusERC4626Factory is ERC4626Factory {
     /// -----------------------------------------------------------------------
 
     /// @notice The XVS token contract
-    ERC20 public immutable xvs;
+    ERC20 public immutable XVS;
 
     /// @notice The address that will receive the liquidity mining rewards (if any)
-    address public immutable rewardRecipient;
+    address public immutable REWARD_RECIPIENT;
 
     /// @notice The Venus Comptroller contract
-    IComptroller public immutable comptroller;
+    IComptroller public immutable COMPTROLLER;
 
     /// @notice The reward distributor contract
-    RewardDistributorInterface public immutable rewardDistributor;
-
-    /// @notice The Venus vBNB address
-    address public immutable vBNBAddress;
+    RewardDistributorInterface public immutable REWARD_DISTRIBUTOR;
 
     /// -----------------------------------------------------------------------
     /// Storage variables
@@ -51,53 +48,23 @@ contract VenusERC4626Factory is ERC4626Factory {
     /// -----------------------------------------------------------------------
     /// Constructor
     /// -----------------------------------------------------------------------
-    constructor(IComptroller comptroller_, address vBNBAddress_, address rewardRecipient_, ERC20 xvs_) {
-        comptroller = comptroller_;
-        vBNBAddress = vBNBAddress_;
-        rewardRecipient = rewardRecipient_;
-        xvs = xvs_;
+    constructor(IComptroller comptroller_, address rewardRecipient_, ERC20 xvs_) {
+        COMPTROLLER = comptroller_;
+        REWARD_RECIPIENT = rewardRecipient_;
+        XVS = xvs_;
 
-        // Initialize underlyingToVToken
-        VToken[] memory allVTokens = comptroller_.getAllMarkets();
-        uint256 numVTokens = allVTokens.length;
-        VToken vToken;
-        for (uint256 i; i < numVTokens; ) {
-            vToken = allVTokens[i];
-            if (address(vToken) != vBNBAddress_) {
-                underlyingToVToken[ERC20(vToken.underlying())] = vToken;
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
+        // Initialize with all valid vTokens from Comptroller
+        _updateVTokenMappings(COMPTROLLER.getAllMarkets());
     }
 
     /// -----------------------------------------------------------------------
     /// External functions
     /// -----------------------------------------------------------------------
 
-    /// @notice Updates the underlyingToVToken mapping in order to support newly added vTokens
-    /// @dev This is needed because Venus doesn't have an onchain registry of vTokens corresponding to underlying assets.
-    /// @param newVTokenIndices The indices of the new vTokens to register in the comptroller.allMarkets array
-    function updateUnderlyingToVToken(uint256[] calldata newVTokenIndices) external {
-        VToken[] memory allVTokens = comptroller.getAllMarkets();
-        uint256 numVTokens = newVTokenIndices.length;
-        VToken vToken;
-        uint256 index;
-
-        for (uint256 i; i < numVTokens; ) {
-            index = newVTokenIndices[i];
-            vToken = allVTokens[index];
-
-            if (address(vToken) != vBNBAddress) {
-                underlyingToVToken[ERC20(vToken.underlying())] = vToken;
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
+    /// @notice External function to update specific vTokens in the underlyingToVToken mapping.
+    /// @param vTokens The addresses of vTokens to update.
+    function updateUnderlyingToVToken(VToken[] calldata vTokens) external {
+        _updateVTokenMappings(vTokens);
     }
 
     /// @inheritdoc ERC4626Factory
@@ -109,11 +76,11 @@ contract VenusERC4626Factory is ERC4626Factory {
 
         vault = new VenusERC4626{ salt: bytes32(0) }(
             asset,
-            xvs,
+            XVS,
             vToken,
-            rewardRecipient,
-            comptroller,
-            rewardDistributor
+            REWARD_RECIPIENT,
+            COMPTROLLER,
+            REWARD_DISTRIBUTOR
         );
 
         emit CreateERC4626(asset, vault);
@@ -128,10 +95,41 @@ contract VenusERC4626Factory is ERC4626Factory {
                         // Deployment bytecode:
                         type(VenusERC4626).creationCode,
                         // Constructor arguments:
-                        abi.encode(asset, xvs, underlyingToVToken[asset], rewardRecipient, comptroller)
+                        abi.encode(asset, XVS, underlyingToVToken[asset], REWARD_RECIPIENT, COMPTROLLER)
                     )
                 )
             )
         );
+    }
+
+    /// @notice Function to update the underlyingToVToken mapping.
+    /// @param vTokens The array of vToken addresses to update.
+    function _updateVTokenMappings(VToken[] memory vTokens) private {
+        VToken[] memory allMarkets = COMPTROLLER.getAllMarkets();
+
+        for (uint256 i; i < vTokens.length; ) {
+            VToken vToken = vTokens[i];
+
+            // Check if the vToken exists in the Comptroller's markets
+            bool isValid = false;
+            for (uint256 j; j < allMarkets.length; ) {
+                if (address(allMarkets[j]) == address(vToken)) {
+                    isValid = true;
+                    break;
+                }
+                unchecked {
+                    ++j;
+                }
+            }
+
+            // If valid, update mapping
+            if (isValid) {
+                underlyingToVToken[ERC20(vToken.underlying())] = vToken;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 }

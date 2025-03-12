@@ -48,9 +48,43 @@ describe("VenusERC4626", function () {
   it("should deploy the VenusERC4626 contract", async function () {
     expect(venusERC4626.address).to.not.equal(ethers.constants.AddressZero);
     expect(await venusERC4626.asset()).to.equal(asset.address);
-    expect(await venusERC4626.vToken()).to.equal(vToken.address);
-    expect(await venusERC4626.comptroller()).to.equal(comptroller.address);
-    expect(await venusERC4626.rewardRecipient()).to.equal(rewardRecipient);
+    expect(await venusERC4626.VTOKEN()).to.equal(vToken.address);
+    expect(await venusERC4626.COMPTROLLER()).to.equal(comptroller.address);
+    expect(await venusERC4626.REWARD_RECIPIENT()).to.equal(rewardRecipient);
+  });
+
+  it("should pause deposit action and revert deposits", async function () {
+    await venusERC4626.setVaultActionPaused(0, true); // 0 corresponds to DEPOSIT
+    await expect(venusERC4626.connect(user).deposit(ethers.utils.parseEther("1"), user.address))
+      .to.be.revertedWithCustomError(venusERC4626, "VaultActionPaused")
+      .withArgs(0);
+  });
+
+  it("should pause mint action and revert mints", async function () {
+    await venusERC4626.setVaultActionPaused(1, true); // 1 corresponds to MINT
+    await expect(venusERC4626.connect(user).mint(ethers.utils.parseEther("1"), user.address))
+      .to.be.revertedWithCustomError(venusERC4626, "VaultActionPaused")
+      .withArgs(1);
+  });
+
+  it("should pause withdraw action and revert withdrawals", async function () {
+    await venusERC4626.setVaultActionPaused(2, true); // 2 corresponds to WITHDRAW
+    await expect(venusERC4626.connect(user).withdraw(ethers.utils.parseEther("1"), user.address, user.address))
+      .to.be.revertedWithCustomError(venusERC4626, "VaultActionPaused")
+      .withArgs(2);
+  });
+
+  it("should pause redeem action and revert redeems", async function () {
+    await venusERC4626.setVaultActionPaused(3, true); // 3 corresponds to REDEEM
+    await expect(venusERC4626.connect(user).redeem(ethers.utils.parseEther("1"), user.address, user.address))
+      .to.be.revertedWithCustomError(venusERC4626, "VaultActionPaused")
+      .withArgs(3);
+  });
+
+  it("should emit event when pausing vault actions", async function () {
+    await expect(venusERC4626.setVaultActionPaused(0, true)) // VaultAction.DEPOSIT
+      .to.emit(venusERC4626, "VaultActionPausedUpdated")
+      .withArgs(0, true);
   });
 
   it("should deposit assets into the vault", async function () {

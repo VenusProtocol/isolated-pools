@@ -16,7 +16,6 @@ describe("VenusERC4626Factory", function () {
   let xvs: FakeContract<ERC20>;
   let vToken: FakeContract<VToken>;
   let comptroller: FakeContract<IComptroller>;
-  let vBNBAddress: string;
   let rewardRecipient: string;
 
   beforeEach(async function () {
@@ -26,7 +25,6 @@ describe("VenusERC4626Factory", function () {
     xvs = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake("VToken");
     comptroller = await smock.fake("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
-    vBNBAddress = constants.AddressZero;
     rewardRecipient = deployer.address;
 
     // Mock comptroller to return an array of vTokens
@@ -35,14 +33,13 @@ describe("VenusERC4626Factory", function () {
 
     // Deploy factory
     const Factory = await ethers.getContractFactory("VenusERC4626Factory");
-    factory = await Factory.deploy(comptroller.address, vBNBAddress, rewardRecipient, xvs.address);
+    factory = await Factory.deploy(comptroller.address, rewardRecipient, xvs.address);
   });
 
   it("should deploy correctly", async function () {
-    expect(await factory.comptroller()).to.equal(comptroller.address);
-    expect(await factory.vBNBAddress()).to.equal(vBNBAddress);
-    expect(await factory.rewardRecipient()).to.equal(rewardRecipient);
-    expect(await factory.xvs()).to.equal(xvs.address);
+    expect(await factory.COMPTROLLER()).to.equal(comptroller.address);
+    expect(await factory.REWARD_RECIPIENT()).to.equal(rewardRecipient);
+    expect(await factory.XVS()).to.equal(xvs.address);
   });
 
   it("should revert if trying to createERC4626 for an asset without a VToken", async function () {
@@ -71,10 +68,10 @@ describe("VenusERC4626Factory", function () {
     const newVToken = await smock.fake("VToken");
     newVToken.underlying.returns(asset.address);
 
-    // Mock comptroller returning the new vToken
-    comptroller.getAllMarkets.returns([vToken.address, newVToken.address]);
+    // Ensure comptroller returns the new vToken in getAllMarkets()
+    comptroller.getAllMarkets.returns([newVToken.address]);
 
-    await factory.updateUnderlyingToVToken([1]);
+    await factory.updateUnderlyingToVToken([newVToken.address]);
 
     expect(await factory.underlyingToVToken(asset.address)).to.equal(newVToken.address);
   });
