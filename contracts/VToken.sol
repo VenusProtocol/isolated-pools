@@ -738,6 +738,7 @@ contract VToken is
      *      Reverts on invalid parameters, disabled flashLoans, or insufficient repayment.
      * @param receiver The address of the contract that will receive the flashLoan and execute the operation.
      * @param amount The amount of asset to be loaned.
+     * @param param The bytes passed in the executeOperation call.
      * @custom:requirements
      *      - The `receiver` address must not be the zero address.
      *      - FlashLoans must be enabled for the asset.
@@ -748,10 +749,15 @@ contract VToken is
      *      - Reverts with `InsufficientReypaymentBalance(asset)` if the repayment (amount + fee) is insufficient after the operation.
      * @custom:event Emits FlashLoanExecuted event on success
      */
-    function executeFlashLoan(address receiver, uint256 amount) external override nonReentrant returns (uint256) {
+    function executeFlashLoan(
+        address receiver,
+        uint256 amount,
+        bytes calldata param
+    ) external override nonReentrant returns (uint256) {
         uint256 repaymentAmount;
         uint256 fee;
-        (fee, repaymentAmount) = calculateFee(receiver, amount);
+        ensureNonzeroAddress(receiver);
+        (fee, repaymentAmount) = calculateFlashLoanFee(amount);
 
         IFlashLoanSimpleReceiver receiverContract = IFlashLoanSimpleReceiver(receiver);
 
@@ -761,7 +767,7 @@ contract VToken is
         uint256 balanceBefore = _getCashPrior();
 
         // Call the execute operation on receiver contract
-        if (!receiverContract.executeOperation(underlying, amount, fee, msg.sender, "")) {
+        if (!receiverContract.executeOperation(underlying, amount, fee, msg.sender, param)) {
             revert ExecuteFlashLoanFailed();
         }
 
@@ -984,18 +990,13 @@ contract VToken is
 
     /**
      * @notice Calculates the fee and repayment amount for a flash loan.
-     * @param receiver The address of the receiver of the flash loan.
      * @param amount The amount of the flash loan.
      * @return fee The calculated fee for the flash loan.
      * @return repaymentAmount The total amount to be repaid (amount + fee).
      * @dev This function reverts if flash loans are not enabled.
      */
-    function calculateFee(
-        address receiver,
-        uint256 amount
-    ) public view override returns (uint256 fee, uint256 repaymentAmount) {
+    function calculateFlashLoanFee(uint256 amount) public view override returns (uint256 fee, uint256 repaymentAmount) {
         if (!isFlashLoanEnabled) revert FlashLoanNotEnabled(address(this));
-        ensureNonzeroAddress(receiver);
 
         fee = (amount * flashLoanFeeMantissa) / MANTISSA_ONE;
         repaymentAmount = amount + fee;

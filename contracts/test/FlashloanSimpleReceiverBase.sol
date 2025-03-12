@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { IFlashLoanSimpleReceiver } from "../interfaces/IFlashloanSimpleReceiver.sol";
-import { VTokenInterface } from "../../VTokenInterfaces.sol";
+import { IFlashLoanSimpleReceiver } from "../Flashloan/interfaces/IFlashloanSimpleReceiver.sol";
+import { VTokenInterface } from "../VTokenInterfaces.sol";
 
 /**
  * @title FlashLoanSimpleReceiverBase

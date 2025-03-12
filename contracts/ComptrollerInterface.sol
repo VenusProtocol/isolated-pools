@@ -91,7 +91,12 @@ interface ComptrollerInterface {
 
     function preTransferHook(address vToken, address src, address dst, uint256 transferTokens) external;
 
-    function executeFlashLoan(address receiver, VTokenInterface[] calldata assets, uint256[] calldata amounts) external;
+    function executeFlashLoan(
+        address receiver,
+        VTokenInterface[] calldata assets,
+        uint256[] calldata amounts,
+        bytes calldata param
+    ) external;
 
     function isComptroller() external view returns (bool);
 

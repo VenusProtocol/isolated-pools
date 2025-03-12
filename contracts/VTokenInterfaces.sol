@@ -368,7 +368,11 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function transferUnderlying(address receiver, uint256 amount) external virtual returns (uint256 balanceBefore);
 
-    function executeFlashLoan(address receiver, uint256 amount) external virtual returns (uint256);
+    function executeFlashLoan(
+        address receiver,
+        uint256 amount,
+        bytes calldata param
+    ) external virtual returns (uint256);
 
     /*** Admin Functions ***/
 
@@ -422,10 +426,7 @@ abstract contract VTokenInterface is VTokenStorage {
         return true;
     }
 
-    function calculateFee(
-        address receiver,
-        uint256 amount
-    ) public view virtual returns (uint256 fee, uint256 repaymentAmount);
+    function calculateFlashLoanFee(uint256 amount) public view virtual returns (uint256 fee, uint256 repaymentAmount);
 
     function verifyBalance(uint256 balanceBefore, uint256 repaymentAmount) public view virtual returns (uint256);
 }

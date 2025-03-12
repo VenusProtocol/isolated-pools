@@ -150,6 +150,7 @@ describe("FlashLoan", async () => {
         mockReceiverContract.requestFlashLoan(
           [VTokenA.address.toString(), VTokenB.address.toString()],
           [flashLoanAmount1, flashLoanAmount2],
+          "0x",
         ),
       ).to.be.revertedWithCustomError(comptroller, "FlashLoanNotEnabled");
     });
@@ -173,7 +174,7 @@ describe("FlashLoan", async () => {
       // Execute the flashLoan from the mockReceiverContract
       const flashLoan = await mockReceiverContract
         .connect(alice)
-        .requestFlashLoan([VTokenA.address, VTokenB.address], [flashLoanAmount1, flashLoanAmount2]);
+        .requestFlashLoan([VTokenA.address, VTokenB.address], [flashLoanAmount1, flashLoanAmount2], "0x");
 
       // Get the balance after the flashLoan
       const afterBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);

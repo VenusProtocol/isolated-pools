@@ -963,6 +963,7 @@ contract Comptroller is
      * @param receiver The address of the contract that will receive the flashLoan and execute the operation.
      * @param assets The addresses of the assets to be loaned.
      * @param amounts The amounts of each asset to be loaned.
+     * @param param The bytes passed in the executeOperation call.
      * @custom:requirements
      *      - `assets.length` must be equal to `amounts.length`.
      *      - `assets.length` and `amounts.length` must not be zero.
@@ -978,8 +979,10 @@ contract Comptroller is
     function executeFlashLoan(
         address receiver,
         VTokenInterface[] calldata assets,
-        uint256[] calldata amounts
+        uint256[] calldata amounts,
+        bytes calldata param
     ) external override {
+        ensureNonzeroAddress(receiver);
         // Asset and amount length must be equals and not be zero
         if (assets.length != amounts.length || assets.length == 0 || receiver == address(0)) {
             revert InvalidFlashLoanParams();
@@ -990,7 +993,7 @@ contract Comptroller is
         uint256[] memory balanceBefore = new uint256[](len);
 
         for (uint256 j; j < len; ) {
-            (fees[j], ) = (assets[j]).calculateFee(receiver, amounts[j]);
+            (fees[j], ) = (assets[j]).calculateFlashLoanFee(amounts[j]);
 
             // Transfer the asset
             (balanceBefore[j]) = (assets[j]).transferUnderlying(receiver, amounts[j]);
@@ -1001,7 +1004,7 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, "")) {
+        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, param)) {
             revert ExecuteFlashLoanFailed();
         }
 

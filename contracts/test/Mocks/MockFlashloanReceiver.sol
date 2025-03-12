@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import { FlashLoanReceiverBase } from "../../Flashloan/base/FlashloanReceiverBase.sol";
+import { FlashLoanReceiverBase } from "../FlashloanReceiverBase.sol";
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,15 +19,19 @@ contract MockFlashLoanReceiver is FlashLoanReceiverBase {
     /**
      * @notice Requests a flash loan from the Comptroller contract.
      * @dev This function calls the `executeFlashLoan` function from the Comptroller to initiate a flash loan.
-     * @param assets_ An array of VToken contracts that support flash loans.
-     * @param amount_ An array of amounts to borrow in the flash loan for each corresponding asset.
+     * @param assets An array of VToken contracts that support flash loans.
+     * @param amount An array of amounts to borrow in the flash loan for each corresponding asset.
+     * @param param The bytes passed in the executeOperation call.
      */
-    function requestFlashLoan(VTokenInterface[] calldata assets_, uint256[] memory amount_) external {
+    function requestFlashLoan(
+        VTokenInterface[] calldata assets,
+        uint256[] calldata amount,
+        bytes calldata param
+    ) external {
         address receiver = address(this); // Receiver address is this contract itself
-        uint256[] memory amount = amount_; // Set the requested amounts
 
         // Request the flashLoan from the Comptroller contract
-        COMPTROLLER.executeFlashLoan(receiver, assets_, amount);
+        COMPTROLLER.executeFlashLoan(receiver, assets, amount, param);
     }
 
     /**
@@ -51,7 +55,8 @@ contract MockFlashLoanReceiver is FlashLoanReceiverBase {
         // 👇 Your custom logic for the flash loan should be implemented here 👇
         /** YOUR CUSTOM LOGIC HERE */
         // 👆 Your custom logic for the flash loan should be implemented above here 👆
-
+        initiator;
+        param;
         // Calculate the total repayment amount (loan amount + premium) for each borrowed asset
         uint256 len = assets.length;
         for (uint256 k; k < len; ) {
