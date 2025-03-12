@@ -1483,7 +1483,7 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "100",
           },
           {
-            name: "Venus PT-clisBNB-24APR2025 (Liquid Staked BNB)	",
+            name: "Venus PT-clisBNB-24APR2025 (Liquid Staked BNB)",
             asset: "PT-clisBNB-24APR2025",
             symbol: "vPT-clisBNB-24APR2025_LiquidStakedBNB",
             rateModel: InterestRateModels.JumpRate.toString(),
