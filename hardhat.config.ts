@@ -106,6 +106,11 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/unichainmainnet",
           "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
         ],
+        berachainbartio: [
+          "node_modules/@venusprotocol/oracle/deployments/berachainbartio",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/berachainbartio",
+          "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",
+        ],
       },
     };
     if (process.env.HARDHAT_FORK_NETWORK) {
@@ -372,6 +377,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_unichainsepolia || "https://sepolia.unichain.org",
       chainId: 1301,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     unichainmainnet: {
@@ -379,6 +385,13 @@ const config: HardhatUserConfig = {
       chainId: 130,
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    berachainbartio: {
+      url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
+      chainId: 80084,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      tags: ["testnet"],
     },
   },
   gasReporter: {
@@ -507,6 +520,14 @@ const config: HardhatUserConfig = {
           browserURL: "https://uniscan.xyz/",
         },
       },
+      {
+        network: "berachainbartio",
+        chainId: 80084,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan",
+          browserURL: "https://bartio.beratrail.io",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
@@ -523,6 +544,7 @@ const config: HardhatUserConfig = {
       basemainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       unichainmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      berachainbartio: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {
