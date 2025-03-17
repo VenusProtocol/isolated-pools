@@ -8,7 +8,7 @@ import { VenusERC4626 } from "./VenusERC4626.sol";
 import { IComptroller } from "./Interfaces/IComptroller.sol";
 import { ERC4626Factory } from "./Base/ERC4626Factory.sol";
 import { VToken } from "../VToken.sol";
-import { RewardDistributorInterface } from "./Interfaces/IRewardDistributor.sol"; // Interface for claiming rewards.
+import { PoolRegistryInterface } from ".././Pool/PoolRegistryInterface.sol";
 
 /// @title VenusERC4626Factory
 /// @notice Factory for creating VenusERC4626 contracts
@@ -19,24 +19,11 @@ contract VenusERC4626Factory is ERC4626Factory {
     /// Immutable params
     /// -----------------------------------------------------------------------
 
-    /// @notice The XVS token contract
-    ERC20 public immutable XVS;
-
     /// @notice The address that will receive the liquidity mining rewards (if any)
     address public immutable REWARD_RECIPIENT;
 
     /// @notice The Venus Comptroller contract
     IComptroller public immutable COMPTROLLER;
-
-    /// @notice The reward distributor contract
-    RewardDistributorInterface public immutable REWARD_DISTRIBUTOR;
-
-    /// -----------------------------------------------------------------------
-    /// Storage variables
-    /// -----------------------------------------------------------------------
-
-    /// @notice Maps underlying asset to the corresponding vToken
-    mapping(ERC20 => VToken) public underlyingToVToken;
 
     /// -----------------------------------------------------------------------
     /// Errors
@@ -48,46 +35,37 @@ contract VenusERC4626Factory is ERC4626Factory {
     /// -----------------------------------------------------------------------
     /// Constructor
     /// -----------------------------------------------------------------------
-    constructor(IComptroller comptroller_, address rewardRecipient_, ERC20 xvs_) {
+    constructor(IComptroller comptroller_, address rewardRecipient_) {
         COMPTROLLER = comptroller_;
         REWARD_RECIPIENT = rewardRecipient_;
-        XVS = xvs_;
-
-        // Initialize with all valid vTokens from Comptroller
-        _updateVTokenMappings(COMPTROLLER.getAllMarkets());
     }
 
     /// -----------------------------------------------------------------------
     /// External functions
     /// -----------------------------------------------------------------------
 
-    /// @notice External function to update specific vTokens in the underlyingToVToken mapping.
-    /// @param vTokens The addresses of vTokens to update.
-    function updateUnderlyingToVToken(VToken[] calldata vTokens) external {
-        _updateVTokenMappings(vTokens);
-    }
-
     /// @inheritdoc ERC4626Factory
     function createERC4626(ERC20 asset) external virtual override returns (ERC4626 vault) {
-        VToken vToken = underlyingToVToken[asset];
+        VToken vToken = VToken(
+            PoolRegistryInterface(COMPTROLLER.poolRegistry()).getVTokenForAsset(address(COMPTROLLER), address(asset))
+        );
         if (address(vToken) == address(0)) {
             revert VenusERC4626Factory__VTokenNonexistent();
         }
 
-        vault = new VenusERC4626{ salt: bytes32(0) }(
-            asset,
-            XVS,
-            vToken,
-            REWARD_RECIPIENT,
-            COMPTROLLER,
-            REWARD_DISTRIBUTOR
-        );
+        vault = new VenusERC4626{ salt: bytes32(0) }(vToken, REWARD_RECIPIENT);
 
         emit CreateERC4626(asset, vault);
     }
 
     /// @inheritdoc ERC4626Factory
     function computeERC4626Address(ERC20 asset) external view virtual override returns (ERC4626 vault) {
+        VToken vToken = VToken(
+            PoolRegistryInterface(COMPTROLLER.poolRegistry()).getVTokenForAsset(address(COMPTROLLER), address(asset))
+        );
+        if (address(vToken) == address(0)) {
+            revert VenusERC4626Factory__VTokenNonexistent();
+        }
         vault = ERC4626(
             _computeCreate2Address(
                 keccak256(
@@ -95,41 +73,10 @@ contract VenusERC4626Factory is ERC4626Factory {
                         // Deployment bytecode:
                         type(VenusERC4626).creationCode,
                         // Constructor arguments:
-                        abi.encode(asset, XVS, underlyingToVToken[asset], REWARD_RECIPIENT, COMPTROLLER)
+                        abi.encode(asset, vToken, REWARD_RECIPIENT, COMPTROLLER)
                     )
                 )
             )
         );
-    }
-
-    /// @notice Function to update the underlyingToVToken mapping.
-    /// @param vTokens The array of vToken addresses to update.
-    function _updateVTokenMappings(VToken[] memory vTokens) private {
-        VToken[] memory allMarkets = COMPTROLLER.getAllMarkets();
-
-        for (uint256 i; i < vTokens.length; ) {
-            VToken vToken = vTokens[i];
-
-            // Check if the vToken exists in the Comptroller's markets
-            bool isValid = false;
-            for (uint256 j; j < allMarkets.length; ) {
-                if (address(allMarkets[j]) == address(vToken)) {
-                    isValid = true;
-                    break;
-                }
-                unchecked {
-                    ++j;
-                }
-            }
-
-            // If valid, update mapping
-            if (isValid) {
-                underlyingToVToken[ERC20(vToken.underlying())] = vToken;
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
     }
 }

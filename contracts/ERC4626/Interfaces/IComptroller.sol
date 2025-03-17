@@ -23,7 +23,6 @@ enum Action {
  * @notice Combined interface for the `Comptroller` contract, including both core and view functions.
  */
 interface IComptroller {
-    /*** Assets You Are In ***/
     function enterMarkets(address[] calldata vTokens) external returns (uint256[] memory);
 
     function exitMarket(address vToken) external returns (uint256);
@@ -34,7 +33,8 @@ interface IComptroller {
 
     function actionPaused(address market, Action action) external view returns (bool);
 
-    /*** View Functions ***/
+    function poolRegistry() external view returns (address);
+
     function markets(address) external view returns (bool, uint256);
 
     function oracle() external view returns (ResilientOracleInterface);
