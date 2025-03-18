@@ -35,8 +35,10 @@ const VTOKEN_BEACON = "0x74ae9919F5866cE148c81331a5FCdE71b81c4056";
 const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(network.name);
 const MAX_BORROW_RATE_MANTISSA = getMaxBorrowRateMantissa(network.name);
 
-const ARBFlashLoanFeeMantissa = parseUnits("0.01", 18);
-const WETHFlashLoanFeeMantissa = parseUnits("0.03", 18);
+const ARBFlashLoanProtocolFeeMantissa = parseUnits("0.01", 18);
+const WETHFlashLoanProtocolFeeMantissa = parseUnits("0.03", 18);
+const ARBFlashLoanSupplierFeeMantissa = parseUnits("0.01", 18);
+const WETHFlashLoanSupplierFeeMantissa = parseUnits("0.03", 18);
 const ARBFlashLoanAmount = parseUnits("50", 18);
 const WETHFlashLoanAmount = parseUnits("20", 18);
 
@@ -50,7 +52,7 @@ async function grantPermissions() {
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256, uint256)", ADMIN);
   await tx.wait();
 
   tx = await accessControlManager
@@ -60,7 +62,7 @@ async function grantPermissions() {
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vWETH.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vWETH.address, "setFlashLoanFeeMantissa(uint256, uint256)", ADMIN);
   await tx.wait();
 }
 
@@ -176,8 +178,12 @@ if (FORK) {
       await vARB.connect(impersonatedTimelock).toggleFlashLoan();
       await vWETH.connect(impersonatedTimelock).toggleFlashLoan();
 
-      await vARB.connect(impersonatedTimelock).setFlashLoanFeeMantissa(ARBFlashLoanFeeMantissa);
-      await vWETH.connect(impersonatedTimelock).setFlashLoanFeeMantissa(WETHFlashLoanFeeMantissa);
+      await vARB
+        .connect(impersonatedTimelock)
+        .setFlashLoanFeeMantissa(ARBFlashLoanProtocolFeeMantissa, ARBFlashLoanSupplierFeeMantissa);
+      await vWETH
+        .connect(impersonatedTimelock)
+        .setFlashLoanFeeMantissa(WETHFlashLoanProtocolFeeMantissa, WETHFlashLoanSupplierFeeMantissa);
 
       // John initiates a flashLoan of ARB and WETH through the comptroller contract
       await comptroller
@@ -192,8 +198,12 @@ if (FORK) {
       const balanceAfterARB = await ARB.balanceOf(vARB.address);
       const balanceAfterWETH = await WETH.balanceOf(vWETH.address);
 
-      const ARBFlashLoanFee = ARBFlashLoanAmount.mul(ARBFlashLoanFeeMantissa).div(parseUnits("1", 18));
-      const WETHFlashLoanFee = WETHFlashLoanAmount.mul(WETHFlashLoanFeeMantissa).div(parseUnits("1", 18));
+      const ARBFlashLoanFee = ARBFlashLoanAmount.mul(
+        ARBFlashLoanProtocolFeeMantissa.add(ARBFlashLoanSupplierFeeMantissa),
+      ).div(parseUnits("1", 18));
+      const WETHFlashLoanFee = WETHFlashLoanAmount.mul(
+        WETHFlashLoanProtocolFeeMantissa.add(WETHFlashLoanSupplierFeeMantissa),
+      ).div(parseUnits("1", 18));
 
       // Validate that ARB and WETH balances in the contracts increased, confirming repayment plus fees
       expect(balanceAfterARB).to.be.equal(balanceBeforeARB.add(ARBFlashLoanFee));

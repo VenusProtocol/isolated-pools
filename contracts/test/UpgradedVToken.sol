@@ -59,7 +59,8 @@ contract UpgradedVToken is VToken {
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_,
         bool isFlashLoanEnabled_,
-        uint256 flashLoanFeeMantissa_
+        uint256 flashLoanProtocolFeeMantissa_,
+        uint256 flashLoanSupplierFeeMantissa_
     ) public reinitializer(2) {
         super._initialize(
             underlying_,
@@ -74,7 +75,8 @@ contract UpgradedVToken is VToken {
             riskManagement,
             reserveFactorMantissa_,
             isFlashLoanEnabled_,
-            flashLoanFeeMantissa_
+            flashLoanProtocolFeeMantissa_,
+            flashLoanSupplierFeeMantissa_
         );
     }
 

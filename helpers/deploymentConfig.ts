@@ -114,7 +114,8 @@ export type VTokenConfig = {
   vTokenReceiver: string;
   reduceReservesBlockDelta: string;
   isFlashLoanAllowed: boolean;
-  flashLoanFeeMantissa: string;
+  flashLoanProtocolFeeMantissa: string;
+  flashLoanSupplierFeeMantissa: string;
 };
 
 export type AccessControlEntry = {
@@ -502,7 +503,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus BTCB",
@@ -522,7 +524,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -565,7 +568,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ankrBNB",
@@ -585,7 +589,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus MBOX",
@@ -605,7 +610,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus NFT",
@@ -625,7 +631,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus RACA",
@@ -645,7 +652,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus stkBNB",
@@ -665,7 +673,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD",
@@ -685,7 +694,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "account:deployer",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -995,7 +1005,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Stable Coins)",
@@ -1015,7 +1026,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Stable Coins)",
@@ -1035,7 +1047,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -1055,7 +1068,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1104,7 +1118,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -1124,7 +1139,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -1144,7 +1160,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -1164,7 +1181,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -1184,7 +1202,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ankrBNB (DeFi)",
@@ -1204,7 +1223,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PLANET (DeFi)",
@@ -1224,7 +1244,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TWT (DeFi)",
@@ -1244,7 +1265,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x0848dB7cB495E7b9aDA1D4dC972b9A526D014D84",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1293,7 +1315,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -1313,7 +1336,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -1333,7 +1357,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -1353,7 +1378,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1396,7 +1422,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -1416,7 +1443,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -1436,7 +1464,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -1456,7 +1485,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -1476,7 +1506,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -1496,7 +1527,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -1516,7 +1548,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1577,7 +1610,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus NFT (Tron)",
@@ -1597,7 +1631,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WIN (Tron)",
@@ -1617,7 +1652,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TRX (Tron)",
@@ -1637,7 +1673,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Tron)",
@@ -1657,7 +1694,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Tron)",
@@ -1677,7 +1715,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1732,7 +1771,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Meme)",
@@ -1752,7 +1792,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -1789,7 +1830,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -1809,7 +1851,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ETH (Liquid Staked ETH)",
@@ -1829,7 +1872,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -1858,6 +1902,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("140", 18),
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-SolvBTC.BBN-27MAR2025 (BTC)",
@@ -1876,6 +1923,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -2128,7 +2178,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x09702Ea135d9D707DD51f530864f2B9220aAD87B",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Stablecoins)",
@@ -2148,7 +2199,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Stablecoins)",
@@ -2168,7 +2220,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus agEUR (Stablecoins)",
@@ -2188,7 +2241,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xc444949e0054a23c44fc45789738bdf64aed2391", // community wallet
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2237,7 +2291,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x109E8083a64c7DedE513e8b580c5b08B96f9cE73", // biswap team treasury
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ALPACA (DeFi)",
@@ -2257,7 +2312,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAD9CADe20100B8b945da48e1bCbd805C38d8bE77", // alpaca team treasury
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (DeFi)",
@@ -2277,7 +2333,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (DeFi)",
@@ -2297,7 +2354,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", // tron ecosystem treasury
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ANKR (DeFi)",
@@ -2317,7 +2375,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // ankr team treasury
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
 
           {
@@ -2338,7 +2397,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508", // ankr team treasury
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PLANET (DeFi)",
@@ -2358,7 +2418,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x0554d6079eBc222AD12405E52b264Bdb5B65D1cf",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TWT (DeFi)",
@@ -2378,7 +2439,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x0848dB7cB495E7b9aDA1D4dC972b9A526D014D84",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2428,7 +2490,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x6Ee74536B3Ff10Ff639aa781B7220121287F6Fa5",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus FLOKI (GameFi)",
@@ -2448,7 +2511,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x17e98a24f992BB7bcd62d6722d714A3C74814B94",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (GameFi)",
@@ -2468,7 +2532,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (GameFi)",
@@ -2488,7 +2553,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2531,7 +2597,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xAE1c38847Fb90A13a2a1D7E5552cCD80c62C6508",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus BNBx (Liquid Staked BNB)",
@@ -2551,7 +2618,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xF0348E1748FCD45020151C097D234DbbD5730BE7",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus stkBNB (Liquid Staked BNB)",
@@ -2571,7 +2639,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xccc022502d6c65e1166fd34147040f05880f7972",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBNB (Liquid Staked BNB)",
@@ -2591,7 +2660,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Liquid Staked BNB)",
@@ -2611,7 +2681,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Liquid Staked BNB)",
@@ -2631,7 +2702,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus SnBNB (Liquid Staked BNB)",
@@ -2651,7 +2723,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0xDC2D855A95Ee70d7282BebD35c96f905CDE31f55",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2712,7 +2785,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus NFT (Tron)",
@@ -2732,7 +2806,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WIN (Tron)",
@@ -2752,7 +2827,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TRX (Tron)",
@@ -2772,7 +2848,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Tron)",
@@ -2792,7 +2869,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDD (Tron)",
@@ -2812,7 +2890,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296",
             reduceReservesBlockDelta: "28800",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2867,7 +2946,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Meme)",
@@ -2887,7 +2967,8 @@ export const globalConfig: NetworkConfig = {
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             reduceReservesBlockDelta: "100",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -2924,7 +3005,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -2944,7 +3026,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ETH (Liquid Staked ETH)",
@@ -2964,7 +3047,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bscmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -2993,6 +3077,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("140", 18),
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-SolvBTC.BBN-27MAR2025 (BTC)",
@@ -3011,6 +3098,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: "28800",
             vTokenReceiver: "0x63f6D9E7d3953106bCaf98832BD9C88A54AfCc9D",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -3242,7 +3332,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -3262,7 +3353,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -3282,7 +3374,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -3302,7 +3395,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus crvUSD (Core)",
@@ -3322,7 +3416,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus CRV (Core)",
@@ -3342,7 +3437,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus DAI (Core)",
@@ -3362,7 +3458,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TUSD (Core)",
@@ -3382,7 +3479,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus Frax (Core)",
@@ -3402,7 +3500,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus Staked FRAX (Core)",
@@ -3422,7 +3521,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury, // TBD
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus eBTC",
@@ -3442,7 +3542,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus EIGEN",
@@ -3462,7 +3563,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus LBTC (Core)",
@@ -3481,6 +3583,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("45", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -3554,7 +3659,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Stablecoins)",
@@ -3574,7 +3680,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus crvUSD (Stablecoins)",
@@ -3594,7 +3701,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -3624,7 +3732,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus CRV (Curve)",
@@ -3644,7 +3753,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -3692,7 +3802,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -3712,7 +3823,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -3732,7 +3844,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-wETH-26DEC2024 (Liquid Staked ETH)",
@@ -3752,7 +3865,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus rsETH (Liquid Staked ETH)",
@@ -3772,7 +3886,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus sfrxETH (Liquid Staked ETH)",
@@ -3792,7 +3907,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ezETH (Liquid Staked ETH)",
@@ -3812,7 +3928,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETHs (Liquid Staked ETH)",
@@ -3832,7 +3949,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus pufETH (Liquid Staked ETH)",
@@ -3852,7 +3970,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -3907,6 +4026,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-sUSDE-27MAR2025 (Ethena)",
@@ -3925,6 +4047,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus sUSDe (Ethena)",
@@ -3943,6 +4068,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Ethena)",
@@ -3961,6 +4089,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(46_000_000, 6),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -4190,7 +4321,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -4210,7 +4342,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -4233,7 +4366,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -4256,7 +4390,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus crvUSD (Core)",
@@ -4276,7 +4411,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus DAI (Core)",
@@ -4296,7 +4432,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus TUSD (Core)",
@@ -4316,7 +4453,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus Frax (Core)",
@@ -4336,7 +4474,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus Staked FRAX (Core)",
@@ -4356,7 +4495,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus eBTC",
@@ -4376,7 +4516,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus EIGEN",
@@ -4396,7 +4537,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus LBTC (Core)",
@@ -4415,6 +4557,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("45", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0xCb09Ab3F6254437d225Ed3CABEBe0949782E2372",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -4506,7 +4651,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus CRV (Curve)",
@@ -4526,7 +4672,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7a16fF8270133F063aAb6C9977183D9e72835428",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -4580,7 +4727,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -4600,7 +4748,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -4620,7 +4769,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: `0xF6C612c745Ba4546075DB62902c1Eb3255CdAe28`,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-wETH-26DEC2024 (Liquid Staked ETH)",
@@ -4640,7 +4790,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus rsETH (Liquid Staked ETH)",
@@ -4660,7 +4811,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x7AAd74b7f0d60D5867B59dbD377a71783425af47",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus sfrxETH (Liquid Staked ETH)",
@@ -4680,7 +4832,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ezETH (Liquid Staked ETH)",
@@ -4700,7 +4853,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x1E3233E8d972cfFc7D0f83aFAE4354a0Db74e34E",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETHs (Liquid Staked ETH)",
@@ -4720,7 +4874,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ETHEREUM,
             vTokenReceiver: "0x86fBaEB3D6b5247F420590D303a6ffC9cd523790",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus pufETH (Liquid Staked ETH)",
@@ -4740,7 +4895,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.ethereum.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -4801,6 +4957,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x3e8734ec146c981e3ed1f6b582d447dde701d90c",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus PT-sUSDE-27MAR2025 (Ethena)",
@@ -4819,6 +4978,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x3e8734ec146c981e3ed1f6b582d447dde701d90c",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus sUSDe (Ethena)",
@@ -4837,6 +4999,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("0", 18),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x3e8734ec146c981e3ed1f6b582d447dde701d90c",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Ethena)",
@@ -4855,6 +5020,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(46_000_000, 6),
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x3e8734ec146c981e3ed1f6b582d447dde701d90c",
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -4923,7 +5091,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET,
             vTokenReceiver: preconfiguredAddresses.opbnbtestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ETH (Core)",
@@ -4943,7 +5112,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET,
             vTokenReceiver: preconfiguredAddresses.opbnbtestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -4963,7 +5133,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET,
             vTokenReceiver: preconfiguredAddresses.opbnbtestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBNB (Core)",
@@ -4983,7 +5154,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBTESTNET,
             vTokenReceiver: preconfiguredAddresses.opbnbtestnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -5066,7 +5238,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
             vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ETH (Core)",
@@ -5086,7 +5259,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
             vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -5106,7 +5280,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
             vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBNB (Core)",
@@ -5126,7 +5301,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
             vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus FDUSD (Core)",
@@ -5146,7 +5322,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OPBNBMAINNET,
             vTokenReceiver: preconfiguredAddresses.opbnbmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -5243,7 +5420,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -5263,7 +5441,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -5283,7 +5462,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -5303,7 +5483,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ARB (Core)",
@@ -5323,7 +5504,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -5360,7 +5542,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -5380,7 +5563,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.arbitrumsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -5400,7 +5584,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: preconfiguredAddresses.sepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -5497,7 +5682,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -5517,7 +5703,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -5540,7 +5727,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -5563,7 +5751,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus ARB (Core)",
@@ -5583,7 +5772,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -5631,7 +5821,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: "0x5A9d695c518e95CD6Ea101f2f25fC2AE18486A61",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus weETH (Liquid Staked ETH)",
@@ -5651,7 +5842,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: "0x46cba1e9b1e5db32da28428f2fb85587bcb785e7",
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Liquid Staked ETH)",
@@ -5671,7 +5863,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ARBITRUM_ONE,
             vTokenReceiver: preconfiguredAddresses.arbitrumone.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -5775,7 +5968,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBTC (Core)",
@@ -5795,7 +5989,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -5815,7 +6010,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC.e (Core)",
@@ -5835,7 +6031,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
 
           {
@@ -5856,7 +6053,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -5876,7 +6074,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.zksyncsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -5984,7 +6183,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WBTC (Core)",
@@ -6004,7 +6204,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -6027,7 +6228,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC.e (Core)",
@@ -6050,7 +6252,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
 
           {
@@ -6071,7 +6274,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -6094,7 +6298,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_ZKSYNC_MAINNET,
             vTokenReceiver: preconfiguredAddresses.zksyncmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -6209,7 +6414,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -6229,7 +6435,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -6249,7 +6456,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -6269,7 +6477,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus OP (Core)",
@@ -6289,7 +6498,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.opsepolia.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -6391,7 +6601,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -6411,7 +6622,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDT (Core)",
@@ -6431,7 +6643,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus OP (Core)",
@@ -6451,7 +6664,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus USDC (Core)",
@@ -6471,7 +6685,8 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_OP_MAINNET,
             vTokenReceiver: preconfiguredAddresses.opmainnet.VTreasury,
             isFlashLoanAllowed: false,
-            flashLoanFeeMantissa: "0",
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],
@@ -6540,6 +6755,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("130000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -6558,6 +6776,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(16, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus cbBTC (Core)",
@@ -6576,6 +6797,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(16, 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.basesepolia.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [
@@ -6662,6 +6886,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit("27000000", 6),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus WETH (Core)",
@@ -6680,6 +6907,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(9000, 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
           {
             name: "Venus cbBTC (Core)",
@@ -6698,6 +6928,9 @@ export const globalConfig: NetworkConfig = {
             borrowCap: convertToUnit(200, 8),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET,
             vTokenReceiver: preconfiguredAddresses.basemainnet.VTreasury,
+            isFlashLoanAllowed: false,
+            flashLoanProtocolFeeMantissa: "0",
+            flashLoanSupplierFeeMantissa: "0",
           },
         ],
         rewards: [],

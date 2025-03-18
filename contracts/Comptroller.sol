@@ -990,13 +990,13 @@ contract Comptroller is
 
         uint256 len = assets.length;
         uint256[] memory fees = new uint256[](len);
-        uint256[] memory balanceBefore = new uint256[](len);
+        uint256[] memory balanceAfterTransfer = new uint256[](len);
 
         for (uint256 j; j < len; ) {
             (fees[j], ) = (assets[j]).calculateFlashLoanFee(amounts[j]);
 
             // Transfer the asset
-            (balanceBefore[j]) = (assets[j]).transferUnderlying(receiver, amounts[j]);
+            (balanceAfterTransfer[j]) = (assets[j]).transferOutUnderlying(receiver, amounts[j]);
 
             unchecked {
                 ++j;
@@ -1004,12 +1004,12 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, fees, receiver, param)) {
+        if (!IFlashLoanReceiver(msg.sender).executeOperation(assets, amounts, fees, receiver, param)) {
             revert ExecuteFlashLoanFailed();
         }
 
         for (uint256 k; k < len; ) {
-            (assets[k]).verifyBalance(balanceBefore[k], amounts[k] + fees[k]);
+            (assets[k]).transferInUnderlyingAndVerify(receiver, amounts[k] + fees[k], balanceAfterTransfer[k]);
 
             unchecked {
                 ++k;

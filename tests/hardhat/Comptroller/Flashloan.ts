@@ -28,8 +28,10 @@ const MAX_LOOP_LIMIT = 150;
 
 const flashLoanAmount1 = parseUnits("20", 18);
 const flashLoanAmount2 = parseUnits("30", 18);
-const feeMantissaTokenA = parseUnits("0.01", 18);
-const feeMantissaTokenB = parseUnits("0.02", 18);
+const protocolFeeMantissaTokenA = parseUnits("0.01", 18);
+const protocolFeeMantissaTokenB = parseUnits("0.02", 18);
+const supplierFeeMantissaTokenA = parseUnits("0.01", 18);
+const supplierFeeMantissaTokenB = parseUnits("0.02", 18);
 
 // Declare the types here
 type FlashLoanContractsFixture = {
@@ -75,7 +77,8 @@ const flashLoanTestFixture = async (): Promise<FlashLoanContractsFixture> => {
       interestRateModel,
       protocolShareReserve,
       isFlashLoanAllowed: true,
-      flashLoanFeeMantissa: feeMantissaTokenA,
+      flashLoanProtocolFeeMantissa: protocolFeeMantissaTokenA,
+      flashLoanSupplierFeeMantissa: supplierFeeMantissaTokenA,
     },
     { kind: "VTokenHarness" },
   );
@@ -89,7 +92,8 @@ const flashLoanTestFixture = async (): Promise<FlashLoanContractsFixture> => {
       interestRateModel,
       protocolShareReserve,
       isFlashLoanAllowed: true,
-      flashLoanFeeMantissa: feeMantissaTokenB,
+      flashLoanProtocolFeeMantissa: protocolFeeMantissaTokenB,
+      flashLoanSupplierFeeMantissa: supplierFeeMantissaTokenB,
     },
     { kind: "VTokenHarness" },
   );
@@ -180,8 +184,12 @@ describe("FlashLoan", async () => {
       const afterBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);
       const afterBalanceVTokenB = await underlyingB.balanceOf(VTokenB.address);
 
-      const feeOnFlashLoanTokenA = BigNumber.from(flashLoanAmount1).mul(feeMantissaTokenA).div(parseUnits("1", 18));
-      const feeOnFlashLoanTokenB = BigNumber.from(flashLoanAmount2).mul(feeMantissaTokenB).div(parseUnits("1", 18));
+      const feeOnFlashLoanTokenA = BigNumber.from(flashLoanAmount1)
+        .mul(protocolFeeMantissaTokenA.add(supplierFeeMantissaTokenA))
+        .div(parseUnits("1", 18));
+      const feeOnFlashLoanTokenB = BigNumber.from(flashLoanAmount2)
+        .mul(protocolFeeMantissaTokenB.add(supplierFeeMantissaTokenB))
+        .div(parseUnits("1", 18));
 
       expect(afterBalanceVTokenA).to.be.equal(beforeBalanceVTokenA.add(feeOnFlashLoanTokenA));
       expect(afterBalanceVTokenB).to.be.equal(beforeBalanceVTokenB.add(feeOnFlashLoanTokenB));

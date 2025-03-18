@@ -45,7 +45,8 @@ const { VTOKEN2, ACM, ACC1, TOKEN2, ADMIN, BLOCK_NUMBER, TOKEN1_HOLDER } = getCo
   FORKED_NETWORK as string,
 );
 
-const flashLoanFeeMantissa = parseUnits("0.01", 18);
+const flashLoanProtocolFeeMantissa = parseUnits("0.01", 18);
+const flashLoanSupplierFeeMantissa = parseUnits("0.01", 18);
 const flashLoanAmount = parseUnits("100", 18);
 
 async function configureTimelock() {
@@ -62,7 +63,7 @@ async function grantPermissions() {
 
   tx = await accessControlManager
     .connect(impersonatedTimelock)
-    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256)", ADMIN);
+    .giveCallPermission(vARB.address, "setFlashLoanFeeMantissa(uint256, uint256)", ADMIN);
   await tx.wait();
 }
 
@@ -138,14 +139,18 @@ if (FORK) {
 
       // Enable flashLoan feature by the admin
       await vARB.connect(impersonatedTimelock).toggleFlashLoan();
-      await vARB.connect(impersonatedTimelock).setFlashLoanFeeMantissa(flashLoanFeeMantissa);
+      await vARB
+        .connect(impersonatedTimelock)
+        .setFlashLoanFeeMantissa(flashLoanProtocolFeeMantissa, flashLoanSupplierFeeMantissa);
 
       // John initiates a flashLoan of 2000 ARB through the mock receiver
       await vARB.connect(john).executeFlashLoan(mockReceiverSimpleFlashLoan.address, parseUnits("100", 18));
 
       // Check if the ARB balance in vARB increased, validating flashLoan repayment with fees
       const balanceAfter = await ARB.balanceOf(vARB.address);
-      const totalFlashLoanFee = flashLoanAmount.mul(flashLoanFeeMantissa).div(parseUnits("1", 18));
+      const totalFlashLoanFee = flashLoanAmount
+        .mul(flashLoanProtocolFeeMantissa.add(flashLoanSupplierFeeMantissa))
+        .div(parseUnits("1", 18));
 
       expect(balanceAfter).to.be.equal(balanceBefore.add(totalFlashLoanFee));
     });

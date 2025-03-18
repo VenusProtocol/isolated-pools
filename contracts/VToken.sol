@@ -108,7 +108,8 @@ contract VToken is
      * @param riskManagement Addresses of risk & income related contracts
      * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
      * @param flashLoanEnabled_ Enable flashLoan or not for this market
-     * @param flashLoanFeeMantissa_ FlashLoan fee mantissa
+     * @param flashLoanProtocolFeeMantissa_ FlashLoan protocol fee mantissa, transferred to the protocol reserve
+     * @param flashLoanSupplierFeeMantissa_ FlashLoan supplier fee mantissa, transferred to suppliers
      * @custom:error ZeroAddressNotAllowed is thrown when admin address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when shortfall contract address is zero
      * @custom:error ZeroAddressNotAllowed is thrown when protocol share reserve address is zero
@@ -126,7 +127,8 @@ contract VToken is
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_,
         bool flashLoanEnabled_,
-        uint256 flashLoanFeeMantissa_
+        uint256 flashLoanProtocolFeeMantissa_,
+        uint256 flashLoanSupplierFeeMantissa_
     ) external initializer {
         ensureNonzeroAddress(admin_);
 
@@ -144,7 +146,8 @@ contract VToken is
             riskManagement,
             reserveFactorMantissa_,
             flashLoanEnabled_,
-            flashLoanFeeMantissa_
+            flashLoanProtocolFeeMantissa_,
+            flashLoanSupplierFeeMantissa_
         );
     }
 
@@ -714,20 +717,54 @@ contract VToken is
      *      - The caller must be the Comptroller contract.
      * @custom:reverts
      *      - Reverts with "Only Comptroller" if the caller is not the Comptroller.
-     * @custom:event Emits FlashLoanAmountTransferred event on successful transfer of amount to receiver
+     * @custom:event Emits TransferOutUnderlying event on successful transfer of amount to receiver
      */
-    function transferUnderlying(
+    function transferOutUnderlying(
         address to,
         uint256 amount
-    ) external override nonReentrant returns (uint256 balanceBefore) {
+    ) external override nonReentrant returns (uint256 balanceAfterTransfer) {
         if (msg.sender != address(comptroller)) {
             revert InvalidComptroller(address(comptroller));
         }
 
         _doTransferOut(to, amount);
 
-        balanceBefore = _getCashPrior();
-        emit FlashLoanAmountTransferred(underlying, to, amount);
+        balanceAfterTransfer = _getCashPrior();
+        emit TransferOutUnderlying(underlying, to, amount);
+    }
+
+    /**
+     * @notice Transfers the underlying asset from the specified address.
+     * @dev Can only be called by the Comptroller contract. This function performs the actual transfer of the underlying
+     *      asset by calling the `_doTransferIn` internal function.
+     * @param from The address from which the underlying asset is to be transferred.
+     * @param amount The amount of the underlying asset to transfer.
+     * @param balanceBefore The cash balance before the transfer.
+     * @custom:requirements
+     *      - The caller must be the Comptroller contract.
+     * @custom:reverts
+     *      - Reverts with "Only Comptroller" if the caller is not the Comptroller.
+     * @custom:event Emits TransferInUnderlyingAndVerify event on successful transfer of amount to receiver
+     */
+    function transferInUnderlyingAndVerify(
+        address from,
+        uint256 amount,
+        uint256 balanceBefore
+    ) external override nonReentrant {
+        if (msg.sender != address(comptroller)) {
+            revert InvalidComptroller(address(comptroller));
+        }
+
+        _doTransferIn(from, amount);
+
+        uint256 balanceAfter = _getCashPrior();
+
+        // balanceAfter should be greater than the fee calculated
+        if ((balanceAfter - balanceBefore) < amount) {
+            revert InsufficientReypaymentBalance(underlying);
+        }
+
+        emit TransferInUnderlyingAndVerify(underlying, from, amount);
     }
 
     /**
@@ -759,7 +796,7 @@ contract VToken is
         ensureNonzeroAddress(receiver);
         (fee, repaymentAmount) = calculateFlashLoanFee(amount);
 
-        IFlashLoanSimpleReceiver receiverContract = IFlashLoanSimpleReceiver(receiver);
+        IFlashLoanSimpleReceiver receiverContract = IFlashLoanSimpleReceiver(msg.sender);
 
         // Transfer the underlying asset to the receiver.
         _doTransferOut(receiver, amount);
@@ -771,7 +808,11 @@ contract VToken is
             revert ExecuteFlashLoanFailed();
         }
 
-        verifyBalance(balanceBefore, repaymentAmount);
+        _doTransferIn(receiver, repaymentAmount);
+
+        if ((_getCashPrior() - balanceBefore) < repaymentAmount) {
+            revert InsufficientReypaymentBalance(underlying);
+        }
 
         emit FlashLoanExecuted(receiver, underlying, amount);
 
@@ -792,14 +833,22 @@ contract VToken is
 
     /**
      * @notice Update flashLoan fee mantissa
+     * @param protocolFeeMantissa FlashLoan protocol fee mantissa, transferred to protocol share reserve
+     * @param supplierFeeMantissa FlashLoan supplier fee mantissa, transferred to the supplier of the asset
      * @custom:access Only Governance
      * @custom:event Emits FlashLoanFeeUpdated event on success
      */
-    function setFlashLoanFeeMantissa(uint256 fee) external override {
+    function setFlashLoanFeeMantissa(uint256 protocolFeeMantissa, uint256 supplierFeeMantissa) external override {
         _checkAccessAllowed("setFlashLoanFeeMantissa(uint256)");
 
-        emit FlashLoanFeeUpdated(flashLoanFeeMantissa, fee);
-        flashLoanFeeMantissa = fee;
+        emit FlashLoanFeeUpdated(
+            flashLoanProtocolFeeMantissa,
+            protocolFeeMantissa,
+            flashLoanSupplierFeeMantissa,
+            supplierFeeMantissa
+        );
+        flashLoanProtocolFeeMantissa = protocolFeeMantissa;
+        flashLoanSupplierFeeMantissa = supplierFeeMantissa;
     }
 
     /**
@@ -998,26 +1047,8 @@ contract VToken is
     function calculateFlashLoanFee(uint256 amount) public view override returns (uint256 fee, uint256 repaymentAmount) {
         if (!isFlashLoanEnabled) revert FlashLoanNotEnabled(address(this));
 
-        fee = (amount * flashLoanFeeMantissa) / MANTISSA_ONE;
+        fee = (amount * (flashLoanProtocolFeeMantissa + flashLoanSupplierFeeMantissa)) / MANTISSA_ONE;
         repaymentAmount = amount + fee;
-    }
-
-    /**
-     * @notice Verifies that the balance after a flash loan is sufficient to cover the repayment amount.
-     * @param balanceBefore The balance before the flash loan.
-     * @param repaymentAmount The total amount to be repaid (amount + fee).
-     * @return NO_ERROR Indicates that the balance verification was successful.
-     * @dev This function reverts if the balance after the flash loan is insufficient to cover the repayment amount.
-     */
-    function verifyBalance(uint256 balanceBefore, uint256 repaymentAmount) public view override returns (uint256) {
-        uint256 balanceAfter = _getCashPrior();
-
-        // balanceAfter should be greater than the fee calculated
-        if ((balanceAfter - balanceBefore) < repaymentAmount) {
-            revert InsufficientReypaymentBalance(underlying);
-        }
-
-        return NO_ERROR;
     }
 
     /**
@@ -1674,7 +1705,8 @@ contract VToken is
      * @param riskManagement Addresses of risk & income related contracts
      * @param reserveFactorMantissa_ Percentage of borrow interest that goes to reserves (from 0 to 1e18)
      * @param flashLoanEnabled_ Enable flashLoan or not for this market
-     * @param flashLoanFeeMantissa_ FlashLoan fee mantissa
+     * @param flashLoanProtocolFeeMantissa_ FlashLoan protocol fee mantissa, transferred to the protocol reserve
+     * @param flashLoanSupplierFeeMantissa_ FlashLoan supplier fee mantissa, transferred to suppliers
      */
     function _initialize(
         address underlying_,
@@ -1689,7 +1721,8 @@ contract VToken is
         RiskManagementInit memory riskManagement,
         uint256 reserveFactorMantissa_,
         bool flashLoanEnabled_,
-        uint256 flashLoanFeeMantissa_
+        uint256 flashLoanProtocolFeeMantissa_,
+        uint256 flashLoanSupplierFeeMantissa_
     ) internal onlyInitializing {
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager_);
@@ -1717,7 +1750,8 @@ contract VToken is
         _setProtocolShareReserve(riskManagement.protocolShareReserve);
         protocolSeizeShareMantissa = DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA;
         isFlashLoanEnabled = flashLoanEnabled_;
-        flashLoanFeeMantissa = flashLoanFeeMantissa_;
+        flashLoanProtocolFeeMantissa = flashLoanProtocolFeeMantissa_;
+        flashLoanSupplierFeeMantissa = flashLoanSupplierFeeMantissa_;
 
         // Set underlying and sanity check it
         underlying = underlying_;
