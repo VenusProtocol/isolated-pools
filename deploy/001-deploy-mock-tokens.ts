@@ -2,6 +2,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
+import { skipMainnets } from "../helpers/deploymentUtils";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -15,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       const contractName = `Mock${token.symbol}`;
       await deploy(contractName, {
         from: deployer,
-        contract: "MockToken",
+        contract: token.mockContract || "MockToken",
         args: [token.name, token.symbol, token.decimals],
         log: true,
         autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
@@ -27,6 +28,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.tags = ["MockTokens"];
 
-func.skip = async hre => hre.network.live;
+func.skip = skipMainnets();
 
 export default func;

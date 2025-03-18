@@ -96,6 +96,21 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/protocol-reserve/deployments/basemainnet",
           "node_modules/@venusprotocol/governance-contracts/deployments/basemainnet",
         ],
+        unichainsepolia: [
+          "node_modules/@venusprotocol/oracle/deployments/unichainsepolia",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/unichainsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/unichainsepolia",
+        ],
+        unichainmainnet: [
+          "node_modules/@venusprotocol/oracle/deployments/unichainmainnet",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/unichainmainnet",
+          "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
+        ],
+        berachainbartio: [
+          "node_modules/@venusprotocol/oracle/deployments/berachainbartio",
+          "node_modules/@venusprotocol/protocol-reserve/deployments/berachainbartio",
+          "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",
+        ],
       },
     };
     if (process.env.HARDHAT_FORK_NETWORK) {
@@ -281,6 +296,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_bsctestnet || "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       live: true,
+      tags: ["testnet"],
       gasPrice: 20000000000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
@@ -288,6 +304,7 @@ const config: HardhatUserConfig = {
     bscmainnet: {
       url: process.env.ARCHIVE_NODE_bscmainnet || "https://bsc-dataseed.binance.org/",
       chainId: 56,
+      live: true,
       timeout: 1200000,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
@@ -302,12 +319,14 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_sepolia || "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
       chainId: 11155111,
       live: true,
+      tags: ["testnet"],
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [`0x${process.env.DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbtestnet: {
       url: process.env.ARCHIVE_NODE_opbnbtestnet || "https://opbnb-testnet-rpc.bnbchain.org",
       chainId: 5611,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opbnbmainnet: {
@@ -320,6 +339,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_arbitrumsepolia || "https://sepolia-rollup.arbitrum.io/rpc",
       chainId: 421614,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     arbitrumone: {
@@ -332,6 +352,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_opsepolia || "https://sepolia.optimism.io",
       chainId: 11155420,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     opmainnet: {
@@ -344,6 +365,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARCHIVE_NODE_basesepolia || "https://sepolia.base.org",
       chainId: 84532,
       live: true,
+      tags: ["testnet"],
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
     basemainnet: {
@@ -351,6 +373,26 @@ const config: HardhatUserConfig = {
       chainId: 8453,
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    unichainsepolia: {
+      url: process.env.ARCHIVE_NODE_unichainsepolia || "https://sepolia.unichain.org",
+      chainId: 1301,
+      live: true,
+      tags: ["testnet"],
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    unichainmainnet: {
+      url: process.env.ARCHIVE_NODE_unichainmainnet || "https://mainnet.unichain.org",
+      chainId: 130,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+    },
+    berachainbartio: {
+      url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
+      chainId: 80084,
+      live: true,
+      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
+      tags: ["testnet"],
     },
   },
   gasReporter: {
@@ -463,6 +505,30 @@ const config: HardhatUserConfig = {
           browserURL: "https://basescan.org/",
         },
       },
+      {
+        network: "unichainsepolia",
+        chainId: 1301,
+        urls: {
+          apiURL: "https://api-sepolia.uniscan.xyz/api/",
+          browserURL: "https://sepolia.uniscan.xyz/",
+        },
+      },
+      {
+        network: "unichainmainnet",
+        chainId: 130,
+        urls: {
+          apiURL: "https://api.uniscan.xyz/api/",
+          browserURL: "https://uniscan.xyz/",
+        },
+      },
+      {
+        network: "berachainbartio",
+        chainId: 80084,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan",
+          browserURL: "https://bartio.beratrail.io",
+        },
+      },
     ],
     apiKey: {
       bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
@@ -477,6 +543,9 @@ const config: HardhatUserConfig = {
       opmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       basesepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
       basemainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      unichainsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      unichainmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
+      berachainbartio: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
     },
   },
   paths: {

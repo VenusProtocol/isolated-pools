@@ -1,3 +1,398 @@
+## [4.2.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.6...v4.2.0-dev.7) (2025-03-10)
+
+
+### Features
+
+* add zkETH market on zkSync ([85276ca](https://github.com/VenusProtocol/isolated-pools/commit/85276caf823d1b7c609f21795a17dc9b355ef08d))
+* reduce supply cap of zkETH following Chaos Labs recommendations ([946f19a](https://github.com/VenusProtocol/isolated-pools/commit/946f19a6718db6655f5e1f2557a4d9f30ac90238))
+* updating deployment files ([ec2017f](https://github.com/VenusProtocol/isolated-pools/commit/ec2017fb53f9d1f9121cf7cde4d78d8f781652e5))
+
+## [4.2.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.5...v4.2.0-dev.6) (2025-03-10)
+
+
+### Features
+
+* add UNI deployments on unichain ([a9c6867](https://github.com/VenusProtocol/isolated-pools/commit/a9c6867cda1aa5765a031c4ae6227df7fe8e2be4))
+* add UNI deployments on unichain mainnet ([a331b36](https://github.com/VenusProtocol/isolated-pools/commit/a331b36bb3cf930d3b453073d2d847b4455c1275))
+* updating deployment files ([70fd1b7](https://github.com/VenusProtocol/isolated-pools/commit/70fd1b705848ca13c0bd7a006ae5483f964852fd))
+* updating deployment files ([c4aca78](https://github.com/VenusProtocol/isolated-pools/commit/c4aca78a13ce95dd0318aeb4523d84be4c5ffe8c))
+
+## [4.2.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.4...v4.2.0-dev.5) (2025-03-06)
+
+
+### Features
+
+* deployment config for wstETH market on base and zksync chains ([85634ba](https://github.com/VenusProtocol/isolated-pools/commit/85634ba14ef4c153f6c0c9c3bafa3880542910d4))
+* updating deployment files ([3d35cc9](https://github.com/VenusProtocol/isolated-pools/commit/3d35cc959a34646ecf9f7f20de1833b9d93b0435))
+* vtoken and jump rate model deployment files for wstETH on zksync mainnet ([a9c4082](https://github.com/VenusProtocol/isolated-pools/commit/a9c4082d0e96d259eb5b5451aece326a4ae9518f))
+* vtoken and mock token deployment files for wstETH on base sepolia ([0edd3bc](https://github.com/VenusProtocol/isolated-pools/commit/0edd3bcd2e979dbdc52c419137129bb5961f94b5))
+* vtoken deployment files for wstETH on base mainnet ([4087415](https://github.com/VenusProtocol/isolated-pools/commit/4087415b8a127ec5874996f6777e89bc62ece8b5))
+* vtoken, jump rate model, and mock token deployment files for wstETH on zksync sepolia ([a02c78d](https://github.com/VenusProtocol/isolated-pools/commit/a02c78deca24bf06b016f305b4f864cdaa4df931))
+
+## [4.2.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.3...v4.2.0-dev.4) (2025-03-04)
+
+
+### Features
+
+* deployed contracts ([a8a9ac0](https://github.com/VenusProtocol/isolated-pools/commit/a8a9ac00ed670fd979ecd7ebe4e5d621219b2085))
+* updating deployment files ([40ea277](https://github.com/VenusProtocol/isolated-pools/commit/40ea2776b3d89fdbe718e39da304ef8539522392))
+* updating deployment files ([0b66d46](https://github.com/VenusProtocol/isolated-pools/commit/0b66d462ed0f8856b7b13b4bc2a08207d7a71896))
+
+
+### Bug Fixes
+
+* deploy NTG and weth ([42fa051](https://github.com/VenusProtocol/isolated-pools/commit/42fa051d7480292f3e86c91ecb90c201b646cc9f))
+
+## [4.2.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.2...v4.2.0-dev.3) (2025-02-20)
+
+
+### Features
+
+* deploy Reward distributor on unichain ([b3054b4](https://github.com/VenusProtocol/isolated-pools/commit/b3054b4001154c3538e543cf19bd80c832b40414))
+* updating deployment files ([509c44e](https://github.com/VenusProtocol/isolated-pools/commit/509c44ea8011266facd622fe444a827de2b53f76))
+
+## [4.2.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.1...v4.2.0-dev.2) (2025-02-14)
+
+
+### Features
+
+* update dependencies ([742ef56](https://github.com/VenusProtocol/isolated-pools/commit/742ef5604163eceb5b79dd08c8c9e6a542e3d3b6))
+
+## [4.2.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0...v4.2.0-dev.1) (2025-02-13)
+
+
+### Features
+
+* reward distributor on unichainsepolia ([002d052](https://github.com/VenusProtocol/isolated-pools/commit/002d0527bce24aba1d1322fc1737362ca786ca89))
+* updating deployment files ([a21dde7](https://github.com/VenusProtocol/isolated-pools/commit/a21dde79fdc7fe519be5370596ab5d0b87ca1435))
+
+## [4.1.0](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0...v4.1.0) (2025-02-11)
+
+
+### Features
+
+* add market deployments on unichain ([7e7f555](https://github.com/VenusProtocol/isolated-pools/commit/7e7f5551db23c91b9e246e8a7d9c700020f741bb))
+* deploy pool lens & configure markets on unichain ([de507ba](https://github.com/VenusProtocol/isolated-pools/commit/de507baf707529707395a37b5d57ac675a938626))
+* deployed mock tokens and vtokens ([3fa98bd](https://github.com/VenusProtocol/isolated-pools/commit/3fa98bd1ea4eae6f9b846b631cf52178e439cf08))
+* deployed on ethereum ([d1e3568](https://github.com/VenusProtocol/isolated-pools/commit/d1e3568abcea3a705f7fcd38566cc9237a4b62cd))
+* deployed on sepolia and ethereym ([ead1d0e](https://github.com/VenusProtocol/isolated-pools/commit/ead1d0eb3936717dbde6236b3cdd76c78e7aa319))
+* NTG deployment on unichain mainnet ([7207fd1](https://github.com/VenusProtocol/isolated-pools/commit/7207fd10bb14d02eea033dade355b838e7b0a7e8))
+* update config & redeploy contracts ([0f1f22f](https://github.com/VenusProtocol/isolated-pools/commit/0f1f22f77189c1788145231ff1da17b907cc2a72))
+* updating deployment files ([3df2be1](https://github.com/VenusProtocol/isolated-pools/commit/3df2be19d9628e5f9c856c973006763c5a699809))
+* updating deployment files ([e81c07f](https://github.com/VenusProtocol/isolated-pools/commit/e81c07fc211a7113ce04071a8aea5b88cbd2d429))
+* updating deployment files ([d0f946c](https://github.com/VenusProtocol/isolated-pools/commit/d0f946c9f6e714f339c24065ded38daef878af15))
+* updating deployment files ([f675856](https://github.com/VenusProtocol/isolated-pools/commit/f6758567ca8ff0462da9a43fe65235525b1b4ed1))
+* updating deployment files ([880bd6d](https://github.com/VenusProtocol/isolated-pools/commit/880bd6dda9063658c9de25f00375c0e56a50a5ae))
+* updating deployment files ([78b1ed7](https://github.com/VenusProtocol/isolated-pools/commit/78b1ed7e54302ef6dc91215e3d90074a5c7e8008))
+* updating deployment files ([39da89c](https://github.com/VenusProtocol/isolated-pools/commit/39da89cc12947708f5dba5784303a45616083571))
+* updating deployment files ([26159b0](https://github.com/VenusProtocol/isolated-pools/commit/26159b0f08bb7ab0150feeaa8f4b7202b43bdf7e))
+* updating deployment files ([90f81e1](https://github.com/VenusProtocol/isolated-pools/commit/90f81e1d96c0b23e7f63896563b3f921b1cacdc8))
+
+
+### Bug Fixes
+
+* fixed yarn ([576ecd0](https://github.com/VenusProtocol/isolated-pools/commit/576ecd09e058735c32b5d76d6446f99cd91972bc))
+* fixed yarn ([6af882c](https://github.com/VenusProtocol/isolated-pools/commit/6af882c8570ce16bffba4ce368c5ac45404a7a4b))
+* redeploy NTG on unichainmainnet ([b04ebb8](https://github.com/VenusProtocol/isolated-pools/commit/b04ebb8d48b6f26652aaed026f629512ff1235b9))
+* revert script ([333600e](https://github.com/VenusProtocol/isolated-pools/commit/333600eeb89779172941f60fd72c45e4f693126c))
+* reverted yarn.lock ([887befc](https://github.com/VenusProtocol/isolated-pools/commit/887befc35b8add3a112abb79cac7e5cedba53bae))
+
+## [4.1.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.3...v4.1.0-dev.4) (2025-02-11)
+
+
+### Features
+
+* NTG deployment on unichain mainnet ([7207fd1](https://github.com/VenusProtocol/isolated-pools/commit/7207fd10bb14d02eea033dade355b838e7b0a7e8))
+* updating deployment files ([3df2be1](https://github.com/VenusProtocol/isolated-pools/commit/3df2be19d9628e5f9c856c973006763c5a699809))
+* updating deployment files ([e81c07f](https://github.com/VenusProtocol/isolated-pools/commit/e81c07fc211a7113ce04071a8aea5b88cbd2d429))
+* updating deployment files ([880bd6d](https://github.com/VenusProtocol/isolated-pools/commit/880bd6dda9063658c9de25f00375c0e56a50a5ae))
+
+
+### Bug Fixes
+
+* redeploy NTG on unichainmainnet ([b04ebb8](https://github.com/VenusProtocol/isolated-pools/commit/b04ebb8d48b6f26652aaed026f629512ff1235b9))
+
+## [4.1.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.2...v4.1.0-dev.3) (2025-02-11)
+
+
+### Features
+
+* add market deployments on unichain ([7e7f555](https://github.com/VenusProtocol/isolated-pools/commit/7e7f5551db23c91b9e246e8a7d9c700020f741bb))
+* deploy pool lens & configure markets on unichain ([de507ba](https://github.com/VenusProtocol/isolated-pools/commit/de507baf707529707395a37b5d57ac675a938626))
+* update config & redeploy contracts ([0f1f22f](https://github.com/VenusProtocol/isolated-pools/commit/0f1f22f77189c1788145231ff1da17b907cc2a72))
+* updating deployment files ([d0f946c](https://github.com/VenusProtocol/isolated-pools/commit/d0f946c9f6e714f339c24065ded38daef878af15))
+* updating deployment files ([f675856](https://github.com/VenusProtocol/isolated-pools/commit/f6758567ca8ff0462da9a43fe65235525b1b4ed1))
+* updating deployment files ([39da89c](https://github.com/VenusProtocol/isolated-pools/commit/39da89cc12947708f5dba5784303a45616083571))
+
+## [4.1.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0-dev.1...v4.1.0-dev.2) (2025-02-11)
+
+
+### Features
+
+* deployed on sepolia and ethereym ([ead1d0e](https://github.com/VenusProtocol/isolated-pools/commit/ead1d0eb3936717dbde6236b3cdd76c78e7aa319))
+* updating deployment files ([78b1ed7](https://github.com/VenusProtocol/isolated-pools/commit/78b1ed7e54302ef6dc91215e3d90074a5c7e8008))
+
+## [4.1.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0...v4.1.0-dev.1) (2025-02-09)
+
+
+### Features
+
+* deployed mock tokens and vtokens ([3fa98bd](https://github.com/VenusProtocol/isolated-pools/commit/3fa98bd1ea4eae6f9b846b631cf52178e439cf08))
+* deployed on ethereum ([d1e3568](https://github.com/VenusProtocol/isolated-pools/commit/d1e3568abcea3a705f7fcd38566cc9237a4b62cd))
+* updating deployment files ([26159b0](https://github.com/VenusProtocol/isolated-pools/commit/26159b0f08bb7ab0150feeaa8f4b7202b43bdf7e))
+* updating deployment files ([90f81e1](https://github.com/VenusProtocol/isolated-pools/commit/90f81e1d96c0b23e7f63896563b3f921b1cacdc8))
+
+
+### Bug Fixes
+
+* fixed yarn ([576ecd0](https://github.com/VenusProtocol/isolated-pools/commit/576ecd09e058735c32b5d76d6446f99cd91972bc))
+* fixed yarn ([6af882c](https://github.com/VenusProtocol/isolated-pools/commit/6af882c8570ce16bffba4ce368c5ac45404a7a4b))
+* revert script ([333600e](https://github.com/VenusProtocol/isolated-pools/commit/333600eeb89779172941f60fd72c45e4f693126c))
+* reverted yarn.lock ([887befc](https://github.com/VenusProtocol/isolated-pools/commit/887befc35b8add3a112abb79cac7e5cedba53bae))
+
+## [4.0.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.9.0...v4.0.0) (2025-02-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename HAY to lisUSD
+* rename agEUR to EURA
+* rename vslisbnb
+
+### Features
+
+* add config & deployment for BAL market on sepolia ([519586a](https://github.com/VenusProtocol/isolated-pools/commit/519586ab730b73ebb1ced677d32a1e4d9539fd9e))
+* deploy BAL market on ethereum ([7016c99](https://github.com/VenusProtocol/isolated-pools/commit/7016c99b2a9353212d7df595b7791c1978820655))
+* IL deployments on unichainsepolia ([6851fa9](https://github.com/VenusProtocol/isolated-pools/commit/6851fa90e369f1e80b35321ebb8498c1640ffcfe))
+* NTG deplyment on unichainsepolia ([6faebd3](https://github.com/VenusProtocol/isolated-pools/commit/6faebd3358f70ac8b36b091b25da24eb4262aed2))
+* update dependencies ([038ed0e](https://github.com/VenusProtocol/isolated-pools/commit/038ed0efa44af4bf5490146815934e5afbea65d7))
+* updating deployment files ([ad493c5](https://github.com/VenusProtocol/isolated-pools/commit/ad493c5e3fe02f05d48be4f46e81b5ba71020a8f))
+* updating deployment files ([086657b](https://github.com/VenusProtocol/isolated-pools/commit/086657bcda77f88757ef47c011e6734852d5b04b))
+* updating deployment files ([7ad24e0](https://github.com/VenusProtocol/isolated-pools/commit/7ad24e069ab9da40177685250684833288280735))
+* updating deployment files ([b4b3f31](https://github.com/VenusProtocol/isolated-pools/commit/b4b3f31fcd9e8d6342a94a98af10fe0711771136))
+* updating deployment files ([48407b3](https://github.com/VenusProtocol/isolated-pools/commit/48407b3aa9e7e642b5650f7fa2db0481e95d1457))
+* updating deployment files ([34abe6f](https://github.com/VenusProtocol/isolated-pools/commit/34abe6fbda37f9416cc353a1bc5c86d74cd74063))
+* updating deployment files ([7ba332a](https://github.com/VenusProtocol/isolated-pools/commit/7ba332a5a9cdbfbefc1663e1464f4840fb17088c))
+
+
+### Bug Fixes
+
+* rename agEUR to EURA ([b075dd9](https://github.com/VenusProtocol/isolated-pools/commit/b075dd9e54908267d3b1d20d715e363fccadb7ed))
+* rename HAY to lisUSD ([645258e](https://github.com/VenusProtocol/isolated-pools/commit/645258eeed6b4d102bb1012a834eaa7e2bea6321))
+* rename StableCoins to stablecoins ([6b32bcc](https://github.com/VenusProtocol/isolated-pools/commit/6b32bccb2ae7bbe5eba59ab1549cdba76eb540f3))
+* rename vslisbnb ([ecacb34](https://github.com/VenusProtocol/isolated-pools/commit/ecacb34eca59212c2529ae15db8b3dcea0128f7f))
+* skip source timelocks on remote chains ([154a2f6](https://github.com/VenusProtocol/isolated-pools/commit/154a2f638652d546705aa07b239117ebef677ecd))
+* update core pool token names in deployments ([2773394](https://github.com/VenusProtocol/isolated-pools/commit/2773394b974cc16c617278bfafd537afc68dac81))
+
+## [4.0.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.4...v4.0.0-dev.5) (2025-02-07)
+
+
+### Features
+
+* update dependencies ([038ed0e](https://github.com/VenusProtocol/isolated-pools/commit/038ed0efa44af4bf5490146815934e5afbea65d7))
+
+## [4.0.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.3...v4.0.0-dev.4) (2025-02-07)
+
+
+### Features
+
+* NTG deplyment on unichainsepolia ([6faebd3](https://github.com/VenusProtocol/isolated-pools/commit/6faebd3358f70ac8b36b091b25da24eb4262aed2))
+* updating deployment files ([ad493c5](https://github.com/VenusProtocol/isolated-pools/commit/ad493c5e3fe02f05d48be4f46e81b5ba71020a8f))
+
+## [4.0.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.2...v4.0.0-dev.3) (2025-02-07)
+
+
+### Features
+
+* IL deployments on unichainsepolia ([6851fa9](https://github.com/VenusProtocol/isolated-pools/commit/6851fa90e369f1e80b35321ebb8498c1640ffcfe))
+* updating deployment files ([086657b](https://github.com/VenusProtocol/isolated-pools/commit/086657bcda77f88757ef47c011e6734852d5b04b))
+
+## [4.0.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.0.0-dev.1...v4.0.0-dev.2) (2025-02-05)
+
+
+### Features
+
+* add config & deployment for BAL market on sepolia ([519586a](https://github.com/VenusProtocol/isolated-pools/commit/519586ab730b73ebb1ced677d32a1e4d9539fd9e))
+* deploy BAL market on ethereum ([7016c99](https://github.com/VenusProtocol/isolated-pools/commit/7016c99b2a9353212d7df595b7791c1978820655))
+* updating deployment files ([48407b3](https://github.com/VenusProtocol/isolated-pools/commit/48407b3aa9e7e642b5650f7fa2db0481e95d1457))
+* updating deployment files ([34abe6f](https://github.com/VenusProtocol/isolated-pools/commit/34abe6fbda37f9416cc353a1bc5c86d74cd74063))
+
+## [4.0.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.9.0...v4.0.0-dev.1) (2025-01-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename HAY to lisUSD
+* rename agEUR to EURA
+* rename vslisbnb
+
+### Features
+
+* updating deployment files ([7ad24e0](https://github.com/VenusProtocol/isolated-pools/commit/7ad24e069ab9da40177685250684833288280735))
+* updating deployment files ([b4b3f31](https://github.com/VenusProtocol/isolated-pools/commit/b4b3f31fcd9e8d6342a94a98af10fe0711771136))
+* updating deployment files ([7ba332a](https://github.com/VenusProtocol/isolated-pools/commit/7ba332a5a9cdbfbefc1663e1464f4840fb17088c))
+
+
+### Bug Fixes
+
+* rename agEUR to EURA ([b075dd9](https://github.com/VenusProtocol/isolated-pools/commit/b075dd9e54908267d3b1d20d715e363fccadb7ed))
+* rename HAY to lisUSD ([645258e](https://github.com/VenusProtocol/isolated-pools/commit/645258eeed6b4d102bb1012a834eaa7e2bea6321))
+* rename StableCoins to stablecoins ([6b32bcc](https://github.com/VenusProtocol/isolated-pools/commit/6b32bccb2ae7bbe5eba59ab1549cdba76eb540f3))
+* rename vslisbnb ([ecacb34](https://github.com/VenusProtocol/isolated-pools/commit/ecacb34eca59212c2529ae15db8b3dcea0128f7f))
+* skip source timelocks on remote chains ([154a2f6](https://github.com/VenusProtocol/isolated-pools/commit/154a2f638652d546705aa07b239117ebef677ecd))
+* update core pool token names in deployments ([2773394](https://github.com/VenusProtocol/isolated-pools/commit/2773394b974cc16c617278bfafd537afc68dac81))
+
+## [3.9.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0...v3.9.0) (2025-01-30)
+
+
+### Features
+
+* add USDS & sUSDS market deployments on sepolia ([6319389](https://github.com/VenusProtocol/isolated-pools/commit/6319389266818a6992f9232de374899c7dc72bc1))
+* add USDS & sUSDS market mainnet deployments ([9581baf](https://github.com/VenusProtocol/isolated-pools/commit/9581baf7480df847c738024b18f4e201b35a3626))
+* added markets ([1840f67](https://github.com/VenusProtocol/isolated-pools/commit/1840f675943534845337c881b22e304a8be56f1d))
+* deployed mock token ([1a974c1](https://github.com/VenusProtocol/isolated-pools/commit/1a974c1da90d753c381785a7b2cfe11537b36073))
+* deployed on arb sepolia ([c7bcd0e](https://github.com/VenusProtocol/isolated-pools/commit/c7bcd0eb41cef5d10a3fad13ef05e830fd4a116e))
+* deployed on arbitrum one ([7aeac7b](https://github.com/VenusProtocol/isolated-pools/commit/7aeac7baced2ba3d2b8b56ec06bfe0eb48f955b1))
+* deployed on mainnet ([8163468](https://github.com/VenusProtocol/isolated-pools/commit/81634688382eb5b0ce2540341cfb6e641bd53bb0))
+* deployed on testnet ([a10a5b1](https://github.com/VenusProtocol/isolated-pools/commit/a10a5b13011659e11b6b3ecf6aabf38e76c38f76))
+* redeployed contracts ([a5982d6](https://github.com/VenusProtocol/isolated-pools/commit/a5982d6125431613c5139268444d4aaa4aa9ddf1))
+* redeployed vtokens ([583e652](https://github.com/VenusProtocol/isolated-pools/commit/583e652e1776fc2a358b58e4bb09f6af962bb5f4))
+* removed previous deployment ([1fb5ab8](https://github.com/VenusProtocol/isolated-pools/commit/1fb5ab85036b22269eae280e1974fc055c1522cd))
+* updating deployment files ([9e7d775](https://github.com/VenusProtocol/isolated-pools/commit/9e7d77525f38f3c43506a6f3b088f7f404384817))
+* updating deployment files ([b0e3a1d](https://github.com/VenusProtocol/isolated-pools/commit/b0e3a1de304f23918941937cc8cc31558965594f))
+* updating deployment files ([cdb5c90](https://github.com/VenusProtocol/isolated-pools/commit/cdb5c90acd4375d5b1c9e800bd8c04e387cc2322))
+* updating deployment files ([3599be0](https://github.com/VenusProtocol/isolated-pools/commit/3599be03c45b892ac2b5038acf87d1d685d6712c))
+* updating deployment files ([c46632b](https://github.com/VenusProtocol/isolated-pools/commit/c46632b5e2ce00f80c3efc3bd7b41083f823b939))
+* updating deployment files ([b381d79](https://github.com/VenusProtocol/isolated-pools/commit/b381d797b26d7774ac192bfe5497457a2eb354e3))
+* updating deployment files ([b7c48d8](https://github.com/VenusProtocol/isolated-pools/commit/b7c48d897b947af8c23bc2151a711486484cdb0e))
+* updating deployment files ([503bc70](https://github.com/VenusProtocol/isolated-pools/commit/503bc70ceabbbdc2ad45070345edf6df80a0c6e7))
+
+
+### Bug Fixes
+
+* merge conflict ([e1f60de](https://github.com/VenusProtocol/isolated-pools/commit/e1f60de4fe756db1be6c5b113169f802f909c5c7))
+* redeployed vtokens ([3291460](https://github.com/VenusProtocol/isolated-pools/commit/329146096784dd1c6059081cf8e03e4f7bd5aef1))
+* updated timelock addresses ([bfe4cac](https://github.com/VenusProtocol/isolated-pools/commit/bfe4cace9068637368af188045744032d0f7a79a))
+
+## [3.9.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v3.9.0-dev.2...v3.9.0-dev.3) (2025-01-30)
+
+
+### Features
+
+* add USDS & sUSDS market deployments on sepolia ([6319389](https://github.com/VenusProtocol/isolated-pools/commit/6319389266818a6992f9232de374899c7dc72bc1))
+* add USDS & sUSDS market mainnet deployments ([9581baf](https://github.com/VenusProtocol/isolated-pools/commit/9581baf7480df847c738024b18f4e201b35a3626))
+* updating deployment files ([9e7d775](https://github.com/VenusProtocol/isolated-pools/commit/9e7d77525f38f3c43506a6f3b088f7f404384817))
+* updating deployment files ([b381d79](https://github.com/VenusProtocol/isolated-pools/commit/b381d797b26d7774ac192bfe5497457a2eb354e3))
+
+## [3.9.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v3.9.0-dev.1...v3.9.0-dev.2) (2025-01-29)
+
+
+### Features
+
+* deployed mock token ([1a974c1](https://github.com/VenusProtocol/isolated-pools/commit/1a974c1da90d753c381785a7b2cfe11537b36073))
+* deployed on mainnet ([8163468](https://github.com/VenusProtocol/isolated-pools/commit/81634688382eb5b0ce2540341cfb6e641bd53bb0))
+* deployed on testnet ([a10a5b1](https://github.com/VenusProtocol/isolated-pools/commit/a10a5b13011659e11b6b3ecf6aabf38e76c38f76))
+* redeployed contracts ([a5982d6](https://github.com/VenusProtocol/isolated-pools/commit/a5982d6125431613c5139268444d4aaa4aa9ddf1))
+* redeployed vtokens ([583e652](https://github.com/VenusProtocol/isolated-pools/commit/583e652e1776fc2a358b58e4bb09f6af962bb5f4))
+* removed previous deployment ([1fb5ab8](https://github.com/VenusProtocol/isolated-pools/commit/1fb5ab85036b22269eae280e1974fc055c1522cd))
+* updating deployment files ([b0e3a1d](https://github.com/VenusProtocol/isolated-pools/commit/b0e3a1de304f23918941937cc8cc31558965594f))
+* updating deployment files ([cdb5c90](https://github.com/VenusProtocol/isolated-pools/commit/cdb5c90acd4375d5b1c9e800bd8c04e387cc2322))
+* updating deployment files ([3599be0](https://github.com/VenusProtocol/isolated-pools/commit/3599be03c45b892ac2b5038acf87d1d685d6712c))
+* updating deployment files ([c46632b](https://github.com/VenusProtocol/isolated-pools/commit/c46632b5e2ce00f80c3efc3bd7b41083f823b939))
+
+
+### Bug Fixes
+
+* merge conflict ([e1f60de](https://github.com/VenusProtocol/isolated-pools/commit/e1f60de4fe756db1be6c5b113169f802f909c5c7))
+* redeployed vtokens ([3291460](https://github.com/VenusProtocol/isolated-pools/commit/329146096784dd1c6059081cf8e03e4f7bd5aef1))
+* updated timelock addresses ([bfe4cac](https://github.com/VenusProtocol/isolated-pools/commit/bfe4cace9068637368af188045744032d0f7a79a))
+
+## [3.9.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0...v3.9.0-dev.1) (2025-01-28)
+
+
+### Features
+
+* added markets ([1840f67](https://github.com/VenusProtocol/isolated-pools/commit/1840f675943534845337c881b22e304a8be56f1d))
+* deployed on arb sepolia ([c7bcd0e](https://github.com/VenusProtocol/isolated-pools/commit/c7bcd0eb41cef5d10a3fad13ef05e830fd4a116e))
+* deployed on arbitrum one ([7aeac7b](https://github.com/VenusProtocol/isolated-pools/commit/7aeac7baced2ba3d2b8b56ec06bfe0eb48f955b1))
+* updating deployment files ([b7c48d8](https://github.com/VenusProtocol/isolated-pools/commit/b7c48d897b947af8c23bc2151a711486484cdb0e))
+* updating deployment files ([503bc70](https://github.com/VenusProtocol/isolated-pools/commit/503bc70ceabbbdc2ad45070345edf6df80a0c6e7))
+
+## [3.8.0](https://github.com/VenusProtocol/isolated-pools/compare/v3.7.0...v3.8.0) (2025-01-22)
+
+
+### Features
+
+*  deployed MockERC4626Token ([8d65088](https://github.com/VenusProtocol/isolated-pools/commit/8d650882a5582ea823ab7e3119693729750e8a4e))
+* add BTC pool deployments on BNB chain ([7e2dce7](https://github.com/VenusProtocol/isolated-pools/commit/7e2dce7f0d06fcc7f1fadfa3bf7ccc813eea5833))
+* add config of Ethena pool on ethereum ([c66c5b5](https://github.com/VenusProtocol/isolated-pools/commit/c66c5b5f6cee88fdb66575d0d9194fb91b2ed6a7))
+* add deployments for ethereum ([76f6597](https://github.com/VenusProtocol/isolated-pools/commit/76f6597dd266ee488532885c03981fc015ab6f05))
+* add MockUSDe deployment file ([f5f5be9](https://github.com/VenusProtocol/isolated-pools/commit/f5f5be977bfd4cc34b83bb854f12b818ec64ceeb))
+* add vwUSDM_Core deployment to zkSync ([feeb90c](https://github.com/VenusProtocol/isolated-pools/commit/feeb90c8c15b207a988b8acdd3e9ac309c84a545))
+* added arbitrum IRM ([3ff3310](https://github.com/VenusProtocol/isolated-pools/commit/3ff33101a782d2e863d36638fde64b3124b30e6e))
+* deployed arbitrum IRMs ([2188780](https://github.com/VenusProtocol/isolated-pools/commit/21887808706b7ce278e858c853f5476cfbcdfed4))
+* deployed bscmainnet IRMs ([c4f388c](https://github.com/VenusProtocol/isolated-pools/commit/c4f388c001ae6537136ea0a6cd5ffc1706feb733))
+* deployed ethereum IRM ([39249a0](https://github.com/VenusProtocol/isolated-pools/commit/39249a081e125216c1201af6dd8526af9e4e8433))
+* deployed ethereum IRMs ([e57d2be](https://github.com/VenusProtocol/isolated-pools/commit/e57d2be44aca87055eef949269dfae391c34b106))
+* deployed zksyncmainnet IRMs ([18d98e2](https://github.com/VenusProtocol/isolated-pools/commit/18d98e295af98a76d1748d94fe01b42d8e4423f1))
+* Ethena pool on sepolia ([6a5a1c1](https://github.com/VenusProtocol/isolated-pools/commit/6a5a1c1185e3c55a9617499dde7e00b41a2e73e6))
+* support deployment dry run on forked network ([1905f69](https://github.com/VenusProtocol/isolated-pools/commit/1905f69e0b6065309d3975f73626c8a576f6a566))
+* support ERC-4626 mock tokens ([37dac6b](https://github.com/VenusProtocol/isolated-pools/commit/37dac6b4319b37f4dd3a5cd32915605ce41bf285))
+* tag testnets and deploy mock tokens on testnets ([970486b](https://github.com/VenusProtocol/isolated-pools/commit/970486b17a31d99b33f8f43fa0a19b7e222c1adf))
+* update dependencies ([2622a1d](https://github.com/VenusProtocol/isolated-pools/commit/2622a1d1b11260863d9aeca40aa16fee4e6f015e))
+* update multifiers for bscmainnet markets ([048996b](https://github.com/VenusProtocol/isolated-pools/commit/048996b9cec4075b4ec6e28806ef40d599b8ae9a))
+* updating deployment files ([b62c931](https://github.com/VenusProtocol/isolated-pools/commit/b62c9314ba83c74c311a96b037b0bb8161e5d8ce))
+* updating deployment files ([3f418d0](https://github.com/VenusProtocol/isolated-pools/commit/3f418d03db1d1dcc5ae5ebe921852b78e47cf679))
+* updating deployment files ([ae189af](https://github.com/VenusProtocol/isolated-pools/commit/ae189af3fb012ec6886562708e11b0cafa49e8f7))
+* updating deployment files ([b92379b](https://github.com/VenusProtocol/isolated-pools/commit/b92379b1e734d44b11bac1cfe0047a26b1850b5a))
+* updating deployment files ([8ea645c](https://github.com/VenusProtocol/isolated-pools/commit/8ea645c50fc8d119993714020de8c25255917d1f))
+* updating deployment files ([fc1ada6](https://github.com/VenusProtocol/isolated-pools/commit/fc1ada665a46f42869a2521d121b489db2ca921c))
+* updating deployment files ([4da1b96](https://github.com/VenusProtocol/isolated-pools/commit/4da1b969d3cb61f7cf82ce5c788cceabf3b2363f))
+* updating deployment files ([5b1e29b](https://github.com/VenusProtocol/isolated-pools/commit/5b1e29b73ced945f0d0294d854fc895ad493d3db))
+* updating deployment files ([322b605](https://github.com/VenusProtocol/isolated-pools/commit/322b6052025144f27a5dbeb315400164f1e65970))
+* updating deployment files ([65bf6d2](https://github.com/VenusProtocol/isolated-pools/commit/65bf6d27c8e6ceec880ff74776fc0b86f4f8ec2b))
+* updating deployment files ([5ce862b](https://github.com/VenusProtocol/isolated-pools/commit/5ce862bb1e774443cd5dfbddb9e87d9213dfb985))
+* updating deployment files ([7477de4](https://github.com/VenusProtocol/isolated-pools/commit/7477de43476c924cf6c9f90fb94d3367ee99f641))
+* updating deployment files ([9ddc742](https://github.com/VenusProtocol/isolated-pools/commit/9ddc74298592f622ea527db0f1b339925ca731af))
+* updating deployment files ([176c87a](https://github.com/VenusProtocol/isolated-pools/commit/176c87a16678b77c7826218082ae42e9715908cc))
+* updating deployment files ([be61772](https://github.com/VenusProtocol/isolated-pools/commit/be617727ce777e7bf486ebce2bc250d4329eeb46))
+* updating deployment files ([7f0605d](https://github.com/VenusProtocol/isolated-pools/commit/7f0605dfbe075b1f25ce90ae00a398fdc8296c27))
+* use timelocks instead of guardians for zkSync deployments ([b4d72dd](https://github.com/VenusProtocol/isolated-pools/commit/b4d72dd13a43e03486d0be238d72c8676f507de6))
+
+
+### Bug Fixes
+
+* compare lowercase addresses ([6667a64](https://github.com/VenusProtocol/isolated-pools/commit/6667a645ac397938407bfbaf5cb5604f733aad45))
+* correct symbol in crv reward config ([b6adb16](https://github.com/VenusProtocol/isolated-pools/commit/b6adb1648d7d34d28053e5c65c99cabd2d4b1cee))
+* fixed lint ([f0945cd](https://github.com/VenusProtocol/isolated-pools/commit/f0945cd85521f10db1c6d7285f9af7883fbe91dd))
+* fixed mantissaToBps params ([6a1664c](https://github.com/VenusProtocol/isolated-pools/commit/6a1664c2947193299485c6e329b7a680de29c7c2))
+* merge conflict ([5d98ed0](https://github.com/VenusProtocol/isolated-pools/commit/5d98ed083fcbc416e74fef113d0c9359f6371221))
+* merge conflict ([9dc73dc](https://github.com/VenusProtocol/isolated-pools/commit/9dc73dc0a3cab4dc2efd2680d48bf558e1438d9f))
+* PR comments ([d1546b9](https://github.com/VenusProtocol/isolated-pools/commit/d1546b947ef23e23b6755a6ad44b7f139f9b8d70))
+* removed wrong deployments ([dfb6da3](https://github.com/VenusProtocol/isolated-pools/commit/dfb6da3c46fbcce70519aa73098469e54e386718))
+* send to treasury only assets that were minted ([3370818](https://github.com/VenusProtocol/isolated-pools/commit/3370818fae202fd7a61fc8c389375a9bdd6a40ba))
+* skip networks where PSR hasnt been deployed yet ([b3b84ca](https://github.com/VenusProtocol/isolated-pools/commit/b3b84ca117e8869cb0886f2534e343e8db08280e))
+* support breaking changes in protocol reserve deployment scripts ([a30a86a](https://github.com/VenusProtocol/isolated-pools/commit/a30a86abe11cfec55bdf45829856d701db01e9b8))
+* support breaking changes in protocol reserve deployment scripts ([ca25f35](https://github.com/VenusProtocol/isolated-pools/commit/ca25f351f3f4bec3e02ffb47e35162bd50b81a73))
+* support getNetworkName for zkSync ([3fda9a5](https://github.com/VenusProtocol/isolated-pools/commit/3fda9a55216b34db394b68627e430b5d43afffb4))
+* vtoken symbol ([1eca225](https://github.com/VenusProtocol/isolated-pools/commit/1eca2254ea75ffe85182824411d7bd0b3f926049))
+
+## [3.8.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.4...v3.8.0-dev.5) (2025-01-22)
+
+
+### Features
+
+* add vwUSDM_Core deployment to zkSync ([feeb90c](https://github.com/VenusProtocol/isolated-pools/commit/feeb90c8c15b207a988b8acdd3e9ac309c84a545))
+* support ERC-4626 mock tokens ([37dac6b](https://github.com/VenusProtocol/isolated-pools/commit/37dac6b4319b37f4dd3a5cd32915605ce41bf285))
+* tag testnets and deploy mock tokens on testnets ([970486b](https://github.com/VenusProtocol/isolated-pools/commit/970486b17a31d99b33f8f43fa0a19b7e222c1adf))
+* updating deployment files ([b62c931](https://github.com/VenusProtocol/isolated-pools/commit/b62c9314ba83c74c311a96b037b0bb8161e5d8ce))
+* use timelocks instead of guardians for zkSync deployments ([b4d72dd](https://github.com/VenusProtocol/isolated-pools/commit/b4d72dd13a43e03486d0be238d72c8676f507de6))
+
+
+### Bug Fixes
+
+* support getNetworkName for zkSync ([3fda9a5](https://github.com/VenusProtocol/isolated-pools/commit/3fda9a55216b34db394b68627e430b5d43afffb4))
+
 ## [3.8.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v3.8.0-dev.3...v3.8.0-dev.4) (2025-01-02)
 
 

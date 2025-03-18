@@ -1,4 +1,5 @@
 import { deployments, ethers, getNamedAccounts } from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
 import {
@@ -126,4 +127,9 @@ export const getBlockOrTimestampBasedDeploymentInfo = (network: string): Deploym
   const blocksPerYearKey = isTimeBased ? "isTimeBased" : network;
 
   return { isTimeBased: isTimeBased, blocksPerYear: blocksPerYear[blocksPerYearKey] };
+};
+
+export const skipMainnets = () => async (hre: HardhatRuntimeEnvironment) => {
+  const isMainnet = hre.network.live && !hre.network.tags["testnet"];
+  return isMainnet;
 };
