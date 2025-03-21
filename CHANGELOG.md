@@ -1,3 +1,13 @@
+## [4.2.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.8...v4.2.0-dev.9) (2025-03-21)
+
+
+### Features
+
+* deploy mainnet asBNB market ([32b1c62](https://github.com/VenusProtocol/isolated-pools/commit/32b1c62c18bceb7a11ed896fb991b42792450d2b))
+* deploy vasBNB_LiquidStakedBNB ([26ff915](https://github.com/VenusProtocol/isolated-pools/commit/26ff9159328e6d4913a4938c1bede633dcaf06dc))
+* updating deployment files ([6164026](https://github.com/VenusProtocol/isolated-pools/commit/616402673b47c7a58a5b5c766aa585f038628bd4))
+* updating deployment files ([d2bd4d8](https://github.com/VenusProtocol/isolated-pools/commit/d2bd4d8abd2436702cbaeaf0a9b1cb8b43f750b0))
+
 ## [4.2.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2025-03-18)
 
 
