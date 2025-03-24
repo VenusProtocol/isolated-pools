@@ -51,8 +51,7 @@
     "@venusprotocol/solidity-utilities": "2.0.3",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14",
-    "module-alias": "^2.2.2",
-    "solmate": "^6.8.0"
+    "module-alias": "^2.2.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.0.3",
