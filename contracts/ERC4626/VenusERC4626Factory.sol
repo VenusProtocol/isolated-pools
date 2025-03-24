@@ -51,13 +51,13 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     /// @param poolRegistryAddress Address of the Pool Registry contract
     /// @param rewardRecipientAddress Reward recipient address
     /// @param venusERC4626Implementation Address of the VenusERC4626 implementation contract
-    /// @param loopsLimit The loops limit for the MaxLoopsLimit helper
+    /// @param loopsLimitNumber The loops limit for the MaxLoopsLimit helper
     function initialize(
         address accessControlManager,
         address poolRegistryAddress,
         address rewardRecipientAddress,
         address venusERC4626Implementation,
-        uint256 loopsLimit
+        uint256 loopsLimitNumber
     ) external initializer {
         // checks are missing
         __Ownable2Step_init();
@@ -65,7 +65,7 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
 
         poolRegistry = PoolRegistryInterface(poolRegistryAddress);
         rewardRecipient = rewardRecipientAddress;
-        loopsLimit = loopsLimit;
+        loopsLimit = loopsLimitNumber;
 
         // Deploy the upgradeable beacon with the initial implementation
         beacon = new UpgradeableBeacon(venusERC4626Implementation);
