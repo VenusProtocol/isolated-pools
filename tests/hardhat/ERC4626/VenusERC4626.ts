@@ -48,7 +48,8 @@ describe("VenusERC4626", function () {
 
     // Deploy MockVenusERC4626 contract
     const VenusERC4626Factory = await ethers.getContractFactory("MockVenusERC4626");
-    venusERC4626 = await VenusERC4626Factory.deploy(vToken.address, rewardRecipient);
+    venusERC4626 = await VenusERC4626Factory.deploy();
+    await venusERC4626.initialize(vToken.address, rewardRecipient, 100); // Initialize with loopsLimit = 100
 
     await venusERC4626.deployed();
   });
@@ -56,9 +57,9 @@ describe("VenusERC4626", function () {
   it("should deploy the VenusERC4626 contract", async function () {
     expect(venusERC4626.address).to.not.equal(ethers.constants.AddressZero);
     expect(await venusERC4626.asset()).to.equal(asset.address);
-    expect(await venusERC4626.VTOKEN()).to.equal(vToken.address);
-    expect(await venusERC4626.COMPTROLLER()).to.equal(comptroller.address);
-    expect(await venusERC4626.REWARD_RECIPIENT()).to.equal(rewardRecipient);
+    expect(await venusERC4626.vToken()).to.equal(vToken.address);
+    expect(await venusERC4626.comptroller()).to.equal(comptroller.address);
+    expect(await venusERC4626.rewardRecipient()).to.equal(rewardRecipient);
   });
 
   it("should deposit assets into the vault", async function () {
@@ -132,7 +133,8 @@ describe("VenusERC4626", function () {
   it("should claim rewards and call updateAssetsState when rewardRecipient is a PSR contract", async () => {
     // Redeploy contract with PSR as rewardRecipient
     const VenusERC4626Factory = await ethers.getContractFactory("MockVenusERC4626");
-    venusERC4626 = await VenusERC4626Factory.deploy(vToken.address, rewardRecipientPSR.address);
+    venusERC4626 = await VenusERC4626Factory.deploy();
+    await venusERC4626.initialize(vToken.address, rewardRecipientPSR.address, 10); // Initialize with loopsLimit = 10
     await venusERC4626.deployed();
 
     comptroller.getRewardDistributors.returns([rewardDistributor.address]);

@@ -1,76 +1,165 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import chai from "chai";
 import { constants } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
-import { ERC20, IComptroller, PoolRegistryInterface, VToken, VenusERC4626Factory } from "../../../typechain";
+import {
+  AccessControlManager,
+  ERC20,
+  IComptroller,
+  PoolRegistryInterface,
+  UpgradeableBeacon,
+  VToken,
+  VenusERC4626,
+  VenusERC4626Factory,
+} from "../../../typechain";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
 describe("VenusERC4626Factory", function () {
   let deployer: SignerWithAddress;
+  let user: SignerWithAddress;
   let factory: VenusERC4626Factory;
-  let asset: FakeContract<ERC20>;
-  let fakeAsset: FakeContract<ERC20>;
+  let beacon: UpgradeableBeacon;
+  let listedAsset: FakeContract<ERC20>;
+  let unListedAsset: FakeContract<ERC20>;
   let vToken: FakeContract<VToken>;
   let comptroller: FakeContract<IComptroller>;
   let poolRegistry: FakeContract<PoolRegistryInterface>;
+  let accessControlManager: FakeContract<AccessControlManager>;
   let rewardRecipient: string;
+  let venusERC4626Impl: VenusERC4626;
 
-  beforeEach(async function () {
-    [deployer] = await ethers.getSigners();
+  before(async function () {
+    [deployer, user] = await ethers.getSigners();
 
-    asset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
-    fakeAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
+    listedAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
+    unListedAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake("VToken");
     comptroller = await smock.fake("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
     poolRegistry = await smock.fake("contracts/Pool/PoolRegistryInterface.sol:PoolRegistryInterface");
+    accessControlManager = await smock.fake("AccessControlManager");
     rewardRecipient = deployer.address;
 
+    accessControlManager.isAllowedToCall.returns(true);
     comptroller.poolRegistry.returns(poolRegistry.address);
 
-    // Return vToken for the main asset
-    poolRegistry.getVTokenForAsset.whenCalledWith(comptroller.address, asset.address).returns(vToken.address);
+    // Return vToken for the main listedAsset
+    poolRegistry.getVTokenForAsset.whenCalledWith(comptroller.address, listedAsset.address).returns(vToken.address);
 
     // Return zero address for unknown assets
     poolRegistry.getVTokenForAsset
-      .whenCalledWith(comptroller.address, fakeAsset.address)
+      .whenCalledWith(comptroller.address, unListedAsset.address)
       .returns(constants.AddressZero);
 
-    // Mock comptroller to return an array of vTokens
-    comptroller.getAllMarkets.returns([vToken.address]);
-    vToken.underlying.returns(asset.address);
+    // Mock comptroller validation
+    poolRegistry.getPoolByComptroller.whenCalledWith(comptroller.address).returns({
+      name: "Test Pool",
+      creator: deployer.address,
+      comptroller: comptroller.address, // Must match input
+      blockPosted: 123456,
+      timestampPosted: Math.floor(Date.now() / 1000), // Current timestamp
+    });
 
-    // Deploy factory
+    poolRegistry.getPoolByComptroller.whenCalledWith(constants.AddressZero).returns({
+      name: "",
+      creator: constants.AddressZero,
+      comptroller: constants.AddressZero, // Must match input
+      blockPosted: 0,
+      timestampPosted: 0, // Current timestamp
+    });
+
+    // Mock vToken underlying
+    vToken.underlying.returns(listedAsset.address);
+
+    const VenusERC4626 = await ethers.getContractFactory("VenusERC4626");
+    venusERC4626Impl = await VenusERC4626.deploy();
+    await venusERC4626Impl.deployed();
+
+    // Deploy the factory with a mock VenusERC4626 implementation
     const Factory = await ethers.getContractFactory("VenusERC4626Factory");
-    factory = await Factory.deploy(comptroller.address, rewardRecipient);
+    factory = await upgrades.deployProxy(
+      Factory,
+      [accessControlManager.address, poolRegistry.address, rewardRecipient, venusERC4626Impl.address, 10],
+      {
+        initializer: "initialize",
+      },
+    );
+
+    await factory.deployed();
+
+    // Fetch beacon address
+    const beaconAddress = await factory.beacon();
+    beacon = await ethers.getContractAt("UpgradeableBeacon", beaconAddress);
   });
 
-  it("should deploy correctly", async function () {
-    expect(await factory.COMPTROLLER()).to.equal(comptroller.address);
-    expect(await factory.REWARD_RECIPIENT()).to.equal(rewardRecipient);
+  it("should initialize correctly", async function () {
+    expect(await factory.poolRegistry()).to.equal(poolRegistry.address);
+    expect(await factory.rewardRecipient()).to.equal(rewardRecipient);
+    expect(await factory.loopsLimit()).to.equal(10);
+    expect(await beacon.implementation()).to.equal(venusERC4626Impl.address);
   });
 
-  it("should revert if trying to createERC4626 for an asset without a VToken", async function () {
-    await expect(factory.createERC4626(fakeAsset.address)).to.be.revertedWithCustomError(
+  it("should revert when trying to createERC4626 for an invalid comptroller", async function () {
+    await expect(factory.createERC4626(constants.AddressZero, listedAsset.address)).to.be.revertedWithCustomError(
+      factory,
+      "VenusERC4626Factory__InvalidComptroller",
+    );
+  });
+
+  it("should revert when trying to createERC4626 for an listedAsset without a VToken", async function () {
+    await expect(factory.createERC4626(comptroller.address, unListedAsset.address)).to.be.revertedWithCustomError(
       factory,
       "VenusERC4626Factory__VTokenNonexistent",
     );
   });
 
   it("should create a VenusERC4626 vault successfully", async function () {
-    const vaultTx = await factory.createERC4626(asset.address);
+    const vaultTx = await factory.createERC4626(comptroller.address, listedAsset.address);
     const receipt = await vaultTx.wait();
 
     const event = receipt.events?.find(e => e.event === "CreateERC4626");
     const vaultAddress = event?.args?.[1];
     expect(vaultAddress).to.not.equal(constants.AddressZero);
+
+    const vault = await ethers.getContractAt("VenusERC4626", vaultAddress);
+    expect(await vault.asset()).to.equal(listedAsset.address);
   });
 
-  it("should compute the correct ERC4626 vault address", async function () {
-    const computedAddress = await factory.computeERC4626Address(asset.address);
-    expect(computedAddress).to.not.equal(constants.AddressZero);
+  it("should emit CreateERC4626 event with correct parameters", async function () {
+    const tx = await factory.createERC4626(comptroller.address, listedAsset.address);
+    const receipt = await tx.wait();
+
+    const event = receipt.events?.find(e => e.event === "CreateERC4626");
+    const emittedVaultAddress = event?.args?.vault;
+
+    expect(event).to.not.be.undefined;
+    expect(event?.args?.asset).to.equal(listedAsset.address);
+    expect(emittedVaultAddress).to.not.equal(constants.AddressZero);
+  });
+
+  it("reverts if ACM denies the access", async () => {
+    const newRecipient = ethers.Wallet.createRandom().address;
+
+    accessControlManager.isAllowedToCall.whenCalledWith(user.address, "setRewardRecipient(address)").returns(false);
+
+    await expect(factory.connect(user).setRewardRecipient(newRecipient)).to.be.revertedWithCustomError(
+      factory,
+      "Unauthorized",
+    );
+  });
+
+  it("should allow updating the reward recipient", async function () {
+    const newRecipient = ethers.Wallet.createRandom().address;
+
+    accessControlManager.isAllowedToCall.whenCalledWith(user.address, "setRewardRecipient(address)").returns(true);
+
+    await expect(factory.connect(user).setRewardRecipient(newRecipient))
+      .to.emit(factory, "RewardRecipientUpdated")
+      .withArgs(rewardRecipient, newRecipient);
+
+    expect(await factory.rewardRecipient()).to.equal(newRecipient);
   });
 });
