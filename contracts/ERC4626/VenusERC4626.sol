@@ -91,11 +91,13 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
                 SafeERC20Upgradeable.safeTransfer(rewardToken, rewardRecipient, rewardBalance);
 
                 // Try to update the asset state on the recipient if reward recipient is a protocol share reserve
-                bytes memory data = abi.encodeWithSignature(
-                    "updateAssetsState(address,address,uint8)",
-                    address(comptroller),
-                    address(rewardToken),
-                    uint8(IProtocolShareReserve.IncomeType.ERC4626_WRAPPER_REWARDS)
+                bytes memory data = abi.encodeCall(
+                    IProtocolShareReserve.updateAssetsState,
+                    (
+                        address(comptroller),
+                        address(rewardToken),
+                        IProtocolShareReserve.IncomeType.ERC4626_WRAPPER_REWARDS
+                    )
                 );
                 rewardRecipient.call(data);
             }

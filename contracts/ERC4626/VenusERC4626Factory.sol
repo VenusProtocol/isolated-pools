@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ERC4626Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { PoolRegistryInterface } from ".././Pool/PoolRegistryInterface.sol";
+import { VTokenInterface } from "../VTokenInterfaces.sol";
 import { VenusERC4626 } from "./VenusERC4626.sol";
 import { ensureNonzeroAddress } from ".././lib/validators.sol";
 
 /// @title VenusERC4626Factory
 /// @notice Factory for creating VenusERC4626 contracts
 contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
-    using SafeERC20Upgradeable for ERC20Upgradeable;
-
     /// @notice The beacon contract for VenusERC4626 proxies
     UpgradeableBeacon public beacon;
 
@@ -31,9 +28,9 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     uint256 public loopsLimit;
 
     /// @notice Emitted when a new ERC4626 vault has been created
-    /// @param asset The base asset used by the vault
+    /// @param vToken The vToken used by the vault
     /// @param vault The vault that was created
-    event CreateERC4626(address indexed asset, ERC4626Upgradeable indexed vault);
+    event CreateERC4626(VTokenInterface indexed vToken, ERC4626Upgradeable indexed vault);
 
     /// @notice Emitted when the reward recipient address is updated.
     /// @param oldRecipient The previous reward recipient address.
@@ -42,9 +39,6 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
 
     /// @notice Thrown when the provided comptroller is invalid (not registered in PoolRegistry)
     error VenusERC4626Factory__InvalidComptroller();
-
-    /// @notice Thrown when trying to deploy a VenusERC4626 vault using an asset without a vToken
-    error VenusERC4626Factory__VTokenNonexistent();
 
     /// @notice Initializes the contract
     /// @param accessControlManager Address of the ACM contract
@@ -85,17 +79,15 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     }
 
     /// @notice Creates a VenusERC4626 vault for a given asset and comptroller
-    /// @param comptroller The comptroller's address to which asset belongs
-    /// @param asset The ERC20 asset address belongs to the comptroller
+    /// @param vToken The vToken address to create the vault
     /// @return vault The deployed VenusERC4626 vault
-    function createERC4626(address comptroller, address asset) external returns (ERC4626Upgradeable vault) {
-        if (poolRegistry.getPoolByComptroller(comptroller).comptroller == address(0)) {
-            revert VenusERC4626Factory__InvalidComptroller();
-        }
+    function createERC4626(address vToken) external returns (ERC4626Upgradeable vault) {
+        ensureNonzeroAddress(vToken);
 
-        address vToken = poolRegistry.getVTokenForAsset(comptroller, asset);
-        if (vToken == address(0)) {
-            revert VenusERC4626Factory__VTokenNonexistent();
+        VTokenInterface vToken_ = VTokenInterface(vToken);
+
+        if (poolRegistry.getPoolByComptroller(address(vToken_.comptroller())).comptroller == address(0)) {
+            revert VenusERC4626Factory__InvalidComptroller();
         }
 
         vault = ERC4626Upgradeable(
@@ -107,6 +99,6 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
             )
         );
 
-        emit CreateERC4626(asset, vault);
+        emit CreateERC4626(vToken_, vault);
     }
 }

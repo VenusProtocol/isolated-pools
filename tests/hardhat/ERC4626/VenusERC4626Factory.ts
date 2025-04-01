@@ -18,26 +18,26 @@ import {
 const { expect } = chai;
 chai.use(smock.matchers);
 
-describe("VenusERC4626Factory", function () {
+describe("VenusERC4626Factory", () => {
   let deployer: SignerWithAddress;
   let user: SignerWithAddress;
   let factory: VenusERC4626Factory;
   let beacon: UpgradeableBeacon;
   let listedAsset: FakeContract<ERC20>;
-  let unListedAsset: FakeContract<ERC20>;
   let vToken: FakeContract<VToken>;
+  let fakeVToken: FakeContract<VToken>;
   let comptroller: FakeContract<IComptroller>;
   let poolRegistry: FakeContract<PoolRegistryInterface>;
   let accessControlManager: FakeContract<AccessControlManager>;
   let rewardRecipient: string;
   let venusERC4626Impl: VenusERC4626;
 
-  before(async function () {
+  before(async () => {
     [deployer, user] = await ethers.getSigners();
 
     listedAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
-    unListedAsset = await smock.fake("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake("VToken");
+    fakeVToken = await smock.fake("VToken");
     comptroller = await smock.fake("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
     poolRegistry = await smock.fake("contracts/Pool/PoolRegistryInterface.sol:PoolRegistryInterface");
     accessControlManager = await smock.fake("AccessControlManager");
@@ -45,14 +45,6 @@ describe("VenusERC4626Factory", function () {
 
     accessControlManager.isAllowedToCall.returns(true);
     comptroller.poolRegistry.returns(poolRegistry.address);
-
-    // Return vToken for the main listedAsset
-    poolRegistry.getVTokenForAsset.whenCalledWith(comptroller.address, listedAsset.address).returns(vToken.address);
-
-    // Return zero address for unknown assets
-    poolRegistry.getVTokenForAsset
-      .whenCalledWith(comptroller.address, unListedAsset.address)
-      .returns(constants.AddressZero);
 
     // Mock comptroller validation
     poolRegistry.getPoolByComptroller.whenCalledWith(comptroller.address).returns({
@@ -73,6 +65,8 @@ describe("VenusERC4626Factory", function () {
 
     // Mock vToken underlying
     vToken.underlying.returns(listedAsset.address);
+    vToken.comptroller.returns(comptroller.address);
+    fakeVToken.comptroller.returns(constants.AddressZero);
 
     const VenusERC4626 = await ethers.getContractFactory("VenusERC4626");
     venusERC4626Impl = await VenusERC4626.deploy();
@@ -95,29 +89,29 @@ describe("VenusERC4626Factory", function () {
     beacon = await ethers.getContractAt("UpgradeableBeacon", beaconAddress);
   });
 
-  it("should initialize correctly", async function () {
+  it("should initialize correctly", async () => {
     expect(await factory.poolRegistry()).to.equal(poolRegistry.address);
     expect(await factory.rewardRecipient()).to.equal(rewardRecipient);
     expect(await factory.loopsLimit()).to.equal(10);
     expect(await beacon.implementation()).to.equal(venusERC4626Impl.address);
   });
 
-  it("should revert when trying to createERC4626 for an invalid comptroller", async function () {
-    await expect(factory.createERC4626(constants.AddressZero, listedAsset.address)).to.be.revertedWithCustomError(
+  it("should revert when trying to createERC4626 for an incorrect VToken", async () => {
+    await expect(factory.createERC4626(constants.AddressZero)).to.be.revertedWithCustomError(
+      factory,
+      "ZeroAddressNotAllowed",
+    );
+  });
+
+  it("should revert when trying to createERC4626 for an VToken with invalid comptroller", async () => {
+    await expect(factory.createERC4626(fakeVToken.address)).to.be.revertedWithCustomError(
       factory,
       "VenusERC4626Factory__InvalidComptroller",
     );
   });
 
-  it("should revert when trying to createERC4626 for an listedAsset without a VToken", async function () {
-    await expect(factory.createERC4626(comptroller.address, unListedAsset.address)).to.be.revertedWithCustomError(
-      factory,
-      "VenusERC4626Factory__VTokenNonexistent",
-    );
-  });
-
-  it("should create a VenusERC4626 vault successfully", async function () {
-    const vaultTx = await factory.createERC4626(comptroller.address, listedAsset.address);
+  it("should create a VenusERC4626 vault successfully", async () => {
+    const vaultTx = await factory.createERC4626(vToken.address);
     const receipt = await vaultTx.wait();
 
     const event = receipt.events?.find(e => e.event === "CreateERC4626");
@@ -128,15 +122,15 @@ describe("VenusERC4626Factory", function () {
     expect(await vault.asset()).to.equal(listedAsset.address);
   });
 
-  it("should emit CreateERC4626 event with correct parameters", async function () {
-    const tx = await factory.createERC4626(comptroller.address, listedAsset.address);
+  it("should emit CreateERC4626 event with correct parameters", async () => {
+    const tx = await factory.createERC4626(vToken.address);
     const receipt = await tx.wait();
 
     const event = receipt.events?.find(e => e.event === "CreateERC4626");
     const emittedVaultAddress = event?.args?.vault;
 
     expect(event).to.not.be.undefined;
-    expect(event?.args?.asset).to.equal(listedAsset.address);
+    expect(event?.args?.vToken).to.equal(vToken.address);
     expect(emittedVaultAddress).to.not.equal(constants.AddressZero);
   });
 
@@ -151,7 +145,7 @@ describe("VenusERC4626Factory", function () {
     );
   });
 
-  it("should allow updating the reward recipient", async function () {
+  it("should allow updating the reward recipient", async () => {
     const newRecipient = ethers.Wallet.createRandom().address;
 
     accessControlManager.isAllowedToCall.whenCalledWith(user.address, "setRewardRecipient(address)").returns(true);

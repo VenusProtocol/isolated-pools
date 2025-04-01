@@ -15,7 +15,7 @@ import {
 const { expect } = chai;
 chai.use(smock.matchers);
 
-describe("VenusERC4626", function () {
+describe("VenusERC4626", () => {
   let deployer: SignerWithAddress;
   let user: SignerWithAddress;
   let venusERC4626: MockVenusERC4626;
@@ -27,7 +27,7 @@ describe("VenusERC4626", function () {
   let rewardRecipient: string;
   let rewardRecipientPSR: FakeContract<IProtocolShareReserve>;
 
-  beforeEach(async function () {
+  beforeEach(async () => {
     [deployer, user] = await ethers.getSigners();
 
     // Create Smock Fake Contracts
@@ -54,7 +54,7 @@ describe("VenusERC4626", function () {
     await venusERC4626.deployed();
   });
 
-  it("should deploy the VenusERC4626 contract", async function () {
+  it("should deploy the VenusERC4626 contract", async () => {
     expect(venusERC4626.address).to.not.equal(ethers.constants.AddressZero);
     expect(await venusERC4626.asset()).to.equal(asset.address);
     expect(await venusERC4626.vToken()).to.equal(vToken.address);
@@ -62,7 +62,7 @@ describe("VenusERC4626", function () {
     expect(await venusERC4626.rewardRecipient()).to.equal(rewardRecipient);
   });
 
-  it("should deposit assets into the vault", async function () {
+  it("should deposit assets into the vault", async () => {
     const depositAmount = ethers.utils.parseUnits("10", 18);
     const decimalsOffset = await venusERC4626.getDecimalsOffset();
     const expectedDepositAmount = depositAmount.mul(ethers.BigNumber.from(10).pow(decimalsOffset));
@@ -84,7 +84,7 @@ describe("VenusERC4626", function () {
     expect(vToken.mint).to.have.been.calledWith(depositAmount);
   });
 
-  it("should withdraw assets from the vault", async function () {
+  it("should withdraw assets from the vault", async () => {
     const depositAmount = ethers.utils.parseEther("10");
     const withdrawAmount = ethers.utils.parseEther("5");
 
@@ -109,7 +109,7 @@ describe("VenusERC4626", function () {
     expect(vToken.redeemUnderlying).to.have.been.calledWith(withdrawAmount);
   });
 
-  it("should claim rewards when rewardRecipient is an EOA", async function () {
+  it("should claim rewards when rewardRecipient is an EOA", async () => {
     comptroller.getRewardDistributors.returns([rewardDistributor.address]);
 
     const rewardAmount = ethers.utils.parseEther("10");
@@ -155,7 +155,7 @@ describe("VenusERC4626", function () {
     expect(rewardRecipientPSR.updateAssetsState).to.have.been.calledWith(comptroller.address, xvs.address, 2);
   });
 
-  it("should revert if vToken mint fails", async function () {
+  it("should revert if vToken mint fails", async () => {
     const depositAmount = ethers.utils.parseEther("100");
 
     // Mock the asset transfer
@@ -173,7 +173,7 @@ describe("VenusERC4626", function () {
     );
   });
 
-  it("should revert if vToken redeemUnderlying fails", async function () {
+  it("should revert if vToken redeemUnderlying fails", async () => {
     const withdrawAmount = ethers.utils.parseEther("50");
 
     // Mock the vToken redeemUnderlying to fail
@@ -186,38 +186,38 @@ describe("VenusERC4626", function () {
     ).to.be.revertedWithCustomError(venusERC4626, "VenusERC4626__VenusError");
   });
 
-  it("should fail deposit with no approval", async function () {
+  it("should fail deposit with no approval", async () => {
     await expect(venusERC4626.connect(user).deposit(ethers.utils.parseEther("1"), user.address)).to.be.reverted;
   });
 
-  it("should fail deposit with insufficient balance", async function () {
+  it("should fail deposit with insufficient balance", async () => {
     asset.transferFrom.returns(false);
     await expect(venusERC4626.connect(user).deposit(ethers.utils.parseEther("1000"), user.address)).to.be.reverted;
   });
 
-  it("should fail withdraw with no balance", async function () {
+  it("should fail withdraw with no balance", async () => {
     await expect(venusERC4626.connect(user).withdraw(ethers.utils.parseEther("1"), user.address, user.address)).to.be
       .reverted;
   });
 
-  it("should fail redeem with no balance", async function () {
+  it("should fail redeem with no balance", async () => {
     await expect(venusERC4626.connect(user).redeem(ethers.utils.parseEther("1"), user.address, user.address)).to.be
       .reverted;
   });
 
-  it("should fail deposit zero", async function () {
+  it("should fail deposit zero", async () => {
     await expect(venusERC4626.connect(user).deposit(0, user.address)).to.be.reverted;
   });
 
-  it("should fail mint zero", async function () {
+  it("should fail mint zero", async () => {
     await expect(venusERC4626.connect(user).mint(0, user.address)).to.be.reverted;
   });
 
-  it("should fail withdraw zero", async function () {
+  it("should fail withdraw zero", async () => {
     await expect(venusERC4626.connect(user).withdraw(0, user.address, user.address)).to.be.reverted;
   });
 
-  it("should fail redeem zero", async function () {
+  it("should fail redeem zero", async () => {
     await expect(venusERC4626.connect(user).redeem(0, user.address, user.address)).to.be.reverted;
   });
 });
