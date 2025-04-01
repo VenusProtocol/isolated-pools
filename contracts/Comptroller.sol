@@ -5,6 +5,7 @@ import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/acc
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
+import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts/Interfaces/IProtocolShareReserve.sol";
 
 import { ComptrollerInterface, VTokenInterface, Action } from "./ComptrollerInterface.sol";
 import { ComptrollerStorage } from "./ComptrollerStorage.sol";
@@ -989,12 +990,14 @@ contract Comptroller is
         }
 
         uint256 len = assets.length;
-        uint256[] memory fees = new uint256[](len);
+        uint256[] memory protocolFees = new uint256[](assets.length);
+        uint256[] memory supplierFees = new uint256[](assets.length);
+        uint256[] memory totalFees = new uint256[](assets.length);
         uint256[] memory balanceAfterTransfer = new uint256[](len);
 
         for (uint256 j; j < len; ) {
-            (fees[j], ) = (assets[j]).calculateFlashLoanFee(amounts[j]);
-
+            (protocolFees[j], supplierFees[j]) = (assets[j]).calculateFlashLoanFee(amounts[j]);
+            totalFees[j] = protocolFees[j] + supplierFees[j]; // Sum protocol and supplier fees
             // Transfer the asset
             (balanceAfterTransfer[j]) = (assets[j]).transferOutUnderlying(receiver, amounts[j]);
 
@@ -1004,12 +1007,20 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!IFlashLoanReceiver(msg.sender).executeOperation(assets, amounts, fees, receiver, param)) {
+        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, totalFees, msg.sender, param)) {
             revert ExecuteFlashLoanFailed();
         }
 
         for (uint256 k; k < len; ) {
-            (assets[k]).transferInUnderlyingAndVerify(receiver, amounts[k] + fees[k], balanceAfterTransfer[k]);
+            (assets[k]).transferInUnderlyingAndVerify(receiver, amounts[k], totalFees[k], balanceAfterTransfer[k]);
+            (assets[k]).transferOutUnderlying(assets[k].protocolShareReserve(), protocolFees[k]);
+
+            // Update protocol share reserve state
+            IProtocolShareReserve(assets[k].protocolShareReserve()).updateAssetsState(
+                address(assets[k].comptroller()),
+                address(assets[k].underlying()),
+                IProtocolShareReserve.IncomeType.FLASHLOAN
+            );
 
             unchecked {
                 ++k;

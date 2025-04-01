@@ -727,6 +727,7 @@ contract VToken is
             revert InvalidComptroller(address(comptroller));
         }
 
+        flashLoanAmount += amount;
         _doTransferOut(to, amount);
 
         balanceAfterTransfer = _getCashPrior();
@@ -739,6 +740,7 @@ contract VToken is
      *      asset by calling the `_doTransferIn` internal function.
      * @param from The address from which the underlying asset is to be transferred.
      * @param amount The amount of the underlying asset to transfer.
+     * @param fee Total fee applied on flashloan amount(protocol + supplier).
      * @param balanceBefore The cash balance before the transfer.
      * @custom:requirements
      *      - The caller must be the Comptroller contract.
@@ -749,22 +751,25 @@ contract VToken is
     function transferInUnderlyingAndVerify(
         address from,
         uint256 amount,
+        uint256 fee,
         uint256 balanceBefore
     ) external override nonReentrant {
         if (msg.sender != address(comptroller)) {
             revert InvalidComptroller(address(comptroller));
         }
 
-        _doTransferIn(from, amount);
+        uint256 repayment = amount + fee;
+        _doTransferIn(from, repayment);
+        flashLoanAmount -= amount;
 
         uint256 balanceAfter = _getCashPrior();
 
         // balanceAfter should be greater than the fee calculated
-        if ((balanceAfter - balanceBefore) < amount) {
+        if ((balanceAfter - balanceBefore) < repayment) {
             revert InsufficientReypaymentBalance(underlying);
         }
 
-        emit TransferInUnderlyingAndVerify(underlying, from, amount);
+        emit TransferInUnderlyingAndVerify(underlying, from, repayment);
     }
 
     /**
@@ -791,28 +796,41 @@ contract VToken is
         uint256 amount,
         bytes calldata param
     ) external override nonReentrant returns (uint256) {
-        uint256 repaymentAmount;
-        uint256 fee;
         ensureNonzeroAddress(receiver);
-        (fee, repaymentAmount) = calculateFlashLoanFee(amount);
 
         IFlashLoanSimpleReceiver receiverContract = IFlashLoanSimpleReceiver(msg.sender);
+
+        flashLoanAmount += amount;
 
         // Transfer the underlying asset to the receiver.
         _doTransferOut(receiver, amount);
 
         uint256 balanceBefore = _getCashPrior();
+        (uint256 protocolFee, uint256 supplierFee) = calculateFlashLoanFee(amount);
+
+        uint256 fee = protocolFee + supplierFee;
+        uint256 repayAmount = amount + fee;
 
         // Call the execute operation on receiver contract
         if (!receiverContract.executeOperation(underlying, amount, fee, msg.sender, param)) {
             revert ExecuteFlashLoanFailed();
         }
 
-        _doTransferIn(receiver, repaymentAmount);
+        _doTransferIn(receiver, repayAmount);
 
-        if ((_getCashPrior() - balanceBefore) < repaymentAmount) {
+        flashLoanAmount -= amount;
+
+        if ((_getCashPrior() - balanceBefore) < repayAmount) {
             revert InsufficientReypaymentBalance(underlying);
         }
+
+        _doTransferOut(protocolShareReserve, protocolFee);
+
+        IProtocolShareReserve(protocolShareReserve).updateAssetsState(
+            address(comptroller),
+            underlying,
+            IProtocolShareReserve.IncomeType.FLASHLOAN
+        );
 
         emit FlashLoanExecuted(receiver, underlying, amount);
 
@@ -839,7 +857,7 @@ contract VToken is
      * @custom:event Emits FlashLoanFeeUpdated event on success
      */
     function setFlashLoanFeeMantissa(uint256 protocolFeeMantissa, uint256 supplierFeeMantissa) external override {
-        _checkAccessAllowed("setFlashLoanFeeMantissa(uint256)");
+        _checkAccessAllowed("setFlashLoanFeeMantissa(uint256,uint256)");
 
         emit FlashLoanFeeUpdated(
             flashLoanProtocolFeeMantissa,
@@ -1038,17 +1056,22 @@ contract VToken is
     }
 
     /**
-     * @notice Calculates the fee and repayment amount for a flash loan.
+     * @notice Calculates the protocol fee and supplier fee for a flash loan.
      * @param amount The amount of the flash loan.
-     * @return fee The calculated fee for the flash loan.
-     * @return repaymentAmount The total amount to be repaid (amount + fee).
+     * @return protocolFee The portion of the fee allocated to the protocol.
+     * @return supplierFee The portion of the fee allocated to the supplier.
      * @dev This function reverts if flash loans are not enabled.
      */
-    function calculateFlashLoanFee(uint256 amount) public view override returns (uint256 fee, uint256 repaymentAmount) {
+    function calculateFlashLoanFee(uint256 amount) public view override returns (uint256, uint256) {
         if (!isFlashLoanEnabled) revert FlashLoanNotEnabled(address(this));
 
-        fee = (amount * (flashLoanProtocolFeeMantissa + flashLoanSupplierFeeMantissa)) / MANTISSA_ONE;
-        repaymentAmount = amount + fee;
+        // Calculate protocol fee: amount * flashLoanProtocolFeeMantissa / MANTISSA_ONE(1e18)
+        uint256 protocolFee = (amount * flashLoanProtocolFeeMantissa) / MANTISSA_ONE;
+
+        // Calculate supplier fee: amount * flashLoanSupplierFeeMantissa / MANTISSA_ONE(1e18)
+        uint256 supplierFee = (amount * flashLoanSupplierFeeMantissa) / MANTISSA_ONE;
+
+        return (protocolFee, supplierFee);
     }
 
     /**
@@ -1834,7 +1857,7 @@ contract VToken is
          *  exchangeRate = (totalCash + totalBorrows + badDebt - totalReserves) / totalSupply
          */
         uint256 totalCash = _getCashPrior();
-        uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + badDebt - totalReserves;
+        uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows + flashLoanAmount + badDebt - totalReserves;
         uint256 exchangeRate = (cashPlusBorrowsMinusReserves * EXP_SCALE) / _totalSupply;
 
         return exchangeRate;

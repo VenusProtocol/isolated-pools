@@ -10,6 +10,7 @@ import {
   AccessControlManager,
   Comptroller,
   ERC20Harness,
+  IProtocolShareReserve,
   MockFlashLoanSimpleReceiver,
   MockFlashLoanSimpleReceiver__factory,
   VTokenHarness,
@@ -36,12 +37,20 @@ describe("FlashLoan Simple", () => {
   let accessControlManager: FakeContract<AccessControlManager>;
   let comptroller: FakeContract<Comptroller>;
   let comptrollerSigner: SignerWithAddress;
+  let protocolShareReserveMock: FakeContract<IProtocolShareReserve>;
 
   beforeEach(async () => {
     [minter, alice, acmUser, receiver] = await ethers.getSigners();
     contracts = await loadFixture(vTokenTestFixture);
     ({ vToken, underlying, accessControlManager, comptroller } = contracts);
     comptrollerSigner = await initMainnetUser(comptroller.address, ethers.utils.parseUnits("2"));
+
+    protocolShareReserveMock = await smock.fake<IProtocolShareReserve>(
+      "contracts/InterfacesV8.sol:IProtocolShareReserve",
+    );
+    protocolShareReserveMock.updateAssetsState.returns(true);
+
+    await vToken.setProtocolShareReserve(protocolShareReserveMock.address);
   });
 
   describe("Enable/disable flash loan feature", () => {
@@ -153,18 +162,30 @@ describe("FlashLoan Simple", () => {
     it("FlashLoan for single underlying", async () => {
       await vToken.connect(acmUser).toggleFlashLoan();
 
-      const balanceBeforeflashLoan = await underlying.balanceOf(vToken.address);
+      const vTokenBalanceBefore = await underlying.balanceOf(vToken.address);
+      const psrBalanceBefore = await underlying.balanceOf(protocolShareReserveMock.address);
+
       const flashLoan = await mockReceiverSimple.connect(alice).requestFlashLoan(flashLoanAmount, "0x");
-      const balanceAfterflashLoan = await underlying.balanceOf(vToken.address);
 
-      const fee = BigNumber.from(flashLoanAmount)
-        .mul(protocolFeeMantissa.add(supplierFeeMantissa))
-        .div(parseUnits("1", 18));
+      const vTokenBalanceAfter = await underlying.balanceOf(vToken.address);
+      const psrBalanceAfter = await underlying.balanceOf(protocolShareReserveMock.address);
 
-      expect(balanceAfterflashLoan).to.be.equal(balanceBeforeflashLoan.add(fee));
+      const protocolFee = BigNumber.from(flashLoanAmount).mul(protocolFeeMantissa).div(parseUnits("1", 18));
+      const supplierFee = BigNumber.from(flashLoanAmount).mul(supplierFeeMantissa).div(parseUnits("1", 18));
+
+      expect(vTokenBalanceAfter).to.be.equal(vTokenBalanceBefore.add(supplierFee));
+
+      expect(psrBalanceAfter).to.equal(psrBalanceBefore.add(protocolFee));
+
       await expect(flashLoan)
         .to.emit(vToken, "FlashLoanExecuted")
         .withArgs(mockReceiverSimple.address, underlying.address, flashLoanAmount);
+
+      expect(protocolShareReserveMock.updateAssetsState).to.have.been.calledWith(
+        comptroller.address,
+        underlying.address,
+        2,
+      );
     });
   });
 });

@@ -147,11 +147,16 @@ contract VTokenStorage {
     uint256 public flashLoanSupplierFeeMantissa;
 
     /**
+     * @notice variable to store the flashLoan amount
+     */
+    uint256 public flashLoanAmount;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 }
 
 /**
@@ -383,7 +388,12 @@ abstract contract VTokenInterface is VTokenStorage {
 
     function transferOutUnderlying(address receiver, uint256 amount) external virtual returns (uint256 balanceBefore);
 
-    function transferInUnderlyingAndVerify(address from, uint256 amount, uint256 balanceBefore) external virtual;
+    function transferInUnderlyingAndVerify(
+        address from,
+        uint256 amount,
+        uint256 fee,
+        uint256 balanceBefore
+    ) external virtual;
 
     function executeFlashLoan(
         address receiver,

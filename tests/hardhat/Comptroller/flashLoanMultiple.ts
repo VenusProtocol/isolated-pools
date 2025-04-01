@@ -1,7 +1,6 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
-import { BigNumber } from "ethers";
 import { parseEther, parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
@@ -11,6 +10,7 @@ import {
   AccessControlManager,
   Comptroller,
   ERC20Harness,
+  IProtocolShareReserve,
   InterestRateModel,
   MockFlashLoanReceiver,
   MockFlashLoanReceiver__factory,
@@ -130,6 +130,7 @@ describe("FlashLoan", async () => {
   let underlyingB: MockContract<ERC20Harness>;
   let comptroller: Comptroller;
   let mockReceiverContract: MockFlashLoanReceiver;
+  let protocolShareReserveMock: FakeContract<IProtocolShareReserve>;
 
   beforeEach(async () => {
     [alice, acmUser] = await ethers.getSigners();
@@ -144,6 +145,13 @@ describe("FlashLoan", async () => {
       );
       mockReceiverContract = await MockFlashLoanReceiver.deploy(comptroller.address);
       await mockReceiverContract.deployed();
+
+      protocolShareReserveMock = await smock.fake<IProtocolShareReserve>(
+        "contracts/InterfacesV8.sol:IProtocolShareReserve",
+      );
+      protocolShareReserveMock.updateAssetsState.returns(true);
+      await VTokenA.setProtocolShareReserve(protocolShareReserveMock.address);
+      await VTokenB.setProtocolShareReserve(protocolShareReserveMock.address);
     });
 
     it("Should revert if flashLoan is not enabled", async () => {
@@ -174,6 +182,8 @@ describe("FlashLoan", async () => {
       // Get the balance before the flashLoan
       const beforeBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);
       const beforeBalanceVTokenB = await underlyingB.balanceOf(VTokenB.address);
+      const psrABalanceBefore = await underlyingA.balanceOf(protocolShareReserveMock.address);
+      const psrBBalanceBefore = await underlyingB.balanceOf(protocolShareReserveMock.address);
 
       // Execute the flashLoan from the mockReceiverContract
       const flashLoan = await mockReceiverContract
@@ -184,15 +194,21 @@ describe("FlashLoan", async () => {
       const afterBalanceVTokenA = await underlyingA.balanceOf(VTokenA.address);
       const afterBalanceVTokenB = await underlyingB.balanceOf(VTokenB.address);
 
-      const feeOnFlashLoanTokenA = BigNumber.from(flashLoanAmount1)
-        .mul(protocolFeeMantissaTokenA.add(supplierFeeMantissaTokenA))
-        .div(parseUnits("1", 18));
-      const feeOnFlashLoanTokenB = BigNumber.from(flashLoanAmount2)
-        .mul(protocolFeeMantissaTokenB.add(supplierFeeMantissaTokenB))
-        .div(parseUnits("1", 18));
+      const protocolFeeA = flashLoanAmount1.mul(protocolFeeMantissaTokenA).div(parseUnits("1", 18));
+      const supplierFeeA = flashLoanAmount1.mul(supplierFeeMantissaTokenA).div(parseUnits("1", 18));
 
-      expect(afterBalanceVTokenA).to.be.equal(beforeBalanceVTokenA.add(feeOnFlashLoanTokenA));
-      expect(afterBalanceVTokenB).to.be.equal(beforeBalanceVTokenB.add(feeOnFlashLoanTokenB));
+      const protocolFeeB = flashLoanAmount2.mul(protocolFeeMantissaTokenB).div(parseUnits("1", 18));
+      const supplierFeeB = flashLoanAmount2.mul(supplierFeeMantissaTokenB).div(parseUnits("1", 18));
+
+      expect(afterBalanceVTokenA).to.be.equal(beforeBalanceVTokenA.add(supplierFeeA));
+      expect(afterBalanceVTokenB).to.be.equal(beforeBalanceVTokenB.add(supplierFeeB));
+
+      expect(await underlyingA.balanceOf(protocolShareReserveMock.address)).to.equal(
+        psrABalanceBefore.add(protocolFeeA),
+      );
+      expect(await underlyingB.balanceOf(protocolShareReserveMock.address)).to.equal(
+        psrBBalanceBefore.add(protocolFeeB),
+      );
 
       await expect(flashLoan)
         .to.emit(comptroller, "FlashLoanExecuted")
@@ -201,6 +217,18 @@ describe("FlashLoan", async () => {
           [VTokenA.address, VTokenB.address],
           [flashLoanAmount1, flashLoanAmount2],
         );
+
+      expect(protocolShareReserveMock.updateAssetsState).to.have.been.calledWith(
+        comptroller.address,
+        underlyingA.address,
+        2,
+      );
+
+      expect(protocolShareReserveMock.updateAssetsState).to.have.been.calledWith(
+        comptroller.address,
+        underlyingB.address,
+        2,
+      );
     });
   });
 });
