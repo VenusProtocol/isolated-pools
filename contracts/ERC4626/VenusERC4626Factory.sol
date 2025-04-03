@@ -15,6 +15,9 @@ import { ensureNonzeroAddress } from ".././lib/validators.sol";
 /// @title VenusERC4626Factory
 /// @notice Factory for creating VenusERC4626 contracts
 contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
+    /// @notice A constant salt value used for deterministic contract deployment
+    bytes32 public constant SALT = keccak256("Venus-ERC4626 Vault");
+
     /// @notice The beacon contract for VenusERC4626 proxies
     UpgradeableBeacon public beacon;
 
@@ -24,7 +27,7 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     /// @notice The address that will receive the liquidity mining rewards
     address public rewardRecipient;
 
-    /// @notice The loops limit for the MaxLoopsLimit helper
+    /// @notice The maximum number of loops allowed in the MaxLoopsLimit helper
     uint256 public loopsLimit;
 
     /// @notice Emitted when a new ERC4626 vault has been created
@@ -37,8 +40,8 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     /// @param newRecipient The new reward recipient address.
     event RewardRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
 
-    /// @notice Thrown when the provided comptroller is invalid (not registered in PoolRegistry)
-    error VenusERC4626Factory__InvalidComptroller();
+    /// @notice Thrown when the provided vToken is not registered in PoolRegistry
+    error VenusERC4626Factory__InvalidVToken();
 
     /// @notice Initializes the contract
     /// @param accessControlManager Address of the ACM contract
@@ -86,13 +89,15 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
 
         VTokenInterface vToken_ = VTokenInterface(vToken);
 
-        if (poolRegistry.getPoolByComptroller(address(vToken_.comptroller())).comptroller == address(0)) {
-            revert VenusERC4626Factory__InvalidComptroller();
+        address comptroller = address(vToken_.comptroller());
+
+        if (vToken != poolRegistry.getVTokenForAsset(comptroller, vToken_.underlying())) {
+            revert VenusERC4626Factory__InvalidVToken();
         }
 
         vault = ERC4626Upgradeable(
             address(
-                new BeaconProxy(
+                new BeaconProxy{ salt: SALT }(
                     address(beacon),
                     abi.encodeWithSelector(VenusERC4626.initialize.selector, vToken, rewardRecipient, loopsLimit)
                 )
@@ -100,5 +105,39 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
         );
 
         emit CreateERC4626(vToken_, vault);
+    }
+
+    /// @notice Predicts the vault address for a given vToken
+    /// @param vToken The vToken address
+    /// @return The precomputed vault address
+    function computeVaultAddress(address vToken) public view returns (address) {
+        return
+            address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xff),
+                                address(this),
+                                SALT,
+                                keccak256(
+                                    abi.encodePacked(
+                                        type(BeaconProxy).creationCode,
+                                        abi.encode(
+                                            address(beacon),
+                                            abi.encodeWithSelector(
+                                                VenusERC4626.initialize.selector,
+                                                vToken,
+                                                rewardRecipient,
+                                                loopsLimit
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
     }
 }

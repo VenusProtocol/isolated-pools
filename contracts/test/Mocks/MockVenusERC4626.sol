@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import { VToken } from "../../VToken.sol";
 import { VenusERC4626 } from "../../ERC4626/VenusERC4626.sol";
 
 contract MockVenusERC4626 is VenusERC4626 {

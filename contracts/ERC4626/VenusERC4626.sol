@@ -8,8 +8,10 @@ import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC2
 
 import { IProtocolShareReserve } from "./Interfaces/IProtocolShareReserve.sol";
 import { RewardsDistributor } from ".././Rewards/RewardsDistributor.sol";
-import { IComptroller, Action } from "./Interfaces/IComptroller.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
+import { IComptroller } from "./Interfaces/IComptroller.sol";
+import { ensureNonzeroAddress } from "../lib/validators.sol";
+import { Action } from "../ComptrollerInterface.sol";
 import { EXP_SCALE } from ".././lib/constants.sol";
 import { VToken } from "../VToken.sol";
 
@@ -54,6 +56,11 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
     /// @notice Thrown when a redemption exceeds the maximum redeemable shares.
     /// @dev This error is triggered if the redemption amount is greater than `maxRedeem(owner)`.
     error ERC4626__RedeemMoreThanMax();
+
+    /// @notice Thrown when attempting an operation with a zero amount.
+    /// @dev This error prevents unnecessary transactions with zero amounts in deposit, withdraw, mint, or redeem operations.
+    /// @param operation The name of the operation that failed (e.g., "deposit", "withdraw", "mint", "redeem").
+    error ERC4626__ZeroAmount(string operation);
 
     /// @notice Initializes the VenusERC4626 vault.
     /// @param vToken_ The VToken associated with the vault, representing the yield-bearing asset.
@@ -107,6 +114,10 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
 
     /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
+        ensureNonzeroAddress(receiver);
+        if (assets == 0) {
+            revert ERC4626__ZeroAmount("deposit");
+        }
         if (assets > maxDeposit(receiver)) {
             revert ERC4626__DepositMoreThanMax();
         }
@@ -119,6 +130,10 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
 
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override returns (uint256) {
+        ensureNonzeroAddress(receiver);
+        if (shares == 0) {
+            revert ERC4626__ZeroAmount("mint");
+        }
         if (shares > maxMint(receiver)) {
             revert ERC4626__MintMoreThanMax();
         }
@@ -131,6 +146,11 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
 
     /// @inheritdoc ERC4626Upgradeable
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
+        ensureNonzeroAddress(receiver);
+        ensureNonzeroAddress(owner);
+        if (assets == 0) {
+            revert ERC4626__ZeroAmount("withdraw");
+        }
         if (assets > maxWithdraw(owner)) {
             revert ERC4626__WithdrawMoreThanMax();
         }
@@ -143,6 +163,11 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
 
     /// @inheritdoc ERC4626Upgradeable
     function redeem(uint256 shares, address receiver, address redeemer) public override returns (uint256) {
+        ensureNonzeroAddress(receiver);
+        ensureNonzeroAddress(redeemer);
+        if (shares == 0) {
+            revert ERC4626__ZeroAmount("redeem");
+        }
         if (shares > maxRedeem(redeemer)) {
             revert ERC4626__RedeemMoreThanMax();
         }
