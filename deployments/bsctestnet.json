@@ -50078,31 +50078,10 @@
       ]
     },
     "Shortfall_Implementation": {
-      "address": "0x9A71F7D1114bb189ec94e88A4466D866948DcB17",
+      "address": "0x40Ec22d1aA01236dE2FB3dF049DE9f104A25c87C",
       "abi": [
         {
-          "inputs": [
-            {
-              "internalType": "bool",
-              "name": "timeBased_",
-              "type": "bool"
-            },
-            {
-              "internalType": "uint256",
-              "name": "blocksPerYear_",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "nextBidderBlockOrTimestampLimit_",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "waitForFirstBidder_",
-              "type": "uint256"
-            }
-          ],
+          "inputs": [],
           "stateMutability": "nonpayable",
           "type": "constructor"
         },
@@ -50159,16 +50138,6 @@
           "type": "error"
         },
         {
-          "inputs": [],
-          "name": "InvalidBlocksPerYear",
-          "type": "error"
-        },
-        {
-          "inputs": [],
-          "name": "InvalidTimeBasedConfiguration",
-          "type": "error"
-        },
-        {
           "inputs": [
             {
               "internalType": "address",
@@ -50195,11 +50164,6 @@
           "type": "error"
         },
         {
-          "inputs": [],
-          "name": "ZeroValueNotAllowed",
-          "type": "error"
-        },
-        {
           "anonymous": false,
           "inputs": [
             {
@@ -50211,7 +50175,7 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "auctionStartBlockOrTimestamp",
+              "name": "auctionStartBlock",
               "type": "uint256"
             },
             {
@@ -50260,7 +50224,7 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "auctionStartBlockOrTimestamp",
+              "name": "auctionStartBlock",
               "type": "uint256"
             }
           ],
@@ -50279,12 +50243,12 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "auctionStartBlockOrTimestamp",
+              "name": "auctionStartBlock",
               "type": "uint256"
             },
             {
               "indexed": false,
-              "internalType": "enum ShortfallStorage.AuctionType",
+              "internalType": "enum Shortfall.AuctionType",
               "name": "auctionType",
               "type": "uint8"
             },
@@ -50354,7 +50318,7 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "auctionStartBlockOrTimestamp",
+              "name": "auctionStartBlock",
               "type": "uint256"
             },
             {
@@ -50449,13 +50413,13 @@
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "oldNextBidderBlockOrTimestampLimit",
+              "name": "oldNextBidderBlockLimit",
               "type": "uint256"
             },
             {
               "indexed": false,
               "internalType": "uint256",
-              "name": "newNextBidderBlockOrTimestampLimit",
+              "name": "newNextBidderBlockLimit",
               "type": "uint256"
             }
           ],
@@ -50620,16 +50584,16 @@
           "outputs": [
             {
               "internalType": "uint256",
-              "name": "startBlockOrTimestamp",
+              "name": "startBlock",
               "type": "uint256"
             },
             {
-              "internalType": "enum ShortfallStorage.AuctionType",
+              "internalType": "enum Shortfall.AuctionType",
               "name": "auctionType",
               "type": "uint8"
             },
             {
-              "internalType": "enum ShortfallStorage.AuctionStatus",
+              "internalType": "enum Shortfall.AuctionStatus",
               "name": "status",
               "type": "uint8"
             },
@@ -50650,7 +50614,7 @@
             },
             {
               "internalType": "uint256",
-              "name": "highestBidBlockOrTimestamp",
+              "name": "highestBidBlock",
               "type": "uint256"
             },
             {
@@ -50670,19 +50634,6 @@
               "internalType": "bool",
               "name": "",
               "type": "bool"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "blocksOrSecondsPerYear",
-          "outputs": [
-            {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
             }
           ],
           "stateMutability": "view",
@@ -50721,19 +50672,6 @@
         },
         {
           "inputs": [],
-          "name": "getBlockNumberOrTimestamp",
-          "outputs": [
-            {
-              "internalType": "uint256",
-              "name": "",
-              "type": "uint256"
-            }
-          ],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "inputs": [],
           "name": "incentiveBps",
           "outputs": [
             {
@@ -50766,19 +50704,6 @@
           "name": "initialize",
           "outputs": [],
           "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [],
-          "name": "isTimeBased",
-          "outputs": [
-            {
-              "internalType": "bool",
-              "name": "",
-              "type": "bool"
-            }
-          ],
-          "stateMutability": "view",
           "type": "function"
         },
         {
@@ -50854,7 +50779,7 @@
             },
             {
               "internalType": "uint256",
-              "name": "auctionStartBlockOrTimestamp",
+              "name": "auctionStartBlock",
               "type": "uint256"
             }
           ],
@@ -51002,7 +50927,7 @@
           "inputs": [
             {
               "internalType": "uint256",
-              "name": "incentiveBps_",
+              "name": "_incentiveBps",
               "type": "uint256"
             }
           ],
@@ -51015,7 +50940,7 @@
           "inputs": [
             {
               "internalType": "uint256",
-              "name": "minimumPoolBadDebt_",
+              "name": "_minimumPoolBadDebt",
               "type": "uint256"
             }
           ],
@@ -51028,7 +50953,7 @@
           "inputs": [
             {
               "internalType": "uint256",
-              "name": "nextBidderBlockOrTimestampLimit_",
+              "name": "_nextBidderBlockLimit",
               "type": "uint256"
             }
           ],
@@ -51054,7 +50979,7 @@
           "inputs": [
             {
               "internalType": "uint256",
-              "name": "waitForFirstBidder_",
+              "name": "_waitForFirstBidder",
               "type": "uint256"
             }
           ],
