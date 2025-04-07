@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 
 import { VToken } from "../VToken.sol";
-import { InterestRateModel } from "../InterestRateModel.sol";
+import { InterestRateModel } from "../InterestRateModels/InterestRateModel.sol";
 
 contract VTokenHarness is VToken {
     uint256 public blockNumber;

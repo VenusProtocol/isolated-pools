@@ -5,7 +5,7 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { ComptrollerInterface } from "./ComptrollerInterface.sol";
-import { InterestRateModel } from "./InterestRateModel.sol";
+import { InterestRateModel } from "./InterestRateModels/InterestRateModel.sol";
 
 /**
  * @title VTokenStorage

@@ -10,7 +10,7 @@ import { IProtocolShareReserve } from "@venusprotocol/protocol-reserve/contracts
 import { VTokenInterface } from "./VTokenInterfaces.sol";
 import { ComptrollerInterface, ComptrollerViewInterface } from "./ComptrollerInterface.sol";
 import { TokenErrorReporter } from "./ErrorReporter.sol";
-import { InterestRateModel } from "./InterestRateModel.sol";
+import { InterestRateModel } from "./InterestRateModels/InterestRateModel.sol";
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";

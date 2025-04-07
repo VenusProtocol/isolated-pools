@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { InterestRateModel } from "./InterestRateModel.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
-import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
+import { EXP_SCALE, MANTISSA_ONE } from "../lib/constants.sol";
+import { InterestRateModel } from "./InterestRateModel.sol";
 
 /**
  * @title Compound's WhitePaperInterestRateModel Contract

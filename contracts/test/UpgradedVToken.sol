@@ -5,7 +5,7 @@ import { AccessControlManager } from "@venusprotocol/governance-contracts/contra
 
 import { VToken } from "../VToken.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
-import { InterestRateModel } from "../InterestRateModel.sol";
+import { InterestRateModel } from "../InterestRateModels/InterestRateModel.sol";
 
 /**
  * @title Venus's VToken Contract

@@ -3,8 +3,8 @@ pragma solidity 0.8.25;
 
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
+import { EXP_SCALE, MANTISSA_ONE } from "../lib/constants.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
-import { EXP_SCALE, MANTISSA_ONE } from "./lib/constants.sol";
 
 /**
  * @title JumpRateModelV2
