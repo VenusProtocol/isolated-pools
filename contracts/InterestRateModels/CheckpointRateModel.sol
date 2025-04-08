@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 import { InterestRateModel } from "./InterestRateModel.sol";
+import { IRateModelWithUtilization } from "./IRateModelWithUtilization.sol";
 
 /**
  * @title Venus CheckpointRateModel Contract
@@ -11,9 +12,9 @@ import { InterestRateModel } from "./InterestRateModel.sol";
  *   the underlying networks, if the block time update is scheduled in advance.
  * @author Venus
  */
-contract CheckpointRateModel is InterestRateModel {
-    InterestRateModel public immutable OLD_RATE_MODEL;
-    InterestRateModel public immutable NEW_RATE_MODEL;
+contract CheckpointRateModel is IRateModelWithUtilization {
+    IRateModelWithUtilization public immutable OLD_RATE_MODEL;
+    IRateModelWithUtilization public immutable NEW_RATE_MODEL;
     uint256 public immutable CHECKPOINT_TIMESTAMP;
 
     /**
@@ -22,7 +23,11 @@ contract CheckpointRateModel is InterestRateModel {
      * @param newRateModel Rate model to use after the checkpoint
      * @param checkpointTimestamp Checkpoint timestamp
      */
-    constructor(InterestRateModel oldRateModel, InterestRateModel newRateModel, uint256 checkpointTimestamp) {
+    constructor(
+        IRateModelWithUtilization oldRateModel,
+        IRateModelWithUtilization newRateModel,
+        uint256 checkpointTimestamp
+    ) {
         ensureNonzeroAddress(address(oldRateModel));
         ensureNonzeroAddress(address(newRateModel));
         OLD_RATE_MODEL = oldRateModel;
@@ -34,7 +39,7 @@ contract CheckpointRateModel is InterestRateModel {
      * @notice Returns the current rate model contract (either the old one or the new one)
      * @return Rate model in use
      */
-    function currentRateModel() external view returns (InterestRateModel) {
+    function currentRateModel() external view returns (IRateModelWithUtilization) {
         return _getCurrentRateModel();
     }
 
@@ -64,10 +69,22 @@ contract CheckpointRateModel is InterestRateModel {
     }
 
     /**
+     * @inheritdoc IRateModelWithUtilization
+     */
+    function utilizationRate(
+        uint256 cash,
+        uint256 borrows,
+        uint256 reserves,
+        uint256 badDebt
+    ) external view override returns (uint256) {
+        return _getCurrentRateModel().utilizationRate(cash, borrows, reserves, badDebt);
+    }
+
+    /**
      * @dev Returns the current rate model contract (either the old one or the new one)
      * @return Rate model in use
      */
-    function _getCurrentRateModel() internal view returns (InterestRateModel) {
+    function _getCurrentRateModel() internal view returns (IRateModelWithUtilization) {
         return (block.timestamp >= CHECKPOINT_TIMESTAMP) ? NEW_RATE_MODEL : OLD_RATE_MODEL;
     }
 }
