@@ -3,14 +3,14 @@ pragma solidity 0.8.25;
 
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../lib/constants.sol";
-import { InterestRateModel } from "./InterestRateModel.sol";
+import { IRateModelWithUtilization } from "./IRateModelWithUtilization.sol";
 
 /**
  * @title Compound's WhitePaperInterestRateModel Contract
  * @author Compound
  * @notice The parameterized model described in section 2.4 of the original Compound Protocol whitepaper
  */
-contract WhitePaperInterestRateModel is InterestRateModel, TimeManagerV8 {
+contract WhitePaperInterestRateModel is IRateModelWithUtilization, TimeManagerV8 {
     /**
      * @notice The multiplier of utilization rate per block or second that gives the slope of the interest rate
      */
@@ -85,19 +85,14 @@ contract WhitePaperInterestRateModel is InterestRateModel, TimeManagerV8 {
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market (currently unused)
-     * @param badDebt The amount of badDebt in the market
-     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
+     * @inheritdoc IRateModelWithUtilization
      */
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves,
         uint256 badDebt
-    ) public pure returns (uint256) {
+    ) public pure override returns (uint256) {
         // Utilization rate is 0 when there are no borrows and badDebt
         if ((borrows + badDebt) == 0) {
             return 0;

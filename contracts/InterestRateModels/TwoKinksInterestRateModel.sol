@@ -3,14 +3,14 @@ pragma solidity 0.8.25;
 
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../lib/constants.sol";
-import { InterestRateModel } from "./InterestRateModel.sol";
+import { IRateModelWithUtilization } from "./IRateModelWithUtilization.sol";
 
 /**
  * @title TwoKinksInterestRateModel
  * @author Venus
  * @notice An interest rate model with two different slope increase or decrease each after a certain utilization threshold called **kink** is reached.
  */
-contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
+contract TwoKinksInterestRateModel is IRateModelWithUtilization, TimeManagerV8 {
     ////////////////////// SLOPE 1 //////////////////////
 
     /**
@@ -164,19 +164,14 @@ contract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {
     }
 
     /**
-     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`
-     * @param cash The amount of cash in the market
-     * @param borrows The amount of borrows in the market
-     * @param reserves The amount of reserves in the market (currently unused)
-     * @param badDebt The amount of badDebt in the market
-     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]
+     * @inheritdoc IRateModelWithUtilization
      */
     function utilizationRate(
         uint256 cash,
         uint256 borrows,
         uint256 reserves,
         uint256 badDebt
-    ) public pure returns (uint256) {
+    ) public pure override returns (uint256) {
         // Utilization rate is 0 when there are no borrows and badDebt
         if ((borrows + badDebt) == 0) {
             return 0;
