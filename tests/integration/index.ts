@@ -508,7 +508,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
 
       let repayAmount = 1000000000003566;
-      
+
       if (timeBasedIntegrationTests) repayAmount = 1000000000002377;
       const param = {
         vTokenCollateral: vBNX.address,
