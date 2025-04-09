@@ -1,15 +1,10 @@
-import { BigNumber, BigNumberish } from "ethers";
-import { parseUnits } from "ethers/lib/utils";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, toAddress } from "../helpers/deploymentUtils";
-
-const mantissaToBps = (num: BigNumberish) => {
-  return BigNumber.from(num).div(parseUnits("1", 14)).toString();
-};
+import { getRateModelName, getRateModelParams } from "../helpers/rateModelHelpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -25,29 +20,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   for (const pool of poolConfig) {
     // Deploy IR Models
-    for (const vtoken of pool.vtokens) {
-      const {
-        rateModel,
-        baseRatePerYear,
-        multiplierPerYear,
-        jumpMultiplierPerYear,
-        kink_,
-        kink2_,
-        multiplierPerYear2,
-        baseRatePerYear2,
-      } = vtoken;
-
-      if (rateModel === InterestRateModels.JumpRate.toString()) {
-        const [b, m, j, k] = [baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_].map(mantissaToBps);
-        const rateModelName = `JumpRateModelV2_base${b}bps_slope${m}bps_jump${j}bps_kink${k}bps`;
+    for (const vTokenConfig of pool.vtokens) {
+      const { symbol } = vTokenConfig;
+      const rateModelParams = getRateModelParams(vTokenConfig);
+      const rateModelName = getRateModelName(rateModelParams, { isTimeBased, blocksPerYear });
+      if (rateModelParams.model === InterestRateModels.JumpRate) {
+        console.log(`Deploying interest rate model ${rateModelName} for ${symbol}`);
         await deploy(rateModelName, {
           from: deployer,
           contract: "JumpRateModelV2",
           args: [
-            baseRatePerYear,
-            multiplierPerYear,
-            jumpMultiplierPerYear,
-            kink_,
+            rateModelParams.baseRatePerYear,
+            rateModelParams.multiplierPerYear,
+            rateModelParams.jumpMultiplierPerYear,
+            rateModelParams.kink,
             accessControlManagerAddress,
             isTimeBased,
             blocksPerYear,
@@ -56,44 +42,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
           autoMine: true,
           skipIfAlreadyDeployed: true,
         });
-      } else if (rateModel === InterestRateModels.WhitePaper.toString()) {
-        const [b, m] = [baseRatePerYear, multiplierPerYear].map(mantissaToBps);
-        const rateModelName = `WhitePaperInterestRateModel_base${b}bps_slope${m}bps`;
+      } else if (rateModelParams.model === InterestRateModels.WhitePaper) {
+        console.log(`Deploying interest rate model ${rateModelName} for ${symbol}`);
         await deploy(rateModelName, {
           from: deployer,
           contract: "WhitePaperInterestRateModel",
-          args: [baseRatePerYear, multiplierPerYear, isTimeBased, blocksPerYear],
+          args: [rateModelParams.baseRatePerYear, rateModelParams.multiplierPerYear, isTimeBased, blocksPerYear],
           log: true,
           autoMine: true,
           skipIfAlreadyDeployed: true,
         });
-      } else {
-        if (!multiplierPerYear2 || !baseRatePerYear2 || !kink2_) {
-          throw new Error(`Invalid IR model parameters for ${rateModel}`);
-        }
-
-        const [b, m, k, m2, b2, k2, j] = [
-          baseRatePerYear,
-          multiplierPerYear,
-          kink_,
-          multiplierPerYear2,
-          baseRatePerYear2,
-          kink2_,
-          jumpMultiplierPerYear,
-        ].map(mantissaToBps);
-        const rateModelName = `TwoKinks_base${b}bps_slope${m}bps_kink${k}bps_slope2${m2}bps_base2${b2}bps_kink2${k2}bps_jump${j}bps`;
-        console.log(`Deploying interest rate model ${rateModelName}`);
+      } else if (rateModelParams.model === InterestRateModels.TwoKinks) {
+        console.log(`Deploying interest rate model ${rateModelName} for ${symbol}`);
         await deploy(rateModelName, {
           from: deployer,
           contract: "TwoKinksInterestRateModel",
           args: [
-            baseRatePerYear,
-            multiplierPerYear,
-            kink_,
-            multiplierPerYear2,
-            baseRatePerYear2,
-            kink2_,
-            jumpMultiplierPerYear,
+            rateModelParams.baseRatePerYear,
+            rateModelParams.multiplierPerYear,
+            rateModelParams.kink,
+            rateModelParams.multiplierPerYear2,
+            rateModelParams.baseRatePerYear2,
+            rateModelParams.kink2,
+            rateModelParams.jumpMultiplierPerYear,
             isTimeBased,
             blocksPerYear,
           ],
