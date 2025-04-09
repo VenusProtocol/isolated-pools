@@ -137,9 +137,9 @@ export type AccessControlEntry = {
 };
 
 export enum InterestRateModels {
-  WhitePaper,
-  JumpRate,
-  TwoKinks,
+  WhitePaper = "WhitePaper",
+  JumpRate = "JumpRate",
+  TwoKinks = "TwoKinks",
 }
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
