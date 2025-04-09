@@ -23,7 +23,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const networkName = hre.getNetworkName();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(networkName);
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.network.name);
+  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
 
   if (networkName === "bscmainnet" || networkName === "bsctestnet" || networkName === "hardhat") {
