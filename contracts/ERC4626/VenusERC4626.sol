@@ -34,7 +34,8 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
 
     /// @notice Emitted when rewards are claimed.
     /// @param amount The amount of reward tokens claimed.
-    event ClaimRewards(uint256 amount);
+    /// @param rewardToken The address of the reward token claimed.
+    event ClaimRewards(uint256 amount, address rewardToken);
 
     /// @notice Thrown when a Venus protocol call returns an error.
     /// @dev This error is triggered if a Venus operation (such as minting or redeeming vTokens) fails.
@@ -61,6 +62,13 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
     /// @dev This error prevents unnecessary transactions with zero amounts in deposit, withdraw, mint, or redeem operations.
     /// @param operation The name of the operation that failed (e.g., "deposit", "withdraw", "mint", "redeem").
     error ERC4626__ZeroAmount(string operation);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
 
     /// @notice Initializes the VenusERC4626 vault.
     /// @param vToken_ The VToken associated with the vault, representing the yield-bearing asset.
@@ -108,7 +116,7 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
                 );
                 rewardRecipient.call(data);
             }
-            emit ClaimRewards(rewardBalance);
+            emit ClaimRewards(rewardBalance, address(rewardToken));
         }
     }
 
@@ -123,6 +131,9 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
         }
 
         uint256 shares = previewDeposit(assets);
+        if (shares == 0) {
+            revert ERC4626__ZeroAmount("deposit");
+        }
         _deposit(_msgSender(), receiver, assets, shares);
         afterDeposit(assets);
         return shares;
@@ -139,6 +150,9 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
         }
 
         uint256 assets = previewMint(shares);
+        if (assets == 0) {
+            revert ERC4626__ZeroAmount("mint");
+        }
         _deposit(_msgSender(), receiver, assets, shares);
         afterDeposit(assets);
         return assets;
@@ -156,6 +170,9 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
         }
 
         uint256 shares = previewWithdraw(assets);
+        if (shares == 0) {
+            revert ERC4626__ZeroAmount("withdraw");
+        }
         beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
         return shares;
@@ -173,6 +190,9 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
         }
 
         uint256 assets = previewRedeem(shares);
+        if (assets == 0) {
+            revert ERC4626__ZeroAmount("redeem");
+        }
         beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, redeemer, assets, shares);
         return assets;
@@ -200,7 +220,7 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
     /// @dev This is derived from the maximum deposit amount converted to shares.
     /// @param /*account*/ The address of the account.
     /// @return The maximum number of shares that can be minted.
-    function maxMint(address /*account*/) public view override returns (uint256) {
+    function maxMint(address /*account*/) public view virtual override returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
     }
 
@@ -222,7 +242,7 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper {
     /// @dev Redemption is limited by the available cash in the vault.
     /// @param receiver The address of the account redeeming.
     /// @return The maximum number of shares that can be redeemed.
-    function maxRedeem(address receiver) public view override returns (uint256) {
+    function maxRedeem(address receiver) public view virtual override returns (uint256) {
         if (comptroller.actionPaused(address(vToken), Action.REDEEM)) {
             return 0;
         }
