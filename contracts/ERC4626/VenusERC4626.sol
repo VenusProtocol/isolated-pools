@@ -88,6 +88,7 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper, ReentrancyGuar
 
         __ERC20_init(_generateVaultName(asset), _generateVaultSymbol(asset));
         __ERC4626_init(asset);
+        __ReentrancyGuard_init();
 
         _setMaxLoopsLimit(loopsLimit_);
     }
