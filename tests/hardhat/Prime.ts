@@ -5,6 +5,7 @@ import { BigNumber, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import {
   Comptroller,
@@ -225,7 +226,15 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
       10,
     ],
     {
-      constructorArgs: [weth.address, vETH.address, 10512000, stakingPeriod, minimumXVS, maximumXVSCap, false],
+      constructorArgs: [
+        weth.address,
+        vETH.address,
+        DEFAULT_BLOCKS_PER_YEAR,
+        stakingPeriod,
+        minimumXVS,
+        maximumXVSCap,
+        false,
+      ],
       unsafeAllow: ["constructor", "internal-function-storage"],
     },
   );
@@ -557,7 +566,7 @@ describe("Prime Token", () => {
 
     it("APR Estimation", async () => {
       const apr = await prime.calculateAPR(vmatic.address, await user1.getAddress());
-      expect(apr.supplyAPR.toString()).to.be.equal("1168000000");
+      expect(apr.supplyAPR.toString()).to.be.equal("2336000000");
     });
 
     it("Hypothetical APR Estimation", async () => {
@@ -568,8 +577,8 @@ describe("Prime Token", () => {
         bigNumber18.mul(100),
         bigNumber18.mul(1000000),
       );
-      expect(apr.supplyAPR.toString()).to.be.equal("525600000");
-      expect(apr.borrowAPR.toString()).to.be.equal("525600000");
+      expect(apr.supplyAPR.toString()).to.be.equal("1051200000");
+      expect(apr.borrowAPR.toString()).to.be.equal("1051200000");
 
       apr = await prime.estimateAPR(
         vmatic.address,
@@ -578,8 +587,8 @@ describe("Prime Token", () => {
         bigNumber18.mul(50),
         bigNumber18.mul(1000000),
       );
-      expect(apr.supplyAPR.toString()).to.be.equal("700800000");
-      expect(apr.borrowAPR.toString()).to.be.equal("700800000");
+      expect(apr.supplyAPR.toString()).to.be.equal("1401600000");
+      expect(apr.borrowAPR.toString()).to.be.equal("1401600000");
 
       apr = await prime.estimateAPR(
         vmatic.address,
@@ -589,7 +598,7 @@ describe("Prime Token", () => {
         bigNumber18.mul(1000000),
       );
       expect(apr.supplyAPR.toString()).to.be.equal("0");
-      expect(apr.borrowAPR.toString()).to.be.equal("1051200000");
+      expect(apr.borrowAPR.toString()).to.be.equal("2102400000");
     });
   });
 });
