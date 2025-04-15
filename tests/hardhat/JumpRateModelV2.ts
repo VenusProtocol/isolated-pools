@@ -4,7 +4,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import { AccessControlManager, JumpRateModelV2 } from "../../typechain";
 import { getDescription } from "./util/descriptionHelpers";
@@ -27,7 +27,7 @@ for (const isTimeBased of [false, true]) {
   const jumpMultiplierPerYear = convertToUnit(2, 18);
 
   const description = getDescription(isTimeBased);
-  let slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
+  let slotsPerYear = isTimeBased ? 0 : DEFAULT_BLOCKS_PER_YEAR;
 
   describe(`${description}Jump rate model tests`, async () => {
     const fixture = async () => {

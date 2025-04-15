@@ -4,7 +4,7 @@ import BigNumber from "bignumber.js";
 import chai from "chai";
 import { ethers } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import { TwoKinksInterestRateModel } from "../../typechain";
 import { getDescription } from "./util/descriptionHelpers";
@@ -30,7 +30,7 @@ for (const isTimeBased of [false, true]) {
   const expScale = convertToUnit(1, 18);
 
   const description = getDescription(isTimeBased);
-  const slotsPerYear = isTimeBased ? 0 : BSC_BLOCKS_PER_YEAR;
+  const slotsPerYear = isTimeBased ? 0 : DEFAULT_BLOCKS_PER_YEAR;
 
   describe(`${description}Two Kinks Interest Rate Model Tests`, async () => {
     const fixture = async () => {
