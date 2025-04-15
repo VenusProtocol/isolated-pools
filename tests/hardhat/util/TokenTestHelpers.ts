@@ -4,7 +4,7 @@ import { BaseContract, BigNumber, BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import {
   AccessControlManager,
   Comptroller,
@@ -77,7 +77,7 @@ export const deployVTokenBeacon = async <VTokenFactory extends AnyVTokenFactory 
   { kind }: { kind: string } = { kind: "VToken" },
   maxBorrowRateMantissa: BigNumberish = BigNumber.from(0.0005e16),
   isTimeBased: boolean = false,
-  blocksPerYear: BigNumberish = BSC_BLOCKS_PER_YEAR,
+  blocksPerYear: BigNumberish = DEFAULT_BLOCKS_PER_YEAR,
 ): Promise<UpgradeableBeacon> => {
   const VToken = await ethers.getContractFactory<VTokenFactory>(kind);
   const vTokenBeacon = (await upgrades.deployBeacon(VToken, {
@@ -116,10 +116,10 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
         { kind },
         params.maxBorrowRateMantissa || BigNumber.from(0.0005e16),
         params.isTimeBased || false,
-        params.blocksPerYear === undefined ? BSC_BLOCKS_PER_YEAR : params.blocksPerYear,
+        params.blocksPerYear === undefined ? DEFAULT_BLOCKS_PER_YEAR : params.blocksPerYear,
       )),
     isTimeBased: params.isTimeBased || false,
-    blocksPerYear: params.blocksPerYear === undefined ? BSC_BLOCKS_PER_YEAR : params.blocksPerYear,
+    blocksPerYear: params.blocksPerYear === undefined ? DEFAULT_BLOCKS_PER_YEAR : params.blocksPerYear,
   };
 };
 
