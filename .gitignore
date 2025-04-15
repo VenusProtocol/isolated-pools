@@ -59,6 +59,7 @@ dist
 docs
 
 contracts/oracle/*
+contracts/generated
 deployments/localhost
 
 # OSX
