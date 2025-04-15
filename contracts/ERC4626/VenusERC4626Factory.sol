@@ -10,7 +10,7 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { PoolRegistryInterface } from ".././Pool/PoolRegistryInterface.sol";
 import { VTokenInterface } from "../VTokenInterfaces.sol";
 import { VenusERC4626 } from "./VenusERC4626.sol";
-import { ensureNonzeroAddress } from ".././lib/validators.sol";
+import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 /// @title VenusERC4626Factory
 /// @notice Factory for creating VenusERC4626 contracts
@@ -43,6 +43,13 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     /// @notice Thrown when the provided vToken is not registered in PoolRegistry
     error VenusERC4626Factory__InvalidVToken();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // Note that the contract is upgradeable. Use initialize() or reinitializers
+        // to set the state variables.
+        _disableInitializers();
+    }
+
     /// @notice Initializes the contract
     /// @param accessControlManager Address of the ACM contract
     /// @param poolRegistryAddress Address of the Pool Registry contract
@@ -56,7 +63,12 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
         address venusERC4626Implementation,
         uint256 loopsLimitNumber
     ) external initializer {
-        // checks are missing
+        ensureNonzeroAddress(accessControlManager);
+        ensureNonzeroAddress(poolRegistryAddress);
+        ensureNonzeroAddress(rewardRecipientAddress);
+        ensureNonzeroAddress(venusERC4626Implementation);
+        ensureNonzeroValue(loopsLimitNumber);
+
         __Ownable2Step_init();
         __AccessControlled_init_unchained(accessControlManager);
 
