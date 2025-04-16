@@ -320,6 +320,8 @@ for (const isTimeBased of [false, true]) {
     it("Claim XVS", async () => {
       const [, user1, user2] = await ethers.getSigners();
 
+      const startBalanceUser2 = await xvs.balanceOf(user2.address);
+
       await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
       await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
 
@@ -343,6 +345,12 @@ for (const isTimeBased of [false, true]) {
 
       await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
 
+      const endBalanceUser2 = await xvs.balanceOf(user2.address);
+      console.log({
+        startBalanceUser2: startBalanceUser2.toString(),
+        endBalanceUser2: endBalanceUser2.toString(),
+        diff: endBalanceUser2.sub(startBalanceUser2).toString(),
+      })
       expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
     });
 
