@@ -1,3 +1,30 @@
+## [4.2.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.8...v4.2.0-dev.9) (2025-03-21)
+
+
+### Features
+
+* deploy mainnet asBNB market ([32b1c62](https://github.com/VenusProtocol/isolated-pools/commit/32b1c62c18bceb7a11ed896fb991b42792450d2b))
+* deploy vasBNB_LiquidStakedBNB ([26ff915](https://github.com/VenusProtocol/isolated-pools/commit/26ff9159328e6d4913a4938c1bede633dcaf06dc))
+* updating deployment files ([6164026](https://github.com/VenusProtocol/isolated-pools/commit/616402673b47c7a58a5b5c766aa585f038628bd4))
+* updating deployment files ([d2bd4d8](https://github.com/VenusProtocol/isolated-pools/commit/d2bd4d8abd2436702cbaeaf0a9b1cb8b43f750b0))
+
+## [4.2.0-dev.8](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2025-03-18)
+
+
+### Features
+
+* deployed on mainnet ([2b7a3b8](https://github.com/VenusProtocol/isolated-pools/commit/2b7a3b835f6f479ac1d8330e04e561b5c8d1193e))
+* deployed PT-clisBNB-24APR2025 market ([8f1aac9](https://github.com/VenusProtocol/isolated-pools/commit/8f1aac9d726f4b232f99d1aa5608045a282e4be2))
+* updating deployment files ([5b4417e](https://github.com/VenusProtocol/isolated-pools/commit/5b4417e4e4dc7df57422313b64ba633de647bf2a))
+* updating deployment files ([7d60e0b](https://github.com/VenusProtocol/isolated-pools/commit/7d60e0b3d938ed2323ec5d32c7d3c4644b89c0b7))
+
+
+### Bug Fixes
+
+* fixed lint ([053dc8a](https://github.com/VenusProtocol/isolated-pools/commit/053dc8a4054b357adca407241a08937b7e6b5ffe))
+* redeployed with correct name ([6e8d212](https://github.com/VenusProtocol/isolated-pools/commit/6e8d212b57c3830f1e135385e55d51517d80650d))
+* revert config ([06c759b](https://github.com/VenusProtocol/isolated-pools/commit/06c759b060dab6fcfbc6471ce598232fdb015b85))
+
 ## [4.2.0-dev.7](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.6...v4.2.0-dev.7) (2025-03-10)
 
 
