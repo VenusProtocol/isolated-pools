@@ -323,6 +323,13 @@ for (const isTimeBased of [false, true]) {
       console.log(label, { blockTimestamp, blockNumber });
     };
 
+    async function mineStrict(blocks = 1) {
+      for (let i = 0; i < blocks; i++) {
+        await network.provider.send("evm_increaseTime", [1]); // Increase timestamp by 1s
+        await network.provider.send("evm_mine"); // Mine the block
+      }
+    }
+
     it("Claim XVS", async () => {
       await network.provider.send("evm_setAutomine", [false]);
       const [, user1, user2] = await ethers.getSigners();
@@ -333,20 +340,20 @@ for (const isTimeBased of [false, true]) {
 
       await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
       await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
-      await mine();
+      await mineStrict();
 
       await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
-      await mine();
+      await mineStrict();
       await printNow("2");
       await vWBTC.connect(user1).mint(convertToUnit(10, 8));
-      await mine();
+      await mineStrict();
       await printNow("3");
 
       await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
         vWBTC.address,
         vDAI.address,
       ]);
-      await mine();
+      await mineStrict();
       await printNow("4");
 
       /*
@@ -357,15 +364,15 @@ for (const isTimeBased of [false, true]) {
       await printNow("5");
 
       await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
-      await mine();
+      await mineStrict();
       await vDAI.connect(user2).mint(convertToUnit(10000, 18));
-      await mine();
+      await mineStrict();
       await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
-      await mine();
+      await mineStrict();
       await printNow("6");
 
       await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
-      await mine();
+      await mineStrict();
       await printNow("7");
 
       const endBalanceUser2 = await xvs.balanceOf(user2.address);
