@@ -36,6 +36,9 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     IERC20Upgradeable public immutable USDCE;
     IERC20Upgradeable public immutable USDT;
 
+    /// @notice Emitted when token is swept from the contract
+    event SweepToken(address indexed token, address indexed receiver, uint256 amount);
+
     constructor() {
         WUSDM = IERC20Upgradeable(VWUSDM.underlying());
         WETH = IERC20Upgradeable(VWETH.underlying());
@@ -59,6 +62,22 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         _borrowUSDTAndLiquidateBorrowers(wusdmPrice, vwUSDMExchangeRate);
         _redeemWUSDMAndLiquidateExploiter();
         _restoreOriginalConfiguration();
+    }
+
+    /**
+     * @notice Sweeps the input token address tokens from the contract and sends them to the owner
+     * @param token Address of the token
+     * @custom:event SweepToken emits on success
+     * @custom:access Controlled by Governance
+     */
+    function sweepToken(IERC20Upgradeable token) external onlyOwner {
+        uint256 balance = token.balanceOf(address(this));
+
+        if (balance > 0) {
+            address owner_ = owner();
+            token.safeTransfer(owner_, balance);
+            emit SweepToken(address(token), owner_, balance);
+        }
     }
 
     function _configureMarkets() internal {
