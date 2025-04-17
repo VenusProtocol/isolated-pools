@@ -3,7 +3,7 @@ import { mine } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 
 import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
@@ -317,33 +317,65 @@ for (const isTimeBased of [false, true]) {
         .withArgs(rewardsDistributor.address, mockWBTC.address);
     });
 
+    const printNow = async (label: string) => {
+      const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+      const blockNumber = (await ethers.provider.getBlock("latest")).number;
+      console.log(label, { blockTimestamp, blockNumber });
+    };
+
     it("Claim XVS", async () => {
+      await network.provider.send("evm_setAutomine", [false]);
       const [, user1, user2] = await ethers.getSigners();
+
+      await printNow("1");
+
+      const startBalanceUser2 = await xvs.balanceOf(user2.address);
 
       await mockWBTC.connect(user1).faucet(convertToUnit(100, 8));
       await mockDAI.connect(user2).faucet(convertToUnit(10000, 18));
+      await mine();
 
       await mockWBTC.connect(user1).approve(vWBTC.address, convertToUnit(10, 8));
+      await mine();
+      await printNow("2");
       await vWBTC.connect(user1).mint(convertToUnit(10, 8));
+      await mine();
+      await printNow("3");
 
       await rewardsDistributor.functions["claimRewardToken(address,address[])"](user1.address, [
         vWBTC.address,
         vDAI.address,
       ]);
+      await mine();
+      await printNow("4");
 
       /*
         Formula: (supplyIndex * supplyTokens * blocksDelta) + (borrowIndex * borrowTokens * blocksDelta)
         0.5 * 10 * 5 = 25
       */
       expect((await xvs.balanceOf(user1.address)).toString()).to.be.equal(convertToUnit(0.25, 18));
+      await printNow("5");
 
       await mockDAI.connect(user2).approve(vDAI.address, convertToUnit(10000, 18));
+      await mine();
       await vDAI.connect(user2).mint(convertToUnit(10000, 18));
+      await mine();
       await vWBTC.connect(user2).borrow(convertToUnit(0.01, 8));
+      await mine();
+      await printNow("6");
 
       await rewardsDistributor["claimRewardToken(address,address[])"](user2.address, [vWBTC.address, vDAI.address]);
+      await mine();
+      await printNow("7");
 
+      const endBalanceUser2 = await xvs.balanceOf(user2.address);
+      console.log({
+        startBalanceUser2: startBalanceUser2.toString(),
+        endBalanceUser2: endBalanceUser2.toString(),
+        diff: endBalanceUser2.sub(startBalanceUser2).toString(),
+      });
       expect((await xvs.balanceOf(user2.address)).toString()).to.be.equal(convertToUnit("1.40909090909090909", 18));
+      await network.provider.send("evm_setAutomine", [true]);
     });
 
     it("Contributor Rewards", async () => {
