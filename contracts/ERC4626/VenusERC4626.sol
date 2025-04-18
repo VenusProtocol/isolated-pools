@@ -186,13 +186,13 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper, ReentrancyGuar
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function redeem(uint256 shares, address receiver, address redeemer) public override nonReentrant returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
-        ensureNonzeroAddress(redeemer);
+        ensureNonzeroAddress(owner);
         if (shares == 0) {
             revert ERC4626__ZeroAmount("redeem");
         }
-        if (shares > maxRedeem(redeemer)) {
+        if (shares > maxRedeem(owner)) {
             revert ERC4626__RedeemMoreThanMax();
         }
 
@@ -201,7 +201,7 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper, ReentrancyGuar
             revert ERC4626__ZeroAmount("redeem");
         }
         beforeWithdraw(assets);
-        _withdraw(_msgSender(), receiver, redeemer, assets, shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
         return assets;
     }
 

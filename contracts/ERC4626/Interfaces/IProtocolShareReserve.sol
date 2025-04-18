@@ -6,7 +6,8 @@ interface IProtocolShareReserve {
     enum IncomeType {
         SPREAD,
         LIQUIDATION,
-        ERC4626_WRAPPER_REWARDS
+        ERC4626_WRAPPER_REWARDS,
+        FLASHLOAN
     }
 
     function updateAssetsState(address comptroller, address asset, IncomeType incomeType) external;
