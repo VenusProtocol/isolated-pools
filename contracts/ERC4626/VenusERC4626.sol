@@ -205,6 +205,8 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper, ReentrancyGuar
         return assets;
     }
 
+    /// @notice Returns the total amount of assets deposited
+    /// @return Amount of assets deposited
     function totalAssets() public view virtual override returns (uint256) {
         return (vToken.balanceOf(address(this)) * vToken.exchangeRateStored()) / EXP_SCALE;
     }
@@ -281,16 +283,22 @@ contract VenusERC4626 is ERC4626Upgradeable, MaxLoopsLimitHelper, ReentrancyGuar
         }
     }
 
-    /// @dev Override `_decimalsOffset` to normalize decimals to 18 for all VenusERC4626 vaults.
+    /// @notice Override `_decimalsOffset` to normalize decimals to 18 for all VenusERC4626 vaults.
+    /// @return Gap between 18 and the decimals of the asset token
     function _decimalsOffset() internal view virtual override returns (uint8) {
         return 18 - ERC20Upgradeable(asset()).decimals();
     }
 
-    /// ERC20 metadata generation
+    /// @notice Generates an returns the derived name of the vault considering the asset name
+    /// @param asset_ Asset to be accepted in the vault whose name this function will return
+    /// @return Name of the vault considering the asset name
     function _generateVaultName(ERC20Upgradeable asset_) internal view returns (string memory) {
         return string(abi.encodePacked("ERC4626-Wrapped Venus ", asset_.name()));
     }
 
+    /// @notice Generates an returns the derived symbol of the vault considering the asset symbol
+    /// @param asset_ Asset to be accepted in the vault whose symbol this function will return
+    /// @return Symbol of the vault considering the asset name
     function _generateVaultSymbol(ERC20Upgradeable asset_) internal view returns (string memory) {
         return string(abi.encodePacked("v4626", asset_.symbol()));
     }

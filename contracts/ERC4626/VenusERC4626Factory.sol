@@ -96,6 +96,9 @@ contract VenusERC4626Factory is Ownable2StepUpgradeable, AccessControlledV8 {
     /// @notice Creates a VenusERC4626 vault for a given asset and comptroller
     /// @param vToken The vToken address to create the vault
     /// @return vault The deployed VenusERC4626 vault
+    /// @custom:error ZeroAddressNotAllowed is thrown when the vToken address is zero
+    /// @custom:error VenusERC4626Factory__InvalidVToken is thrown when the provided vToken is not supported by the poolRegistry
+    /// @custom:event CreateERC4626 is emitted when the ERC4626 wrapper is created
     function createERC4626(address vToken) external returns (ERC4626Upgradeable vault) {
         ensureNonzeroAddress(vToken);
 
