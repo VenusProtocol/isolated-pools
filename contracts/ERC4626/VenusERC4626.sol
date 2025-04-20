@@ -45,6 +45,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @param newRecipient The new reward recipient address.
     event RewardRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
 
+    /// @notice Event emitted when tokens are swept
+    event SweepToken(address indexed token, address indexed receiver, uint256 amount);
+
     /// @notice Thrown when a Venus protocol call returns an error.
     /// @dev This error is triggered if a Venus operation (such as minting or redeeming vTokens) fails.
     /// @param errorCode The error code returned by the Venus protocol.
@@ -110,6 +113,20 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function setRewardRecipient(address newRecipient) external {
         _checkAccessAllowed("setRewardRecipient(address)");
         _setRewardRecipient(newRecipient);
+    }
+
+    /// @notice Sweeps the input token address tokens from the contract and sends them to the owner
+    /// @param token Address of the token
+    /// @custom:event SweepToken emits on success
+    /// @custom:access Only owner
+    function sweepToken(IERC20Upgradeable token) external onlyOwner {
+        uint256 balance = token.balanceOf(address(this));
+
+        if (balance > 0) {
+            address owner_ = owner();
+            SafeERC20Upgradeable.safeTransfer(token, owner_, balance);
+            emit SweepToken(address(token), owner_, balance);
+        }
     }
 
     /// @notice Claims rewards from all reward distributors associated with the VToken and transfers them to the reward recipient.
