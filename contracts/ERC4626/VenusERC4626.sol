@@ -278,8 +278,15 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         }
 
         uint256 cash = vToken.getCash();
+        uint256 totalReserves = vToken.totalReserves();
         uint256 assetsBalance = convertToAssets(balanceOf(receiver));
-        return cash < assetsBalance ? cash : assetsBalance;
+
+        if (cash < totalReserves) {
+            return 0;
+        } else {
+            uint256 availableCash = cash - totalReserves;
+            return availableCash < assetsBalance ? availableCash : assetsBalance;
+        }
     }
 
     /// @notice Returns the maximum amount of shares that can be redeemed.
@@ -292,9 +299,15 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         }
 
         uint256 cash = vToken.getCash();
-        uint256 cashInShares = convertToShares(cash);
-        uint256 shareBalance = balanceOf(receiver);
-        return cashInShares < shareBalance ? cashInShares : shareBalance;
+        uint256 totalReserves = vToken.totalReserves();
+        if (cash < totalReserves) {
+            return 0;
+        } else {
+            uint256 availableCash = cash - totalReserves;
+            uint256 availableCashInShares = convertToShares(availableCash);
+            uint256 shareBalance = balanceOf(receiver);
+            return availableCashInShares < shareBalance ? availableCashInShares : shareBalance;
+        }
     }
 
     /// @notice Redeems underlying assets before withdrawing from the vault.
