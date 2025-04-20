@@ -107,6 +107,10 @@ describe("VenusERC4626Factory", () => {
     it("should setup beacon proxy correctly", async () => {
       expect(await beacon.implementation()).to.equal(venusERC4626Impl.address);
     });
+
+    it("should set the owner of the beacon to the owner of the factory", async () => {
+      expect(await beacon.owner()).to.equal(await factory.owner());
+    });
   });
 
   describe("Vault Creation", () => {

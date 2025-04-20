@@ -79,6 +79,9 @@ contract VenusERC4626Factory is AccessControlledV8, MaxLoopsLimitHelper {
 
         // Deploy the upgradeable beacon with the initial implementation
         beacon = new UpgradeableBeacon(venusERC4626Implementation);
+
+        // The owner of the beacon will initially be the owner of the factory
+        beacon.transferOwnership(owner());
     }
 
     /// @notice Sets a new reward recipient address
