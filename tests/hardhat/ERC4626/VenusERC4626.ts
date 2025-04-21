@@ -4,6 +4,7 @@ import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 
 import {
+  AccessControlManager,
   ERC20,
   IComptroller,
   IProtocolShareReserve,
@@ -23,6 +24,7 @@ describe("VenusERC4626", () => {
   let xvs: FakeContract<ERC20>;
   let vToken: FakeContract<VToken>;
   let comptroller: FakeContract<IComptroller>;
+  let accessControlManager: FakeContract<AccessControlManager>;
   let rewardDistributor: FakeContract<IRewardsDistributor>;
   let rewardRecipient: string;
   let rewardRecipientPSR: FakeContract<IProtocolShareReserve>;
@@ -35,6 +37,7 @@ describe("VenusERC4626", () => {
     xvs = await smock.fake<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
     vToken = await smock.fake<VToken>("VToken");
     comptroller = await smock.fake<IComptroller>("contracts/ERC4626/Interfaces/IComptroller.sol:IComptroller");
+    accessControlManager = await smock.fake("AccessControlManager");
     rewardDistributor = await smock.fake<IRewardsDistributor>("IRewardsDistributor");
     rewardRecipient = deployer.address;
     rewardRecipientPSR = await smock.fake<IProtocolShareReserve>(
@@ -42,15 +45,17 @@ describe("VenusERC4626", () => {
     );
 
     // Configure mock behaviors
+    accessControlManager.isAllowedToCall.returns(true);
     vToken.underlying.returns(asset.address);
     vToken.comptroller.returns(comptroller.address);
 
     // Deploy and initialize MockVenusERC4626
     const VenusERC4626Factory = await ethers.getContractFactory("MockVenusERC4626");
 
-    venusERC4626 = await upgrades.deployProxy(VenusERC4626Factory, [vToken.address, rewardRecipient, 100], {
+    venusERC4626 = await upgrades.deployProxy(VenusERC4626Factory, [vToken.address], {
       initializer: "initialize",
     });
+    await venusERC4626.initialize2(accessControlManager.address, rewardRecipient, 100);
   });
 
   describe("Initialization", () => {
@@ -60,6 +65,24 @@ describe("VenusERC4626", () => {
       expect(await venusERC4626.vToken()).to.equal(vToken.address);
       expect(await venusERC4626.comptroller()).to.equal(comptroller.address);
       expect(await venusERC4626.rewardRecipient()).to.equal(rewardRecipient);
+      expect(await venusERC4626.accessControlManager()).to.equal(accessControlManager.address);
+    });
+  });
+
+  describe("Access Control", () => {
+    it("should allow authorized accounts to update reward recipient", async () => {
+      const newRecipient = ethers.Wallet.createRandom().address;
+      await expect(venusERC4626.setRewardRecipient(newRecipient))
+        .to.emit(venusERC4626, "RewardRecipientUpdated")
+        .withArgs(rewardRecipient, newRecipient);
+    });
+
+    it("should allow authorized accounts to update maxLoopsLimit", async () => {
+      const maxLoopsLimit = await venusERC4626.maxLoopsLimit();
+      const newMaxLoopLimit = maxLoopsLimit.add(10);
+      await expect(venusERC4626.setMaxLoopsLimit(newMaxLoopLimit))
+        .to.emit(venusERC4626, "MaxLoopsLimitUpdated")
+        .withArgs(maxLoopsLimit, newMaxLoopLimit);
     });
   });
 
@@ -284,11 +307,10 @@ describe("VenusERC4626", () => {
       beforeEach(async () => {
         // Redeploy with PSR as rewardRecipient
         const VenusERC4626Factory = await ethers.getContractFactory("MockVenusERC4626");
-        venusERC4626 = await upgrades.deployProxy(
-          VenusERC4626Factory,
-          [vToken.address, rewardRecipientPSR.address, 100],
-          { initializer: "initialize" },
-        );
+        venusERC4626 = await upgrades.deployProxy(VenusERC4626Factory, [vToken.address], {
+          initializer: "initialize",
+        });
+        await venusERC4626.initialize2(accessControlManager.address, rewardRecipientPSR.address, 100);
         comptroller.getRewardDistributors.returns([rewardDistributor.address]);
         rewardDistributor.rewardToken.returns(xvs.address);
         xvs.balanceOf.whenCalledWith(venusERC4626.address).returns(rewardAmount);

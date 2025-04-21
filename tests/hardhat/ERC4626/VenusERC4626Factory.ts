@@ -101,11 +101,15 @@ describe("VenusERC4626Factory", () => {
     it("should set correct initial values", async () => {
       expect(await factory.poolRegistry()).to.equal(poolRegistry.address);
       expect(await factory.rewardRecipient()).to.equal(rewardRecipient);
-      expect(await factory.loopsLimit()).to.equal(10);
+      expect(await factory.maxLoopsLimit()).to.equal(10);
     });
 
     it("should setup beacon proxy correctly", async () => {
       expect(await beacon.implementation()).to.equal(venusERC4626Impl.address);
+    });
+
+    it("should set the owner of the beacon to the owner of the factory", async () => {
+      expect(await beacon.owner()).to.equal(await factory.owner());
     });
   });
 
@@ -146,6 +150,28 @@ describe("VenusERC4626Factory", () => {
 
     it("should revert for deployment of same vToken", async () => {
       await factory.createERC4626(vTokenA.address);
+      await expect(factory.createERC4626(vTokenA.address)).to.be.revertedWithCustomError(
+        factory,
+        "VenusERC4626Factory__ERC4626AlreadyExists",
+      );
+    });
+
+    it("should revert for deployment of same vToken after updating reward recipient", async () => {
+      const newRecipient = ethers.Wallet.createRandom().address;
+
+      await factory.createERC4626(vTokenA.address);
+      await factory.setRewardRecipient(newRecipient);
+
+      await expect(factory.createERC4626(vTokenA.address)).to.be.reverted;
+    });
+
+    it("should revert for deployment of same vToken after updating max loop limit", async () => {
+      const maxLoopsLimit = await factory.maxLoopsLimit();
+      const newMaxLoopLimit = maxLoopsLimit.add(10);
+
+      await factory.createERC4626(vTokenA.address);
+      await factory.setMaxLoopsLimit(newMaxLoopLimit);
+
       await expect(factory.createERC4626(vTokenA.address)).to.be.reverted;
     });
 
@@ -156,11 +182,19 @@ describe("VenusERC4626Factory", () => {
   });
 
   describe("Access Control", () => {
-    it("should allow owner to update reward recipient", async () => {
+    it("should allow authorized accounts to update reward recipient", async () => {
       const newRecipient = ethers.Wallet.createRandom().address;
       await expect(factory.setRewardRecipient(newRecipient))
         .to.emit(factory, "RewardRecipientUpdated")
         .withArgs(rewardRecipient, newRecipient);
+    });
+
+    it("should allow authorized accounts to update maxLoopsLimit", async () => {
+      const maxLoopsLimit = await factory.maxLoopsLimit();
+      const newMaxLoopLimit = maxLoopsLimit.add(10);
+      await expect(factory.setMaxLoopsLimit(newMaxLoopLimit))
+        .to.emit(factory, "MaxLoopsLimitUpdated")
+        .withArgs(maxLoopsLimit, newMaxLoopLimit);
     });
 
     it("should revert when unauthorized user tries to update", async () => {
