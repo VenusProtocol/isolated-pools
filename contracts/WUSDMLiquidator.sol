@@ -51,6 +51,9 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     /// @notice Emitted when token is swept from the contract
     event SweepToken(address indexed token, address indexed receiver, uint256 amount);
 
+    /**
+     * @notice Constructor to initialize immutable token references and disable initializers
+     */
     constructor() {
         WUSDM = IERC20Upgradeable(VWUSDM.underlying());
         WETH = IERC20Upgradeable(VWETH.underlying());
@@ -59,10 +62,24 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the contract and sets up ownership
+     * @dev This function can only be called once
+     */
     function initialize() external initializer {
         __Ownable2Step_init();
     }
 
+    /**
+     * @notice Executes the liquidation and repayment process
+     * @dev This function performs the following steps:
+     *      1. Configures the markets by setting collateral factors, close factors, and enabling actions.
+     *      2. Supplies WUSDM as collateral.
+     *      3. Borrows WETH and liquidates borrowers with WETH debt.
+     *      4. Borrows USDCE and liquidates borrowers with USDCE debt.
+     *      5. Borrows USDT and liquidates borrowers with USDT debt.
+     *      6. Restores the original market configuration.
+     */
     function run() external {
         uint256 wusdmPrice = ORACLE.getPrice(address(WUSDM));
         uint256 vwUSDMExchangeRate = VWUSDM.exchangeRateCurrent();
