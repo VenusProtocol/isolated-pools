@@ -137,7 +137,7 @@ const config: HardhatUserConfig = {
       chainId: 324,
       ethNetwork: "mainnet",
       blockGasLimit: 30000000,
-      timeout: 200000000000,
+      timeout: 2000000000,
       zksync: true,
     },
   },
