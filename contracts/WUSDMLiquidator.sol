@@ -38,7 +38,6 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
 
     uint256 public constant LIQUIDATION_INCENTIVE = 1.1e18;
 
-    address public constant A1 = 0x68c8020A052d5061760e2AbF5726D59D4ebe3506;
     address public constant A2 = 0x4C0e4B3e6c5756fb31886a0A01079701ffEC0561;
     address public constant A3 = 0x924EDEd3D010b3F20009b872183eec48D0111265;
     address public constant A4 = 0x2B379d8c90e02016658aD00ba2566F55E814C369;
@@ -73,7 +72,6 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         _borrowWETHAndLiquidateBorrowers(wusdmPrice, vwUSDMExchangeRate);
         _borrowUSDCeAndLiquidateBorrowers(wusdmPrice, vwUSDMExchangeRate);
         _borrowUSDTAndLiquidateBorrowers(wusdmPrice, vwUSDMExchangeRate);
-        _redeemWUSDMAndLiquidateExploiter();
         _restoreOriginalConfiguration();
     }
 
@@ -196,18 +194,6 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         _repay(A4, VUSDT, a4Debt > 1 ? a4Debt - 1 : 0);
         _repay(A5, VUSDT, a5Debt > 1 ? a5Debt - 1 : 0);
         USDT.approveOrRevert(address(VUSDT), 0);
-    }
-
-    function _redeemWUSDMAndLiquidateExploiter() internal {
-        uint256 debt = VWUSDM.borrowBalanceCurrent(A1);
-        VWUSDM.redeemUnderlying(debt);
-        uint256 wethPrice = ORACLE.getPrice(address(WETH));
-        uint256 vWETHExchangeRate = VWETH.exchangeRateCurrent();
-        uint256 ratio = _getBorrowedTokensToCollateralVTokensRatio(VWUSDM, wethPrice, vWETHExchangeRate);
-        WUSDM.approveOrRevert(address(VWUSDM), debt);
-        debt = _liquidateAsMuchAsPossible(A1, debt, VWUSDM, VWETH, ratio);
-        _repay(A1, VWUSDM, debt > 1 ? debt - 1 : 0);
-        WUSDM.approveOrRevert(address(VWUSDM), 0);
     }
 
     function _getDebt(VToken market, address account) internal returns (uint256) {
