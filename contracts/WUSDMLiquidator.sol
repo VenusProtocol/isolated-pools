@@ -15,6 +15,19 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using ApproveOrRevert for IERC20Upgradeable;
 
+    struct OriginalConfig {
+        uint256 minLiquidatableCollateral;
+        uint256 closeFactor;
+        uint256 wUSDMCollateralFactor;
+        uint256 wUSDMLiquidationThreshold;
+        uint256 vWUSDMProtocolSeizeShare;
+        uint256 vWETHProtocolSeizeShare;
+        uint256 vUSDCEProtocolSeizeShare;
+        uint256 vUSDTProtocolSeizeShare;
+    }
+
+    OriginalConfig private _originalConfig;
+
     ResilientOracleInterface public constant ORACLE =
         ResilientOracleInterface(0xDe564a4C887d5ad315a19a96DC81991c98b12182);
     Comptroller public constant COMPTROLLER = Comptroller(0xddE4D098D9995B659724ae6d5E3FB9681Ac941B1);
@@ -81,6 +94,17 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     }
 
     function _configureMarkets() internal {
+        (, uint256 wUSDMCollateralFactor, uint256 wUSDMLiquidationThreshold) = COMPTROLLER.markets(address(VWUSDM));
+        _originalConfig = OriginalConfig({
+            minLiquidatableCollateral: COMPTROLLER.minLiquidatableCollateral(),
+            closeFactor: COMPTROLLER.closeFactorMantissa(),
+            wUSDMCollateralFactor: wUSDMCollateralFactor,
+            wUSDMLiquidationThreshold: wUSDMLiquidationThreshold,
+            vWUSDMProtocolSeizeShare: VWUSDM.protocolSeizeShareMantissa(),
+            vWETHProtocolSeizeShare: VWETH.protocolSeizeShareMantissa(),
+            vUSDCEProtocolSeizeShare: VUSDCE.protocolSeizeShareMantissa(),
+            vUSDTProtocolSeizeShare: VUSDT.protocolSeizeShareMantissa()
+        });
         COMPTROLLER.setMinLiquidatableCollateral(0);
         COMPTROLLER.setCloseFactor(1e18);
         COMPTROLLER.setCollateralFactor(VWUSDM, 0.78e18, 0.78e18);
@@ -97,19 +121,25 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     }
 
     function _restoreOriginalConfiguration() internal {
-        COMPTROLLER.setMinLiquidatableCollateral(100e18);
-        COMPTROLLER.setCloseFactor(0.5e18);
-        COMPTROLLER.setCollateralFactor(VWUSDM, 0, 0.78e18);
+        COMPTROLLER.setMinLiquidatableCollateral(_originalConfig.minLiquidatableCollateral);
+        COMPTROLLER.setCloseFactor(_originalConfig.closeFactor);
+        COMPTROLLER.setCollateralFactor(
+            VWUSDM,
+            _originalConfig.wUSDMCollateralFactor,
+            _originalConfig.wUSDMLiquidationThreshold
+        );
         VToken[] memory markets = new VToken[](1);
         Action[] memory actions = new Action[](2);
         markets[0] = VWUSDM;
         actions[0] = Action.MINT;
         actions[1] = Action.ENTER_MARKET;
         COMPTROLLER.setActionsPaused(markets, actions, true);
-        VWUSDM.setProtocolSeizeShare(0.05e18);
-        VWETH.setProtocolSeizeShare(0.05e18);
-        VUSDCE.setProtocolSeizeShare(0.05e18);
-        VUSDT.setProtocolSeizeShare(0.05e18);
+        VWUSDM.setProtocolSeizeShare(_originalConfig.vWUSDMProtocolSeizeShare);
+        VWETH.setProtocolSeizeShare(_originalConfig.vWETHProtocolSeizeShare);
+        VUSDCE.setProtocolSeizeShare(_originalConfig.vUSDCEProtocolSeizeShare);
+        VUSDT.setProtocolSeizeShare(_originalConfig.vUSDTProtocolSeizeShare);
+        // Get some gas refunds for zeroing out storage
+        _originalConfig = OriginalConfig(0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     function _supplyCollateral() internal {
