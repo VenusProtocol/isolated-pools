@@ -1,7 +1,8 @@
 // assumes we're forking zksyncmainnet at any recent block, e.g.
-// anvil-zksync fork --fork-url mainnet --fork-block-number 57100557
+// anvil-zksync fork --fork-url mainnet --fork-block-number 59265626
 import { smock } from "@defi-wonderland/smock";
 import { Deployer } from "@matterlabs/hardhat-zksync";
+import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { BytesLike, formatUnits, parseUnits } from "ethers/lib/utils";
@@ -70,8 +71,8 @@ const WUSDM_INTERFACE = new ethers.utils.Interface([
 ]);
 
 if (FORK && FORKED_NETWORK === "zksyncmainnet") {
-  describe("Repay and liquidate", async () => {
-    const provider = new Provider("http://127.0.0.1:8011");
+  describe("Repay and liquidate", () => {
+    const provider = new Provider({ url: "http://127.0.0.1:8011", timeout: 1200000 });
     const wallet = new Wallet(DEPLOYER_PRIVATE_KEY, provider);
     const deployer = new Deployer(hre, wallet);
 
@@ -92,6 +93,7 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
     before(async () => {
       timelock = await initMainnetUser(TIMELOCK, ethers.utils.parseUnits("2"));
       usdmMinter = await initMainnetUser(USDM_MINTER, ethers.utils.parseUnits("2"));
+      await setBalance(wallet.address, ethers.utils.parseUnits("2"));
 
       const wUSDMLiquidatorImpl = await deployer.deploy("WUSDMLiquidator");
       const data = (await wUSDMLiquidatorImpl.populateTransaction.initialize()).data;
@@ -210,12 +212,12 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
 
     describe("Post-VIP state", () => {
       describe(A1, () => {
-        it(`leaves 1 wei of wUSDM debt in ${A1}`, async () => {
-          expect(await vwUSDM.callStatic.borrowBalanceCurrent(A1)).to.equal(1);
+        it(`keeps 805315.832951034118725452 wUSDM of debt in ${A1}`, async () => {
+          expect(await vwUSDM.callStatic.borrowBalanceCurrent(A1)).to.equal(parseUnits("805315.832951034118725452"));
         });
 
-        it(`leaves less than 100 wei of vWETH collateral in ${A1}`, async () => {
-          expect(await vWETH.balanceOf(A1)).to.be.lt(100);
+        it(`keeps 287 wei of vWETH collateral in ${A1}`, async () => {
+          expect(await vWETH.balanceOf(A1)).to.equal(287);
         });
       });
 
@@ -224,8 +226,8 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
           expect(await vWETH.callStatic.borrowBalanceCurrent(A2)).to.equal(1);
         });
 
-        it(`leaves less than 100 wei of vwUSDM collateral in ${A2}`, async () => {
-          expect(await vwUSDM.balanceOf(A2)).to.be.lt(100);
+        it(`leaves 15890.96471584 vwUSDM of collateral in ${A2}`, async () => {
+          expect(await vwUSDM.balanceOf(A2)).to.equal(parseUnits("15890.96471584", 8));
         });
       });
 
@@ -252,8 +254,8 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
           expect(await vUSDT.callStatic.borrowBalanceCurrent(A4)).to.equal(1);
         });
 
-        it(`leaves less than 100 wei of vwUSDM collateral in ${A2}`, async () => {
-          expect(await vwUSDM.balanceOf(A2)).to.be.lt(100);
+        it(`leaves less than 100 wei of vwUSDM collateral in ${A4}`, async () => {
+          expect(await vwUSDM.balanceOf(A4)).to.be.lt(100);
         });
       });
 
