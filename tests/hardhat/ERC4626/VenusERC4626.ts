@@ -87,37 +87,45 @@ describe("VenusERC4626", () => {
   });
 
   describe("Mint Operations", () => {
-    const testShares = ethers.utils.parseEther("10");
+    const mintShares = ethers.utils.parseEther("10");
     let expectedAssets: ethers.BigNumber;
 
     beforeEach(async () => {
       asset.transferFrom.returns(true);
       asset.approve.returns(true);
       vToken.mint.returns(0); // NO_ERROR
+      vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
 
-      const decimalsOffset = await venusERC4626.getDecimalsOffset();
-      expectedAssets = testShares.div(ethers.BigNumber.from(10).pow(decimalsOffset));
+      expectedAssets = await venusERC4626.previewMint(mintShares);
+
+      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      asset.balanceOf.returnsAtCall(1, expectedAssets);
+
+      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      vToken.balanceOf.returnsAtCall(1, expectedAssets);
 
       await venusERC4626.setMaxDeposit(ethers.utils.parseEther("100")); // Sets max assets
       await venusERC4626.setMaxMint(ethers.utils.parseEther("100")); // Sets max shares
     });
 
-    it("should mint shares successfully", async () => {
-      await expect(venusERC4626.connect(user).mint(testShares, user.address))
+    it("should mint shares successfully with proper vToken accounting", async () => {
+      // Expect the Deposit event to be emitted
+      await expect(venusERC4626.connect(user).mint(mintShares, user.address))
         .to.emit(venusERC4626, "Deposit")
-        .withArgs(user.address, user.address, expectedAssets, testShares);
+        .withArgs(user.address, user.address, expectedAssets, mintShares);
 
       expect(vToken.mint).to.have.been.calledWith(expectedAssets);
+      expect(await venusERC4626.balanceOf(user.address)).to.equal(mintShares);
     });
 
     it("should return correct assets amount", async () => {
-      const returnedAssets = await venusERC4626.connect(user).callStatic.mint(testShares, user.address);
+      const returnedAssets = await venusERC4626.connect(user).callStatic.mint(mintShares, user.address);
       expect(returnedAssets).to.equal(expectedAssets);
     });
 
     it("should revert if vToken mint fails", async () => {
       vToken.mint.returns(1); // Error code 1
-      await expect(venusERC4626.connect(user).mint(testShares, user.address)).to.be.revertedWithCustomError(
+      await expect(venusERC4626.connect(user).mint(mintShares, user.address)).to.be.revertedWithCustomError(
         venusERC4626,
         "VenusERC4626__VenusError",
       );
@@ -125,7 +133,7 @@ describe("VenusERC4626", () => {
 
     it("should fail mint with no approval", async () => {
       asset.transferFrom.returns(false);
-      await expect(venusERC4626.connect(user).mint(testShares, user.address)).to.be.reverted;
+      await expect(venusERC4626.connect(user).mint(mintShares, user.address)).to.be.reverted;
     });
 
     it("should fail mint zero shares", async () => {
@@ -136,23 +144,39 @@ describe("VenusERC4626", () => {
   });
 
   describe("Deposit Operations", () => {
+    const depositAmount = ethers.utils.parseUnits("10", 18);
+    const expectedVTokens = depositAmount;
+
     beforeEach(async () => {
       asset.transferFrom.returns(true);
       asset.approve.returns(true);
+
+      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      asset.balanceOf.returnsAtCall(1, depositAmount);
+
+      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      vToken.balanceOf.returnsAtCall(1, depositAmount);
+
       vToken.mint.returns(0); // NO_ERROR
+      vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
+
       await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
     });
 
-    it("should deposit assets successfully", async () => {
-      const depositAmount = ethers.utils.parseUnits("10", 18);
-      const decimalsOffset = await venusERC4626.getDecimalsOffset();
-      const expectedDepositAmount = depositAmount.mul(ethers.BigNumber.from(10).pow(decimalsOffset));
+    it("should deposit assets successfully with proper vToken accounting", async () => {
+      const expectedAssetsValue = expectedVTokens
+        .mul(ethers.utils.parseUnits("1.0001", 18))
+        .div(ethers.utils.parseUnits("1", 18));
+
+      // Calculate shares using previewDeposit
+      const expectedShares = await venusERC4626.previewDeposit(expectedAssetsValue);
 
       await expect(venusERC4626.connect(user).deposit(depositAmount, user.address))
         .to.emit(venusERC4626, "Deposit")
-        .withArgs(user.address, user.address, depositAmount, expectedDepositAmount);
+        .withArgs(user.address, user.address, depositAmount, expectedShares);
 
       expect(vToken.mint).to.have.been.calledWith(depositAmount);
+      expect(await venusERC4626.balanceOf(user.address)).to.equal(expectedShares);
     });
 
     it("should revert if vToken mint fails", async () => {
@@ -181,9 +205,17 @@ describe("VenusERC4626", () => {
     beforeEach(async () => {
       asset.transferFrom.returns(true);
       asset.approve.returns(true);
-      vToken.mint.returns(0);
-      vToken.redeemUnderlying.returns(0);
       asset.transfer.returns(true);
+
+      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      asset.balanceOf.returnsAtCall(1, depositAmount);
+
+      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      vToken.balanceOf.returnsAtCall(1, depositAmount);
+
+      vToken.mint.returns(0); // NO_ERROR
+      vToken.redeemUnderlying.returns(0);
+      vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
 
       await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
       await venusERC4626.connect(user).deposit(depositAmount, user.address);
@@ -192,8 +224,7 @@ describe("VenusERC4626", () => {
     });
 
     it("should withdraw assets successfully", async () => {
-      const decimalsOffset = await venusERC4626.getDecimalsOffset();
-      const expectedWithdrawAmount = withdrawAmount.mul(ethers.BigNumber.from(10).pow(decimalsOffset));
+      const expectedWithdrawAmount = await venusERC4626.previewWithdraw(withdrawAmount);
 
       await expect(venusERC4626.connect(user).withdraw(withdrawAmount, user.address, user.address))
         .to.emit(venusERC4626, "Withdraw")
@@ -230,9 +261,17 @@ describe("VenusERC4626", () => {
     beforeEach(async () => {
       asset.transferFrom.returns(true);
       asset.approve.returns(true);
-      vToken.mint.returns(0);
-      vToken.redeemUnderlying.returns(0);
       asset.transfer.returns(true);
+
+      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      asset.balanceOf.returnsAtCall(1, depositAmount);
+
+      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      vToken.balanceOf.returnsAtCall(1, depositAmount);
+
+      vToken.mint.returns(0); // NO_ERROR
+      vToken.redeemUnderlying.returns(0);
+      vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
 
       await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
       await venusERC4626.setMaxRedeem(ethers.utils.parseEther("50"));
@@ -240,8 +279,7 @@ describe("VenusERC4626", () => {
       await venusERC4626.setTotalAssets(depositAmount);
       await venusERC4626.setMaxWithdraw(ethers.utils.parseEther("15"));
 
-      const decimalsOffset = await venusERC4626.getDecimalsOffset();
-      expectedRedeemAssets = redeemShares.div(ethers.BigNumber.from(10).pow(decimalsOffset));
+      expectedRedeemAssets = await venusERC4626.previewRedeem(redeemShares);
     });
 
     it("should redeem shares successfully", async () => {

@@ -173,6 +173,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         uint256 loopsLimit_
     ) public reinitializer(2) {
         ensureNonzeroAddress(accessControlManager_);
+        ensureNonzeroAddress(rewardRecipient_);
+        ensureNonzeroValue(loopsLimit_);
 
         __AccessControlled_init(accessControlManager_);
         _setMaxLoopsLimit(loopsLimit_);
@@ -194,7 +196,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__ZeroAmount("deposit");
         }
         _deposit(_msgSender(), receiver, assets, shares);
-        afterDeposit(assets);
         return shares;
     }
 
@@ -213,7 +214,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__ZeroAmount("mint");
         }
         _deposit(_msgSender(), receiver, assets, shares);
-        afterDeposit(assets);
         return assets;
     }
 
@@ -357,6 +357,33 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
         emit RewardRecipientUpdated(rewardRecipient, newRecipient);
         rewardRecipient = newRecipient;
+    }
+
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        // 1. Track pre-transfer balances
+        uint256 assetBalanceBefore = IERC20Upgradeable(asset()).balanceOf(address(this));
+        uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
+
+        // 2. Perform asset transfer (original OZ 4626 logic)
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
+
+        // 3. Calculate actual assets received (protects against fee-on-transfer)
+        uint256 assetsReceived = IERC20Upgradeable(asset()).balanceOf(address(this)) - assetBalanceBefore;
+
+        // 4. Mint vTokens with received assets
+        afterDeposit(assetsReceived);
+
+        // 5. Verify actual vTokens received
+        uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
+        uint256 actualAssetsValue = (vTokensReceived * vToken.exchangeRateStored()) / EXP_SCALE;
+
+        // 6. Recalculate shares based on actual received value
+        uint256 actualShares = previewDeposit(actualAssetsValue);
+
+        // 7. Mint the corrected share amount
+        _mint(receiver, actualShares);
+
+        emit Deposit(caller, receiver, assets, actualShares);
     }
 
     /// @notice Override `_decimalsOffset` to normalize decimals to 18 for all VenusERC4626 vaults.
