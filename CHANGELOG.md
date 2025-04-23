@@ -1,3 +1,15 @@
+## [4.2.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.9...v4.2.0-dev.10) (2025-04-23)
+
+
+### Features
+
+* updating deployment files ([555cd98](https://github.com/VenusProtocol/isolated-pools/commit/555cd9851c95e773e7a094375d38970935bbfb0e))
+
+
+### Bug Fixes
+
+* keep only one vlisUSD_Stablecoins deployment ([b44f5be](https://github.com/VenusProtocol/isolated-pools/commit/b44f5be9732f74e0c3d0739038ac03d89a1cdc08))
+
 ## [4.2.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.8...v4.2.0-dev.9) (2025-03-21)
 
 
