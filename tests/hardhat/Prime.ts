@@ -163,7 +163,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const xvsStoreScenario: XVSStoreScenario = (await xvsStoreScenarioFactory.deploy()) as XVSStoreScenario;
 
   const xvsVaultScenarioFactory = await ethers.getContractFactory("XVSVaultScenario");
-  const blocksPerYear = 21024000;
+  const blocksPerYear = DEFAULT_BLOCKS_PER_YEAR;
   const xvsVaultScenario: XVSVaultScenario = (await xvsVaultScenarioFactory.deploy(
     false,
     blocksPerYear,
