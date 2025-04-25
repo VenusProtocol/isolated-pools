@@ -19,6 +19,7 @@ chai.use(smock.matchers);
 describe("VenusERC4626", () => {
   let deployer: SignerWithAddress;
   let user: SignerWithAddress;
+  let vaultOwner: SignerWithAddress;
   let venusERC4626: MockVenusERC4626;
   let asset: FakeContract<ERC20>;
   let xvs: FakeContract<ERC20>;
@@ -30,7 +31,7 @@ describe("VenusERC4626", () => {
   let rewardRecipientPSR: FakeContract<IProtocolShareReserve>;
 
   beforeEach(async () => {
-    [deployer, user] = await ethers.getSigners();
+    [deployer, user, vaultOwner] = await ethers.getSigners();
 
     // Create Smock Fake Contracts
     asset = await smock.fake<ERC20>("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
@@ -55,7 +56,7 @@ describe("VenusERC4626", () => {
     venusERC4626 = await upgrades.deployProxy(VenusERC4626Factory, [vToken.address], {
       initializer: "initialize",
     });
-    await venusERC4626.initialize2(accessControlManager.address, rewardRecipient, 100);
+    await venusERC4626.initialize2(accessControlManager.address, rewardRecipient, 100, vaultOwner.address);
   });
 
   describe("Initialization", () => {
@@ -66,6 +67,7 @@ describe("VenusERC4626", () => {
       expect(await venusERC4626.comptroller()).to.equal(comptroller.address);
       expect(await venusERC4626.rewardRecipient()).to.equal(rewardRecipient);
       expect(await venusERC4626.accessControlManager()).to.equal(accessControlManager.address);
+      expect(await venusERC4626.owner()).to.equal(vaultOwner.address);
     });
   });
 
@@ -348,7 +350,12 @@ describe("VenusERC4626", () => {
         venusERC4626 = await upgrades.deployProxy(VenusERC4626Factory, [vToken.address], {
           initializer: "initialize",
         });
-        await venusERC4626.initialize2(accessControlManager.address, rewardRecipientPSR.address, 100);
+        await venusERC4626.initialize2(
+          accessControlManager.address,
+          rewardRecipientPSR.address,
+          100,
+          vaultOwner.address,
+        );
         comptroller.getRewardDistributors.returns([rewardDistributor.address]);
         rewardDistributor.rewardToken.returns(xvs.address);
         xvs.balanceOf.whenCalledWith(venusERC4626.address).returns(rewardAmount);

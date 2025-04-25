@@ -38,7 +38,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @notice Emitted when rewards are claimed.
     /// @param amount The amount of reward tokens claimed.
     /// @param rewardToken The address of the reward token claimed.
-    event ClaimRewards(uint256 amount, address rewardToken);
+    event ClaimRewards(uint256 amount, address indexed rewardToken);
 
     /// @notice Emitted when the reward recipient address is updated.
     /// @param oldRecipient The previous reward recipient address.
@@ -132,6 +132,10 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @notice Claims rewards from all reward distributors associated with the VToken and transfers them to the reward recipient.
     /// @dev Iterates through all reward distributors fetched from the comptroller, claims rewards, and transfers them if available.
     function claimRewards() external {
+        IComptroller _comptroller = comptroller;
+        VToken _vToken = vToken;
+        address _rewardRecipient = rewardRecipient;
+
         RewardsDistributor[] memory rewardDistributors = comptroller.getRewardDistributors();
 
         _ensureMaxLoops(rewardDistributors.length);
@@ -141,18 +145,18 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             IERC20Upgradeable rewardToken = IERC20Upgradeable(address(rewardDistributor.rewardToken()));
 
             VToken[] memory vTokens = new VToken[](1);
-            vTokens[0] = vToken;
+            vTokens[0] = _vToken;
             RewardsDistributor(rewardDistributor).claimRewardToken(address(this), vTokens);
             uint256 rewardBalance = rewardToken.balanceOf(address(this));
 
             if (rewardBalance > 0) {
-                SafeERC20Upgradeable.safeTransfer(rewardToken, rewardRecipient, rewardBalance);
+                SafeERC20Upgradeable.safeTransfer(rewardToken, _rewardRecipient, rewardBalance);
 
                 // Try to update the asset state on the recipient if reward recipient is a protocol share reserve
                 bytes memory data = abi.encodeCall(
                     IProtocolShareReserve.updateAssetsState,
                     (
-                        address(comptroller),
+                        address(_comptroller),
                         address(rewardToken),
                         IProtocolShareReserve.IncomeType.ERC4626_WRAPPER_REWARDS
                     )
