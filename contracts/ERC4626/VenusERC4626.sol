@@ -190,6 +190,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
+
+        vToken.accrueInterest();
         if (assets == 0) {
             revert ERC4626__ZeroAmount("deposit");
         }
@@ -208,13 +210,14 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
+
+        vToken.accrueInterest();
         if (shares == 0) {
             revert ERC4626__ZeroAmount("mint");
         }
         if (shares > maxMint(receiver)) {
             revert ERC4626__MintMoreThanMax();
         }
-
         uint256 assets = previewMint(shares);
         if (assets == 0) {
             revert ERC4626__ZeroAmount("mint");
@@ -227,6 +230,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
         ensureNonzeroAddress(owner);
+
+        vToken.accrueInterest();
         if (assets == 0) {
             revert ERC4626__ZeroAmount("withdraw");
         }
@@ -247,6 +252,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function redeem(uint256 shares, address receiver, address owner) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
         ensureNonzeroAddress(owner);
+
+        vToken.accrueInterest();
         if (shares == 0) {
             revert ERC4626__ZeroAmount("redeem");
         }
