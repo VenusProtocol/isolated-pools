@@ -12,7 +12,7 @@ import { IProtocolShareReserve } from "./Interfaces/IProtocolShareReserve.sol";
 import { RewardsDistributor } from ".././Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { IComptroller } from "./Interfaces/IComptroller.sol";
-import { ensureNonzeroAddress, ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
+import { ensureNonzeroAddress } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { Action } from "../ComptrollerInterface.sol";
 import { EXP_SCALE } from ".././lib/constants.sol";
@@ -179,9 +179,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         address vaultOwner_
     ) public reinitializer(2) {
         ensureNonzeroAddress(accessControlManager_);
-        ensureNonzeroAddress(rewardRecipient_);
         ensureNonzeroAddress(vaultOwner_);
-        ensureNonzeroValue(loopsLimit_);
 
         __AccessControlled_init(accessControlManager_);
         _setMaxLoopsLimit(loopsLimit_);
