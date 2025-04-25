@@ -141,7 +141,7 @@ contract VenusERC4626Factory is AccessControlledV8, MaxLoopsLimitHelper {
 
         // TODO replace this with `_accessControlManager` when the inherited attribute is internal instead of private
         address accessControlManager = address(this.accessControlManager());
-        venusERC4626.initialize2(accessControlManager, rewardRecipient, maxLoopsLimit);
+        venusERC4626.initialize2(accessControlManager, rewardRecipient, maxLoopsLimit, owner());
 
         vault = ERC4626Upgradeable(address(venusERC4626));
 
