@@ -1,0 +1,8 @@
+{
+  "name": "berachainbepolia",
+  "chainId": "80069",
+  "addresses": {
+    "MockUSDC.e": "0xEf368e4c1f9ACC9241E66CD67531FEB195fF7536",
+    "MockWETH": "0x434BB500fA491Daa03375D2B9762dD6080064e2D"
+  }
+}
