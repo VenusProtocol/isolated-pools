@@ -44,7 +44,7 @@ export type NetworkConfig = {
   basemainnet: DeploymentConfig;
   unichainsepolia: DeploymentConfig;
   unichainmainnet: DeploymentConfig;
-  berachainbartio: DeploymentConfig;
+  berachainbepolia: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -174,7 +174,7 @@ export const blocksPerYear: BlocksPerYear = {
   basemainnet: 0, // for time based contracts
   unichainsepolia: 0, // for time based contracts
   unichainmainnet: 0, // for time based contracts
-  berachainbartio: 0, // for time based contracts
+  berachainbepolia: 0, // for time based contracts
   isTimeBased: 0, // for time based contracts
 };
 
@@ -207,7 +207,7 @@ const REDUCE_RESERVES_BLOCK_DELTA_BASE_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_BASE_MAINNET = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA = "86400";
 const REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET = "86400";
-const REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO = "86400";
+const REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BEPOLIA = "86400";
 
 export const preconfiguredAddresses = {
   hardhat: {
@@ -339,12 +339,12 @@ export const preconfiguredAddresses = {
     CriticalTimelock: UNICHAIN_MAINNET_MULTISIG,
     AccessControlManager: "0x1f12014c497a9d905155eB9BfDD9FaC6885e61d0",
   },
-  berachainbartio: {
-    VTreasury: "0xF2f878a9cF9a43409F673CfA17B4F1E9D8169211",
-    NormalTimelock: "0x8699D418D8bae5CFdc566E4fce897B08bd9B03B0",
-    FastTrackTimelock: "0x723b7CB226d86bd89638ec77936463453a46C656",
-    CriticalTimelock: "0x920eeE8A5581e80Ca9C47CbF11B7A6cDB30204BD",
-    AccessControlManager: "0xEf368e4c1f9ACC9241E66CD67531FEB195fF7536",
+  berachainbepolia: {
+    VTreasury: "0xd0D3FBBE22d9a43d3Aa605590976ac5843597228",
+    NormalTimelock: "0xAb3DBA18664B96AD54459D06Ca8BD18C9146d5CE",
+    FastTrackTimelock: "0x08Cf9d51df988F1E69174D22b7f93f97e1aAEbeE",
+    CriticalTimelock: "0x2aae1073B2219729Ff8e5952887905A8da498062",
+    AccessControlManager: "0x243313C1cC198FF80756ed2ef14D9dcd94Ee762b",
   },
 };
 
@@ -7556,7 +7556,7 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.unichainmainnet,
   },
-  berachainbartio: {
+  berachainbepolia: {
     tokensConfig: [
       {
         isMock: true,
@@ -7577,14 +7577,14 @@ export const globalConfig: NetworkConfig = {
         name: "Wrapped Bera",
         symbol: "WBERA",
         decimals: 18,
-        tokenAddress: "0x7507c1dc16935B82698e4C63f2746A2fCf994dF8",
+        tokenAddress: "0x6969696969696969696969696969696969696969",
       },
       {
         isMock: false,
         name: "Venus",
         symbol: "XVS",
         decimals: 18,
-        tokenAddress: "0x75A3668f0b0d06E45601C883b0c66f7Dd2364208",
+        tokenAddress: "0x8699D418D8bae5CFdc566E4fce897B08bd9B03B0",
       },
     ],
     poolConfig: [
@@ -7610,8 +7610,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("5000", 6),
             supplyCap: convertToUnit("20000000", 6),
             borrowCap: convertToUnit("18000000", 6),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.berachainbepolia.VTreasury,
           },
           {
             name: "Venus WETH (Core)",
@@ -7628,8 +7628,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("2", 18),
             supplyCap: convertToUnit("700", 18),
             borrowCap: convertToUnit("350", 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.berachainbepolia.VTreasury,
           },
           {
             name: "Venus WBERA (Core)",
@@ -7646,8 +7646,8 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("1000", 18),
             supplyCap: convertToUnit("4000000", 18),
             borrowCap: convertToUnit("3500000", 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.berachainbepolia.VTreasury,
           },
         ],
         rewards: [],
@@ -7655,9 +7655,9 @@ export const globalConfig: NetworkConfig = {
     ],
     accessControlConfig: [
       ...poolRegistryPermissions(),
-      ...normalTimelockPermissions(preconfiguredAddresses.berachainbartio.NormalTimelock),
+      ...normalTimelockPermissions(preconfiguredAddresses.berachainbepolia.NormalTimelock),
     ],
-    preconfiguredAddresses: preconfiguredAddresses.berachainbartio,
+    preconfiguredAddresses: preconfiguredAddresses.berachainbepolia,
   },
 };
 
@@ -7697,8 +7697,8 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.unichainsepolia;
     case "unichainmainnet":
       return globalConfig.unichainmainnet;
-    case "berachainbartio":
-      return globalConfig.berachainbartio;
+    case "berachainbepolia":
+      return globalConfig.berachainbepolia;
     case "development":
       return globalConfig.bsctestnet;
     default:
