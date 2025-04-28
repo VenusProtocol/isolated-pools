@@ -1,0 +1,37 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/generated/SetCheckpointOpbnbtestnet.sol": {
+      "content": "\n// SPDX-License-Identifier: BSD-3-Clause\npragma solidity 0.8.25;\n\ninterface VTokenInterface {\n    function setInterestRateModel(address) external;\n}\n\ncontract SetCheckpointOpbnbtestnet {\n    error Unauthorized();\n\n    function run() external {\n        if (msg.sender != 0x1c4e015Bd435Efcf4f58D82B0d0fBa8fC4F81120) {\n            revert Unauthorized();\n        }\n        \n        // vBTCB_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps_bpy31536000_To_bpy63072000_At_1743562800\n        VTokenInterface(0x86F82bca79774fc04859966917D2291A68b870A9).setInterestRateModel(0xce10739590001705F7FF231611ba4A48B2820327);\n        \n        // vETH_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps_bpy31536000_To_bpy63072000_At_1743562800\n        VTokenInterface(0x034Cc5097379B13d3Ed5F6c85c8FAf20F48aE480).setInterestRateModel(0xC60Db9Ed666a30b0683C9E30eB83aDDe50dB9355);\n        \n        // vUSDT_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps_bpy31536000_To_bpy63072000_At_1743562800\n        VTokenInterface(0xe3923805f6E117E51f5387421240a86EF1570abC).setInterestRateModel(0x41255DA851247d67c13a30e1159778Eb2C55dDDA);\n        \n        // vWBNB_Core -> CheckpointView_From_JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps_bpy31536000_To_bpy63072000_At_1743562800\n        VTokenInterface(0xD36a31AcD3d901AeD998da6E24e848798378474e).setInterestRateModel(0x79c2BE1DA288DFD2fEFa6fF6F1891d5343CCec6D);\n    }\n}"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200,
+      "details": {
+        "yul": true
+      }
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "storageLayout",
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "evm.gasEstimates"
+        ],
+        "": ["ast"]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
