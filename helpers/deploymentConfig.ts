@@ -56,10 +56,7 @@ export type DeploymentConfig = {
   preconfiguredAddresses: PreconfiguredAddresses;
 };
 
-export type DeploymentInfo = {
-  isTimeBased: boolean;
-  blocksPerYear: number;
-};
+export type DeploymentInfo = { isTimeBased: true; blocksPerYear: 0 } | { isTimeBased: false; blocksPerYear: number };
 
 type BidderDeploymentValues = {
   waitForFirstBidder: number;
@@ -140,9 +137,9 @@ export type AccessControlEntry = {
 };
 
 export enum InterestRateModels {
-  WhitePaper,
-  JumpRate,
-  TwoKinks,
+  WhitePaper = "WhitePaper",
+  JumpRate = "JumpRate",
+  TwoKinks = "TwoKinks",
 }
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
@@ -153,30 +150,28 @@ export const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every
 export const OPBNB_BLOCKS_PER_YEAR = 63_072_000; // assuming a block is mined every 0.5 seconds
 export const SECONDS_PER_YEAR = 31_536_000; // seconds per year
 
-export type BlocksPerYear = {
-  [key: string]: number;
-};
+export type BlocksPerYear = number | "time-based";
 
-export const blocksPerYear: BlocksPerYear = {
-  hardhat: DEFAULT_BLOCKS_PER_YEAR,
+export const blocksPerYear: Record<string, BlocksPerYear> = {
+  hardhat: process.env.IS_TIME_BASED_DEPLOYMENT === "true" ? "time-based" : DEFAULT_BLOCKS_PER_YEAR,
   bsctestnet: BSC_BLOCKS_PER_YEAR,
   bscmainnet: BSC_BLOCKS_PER_YEAR,
   sepolia: ETH_BLOCKS_PER_YEAR,
   ethereum: ETH_BLOCKS_PER_YEAR,
   opbnbtestnet: OPBNB_BLOCKS_PER_YEAR,
   opbnbmainnet: OPBNB_BLOCKS_PER_YEAR,
-  arbitrumsepolia: 0, // for time based contracts
-  arbitrumone: 0, // for time based contracts
-  zksyncsepolia: 0, // for time based contracts
-  zksyncmainnet: 0, // for time based contracts
-  opsepolia: 0, // for time based contracts
-  opmainnet: 0, // for time based contracts
-  basesepolia: 0, // for time based contracts
-  basemainnet: 0, // for time based contracts
-  unichainsepolia: 0, // for time based contracts
-  unichainmainnet: 0, // for time based contracts
-  berachainbartio: 0, // for time based contracts
-  isTimeBased: 0, // for time based contracts
+  arbitrumsepolia: "time-based",
+  arbitrumone: "time-based",
+  zksyncsepolia: "time-based",
+  zksyncmainnet: "time-based",
+  opsepolia: "time-based",
+  opmainnet: "time-based",
+  basesepolia: "time-based",
+  basemainnet: "time-based",
+  unichainsepolia: "time-based",
+  unichainmainnet: "time-based",
+  berachainbartio: "time-based",
+  isTimeBased: "time-based",
 };
 
 export const SEPOLIA_MULTISIG = "0x94fa6078b6b8a26f0b6edffbe6501b22a10470fb";
@@ -1023,7 +1018,7 @@ export const globalConfig: NetworkConfig = {
             symbol: "vlisUSD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
-            multiplierPerYear: convertToUnit("0.1", 18),
+            multiplierPerYear: convertToUnit("0.125", 18),
             jumpMultiplierPerYear: convertToUnit("3", 18),
             kink_: convertToUnit("0.8", 18),
             collateralFactor: convertToUnit("0.65", 18),
@@ -1041,7 +1036,7 @@ export const globalConfig: NetworkConfig = {
             symbol: "vUSDT_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
-            multiplierPerYear: convertToUnit("0.05", 18),
+            multiplierPerYear: convertToUnit("0.083333333333333333", 18),
             jumpMultiplierPerYear: convertToUnit("2.5", 18),
             kink_: convertToUnit("0.6", 18),
             collateralFactor: convertToUnit("0.8", 18),
@@ -1059,7 +1054,7 @@ export const globalConfig: NetworkConfig = {
             symbol: "vUSDD_Stablecoins",
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
-            multiplierPerYear: convertToUnit("0.1", 18),
+            multiplierPerYear: convertToUnit("0.125", 18),
             jumpMultiplierPerYear: convertToUnit("3", 18),
             kink_: convertToUnit("0.8", 18),
             collateralFactor: convertToUnit("0.65", 18),
@@ -2139,8 +2134,8 @@ export const globalConfig: NetworkConfig = {
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.8", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.5", 18),
             collateralFactor: convertToUnit("0.65", 18),
             liquidationThreshold: convertToUnit("0.7", 18),
             reserveFactor: convertToUnit("0.2", 18),
@@ -2175,8 +2170,8 @@ export const globalConfig: NetworkConfig = {
             rateModel: InterestRateModels.JumpRate.toString(),
             baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
-            jumpMultiplierPerYear: convertToUnit("3", 18),
-            kink_: convertToUnit("0.8", 18),
+            jumpMultiplierPerYear: convertToUnit("2.5", 18),
+            kink_: convertToUnit("0.7", 18),
             collateralFactor: convertToUnit("0.65", 18),
             liquidationThreshold: convertToUnit("0.7", 18),
             reserveFactor: convertToUnit("0.1", 18),
@@ -2292,10 +2287,10 @@ export const globalConfig: NetworkConfig = {
             asset: "USDD",
             symbol: "vUSDD_DeFi",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: convertToUnit("0.03", 18),
+            baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
             jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.6", 18),
+            kink_: convertToUnit("0.7", 18),
             collateralFactor: convertToUnit("0.65", 18),
             liquidationThreshold: convertToUnit("0.7", 18),
             reserveFactor: convertToUnit("0.1", 18),
@@ -2467,10 +2462,10 @@ export const globalConfig: NetworkConfig = {
             asset: "USDD",
             symbol: "vUSDD_GameFi",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: convertToUnit("0.03", 18),
+            baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
             jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.6", 18),
+            kink_: convertToUnit("0.7", 18),
             collateralFactor: convertToUnit("0.65", 18),
             liquidationThreshold: convertToUnit("0.7", 18),
             reserveFactor: convertToUnit("0.1", 18),
@@ -2801,10 +2796,10 @@ export const globalConfig: NetworkConfig = {
             asset: "USDD",
             symbol: "vUSDD_Tron",
             rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: convertToUnit("0.03", 18),
+            baseRatePerYear: convertToUnit("0.02", 18),
             multiplierPerYear: convertToUnit("0.1", 18),
             jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.6", 18),
+            kink_: convertToUnit("0.7", 18),
             collateralFactor: convertToUnit("0.65", 18),
             liquidationThreshold: convertToUnit("0.7", 18),
             reserveFactor: convertToUnit("0.1", 18),
