@@ -123,6 +123,16 @@ describe("VenusERC4626Factory", () => {
       expect(event?.args?.vault).to.not.equal(constants.AddressZero);
     });
 
+    it("should set the owner of the vault", async () => {
+      const tx = await factory.createERC4626(vTokenA.address);
+      const receipt = await tx.wait();
+      const deployed = receipt.events?.find(e => e.event === "CreateERC4626")?.args?.vault;
+
+      const venusERC4626 = await ethers.getContractAt("VenusERC4626", deployed);
+
+      expect(await venusERC4626.owner()).to.equal(await factory.owner());
+    });
+
     it("should revert for zero vToken address", async () => {
       await expect(factory.createERC4626(constants.AddressZero)).to.be.revertedWithCustomError(
         factory,
