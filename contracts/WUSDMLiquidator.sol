@@ -80,7 +80,7 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
      *      5. Borrows USDT and liquidates borrowers with USDT debt.
      *      6. Restores the original market configuration.
      */
-    function run() external {
+    function run() external onlyOwner {
         uint256 wusdmPrice = ORACLE.getPrice(address(WUSDM));
         uint256 vwUSDMExchangeRate = VWUSDM.exchangeRateCurrent();
 
