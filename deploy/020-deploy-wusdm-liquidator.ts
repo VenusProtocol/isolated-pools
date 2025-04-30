@@ -1,3 +1,4 @@
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -39,6 +40,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     skipIfAlreadyDeployed: true,
   });
+  const wusdmLiquidator = await ethers.getContract("WUSDMLiquidator");
+
+  console.log("Transferring ownership to Normal Timelock ....");
+  const tx = await wusdmLiquidator.transferOwnership(preconfiguredAddresses.NormalTimelock);
+  await tx.wait();
+  console.log("Ownership transferred to Normal Timelock");
 };
 
 func.tags = ["wusdm-liquidator"];
