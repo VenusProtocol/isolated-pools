@@ -2380,7 +2380,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": {
       "address": "0xb130560618698D9A1e5184De02Dc940080f3159F",
       "abi": [
         {
@@ -2740,7 +2740,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x8138db52D03bb2740207AB7c0dc188AC6B3C3500",
       "abi": [
         {
@@ -3100,7 +3100,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0xCD6f2137182affDA1883135C3351D556721B81dE",
       "abi": [
         {
@@ -3460,7 +3460,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x5454be0683eDeceD065D9A4Bd9F376a0396cDCd9",
       "abi": [
         {
@@ -3820,7 +3820,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope875bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope875bps_jump8000bps_kink8000bps_timeBased": {
       "address": "0x782D1BA04d28dbbf1Ff664B62993f69cd6225466",
       "abi": [
         {
@@ -4180,7 +4180,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_timeBased": {
       "address": "0x41113B64774a5980bCC09011855756775A297876",
       "abi": [
         {
