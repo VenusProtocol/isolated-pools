@@ -183,7 +183,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         uint256 loopsLimit_,
         address vaultOwner_
     ) public reinitializer(2) {
-        ensureNonzeroAddress(accessControlManager_);
         ensureNonzeroAddress(vaultOwner_);
 
         __AccessControlled_init(accessControlManager_);
