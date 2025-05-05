@@ -193,14 +193,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
-        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
-        uint256 adjustedAssets = _roundAssets(assets, Rounding.Down);
-
-        return super.previewDeposit(adjustedAssets);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
 
@@ -222,14 +214,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function previewMint(uint256 shares) public view virtual override returns (uint256) {
-        uint256 assets = super.previewMint(shares);
-
-        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
-        return _roundAssets(assets, Rounding.Down);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
 
@@ -247,14 +231,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         _deposit(_msgSender(), receiver, assets, shares);
         afterDeposit(assets);
         return assets;
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
-    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
-        // round up the asset amount to redeem a natural number of vTokens, without decimals
-        uint256 adjustedAssets = _roundAssets(assets, Rounding.Up);
-
-        return super.previewWithdraw(adjustedAssets);
     }
 
     /// @inheritdoc ERC4626Upgradeable
@@ -280,14 +256,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
-        uint256 assets = super.previewRedeem(shares);
-
-        // round down the asset amount to redeem a natural number of vTokens, without decimals
-        return _roundAssets(assets, Rounding.Down);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
     function redeem(uint256 shares, address receiver, address owner) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
         ensureNonzeroAddress(owner);
@@ -310,6 +278,38 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         uint256 actualAssets = beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, actualAssets, shares);
         return actualAssets;
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
+        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
+        uint256 adjustedAssets = _roundAssets(assets, Rounding.Down);
+
+        return super.previewDeposit(adjustedAssets);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewMint(uint256 shares) public view virtual override returns (uint256) {
+        uint256 assets = super.previewMint(shares);
+
+        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
+        return _roundAssets(assets, Rounding.Down);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
+        // round up the asset amount to redeem a natural number of vTokens, without decimals
+        uint256 adjustedAssets = _roundAssets(assets, Rounding.Up);
+
+        return super.previewWithdraw(adjustedAssets);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
+        uint256 assets = super.previewRedeem(shares);
+
+        // round down the asset amount to redeem a natural number of vTokens, without decimals
+        return _roundAssets(assets, Rounding.Down);
     }
 
     /// @notice Returns the total amount of assets deposited
