@@ -50,4 +50,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 func.tags = ["wusdm-liquidator"];
 
+func.skip = async (hre: HardhatRuntimeEnvironment) => hre.network.name !== "zksyncmainnet";
+
 export default func;
