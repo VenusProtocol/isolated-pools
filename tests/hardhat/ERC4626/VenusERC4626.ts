@@ -100,13 +100,6 @@ describe("VenusERC4626", () => {
 
       expectedAssets = await venusERC4626.previewMint(mintShares);
 
-      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      asset.balanceOf.returnsAtCall(1, expectedAssets);
-
-      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      vToken.balanceOf.returnsAtCall(1, expectedAssets);
-
-      await venusERC4626.setMaxDeposit(ethers.utils.parseEther("100")); // Sets max assets
       await venusERC4626.setMaxMint(ethers.utils.parseEther("100")); // Sets max shares
     });
 
@@ -147,17 +140,10 @@ describe("VenusERC4626", () => {
 
   describe("Deposit Operations", () => {
     const depositAmount = ethers.utils.parseUnits("10", 18);
-    const expectedVTokens = depositAmount;
 
     beforeEach(async () => {
       asset.transferFrom.returns(true);
       asset.approve.returns(true);
-
-      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      asset.balanceOf.returnsAtCall(1, depositAmount);
-
-      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      vToken.balanceOf.returnsAtCall(1, depositAmount);
 
       vToken.mint.returns(0); // NO_ERROR
       vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
@@ -165,13 +151,9 @@ describe("VenusERC4626", () => {
       await venusERC4626.setMaxDeposit(ethers.utils.parseEther("50"));
     });
 
-    it("should deposit assets successfully with proper vToken accounting", async () => {
-      const expectedAssetsValue = expectedVTokens
-        .mul(ethers.utils.parseUnits("1.0001", 18))
-        .div(ethers.utils.parseUnits("1", 18));
-
+    it("should deposit assets successfully", async () => {
       // Calculate shares using previewDeposit
-      const expectedShares = await venusERC4626.previewDeposit(expectedAssetsValue);
+      const expectedShares = await venusERC4626.previewDeposit(depositAmount);
 
       await expect(venusERC4626.connect(user).deposit(depositAmount, user.address))
         .to.emit(venusERC4626, "Deposit")
@@ -210,10 +192,7 @@ describe("VenusERC4626", () => {
       asset.transfer.returns(true);
 
       asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      asset.balanceOf.returnsAtCall(1, depositAmount);
-
-      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      vToken.balanceOf.returnsAtCall(1, depositAmount);
+      asset.balanceOf.returnsAtCall(1, depositAmount.sub(withdrawAmount));
 
       vToken.mint.returns(0); // NO_ERROR
       vToken.redeemUnderlying.returns(0);
@@ -226,11 +205,11 @@ describe("VenusERC4626", () => {
     });
 
     it("should withdraw assets successfully", async () => {
-      const expectedWithdrawAmount = await venusERC4626.previewWithdraw(withdrawAmount);
+      const expectedShares = await venusERC4626.previewWithdraw(withdrawAmount);
 
       await expect(venusERC4626.connect(user).withdraw(withdrawAmount, user.address, user.address))
         .to.emit(venusERC4626, "Withdraw")
-        .withArgs(user.address, user.address, user.address, withdrawAmount, expectedWithdrawAmount);
+        .withArgs(user.address, user.address, user.address, withdrawAmount, expectedShares);
 
       expect(vToken.redeemUnderlying).to.have.been.calledWith(withdrawAmount);
     });
@@ -265,12 +244,6 @@ describe("VenusERC4626", () => {
       asset.approve.returns(true);
       asset.transfer.returns(true);
 
-      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      asset.balanceOf.returnsAtCall(1, depositAmount);
-
-      vToken.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
-      vToken.balanceOf.returnsAtCall(1, depositAmount);
-
       vToken.mint.returns(0); // NO_ERROR
       vToken.redeemUnderlying.returns(0);
       vToken.exchangeRateStored.returns(ethers.utils.parseUnits("1.0001", 18));
@@ -282,6 +255,9 @@ describe("VenusERC4626", () => {
       await venusERC4626.setMaxWithdraw(ethers.utils.parseEther("15"));
 
       expectedRedeemAssets = await venusERC4626.previewRedeem(redeemShares);
+
+      asset.balanceOf.returnsAtCall(0, ethers.BigNumber.from(0));
+      asset.balanceOf.returnsAtCall(1, expectedRedeemAssets);
     });
 
     it("should redeem shares successfully", async () => {
@@ -296,6 +272,7 @@ describe("VenusERC4626", () => {
       const returnedAssets = await venusERC4626
         .connect(user)
         .callStatic.redeem(redeemShares, user.address, user.address);
+
       expect(returnedAssets).to.equal(expectedRedeemAssets);
     });
 
