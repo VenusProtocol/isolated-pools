@@ -2546,7 +2546,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": {
       "address": "0x390D1C248217615D79f74f2453D682906Bd2dD20",
       "abi": [
         {
@@ -2906,7 +2906,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": {
+    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps_timeBased": {
       "address": "0x425dde630be832195619a06175ba45C827Dd3DCa",
       "abi": [
         {
@@ -3266,7 +3266,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x305f960b00594200ed80373B61b38e669651469E",
       "abi": [
         {
@@ -3626,7 +3626,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps_timeBased": {
       "address": "0x5123645b47f0c526Bf1e772CC68319C6d9C0d156",
       "abi": [
         {
@@ -3986,7 +3986,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x42888177eB8FcdEa0884De66c7E0f7638125914A",
       "abi": [
         {
@@ -4346,7 +4346,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0xC7EDE29FE265aA46C1Bbc62Dc7e0f3565cce3Db6",
       "abi": [
         {
@@ -4706,7 +4706,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_timeBased": {
       "address": "0x88C409Bf5b604F70505C1eC594D8155489B1d8b2",
       "abi": [
         {
@@ -12654,7 +12654,7 @@
         }
       ]
     },
-    "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps": {
+    "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps_timeBased": {
       "address": "0x8fd05f11a175A9b7E6dDcA8Ee2713E2c7f94c011",
       "abi": [
         {

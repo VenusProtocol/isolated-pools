@@ -6,7 +6,7 @@
     "ComptrollerImpl": "0x6F642A914Dfe8278801c35bE2622768E8924012E",
     "Comptroller_Core": "0x854Ba54c41bE5e54408EDF432e28A195Bcd3E88d",
     "DefaultProxyAdmin": "0xccF1655d49bD9f94106524Cc416277135A811815",
-    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": "0x859621f08afEd89D7F6796A513F1C9edaB71324E",
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_timeBased": "0x859621f08afEd89D7F6796A513F1C9edaB71324E",
     "MockUSDC.e": "0x0A912ebEc8D4a35568C1BFE368AD68A548597906",
     "MockWETH": "0x5A4bcFa0cf7f029bb5A62Cd52a24F7B2d0C18d2A",
     "NativeTokenGateway_vWBERA_Core": "0x9aEDab5FFD5CfeA4aF0bcFBC618cB48a53936034",

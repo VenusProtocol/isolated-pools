@@ -2472,7 +2472,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": {
       "address": "0x30EEAD47F3C63A9Fa179Ab6e263A8666f91B1764",
       "abi": [
         {
@@ -2832,7 +2832,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink3000bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink3000bps_timeBased": {
       "address": "0xAB28D51283Bd455bF1d3eE7e1B3f29fa23CBB89D",
       "abi": [
         {
@@ -3192,7 +3192,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x5fC344E85E5950335a1cE717AC04247B485efB00",
       "abi": [
         {
@@ -3552,7 +3552,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x2f8263A8833C21b6B72AC55951756B41D4607e3F",
       "abi": [
         {
