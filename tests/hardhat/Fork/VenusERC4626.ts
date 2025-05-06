@@ -5,7 +5,7 @@ import { Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { Comptroller, ERC20, VenusERC4626 } from "../../../typechain";
+import { Comptroller, ERC20, VToken, VenusERC4626 } from "../../../typechain";
 import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
 
 const { expect } = chai;
@@ -19,6 +19,7 @@ const { ADMIN, ACM, PSR, USDT, VUSDT, COMPTROLLER, USDT_HOLDER, BLOCK_NUMBER } =
 );
 
 let usdt: ERC20;
+let vUSDT: VToken;
 let comptroller: Comptroller;
 let venusERC4626: VenusERC4626;
 let usdtHolder: Signer;
@@ -40,6 +41,7 @@ async function setup() {
   // Get mainnet contracts
   usdt = await ethers.getContractAt("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20", USDT);
   comptroller = await ethers.getContractAt("Comptroller", COMPTROLLER);
+  vUSDT = await ethers.getContractAt("VToken", VUSDT);
 
   // Deploy VenusERC4626
   const VenusERC4626Factory = await ethers.getContractFactory("VenusERC4626");
@@ -68,6 +70,22 @@ if (FORK) {
     });
 
     describe("Deposit Operations", () => {
+      it("should preview deposits", async () => {
+        // Accrue interest to update the stored exchange rate
+        await vUSDT.connect(userSigner).accrueInterest();
+
+        const previewDeposit = await venusERC4626.previewDeposit(depositAmount);
+
+        // Perform the deposit - it will accrue interest too, so the minted VTokens will be lower than previewed
+        const tx = await venusERC4626.connect(userSigner).deposit(depositAmount, await userSigner.getAddress());
+        const receipt = await tx.wait();
+
+        const depositEvent = receipt.events?.find(e => e.event === "Deposit");
+        const actualShares = depositEvent?.args?.shares;
+
+        expect(actualShares).to.be.lte(previewDeposit);
+      });
+
       it("should deposit assets and mint shares", async () => {
         const assetsBefore = await usdt.balanceOf(await userSigner.getAddress());
         const sharesBefore = await venusERC4626.balanceOf(await userSigner.getAddress());
@@ -87,6 +105,24 @@ if (FORK) {
 
         const expectedAssetsFromShares = await venusERC4626.previewRedeem(actualShares);
         expect(expectedAssetsFromShares).to.be.lte(depositAmount);
+      });
+
+      it("should withdraw more than deposited assets, with time", async () => {
+        // Perform the deposit
+        const tx = await venusERC4626.connect(userSigner).deposit(depositAmount, await userSigner.getAddress());
+        const receipt = await tx.wait();
+
+        const depositEvent = receipt.events?.find(e => e.event === "Deposit");
+        const actualShares = depositEvent?.args?.shares;
+
+        // 1 day, assuming 1.5 seconds per block. The exact amount of blocks is not relevant for the test
+        await mine(57600);
+
+        // Accrue interest to update the stored exchange rate
+        await vUSDT.connect(userSigner).accrueInterest();
+
+        const expectedAssetsFromShares = await venusERC4626.previewRedeem(actualShares);
+        expect(expectedAssetsFromShares).to.be.gte(depositAmount);
       });
 
       it("should revert when depositing more than max", async () => {
@@ -163,12 +199,15 @@ if (FORK) {
 
         const withdrawEvent = receipt.events?.find(e => e.event === "Withdraw");
         const actualShares = withdrawEvent?.args?.shares;
+        const actualAssets = withdrawEvent?.args?.assets;
 
         const sharesAfter = await venusERC4626.balanceOf(await userSigner.getAddress());
         const assetsAfter = await usdt.balanceOf(await userSigner.getAddress());
 
         // User should receive AT LEAST the requested amount
-        expect(assetsAfter.sub(assetsBefore)).to.be.gte(withdrawAmount);
+        expect(assetsAfter.sub(assetsBefore)).to.equal(actualAssets);
+        expect(actualAssets).to.be.gte(withdrawAmount);
+        expect(actualAssets).to.be.closeTo(withdrawAmount, parseUnits("4", 9));
 
         // Shares burned should match event emission
         expect(sharesBefore.sub(sharesAfter)).to.equal(actualShares);
