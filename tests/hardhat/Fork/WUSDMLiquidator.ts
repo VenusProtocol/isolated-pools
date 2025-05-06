@@ -1,12 +1,10 @@
 // assumes we're forking zksyncmainnet at any recent block, e.g.
 // anvil-zksync fork --fork-url mainnet --fork-block-number 59265626
 import { smock } from "@defi-wonderland/smock";
-import { Deployer } from "@matterlabs/hardhat-zksync";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { BytesLike, formatUnits, parseUnits } from "ethers/lib/utils";
-import hre from "hardhat";
 import { ethers } from "hardhat";
 import { Provider, Wallet } from "zksync-ethers";
 
@@ -71,10 +69,10 @@ const WUSDM_INTERFACE = new ethers.utils.Interface([
 ]);
 
 if (FORK && FORKED_NETWORK === "zksyncmainnet") {
-  describe("Repay and liquidate", () => {
+  describe("Repay and liquidate", async () => {
     const provider = new Provider({ url: "http://127.0.0.1:8011", timeout: 1200000 });
     const wallet = new Wallet(DEPLOYER_PRIVATE_KEY, provider);
-    const deployer = new Deployer(hre, wallet);
+    const [deployer] = await ethers.getSigners();
 
     const comptroller = Comptroller__factory.connect(COMPTROLLER, provider);
     const beacon = UpgradeableBeacon__factory.connect(COMPTROLLER_BEACON, provider);
