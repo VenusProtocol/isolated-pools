@@ -160,6 +160,32 @@ if (FORK) {
         expect(assetsBefore.sub(assetsAfter)).to.equal(actualAssets);
       });
 
+      it("should redeem the minted shares", async () => {
+        // Perform mint
+        const depositTx = await venusERC4626.connect(userSigner).mint(mintShares, await userSigner.getAddress());
+        const depositReceipt = await depositTx.wait();
+
+        const event = depositReceipt.events?.find(e => e.event === "Deposit");
+        const depositAssets = event?.args?.assets;
+        const depositShares = event?.args?.shares;
+
+        // Perform redeem
+        const redeemTx = await venusERC4626
+          .connect(userSigner)
+          .redeem(depositShares, await userSigner.getAddress(), await userSigner.getAddress());
+        const redeemReceipt = await redeemTx.wait();
+
+        const redeemEvent = redeemReceipt.events?.find(e => e.event === "Withdraw");
+        const redeemedAssets = redeemEvent?.args?.assets;
+        const redeemedShares = redeemEvent?.args?.shares;
+
+        expect(redeemedShares).to.equal(depositShares);
+
+        // The difference on the withdrawn funds are the accrued interests between the mint and redeem
+        expect(redeemedAssets).to.be.gte(depositAssets);
+        expect(redeemedAssets).to.be.closeTo(depositAssets, parseUnits("3", 10));
+      });
+
       it("should revert when minting more than max", async () => {
         // Set supply cap to 0 to make maxMint return 0
         await comptroller.connect(adminSigner).setMarketSupplyCaps([VUSDT], [0]);

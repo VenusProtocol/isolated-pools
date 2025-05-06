@@ -291,8 +291,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function previewMint(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewMint(shares);
 
-        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
-        return _roundAssets(assets, Rounding.Down);
+        // round up the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
+        return _roundAssets(assets, Rounding.Up);
     }
 
     /// @inheritdoc ERC4626Upgradeable
