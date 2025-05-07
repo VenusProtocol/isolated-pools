@@ -1,3 +1,54 @@
+## [4.2.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.10...v4.2.0-dev.11) (2025-04-28)
+
+
+### Features
+
+* add a script to check interest rate models ([3d96a9c](https://github.com/VenusProtocol/isolated-pools/commit/3d96a9ca557098264fab1af58d426d3c35fe56de))
+* add deployment scripts for checkpoint rate models ([b752ea8](https://github.com/VenusProtocol/isolated-pools/commit/b752ea8fc44d55e5ad59718921dc695ce84b1ce9))
+* add mainnet deployments on BNB ([f5d102d](https://github.com/VenusProtocol/isolated-pools/commit/f5d102d0b200d4bec5ca33891dcbb69dd7900bda))
+* add pool lens deployment on OPBNB with updated Block rate ([054233a](https://github.com/VenusProtocol/isolated-pools/commit/054233ace70965de86792b2dba277b142373c4e1))
+* add poolLens deployments with updated block number ([da5e2e6](https://github.com/VenusProtocol/isolated-pools/commit/da5e2e644356f1f0970824797f2cae681a352a1f))
+* deploy 21024000 blocks per year models to bnb chain ([d681c72](https://github.com/VenusProtocol/isolated-pools/commit/d681c72a26bed9518760d3a863cf2cfcec735521))
+* deploy 63072000 blocks per year models to opbnb chain ([9a701a5](https://github.com/VenusProtocol/isolated-pools/commit/9a701a55b55be9a21999c8aa59d89ded04dcb1a0))
+* deploy checkpoint rate models to bnb chain ([80e0b4d](https://github.com/VenusProtocol/isolated-pools/commit/80e0b4dfd4703f309988dafd7b2c736adbd35156))
+* deploy checkpoint rate models to opbnb chain ([9f91aea](https://github.com/VenusProtocol/isolated-pools/commit/9f91aea5533d89a4c2e6e33cde37032f9d2e61a6))
+* redeploy impls wrt to change in block rate ([8c08dbd](https://github.com/VenusProtocol/isolated-pools/commit/8c08dbd4bf1c645ce709e7b791c6f850a2e8229f))
+* redeploy new vtoken impl ([63f042e](https://github.com/VenusProtocol/isolated-pools/commit/63f042e2e05c895a3394cea208073457ae8ca220))
+* redeployed mainnet contracts ([537f4a7](https://github.com/VenusProtocol/isolated-pools/commit/537f4a7764450ffd6af6b913c20a4069d0a7218e))
+* revert shortfall implemetation deployment ([7bc8ffc](https://github.com/VenusProtocol/isolated-pools/commit/7bc8ffc11fc8a25353745b797b8f4f0c1ec0274e))
+* update DEFAULT_BLOCKS_PER_YEAR & prime tests ([75b87ab](https://github.com/VenusProtocol/isolated-pools/commit/75b87ab8f364d83f57bb427218e5788be6c8210f))
+* updating deployment files ([71bc4ea](https://github.com/VenusProtocol/isolated-pools/commit/71bc4ea26ff6cda9689a283575cd5261f1e4e44b))
+* updating deployment files ([1caa73b](https://github.com/VenusProtocol/isolated-pools/commit/1caa73be5b6850d1d6297faf301d0b713e702419))
+* updating deployment files ([fd26098](https://github.com/VenusProtocol/isolated-pools/commit/fd26098a083754e64ee2d77fc32eb782be6627d7))
+* updating deployment files ([8056d6f](https://github.com/VenusProtocol/isolated-pools/commit/8056d6f2a741abf052758ad7e1b350ea8ad9c348))
+* updating deployment files ([1336b3e](https://github.com/VenusProtocol/isolated-pools/commit/1336b3e6974f67d32aeec5d44ee3b3859ee8d662))
+* updating deployment files ([91613e1](https://github.com/VenusProtocol/isolated-pools/commit/91613e16992a5e22d02194f5d7c24ea65cec6610))
+* updating deployment files ([38b5b0e](https://github.com/VenusProtocol/isolated-pools/commit/38b5b0eeb61292bbf81a536eff8d96c082e372b0))
+* updating deployment files ([8bb83b5](https://github.com/VenusProtocol/isolated-pools/commit/8bb83b5c678080b1cd9a45ef4966c11d54c01fa4))
+
+
+### Bug Fixes
+
+* add missing rate model contract ([c6f3143](https://github.com/VenusProtocol/isolated-pools/commit/c6f3143a27a0aedd12dc65fc4e254e3772834134))
+* failing integration test ([18fa487](https://github.com/VenusProtocol/isolated-pools/commit/18fa4876eca250860983f4dd0fbdf2683daff2b7))
+* lint issue ([9a3a685](https://github.com/VenusProtocol/isolated-pools/commit/9a3a685a17f35d68f41875777b7562d4996b3d0d))
+* redeploy bsctestnet IRM setter with the correct vlisUSD_Stablecoins ([7cd5235](https://github.com/VenusProtocol/isolated-pools/commit/7cd5235ca02d1036e9c5030b6cd3b42e2063ab65))
+* update bscmainnet interest rate params ([458cc02](https://github.com/VenusProtocol/isolated-pools/commit/458cc027b900853b4e983a24c37a63bcfe17623a))
+* use DEFAULT_BLOCKS_PER_YEAR in prime test ([cc88295](https://github.com/VenusProtocol/isolated-pools/commit/cc88295ada437d800756f0c67f5400ffb136b747))
+* use Venus-style interest rate multiplier for bsctestnet models ([d137548](https://github.com/VenusProtocol/isolated-pools/commit/d137548215a9b00a98011252638ff9626aecf2b8))
+
+## [4.2.0-dev.10](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.9...v4.2.0-dev.10) (2025-04-23)
+
+
+### Features
+
+* updating deployment files ([555cd98](https://github.com/VenusProtocol/isolated-pools/commit/555cd9851c95e773e7a094375d38970935bbfb0e))
+
+
+### Bug Fixes
+
+* keep only one vlisUSD_Stablecoins deployment ([b44f5be](https://github.com/VenusProtocol/isolated-pools/commit/b44f5be9732f74e0c3d0739038ac03d89a1cdc08))
+
 ## [4.2.0-dev.9](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.8...v4.2.0-dev.9) (2025-03-21)
 
 

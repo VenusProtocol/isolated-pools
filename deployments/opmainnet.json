@@ -2472,7 +2472,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": {
       "address": "0x3Bc6dA50ff7E427eE1336C83d4ceBaBd5ccc5ab3",
       "abi": [
         {
@@ -2832,7 +2832,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x365B3a4dA73D000E06d250F86e4Fb1d7a2F63e57",
       "abi": [
         {
@@ -3192,7 +3192,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x8AB36EBdBd4873bd1613Cc77D21A0bE29a34EFD9",
       "abi": [
         {
