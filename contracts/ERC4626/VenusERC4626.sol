@@ -158,15 +158,12 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
                 SafeERC20Upgradeable.safeTransfer(rewardToken, _rewardRecipient, rewardBalance);
 
                 // Try to update the asset state on the recipient if reward recipient is a protocol share reserve
-                bytes memory data = abi.encodeCall(
-                    IProtocolShareReserve.updateAssetsState,
-                    (
-                        address(_comptroller),
-                        address(rewardToken),
-                        IProtocolShareReserve.IncomeType.ERC4626_WRAPPER_REWARDS
-                    )
-                );
-                rewardRecipient.call(data);
+                // reward recipient cannot be an EOA
+                try IProtocolShareReserve(_rewardRecipient).updateAssetsState(
+                    address(_comptroller),
+                    address(rewardToken),
+                    IProtocolShareReserve.IncomeType.ERC4626_WRAPPER_REWARDS
+                ) {} catch {}
             }
             emit ClaimRewards(rewardBalance, address(rewardToken));
         }

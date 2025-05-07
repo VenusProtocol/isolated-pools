@@ -308,15 +308,11 @@ describe("VenusERC4626", () => {
     });
 
     describe("When rewardRecipient is EOA", () => {
-      it("should claim rewards and transfer to recipient", async () => {
+      it("should revert the transaction", async () => {
         xvs.transfer.returns(true);
 
         await expect(venusERC4626.connect(user).claimRewards())
-          .to.emit(venusERC4626, "ClaimRewards")
-          .withArgs(rewardAmount, xvs.address);
-
-        expect(rewardDistributor.claimRewardToken).to.have.been.calledWith(venusERC4626.address, [vToken.address]);
-        expect(xvs.transfer).to.have.been.calledWith(rewardRecipient, rewardAmount);
+          .to.be.reverted;
       });
     });
 
