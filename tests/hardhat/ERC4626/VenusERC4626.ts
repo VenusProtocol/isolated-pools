@@ -311,8 +311,7 @@ describe("VenusERC4626", () => {
       it("should revert the transaction", async () => {
         xvs.transfer.returns(true);
 
-        await expect(venusERC4626.connect(user).claimRewards())
-          .to.be.reverted;
+        await expect(venusERC4626.connect(user).claimRewards()).to.be.reverted;
       });
     });
 
