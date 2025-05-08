@@ -141,7 +141,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         VToken _vToken = vToken;
         address _rewardRecipient = rewardRecipient;
 
-        RewardsDistributor[] memory rewardDistributors = comptroller.getRewardDistributors();
+        RewardsDistributor[] memory rewardDistributors = _comptroller.getRewardDistributors();
 
         _ensureMaxLoops(rewardDistributors.length);
 
