@@ -8,6 +8,7 @@
     "DefaultProxyAdmin": "0x78e9fff2ab8daAB8559070d897C399E5e1C5074c",
     "JumpRateModelV2_base0bps_slope1250bps_jump30000bps_kink8000bps_timeBased": "0x2DAb0B51d7d899b66d4F16EA1c0cEB1767863523",
     "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink3000bps_timeBased": "0x6379613ceE9f40E187971c9917fdf33ba5386CAb",
+    "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink4500bps_timeBased": "0x5C7D8858a25778d992eE803Ce79F1eff60c1d9D1",
     "JumpRateModelV2_base0bps_slope2000bps_jump25000bps_kink8000bps_timeBased": "0x897aD981078d1dBA52069f4BdC7F9441B0B94B76",
     "JumpRateModelV2_base0bps_slope300bps_jump30000bps_kink8000bps_timeBased": "0x1cC9De442f893a0C4e1E6ffB1Ac404DDb9B67ab4",
     "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": "0xb41aDec3D6dCc376164D071Cb5ed70388335e471",
