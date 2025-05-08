@@ -280,8 +280,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
     /// @inheritdoc ERC4626Upgradeable
     function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
-        // round down the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
-        uint256 adjustedAssets = _roundAssets(assets, Rounding.Down);
+        // adjust the assets to the actual amount that will be alloccated to the minted VTokens,
+        // considering the actual amount of VTokens that will be minted (that are rounding down)
+        uint256 adjustedAssets = _adjustAssetsRoundingVTokens(assets, Rounding.Down);
 
         return super.previewDeposit(adjustedAssets);
     }
@@ -290,14 +291,16 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function previewMint(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewMint(shares);
 
-        // round up the asset amount, to deposit an amont equivalent to a natural number of vTokens, without decimals
-        return _roundAssets(assets, Rounding.Up);
+        // adjust the assets to the actual amount that will be alloccated to the minted VTokens,
+        // considering the actual amount of VTokens that will be minted (that are rounding down)
+        return _adjustAssetsRoundingVTokens(assets, Rounding.Down);
     }
 
     /// @inheritdoc ERC4626Upgradeable
     function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
-        // round up the asset amount to redeem a natural number of vTokens, without decimals
-        uint256 adjustedAssets = _roundAssets(assets, Rounding.Up);
+        // adjust the assets to the actual amount that will be withdrawn from the market,
+        // considering the actual amount of VTokens that will be redeemed (that are rounding up)
+        uint256 adjustedAssets = _adjustAssetsRoundingVTokens(assets, Rounding.Up);
 
         return super.previewWithdraw(adjustedAssets);
     }
@@ -306,8 +309,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewRedeem(shares);
 
-        // round down the asset amount to redeem a natural number of vTokens, without decimals
-        return _roundAssets(assets, Rounding.Down);
+        // adjust the assets to the actual amount that will be withdrawn from the market,
+        // considering the actual amount of VTokens that will be redeemed (that are rounding up)
+        return _adjustAssetsRoundingVTokens(assets, Rounding.Up);
     }
 
     /// @notice Returns the total amount of assets deposited
@@ -440,12 +444,12 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         return string(abi.encodePacked("v4626", asset_.symbol()));
     }
 
-    /// @notice Round the amount of assets, up or down, to a multiple of the exchange rate. That way the
-    /// associated number of VTokens won't have any decimals
-    /// @param assets The amount of assets to round
-    /// @param rounding If the round should be up (Rounding.Up), or down (Rounding.Down)
-    /// @return The rounded amount of assets
-    function _roundAssets(uint256 assets, Rounding rounding) internal view returns (uint256) {
+    /// @notice Adjust the amount of assets associated to VTokens, considering the rounding (up or down)
+    /// in the amount of VTokens that will be done by `redeemUnderlying` (UP), or `mint` (DOWN).
+    /// @param assets The amount of assets to adjust
+    /// @param rounding If the round on the VToken will be up (Rounding.Up), or down (Rounding.Down)
+    /// @return The adjusted amount of assets
+    function _adjustAssetsRoundingVTokens(uint256 assets, Rounding rounding) internal view returns (uint256) {
         uint256 exchangeRate = vToken.exchangeRateStored();
         uint256 redeemTokens = (assets * EXP_SCALE) / exchangeRate;
 
