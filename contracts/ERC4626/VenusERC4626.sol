@@ -6,6 +6,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { MathUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { IProtocolShareReserve } from "./Interfaces/IProtocolShareReserve.sol";
@@ -22,11 +23,6 @@ import { VToken } from "../VToken.sol";
 /// @notice ERC4626 wrapper for Venus vTokens, enabling standard ERC4626 vault interactions with Venus Protocol.
 contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHelper, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for ERC20Upgradeable;
-
-    enum Rounding {
-        Down,
-        Up
-    }
 
     /// @notice Error code representing no errors in Venus operations.
     uint256 internal constant NO_ERROR = 0;
@@ -207,7 +203,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__ZeroAmount("deposit");
         }
         _deposit(_msgSender(), receiver, assets, shares);
-        afterDeposit(assets);
         return shares;
     }
 
@@ -227,7 +222,6 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__ZeroAmount("mint");
         }
         _deposit(_msgSender(), receiver, assets, shares);
-        afterDeposit(assets);
         return assets;
     }
 
@@ -271,47 +265,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__ZeroAmount("redeem");
         }
 
-        // actualAssets should be equal to assets, because of the round performed in previewRedeem
-        // but let's use the returned value anyway
         uint256 actualAssets = beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, actualAssets, shares);
         return actualAssets;
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
-    function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
-        // adjust the assets to the actual amount that will be alloccated to the minted VTokens,
-        // considering the actual amount of VTokens that will be minted (that are rounding down)
-        uint256 adjustedAssets = _adjustAssetsRoundingVTokens(assets, Rounding.Down);
-
-        return super.previewDeposit(adjustedAssets);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
-    function previewMint(uint256 shares) public view virtual override returns (uint256) {
-        uint256 assets = super.previewMint(shares);
-
-        // adjust the assets to the actual amount that will be alloccated to the minted VTokens,
-        // considering the actual amount of VTokens that will be minted (that are rounding down)
-        return _adjustAssetsRoundingVTokens(assets, Rounding.Down);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
-    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
-        // adjust the assets to the actual amount that will be withdrawn from the market,
-        // considering the actual amount of VTokens that will be redeemed (that are rounding up)
-        uint256 adjustedAssets = _adjustAssetsRoundingVTokens(assets, Rounding.Up);
-
-        return super.previewWithdraw(adjustedAssets);
-    }
-
-    /// @inheritdoc ERC4626Upgradeable
-    function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
-        uint256 assets = super.previewRedeem(shares);
-
-        // adjust the assets to the actual amount that will be withdrawn from the market,
-        // considering the actual amount of VTokens that will be redeemed (that are rounding up)
-        return _adjustAssetsRoundingVTokens(assets, Rounding.Up);
     }
 
     /// @notice Returns the total amount of assets deposited
@@ -405,7 +361,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @notice Mints vTokens after depositing assets.
     /// @dev Calls `mint` on the vToken contract. Reverts on error.
     /// @param assets The amount of underlying assets to deposit.
-    function afterDeposit(uint256 assets) internal {
+    function mintVTokens(uint256 assets) internal {
         ERC20Upgradeable(asset()).safeApprove(address(vToken), assets);
         uint256 errorCode = vToken.mint(assets);
         if (errorCode != NO_ERROR) {
@@ -422,6 +378,42 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
         emit RewardRecipientUpdated(rewardRecipient, newRecipient);
         rewardRecipient = newRecipient;
+    }
+
+    /// @notice Deposits the assets into the VToken and calculates the shares to mint based on the
+    /// underlying assets equivalent to the new VTokens minted
+    /// @inheritdoc ERC4626Upgradeable
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        // 1. Track pre-transfer balances
+        uint256 assetBalanceBefore = IERC20Upgradeable(asset()).balanceOf(address(this));
+        uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
+
+        // 2. Perform asset transfer (original OZ 4626 logic)
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
+
+        // 3. Calculate actual assets received (protects against fee-on-transfer)
+        uint256 assetsReceived = IERC20Upgradeable(asset()).balanceOf(address(this)) - assetBalanceBefore;
+
+        // 4. Mint vTokens with received assets
+        mintVTokens(assetsReceived);
+
+        // 5. Verify actual vTokens received
+        uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
+        uint256 actualAssetsValue = (vTokensReceived * vToken.exchangeRateStored()) / EXP_SCALE;
+
+        // 6. Recalculate shares based on actual received value
+        // This is the same operation performed by previewDeposit, adjusting the total assets
+        uint256 actualShares = MathUpgradeable.mulDiv(
+            actualAssetsValue,
+            totalSupply() + 10 ** _decimalsOffset(),
+            totalAssets() + 1 - actualAssetsValue, // remove the new assets deposited to the VToken in this operation
+            MathUpgradeable.Rounding.Down
+        );
+
+        // 7. Mint the corrected share amount
+        _mint(receiver, actualShares);
+
+        emit Deposit(caller, receiver, assets, actualShares);
     }
 
     /// @notice Override `_decimalsOffset` to normalize decimals to 18 for all VenusERC4626 vaults.
@@ -442,22 +434,5 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @return Symbol of the vault considering the asset name
     function _generateVaultSymbol(ERC20Upgradeable asset_) internal view returns (string memory) {
         return string(abi.encodePacked("v4626", asset_.symbol()));
-    }
-
-    /// @notice Adjust the amount of assets associated to VTokens, considering the rounding (up or down)
-    /// in the amount of VTokens that will be done by `redeemUnderlying` (UP), or `mint` (DOWN).
-    /// @param assets The amount of assets to adjust
-    /// @param rounding If the round on the VToken will be up (Rounding.Up), or down (Rounding.Down)
-    /// @return The adjusted amount of assets
-    function _adjustAssetsRoundingVTokens(uint256 assets, Rounding rounding) internal view returns (uint256) {
-        uint256 exchangeRate = vToken.exchangeRateStored();
-        uint256 redeemTokens = (assets * EXP_SCALE) / exchangeRate;
-
-        uint256 _redeemAmount = (redeemTokens * exchangeRate) / EXP_SCALE;
-
-        if (_redeemAmount != 0 && _redeemAmount != assets && rounding == Rounding.Up) redeemTokens++; // round up
-
-        // redeemAmount = exchangeRate * redeemTokens
-        return (exchangeRate * redeemTokens) / EXP_SCALE;
     }
 }

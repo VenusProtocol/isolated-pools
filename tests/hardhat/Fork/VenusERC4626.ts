@@ -183,7 +183,7 @@ if (FORK) {
 
         // The difference on the withdrawn funds are the accrued interests between the mint and redeem
         expect(redeemedAssets).to.be.gte(depositAssets);
-        expect(redeemedAssets).to.be.closeTo(depositAssets, parseUnits("3", 10));
+        expect(redeemedAssets).to.be.closeTo(depositAssets, parseUnits("3", 11));
       });
 
       it("should revert when minting more than max", async () => {
