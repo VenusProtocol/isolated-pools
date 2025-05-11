@@ -1,3 +1,11 @@
+## [4.2.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.11...v4.2.0-dev.12) (2025-05-11)
+
+
+### Features
+
+* deployment files for interest rate model on unichain for UNI market ([61bf6da](https://github.com/VenusProtocol/isolated-pools/commit/61bf6daf44fa76c01c8e0cdce6c0a67786ee35a3))
+* updating deployment files ([07732cb](https://github.com/VenusProtocol/isolated-pools/commit/07732cbfd757f6401072f2b8c630c89c9806dc86))
+
 ## [4.2.0-dev.11](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.10...v4.2.0-dev.11) (2025-04-28)
 
 
