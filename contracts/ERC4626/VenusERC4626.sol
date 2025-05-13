@@ -247,12 +247,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__WithdrawMoreThanMax();
         }
 
-        uint256 shares = previewWithdraw(assets);
-        if (shares == 0) {
-            revert ERC4626__ZeroAmount("withdraw");
-        }
-
-        (uint256 actualAssets, uint256 actualShares) = beforeWithdraw(assets);
+        (uint256 actualAssets, uint256 actualShares) = _beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, actualAssets, actualShares);
 
         return actualShares;
@@ -271,7 +266,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__RedeemMoreThanMax();
         }
 
-        uint256 actualAssets = beforeRedeem(shares);
+        uint256 actualAssets = _beforeRedeem(shares);
         if (actualAssets == 0) {
             revert ERC4626__ZeroAmount("redeem");
         }
@@ -354,7 +349,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @dev Calls `redeem` on the vToken contract. Reverts on error.
     /// @param shares The amount of shares to redeem.
     /// @return The amount of assets transferred in
-    function beforeRedeem(uint256 shares) internal returns (uint256) {
+    function _beforeRedeem(uint256 shares) internal returns (uint256) {
         IERC20Upgradeable token = IERC20Upgradeable(asset());
         uint256 balanceBefore = token.balanceOf(address(this));
 
@@ -381,7 +376,13 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @param assets The amount of underlying assets to redeem.
     /// @return actualAssets The amount of assets transferred in
     /// @return actualShares The shares equivalent to `actualAssets`, to be burned, rounded up
-    function beforeWithdraw(uint256 assets) internal returns (uint256 actualAssets, uint256 actualShares) {
+    /// @custom:error ERC4626__ZeroAmount is thrown when the shares for the assets are zero
+    function _beforeWithdraw(uint256 assets) internal returns (uint256 actualAssets, uint256 actualShares) {
+        uint256 shares = previewWithdraw(assets);
+        if (shares == 0) {
+            revert ERC4626__ZeroAmount("beforeWithdraw");
+        }
+
         IERC20Upgradeable token = IERC20Upgradeable(asset());
         uint256 balanceBefore = token.balanceOf(address(this));
         uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
