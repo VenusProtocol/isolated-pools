@@ -22,6 +22,7 @@ import { VToken } from "../VToken.sol";
 /// @title VenusERC4626
 /// @notice ERC4626 wrapper for Venus vTokens, enabling standard ERC4626 vault interactions with Venus Protocol.
 contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHelper, ReentrancyGuardUpgradeable {
+    using MathUpgradeable for uint256;
     using SafeERC20Upgradeable for ERC20Upgradeable;
 
     /// @notice Error code representing no errors in Venus operations.
@@ -210,6 +211,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         return actualShares;
     }
 
+    /// @dev The minted shares are calculated considering the minted VTokens
+    /// @dev It can mint slightly fewer shares than requested, because VToken.mint rounds down
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
@@ -229,6 +232,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         return assets;
     }
 
+    /// @dev Receiver can receive slightly more assets than requested, because VToken.redeemUnderlying rounds up
+    /// @dev The shares to burn are calculated considering the actual transferred assets, not the requested ones
     /// @inheritdoc ERC4626Upgradeable
     function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant returns (uint256) {
         ensureNonzeroAddress(receiver);
@@ -246,9 +251,11 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         if (shares == 0) {
             revert ERC4626__ZeroAmount("withdraw");
         }
-        uint256 actualAssets = beforeWithdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, actualAssets, shares);
-        return shares;
+
+        (uint256 actualAssets, uint256 actualShares) = beforeWithdraw(assets);
+        _withdraw(_msgSender(), receiver, owner, actualAssets, actualShares);
+
+        return actualShares;
     }
 
     /// @inheritdoc ERC4626Upgradeable
@@ -264,12 +271,11 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert ERC4626__RedeemMoreThanMax();
         }
 
-        uint256 assets = previewRedeem(shares);
-        if (assets == 0) {
+        uint256 actualAssets = beforeRedeem(shares);
+        if (actualAssets == 0) {
             revert ERC4626__ZeroAmount("redeem");
         }
 
-        uint256 actualAssets = beforeWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, actualAssets, shares);
         return actualAssets;
     }
@@ -344,28 +350,63 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         }
     }
 
+    /// @notice Redeems the amount of vTokens equivalent to the provided shares.
+    /// @dev Calls `redeem` on the vToken contract. Reverts on error.
+    /// @param shares The amount of shares to redeem.
+    /// @return The amount of assets transferred in
+    function beforeRedeem(uint256 shares) internal returns (uint256) {
+        IERC20Upgradeable token = IERC20Upgradeable(asset());
+        uint256 balanceBefore = token.balanceOf(address(this));
+
+        // Calculate the amount of vTokens equivalent to the amount of shares, rounding it down
+        uint256 vTokens = shares.mulDiv(
+            vToken.balanceOf(address(this)),
+            totalSupply() + 10 ** _decimalsOffset(),
+            MathUpgradeable.Rounding.Down
+        );
+
+        uint256 errorCode = vToken.redeem(vTokens);
+        if (errorCode != NO_ERROR) {
+            revert VenusERC4626__VenusError(errorCode);
+        }
+
+        uint256 balanceAfter = token.balanceOf(address(this));
+
+        // Return the amount of assets that was *actually* transferred in
+        return balanceAfter - balanceBefore;
+    }
+
     /// @notice Redeems underlying assets before withdrawing from the vault.
     /// @dev Calls `redeemUnderlying` on the vToken contract. Reverts on error.
     /// @param assets The amount of underlying assets to redeem.
-    /// @return The amount of assets transferred in
-    function beforeWithdraw(uint256 assets) internal returns (uint256) {
+    /// @return actualAssets The amount of assets transferred in
+    /// @return actualShares The shares equivalent to `actualAssets`, to be burned, rounded up
+    function beforeWithdraw(uint256 assets) internal returns (uint256 actualAssets, uint256 actualShares) {
         IERC20Upgradeable token = IERC20Upgradeable(asset());
         uint256 balanceBefore = token.balanceOf(address(this));
+        uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
 
         uint256 errorCode = vToken.redeemUnderlying(assets);
         if (errorCode != NO_ERROR) {
             revert VenusERC4626__VenusError(errorCode);
         }
 
-        uint256 balanceAfter = token.balanceOf(address(this));
-        // Return the amount that was *actually* transferred
-        return balanceAfter - balanceBefore;
+        // Return the amount of assets *actually* transferred in
+        actualAssets = token.balanceOf(address(this)) - balanceBefore;
+
+        // Return the shares equivalent to the burned vTokens
+        uint256 actualVTokens = vTokenBalanceBefore - vToken.balanceOf(address(this));
+        actualShares = actualVTokens.mulDiv(
+            totalSupply() + 10 ** _decimalsOffset(),
+            vTokenBalanceBefore,
+            MathUpgradeable.Rounding.Up
+        );
     }
 
     /// @notice Mints vTokens after depositing assets.
     /// @dev Calls `mint` on the vToken contract. Reverts on error.
     /// @param assets The amount of underlying assets to deposit.
-    function mintVTokens(uint256 assets) internal {
+    function _mintVTokens(uint256 assets) internal {
         ERC20Upgradeable(asset()).safeApprove(address(vToken), assets);
         uint256 errorCode = vToken.mint(assets);
         if (errorCode != NO_ERROR) {
@@ -399,7 +440,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         uint256 assetsReceived = IERC20Upgradeable(asset()).balanceOf(address(this)) - assetBalanceBefore;
 
         // 4. Mint vTokens with received assets
-        mintVTokens(assetsReceived);
+        _mintVTokens(assetsReceived);
 
         // 5. Verify actual vTokens received
         uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
@@ -407,8 +448,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
         // 6. Recalculate shares based on actual received value
         // This is the same operation performed by previewDeposit, adjusting the total assets
-        uint256 actualShares = MathUpgradeable.mulDiv(
-            actualAssetsValue,
+        uint256 actualShares = actualAssetsValue.mulDiv(
             totalSupply() + 10 ** _decimalsOffset(),
             totalAssets() + 1 - actualAssetsValue, // remove the new assets deposited to the VToken in this operation
             MathUpgradeable.Rounding.Down
