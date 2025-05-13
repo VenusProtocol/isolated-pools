@@ -202,8 +202,12 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         if (shares == 0) {
             revert ERC4626__ZeroAmount("deposit");
         }
+
+        uint256 totalSupplyBefore = totalSupply();
         _deposit(_msgSender(), receiver, assets, shares);
-        return shares;
+        uint256 actualShares = totalSupply() - totalSupplyBefore;
+
+        return actualShares;
     }
 
     /// @inheritdoc ERC4626Upgradeable
