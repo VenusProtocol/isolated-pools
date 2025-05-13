@@ -96,15 +96,18 @@ if (FORK) {
 
         const depositEvent = receipt.events?.find(e => e.event === "Deposit");
         const actualShares = depositEvent?.args?.shares;
+        const actualAssets = depositEvent?.args?.assets;
 
         const assetsAfter = await usdt.balanceOf(await userSigner.getAddress());
         const sharesAfter = await venusERC4626.balanceOf(await userSigner.getAddress());
 
         expect(assetsBefore.sub(assetsAfter)).to.equal(depositAmount);
         expect(sharesAfter.sub(sharesBefore)).to.equal(actualShares);
+        expect(actualAssets).to.equal(depositAmount);
 
         const expectedAssetsFromShares = await venusERC4626.previewRedeem(actualShares);
         expect(expectedAssetsFromShares).to.be.lte(depositAmount);
+        expect(expectedAssetsFromShares).to.be.closeTo(depositAmount, parseUnits("1", 11));
       });
 
       it("should withdraw more than deposited assets, with time", async () => {

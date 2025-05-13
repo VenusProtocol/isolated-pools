@@ -31,6 +31,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @notice The Venus vToken associated with this ERC4626 vault.
     VToken public vToken;
 
+    /// @notice Amount of vTokens tracked by this contract, ignoring donations, for example
+    uint256 vTokenBalance;
+
     /// @notice The Venus Comptroller contract, responsible for market operations.
     IComptroller public comptroller;
 
@@ -49,6 +52,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
     /// @notice Event emitted when tokens are swept
     event SweepToken(address indexed token, address indexed receiver, uint256 amount);
+
+    /// @notice Event emitted when VToken balance is updated
+    event VTokenBalanceUpdated(uint256 indexed oldBalance, uint256 indexed newBalance);
 
     /// @notice Thrown when a Venus protocol call returns an error.
     /// @dev This error is triggered if a Venus operation (such as minting or redeeming vTokens) fails.
@@ -278,7 +284,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @notice Returns the total amount of assets deposited
     /// @return Amount of assets deposited
     function totalAssets() public view virtual override returns (uint256) {
-        return (vToken.balanceOf(address(this)) * vToken.exchangeRateStored()) / EXP_SCALE;
+        return (vTokenBalance * vToken.exchangeRateStored()) / EXP_SCALE;
     }
 
     /// @notice Returns the maximum deposit allowed based on Venus supply caps.
@@ -355,7 +361,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
         // Calculate the amount of vTokens equivalent to the amount of shares, rounding it down
         uint256 vTokens = shares.mulDiv(
-            vToken.balanceOf(address(this)),
+            vTokenBalance,
             totalSupply() + 10 ** _decimalsOffset(),
             MathUpgradeable.Rounding.Down
         );
@@ -364,6 +370,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         if (errorCode != NO_ERROR) {
             revert VenusERC4626__VenusError(errorCode);
         }
+
+        _decreaseVTokenBalance(vTokens);
 
         uint256 balanceAfter = token.balanceOf(address(this));
 
@@ -392,27 +400,37 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
             revert VenusERC4626__VenusError(errorCode);
         }
 
-        // Return the amount of assets *actually* transferred in
-        actualAssets = token.balanceOf(address(this)) - balanceBefore;
-
         // Return the shares equivalent to the burned vTokens
         uint256 actualVTokens = vTokenBalanceBefore - vToken.balanceOf(address(this));
+        _decreaseVTokenBalance(actualVTokens);
         actualShares = actualVTokens.mulDiv(
             totalSupply() + 10 ** _decimalsOffset(),
             vTokenBalanceBefore,
             MathUpgradeable.Rounding.Up
         );
+
+        // Return the amount of assets *actually* transferred in
+        actualAssets = token.balanceOf(address(this)) - balanceBefore;
     }
 
     /// @notice Mints vTokens after depositing assets.
     /// @dev Calls `mint` on the vToken contract. Reverts on error.
     /// @param assets The amount of underlying assets to deposit.
-    function _mintVTokens(uint256 assets) internal {
+    /// @return Amount of minted vTokens
+    function _mintVTokens(uint256 assets) internal returns (uint256) {
+        uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
+
         ERC20Upgradeable(asset()).safeApprove(address(vToken), assets);
         uint256 errorCode = vToken.mint(assets);
         if (errorCode != NO_ERROR) {
             revert VenusERC4626__VenusError(errorCode);
         }
+
+        uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
+
+        _increaseVTokenBalance(vTokensReceived);
+
+        return vTokensReceived;
     }
 
     /// @notice Sets a new reward recipient address
@@ -426,13 +444,30 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         rewardRecipient = newRecipient;
     }
 
+    /// @notice Increase the tracked balance of VTokens
+    /// @param delta Amount of VTokens to add to the tracked amount
+    /// @custom:event VTokenBalanceUpdated is emitted
+    function _increaseVTokenBalance(uint256 delta) internal {
+        uint256 newVTokenBalance = vTokenBalance + delta;
+        emit VTokenBalanceUpdated(vTokenBalance, newVTokenBalance);
+        vTokenBalance = newVTokenBalance;
+    }
+
+    /// @notice Increase the tracked balance of VTokens
+    /// @param delta Amount of VTokens to remove from the tracked amount
+    /// @custom:event VTokenBalanceUpdated is emitted
+    function _decreaseVTokenBalance(uint256 delta) internal {
+        uint256 newVTokenBalance = vTokenBalance - delta;
+        emit VTokenBalanceUpdated(vTokenBalance, newVTokenBalance);
+        vTokenBalance = newVTokenBalance;
+    }
+
     /// @notice Deposits the assets into the VToken and calculates the shares to mint based on the
     /// underlying assets equivalent to the new VTokens minted
     /// @inheritdoc ERC4626Upgradeable
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // 1. Track pre-transfer balances
         uint256 assetBalanceBefore = IERC20Upgradeable(asset()).balanceOf(address(this));
-        uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
 
         // 2. Perform asset transfer (original OZ 4626 logic)
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
@@ -441,10 +476,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         uint256 assetsReceived = IERC20Upgradeable(asset()).balanceOf(address(this)) - assetBalanceBefore;
 
         // 4. Mint vTokens with received assets
-        _mintVTokens(assetsReceived);
+        uint256 vTokensReceived = _mintVTokens(assetsReceived);
 
         // 5. Verify actual vTokens received
-        uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
         uint256 actualAssetsValue = (vTokensReceived * vToken.exchangeRateStored()) / EXP_SCALE;
 
         // 6. Recalculate shares based on actual received value
