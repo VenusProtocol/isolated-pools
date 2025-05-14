@@ -7902,9 +7902,9 @@ export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
     case "opbnbmainnet":
       return BigNumber.from(0.0005e16);
     case "unichainsepolia":
-      return BigNumber.from(0.0005e16); 
+      return BigNumber.from(0.0005e16);
     case "unichainmainnet":
-      return BigNumber.from(0.0005e16); 
+      return BigNumber.from(0.0005e16);
     case "development":
       return BigNumber.from(0.0005e16);
     default:
