@@ -376,13 +376,8 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
     /// @param assets The amount of underlying assets to redeem.
     /// @return actualAssets The amount of assets transferred in
     /// @return actualShares The shares equivalent to `actualAssets`, to be burned, rounded up
-    /// @custom:error ERC4626__ZeroAmount is thrown when the shares for the assets are zero
+    /// @custom:error ERC4626__ZeroAmount is thrown when the redeemed VTokens are zero
     function _beforeWithdraw(uint256 assets) internal returns (uint256 actualAssets, uint256 actualShares) {
-        uint256 shares = previewWithdraw(assets);
-        if (shares == 0) {
-            revert ERC4626__ZeroAmount("beforeWithdraw");
-        }
-
         IERC20Upgradeable token = IERC20Upgradeable(asset());
         uint256 balanceBefore = token.balanceOf(address(this));
         uint256 vTokenBalanceBefore = vToken.balanceOf(address(this));
@@ -395,8 +390,11 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
         // Return the amount of assets *actually* transferred in
         actualAssets = token.balanceOf(address(this)) - balanceBefore;
 
-        // Return the shares equivalent to the burned vTokens
         uint256 actualVTokens = vTokenBalanceBefore - vToken.balanceOf(address(this));
+        if (actualVTokens == 0) {
+            revert ERC4626__ZeroAmount("actualVTokens at _beforeWithdraw");
+        }
+        // Return the shares equivalent to the burned vTokens
         actualShares = actualVTokens.mulDiv(
             totalSupply() + 10 ** _decimalsOffset(),
             vTokenBalanceBefore,
@@ -428,6 +426,7 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
     /// @notice Deposits the assets into the VToken and calculates the shares to mint based on the
     /// underlying assets equivalent to the new VTokens minted
+    /// @custom:error ERC4626__ZeroAmount is thrown when the minted VTokens are zero
     /// @inheritdoc ERC4626Upgradeable
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // 1. Track pre-transfer balances
@@ -445,6 +444,9 @@ contract VenusERC4626 is ERC4626Upgradeable, AccessControlledV8, MaxLoopsLimitHe
 
         // 5. Verify actual vTokens received
         uint256 vTokensReceived = vToken.balanceOf(address(this)) - vTokenBalanceBefore;
+        if (vTokensReceived == 0) {
+            revert ERC4626__ZeroAmount("vTokensReceived at _deposit");
+        }
         uint256 actualAssetsValue = (vTokensReceived * vToken.exchangeRateStored()) / EXP_SCALE;
 
         // 6. Recalculate shares based on actual received value

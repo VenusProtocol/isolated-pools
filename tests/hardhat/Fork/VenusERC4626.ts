@@ -139,6 +139,12 @@ if (FORK) {
           .to.be.revertedWithCustomError(venusERC4626, "ERC4626__ZeroAmount")
           .withArgs("deposit");
       });
+
+      it("should revert when depositing not enough assets to mint a VToken", async () => {
+        await expect(venusERC4626.connect(userSigner).deposit(1, await userSigner.getAddress()))
+          .to.be.revertedWithCustomError(venusERC4626, "ERC4626__ZeroAmount")
+          .withArgs("vTokensReceived at _deposit");
+      });
     });
 
     describe("Mint Operations", () => {
@@ -255,6 +261,12 @@ if (FORK) {
         )
           .to.be.revertedWithCustomError(venusERC4626, "ERC4626__ZeroAmount")
           .withArgs("withdraw");
+      });
+
+      it("should revert when withdrawing less than the value of 1 VToken", async () => {
+        await expect(
+          venusERC4626.connect(userSigner).withdraw(1, await userSigner.getAddress(), await userSigner.getAddress()),
+        ).to.be.revertedWith("redeemAmount is zero");
       });
     });
 
