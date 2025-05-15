@@ -1,11 +1,17 @@
 // assumes we're forking zksyncmainnet at any recent block, e.g.
-// anvil-zksync fork --fork-url mainnet --fork-block-number 59265626
+// anvil-zksync fork --fork-url mainnet --fork-block-number 60400000
+//
+// Some imports are commented because they conflict with other hardhat
+// config we have in the repo. Before running tests, uncomment these
+//
 import { smock } from "@defi-wonderland/smock";
+// import { Deployer } from "@matterlabs/hardhat-zksync";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { BytesLike, formatUnits, parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
+// import hre from "hardhat";
 import { Provider, Wallet } from "zksync-ethers";
 
 import {
@@ -72,7 +78,7 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
   describe("Repay and liquidate", async () => {
     const provider = new Provider({ url: "http://127.0.0.1:8011", timeout: 1200000 });
     const wallet = new Wallet(DEPLOYER_PRIVATE_KEY, provider);
-    const [deployer] = await ethers.getSigners();
+    const deployer = new Deployer(hre, wallet);
 
     const comptroller = Comptroller__factory.connect(COMPTROLLER, provider);
     const beacon = UpgradeableBeacon__factory.connect(COMPTROLLER_BEACON, provider);
@@ -104,18 +110,22 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
 
     describe("Prerequisites – Mountain protocol team", () => {
       it("should mint USDM", async () => {
-        await usdm.connect(usdmMinter).mint(USDM_MINTER, USDM_MINT_AMOUNT);
+        const nonce = await usdmMinter.getTransactionCount();
+        await usdm.connect(usdmMinter).mint(USDM_MINTER, USDM_MINT_AMOUNT, { nonce });
         expect(await usdm.balanceOf(USDM_MINTER)).to.be.gte(USDM_MINT_AMOUNT);
       });
 
       it("should deposit USDM to wUSDM", async () => {
-        await usdm.connect(usdmMinter).approve(WUSDM, USDM_MINT_AMOUNT);
-        await wUSDM.connect(usdmMinter).deposit(USDM_MINT_AMOUNT, USDM_MINTER);
+        let nonce = await usdmMinter.getTransactionCount();
+        await usdm.connect(usdmMinter).approve(WUSDM, USDM_MINT_AMOUNT, { nonce });
+        nonce = await usdmMinter.getTransactionCount();
+        await wUSDM.connect(usdmMinter).deposit(USDM_MINT_AMOUNT, USDM_MINTER, { nonce });
       });
 
       it("should transfer wUSDM to the auxiliary contract", async () => {
         const wUSDMAmount = await wUSDM.balanceOf(USDM_MINTER);
-        await wUSDM.connect(usdmMinter).transfer(wUSDMLiquidator.address, wUSDMAmount);
+        const nonce = await usdmMinter.getTransactionCount();
+        await wUSDM.connect(usdmMinter).transfer(wUSDMLiquidator.address, wUSDMAmount, { nonce });
       });
     });
 
