@@ -13574,7 +13574,7 @@
       ]
     },
     "WUSDMLiquidator": {
-      "address": "0xB983E9A88A14df7B57A3C47c19D69F60250CE40B",
+      "address": "0x0192fFeFb1dddB9d30afcCCb12F60CEaaD490807",
       "abi": [
         {
           "anonymous": false,
@@ -14066,7 +14066,7 @@
       ]
     },
     "WUSDMLiquidator_Implementation": {
-      "address": "0x26c39018Bc69d31E9AA783020450d4033110a028",
+      "address": "0xffcaD7463942Ef1e5961866757bE164b51d736e3",
       "abi": [
         {
           "inputs": [],
@@ -14432,7 +14432,7 @@
       ]
     },
     "WUSDMLiquidator_Proxy": {
-      "address": "0xB983E9A88A14df7B57A3C47c19D69F60250CE40B",
+      "address": "0x0192fFeFb1dddB9d30afcCCb12F60CEaaD490807",
       "abi": [
         {
           "inputs": [
