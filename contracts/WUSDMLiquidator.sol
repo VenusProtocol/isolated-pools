@@ -169,12 +169,14 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
 
     function _borrowWETHAndLiquidateBorrowers(uint256 wusdmPrice, uint256 vwUSDMExchangeRate) internal {
         uint256 a2Debt = _getDebt(VWETH, A2);
-        _borrow(VWETH, a2Debt);
-        WETH.approveOrRevert(address(VWETH), a2Debt);
         uint256 ratio = _getBorrowedTokensToCollateralVTokensRatio(VWETH, wusdmPrice, vwUSDMExchangeRate);
-        a2Debt = _liquidateAsMuchAsPossible(A2, a2Debt, VWETH, VWUSDM, ratio);
-        _repay(A2, VWETH, a2Debt > 1 ? a2Debt - 1 : 0);
-        WETH.approveOrRevert(address(VWETH), 0);
+        uint256 amountToRepay = _getAmountToRepayDuringLiquidation(A2, a2Debt, VWUSDM, ratio);
+        if (amountToRepay > 0) {
+            _borrow(VWETH, amountToRepay);
+            WETH.approveOrRevert(address(VWETH), amountToRepay);
+            VWETH.liquidateBorrow(A2, amountToRepay, VWUSDM);
+            WETH.approveOrRevert(address(VWETH), 0);
+        }
     }
 
     function _borrowUSDCeAndLiquidateBorrowers(uint256 wusdmPrice, uint256 vwUSDMExchangeRate) internal {
@@ -241,6 +243,22 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         if (debt == 0) {
             return 0;
         }
+        uint256 amountToRepay = _getAmountToRepayDuringLiquidation(account, debt, collateral, ratio);
+        if (amountToRepay > 1) {
+            market.liquidateBorrow(account, amountToRepay, collateral);
+        }
+        return debt - amountToRepay;
+    }
+
+    function _getAmountToRepayDuringLiquidation(
+        address account,
+        uint256 debt,
+        VToken collateral,
+        uint256 ratio
+    ) internal view returns (uint256) {
+        if (debt == 0) {
+            return 0;
+        }
         uint256 seizeableVTokens = collateral.balanceOf(account);
         if (seizeableVTokens <= 1) {
             return debt;
@@ -250,11 +268,7 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
         // of vTokens supplied so that we're able to test it later
         uint256 amountToRepayForEntireCollateral = ((seizeableVTokens - 1) * 1e18) / ratio;
         // Keeping 1 wei of debt, for the same purpose
-        uint256 amountToRepay = debt > amountToRepayForEntireCollateral ? amountToRepayForEntireCollateral : (debt - 1);
-        if (amountToRepay > 1) {
-            market.liquidateBorrow(account, amountToRepay, collateral);
-        }
-        return debt - amountToRepay;
+        return debt > amountToRepayForEntireCollateral ? amountToRepayForEntireCollateral : (debt - 1);
     }
 
     function _getBorrowedTokensToCollateralVTokensRatio(

@@ -52,7 +52,7 @@ const ORIGINAL_CLOSE_FACTOR = parseUnits("0.5", 18);
 const USDM_MINTER = "0xd9dF2f01183eA1738f7C9a5314440f04e4B28b21";
 const USDM = "0x7715c206A14Ac93Cb1A6c0316A6E5f8aD7c9Dc31";
 const WUSDM = "0xA900cbE7739c96D2B153a273953620A701d5442b";
-const USDM_MINT_AMOUNT = parseUnits("1200000", 18);
+const USDM_MINT_AMOUNT = parseUnits("370732.56284", 18);
 
 const DEPLOYER_PRIVATE_KEY = `0x${process.env["DEPLOYER_PRIVATE_KEY"]}` as BytesLike;
 
@@ -210,8 +210,10 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
 
     describe("Post-VIP state", () => {
       describe(A1, () => {
-        it(`keeps 805315.832951034118725452 wUSDM of debt in ${A1}`, async () => {
-          expect(await vwUSDM.callStatic.borrowBalanceCurrent(A1)).to.equal(parseUnits("805315.832951034118725452"));
+        it(`keeps 838396.149909612463448294 wUSDM of debt in ${A1}`, async () => {
+          expect(await vwUSDM.callStatic.borrowBalanceCurrent(A1)).to.equal(
+            parseUnits("838396.149909612463448294", 18),
+          );
         });
 
         it(`keeps 287 wei of vWETH collateral in ${A1}`, async () => {
@@ -220,12 +222,12 @@ if (FORK && FORKED_NETWORK === "zksyncmainnet") {
       });
 
       describe(A2, () => {
-        it(`leaves 1 wei of WETH debt in ${A2}`, async () => {
-          expect(await vWETH.callStatic.borrowBalanceCurrent(A2)).to.equal(1);
+        it(`leaves 55.100051544679330171 WETH debt in ${A2}`, async () => {
+          expect(await vWETH.callStatic.borrowBalanceCurrent(A2)).to.equal(parseUnits("55.100051544679330171", 18));
         });
 
-        it(`leaves 15890.96471584 vwUSDM of collateral in ${A2}`, async () => {
-          expect(await vwUSDM.balanceOf(A2)).to.equal(parseUnits("15890.96471584", 8));
+        it(`leaves less than 100 wei of vwUSDM collateral in ${A2}`, async () => {
+          expect(await vwUSDM.balanceOf(A2)).to.be.lt(100);
         });
       });
 
