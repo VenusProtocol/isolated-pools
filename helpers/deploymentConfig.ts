@@ -323,14 +323,14 @@ export const preconfiguredAddresses = {
   },
   unichainsepolia: {
     VTreasury: "0x0C7CB62F2194cD701bcE8FD8067b43A3Bb76428e",
-    NormalTimelock: UNICHAIN_SEPOLIA_MULTISIG,
+    NormalTimelock: "0x5e20F5A2e23463D39287185DF84607DF7068F314",
     FastTrackTimelock: UNICHAIN_SEPOLIA_MULTISIG,
     CriticalTimelock: UNICHAIN_SEPOLIA_MULTISIG,
     AccessControlManager: "0x854C064EA6b503A97980F481FA3B7279012fdeDd",
   },
   unichainmainnet: {
     VTreasury: "0x958F4C84d3ad523Fa9936Dc465A123C7AD43D69B",
-    NormalTimelock: UNICHAIN_MAINNET_MULTISIG,
+    NormalTimelock: "0x918532A78d22419Da4091930d472bDdf532BE89a",
     FastTrackTimelock: UNICHAIN_MAINNET_MULTISIG,
     CriticalTimelock: UNICHAIN_MAINNET_MULTISIG,
     AccessControlManager: "0x1f12014c497a9d905155eB9BfDD9FaC6885e61d0",
