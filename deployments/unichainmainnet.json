@@ -13138,7 +13138,7 @@
       ]
     },
     "VToken_vweETH_Core": {
-      "address": "0xd16b6f7f5b51e402fC1190dc6fc990a2a6ED794f",
+      "address": "0x0170398083eb0D0387709523baFCA6426146C218",
       "abi": [
         {
           "inputs": [
@@ -13212,7 +13212,7 @@
       ]
     },
     "VToken_vwstETH_Core": {
-      "address": "0x3B3aCc90D848981E69052FD461123EA19dca6cAF",
+      "address": "0xbEC19Bef402C697a7be315d3e59E5F65b89Fa1BB",
       "abi": [
         {
           "inputs": [
