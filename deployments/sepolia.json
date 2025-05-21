@@ -36149,7 +36149,7 @@
       ]
     },
     "VenusERC4626Factory": {
-      "address": "0xa2f3ac3745E6C813f5bBd3D5c8b29b894E952F04",
+      "address": "0xbf76e9429BA565220d77831A9eC3606434e2106e",
       "abi": [
         {
           "anonymous": false,
@@ -36724,7 +36724,7 @@
       ]
     },
     "VenusERC4626Factory_Implementation": {
-      "address": "0x668f86A5933EB2B867F7dc0A6E512Bb3E22fEaC3",
+      "address": "0xbD667B9FEEAEadAF3257228d9CD2B41d50Ec2dc7",
       "abi": [
         {
           "inputs": [],
@@ -37173,7 +37173,7 @@
       ]
     },
     "VenusERC4626Factory_Proxy": {
-      "address": "0xa2f3ac3745E6C813f5bBd3D5c8b29b894E952F04",
+      "address": "0xbf76e9429BA565220d77831A9eC3606434e2106e",
       "abi": [
         {
           "inputs": [
@@ -37309,7 +37309,7 @@
       ]
     },
     "VenusERC4626Implementation": {
-      "address": "0x64a811bd0E91cf00D9CE0769eDA028026577A6D9",
+      "address": "0x8aBbC46EdA562fBaF0A1FD1667d50c3b429472C0",
       "abi": [
         {
           "inputs": [],

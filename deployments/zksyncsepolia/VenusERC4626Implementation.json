@@ -1151,9 +1151,7 @@
         "blockNumber": 5157148,
         "transactionHash": "0xa7fae8ce026eeee25088772be3d088ceec88330db9e2ac2051c15c4c0bdbe2b3",
         "address": "0xAC2aBe84d2272F39F112FfdDa451b468Ad63FbcA",
-        "topics": [
-          "0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"
-        ],
+        "topics": ["0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498"],
         "data": "0x00000000000000000000000000000000000000000000000000000000000000ff",
         "logIndex": 1,
         "blockHash": "0x9518fe8433c0c6666b9209bdf96945a2b3399550e9dd78a785327e8ff1fc212b"

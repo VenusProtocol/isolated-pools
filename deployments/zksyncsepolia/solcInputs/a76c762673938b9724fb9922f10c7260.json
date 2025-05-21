@@ -346,17 +346,8 @@
     "evmVersion": "paris",
     "outputSelection": {
       "*": {
-        "*": [
-          "storageLayout",
-          "abi",
-          "evm.methodIdentifiers",
-          "metadata",
-          "devdoc",
-          "userdoc"
-        ],
-        "": [
-          "ast"
-        ]
+        "*": ["storageLayout", "abi", "evm.methodIdentifiers", "metadata", "devdoc", "userdoc"],
+        "": ["ast"]
       }
     },
     "detectMissingLibraries": false,
