@@ -31,6 +31,6 @@
     "VenusERC4626Factory": "0x102fEb723C25c67dbdfDccCa3B1c1a6e1a662D2f",
     "VenusERC4626Factory_Implementation": "0xDeDC1D9888c420D963B4F2062B8646522dA3BF63",
     "VenusERC4626Factory_Proxy": "0x102fEb723C25c67dbdfDccCa3B1c1a6e1a662D2f",
-    "VenusERC4626Implementation": "0x97C56f0a1a66bfaF6746dDec42DD861144FCbd8b"
+    "VenusERC4626Implementation": "0xE5b7978b0DB9e6d6026d1C79B8174D47295f8117"
   }
 }
