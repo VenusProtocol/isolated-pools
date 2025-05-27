@@ -1,3 +1,25 @@
+## [4.2.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.12...v4.2.0-dev.13) (2025-05-23)
+
+
+### Features
+
+* add weETH and wstETH deployments on unichain mainnet ([f5effc4](https://github.com/VenusProtocol/isolated-pools/commit/f5effc4fb600ef50b928092bca4cb6b72488452b))
+* add weETH and wstETH deployments on unichain sepolia ([24ae1ab](https://github.com/VenusProtocol/isolated-pools/commit/24ae1ab6e06166af803ce9403b27ee98b012e536))
+* redeploy weETH and wstETH on unichain mainnet ([366f62d](https://github.com/VenusProtocol/isolated-pools/commit/366f62d0dd93a20335d4b02804c016f37ffa37e8))
+* redeploy weETH and wstETH on unichain sepolia ([b720d30](https://github.com/VenusProtocol/isolated-pools/commit/b720d305afa12350b09089a90c7b7bc9ee62424d))
+* updating deployment files ([cb769a9](https://github.com/VenusProtocol/isolated-pools/commit/cb769a93d538760773e0a7389d61e14f8a1b1384))
+* updating deployment files ([743ff5e](https://github.com/VenusProtocol/isolated-pools/commit/743ff5ea7ec0434a054f7bf00f4b165cf02b79e5))
+* updating deployment files ([732c020](https://github.com/VenusProtocol/isolated-pools/commit/732c0205a649ca244fde6ef01073f3d3ac7014c8))
+* updating deployment files ([bbcfbbc](https://github.com/VenusProtocol/isolated-pools/commit/bbcfbbcc2e34fe1b69b858fd0276f3e246f3ec52))
+* updating deployment files ([c1204b0](https://github.com/VenusProtocol/isolated-pools/commit/c1204b0695934cc6b39f2a53528acfb24428bd95))
+* updating deployment files ([3fe67a8](https://github.com/VenusProtocol/isolated-pools/commit/3fe67a8d15c09c79ba97dc469de79d97af2c5d0d))
+
+
+### Bug Fixes
+
+* redeploy wstETH on unichain mainnet ([fa6bf91](https://github.com/VenusProtocol/isolated-pools/commit/fa6bf91c80f03b97fafe8d546947fea021f59837))
+* redeploy wstETH on unichain sepolia ([907d153](https://github.com/VenusProtocol/isolated-pools/commit/907d153524f2faa4585d0da1e4b4d4b2ba14cbb5))
+
 ## [4.2.0-dev.12](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.11...v4.2.0-dev.12) (2025-05-11)
 
 

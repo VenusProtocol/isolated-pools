@@ -323,14 +323,14 @@ export const preconfiguredAddresses = {
   },
   unichainsepolia: {
     VTreasury: "0x0C7CB62F2194cD701bcE8FD8067b43A3Bb76428e",
-    NormalTimelock: UNICHAIN_SEPOLIA_MULTISIG,
+    NormalTimelock: "0x5e20F5A2e23463D39287185DF84607DF7068F314",
     FastTrackTimelock: UNICHAIN_SEPOLIA_MULTISIG,
     CriticalTimelock: UNICHAIN_SEPOLIA_MULTISIG,
     AccessControlManager: "0x854C064EA6b503A97980F481FA3B7279012fdeDd",
   },
   unichainmainnet: {
     VTreasury: "0x958F4C84d3ad523Fa9936Dc465A123C7AD43D69B",
-    NormalTimelock: UNICHAIN_MAINNET_MULTISIG,
+    NormalTimelock: "0x918532A78d22419Da4091930d472bDdf532BE89a",
     FastTrackTimelock: UNICHAIN_MAINNET_MULTISIG,
     CriticalTimelock: UNICHAIN_MAINNET_MULTISIG,
     AccessControlManager: "0x1f12014c497a9d905155eB9BfDD9FaC6885e61d0",
@@ -7305,6 +7305,20 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: ethers.constants.AddressZero,
       },
+      {
+        isMock: true,
+        name: "Wrapped eETH",
+        symbol: "weETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
+      {
+        isMock: true,
+        name: "Wrapped liquid staked Ether 2.0",
+        symbol: "wstETH",
+        decimals: 18,
+        tokenAddress: ethers.constants.AddressZero,
+      },
     ],
     poolConfig: [
       {
@@ -7405,6 +7419,42 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
             vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury,
           },
+          {
+            name: "Venus wstETH (Core)",
+            asset: "wstETH",
+            symbol: "vwstETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.725", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("3", 18),
+            supplyCap: convertToUnit("14000", 18),
+            borrowCap: convertToUnit("7000", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury,
+          },
+          {
+            name: "Venus weETH (Core)",
+            asset: "weETH",
+            symbol: "vweETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.4", 18),
+            initialSupply: convertToUnit("3", 18),
+            supplyCap: convertToUnit("4000", 18),
+            borrowCap: convertToUnit("400", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_SEPOLIA,
+            vTokenReceiver: preconfiguredAddresses.unichainsepolia.VTreasury,
+          },
         ],
         rewards: [
           // XVS Rewards Over 3600 days (311040000 seconds)
@@ -7462,6 +7512,20 @@ export const globalConfig: NetworkConfig = {
         symbol: "UNI",
         decimals: 18,
         tokenAddress: "0x8f187aa05619a017077f5308904739877ce9ea21",
+      },
+      {
+        isMock: false,
+        name: "Wrapped eETH",
+        symbol: "weETH",
+        decimals: 18,
+        tokenAddress: "0x7DCC39B4d1C53CB31e1aBc0e358b43987FEF80f7",
+      },
+      {
+        isMock: false,
+        name: "Wrapped liquid staked Ether 2.0",
+        symbol: "wstETH",
+        decimals: 18,
+        tokenAddress: "0xc02fE7317D4eb8753a02c35fe019786854A92001",
       },
     ],
 
@@ -7524,6 +7588,42 @@ export const globalConfig: NetworkConfig = {
             initialSupply: convertToUnit("529.463427983309919376", 18), // 529.463427983309919376 UNI
             supplyCap: convertToUnit("4000000", 18),
             borrowCap: convertToUnit("2000000", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
+          },
+          {
+            name: "Venus wstETH (Core)",
+            asset: "wstETH",
+            symbol: "vwstETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.15", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.725", 18),
+            reserveFactor: convertToUnit("0.25", 18),
+            initialSupply: convertToUnit("3", 18),
+            supplyCap: convertToUnit("14000", 18),
+            borrowCap: convertToUnit("7000", 18),
+            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
+            vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
+          },
+          {
+            name: "Venus weETH (Core)",
+            asset: "weETH",
+            symbol: "vweETH_Core",
+            rateModel: InterestRateModels.JumpRate.toString(),
+            baseRatePerYear: "0",
+            multiplierPerYear: convertToUnit("0.09", 18),
+            jumpMultiplierPerYear: convertToUnit("3", 18),
+            kink_: convertToUnit("0.45", 18),
+            collateralFactor: convertToUnit("0.7", 18),
+            liquidationThreshold: convertToUnit("0.75", 18),
+            reserveFactor: convertToUnit("0.4", 18),
+            initialSupply: convertToUnit("3", 18),
+            supplyCap: convertToUnit("4000", 18),
+            borrowCap: convertToUnit("400", 18),
             reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_UNICHAIN_MAINNET,
             vTokenReceiver: preconfiguredAddresses.unichainmainnet.VTreasury,
           },
@@ -7800,6 +7900,10 @@ export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
     case "opbnbtestnet":
       return BigNumber.from(0.0005e16);
     case "opbnbmainnet":
+      return BigNumber.from(0.0005e16);
+    case "unichainsepolia":
+      return BigNumber.from(0.0005e16);
+    case "unichainmainnet":
       return BigNumber.from(0.0005e16);
     case "development":
       return BigNumber.from(0.0005e16);
