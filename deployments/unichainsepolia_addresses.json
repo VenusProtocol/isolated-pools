@@ -26,6 +26,7 @@
     "RewardsDistributorImpl": "0x201Fe3258F34a7b3a1F284056dC9D9B7B0b3E9bd",
     "RewardsDistributor_Core_0": "0xeE51109E032595D2943397C73d8d5D0982C0E00D",
     "RewardsDistributor_Core_0_Proxy": "0xeE51109E032595D2943397C73d8d5D0982C0E00D",
+    "TwoKinks_base0bps_slope1000bps_kink8000bps_slope27000bps_base20bps_kink29000bps_jump25000bps_timeBased": "0x871C80dd0d165307eEeeCF6B0aC0a3Af91B90FE4",
     "VTokenBeacon": "0x123AC6429C00333D5b2E140e54d9037E154b27E4",
     "VTokenImpl": "0x747CFdF20d4257131Bf5731D2A79f570B71970E8",
     "VToken_vUNI_Core": "0xaE43aAd383b93FCeE5d3e0dD2d40b6e94639c642",
