@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
+
 import { VenusERC4626 } from "../../ERC4626/VenusERC4626.sol";
+import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 contract MockVenusERC4626 is VenusERC4626 {
+    mapping(address => uint256) private _balances;
     uint256 private mockTotalAssets;
     uint256 private mockMaxDeposit;
     uint256 private mockMaxWithdraw;
     uint256 private mockMaxMint;
     uint256 private mockMaxRedeem;
+    uint256 private mockTotalSupply;
 
     // Mock functions for testing
     function setTotalAssets(uint256 _totalAssets) external {
@@ -30,9 +35,12 @@ contract MockVenusERC4626 is VenusERC4626 {
         mockMaxMint = _maxMint;
     }
 
-    // Expose internal functions for testing
-    function getDecimalsOffset() external view returns (uint8) {
-        return _decimalsOffset();
+    function setTotalSupply(uint256 _totalSupply) external {
+        mockTotalSupply = _totalSupply;
+    }
+
+    function setAccountBalance(address account, uint256 balance) public {
+        _balances[account] = balance;
     }
 
     // Override totalAssets to return the mocked value
@@ -56,5 +64,21 @@ contract MockVenusERC4626 is VenusERC4626 {
 
     function maxRedeem(address) public view override returns (uint256) {
         return mockMaxRedeem;
+    }
+
+    function totalSupply() public view override(ERC20Upgradeable, IERC20Upgradeable) returns (uint256) {
+        return mockTotalSupply;
+    }
+
+    function _mint(address account, uint256 amount) internal override {
+        mockTotalSupply += amount;
+        _balances[account] += amount;
+        super._mint(account, amount);
+    }
+
+    function _burn(address account, uint256 amount) internal override {
+        mockTotalSupply -= amount;
+        _balances[account] -= amount;
+        super._burn(account, amount);
     }
 }

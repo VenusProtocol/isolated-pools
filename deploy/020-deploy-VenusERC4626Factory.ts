@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { DeployFunction, DeployResult } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+
 import { getConfig } from "../helpers/deploymentConfig";
 import { toAddress } from "../helpers/deploymentUtils";
 
@@ -67,11 +68,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const erc4626FactoryProxy = await ethers.getContract("VenusERC4626Factory");
   const targetOwner = preconfiguredAddresses.NormalTimelock || deployer;
 
-  if ((await erc4626FactoryProxy.owner()) === deployer && (await erc4626FactoryProxy.pendingOwner()) === ethers.constants.AddressZero) {
-      console.log(`Transferring ownership of erc4626FactoryProxy to ${targetOwner}`);
-      const tx = await erc4626FactoryProxy.transferOwnership(targetOwner);
-      await tx.wait();
-    }
+  if (
+    (await erc4626FactoryProxy.owner()) === deployer &&
+    (await erc4626FactoryProxy.pendingOwner()) === ethers.constants.AddressZero
+  ) {
+    console.log(`Transferring ownership of erc4626FactoryProxy to ${targetOwner}`);
+    const tx = await erc4626FactoryProxy.transferOwnership(targetOwner);
+    await tx.wait();
+  }
 };
 
 func.tags = ["VenusERC4626Factory"];
