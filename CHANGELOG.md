@@ -1,3 +1,12 @@
+## [4.2.0-dev.14](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.13...v4.2.0-dev.14) (2025-06-02)
+
+
+### Features
+
+* add deployments for sUSDe and USDe on ethereum ([190c018](https://github.com/VenusProtocol/isolated-pools/commit/190c01896adef13ed043f4af4ff7f471a0b3acb1))
+* add deployments for sUSDe and USDe on sepolia ([3227327](https://github.com/VenusProtocol/isolated-pools/commit/3227327c92bc43a206a5d3c055d033bfd35a5afa))
+* updating deployment files ([f03aa40](https://github.com/VenusProtocol/isolated-pools/commit/f03aa40b5c567002e54902d8546034977bf17168))
+
 ## [4.2.0-dev.13](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0-dev.12...v4.2.0-dev.13) (2025-05-23)
 
 
