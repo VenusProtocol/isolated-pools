@@ -2694,7 +2694,727 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1250bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope0bps_jump0bps_kink0bps_bpy2628000": {
+      "address": "0x6c7C46802061FEa5073ac5a10bdC838A41FB75D8",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "baseRatePerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "multiplierPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "kink_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "contract IAccessControlManagerV8",
+              "name": "accessControlManager_",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "timeBased_",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blocksPerYear_",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBlocksPerYear",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidTimeBasedConfiguration",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "calledContract",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "methodSignature",
+              "type": "string"
+            }
+          ],
+          "name": "Unauthorized",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "baseRatePerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "multiplierPerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "kink",
+              "type": "uint256"
+            }
+          ],
+          "name": "NewInterestParams",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "accessControlManager",
+          "outputs": [
+            {
+              "internalType": "contract IAccessControlManagerV8",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "baseRatePerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "blocksOrSecondsPerYear",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getBlockNumberOrTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "getBorrowRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserveFactorMantissa",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "getSupplyRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isInterestRateModel",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isTimeBased",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "jumpMultiplierPerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "kink",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "multiplierPerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "baseRatePerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "multiplierPerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "kink_",
+              "type": "uint256"
+            }
+          ],
+          "name": "updateJumpRateModel",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "utilizationRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        }
+      ]
+    },
+    "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy2628000": {
+      "address": "0x8a38a184E4AF5FeE49D97F9A70228C00B20cD085",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "baseRatePerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "multiplierPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "kink_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "contract IAccessControlManagerV8",
+              "name": "accessControlManager_",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "timeBased_",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "blocksPerYear_",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidBlocksPerYear",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidTimeBasedConfiguration",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "calledContract",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "methodSignature",
+              "type": "string"
+            }
+          ],
+          "name": "Unauthorized",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "baseRatePerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "multiplierPerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerBlockOrTimestamp",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "kink",
+              "type": "uint256"
+            }
+          ],
+          "name": "NewInterestParams",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "accessControlManager",
+          "outputs": [
+            {
+              "internalType": "contract IAccessControlManagerV8",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "baseRatePerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "blocksOrSecondsPerYear",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getBlockNumberOrTimestamp",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "getBorrowRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserveFactorMantissa",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "getSupplyRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isInterestRateModel",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "isTimeBased",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "jumpMultiplierPerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "kink",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "multiplierPerBlock",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "baseRatePerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "multiplierPerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "jumpMultiplierPerYear",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "kink_",
+              "type": "uint256"
+            }
+          ],
+          "name": "updateJumpRateModel",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "cash",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "borrows",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserves",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "badDebt",
+              "type": "uint256"
+            }
+          ],
+          "name": "utilizationRate",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        }
+      ]
+    },
+    "JumpRateModelV2_base0bps_slope1250bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0x508a84311d19fb77E603C1d234d560b2374d0791",
       "abi": [
         {
@@ -3013,7 +3733,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0x244dBE6d11Ae9AadBaD552E6BD8901B680028E31",
       "abi": [
         {
@@ -3332,7 +4052,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1562bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope1562bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0x322072b84434609ff64333A125516055B5B4405F",
       "abi": [
         {
@@ -3692,7 +4412,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1630bps_jump25000bps_kink9200bps": {
+    "JumpRateModelV2_base0bps_slope1630bps_jump25000bps_kink9200bps_bpy2628000": {
       "address": "0x786ed1931Fa76a70B1259c42B0aC106B1E08485c",
       "abi": [
         {
@@ -4052,7 +4772,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1750bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope1750bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0x675b3dF06a5F3A7d2f04e7852Dbf8f8d40959Ca9",
       "abi": [
         {
@@ -4412,7 +5132,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope2000bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope2000bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0x837996e7d74222965ACf1fdd478926e07336a291",
       "abi": [
         {
@@ -4772,7 +5492,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": {
+    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps_bpy2628000": {
       "address": "0x2F81dAA9de0fD60fb9B105Cfc5b67A31Fda547b6",
       "abi": [
         {
@@ -5132,7 +5852,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope300bps_jump8000bps_kink9000bps": {
+    "JumpRateModelV2_base0bps_slope300bps_jump8000bps_kink9000bps_bpy2628000": {
       "address": "0xe1747F8D64C297DBB482c4FD8fd11EA73F7Dc85a",
       "abi": [
         {
@@ -5492,7 +6212,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope350bps_jump8000bps_kink8000bps_bpy2628000": {
       "address": "0x01E002C218D70dD374566cc40D9fCA1429AB7E65",
       "abi": [
         {
@@ -5811,7 +6531,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope450bps_jump20000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope450bps_jump20000bps_kink4500bps_bpy2628000": {
       "address": "0xDaFA3B350288cEb448e0E03077D932f8EF561391",
       "abi": [
         {
@@ -6171,7 +6891,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink8000bps_bpy2628000": {
       "address": "0xFCaBF5b76968e010b8BC310486bE418b9d16fEb2",
       "abi": [
         {
@@ -6490,7 +7210,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink9000bps": {
+    "JumpRateModelV2_base0bps_slope450bps_jump8000bps_kink9000bps_bpy2628000": {
       "address": "0x834078D691d431aAdC80197f7a61239F9F89547b",
       "abi": [
         {
@@ -6850,7 +7570,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps": {
+    "JumpRateModelV2_base0bps_slope500bps_jump8000bps_kink7500bps_bpy2628000": {
       "address": "0x07a912CD58CbB5736d015608F424c43B2CAd0B5e",
       "abi": [
         {
@@ -7169,7 +7889,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope700bps_jump8000bps_kink8000bps_bpy2628000": {
       "address": "0x0F84aF9A902dbb5a0986e5D5003189cF2B80A760",
       "abi": [
         {
@@ -7488,7 +8208,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope800bps_jump8000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope800bps_jump8000bps_kink8000bps_bpy2628000": {
       "address": "0x410a068C2ca9986d2b76d0A7b2b5DF336499114f",
       "abi": [
         {
@@ -7848,7 +8568,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0xD9D3E7adA04993Cf06dE1A5c9C7f101BD1DefBF4",
       "abi": [
         {
@@ -8208,7 +8928,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump20000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump20000bps_kink4500bps_bpy2628000": {
       "address": "0xD9a049512ABaA7073D02a398ceD1B92371bff622",
       "abi": [
         {
@@ -8568,7 +9288,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4000bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4000bps_bpy2628000": {
       "address": "0x50196dfad5030ED54190F75e5F9d88600A4CA0B4",
       "abi": [
         {
@@ -8928,7 +9648,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_bpy2628000": {
       "address": "0x17F987e09896F19584799e3FFD10679b9C7C35f0",
       "abi": [
         {
@@ -9288,7 +10008,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink4500bps_bpy2628000": {
       "address": "0xae838dEB13Ff67681704AA69e31Da304918Ee43D",
       "abi": [
         {
@@ -9607,7 +10327,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink7500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink7500bps_bpy2628000": {
       "address": "0xa4f048254631119f4E899359711fB282589c4ED8",
       "abi": [
         {
@@ -9926,7 +10646,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump7500bps_kink8000bps_bpy2628000": {
       "address": "0x694536cbCe185f8549Ca56cDFeE4531593762686",
       "abi": [
         {
@@ -10245,7 +10965,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base200bps_slope1500bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base200bps_slope1500bps_jump30000bps_kink4500bps_bpy2628000": {
       "address": "0x162b94324279A3ad3AF3Eafd0CE3103a14e5b377",
       "abi": [
         {
@@ -10564,7 +11284,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink4500bps_bpy2628000": {
       "address": "0x5eD025A0a8A050bB08BC6c5FbEd526be2321A872",
       "abi": [
         {
@@ -10883,7 +11603,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps": {
+    "JumpRateModelV2_base200bps_slope2000bps_jump30000bps_kink5000bps_bpy2628000": {
       "address": "0x87C427b00C89E82064B32Ca63c9E983fedD3e53e",
       "abi": [
         {
@@ -11202,7 +11922,7 @@
         }
       ]
     },
-    "JumpRateModel_base0bps_slope1000bps_jump25000bps_kink8000bps": {
+    "JumpRateModel_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy2628000": {
       "address": "0xd7fbFD2A36b8b388E6d04C7a05956Df91862E146",
       "abi": [
         {
@@ -29372,7 +30092,7 @@
         }
       ]
     },
-    "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps": {
+    "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps_bpy2628000": {
       "address": "0x4A786e4653Ff7DBA74D6dA0861350F233f2dA73b",
       "abi": [
         {
@@ -37143,6 +37863,80 @@
         }
       ]
     },
+    "VToken_vUSDe_Core": {
+      "address": "0xa0EE2bAA024cC3AA1BC9395522D07B7970Ca75b3",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
     "VToken_vWBTC_Core": {
       "address": "0x8716554364f20BCA783cb2BAA744d39361fd1D8d",
       "abi": [
@@ -42092,6 +42886,80 @@
     },
     "VToken_vsUSDS_Core": {
       "address": "0xE36Ae842DbbD7aE372ebA02C8239cd431cC063d6",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "VToken_vsUSDe_Core": {
+      "address": "0xa836ce315b7A6Bb19397Ee996551659B1D92298e",
       "abi": [
         {
           "inputs": [

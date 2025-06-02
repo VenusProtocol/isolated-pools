@@ -122,11 +122,11 @@ export const getUnregisteredRewardsDistributors = async (poolConfig: PoolConfig[
 };
 
 export const getBlockOrTimestampBasedDeploymentInfo = (network: string): DeploymentInfo => {
-  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
-
-  const blocksPerYearKey = isTimeBased ? "isTimeBased" : network;
-
-  return { isTimeBased: isTimeBased, blocksPerYear: blocksPerYear[blocksPerYearKey] };
+  const blocksPerYear_ = blocksPerYear[network];
+  if (blocksPerYear_ === "time-based") {
+    return { isTimeBased: true, blocksPerYear: 0 };
+  }
+  return { isTimeBased: false, blocksPerYear: blocksPerYear_ };
 };
 
 export const skipMainnets = () => async (hre: HardhatRuntimeEnvironment) => {

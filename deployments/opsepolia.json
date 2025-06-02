@@ -2472,7 +2472,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope750bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0x4425f62b240c941B8903291AD4C030eFbbF24D25",
       "abi": [
         {
@@ -2832,7 +2832,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_timeBased": {
       "address": "0x5A0F8bce93204F14F3829d3c77644ee540843C22",
       "abi": [
         {

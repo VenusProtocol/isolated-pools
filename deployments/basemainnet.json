@@ -2472,7 +2472,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": {
       "address": "0xd75065d8606460bC0BbDa5b2AbcaCc949a77842C",
       "abi": [
         {
@@ -2832,7 +2832,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps": {
+    "JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps_timeBased": {
       "address": "0x45458214fAD74C86E7DB7a51aE9D61d02BcdA6AF",
       "abi": [
         {
@@ -3192,7 +3192,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps": {
+    "JumpRateModelV2_base0bps_slope800bps_jump25000bps_kink8000bps_timeBased": {
       "address": "0xB7FCED42486F8DB8155fD509e726F9604fCdd41F",
       "abi": [
         {
@@ -3552,7 +3552,7 @@
         }
       ]
     },
-    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps": {
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_timeBased": {
       "address": "0x527c29aAfB367fAd5AFf97855EBFAa610AA514CA",
       "abi": [
         {
@@ -9416,6 +9416,80 @@
     },
     "VToken_vcbBTC_Core": {
       "address": "0x7bBd1005bB24Ec84705b04e1f2DfcCad533b6D72",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "VToken_vwstETH_Core": {
+      "address": "0x133d3BCD77158D125B75A17Cb517fFD4B4BE64C5",
       "abi": [
         {
           "inputs": [

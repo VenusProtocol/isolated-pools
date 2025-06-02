@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
-import { BSC_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../helpers/deploymentConfig";
 import { convertToUnit } from "../../helpers/utils";
 import {
   AccessControlManager,
@@ -37,7 +37,7 @@ let xvs: MockToken;
 let fakePriceOracle: FakeContract<ResilientOracleInterface>;
 let fakeAccessControlManager: FakeContract<AccessControlManager>;
 const maxLoopsLimit = 150;
-let blocksPerYear = BSC_BLOCKS_PER_YEAR; // for block based contracts
+let blocksPerYear = DEFAULT_BLOCKS_PER_YEAR; // for block based contracts
 
 async function rewardsFixture(isTimeBased: boolean) {
   [root] = await ethers.getSigners();
