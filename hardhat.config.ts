@@ -84,7 +84,7 @@ extendConfig((config: HardhatConfig) => {
         arbitrumone: [
           "node_modules/@venusprotocol/oracle/deployments/arbitrumone",
           "node_modules/@venusprotocol/protocol-reserve/deployments/arbitrumone",
-          "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumsepolia",
+          "node_modules/@venusprotocol/governance-contracts/deployments/arbitrumone",
         ],
         basesepolia: [
           "node_modules/@venusprotocol/oracle/deployments/basesepolia",
