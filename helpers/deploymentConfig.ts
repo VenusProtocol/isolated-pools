@@ -4836,7 +4836,7 @@ export const globalConfig: NetworkConfig = {
             reduceReservesBlockDelta: DEFAULT_REDUCE_RESERVES_BLOCK_DELTA,
             vTokenReceiver: "0x3e8734ec146c981e3ed1f6b582d447dde701d90c",
           },
-           {
+          {
             name: "Venus tBTC (Core)",
             asset: "tBTC",
             symbol: "vtBTC_Core",
