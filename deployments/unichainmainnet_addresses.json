@@ -8,9 +8,11 @@
     "DefaultProxyAdmin": "0x78e9fff2ab8daAB8559070d897C399E5e1C5074c",
     "JumpRateModelV2_base0bps_slope1250bps_jump30000bps_kink8000bps_timeBased": "0x2DAb0B51d7d899b66d4F16EA1c0cEB1767863523",
     "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink3000bps_timeBased": "0x6379613ceE9f40E187971c9917fdf33ba5386CAb",
+    "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink4500bps_timeBased": "0x5C7D8858a25778d992eE803Ce79F1eff60c1d9D1",
     "JumpRateModelV2_base0bps_slope2000bps_jump25000bps_kink8000bps_timeBased": "0x897aD981078d1dBA52069f4BdC7F9441B0B94B76",
     "JumpRateModelV2_base0bps_slope300bps_jump30000bps_kink8000bps_timeBased": "0x1cC9De442f893a0C4e1E6ffB1Ac404DDb9B67ab4",
     "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": "0xb41aDec3D6dCc376164D071Cb5ed70388335e471",
+    "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_timeBased": "0xc2edB1e96e45178b901618B96142C2743Ed0e7B3",
     "NativeTokenGateway_vWETH_Core": "0x4441aE3bCEd3210edbA35d0F7348C493E79F1C52",
     "PoolLens": "0xe192aeDBDBd235DBF33Ea1444f2B908Ea3E78419",
     "PoolRegistry": "0x0C52403E16BcB8007C1e54887E1dFC1eC9765D7C",
@@ -23,6 +25,8 @@
     "VTokenImpl": "0x89368F746C6e96801cB92776E72a8948226072cc",
     "VToken_vUNI_Core": "0x67716D6Bf76170Af816F5735e14c4d44D0B05eD2",
     "VToken_vUSDC_Core": "0xB953f92B9f759d97d2F2Dec10A8A3cf75fcE3A95",
-    "VToken_vWETH_Core": "0xc219BC179C7cDb37eACB03f993f9fDc2495e3374"
+    "VToken_vWETH_Core": "0xc219BC179C7cDb37eACB03f993f9fDc2495e3374",
+    "VToken_vweETH_Core": "0x0170398083eb0D0387709523baFCA6426146C218",
+    "VToken_vwstETH_Core": "0xbEC19Bef402C697a7be315d3e59E5F65b89Fa1BB"
   }
 }
