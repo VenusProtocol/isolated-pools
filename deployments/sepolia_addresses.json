@@ -11,7 +11,6 @@
     "Comptroller_Stablecoins": "0x18eF8D2bee415b731C25662568dc1035001cEB2c",
     "DefaultProxyAdmin": "0xe98a3110929c6650c73031756288Ec518f65e846",
     "JumpRateModelV2_base0bps_slope0bps_jump0bps_kink0bps_bpy2628000": "0x9F508F3146cb03276282f9237c6eE64f76E3261D",
-    "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy2628000": "0x056CA57ed87d2AfF9a885feA6f17CA790414420d",
     "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy2628000": "0x8E09246751bcf2F621694881bd0E55d681f061c3",
     "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink9200bps_bpy2628000": "0x4769da696C52369EbB4bB6e8C646fdd4e31E155F",
     "JumpRateModelV2_base0bps_slope1000bps_jump30000bps_kink8000bps_bpy2628000": "0x93102B979b37290A9d4D59F17394C55fbAE54c5a",
