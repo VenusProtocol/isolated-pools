@@ -132,6 +132,14 @@ const config: HardhatUserConfig = {
       zksync: true,
       live: true,
     },
+    zksynctestnode: {
+      url: process.env.ZKSYNC_ERA_LOCAL_TEST_NODE || "http://localhost:8011",
+      chainId: 324,
+      ethNetwork: "mainnet",
+      blockGasLimit: 30000000,
+      timeout: 2000000000,
+      zksync: true,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -162,6 +170,9 @@ const config: HardhatUserConfig = {
       "hardhat-deploy/solc_0.8/proxy/OptimizedTransparentUpgradeableProxy.sol",
       "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol",
     ],
+  },
+  mocha: {
+    timeout: 100000000,
   },
 };
 
