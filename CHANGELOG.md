@@ -1,3 +1,35 @@
+## [4.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0...v4.3.0-dev.1) (2025-06-03)
+
+
+### Features
+
+* add a contract to resolve wUSDM incident ([9327fb2](https://github.com/VenusProtocol/isolated-pools/commit/9327fb233ea495f60052d96fdbbd106002217d30))
+* add a function to sweep tokens from the contract ([8efdb54](https://github.com/VenusProtocol/isolated-pools/commit/8efdb540d763c05f2c2fbb0352b35174095446ca))
+* add wusdm and temp comptroller impl deployments ([4acbe3e](https://github.com/VenusProtocol/isolated-pools/commit/4acbe3e0545b35b27013325a91d9d2346465fcbe))
+* adjust the test cases for block [#59265626](https://github.com/VenusProtocol/isolated-pools/issues/59265626) ([0c7461c](https://github.com/VenusProtocol/isolated-pools/commit/0c7461c10194159d86476812c75eafcec4bf1774))
+* deployed contracts ([7429f11](https://github.com/VenusProtocol/isolated-pools/commit/7429f11fd75e10250cd864229a76d804e6f5837b))
+* protect run() with owner restriction ([c57bbf0](https://github.com/VenusProtocol/isolated-pools/commit/c57bbf0ec66f606ede845a3d7820cffcbecbd410))
+* redeploy WUSDMLiquidator with the new A2 liquidation logic ([b8c4f25](https://github.com/VenusProtocol/isolated-pools/commit/b8c4f2539c7089bd4c1116771cad54d740e8673b))
+* remove exploiter liquidation code ([a8212e3](https://github.com/VenusProtocol/isolated-pools/commit/a8212e3c644008929835e988265998ddebee8e22))
+* save original configuration in storage ([f009c03](https://github.com/VenusProtocol/isolated-pools/commit/f009c038b54f5df4c9d616a25adafdc7d1f6c08c))
+* transferred ownership to NT ([74ed2f2](https://github.com/VenusProtocol/isolated-pools/commit/74ed2f2f96ce31df2626bb7e81e1b8918d1ffb5e))
+* updating deployment files ([58c7653](https://github.com/VenusProtocol/isolated-pools/commit/58c7653380db33bf7db375e41e1672b04934fcea))
+* updating deployment files ([5a53f78](https://github.com/VenusProtocol/isolated-pools/commit/5a53f78fc0ffb2bfe1eb009f3ca3fc25fe189952))
+* updating deployment files ([320c447](https://github.com/VenusProtocol/isolated-pools/commit/320c447e2d58c127c3784441378f1f10f4a861fd))
+* updating deployment files ([c0e15ae](https://github.com/VenusProtocol/isolated-pools/commit/c0e15aeda0f16ede7d26e25a23009d97b2a1bf94))
+
+
+### Bug Fixes
+
+* added config ([6e5c816](https://github.com/VenusProtocol/isolated-pools/commit/6e5c81693266f6da6d7f7e8055b538661ed62da1))
+* impersonate accounts using JsonRpcProvider ([6d09410](https://github.com/VenusProtocol/isolated-pools/commit/6d0941072e4ddffcbfc612248d0d82b0be342111))
+* liquidate what we can for A2, keep the rest as A2 debt ([282d208](https://github.com/VenusProtocol/isolated-pools/commit/282d2088fb04c014460bcc07fefbcc3b24481218))
+* merge conflict ([72e4da5](https://github.com/VenusProtocol/isolated-pools/commit/72e4da5ff1983267ccdff4bab061f9d4741ed8b5))
+* revert Comptroller changes ([5fd76d7](https://github.com/VenusProtocol/isolated-pools/commit/5fd76d7451f50e0fc81c978eae32aac50e2d89db))
+* skip wusdm liquidator for unnecessary networlks ([94bda33](https://github.com/VenusProtocol/isolated-pools/commit/94bda33959f4cb084bdea3488b64c06fca3da21f))
+* test ([024b6fd](https://github.com/VenusProtocol/isolated-pools/commit/024b6fdb35107b6cca624ad7015a1e54105ffbae))
+* use explicit nonces for impersonated signers ([89fb697](https://github.com/VenusProtocol/isolated-pools/commit/89fb6973f906a18979a4daefb7d661b659f96361))
+
 ## [4.2.0](https://github.com/VenusProtocol/isolated-pools/compare/v4.1.0...v4.2.0) (2025-06-02)
 
 
