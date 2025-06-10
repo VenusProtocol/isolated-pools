@@ -1,3 +1,18 @@
+## [4.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.1...v4.3.0-dev.2) (2025-06-10)
+
+
+### Features
+
+* add mainnet deployments ([f713ee8](https://github.com/VenusProtocol/isolated-pools/commit/f713ee80abbc5d1a4b18c2bb1b97979795bd2070))
+* remove duplicate entries ([935b0e1](https://github.com/VenusProtocol/isolated-pools/commit/935b0e10e92124dfe3622c4fa58dc64270227d80))
+* remove VToken_vHAY_Stablecoins entry ([9adda71](https://github.com/VenusProtocol/isolated-pools/commit/9adda71c00c66fcabe86c4489cff797df0f34553))
+* update risk parameters and deploy IRM on testnets ([7e46f2d](https://github.com/VenusProtocol/isolated-pools/commit/7e46f2d8668beb366d0757878c3ab1c2ce3b54a2))
+* updating deployment files ([7114b38](https://github.com/VenusProtocol/isolated-pools/commit/7114b38b1c48f8fa20e9527514f14215b43616c5))
+* updating deployment files ([6fd8454](https://github.com/VenusProtocol/isolated-pools/commit/6fd8454448b9c2dd3788739e8dc83c42a33ff3dd))
+* updating deployment files ([b74203e](https://github.com/VenusProtocol/isolated-pools/commit/b74203e3e4906d040098b66d721cae3ffb385cb8))
+* updating deployment files ([0ad5a37](https://github.com/VenusProtocol/isolated-pools/commit/0ad5a37305eb80f53c73dffb1df3b9397aedaafc))
+* updating deployment files ([22172b6](https://github.com/VenusProtocol/isolated-pools/commit/22172b62819109dc954930efae5e6d1644afeb6c))
+
 ## [4.3.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0...v4.3.0-dev.1) (2025-06-03)
 
 
