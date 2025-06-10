@@ -385,7 +385,7 @@ describe("Positive Cases", function () {
       if (timeBasedIntegrationTests) {
         await mine(700000000);
       } else {
-        await mine(600000000);
+        await mine(1200000000);
       }
 
       await BTCB.connect(acc1Signer).approve(vBTCB.address, convertToUnit(10, 18));
@@ -507,7 +507,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
 
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
 
-      let repayAmount = 1000000000003566;
+      let repayAmount = 1000000000001783;
 
       if (timeBasedIntegrationTests) repayAmount = 1000000000002377;
       const param = {
