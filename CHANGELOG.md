@@ -1,3 +1,19 @@
+## [4.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.2...v4.3.0-dev.3) (2025-06-12)
+
+
+### Features
+
+* add WBTC and USDT0 deployments on unichain mainnet ([00d0545](https://github.com/VenusProtocol/isolated-pools/commit/00d05459e5cc2f0e28552eafa51c8e62cd6a070d))
+* add WBTC and USDT0 deployments on unichain sepolia ([c4c0322](https://github.com/VenusProtocol/isolated-pools/commit/c4c032209f66f3ba5dcedabfc5834cc29abf001f))
+* updating deployment files ([e8b8379](https://github.com/VenusProtocol/isolated-pools/commit/e8b8379699c8cf438625b15ebea03b5ad370043b))
+* updating deployment files ([6fa9dd3](https://github.com/VenusProtocol/isolated-pools/commit/6fa9dd3bef6108febcabb6dc669e92a39d1f6757))
+
+
+### Bug Fixes
+
+* lint ([3b89653](https://github.com/VenusProtocol/isolated-pools/commit/3b896539de10a745f4a9b6a2b4472c0eab90d7c7))
+* remove yarn.lock ([2184069](https://github.com/VenusProtocol/isolated-pools/commit/21840695ca54f0e01a98aae2cafc714d96902bbc))
+
 ## [4.3.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.1...v4.3.0-dev.2) (2025-06-10)
 
 
