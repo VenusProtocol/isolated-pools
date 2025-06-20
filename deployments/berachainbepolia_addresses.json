@@ -2,7 +2,18 @@
   "name": "berachainbepolia",
   "chainId": "80069",
   "addresses": {
+    "ComptrollerBeacon": "0x5786bE7F63410C9017Cff4c31cf9D2456f913c54",
+    "ComptrollerImpl": "0x16A2034232732784547561893A4Fd55827b1f32D",
+    "Comptroller_Core": "0x2cAD397672BD86269E0fD41E4c61D91974e78FD0",
+    "DefaultProxyAdmin": "0x09f0Cf4eD50ed01994900CE9ee1ae85BFECd5c66",
+    "JumpRateModelV2_base0bps_slope875bps_jump25000bps_kink8000bps_timeBased": "0x1c8d09ebdA6dad7a1fd7D6D8A670B7E599602d18",
     "MockUSDC.e": "0xEf368e4c1f9ACC9241E66CD67531FEB195fF7536",
-    "MockWETH": "0x434BB500fA491Daa03375D2B9762dD6080064e2D"
+    "MockWETH": "0x434BB500fA491Daa03375D2B9762dD6080064e2D",
+    "PoolLens": "0x93B0c5F974Ac6ae6fCA6A3d9381a303c78D36D8b",
+    "PoolRegistry": "0xA387F22bd35E35904B0e59C3Db925fb061537044",
+    "PoolRegistry_Implementation": "0xA0290D346c217048871Cd004DAf26525ecb6bA5d",
+    "PoolRegistry_Proxy": "0xA387F22bd35E35904B0e59C3Db925fb061537044",
+    "VTokenBeacon": "0x834741492Baa71eb78a538f6B0Bacc3f8E76Eefe",
+    "VTokenImpl": "0xD93128D7281c5f906636e85Ab81F94782b0Ece0e"
   }
 }
