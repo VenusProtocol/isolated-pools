@@ -1,3 +1,13 @@
+## [4.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.3...v4.3.0-dev.4) (2025-06-24)
+
+
+### Features
+
+* add bscmainnet checkpoint IRMs for Maxwell upgrade ([7ed55a1](https://github.com/VenusProtocol/isolated-pools/commit/7ed55a15846d9118ce59cdcf89a060b1da131273))
+* add bsctestnet checkpoint IRMs for Maxwell upgrade ([835e3a4](https://github.com/VenusProtocol/isolated-pools/commit/835e3a43d34120c6c0cc284ab435180ab9f03616))
+* update BNB chain blocks per year to 42,048,000 ([a59a164](https://github.com/VenusProtocol/isolated-pools/commit/a59a164782a78846544a5f24e01bc1d817ebc513))
+* updating deployment files ([c8fff6b](https://github.com/VenusProtocol/isolated-pools/commit/c8fff6b2f8eb271b9b23f55b6a4bea15e68305e8))
+
 ## [4.3.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.2...v4.3.0-dev.3) (2025-06-12)
 
 
