@@ -10,6 +10,7 @@
     "ComptrollerImpl": "0xD3b2431c186A2bDEB61b86D9B042B75C954004F6",
     "Comptroller_Core": "0xD6e3E2A1d8d95caE355D15b3b9f8E5c2511874dd",
     "DefaultProxyAdmin": "0xF77bD1D893F67b3EB2Cd256239c98Ba3F238fb52",
+    "JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy63072000": "0xB58E6e7FAfC84A634fA80b4660fA0a72Ac527FDE",
     "JumpRateModelV2_base0bps_slope1250bps_jump25000bps_kink8000bps_bpy31536000": "0x0E43acCbe2f38A0e98C6979bE5b803f813ce8be5",
     "JumpRateModelV2_base0bps_slope1250bps_jump25000bps_kink8000bps_bpy63072000": "0xE28c32c3E5Ee5A349a57ea5345A8661dA1f465E4",
     "JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink6000bps_bpy31536000": "0x0b7cdC617bFE8e63D7861AbC1139811b61DbC869",
