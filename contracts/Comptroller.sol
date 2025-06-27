@@ -956,50 +956,50 @@ contract Comptroller is
     }
 
     /**
-     * @notice Executes a flashLoan operation with the specified assets and amounts.
-     * @dev Transfer the specified assets to the receiver contract and ensures that the total repayment (amount + fee)
+     * @notice Executes a flashLoan operation with the specified vTokens and underlyingAmounts.
+     * @dev Transfer the specified vTokens to the receiver contract and ensures that the total repayment (amount + fee)
      *      is returned by the receiver contract after the operation for each asset. The function performs checks to ensure the validity
-     *      of parameters, that flashLoans are enabled for the given assets, and that the total repayment is sufficient.
+     *      of parameters, that flashLoans are enabled for the given vTokens, and that the total repayment is sufficient.
      *      Reverts on invalid parameters, disabled flashLoans, or insufficient repayment.
      * @param receiver The address of the contract that will receive the flashLoan and execute the operation.
-     * @param assets The addresses of the assets to be loaned.
-     * @param amounts The amounts of each asset to be loaned.
+     * @param vTokens The addresses of the vTokens to be loaned.
+     * @param underlyingAmounts The underlyingAmounts of each asset to be loaned.
      * @param param The bytes passed in the executeOperation call.
      * @custom:requirements
-     *      - `assets.length` must be equal to `amounts.length`.
-     *      - `assets.length` and `amounts.length` must not be zero.
+     *      - `vTokens.length` must be equal to `underlyingAmounts.length`.
+     *      - `vTokens.length` and `underlyingAmounts.length` must not be zero.
      *      - The `receiver` address must not be the zero address.
      *      - FlashLoans must be enabled for each asset.
      *      - The `receiver` contract must repay the loan with the appropriate fee.
      * @custom:reverts
      *      - Reverts with `InvalidFlashLoanParams()` if parameter checks fail.
-     *      - Reverts with `FlashLoanNotEnabled(asset)` if flashLoans are disabled for any of the requested assets.
+     *      - Reverts with `FlashLoanNotEnabled(asset)` if flashLoans are disabled for any of the requested vTokens.
      *      - Reverts with `ExecuteFlashLoanFailed` if the receiver contract fails to execute the operation.
      *      - Reverts with `InsufficientReypaymentBalance(asset)` if the repayment (amount + fee) is insufficient after the operation.
      */
     function executeFlashLoan(
         address receiver,
-        VTokenInterface[] calldata assets,
-        uint256[] calldata amounts,
+        VTokenInterface[] calldata vTokens,
+        uint256[] calldata underlyingAmounts,
         bytes calldata param
     ) external override {
         ensureNonzeroAddress(receiver);
         // Asset and amount length must be equals and not be zero
-        if (assets.length != amounts.length || assets.length == 0 || receiver == address(0)) {
+        if (vTokens.length != underlyingAmounts.length || vTokens.length == 0 || receiver == address(0)) {
             revert InvalidFlashLoanParams();
         }
 
-        uint256 len = assets.length;
-        uint256[] memory protocolFees = new uint256[](assets.length);
-        uint256[] memory supplierFees = new uint256[](assets.length);
-        uint256[] memory totalFees = new uint256[](assets.length);
+        uint256 len = vTokens.length;
+        uint256[] memory protocolFees = new uint256[](vTokens.length);
+        uint256[] memory supplierFees = new uint256[](vTokens.length);
+        uint256[] memory totalFees = new uint256[](vTokens.length);
         uint256[] memory balanceAfterTransfer = new uint256[](len);
 
         for (uint256 j; j < len; ) {
-            (protocolFees[j], supplierFees[j]) = (assets[j]).calculateFlashLoanFee(amounts[j]);
+            (protocolFees[j], supplierFees[j]) = (vTokens[j]).calculateFlashLoanFee(underlyingAmounts[j]);
             totalFees[j] = protocolFees[j] + supplierFees[j]; // Sum protocol and supplier fees
             // Transfer the asset
-            (balanceAfterTransfer[j]) = (assets[j]).transferOutUnderlying(receiver, amounts[j]);
+            (balanceAfterTransfer[j]) = (vTokens[j]).transferOutUnderlying(receiver, underlyingAmounts[j]);
 
             unchecked {
                 ++j;
@@ -1007,18 +1007,23 @@ contract Comptroller is
         }
 
         // Call the execute operation on receiver contract
-        if (!IFlashLoanReceiver(receiver).executeOperation(assets, amounts, totalFees, msg.sender, param)) {
+        if (!IFlashLoanReceiver(receiver).executeOperation(vTokens, underlyingAmounts, totalFees, msg.sender, param)) {
             revert ExecuteFlashLoanFailed();
         }
 
         for (uint256 k; k < len; ) {
-            (assets[k]).transferInUnderlyingAndVerify(receiver, amounts[k], totalFees[k], balanceAfterTransfer[k]);
-            (assets[k]).transferOutUnderlying(assets[k].protocolShareReserve(), protocolFees[k]);
+            (vTokens[k]).transferInUnderlyingAndVerify(
+                receiver,
+                underlyingAmounts[k],
+                totalFees[k],
+                balanceAfterTransfer[k]
+            );
+            (vTokens[k]).transferOutUnderlying(vTokens[k].protocolShareReserve(), protocolFees[k]);
 
             // Update protocol share reserve state
-            IProtocolShareReserve(assets[k].protocolShareReserve()).updateAssetsState(
-                address(assets[k].comptroller()),
-                address(assets[k].underlying()),
+            IProtocolShareReserve(vTokens[k].protocolShareReserve()).updateAssetsState(
+                address(vTokens[k].comptroller()),
+                address(vTokens[k].underlying()),
                 IProtocolShareReserve.IncomeType.FLASHLOAN
             );
 
@@ -1027,7 +1032,7 @@ contract Comptroller is
             }
         }
 
-        emit FlashLoanExecuted(receiver, assets, amounts);
+        emit FlashLoanExecuted(receiver, vTokens, underlyingAmounts);
     }
 
     /**
@@ -1094,7 +1099,6 @@ contract Comptroller is
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
-            // require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
             if (borrowBalance > 0) {
                 revert NonzeroBorrowBalance();
             }
@@ -1109,11 +1113,10 @@ contract Comptroller is
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
+
         if (MAX_CLOSE_FACTOR_MANTISSA < newCloseFactorMantissa || MIN_CLOSE_FACTOR_MANTISSA > newCloseFactorMantissa) {
             revert InvalidCloseFactor();
         }
-        // require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
-        // require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
@@ -1191,7 +1194,6 @@ contract Comptroller is
         if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
             revert InvalidLiquidationIncentive();
         }
-        // require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
@@ -1222,8 +1224,6 @@ contract Comptroller is
         if (!vToken.isVToken()) {
             revert InvalidVToken();
         }
-
-        // require(vToken.isVToken(), "Comptroller: Invalid vToken"); // Sanity check to make sure its really a VToken
 
         Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;
@@ -1260,7 +1260,6 @@ contract Comptroller is
         if (numMarkets == 0 || numMarkets != numBorrowCaps) {
             revert InvalidInput();
         }
-        // require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
 
         _ensureMaxLoops(numMarkets);
 
@@ -1287,8 +1286,6 @@ contract Comptroller is
         if (vTokensCount == 0 || vTokensCount != newSupplyCaps.length) {
             revert InvalidInput();
         }
-        // require(vTokensCount != 0, "invalid number of markets");
-        // require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
 
         _ensureMaxLoops(vTokensCount);
 
@@ -1349,7 +1346,6 @@ contract Comptroller is
         if (rewardsDistributorExists[address(_rewardsDistributor)]) {
             revert RewardsDistributorAlreadyExists();
         }
-        // require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
 
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);
@@ -1690,7 +1686,7 @@ contract Comptroller is
         if (!markets[market].isListed) {
             revert MarketNotExist();
         }
-        // require(markets[market].isListed, "cannot pause a market that is not listed");
+
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
     }
