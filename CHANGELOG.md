@@ -1,3 +1,13 @@
+## [4.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.4...v4.3.0-dev.5) (2025-06-27)
+
+
+### Features
+
+* add mainnet deployments and deployed shortfall on testnet ([0694c00](https://github.com/VenusProtocol/isolated-pools/commit/0694c0016a5f7d394c177cf24c9daac9a53e87b0))
+* block rate update on BNB phase 2 ([58d736f](https://github.com/VenusProtocol/isolated-pools/commit/58d736fe27bada793989d433c014b802ee5b787c))
+* updating deployment files ([afbefa5](https://github.com/VenusProtocol/isolated-pools/commit/afbefa5374d4b75fd0539bc6e078fd6f1db7643b))
+* updating deployment files ([519f125](https://github.com/VenusProtocol/isolated-pools/commit/519f125a61874c883aeb450592ecc54c636060be))
+
 ## [4.3.0-dev.4](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.3...v4.3.0-dev.4) (2025-06-24)
 
 
