@@ -1221,6 +1221,7 @@ contract VToken is
 
         /* We calculate the number of collateral tokens that will be seized */
         (uint256 amountSeizeError, uint256 seizeTokens) = comptroller.liquidateCalculateSeizeTokens(
+            borrower,
             address(this),
             address(vTokenCollateral),
             actualRepayAmount
@@ -1274,8 +1275,10 @@ contract VToken is
          *  borrowerTokensNew = accountTokens[borrower] - seizeTokens
          *  liquidatorTokensNew = accountTokens[liquidator] + seizeTokens
          */
-        uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller))
-            .liquidationIncentiveMantissa();
+
+        uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller)).getLiquidationIncentive(
+            borrower
+        );
         uint256 numerator = mul_(seizeTokens, Exp({ mantissa: protocolSeizeShareMantissa }));
         uint256 protocolSeizeTokens = div_(numerator, Exp({ mantissa: liquidationIncentiveMantissa }));
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;

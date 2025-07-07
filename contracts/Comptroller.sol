@@ -755,8 +755,22 @@ contract Comptroller is
             revert InsufficientShortfall();
         }
 
+        uint256 closeFactor;
+        unchecked {
+            if (snapshot.healthFactor >= 1e18) revert InsufficientShortfall();
+            uint256 wtAvg = snapshot.weightavg;
+            if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
+                uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
+                uint256 denominator = borrowBalance * (1e18 - ((wtAvg * (1e18 + liquidationIncentiveMantissa)) / 1e18));
+                closeFactor = (numerator * 1e18) / denominator;
+                closeFactor = closeFactor > 1e18 ? 1e18 : closeFactor;
+            } else {
+                closeFactor = 1e18;
+            }
+        }
+
         /* The liquidator may not repay more than what is allowed by the closeFactor */
-        uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactorMantissa }), borrowBalance);
+        uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactor }), borrowBalance);
         if (repayAmount > maxClose) {
             revert TooMuchRepay();
         }
@@ -894,7 +908,7 @@ contract Comptroller is
         Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory scaledBorrows = mul_(
             Exp({ mantissa: snapshot.borrows }),
-            Exp({ mantissa: liquidationIncentiveMantissa })
+            Exp({ mantissa: getLiquidationIncentive(user) })
         );
 
         Exp memory percentage = div_(collateral, scaledBorrows);
@@ -943,7 +957,7 @@ contract Comptroller is
         }
 
         uint256 collateralToSeize = mul_ScalarTruncate(
-            Exp({ mantissa: liquidationIncentiveMantissa }),
+            Exp({ mantissa: getLiquidationIncentive(borrower) }),
             snapshot.borrows
         );
         if (collateralToSeize >= snapshot.totalCollateral) {
@@ -1375,6 +1389,7 @@ contract Comptroller is
     /**
      * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
      * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
+     * @param borrower The address of the borrower
      * @param vTokenBorrowed The address of the borrowed vToken
      * @param vTokenCollateral The address of the collateral vToken
      * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
@@ -1383,6 +1398,7 @@ contract Comptroller is
      * @custom:error PriceError if the oracle returns an invalid price
      */
     function liquidateCalculateSeizeTokens(
+        address borrower,
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 actualRepayAmount
@@ -1403,7 +1419,10 @@ contract Comptroller is
         Exp memory denominator;
         Exp memory ratio;
 
-        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
+        numerator = mul_(
+            Exp({ mantissa: getLiquidationIncentive(borrower) }),
+            Exp({ mantissa: priceBorrowedMantissa })
+        );
         denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
         ratio = div_(numerator, denominator);
 
@@ -1498,6 +1517,20 @@ contract Comptroller is
         }
 
         return assetsIn;
+    }
+
+    /// @notice Get the liquidation incentive for a borrower
+    /// @param borrower The address of the borrower
+    /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
+    function getLiquidationIncentive(address borrower) public view returns (uint256 incentive) {
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
+
+        if (snapshot.healthFactor >= snapshot.healthFactorThreshold) return liquidationIncentiveMantissa;
+
+        unchecked {
+            uint256 value = ((snapshot.healthFactor * 1e18) / snapshot.weightavg) - 1e18;
+            return value > liquidationIncentiveMantissa ? liquidationIncentiveMantissa : value;
+        }
     }
 
     /**
@@ -1661,6 +1694,12 @@ contract Comptroller is
             // borrows += oraclePrice * borrowBalance
             snapshot.borrows = mul_ScalarTruncateAddUInt(oraclePrice, borrowBalance, snapshot.borrows);
 
+            Exp memory weightSum;
+            weightSum = add_(weightSum, weight(asset));
+            if (i == assetsCount - 1) {
+                snapshot.weightavg = weightSum.mantissa / assetsCount;
+            }
+
             // Calculate effects of interacting with vTokenModify
             if (asset == vTokenModify) {
                 // redeem effect
@@ -1674,6 +1713,9 @@ contract Comptroller is
         }
 
         uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
+        snapshot.healthFactor = div_(snapshot.weightedCollateral, borrowPlusEffects);
+        snapshot.healthFactorThreshold = div_(snapshot.weightavg * (1e18 + liquidationIncentiveMantissa), 1e18);
+
         // These are safe, as the underflow condition is checked first
         unchecked {
             if (snapshot.weightedCollateral > borrowPlusEffects) {
