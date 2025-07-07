@@ -95,6 +95,7 @@ interface ComptrollerInterface {
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(
+        address borrower,
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 repayAmount
@@ -132,4 +133,6 @@ interface ComptrollerViewInterface {
     function supplyCaps(address) external view returns (uint256);
 
     function approvedDelegates(address user, address delegate) external view returns (bool);
+
+    function getLiquidationIncentive(address borrower) external view returns (uint256);
 }
