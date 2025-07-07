@@ -27,6 +27,9 @@ contract ComptrollerStorage {
         uint256 effects;
         uint256 liquidity;
         uint256 shortfall;
+        uint256 weightavg;
+        uint256 healthFactor;
+        uint256 healthFactorThreshold;
     }
 
     struct RewardSpeeds {
