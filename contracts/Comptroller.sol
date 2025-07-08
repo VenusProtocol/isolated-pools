@@ -13,6 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
+import { Liquidation } from "./lib/Liquidation.sol";
 
 /**
  * @title Comptroller
@@ -974,23 +975,7 @@ contract Comptroller is
 
         _ensureMaxLoops(ordersCount / 2);
 
-        for (uint256 i; i < ordersCount; ++i) {
-            if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenBorrowed));
-            }
-            if (!markets[address(orders[i].vTokenCollateral)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenCollateral));
-            }
-
-            LiquidationOrder calldata order = orders[i];
-            order.vTokenBorrowed.forceLiquidateBorrow(
-                msg.sender,
-                borrower,
-                order.repayAmount,
-                order.vTokenCollateral,
-                true
-            );
-        }
+        Liquidation.processLiquidationOrders(orders, borrower, msg.sender, markets);
 
         VToken[] memory borrowMarkets = getAssetsIn(borrower);
         uint256 marketsCount = borrowMarkets.length;
@@ -1417,16 +1402,14 @@ contract Comptroller is
         uint256 seizeTokens;
         Exp memory numerator;
         Exp memory denominator;
-        Exp memory ratio;
 
         numerator = mul_(
             Exp({ mantissa: getLiquidationIncentive(borrower) }),
             Exp({ mantissa: priceBorrowedMantissa })
         );
         denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
 
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+        seizeTokens = mul_ScalarTruncate(div_(numerator, denominator), actualRepayAmount);
 
         return (NO_ERROR, seizeTokens);
     }
@@ -1665,68 +1648,35 @@ contract Comptroller is
         VToken[] memory assets = getAssetsIn(account);
         uint256 assetsCount = assets.length;
 
-        for (uint256 i; i < assetsCount; ++i) {
-            VToken asset = assets[i];
+        Liquidation.EffectsParams memory effectsParams = Liquidation.EffectsParams({
+            vTokenModify: vTokenModify,
+            redeemTokens: redeemTokens,
+            borrowAmount: borrowAmount
+        });
 
-            // Read the balances and exchange rate from the vToken
+        for (uint256 i; i < assetsCount; ) {
+            VToken asset = assets[i];
             (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
                 asset,
                 account
             );
 
-            // Get the normalized price of the asset
-            Exp memory oraclePrice = Exp({ mantissa: _safeGetUnderlyingPrice(asset) });
+            Liquidation.AssetData memory assetData = Liquidation.AssetData({
+                vTokenBalance: vTokenBalance,
+                borrowBalance: borrowBalance,
+                exchangeRateMantissa: exchangeRateMantissa,
+                underlyingPrice: _safeGetUnderlyingPrice(asset),
+                assetWeight: weight(asset).mantissa,
+                vTokenAddress: address(asset)
+            });
 
-            // Pre-compute conversion factors from vTokens -> usd
-            Exp memory vTokenPrice = mul_(Exp({ mantissa: exchangeRateMantissa }), oraclePrice);
-            Exp memory weightedVTokenPrice = mul_(weight(asset), vTokenPrice);
-
-            // weightedCollateral += weightedVTokenPrice * vTokenBalance
-            snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
-                weightedVTokenPrice,
-                vTokenBalance,
-                snapshot.weightedCollateral
-            );
-
-            // totalCollateral += vTokenPrice * vTokenBalance
-            snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
-
-            // borrows += oraclePrice * borrowBalance
-            snapshot.borrows = mul_ScalarTruncateAddUInt(oraclePrice, borrowBalance, snapshot.borrows);
-
-            Exp memory weightSum;
-            weightSum = add_(weightSum, weight(asset));
-            if (i == assetsCount - 1) {
-                snapshot.weightavg = weightSum.mantissa / assetsCount;
-            }
-
-            // Calculate effects of interacting with vTokenModify
-            if (asset == vTokenModify) {
-                // redeem effect
-                // effects += tokensToDenom * redeemTokens
-                snapshot.effects = mul_ScalarTruncateAddUInt(weightedVTokenPrice, redeemTokens, snapshot.effects);
-
-                // borrow effect
-                // effects += oraclePrice * borrowAmount
-                snapshot.effects = mul_ScalarTruncateAddUInt(oraclePrice, borrowAmount, snapshot.effects);
+            snapshot = Liquidation.calculateAssetValues(assetData, snapshot, effectsParams);
+            unchecked {
+                ++i;
             }
         }
 
-        uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
-        snapshot.healthFactor = div_(snapshot.weightedCollateral, borrowPlusEffects);
-        snapshot.healthFactorThreshold = div_(snapshot.weightavg * (1e18 + liquidationIncentiveMantissa), 1e18);
-
-        // These are safe, as the underflow condition is checked first
-        unchecked {
-            if (snapshot.weightedCollateral > borrowPlusEffects) {
-                snapshot.liquidity = snapshot.weightedCollateral - borrowPlusEffects;
-                snapshot.shortfall = 0;
-            } else {
-                snapshot.liquidity = 0;
-                snapshot.shortfall = borrowPlusEffects - snapshot.weightedCollateral;
-            }
-        }
-
+        snapshot = Liquidation.finalizeSnapshot(snapshot, assetsCount, liquidationIncentiveMantissa);
         return snapshot;
     }
 
