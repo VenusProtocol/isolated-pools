@@ -7,6 +7,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
+import "hardhat-contract-sizer";
 import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import { DeployResult } from "hardhat-deploy/types";
