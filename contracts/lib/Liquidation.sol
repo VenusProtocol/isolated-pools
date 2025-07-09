@@ -64,6 +64,55 @@ library Liquidation {
         }
     }
 
+    /**
+     * @notice Creates AssetData struct from raw inputs
+     */
+    function createAssetData(
+        VToken asset,
+        address account,
+        uint256 assetWeight,
+        function(VToken) internal view returns (uint256) getUnderlyingPrice,
+        function(VToken, address) internal view returns (uint256, uint256, uint256) getAccountSnapshot
+    ) internal view returns (AssetData memory) {
+        (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = getAccountSnapshot(
+            asset,
+            account
+        );
+
+        return
+            AssetData({
+                vTokenBalance: vTokenBalance,
+                borrowBalance: borrowBalance,
+                exchangeRateMantissa: exchangeRateMantissa,
+                underlyingPrice: getUnderlyingPrice(asset),
+                assetWeight: assetWeight,
+                vTokenAddress: address(asset)
+            });
+    }
+
+    /**
+     * @notice Processes a single asset's liquidity impact
+     */
+    function processAsset(
+        VToken asset,
+        address account,
+        EffectsParams memory effects,
+        uint256 assetWeight,
+        function(VToken) internal view returns (uint256) getUnderlyingPrice,
+        function(VToken, address) internal view returns (uint256, uint256, uint256) getAccountSnapshot,
+        ComptrollerStorage.AccountLiquiditySnapshot memory snapshot
+    ) internal view returns (ComptrollerStorage.AccountLiquiditySnapshot memory) {
+        AssetData memory assetData = createAssetData(
+            asset,
+            account,
+            assetWeight,
+            getUnderlyingPrice,
+            getAccountSnapshot
+        );
+
+        return calculateAssetValues(assetData, snapshot, effects);
+    }
+
     function calculateAssetValues(
         AssetData memory asset,
         ComptrollerStorage.AccountLiquiditySnapshot memory snapshot,
