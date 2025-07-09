@@ -70,7 +70,11 @@ contract Comptroller is
     );
 
     /// @notice Emitted when liquidation incentive is changed by admin
-    event NewLiquidationIncentive(uint256 oldLiquidationIncentiveMantissa, uint256 newLiquidationIncentiveMantissa);
+    event NewMarketLiquidationIncentive(
+        VToken indexed vToken,
+        uint256 oldLiquidationIncentiveMantissa,
+        uint256 newLiquidationIncentiveMantissa
+    );
 
     /// @notice Emitted when price oracle is changed
     event NewPriceOracle(ResilientOracleInterface oldPriceOracle, ResilientOracleInterface newPriceOracle);
@@ -762,7 +766,8 @@ contract Comptroller is
             uint256 wtAvg = snapshot.weightavg;
             if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
                 uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
-                uint256 denominator = borrowBalance * (1e18 - ((wtAvg * (1e18 + liquidationIncentiveMantissa)) / 1e18));
+                uint256 denominator = borrowBalance *
+                    (1e18 - ((wtAvg * (1e18 + marketLiquidationIncentiveMantissa[vTokenCollateral])) / 1e18));
                 closeFactor = (numerator * 1e18) / denominator;
                 closeFactor = closeFactor > 1e18 ? 1e18 : closeFactor;
             } else {
@@ -905,16 +910,27 @@ contract Comptroller is
             revert InsufficientShortfall();
         }
 
-        // percentage = collateral / (borrows * liquidation incentive)
-        Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
-        Exp memory scaledBorrows = mul_(
-            Exp({ mantissa: snapshot.borrows }),
-            Exp({ mantissa: getLiquidationIncentive(user) })
-        );
+        Exp memory totalCollateral = Exp({ mantissa: snapshot.totalCollateral });
+        Exp memory totalScaledBorrows = Exp({ mantissa: 0 });
 
-        Exp memory percentage = div_(collateral, scaledBorrows);
+        for (uint256 i; i < userAssetsCount; ++i) {
+            VToken market = userAssets[i];
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, user);
+
+            if (borrowBalance > 0) {
+                uint256 marketIncentive = getDynamicLiquidationIncentive(user, address(market));
+
+                Exp memory marketBorrow = Exp({ mantissa: borrowBalance });
+                Exp memory scaledMarketBorrow = mul_(marketBorrow, Exp({ mantissa: marketIncentive }));
+
+                totalScaledBorrows = add_(totalScaledBorrows, scaledMarketBorrow);
+            }
+        }
+
+        // percentage = collateral / (borrows * liquidation incentive)
+        Exp memory percentage = div_(totalCollateral, totalScaledBorrows);
         if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
-            revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
+            revert CollateralExceedsThreshold(totalScaledBorrows.mantissa, totalCollateral.mantissa);
         }
 
         for (uint256 i; i < userAssetsCount; ++i) {
@@ -957,10 +973,23 @@ contract Comptroller is
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
-        uint256 collateralToSeize = mul_ScalarTruncate(
-            Exp({ mantissa: getLiquidationIncentive(borrower) }),
-            snapshot.borrows
-        );
+        uint256 collateralToSeize;
+        VToken[] memory userAssets = getAssetsIn(borrower);
+        uint256 userAssetsCount = userAssets.length;
+
+        for (uint256 i; i < userAssetsCount; ++i) {
+            VToken market = userAssets[i];
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, borrower);
+
+            if (borrowBalance > 0) {
+                uint256 marketIncentive = getDynamicLiquidationIncentive(borrower, address(market));
+
+                uint256 MarketCollateralToSeize = mul_ScalarTruncate(Exp({ mantissa: marketIncentive }), borrowBalance);
+
+                collateralToSeize = add_(collateralToSeize, MarketCollateralToSeize);
+            }
+        }
+
         if (collateralToSeize >= snapshot.totalCollateral) {
             // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
             // and record bad debt.
@@ -1063,25 +1092,32 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets liquidationIncentive
+     * @notice Sets liquidationIncentive for a specific market
      * @dev This function is restricted by the AccessControlManager
+     * @param vToken The market to set the liquidation incentive on
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
-     * @custom:event Emits NewLiquidationIncentive on success
+     * @custom:event Emits NewMarketLiquidationIncentive on success
      * @custom:access Controlled by AccessControlManager
      */
-    function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
+    function setMarketLiquidationIncentive(VToken vToken, uint256 newLiquidationIncentiveMantissa) external {
         require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
-        _checkAccessAllowed("setLiquidationIncentive(uint256)");
+        _checkAccessAllowed("setMarketLiquidationIncentive(address,uint256)");
 
-        // Save current value for use in log
-        uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
+        Market storage market = markets[address(vToken)];
+        if (!market.isListed) {
+            revert MarketNotListed(address(vToken));
+        }
 
-        // Set liquidation incentive to new incentive
-        liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
+        uint256 oldLiquidationIncentiveMantissa = market.liquidationIncentiveMantissa;
+        if (newLiquidationIncentiveMantissa == oldLiquidationIncentiveMantissa) {
+            return; // No change, no need to emit event
+        }
+
+        market.liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
 
         // Emit event with old incentive, new incentive
-        emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+        emit NewMarketLiquidationIncentive(vToken, oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
     }
 
     /**
@@ -1404,7 +1440,7 @@ contract Comptroller is
         Exp memory denominator;
 
         numerator = mul_(
-            Exp({ mantissa: getLiquidationIncentive(borrower) }),
+            Exp({ mantissa: getDynamicLiquidationIncentive(borrower, vTokenCollateral) }),
             Exp({ mantissa: priceBorrowedMantissa })
         );
         denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
@@ -1505,9 +1541,10 @@ contract Comptroller is
     /// @notice Get the liquidation incentive for a borrower
     /// @param borrower The address of the borrower
     /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
-    function getLiquidationIncentive(address borrower) public view returns (uint256 incentive) {
+    function getDynamicLiquidationIncentive(address borrower, address market) public view returns (uint256 incentive) {
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
 
+        uint256 liquidationIncentiveMantissa = marketLiquidationIncentiveMantissa[market];
         if (snapshot.healthFactor >= snapshot.healthFactorThreshold) return liquidationIncentiveMantissa;
 
         unchecked {
@@ -1644,11 +1681,11 @@ contract Comptroller is
         uint256 borrowAmount,
         function(VToken) internal view returns (Exp memory) weight
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
-        // For each asset the account is in
         VToken[] memory assets = getAssetsIn(account);
         uint256 assetsCount = assets.length;
+        uint256 liquidationIncentiveMantissa;
 
-        Liquidation.EffectsParams memory effectsParams = Liquidation.EffectsParams({
+        Liquidation.EffectsParams memory effects = Liquidation.EffectsParams({
             vTokenModify: vTokenModify,
             redeemTokens: redeemTokens,
             borrowAmount: borrowAmount
@@ -1656,28 +1693,22 @@ contract Comptroller is
 
         for (uint256 i; i < assetsCount; ) {
             VToken asset = assets[i];
-            (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
-                asset,
-                account
+            snapshot = Liquidation.processAsset(
+                assets[i],
+                account,
+                effects,
+                weight(asset).mantissa,
+                _safeGetUnderlyingPrice,
+                _safeGetAccountSnapshot,
+                snapshot
             );
 
-            Liquidation.AssetData memory assetData = Liquidation.AssetData({
-                vTokenBalance: vTokenBalance,
-                borrowBalance: borrowBalance,
-                exchangeRateMantissa: exchangeRateMantissa,
-                underlyingPrice: _safeGetUnderlyingPrice(asset),
-                assetWeight: weight(asset).mantissa,
-                vTokenAddress: address(asset)
-            });
-
-            snapshot = Liquidation.calculateAssetValues(assetData, snapshot, effectsParams);
             unchecked {
                 ++i;
             }
         }
 
-        snapshot = Liquidation.finalizeSnapshot(snapshot, assetsCount, liquidationIncentiveMantissa);
-        return snapshot;
+        return Liquidation.finalizeSnapshot(snapshot, assetsCount, div_(liquidationIncentiveMantissa, assetsCount));
     }
 
     /**

@@ -51,6 +51,8 @@ contract ComptrollerStorage {
         uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
+        // discount on collateral that a liquidator receives when liquidating a borrow in this market
+        uint256 liquidationIncentiveMantissa;
     }
 
     /**
@@ -62,11 +64,6 @@ contract ComptrollerStorage {
      * @notice Multiplier used to calculate the maximum repayAmount when liquidating a borrow
      */
     uint256 public closeFactorMantissa;
-
-    /**
-     * @notice Multiplier representing the discount on collateral that a liquidator receives
-     */
-    uint256 public liquidationIncentiveMantissa;
 
     /**
      * @notice Per-account mapping of "assets you are in"
@@ -121,10 +118,14 @@ contract ComptrollerStorage {
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;
 
+    /// @notice Mapping of liquidation incentives for each vToken
+    /// @dev This is used to determine the incentive for liquidators when they liquidate a borrow
+    mapping(address => uint256) public marketLiquidationIncentiveMantissa;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 }
