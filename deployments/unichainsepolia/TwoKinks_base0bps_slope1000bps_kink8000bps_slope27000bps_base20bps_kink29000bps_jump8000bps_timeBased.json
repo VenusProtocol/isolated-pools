@@ -1,0 +1,552 @@
+{
+  "address": "0x208DedbBc74525764DE7521C12B53CcEd0FCcA4B",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "int256",
+          "name": "baseRatePerYear_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "multiplierPerYear_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "kink1_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "multiplier2PerYear_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "baseRate2PerYear_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "kink2_",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "jumpMultiplierPerYear_",
+          "type": "int256"
+        },
+        {
+          "internalType": "bool",
+          "name": "timeBased_",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "blocksPerYear_",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidBlocksPerYear",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidKink",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidTimeBasedConfiguration",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NegativeValueNotAllowed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BASE_RATE_2_PER_BLOCK_OR_SECOND",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "BASE_RATE_PER_BLOCK_OR_SECOND",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "KINK_1",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "KINK_2",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MULTIPLIER_2_PER_BLOCK_OR_SECOND",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MULTIPLIER_PER_BLOCK_OR_SECOND",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RATE_1",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RATE_2",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "blocksOrSecondsPerYear",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBlockNumberOrTimestamp",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBorrowRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserveFactorMantissa",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSupplyRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isInterestRateModel",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isTimeBased",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "utilizationRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x9fc5a264842422aa87c5522d58a3f58359083c22968d33620517c0ed96960642",
+  "receipt": {
+    "to": null,
+    "from": "0xA03893a7f835C6A216E63F8C212EEB4310416dDF",
+    "contractAddress": "0x208DedbBc74525764DE7521C12B53CcEd0FCcA4B",
+    "transactionIndex": 26,
+    "gasUsed": "537644",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xa6f745182fa964d066368dc200dc39114df8881a0d08a7997b5175d683a44980",
+    "transactionHash": "0x9fc5a264842422aa87c5522d58a3f58359083c22968d33620517c0ed96960642",
+    "logs": [],
+    "blockNumber": 22253380,
+    "cumulativeGasUsed": "1753370",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0",
+    "100000000000000000",
+    "800000000000000000",
+    "700000000000000000",
+    "0",
+    "900000000000000000",
+    "800000000000000000",
+    true,
+    0
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "f28d03c2f8781c2e1894b10843f4ae81",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"baseRatePerYear_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"multiplierPerYear_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"kink1_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"multiplier2PerYear_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"baseRate2PerYear_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"kink2_\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"jumpMultiplierPerYear_\",\"type\":\"int256\"},{\"internalType\":\"bool\",\"name\":\"timeBased_\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"blocksPerYear_\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidBlocksPerYear\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidKink\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidTimeBasedConfiguration\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NegativeValueNotAllowed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BASE_RATE_2_PER_BLOCK_OR_SECOND\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"BASE_RATE_PER_BLOCK_OR_SECOND\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"KINK_1\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"KINK_2\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MULTIPLIER_2_PER_BLOCK_OR_SECOND\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MULTIPLIER_PER_BLOCK_OR_SECOND\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RATE_1\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"RATE_2\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"blocksOrSecondsPerYear\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlockNumberOrTimestamp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"getBorrowRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveFactorMantissa\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"getSupplyRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isInterestRateModel\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isTimeBased\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"utilizationRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Venus\",\"kind\":\"dev\",\"methods\":{\"constructor\":{\"params\":{\"baseRate2PerYear_\":\"The additonal base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)\",\"baseRatePerYear_\":\"The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\",\"blocksPerYear_\":\"The number of blocks per year\",\"jumpMultiplierPerYear_\":\"The multiplier after hitting KINK_2\",\"kink1_\":\"The utilization point at which the multiplier2 is applied\",\"kink2_\":\"The utilization point at which the jump multiplier is applied\",\"multiplier2PerYear_\":\"The rate of increase or decrease in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)\",\"multiplierPerYear_\":\"The rate of increase or decrease in interest rate wrt utilization (scaled by EXP_SCALE)\",\"timeBased_\":\"A boolean indicating whether the contract is based on time or block.\"}},\"getBlockNumberOrTimestamp()\":{\"details\":\"Function to simply retrieve block number or block timestamp\",\"returns\":{\"_0\":\"Current block number or block timestamp\"}},\"getBorrowRate(uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserves\":\"The amount of reserves in the market\"},\"returns\":{\"_0\":\"The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\"}},\"getSupplyRate(uint256,uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserveFactorMantissa\":\"The current reserve factor for the market\",\"reserves\":\"The amount of reserves in the market\"},\"returns\":{\"_0\":\"The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\"}},\"isInterestRateModel()\":{\"returns\":{\"_0\":\"Always true\"}},\"utilizationRate(uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserves\":\"The amount of reserves in the market (currently unused)\"},\"returns\":{\"_0\":\"The utilization rate as a mantissa between [0, MANTISSA_ONE]\"}}},\"title\":\"TwoKinksInterestRateModel\",\"version\":1},\"userdoc\":{\"errors\":{\"InvalidBlocksPerYear()\":[{\"notice\":\"Thrown when blocks per year is invalid\"}],\"InvalidKink()\":[{\"notice\":\"Thrown when the kink points are not in the correct order\"}],\"InvalidTimeBasedConfiguration()\":[{\"notice\":\"Thrown when time based but blocks per year is provided\"}],\"NegativeValueNotAllowed()\":[{\"notice\":\"Thrown when a negative value is not allowed\"}]},\"kind\":\"user\",\"methods\":{\"BASE_RATE_2_PER_BLOCK_OR_SECOND()\":{\"notice\":\"The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1 scaled by EXP_SCALE\"},\"BASE_RATE_PER_BLOCK_OR_SECOND()\":{\"notice\":\"The base interest rate per block or second which is the y-intercept when utilization rate is 0 scaled by EXP_SCALE\"},\"JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND()\":{\"notice\":\"The multiplier of utilization rate per block or second that gives the slope 3 of interest rate scaled by EXP_SCALE\"},\"KINK_1()\":{\"notice\":\"The utilization point at which the multiplier2 is applied\"},\"KINK_2()\":{\"notice\":\"The utilization point at which the jump multiplier is applied\"},\"MULTIPLIER_2_PER_BLOCK_OR_SECOND()\":{\"notice\":\"The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate scaled by EXP_SCALE\"},\"MULTIPLIER_PER_BLOCK_OR_SECOND()\":{\"notice\":\"The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate scaled by EXP_SCALE\"},\"RATE_1()\":{\"notice\":\"The maximum kink interest rate scaled by EXP_SCALE\"},\"RATE_2()\":{\"notice\":\"The maximum kink interest rate scaled by EXP_SCALE\"},\"blocksOrSecondsPerYear()\":{\"notice\":\"Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored\"},\"constructor\":{\"notice\":\"Construct an interest rate model\"},\"getBorrowRate(uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the current borrow rate per slot (block or second)\"},\"getSupplyRate(uint256,uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the current supply rate per slot (block or second)\"},\"isInterestRateModel()\":{\"notice\":\"Indicator that this is an InterestRateModel contract (for inspection)\"},\"isTimeBased()\":{\"notice\":\"Acknowledges if a contract is time based or not\"},\"utilizationRate(uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`\"}},\"notice\":\"An interest rate model with two different slope increase or decrease each after a certain utilization threshold called **kink** is reached.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/TwoKinksInterestRateModel.sol\":\"TwoKinksInterestRateModel\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\nimport { SECONDS_PER_YEAR } from \\\"./constants.sol\\\";\\n\\nabstract contract TimeManagerV8 {\\n    /// @notice Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    uint256 public immutable blocksOrSecondsPerYear;\\n\\n    /// @notice Acknowledges if a contract is time based or not\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    bool public immutable isTimeBased;\\n\\n    /// @notice Stores the current block timestamp or block number depending on isTimeBased\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    function() view returns (uint256) private immutable _getCurrentSlot;\\n\\n    /**\\n     * @dev This empty reserved space is put in place to allow future versions to add new\\n     * variables without shifting down storage in the inheritance chain\\n     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps\\n     */\\n    uint256[48] private __gap;\\n\\n    /// @notice Thrown when blocks per year is invalid\\n    error InvalidBlocksPerYear();\\n\\n    /// @notice Thrown when time based but blocks per year is provided\\n    error InvalidTimeBasedConfiguration();\\n\\n    /**\\n     * @param timeBased_ A boolean indicating whether the contract is based on time or block\\n     * If timeBased is true than blocksPerYear_ param is ignored as blocksOrSecondsPerYear is set to SECONDS_PER_YEAR\\n     * @param blocksPerYear_ The number of blocks per year\\n     * @custom:error InvalidBlocksPerYear is thrown if blocksPerYear entered is zero and timeBased is false\\n     * @custom:error InvalidTimeBasedConfiguration is thrown if blocksPerYear entered is non zero and timeBased is true\\n     * @custom:oz-upgrades-unsafe-allow constructor\\n     */\\n    constructor(bool timeBased_, uint256 blocksPerYear_) {\\n        if (!timeBased_ && blocksPerYear_ == 0) {\\n            revert InvalidBlocksPerYear();\\n        }\\n\\n        if (timeBased_ && blocksPerYear_ != 0) {\\n            revert InvalidTimeBasedConfiguration();\\n        }\\n\\n        isTimeBased = timeBased_;\\n        blocksOrSecondsPerYear = timeBased_ ? SECONDS_PER_YEAR : blocksPerYear_;\\n        _getCurrentSlot = timeBased_ ? _getBlockTimestamp : _getBlockNumber;\\n    }\\n\\n    /**\\n     * @dev Function to simply retrieve block number or block timestamp\\n     * @return Current block number or block timestamp\\n     */\\n    function getBlockNumberOrTimestamp() public view virtual returns (uint256) {\\n        return _getCurrentSlot();\\n    }\\n\\n    /**\\n     * @dev Returns the current timestamp in seconds\\n     * @return The current timestamp\\n     */\\n    function _getBlockTimestamp() private view returns (uint256) {\\n        return block.timestamp;\\n    }\\n\\n    /**\\n     * @dev Returns the current block number\\n     * @return The current block number\\n     */\\n    function _getBlockNumber() private view returns (uint256) {\\n        return block.number;\\n    }\\n}\\n\",\"keccak256\":\"0x57a2bbb9b8e02b1c0a5c0e305fef1328a22db56c3d4b148c362010a6e767243c\",\"license\":\"BSD-3-Clause\"},\"@venusprotocol/solidity-utilities/contracts/constants.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\n/// @dev Base unit for computations, usually used in scaling (multiplications, divisions)\\nuint256 constant EXP_SCALE = 1e18;\\n\\n/// @dev A unit (literal one) in EXP_SCALE, usually used in additions/subtractions\\nuint256 constant MANTISSA_ONE = EXP_SCALE;\\n\\n/// @dev The approximate number of seconds per year\\nuint256 constant SECONDS_PER_YEAR = 31_536_000;\\n\",\"keccak256\":\"0x14de93ead464da249af31bea0e3bcfb62ec693bea3475fb4d90f055ac81dc5eb\",\"license\":\"BSD-3-Clause\"},\"contracts/InterestRateModel.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\n/**\\n * @title Compound's InterestRateModel Interface\\n * @author Compound\\n */\\nabstract contract InterestRateModel {\\n    /**\\n     * @notice Calculates the current borrow interest rate per slot (block or second)\\n     * @param cash The total amount of cash the market has\\n     * @param borrows The total amount of borrows the market has outstanding\\n     * @param reserves The total amount of reserves the market has\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) external view virtual returns (uint256);\\n\\n    /**\\n     * @notice Calculates the current supply interest rate per slot (block or second)\\n     * @param cash The total amount of cash the market has\\n     * @param borrows The total amount of borrows the market has outstanding\\n     * @param reserves The total amount of reserves the market has\\n     * @param reserveFactorMantissa The current reserve factor the market has\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getSupplyRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 reserveFactorMantissa,\\n        uint256 badDebt\\n    ) external view virtual returns (uint256);\\n\\n    /**\\n     * @notice Indicator that this is an InterestRateModel contract (for inspection)\\n     * @return Always true\\n     */\\n    function isInterestRateModel() external pure virtual returns (bool) {\\n        return true;\\n    }\\n}\\n\",\"keccak256\":\"0xc4fda1ab75ebe4b187b707c4f10c58780f343cf343c537f641dc75d3cd28ab51\",\"license\":\"BSD-3-Clause\"},\"contracts/TwoKinksInterestRateModel.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\nimport { TimeManagerV8 } from \\\"@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol\\\";\\nimport { InterestRateModel } from \\\"./InterestRateModel.sol\\\";\\nimport { EXP_SCALE, MANTISSA_ONE } from \\\"./lib/constants.sol\\\";\\n\\n/**\\n * @title TwoKinksInterestRateModel\\n * @author Venus\\n * @notice An interest rate model with two different slope increase or decrease each after a certain utilization threshold called **kink** is reached.\\n */\\ncontract TwoKinksInterestRateModel is InterestRateModel, TimeManagerV8 {\\n    ////////////////////// SLOPE 1 //////////////////////\\n\\n    /**\\n     * @notice The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate scaled by EXP_SCALE\\n     */\\n    int256 public immutable MULTIPLIER_PER_BLOCK_OR_SECOND;\\n\\n    /**\\n     * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0 scaled by EXP_SCALE\\n     */\\n    int256 public immutable BASE_RATE_PER_BLOCK_OR_SECOND;\\n\\n    ////////////////////// SLOPE 2 //////////////////////\\n\\n    /**\\n     * @notice The utilization point at which the multiplier2 is applied\\n     */\\n    int256 public immutable KINK_1;\\n\\n    /**\\n     * @notice The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate scaled by EXP_SCALE\\n     */\\n    int256 public immutable MULTIPLIER_2_PER_BLOCK_OR_SECOND;\\n\\n    /**\\n     * @notice The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1 scaled by EXP_SCALE\\n     */\\n    int256 public immutable BASE_RATE_2_PER_BLOCK_OR_SECOND;\\n\\n    /**\\n     * @notice The maximum kink interest rate scaled by EXP_SCALE\\n     */\\n    int256 public immutable RATE_1;\\n\\n    ////////////////////// SLOPE 3 //////////////////////\\n\\n    /**\\n     * @notice The utilization point at which the jump multiplier is applied\\n     */\\n    int256 public immutable KINK_2;\\n\\n    /**\\n     * @notice The multiplier of utilization rate per block or second that gives the slope 3 of interest rate scaled by EXP_SCALE\\n     */\\n    int256 public immutable JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND;\\n\\n    /**\\n     * @notice The maximum kink interest rate scaled by EXP_SCALE\\n     */\\n    int256 public immutable RATE_2;\\n\\n    /**\\n     * @notice Thrown when a negative value is not allowed\\n     */\\n    error NegativeValueNotAllowed();\\n\\n    /**\\n     * @notice Thrown when the kink points are not in the correct order\\n     */\\n    error InvalidKink();\\n\\n    /**\\n     * @notice Construct an interest rate model\\n     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\\n     * @param multiplierPerYear_ The rate of increase or decrease in interest rate wrt utilization (scaled by EXP_SCALE)\\n     * @param kink1_ The utilization point at which the multiplier2 is applied\\n     * @param multiplier2PerYear_ The rate of increase or decrease in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)\\n     * @param baseRate2PerYear_ The additonal base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)\\n     * @param kink2_ The utilization point at which the jump multiplier is applied\\n     * @param jumpMultiplierPerYear_ The multiplier after hitting KINK_2\\n     * @param timeBased_ A boolean indicating whether the contract is based on time or block.\\n     * @param blocksPerYear_ The number of blocks per year\\n     */\\n    constructor(\\n        int256 baseRatePerYear_,\\n        int256 multiplierPerYear_,\\n        int256 kink1_,\\n        int256 multiplier2PerYear_,\\n        int256 baseRate2PerYear_,\\n        int256 kink2_,\\n        int256 jumpMultiplierPerYear_,\\n        bool timeBased_,\\n        uint256 blocksPerYear_\\n    ) TimeManagerV8(timeBased_, blocksPerYear_) {\\n        if (baseRatePerYear_ < 0 || baseRate2PerYear_ < 0) {\\n            revert NegativeValueNotAllowed();\\n        }\\n\\n        if (kink2_ <= kink1_ || kink1_ <= 0) {\\n            revert InvalidKink();\\n        }\\n\\n        int256 blocksOrSecondsPerYear_ = int256(blocksOrSecondsPerYear);\\n        BASE_RATE_PER_BLOCK_OR_SECOND = baseRatePerYear_ / blocksOrSecondsPerYear_;\\n        MULTIPLIER_PER_BLOCK_OR_SECOND = multiplierPerYear_ / blocksOrSecondsPerYear_;\\n        KINK_1 = kink1_;\\n        MULTIPLIER_2_PER_BLOCK_OR_SECOND = multiplier2PerYear_ / blocksOrSecondsPerYear_;\\n        BASE_RATE_2_PER_BLOCK_OR_SECOND = baseRate2PerYear_ / blocksOrSecondsPerYear_;\\n        KINK_2 = kink2_;\\n        JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND = jumpMultiplierPerYear_ / blocksOrSecondsPerYear_;\\n\\n        int256 expScale = int256(EXP_SCALE);\\n        RATE_1 = (((KINK_1 * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);\\n\\n        int256 slope2Util;\\n        unchecked {\\n            slope2Util = KINK_2 - KINK_1;\\n        }\\n        RATE_2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_2_PER_BLOCK_OR_SECOND;\\n    }\\n\\n    /**\\n     * @notice Calculates the current borrow rate per slot (block or second)\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) external view override returns (uint256) {\\n        return _getBorrowRate(cash, borrows, reserves, badDebt);\\n    }\\n\\n    /**\\n     * @notice Calculates the current supply rate per slot (block or second)\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param reserveFactorMantissa The current reserve factor for the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getSupplyRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 reserveFactorMantissa,\\n        uint256 badDebt\\n    ) public view virtual override returns (uint256) {\\n        uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;\\n        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);\\n        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;\\n        uint256 incomeToDistribute = borrows * rateToPool;\\n        uint256 supply = cash + borrows + badDebt - reserves;\\n        return incomeToDistribute / supply;\\n    }\\n\\n    /**\\n     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market (currently unused)\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]\\n     */\\n    function utilizationRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) public pure returns (uint256) {\\n        // Utilization rate is 0 when there are no borrows and badDebt\\n        if ((borrows + badDebt) == 0) {\\n            return 0;\\n        }\\n\\n        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);\\n\\n        if (rate > EXP_SCALE) {\\n            rate = EXP_SCALE;\\n        }\\n\\n        return rate;\\n    }\\n\\n    /**\\n     * @notice Calculates the current borrow rate per slot (block or second), with the error code expected by the market\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function _getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) internal view returns (uint256) {\\n        int256 util = int256(utilizationRate(cash, borrows, reserves, badDebt));\\n        int256 expScale = int256(EXP_SCALE);\\n\\n        if (util < KINK_1) {\\n            return _minCap(((util * MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale) + BASE_RATE_PER_BLOCK_OR_SECOND);\\n        } else if (util < KINK_2) {\\n            int256 slope2Util;\\n            unchecked {\\n                slope2Util = util - KINK_1;\\n            }\\n            int256 rate2 = ((slope2Util * MULTIPLIER_2_PER_BLOCK_OR_SECOND) / expScale) +\\n                BASE_RATE_2_PER_BLOCK_OR_SECOND;\\n\\n            return _minCap(RATE_1 + rate2);\\n        } else {\\n            int256 slope3Util;\\n            unchecked {\\n                slope3Util = util - KINK_2;\\n            }\\n            int256 rate3 = ((slope3Util * JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND) / expScale);\\n\\n            return _minCap(RATE_1 + RATE_2 + rate3);\\n        }\\n    }\\n\\n    /**\\n     * @notice Returns 0 if number is less than 0, otherwise returns the input\\n     * @param number The first number\\n     * @return The maximum of 0 and input number\\n     */\\n    function _minCap(int256 number) internal pure returns (uint256) {\\n        int256 zero;\\n        return uint256(number > zero ? number : zero);\\n    }\\n}\\n\",\"keccak256\":\"0x4967cdef63fd2095fbaae94fd426d0900f8c785d64f135fe03a1f83ba290f9b6\",\"license\":\"BSD-3-Clause\"},\"contracts/lib/constants.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\n/// @dev The approximate number of seconds per year\\nuint256 constant SECONDS_PER_YEAR = 31_536_000;\\n\\n/// @dev Base unit for computations, usually used in scaling (multiplications, divisions)\\nuint256 constant EXP_SCALE = 1e18;\\n\\n/// @dev A unit (literal one) in EXP_SCALE, usually used in additions/subtractions\\nuint256 constant MANTISSA_ONE = EXP_SCALE;\\n\",\"keccak256\":\"0x54ab3a6f3bc87569ed12370f3470a1ec84cea9796d4d0ccf3d07dd4280c044aa\",\"license\":\"BSD-3-Clause\"}},\"version\":1}",
+  "bytecode": "0x61020060405234801561001157600080fd5b50604051610ca8380380610ca883398101604081905261003091610209565b81818115801561003e575080155b1561005c576040516302723dfb60e21b815260040160405180910390fd5b81801561006857508015155b156100865760405163ae0fcab360e01b815260040160405180910390fd5b81151560a05281610097578061009d565b6301e133805b608052816100b45761020160201b610480176100bf565b61020560201b610484175b6001600160401b031660c052505060008912806100dc5750600085125b156100fa576040516341820e7560e11b815260040160405180910390fd5b868413158061010a575060008713155b1561012857604051637099641d60e11b815260040160405180910390fd5b608051610135818b610298565b61010052610143818a610298565b60e0526101208890526101568188610298565b610140526101648187610298565b610160526101a08590526101788185610298565b6101c0526101005160e05161012051670de0b6b3a76400009291839161019e91906102d4565b6101a89190610298565b6101b2919061030a565b61018052610120516101a0516101605161014051929091039183906101d790846102d4565b6101e19190610298565b6101eb919061030a565b6101e052506103329a5050505050505050505050565b4390565b4290565b60008060008060008060008060006101208a8c03121561022857600080fd5b8951985060208a0151975060408a0151965060608a0151955060808a0151945060a08a0151935060c08a0151925060e08a0151801515811461026957600080fd5b809250506101008a015190509295985092959850929598565b634e487b7160e01b600052601160045260246000fd5b6000826102b557634e487b7160e01b600052601260045260246000fd5b600160ff1b8214600019841416156102cf576102cf610282565b500590565b80820260008212600160ff1b841416156102f0576102f0610282565b818105831482151761030457610304610282565b92915050565b808201828112600083128015821682158216171561032a5761032a610282565b505092915050565b60805160a05160c05160e05161010051610120516101405161016051610180516101a0516101c0516101e051610891610417600039600081816102180152610687015260008181610169015261064d0152600081816101ca0152818161053d0152610624015260008181610109015281816105f301526106a80152600081816102c7015261058a0152600081816102f601526105af0152600081816101f1015281816104a401526105650152600081816101a301526104cf01526000818161027901526104f401526000610454015260006102a00152600061023f01526108916000f3fe608060405234801561001057600080fd5b50600436106100ff5760003560e01c80635d0054c411610097578063c7ad089511610066578063c7ad08951461029b578063d783c4c8146102c2578063e1d146fb146102e9578063ef882f19146102f157600080fd5b80635d0054c4146102135780636857249c1461023a57806370d3c43f14610261578063a22ed0f81461027457600080fd5b80632191f92a116100d35780632191f92a1461018b57806333da32671461019e57806338afe9c4146101c55780633b53e888146101ec57600080fd5b8062084e8914610104578063073b8a741461013e5780630cde8d1c1461015157806310c68e4b14610164575b600080fd5b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b6040519081526020015b60405180910390f35b61012b61014c3660046106e5565b610318565b61012b61015f366004610717565b610331565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b60015b6040519015158152602001610135565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b61026f3660046106e5565b6103c4565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61018e7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b61044d565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b600061032685858585610488565b90505b949350505050565b60008061034684670de0b6b3a7640000610768565b9050600061035688888887610488565b90506000670de0b6b3a764000061036d8484610781565b61037791906107ae565b90506000610385828a610781565b9050600088876103958c8e6107c2565b61039f91906107c2565b6103a99190610768565b90506103b581836107ae565b9b9a5050505050505050505050565b60006103d082856107c2565b6000036103df57506000610329565b600083836103ed87896107c2565b6103f791906107c2565b6104019190610768565b670de0b6b3a764000061041485886107c2565b61041e9190610781565b61042891906107ae565b9050670de0b6b3a76400008111156103265750670de0b6b3a764000095945050505050565b600061047b7f000000000000000000000000000000000000000000000000000000000000000063ffffffff16565b905090565b4390565b4290565b600080610497868686866103c4565b9050670de0b6b3a76400007f000000000000000000000000000000000000000000000000000000000000000082121561053b576105327f0000000000000000000000000000000000000000000000000000000000000000826105197f0000000000000000000000000000000000000000000000000000000000000000866107d5565b6105239190610805565b61052d9190610833565b6106cc565b92505050610329565b7f0000000000000000000000000000000000000000000000000000000000000000821215610622577f0000000000000000000000000000000000000000000000000000000000000000820360007f0000000000000000000000000000000000000000000000000000000000000000836105d47f0000000000000000000000000000000000000000000000000000000000000000856107d5565b6105de9190610805565b6105e89190610833565b905061061761052d827f0000000000000000000000000000000000000000000000000000000000000000610833565b945050505050610329565b7f000000000000000000000000000000000000000000000000000000000000000082036000826106727f0000000000000000000000000000000000000000000000000000000000000000846107d5565b61067c9190610805565b9050610617816105237f00000000000000000000000000000000000000000000000000000000000000007f0000000000000000000000000000000000000000000000000000000000000000610833565b6000808083136106dc57806106de565b825b9392505050565b600080600080608085870312156106fb57600080fd5b5050823594602084013594506040840135936060013592509050565b600080600080600060a0868803121561072f57600080fd5b505083359560208501359550604085013594606081013594506080013592509050565b634e487b7160e01b600052601160045260246000fd5b8181038181111561077b5761077b610752565b92915050565b808202811582820484141761077b5761077b610752565b634e487b7160e01b600052601260045260246000fd5b6000826107bd576107bd610798565b500490565b8082018082111561077b5761077b610752565b80820260008212600160ff1b841416156107f1576107f1610752565b818105831482151761077b5761077b610752565b60008261081457610814610798565b600160ff1b82146000198414161561082e5761082e610752565b500590565b808201828112600083128015821682158216171561085357610853610752565b50509291505056fea264697066735822122041efee9a74a0a97d8aa0303dcaa41d2664d817542f0d86ea7ea347b935e7418464736f6c63430008190033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100ff5760003560e01c80635d0054c411610097578063c7ad089511610066578063c7ad08951461029b578063d783c4c8146102c2578063e1d146fb146102e9578063ef882f19146102f157600080fd5b80635d0054c4146102135780636857249c1461023a57806370d3c43f14610261578063a22ed0f81461027457600080fd5b80632191f92a116100d35780632191f92a1461018b57806333da32671461019e57806338afe9c4146101c55780633b53e888146101ec57600080fd5b8062084e8914610104578063073b8a741461013e5780630cde8d1c1461015157806310c68e4b14610164575b600080fd5b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b6040519081526020015b60405180910390f35b61012b61014c3660046106e5565b610318565b61012b61015f366004610717565b610331565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b60015b6040519015158152602001610135565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b61026f3660046106e5565b6103c4565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61018e7f000000000000000000000000000000000000000000000000000000000000000081565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b61012b61044d565b61012b7f000000000000000000000000000000000000000000000000000000000000000081565b600061032685858585610488565b90505b949350505050565b60008061034684670de0b6b3a7640000610768565b9050600061035688888887610488565b90506000670de0b6b3a764000061036d8484610781565b61037791906107ae565b90506000610385828a610781565b9050600088876103958c8e6107c2565b61039f91906107c2565b6103a99190610768565b90506103b581836107ae565b9b9a5050505050505050505050565b60006103d082856107c2565b6000036103df57506000610329565b600083836103ed87896107c2565b6103f791906107c2565b6104019190610768565b670de0b6b3a764000061041485886107c2565b61041e9190610781565b61042891906107ae565b9050670de0b6b3a76400008111156103265750670de0b6b3a764000095945050505050565b600061047b7f000000000000000000000000000000000000000000000000000000000000000063ffffffff16565b905090565b4390565b4290565b600080610497868686866103c4565b9050670de0b6b3a76400007f000000000000000000000000000000000000000000000000000000000000000082121561053b576105327f0000000000000000000000000000000000000000000000000000000000000000826105197f0000000000000000000000000000000000000000000000000000000000000000866107d5565b6105239190610805565b61052d9190610833565b6106cc565b92505050610329565b7f0000000000000000000000000000000000000000000000000000000000000000821215610622577f0000000000000000000000000000000000000000000000000000000000000000820360007f0000000000000000000000000000000000000000000000000000000000000000836105d47f0000000000000000000000000000000000000000000000000000000000000000856107d5565b6105de9190610805565b6105e89190610833565b905061061761052d827f0000000000000000000000000000000000000000000000000000000000000000610833565b945050505050610329565b7f000000000000000000000000000000000000000000000000000000000000000082036000826106727f0000000000000000000000000000000000000000000000000000000000000000846107d5565b61067c9190610805565b9050610617816105237f00000000000000000000000000000000000000000000000000000000000000007f0000000000000000000000000000000000000000000000000000000000000000610833565b6000808083136106dc57806106de565b825b9392505050565b600080600080608085870312156106fb57600080fd5b5050823594602084013594506040840135936060013592509050565b600080600080600060a0868803121561072f57600080fd5b505083359560208501359550604085013594606081013594506080013592509050565b634e487b7160e01b600052601160045260246000fd5b8181038181111561077b5761077b610752565b92915050565b808202811582820484141761077b5761077b610752565b634e487b7160e01b600052601260045260246000fd5b6000826107bd576107bd610798565b500490565b8082018082111561077b5761077b610752565b80820260008212600160ff1b841416156107f1576107f1610752565b818105831482151761077b5761077b610752565b60008261081457610814610798565b600160ff1b82146000198414161561082e5761082e610752565b500590565b808201828112600083128015821682158216171561085357610853610752565b50509291505056fea264697066735822122041efee9a74a0a97d8aa0303dcaa41d2664d817542f0d86ea7ea347b935e7418464736f6c63430008190033",
+  "devdoc": {
+    "author": "Venus",
+    "kind": "dev",
+    "methods": {
+      "constructor": {
+        "params": {
+          "baseRate2PerYear_": "The additonal base APR after hitting KINK_1, as a mantissa (scaled by EXP_SCALE)",
+          "baseRatePerYear_": "The approximate target base APR, as a mantissa (scaled by EXP_SCALE)",
+          "blocksPerYear_": "The number of blocks per year",
+          "jumpMultiplierPerYear_": "The multiplier after hitting KINK_2",
+          "kink1_": "The utilization point at which the multiplier2 is applied",
+          "kink2_": "The utilization point at which the jump multiplier is applied",
+          "multiplier2PerYear_": "The rate of increase or decrease in interest rate wrt utilization after hitting KINK_1 (scaled by EXP_SCALE)",
+          "multiplierPerYear_": "The rate of increase or decrease in interest rate wrt utilization (scaled by EXP_SCALE)",
+          "timeBased_": "A boolean indicating whether the contract is based on time or block."
+        }
+      },
+      "getBlockNumberOrTimestamp()": {
+        "details": "Function to simply retrieve block number or block timestamp",
+        "returns": {
+          "_0": "Current block number or block timestamp"
+        }
+      },
+      "getBorrowRate(uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserves": "The amount of reserves in the market"
+        },
+        "returns": {
+          "_0": "The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)"
+        }
+      },
+      "getSupplyRate(uint256,uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserveFactorMantissa": "The current reserve factor for the market",
+          "reserves": "The amount of reserves in the market"
+        },
+        "returns": {
+          "_0": "The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)"
+        }
+      },
+      "isInterestRateModel()": {
+        "returns": {
+          "_0": "Always true"
+        }
+      },
+      "utilizationRate(uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserves": "The amount of reserves in the market (currently unused)"
+        },
+        "returns": {
+          "_0": "The utilization rate as a mantissa between [0, MANTISSA_ONE]"
+        }
+      }
+    },
+    "title": "TwoKinksInterestRateModel",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "InvalidBlocksPerYear()": [
+        {
+          "notice": "Thrown when blocks per year is invalid"
+        }
+      ],
+      "InvalidKink()": [
+        {
+          "notice": "Thrown when the kink points are not in the correct order"
+        }
+      ],
+      "InvalidTimeBasedConfiguration()": [
+        {
+          "notice": "Thrown when time based but blocks per year is provided"
+        }
+      ],
+      "NegativeValueNotAllowed()": [
+        {
+          "notice": "Thrown when a negative value is not allowed"
+        }
+      ]
+    },
+    "kind": "user",
+    "methods": {
+      "BASE_RATE_2_PER_BLOCK_OR_SECOND()": {
+        "notice": "The base interest rate per block or second which is the y-intercept when utilization rate hits KINK_1 scaled by EXP_SCALE"
+      },
+      "BASE_RATE_PER_BLOCK_OR_SECOND()": {
+        "notice": "The base interest rate per block or second which is the y-intercept when utilization rate is 0 scaled by EXP_SCALE"
+      },
+      "JUMP_MULTIPLIER_PER_BLOCK_OR_SECOND()": {
+        "notice": "The multiplier of utilization rate per block or second that gives the slope 3 of interest rate scaled by EXP_SCALE"
+      },
+      "KINK_1()": {
+        "notice": "The utilization point at which the multiplier2 is applied"
+      },
+      "KINK_2()": {
+        "notice": "The utilization point at which the jump multiplier is applied"
+      },
+      "MULTIPLIER_2_PER_BLOCK_OR_SECOND()": {
+        "notice": "The multiplier of utilization rate per block or second that gives the slope 2 of the interest rate scaled by EXP_SCALE"
+      },
+      "MULTIPLIER_PER_BLOCK_OR_SECOND()": {
+        "notice": "The multiplier of utilization rate per block or second that gives the slope 1 of the interest rate scaled by EXP_SCALE"
+      },
+      "RATE_1()": {
+        "notice": "The maximum kink interest rate scaled by EXP_SCALE"
+      },
+      "RATE_2()": {
+        "notice": "The maximum kink interest rate scaled by EXP_SCALE"
+      },
+      "blocksOrSecondsPerYear()": {
+        "notice": "Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored"
+      },
+      "constructor": {
+        "notice": "Construct an interest rate model"
+      },
+      "getBorrowRate(uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the current borrow rate per slot (block or second)"
+      },
+      "getSupplyRate(uint256,uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the current supply rate per slot (block or second)"
+      },
+      "isInterestRateModel()": {
+        "notice": "Indicator that this is an InterestRateModel contract (for inspection)"
+      },
+      "isTimeBased()": {
+        "notice": "Acknowledges if a contract is time based or not"
+      },
+      "utilizationRate(uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`"
+      }
+    },
+    "notice": "An interest rate model with two different slope increase or decrease each after a certain utilization threshold called **kink** is reached.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 12045,
+        "contract": "contracts/TwoKinksInterestRateModel.sol:TwoKinksInterestRateModel",
+        "label": "__gap",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_array(t_uint256)48_storage"
+      }
+    ],
+    "types": {
+      "t_array(t_uint256)48_storage": {
+        "base": "t_uint256",
+        "encoding": "inplace",
+        "label": "uint256[48]",
+        "numberOfBytes": "1536"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

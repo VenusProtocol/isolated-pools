@@ -1,0 +1,608 @@
+{
+  "address": "0x28EDBbeF282e1B500Ae82D0a1A01A2093157D8c7",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseRatePerYear_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "multiplierPerYear_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "jumpMultiplierPerYear_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "kink_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "contract IAccessControlManagerV8",
+          "name": "accessControlManager_",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "timeBased_",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "blocksPerYear_",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidBlocksPerYear",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidTimeBasedConfiguration",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "calledContract",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "methodSignature",
+          "type": "string"
+        }
+      ],
+      "name": "Unauthorized",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "baseRatePerBlockOrTimestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "multiplierPerBlockOrTimestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "jumpMultiplierPerBlockOrTimestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "kink",
+          "type": "uint256"
+        }
+      ],
+      "name": "NewInterestParams",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "accessControlManager",
+      "outputs": [
+        {
+          "internalType": "contract IAccessControlManagerV8",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "baseRatePerBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "blocksOrSecondsPerYear",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBlockNumberOrTimestamp",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBorrowRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserveFactorMantissa",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "getSupplyRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isInterestRateModel",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isTimeBased",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "jumpMultiplierPerBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "kink",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "multiplierPerBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "baseRatePerYear",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "multiplierPerYear",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "jumpMultiplierPerYear",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "kink_",
+          "type": "uint256"
+        }
+      ],
+      "name": "updateJumpRateModel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "cash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "borrows",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "reserves",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "badDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "utilizationRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x978db52c930fade68c285246ebe6a611eaedcedb1eb3375c54c725f9247c7cd9",
+  "receipt": {
+    "to": null,
+    "from": "0x4d5E5466D79088B81f85A5ab6dE24Db46343EdD0",
+    "contractAddress": "0x28EDBbeF282e1B500Ae82D0a1A01A2093157D8c7",
+    "transactionIndex": 1,
+    "gasUsed": "594764",
+    "logsBloom": "0x00000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000004000000000000000000000000080000000000000000000000000000000000000010000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x26a42329d89dd7dae607342a7e23e3c40ad875000f7b5505808d39e4f9af7af8",
+    "transactionHash": "0x978db52c930fade68c285246ebe6a611eaedcedb1eb3375c54c725f9247c7cd9",
+    "logs": [
+      {
+        "transactionIndex": 1,
+        "blockNumber": 66091027,
+        "transactionHash": "0x978db52c930fade68c285246ebe6a611eaedcedb1eb3375c54c725f9247c7cd9",
+        "address": "0x28EDBbeF282e1B500Ae82D0a1A01A2093157D8c7",
+        "topics": ["0x6960ab234c7ef4b0c9197100f5393cfcde7c453ac910a27bd2000aa1dd4c068d"],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005e80a6bf00000000000000000000000000000000000000000000000000000002f40535f90000000000000000000000000000000000000000000000000b1a2bc2ec500000",
+        "logIndex": 0,
+        "blockHash": "0x26a42329d89dd7dae607342a7e23e3c40ad875000f7b5505808d39e4f9af7af8"
+      }
+    ],
+    "blockNumber": 66091027,
+    "cumulativeGasUsed": "641391",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0",
+    "100000000000000000",
+    "800000000000000000",
+    "800000000000000000",
+    "0x049f77F7046266d27C3bC96376f53C17Ef09c986",
+    false,
+    63072000
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "2779d74bb5f3dd850decc06e31b696d8",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.25+commit.b61c2a91\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"baseRatePerYear_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"multiplierPerYear_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"jumpMultiplierPerYear_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"kink_\",\"type\":\"uint256\"},{\"internalType\":\"contract IAccessControlManagerV8\",\"name\":\"accessControlManager_\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"timeBased_\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"blocksPerYear_\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"InvalidBlocksPerYear\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidTimeBasedConfiguration\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"calledContract\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"methodSignature\",\"type\":\"string\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"baseRatePerBlockOrTimestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"multiplierPerBlockOrTimestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"jumpMultiplierPerBlockOrTimestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"kink\",\"type\":\"uint256\"}],\"name\":\"NewInterestParams\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"accessControlManager\",\"outputs\":[{\"internalType\":\"contract IAccessControlManagerV8\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"baseRatePerBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"blocksOrSecondsPerYear\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlockNumberOrTimestamp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"getBorrowRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserveFactorMantissa\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"getSupplyRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isInterestRateModel\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isTimeBased\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"jumpMultiplierPerBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"kink\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"multiplierPerBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"baseRatePerYear\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"multiplierPerYear\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"jumpMultiplierPerYear\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"kink_\",\"type\":\"uint256\"}],\"name\":\"updateJumpRateModel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"cash\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"borrows\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"reserves\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"badDebt\",\"type\":\"uint256\"}],\"name\":\"utilizationRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Compound (modified by Dharma Labs, Arr00 and Venus)\",\"kind\":\"dev\",\"methods\":{\"constructor\":{\"params\":{\"accessControlManager_\":\"The address of the AccessControlManager contract\",\"baseRatePerYear_\":\"The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\",\"blocksPerYear_\":\"The number of blocks per year\",\"jumpMultiplierPerYear_\":\"The multiplier after hitting a specified utilization point\",\"kink_\":\"The utilization point at which the jump multiplier is applied\",\"multiplierPerYear_\":\"The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)\",\"timeBased_\":\"A boolean indicating whether the contract is based on time or block.\"}},\"getBlockNumberOrTimestamp()\":{\"details\":\"Function to simply retrieve block number or block timestamp\",\"returns\":{\"_0\":\"Current block number or block timestamp\"}},\"getBorrowRate(uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserves\":\"The amount of reserves in the market\"},\"returns\":{\"_0\":\"The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)\"}},\"getSupplyRate(uint256,uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserveFactorMantissa\":\"The current reserve factor for the market\",\"reserves\":\"The amount of reserves in the market\"},\"returns\":{\"_0\":\"The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\"}},\"isInterestRateModel()\":{\"returns\":{\"_0\":\"Always true\"}},\"updateJumpRateModel(uint256,uint256,uint256,uint256)\":{\"custom:access\":\"Controlled by AccessControlManager\",\"custom:error\":\"Unauthorized if the sender is not allowed to call this function\",\"params\":{\"baseRatePerYear\":\"The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\",\"jumpMultiplierPerYear\":\"The multiplierPerBlockOrTimestamp after hitting a specified utilization point\",\"kink_\":\"The utilization point at which the jump multiplier is applied\",\"multiplierPerYear\":\"The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)\"}},\"utilizationRate(uint256,uint256,uint256,uint256)\":{\"params\":{\"badDebt\":\"The amount of badDebt in the market\",\"borrows\":\"The amount of borrows in the market\",\"cash\":\"The amount of cash in the market\",\"reserves\":\"The amount of reserves in the market (currently unused)\"},\"returns\":{\"_0\":\"The utilization rate as a mantissa between [0, MANTISSA_ONE]\"}}},\"title\":\"JumpRateModelV2\",\"version\":1},\"userdoc\":{\"errors\":{\"InvalidBlocksPerYear()\":[{\"notice\":\"Thrown when blocks per year is invalid\"}],\"InvalidTimeBasedConfiguration()\":[{\"notice\":\"Thrown when time based but blocks per year is provided\"}],\"Unauthorized(address,address,string)\":[{\"notice\":\"Thrown when the action is prohibited by AccessControlManager\"}]},\"kind\":\"user\",\"methods\":{\"accessControlManager()\":{\"notice\":\"The address of the AccessControlManager contract\"},\"baseRatePerBlock()\":{\"notice\":\"The base interest rate per block or second which is the y-intercept when utilization rate is 0\"},\"blocksOrSecondsPerYear()\":{\"notice\":\"Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored\"},\"constructor\":{\"notice\":\"Construct an interest rate model\"},\"getBorrowRate(uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the current borrow rate per slot (block or second)\"},\"getSupplyRate(uint256,uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the current supply rate per slot (block or second)\"},\"isInterestRateModel()\":{\"notice\":\"Indicator that this is an InterestRateModel contract (for inspection)\"},\"isTimeBased()\":{\"notice\":\"Acknowledges if a contract is time based or not\"},\"jumpMultiplierPerBlock()\":{\"notice\":\"The multiplier per block or second after hitting a specified utilization point\"},\"kink()\":{\"notice\":\"The utilization point at which the jump multiplier is applied\"},\"multiplierPerBlock()\":{\"notice\":\"The multiplier of utilization rate per block or second that gives the slope of the interest rate\"},\"updateJumpRateModel(uint256,uint256,uint256,uint256)\":{\"notice\":\"Update the parameters of the interest rate model\"},\"utilizationRate(uint256,uint256,uint256,uint256)\":{\"notice\":\"Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`\"}},\"notice\":\"An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached. The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/JumpRateModelV2.sol\":\"JumpRateModelV2\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/access/IAccessControl.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (access/IAccessControl.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev External interface of AccessControl declared to support ERC165 detection.\\n */\\ninterface IAccessControl {\\n    /**\\n     * @dev Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`\\n     *\\n     * `DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite\\n     * {RoleAdminChanged} not being emitted signaling this.\\n     *\\n     * _Available since v3.1._\\n     */\\n    event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);\\n\\n    /**\\n     * @dev Emitted when `account` is granted `role`.\\n     *\\n     * `sender` is the account that originated the contract call, an admin role\\n     * bearer except when using {AccessControl-_setupRole}.\\n     */\\n    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);\\n\\n    /**\\n     * @dev Emitted when `account` is revoked `role`.\\n     *\\n     * `sender` is the account that originated the contract call:\\n     *   - if using `revokeRole`, it is the admin role bearer\\n     *   - if using `renounceRole`, it is the role bearer (i.e. `account`)\\n     */\\n    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);\\n\\n    /**\\n     * @dev Returns `true` if `account` has been granted `role`.\\n     */\\n    function hasRole(bytes32 role, address account) external view returns (bool);\\n\\n    /**\\n     * @dev Returns the admin role that controls `role`. See {grantRole} and\\n     * {revokeRole}.\\n     *\\n     * To change a role's admin, use {AccessControl-_setRoleAdmin}.\\n     */\\n    function getRoleAdmin(bytes32 role) external view returns (bytes32);\\n\\n    /**\\n     * @dev Grants `role` to `account`.\\n     *\\n     * If `account` had not been already granted `role`, emits a {RoleGranted}\\n     * event.\\n     *\\n     * Requirements:\\n     *\\n     * - the caller must have ``role``'s admin role.\\n     */\\n    function grantRole(bytes32 role, address account) external;\\n\\n    /**\\n     * @dev Revokes `role` from `account`.\\n     *\\n     * If `account` had been granted `role`, emits a {RoleRevoked} event.\\n     *\\n     * Requirements:\\n     *\\n     * - the caller must have ``role``'s admin role.\\n     */\\n    function revokeRole(bytes32 role, address account) external;\\n\\n    /**\\n     * @dev Revokes `role` from the calling account.\\n     *\\n     * Roles are often managed via {grantRole} and {revokeRole}: this function's\\n     * purpose is to provide a mechanism for accounts to lose their privileges\\n     * if they are compromised (such as when a trusted device is misplaced).\\n     *\\n     * If the calling account had been granted `role`, emits a {RoleRevoked}\\n     * event.\\n     *\\n     * Requirements:\\n     *\\n     * - the caller must be `account`.\\n     */\\n    function renounceRole(bytes32 role, address account) external;\\n}\\n\",\"keccak256\":\"0x59ce320a585d7e1f163cd70390a0ef2ff9cec832e2aa544293a00692465a7a57\",\"license\":\"MIT\"},\"@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\nimport \\\"@openzeppelin/contracts/access/IAccessControl.sol\\\";\\n\\n/**\\n * @title IAccessControlManagerV8\\n * @author Venus\\n * @notice Interface implemented by the `AccessControlManagerV8` contract.\\n */\\ninterface IAccessControlManagerV8 is IAccessControl {\\n    function giveCallPermission(address contractAddress, string calldata functionSig, address accountToPermit) external;\\n\\n    function revokeCallPermission(\\n        address contractAddress,\\n        string calldata functionSig,\\n        address accountToRevoke\\n    ) external;\\n\\n    function isAllowedToCall(address account, string calldata functionSig) external view returns (bool);\\n\\n    function hasPermission(\\n        address account,\\n        address contractAddress,\\n        string calldata functionSig\\n    ) external view returns (bool);\\n}\\n\",\"keccak256\":\"0xaa29b098440d0b3a131c5ecdf25ce548790c1b5ac7bf9b5c0264b6af6f7a1e0b\",\"license\":\"BSD-3-Clause\"},\"@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\nimport { SECONDS_PER_YEAR } from \\\"./constants.sol\\\";\\n\\nabstract contract TimeManagerV8 {\\n    /// @notice Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    uint256 public immutable blocksOrSecondsPerYear;\\n\\n    /// @notice Acknowledges if a contract is time based or not\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    bool public immutable isTimeBased;\\n\\n    /// @notice Stores the current block timestamp or block number depending on isTimeBased\\n    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable\\n    function() view returns (uint256) private immutable _getCurrentSlot;\\n\\n    /**\\n     * @dev This empty reserved space is put in place to allow future versions to add new\\n     * variables without shifting down storage in the inheritance chain\\n     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps\\n     */\\n    uint256[48] private __gap;\\n\\n    /// @notice Thrown when blocks per year is invalid\\n    error InvalidBlocksPerYear();\\n\\n    /// @notice Thrown when time based but blocks per year is provided\\n    error InvalidTimeBasedConfiguration();\\n\\n    /**\\n     * @param timeBased_ A boolean indicating whether the contract is based on time or block\\n     * If timeBased is true than blocksPerYear_ param is ignored as blocksOrSecondsPerYear is set to SECONDS_PER_YEAR\\n     * @param blocksPerYear_ The number of blocks per year\\n     * @custom:error InvalidBlocksPerYear is thrown if blocksPerYear entered is zero and timeBased is false\\n     * @custom:error InvalidTimeBasedConfiguration is thrown if blocksPerYear entered is non zero and timeBased is true\\n     * @custom:oz-upgrades-unsafe-allow constructor\\n     */\\n    constructor(bool timeBased_, uint256 blocksPerYear_) {\\n        if (!timeBased_ && blocksPerYear_ == 0) {\\n            revert InvalidBlocksPerYear();\\n        }\\n\\n        if (timeBased_ && blocksPerYear_ != 0) {\\n            revert InvalidTimeBasedConfiguration();\\n        }\\n\\n        isTimeBased = timeBased_;\\n        blocksOrSecondsPerYear = timeBased_ ? SECONDS_PER_YEAR : blocksPerYear_;\\n        _getCurrentSlot = timeBased_ ? _getBlockTimestamp : _getBlockNumber;\\n    }\\n\\n    /**\\n     * @dev Function to simply retrieve block number or block timestamp\\n     * @return Current block number or block timestamp\\n     */\\n    function getBlockNumberOrTimestamp() public view virtual returns (uint256) {\\n        return _getCurrentSlot();\\n    }\\n\\n    /**\\n     * @dev Returns the current timestamp in seconds\\n     * @return The current timestamp\\n     */\\n    function _getBlockTimestamp() private view returns (uint256) {\\n        return block.timestamp;\\n    }\\n\\n    /**\\n     * @dev Returns the current block number\\n     * @return The current block number\\n     */\\n    function _getBlockNumber() private view returns (uint256) {\\n        return block.number;\\n    }\\n}\\n\",\"keccak256\":\"0x57a2bbb9b8e02b1c0a5c0e305fef1328a22db56c3d4b148c362010a6e767243c\",\"license\":\"BSD-3-Clause\"},\"@venusprotocol/solidity-utilities/contracts/constants.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\n/// @dev Base unit for computations, usually used in scaling (multiplications, divisions)\\nuint256 constant EXP_SCALE = 1e18;\\n\\n/// @dev A unit (literal one) in EXP_SCALE, usually used in additions/subtractions\\nuint256 constant MANTISSA_ONE = EXP_SCALE;\\n\\n/// @dev The approximate number of seconds per year\\nuint256 constant SECONDS_PER_YEAR = 31_536_000;\\n\",\"keccak256\":\"0x14de93ead464da249af31bea0e3bcfb62ec693bea3475fb4d90f055ac81dc5eb\",\"license\":\"BSD-3-Clause\"},\"contracts/InterestRateModel.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\n/**\\n * @title Compound's InterestRateModel Interface\\n * @author Compound\\n */\\nabstract contract InterestRateModel {\\n    /**\\n     * @notice Calculates the current borrow interest rate per slot (block or second)\\n     * @param cash The total amount of cash the market has\\n     * @param borrows The total amount of borrows the market has outstanding\\n     * @param reserves The total amount of reserves the market has\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) external view virtual returns (uint256);\\n\\n    /**\\n     * @notice Calculates the current supply interest rate per slot (block or second)\\n     * @param cash The total amount of cash the market has\\n     * @param borrows The total amount of borrows the market has outstanding\\n     * @param reserves The total amount of reserves the market has\\n     * @param reserveFactorMantissa The current reserve factor the market has\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getSupplyRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 reserveFactorMantissa,\\n        uint256 badDebt\\n    ) external view virtual returns (uint256);\\n\\n    /**\\n     * @notice Indicator that this is an InterestRateModel contract (for inspection)\\n     * @return Always true\\n     */\\n    function isInterestRateModel() external pure virtual returns (bool) {\\n        return true;\\n    }\\n}\\n\",\"keccak256\":\"0xc4fda1ab75ebe4b187b707c4f10c58780f343cf343c537f641dc75d3cd28ab51\",\"license\":\"BSD-3-Clause\"},\"contracts/JumpRateModelV2.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity 0.8.25;\\n\\nimport { IAccessControlManagerV8 } from \\\"@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol\\\";\\nimport { TimeManagerV8 } from \\\"@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol\\\";\\nimport { InterestRateModel } from \\\"./InterestRateModel.sol\\\";\\nimport { EXP_SCALE, MANTISSA_ONE } from \\\"./lib/constants.sol\\\";\\n\\n/**\\n * @title JumpRateModelV2\\n * @author Compound (modified by Dharma Labs, Arr00 and Venus)\\n * @notice An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached.\\n * The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters\\n */\\ncontract JumpRateModelV2 is InterestRateModel, TimeManagerV8 {\\n    /**\\n     * @notice The address of the AccessControlManager contract\\n     */\\n    IAccessControlManagerV8 public accessControlManager;\\n\\n    /**\\n     * @notice The multiplier of utilization rate per block or second that gives the slope of the interest rate\\n     */\\n    uint256 public multiplierPerBlock;\\n\\n    /**\\n     * @notice The base interest rate per block or second which is the y-intercept when utilization rate is 0\\n     */\\n    uint256 public baseRatePerBlock;\\n\\n    /**\\n     * @notice The multiplier per block or second after hitting a specified utilization point\\n     */\\n    uint256 public jumpMultiplierPerBlock;\\n\\n    /**\\n     * @notice The utilization point at which the jump multiplier is applied\\n     */\\n    uint256 public kink;\\n\\n    event NewInterestParams(\\n        uint256 baseRatePerBlockOrTimestamp,\\n        uint256 multiplierPerBlockOrTimestamp,\\n        uint256 jumpMultiplierPerBlockOrTimestamp,\\n        uint256 kink\\n    );\\n\\n    /**\\n     * @notice Thrown when the action is prohibited by AccessControlManager\\n     */\\n    error Unauthorized(address sender, address calledContract, string methodSignature);\\n\\n    /**\\n     * @notice Construct an interest rate model\\n     * @param baseRatePerYear_ The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\\n     * @param multiplierPerYear_ The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)\\n     * @param jumpMultiplierPerYear_ The multiplier after hitting a specified utilization point\\n     * @param kink_ The utilization point at which the jump multiplier is applied\\n     * @param accessControlManager_ The address of the AccessControlManager contract\\n     * @param timeBased_ A boolean indicating whether the contract is based on time or block.\\n     * @param blocksPerYear_ The number of blocks per year\\n     */\\n    constructor(\\n        uint256 baseRatePerYear_,\\n        uint256 multiplierPerYear_,\\n        uint256 jumpMultiplierPerYear_,\\n        uint256 kink_,\\n        IAccessControlManagerV8 accessControlManager_,\\n        bool timeBased_,\\n        uint256 blocksPerYear_\\n    ) TimeManagerV8(timeBased_, blocksPerYear_) {\\n        require(address(accessControlManager_) != address(0), \\\"invalid ACM address\\\");\\n\\n        accessControlManager = accessControlManager_;\\n\\n        _updateJumpRateModel(baseRatePerYear_, multiplierPerYear_, jumpMultiplierPerYear_, kink_);\\n    }\\n\\n    /**\\n     * @notice Update the parameters of the interest rate model\\n     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\\n     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)\\n     * @param jumpMultiplierPerYear The multiplierPerBlockOrTimestamp after hitting a specified utilization point\\n     * @param kink_ The utilization point at which the jump multiplier is applied\\n     * @custom:error Unauthorized if the sender is not allowed to call this function\\n     * @custom:access Controlled by AccessControlManager\\n     */\\n    function updateJumpRateModel(\\n        uint256 baseRatePerYear,\\n        uint256 multiplierPerYear,\\n        uint256 jumpMultiplierPerYear,\\n        uint256 kink_\\n    ) external virtual {\\n        string memory signature = \\\"updateJumpRateModel(uint256,uint256,uint256,uint256)\\\";\\n        bool isAllowedToCall = accessControlManager.isAllowedToCall(msg.sender, signature);\\n\\n        if (!isAllowedToCall) {\\n            revert Unauthorized(msg.sender, address(this), signature);\\n        }\\n\\n        _updateJumpRateModel(baseRatePerYear, multiplierPerYear, jumpMultiplierPerYear, kink_);\\n    }\\n\\n    /**\\n     * @notice Calculates the current borrow rate per slot (block or second)\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)\\n     */\\n    function getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) external view override returns (uint256) {\\n        return _getBorrowRate(cash, borrows, reserves, badDebt);\\n    }\\n\\n    /**\\n     * @notice Calculates the current supply rate per slot (block or second)\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param reserveFactorMantissa The current reserve factor for the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function getSupplyRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 reserveFactorMantissa,\\n        uint256 badDebt\\n    ) public view virtual override returns (uint256) {\\n        uint256 oneMinusReserveFactor = MANTISSA_ONE - reserveFactorMantissa;\\n        uint256 borrowRate = _getBorrowRate(cash, borrows, reserves, badDebt);\\n        uint256 rateToPool = (borrowRate * oneMinusReserveFactor) / EXP_SCALE;\\n        uint256 incomeToDistribute = borrows * rateToPool;\\n        uint256 supply = cash + borrows + badDebt - reserves;\\n        return incomeToDistribute / supply;\\n    }\\n\\n    /**\\n     * @notice Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market (currently unused)\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The utilization rate as a mantissa between [0, MANTISSA_ONE]\\n     */\\n    function utilizationRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) public pure returns (uint256) {\\n        // Utilization rate is 0 when there are no borrows and badDebt\\n        if ((borrows + badDebt) == 0) {\\n            return 0;\\n        }\\n\\n        uint256 rate = ((borrows + badDebt) * EXP_SCALE) / (cash + borrows + badDebt - reserves);\\n\\n        if (rate > EXP_SCALE) {\\n            rate = EXP_SCALE;\\n        }\\n\\n        return rate;\\n    }\\n\\n    /**\\n     * @notice Internal function to update the parameters of the interest rate model\\n     * @param baseRatePerYear The approximate target base APR, as a mantissa (scaled by EXP_SCALE)\\n     * @param multiplierPerYear The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)\\n     * @param jumpMultiplierPerYear The multiplierPerBlockOrTimestamp after hitting a specified utilization point\\n     * @param kink_ The utilization point at which the jump multiplier is applied\\n     */\\n    function _updateJumpRateModel(\\n        uint256 baseRatePerYear,\\n        uint256 multiplierPerYear,\\n        uint256 jumpMultiplierPerYear,\\n        uint256 kink_\\n    ) internal {\\n        baseRatePerBlock = baseRatePerYear / blocksOrSecondsPerYear;\\n        multiplierPerBlock = multiplierPerYear / blocksOrSecondsPerYear;\\n        jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksOrSecondsPerYear;\\n        kink = kink_;\\n\\n        emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);\\n    }\\n\\n    /**\\n     * @notice Calculates the current borrow rate per slot (block or second), with the error code expected by the market\\n     * @param cash The amount of cash in the market\\n     * @param borrows The amount of borrows in the market\\n     * @param reserves The amount of reserves in the market\\n     * @param badDebt The amount of badDebt in the market\\n     * @return The borrow rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)\\n     */\\n    function _getBorrowRate(\\n        uint256 cash,\\n        uint256 borrows,\\n        uint256 reserves,\\n        uint256 badDebt\\n    ) internal view returns (uint256) {\\n        uint256 util = utilizationRate(cash, borrows, reserves, badDebt);\\n        uint256 kink_ = kink;\\n\\n        if (util <= kink_) {\\n            return ((util * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;\\n        }\\n        uint256 normalRate = ((kink_ * multiplierPerBlock) / EXP_SCALE) + baseRatePerBlock;\\n        uint256 excessUtil;\\n        unchecked {\\n            excessUtil = util - kink_;\\n        }\\n        return ((excessUtil * jumpMultiplierPerBlock) / EXP_SCALE) + normalRate;\\n    }\\n}\\n\",\"keccak256\":\"0x926821f88c135be782af42e894cbc733f2d565f720f7b473ac5f37836aace26f\",\"license\":\"BSD-3-Clause\"},\"contracts/lib/constants.sol\":{\"content\":\"// SPDX-License-Identifier: BSD-3-Clause\\npragma solidity ^0.8.25;\\n\\n/// @dev The approximate number of seconds per year\\nuint256 constant SECONDS_PER_YEAR = 31_536_000;\\n\\n/// @dev Base unit for computations, usually used in scaling (multiplications, divisions)\\nuint256 constant EXP_SCALE = 1e18;\\n\\n/// @dev A unit (literal one) in EXP_SCALE, usually used in additions/subtractions\\nuint256 constant MANTISSA_ONE = EXP_SCALE;\\n\",\"keccak256\":\"0x54ab3a6f3bc87569ed12370f3470a1ec84cea9796d4d0ccf3d07dd4280c044aa\",\"license\":\"BSD-3-Clause\"}},\"version\":1}",
+  "bytecode": "0x60e060405234801561001057600080fd5b50604051610abd380380610abd83398101604081905261002f916101ed565b81818115801561003d575080155b1561005b576040516302723dfb60e21b815260040160405180910390fd5b81801561006757508015155b156100855760405163ae0fcab360e01b815260040160405180910390fd5b81151560a05281610096578061009c565b6301e133805b608052816100b35761015960201b61042c176100be565b61015d60201b610430175b6001600160401b031660c05250506001600160a01b0383166101265760405162461bcd60e51b815260206004820152601360248201527f696e76616c69642041434d206164647265737300000000000000000000000000604482015260640160405180910390fd5b603080546001600160a01b0319166001600160a01b03851617905561014d87878787610161565b5050505050505061028c565b4390565b4290565b60805161016e908561026a565b60325560805161017e908461026a565b60315560805161018e908361026a565b60338190556034829055603254603154604080519283526020830191909152810191909152606081018290527f6960ab234c7ef4b0c9197100f5393cfcde7c453ac910a27bd2000aa1dd4c068d9060800160405180910390a150505050565b600080600080600080600060e0888a03121561020857600080fd5b8751602089015160408a015160608b015160808c0151939a50919850965094506001600160a01b038116811461023d57600080fd5b60a0890151909350801515811461025357600080fd5b8092505060c0880151905092959891949750929550565b60008261028757634e487b7160e01b600052601260045260246000fd5b500490565b60805160a05160c0516107ed6102d06000396000610400015260006101b101526000818161013a015281816104fe0152818161052b015261055801526107ed6000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c80638726bb891161008c578063c7ad089511610066578063c7ad0895146101ac578063e1d146fb146101d3578063f14039de146101db578063fd2da339146101e457600080fd5b80638726bb891461016f578063b4a0bdf314610178578063b9f9850a146101a357600080fd5b8063073b8a74146100d45780630cde8d1c146100fa5780632037f3e71461010d5780632191f92a146101225780636857249c1461013557806370d3c43f1461015c575b600080fd5b6100e76100e23660046105dc565b6101ed565b6040519081526020015b60405180910390f35b6100e761010836600461060e565b610206565b61012061011b3660046105dc565b610299565b005b60015b60405190151581526020016100f1565b6100e77f000000000000000000000000000000000000000000000000000000000000000081565b6100e761016a3660046105dc565b610370565b6100e760315481565b60305461018b906001600160a01b031681565b6040516001600160a01b0390911681526020016100f1565b6100e760335481565b6101257f000000000000000000000000000000000000000000000000000000000000000081565b6100e76103f9565b6100e760325481565b6100e760345481565b60006101fb85858585610434565b90505b949350505050565b60008061021b84670de0b6b3a764000061065f565b9050600061022b88888887610434565b90506000670de0b6b3a76400006102428484610678565b61024c919061068f565b9050600061025a828a610678565b90506000888761026a8c8e6106b1565b61027491906106b1565b61027e919061065f565b905061028a818361068f565b9b9a5050505050505050505050565b6000604051806060016040528060348152602001610784603491396030546040516318c5e8ab60e01b81529192506000916001600160a01b03909116906318c5e8ab906102ec903390869060040161070a565b602060405180830381865afa158015610309573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061032d919061072e565b90508061035c57333083604051634a3fa29360e01b815260040161035393929190610757565b60405180910390fd5b610368868686866104f9565b505050505050565b600061037c82856106b1565b60000361038b575060006101fe565b6000838361039987896106b1565b6103a391906106b1565b6103ad919061065f565b670de0b6b3a76400006103c085886106b1565b6103ca9190610678565b6103d4919061068f565b9050670de0b6b3a76400008111156101fb5750670de0b6b3a764000095945050505050565b60006104277f000000000000000000000000000000000000000000000000000000000000000063ffffffff16565b905090565b4390565b4290565b60008061044386868686610370565b60345490915080821161048757603254670de0b6b3a76400006031548461046a9190610678565b610474919061068f565b61047e91906106b1565b925050506101fe565b6000603254670de0b6b3a7640000603154846104a39190610678565b6104ad919061068f565b6104b791906106b1565b90506000828403905081670de0b6b3a7640000603354836104d89190610678565b6104e2919061068f565b6104ec91906106b1565b9998505050505050505050565b6105237f00000000000000000000000000000000000000000000000000000000000000008561068f565b6032556105507f00000000000000000000000000000000000000000000000000000000000000008461068f565b60315561057d7f00000000000000000000000000000000000000000000000000000000000000008361068f565b60338190556034829055603254603154604080519283526020830191909152810191909152606081018290527f6960ab234c7ef4b0c9197100f5393cfcde7c453ac910a27bd2000aa1dd4c068d9060800160405180910390a150505050565b600080600080608085870312156105f257600080fd5b5050823594602084013594506040840135936060013592509050565b600080600080600060a0868803121561062657600080fd5b505083359560208501359550604085013594606081013594506080013592509050565b634e487b7160e01b600052601160045260246000fd5b8181038181111561067257610672610649565b92915050565b808202811582820484141761067257610672610649565b6000826106ac57634e487b7160e01b600052601260045260246000fd5b500490565b8082018082111561067257610672610649565b6000815180845260005b818110156106ea576020818501810151868301820152016106ce565b506000602082860101526020601f19601f83011685010191505092915050565b6001600160a01b03831681526040602082018190526000906101fe908301846106c4565b60006020828403121561074057600080fd5b8151801515811461075057600080fd5b9392505050565b6001600160a01b038481168252831660208201526060604082018190526000906101fb908301846106c456fe7570646174654a756d70526174654d6f64656c2875696e743235362c75696e743235362c75696e743235362c75696e7432353629a2646970667358221220c93e2af3e05152d7c10d83dd7b48d9708df3ad5d5901502bf132652935f6e78164736f6c63430008190033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100cf5760003560e01c80638726bb891161008c578063c7ad089511610066578063c7ad0895146101ac578063e1d146fb146101d3578063f14039de146101db578063fd2da339146101e457600080fd5b80638726bb891461016f578063b4a0bdf314610178578063b9f9850a146101a357600080fd5b8063073b8a74146100d45780630cde8d1c146100fa5780632037f3e71461010d5780632191f92a146101225780636857249c1461013557806370d3c43f1461015c575b600080fd5b6100e76100e23660046105dc565b6101ed565b6040519081526020015b60405180910390f35b6100e761010836600461060e565b610206565b61012061011b3660046105dc565b610299565b005b60015b60405190151581526020016100f1565b6100e77f000000000000000000000000000000000000000000000000000000000000000081565b6100e761016a3660046105dc565b610370565b6100e760315481565b60305461018b906001600160a01b031681565b6040516001600160a01b0390911681526020016100f1565b6100e760335481565b6101257f000000000000000000000000000000000000000000000000000000000000000081565b6100e76103f9565b6100e760325481565b6100e760345481565b60006101fb85858585610434565b90505b949350505050565b60008061021b84670de0b6b3a764000061065f565b9050600061022b88888887610434565b90506000670de0b6b3a76400006102428484610678565b61024c919061068f565b9050600061025a828a610678565b90506000888761026a8c8e6106b1565b61027491906106b1565b61027e919061065f565b905061028a818361068f565b9b9a5050505050505050505050565b6000604051806060016040528060348152602001610784603491396030546040516318c5e8ab60e01b81529192506000916001600160a01b03909116906318c5e8ab906102ec903390869060040161070a565b602060405180830381865afa158015610309573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061032d919061072e565b90508061035c57333083604051634a3fa29360e01b815260040161035393929190610757565b60405180910390fd5b610368868686866104f9565b505050505050565b600061037c82856106b1565b60000361038b575060006101fe565b6000838361039987896106b1565b6103a391906106b1565b6103ad919061065f565b670de0b6b3a76400006103c085886106b1565b6103ca9190610678565b6103d4919061068f565b9050670de0b6b3a76400008111156101fb5750670de0b6b3a764000095945050505050565b60006104277f000000000000000000000000000000000000000000000000000000000000000063ffffffff16565b905090565b4390565b4290565b60008061044386868686610370565b60345490915080821161048757603254670de0b6b3a76400006031548461046a9190610678565b610474919061068f565b61047e91906106b1565b925050506101fe565b6000603254670de0b6b3a7640000603154846104a39190610678565b6104ad919061068f565b6104b791906106b1565b90506000828403905081670de0b6b3a7640000603354836104d89190610678565b6104e2919061068f565b6104ec91906106b1565b9998505050505050505050565b6105237f00000000000000000000000000000000000000000000000000000000000000008561068f565b6032556105507f00000000000000000000000000000000000000000000000000000000000000008461068f565b60315561057d7f00000000000000000000000000000000000000000000000000000000000000008361068f565b60338190556034829055603254603154604080519283526020830191909152810191909152606081018290527f6960ab234c7ef4b0c9197100f5393cfcde7c453ac910a27bd2000aa1dd4c068d9060800160405180910390a150505050565b600080600080608085870312156105f257600080fd5b5050823594602084013594506040840135936060013592509050565b600080600080600060a0868803121561062657600080fd5b505083359560208501359550604085013594606081013594506080013592509050565b634e487b7160e01b600052601160045260246000fd5b8181038181111561067257610672610649565b92915050565b808202811582820484141761067257610672610649565b6000826106ac57634e487b7160e01b600052601260045260246000fd5b500490565b8082018082111561067257610672610649565b6000815180845260005b818110156106ea576020818501810151868301820152016106ce565b506000602082860101526020601f19601f83011685010191505092915050565b6001600160a01b03831681526040602082018190526000906101fe908301846106c4565b60006020828403121561074057600080fd5b8151801515811461075057600080fd5b9392505050565b6001600160a01b038481168252831660208201526060604082018190526000906101fb908301846106c456fe7570646174654a756d70526174654d6f64656c2875696e743235362c75696e743235362c75696e743235362c75696e7432353629a2646970667358221220c93e2af3e05152d7c10d83dd7b48d9708df3ad5d5901502bf132652935f6e78164736f6c63430008190033",
+  "devdoc": {
+    "author": "Compound (modified by Dharma Labs, Arr00 and Venus)",
+    "kind": "dev",
+    "methods": {
+      "constructor": {
+        "params": {
+          "accessControlManager_": "The address of the AccessControlManager contract",
+          "baseRatePerYear_": "The approximate target base APR, as a mantissa (scaled by EXP_SCALE)",
+          "blocksPerYear_": "The number of blocks per year",
+          "jumpMultiplierPerYear_": "The multiplier after hitting a specified utilization point",
+          "kink_": "The utilization point at which the jump multiplier is applied",
+          "multiplierPerYear_": "The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)",
+          "timeBased_": "A boolean indicating whether the contract is based on time or block."
+        }
+      },
+      "getBlockNumberOrTimestamp()": {
+        "details": "Function to simply retrieve block number or block timestamp",
+        "returns": {
+          "_0": "Current block number or block timestamp"
+        }
+      },
+      "getBorrowRate(uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserves": "The amount of reserves in the market"
+        },
+        "returns": {
+          "_0": "The borrow rate percentage per slot (block or second) as a mantissa (scaled by 1e18)"
+        }
+      },
+      "getSupplyRate(uint256,uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserveFactorMantissa": "The current reserve factor for the market",
+          "reserves": "The amount of reserves in the market"
+        },
+        "returns": {
+          "_0": "The supply rate percentage per slot (block or second) as a mantissa (scaled by EXP_SCALE)"
+        }
+      },
+      "isInterestRateModel()": {
+        "returns": {
+          "_0": "Always true"
+        }
+      },
+      "updateJumpRateModel(uint256,uint256,uint256,uint256)": {
+        "custom:access": "Controlled by AccessControlManager",
+        "custom:error": "Unauthorized if the sender is not allowed to call this function",
+        "params": {
+          "baseRatePerYear": "The approximate target base APR, as a mantissa (scaled by EXP_SCALE)",
+          "jumpMultiplierPerYear": "The multiplierPerBlockOrTimestamp after hitting a specified utilization point",
+          "kink_": "The utilization point at which the jump multiplier is applied",
+          "multiplierPerYear": "The rate of increase in interest rate wrt utilization (scaled by EXP_SCALE)"
+        }
+      },
+      "utilizationRate(uint256,uint256,uint256,uint256)": {
+        "params": {
+          "badDebt": "The amount of badDebt in the market",
+          "borrows": "The amount of borrows in the market",
+          "cash": "The amount of cash in the market",
+          "reserves": "The amount of reserves in the market (currently unused)"
+        },
+        "returns": {
+          "_0": "The utilization rate as a mantissa between [0, MANTISSA_ONE]"
+        }
+      }
+    },
+    "title": "JumpRateModelV2",
+    "version": 1
+  },
+  "userdoc": {
+    "errors": {
+      "InvalidBlocksPerYear()": [
+        {
+          "notice": "Thrown when blocks per year is invalid"
+        }
+      ],
+      "InvalidTimeBasedConfiguration()": [
+        {
+          "notice": "Thrown when time based but blocks per year is provided"
+        }
+      ],
+      "Unauthorized(address,address,string)": [
+        {
+          "notice": "Thrown when the action is prohibited by AccessControlManager"
+        }
+      ]
+    },
+    "kind": "user",
+    "methods": {
+      "accessControlManager()": {
+        "notice": "The address of the AccessControlManager contract"
+      },
+      "baseRatePerBlock()": {
+        "notice": "The base interest rate per block or second which is the y-intercept when utilization rate is 0"
+      },
+      "blocksOrSecondsPerYear()": {
+        "notice": "Stores blocksPerYear if isTimeBased is true else secondsPerYear is stored"
+      },
+      "constructor": {
+        "notice": "Construct an interest rate model"
+      },
+      "getBorrowRate(uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the current borrow rate per slot (block or second)"
+      },
+      "getSupplyRate(uint256,uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the current supply rate per slot (block or second)"
+      },
+      "isInterestRateModel()": {
+        "notice": "Indicator that this is an InterestRateModel contract (for inspection)"
+      },
+      "isTimeBased()": {
+        "notice": "Acknowledges if a contract is time based or not"
+      },
+      "jumpMultiplierPerBlock()": {
+        "notice": "The multiplier per block or second after hitting a specified utilization point"
+      },
+      "kink()": {
+        "notice": "The utilization point at which the jump multiplier is applied"
+      },
+      "multiplierPerBlock()": {
+        "notice": "The multiplier of utilization rate per block or second that gives the slope of the interest rate"
+      },
+      "updateJumpRateModel(uint256,uint256,uint256,uint256)": {
+        "notice": "Update the parameters of the interest rate model"
+      },
+      "utilizationRate(uint256,uint256,uint256,uint256)": {
+        "notice": "Calculates the utilization rate of the market: `(borrows + badDebt) / (cash + borrows + badDebt - reserves)`"
+      }
+    },
+    "notice": "An interest rate model with a steep increase after a certain utilization threshold called **kink** is reached. The parameters of this interest rate model can be adjusted by the owner. Version 2 modifies Version 1 by enabling updateable parameters",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 9747,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "__gap",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_array(t_uint256)48_storage"
+      },
+      {
+        "astId": 21787,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "accessControlManager",
+        "offset": 0,
+        "slot": "48",
+        "type": "t_contract(IAccessControlManagerV8)7478"
+      },
+      {
+        "astId": 21790,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "multiplierPerBlock",
+        "offset": 0,
+        "slot": "49",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 21793,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "baseRatePerBlock",
+        "offset": 0,
+        "slot": "50",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 21796,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "jumpMultiplierPerBlock",
+        "offset": 0,
+        "slot": "51",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 21799,
+        "contract": "contracts/JumpRateModelV2.sol:JumpRateModelV2",
+        "label": "kink",
+        "offset": 0,
+        "slot": "52",
+        "type": "t_uint256"
+      }
+    ],
+    "types": {
+      "t_array(t_uint256)48_storage": {
+        "base": "t_uint256",
+        "encoding": "inplace",
+        "label": "uint256[48]",
+        "numberOfBytes": "1536"
+      },
+      "t_contract(IAccessControlManagerV8)7478": {
+        "encoding": "inplace",
+        "label": "contract IAccessControlManagerV8",
+        "numberOfBytes": "20"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}
