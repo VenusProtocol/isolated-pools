@@ -1,3 +1,11 @@
+## [4.3.0-dev.6](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.5...v4.3.0-dev.6) (2025-07-10)
+
+
+### Features
+
+* deployed pool lens with fix ([438e534](https://github.com/VenusProtocol/isolated-pools/commit/438e534ce6fc606620d8ddb8ec9cce645f069823))
+* updating deployment files ([82e2292](https://github.com/VenusProtocol/isolated-pools/commit/82e2292480fb628ffdcfad25780abbdc72ff06f4))
+
 ## [4.3.0-dev.5](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0-dev.4...v4.3.0-dev.5) (2025-06-27)
 
 
