@@ -1276,9 +1276,8 @@ contract VToken is
          *  liquidatorTokensNew = accountTokens[liquidator] + seizeTokens
          */
 
-        uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller)).getLiquidationIncentive(
-            borrower
-        );
+        uint256 liquidationIncentiveMantissa = ComptrollerViewInterface(address(comptroller))
+            .getDynamicLiquidationIncentive(borrower, address(this));
         uint256 numerator = mul_(seizeTokens, Exp({ mantissa: protocolSeizeShareMantissa }));
         uint256 protocolSeizeTokens = div_(numerator, Exp({ mantissa: liquidationIncentiveMantissa }));
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
