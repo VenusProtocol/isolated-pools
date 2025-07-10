@@ -14,6 +14,7 @@ import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 import { Liquidation } from "./lib/Liquidation.sol";
+import { Rewards } from "./lib/Rewards.sol";
 
 /**
  * @title Comptroller
@@ -448,13 +449,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
-        }
+        Rewards.updateAndDistributeSupplyRewards(rewardsDistributors, vToken, minter);
     }
 
     /**
@@ -489,13 +484,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
-        }
+        Rewards.updateAndDistributeSupplyRewards(rewardsDistributors, vToken, redeemer);
     }
 
     /**
@@ -648,16 +637,8 @@ contract Comptroller is
             revert InsufficientLiquidity();
         }
 
-        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
+        Rewards.updateAndDistributeBorrowRewards(rewardsDistributors, vToken, borrower);
     }
 
     /**
@@ -691,14 +672,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
+        Rewards.updateAndDistributeBorrowRewards(rewardsDistributors, vToken, borrower);
     }
 
     /**
@@ -760,6 +734,8 @@ contract Comptroller is
             revert InsufficientShortfall();
         }
 
+        Market storage marketCollateral = markets[vTokenCollateral];
+
         uint256 closeFactor;
         unchecked {
             if (snapshot.healthFactor >= 1e18) revert InsufficientShortfall();
@@ -767,7 +743,7 @@ contract Comptroller is
             if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
                 uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
                 uint256 denominator = borrowBalance *
-                    (1e18 - ((wtAvg * (1e18 + marketLiquidationIncentiveMantissa[vTokenCollateral])) / 1e18));
+                    (1e18 - ((wtAvg * (1e18 + marketCollateral.liquidationIncentiveMantissa)) / 1e18));
                 closeFactor = (numerator * 1e18) / denominator;
                 closeFactor = closeFactor > 1e18 ? 1e18 : closeFactor;
             } else {
@@ -832,14 +808,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vTokenCollateral);
-            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
-            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
-        }
+        Rewards.updateAndDistributeSupplyRewardsMulti(rewardsDistributors, vTokenCollateral, borrower, liquidator);
     }
 
     /**
@@ -863,14 +832,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, src, transferTokens);
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, src);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
-        }
+        Rewards.updateAndDistributeSupplyRewardsMulti(rewardsDistributors, vToken, src, dst);
     }
 
     /*** Pool-level operations ***/
@@ -905,27 +867,14 @@ contract Comptroller is
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
-
         if (snapshot.shortfall == 0) {
             revert InsufficientShortfall();
         }
 
         Exp memory totalCollateral = Exp({ mantissa: snapshot.totalCollateral });
-        Exp memory totalScaledBorrows = Exp({ mantissa: 0 });
-
-        for (uint256 i; i < userAssetsCount; ++i) {
-            VToken market = userAssets[i];
-            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, user);
-
-            if (borrowBalance > 0) {
-                uint256 marketIncentive = getDynamicLiquidationIncentive(user, address(market));
-
-                Exp memory marketBorrow = Exp({ mantissa: borrowBalance });
-                Exp memory scaledMarketBorrow = mul_(marketBorrow, Exp({ mantissa: marketIncentive }));
-
-                totalScaledBorrows = add_(totalScaledBorrows, scaledMarketBorrow);
-            }
-        }
+        Exp memory totalScaledBorrows = Exp({
+            mantissa: Liquidation.calculateIncentiveAdjustedDebt(user, userAssets, ComptrollerInterface(address(this)))
+        });
 
         // percentage = collateral / (borrows * liquidation incentive)
         Exp memory percentage = div_(totalCollateral, totalScaledBorrows);
@@ -973,22 +922,14 @@ contract Comptroller is
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
-        uint256 collateralToSeize;
-        VToken[] memory userAssets = getAssetsIn(borrower);
-        uint256 userAssetsCount = userAssets.length;
+        VToken[] memory borrowMarkets = getAssetsIn(borrower);
+        uint256 marketsCount = borrowMarkets.length;
 
-        for (uint256 i; i < userAssetsCount; ++i) {
-            VToken market = userAssets[i];
-            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, borrower);
-
-            if (borrowBalance > 0) {
-                uint256 marketIncentive = getDynamicLiquidationIncentive(borrower, address(market));
-
-                uint256 MarketCollateralToSeize = mul_ScalarTruncate(Exp({ mantissa: marketIncentive }), borrowBalance);
-
-                collateralToSeize = add_(collateralToSeize, MarketCollateralToSeize);
-            }
-        }
+        uint256 collateralToSeize = Liquidation.calculateIncentiveAdjustedDebt(
+            borrower,
+            borrowMarkets,
+            ComptrollerInterface(address(this))
+        );
 
         if (collateralToSeize >= snapshot.totalCollateral) {
             // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
@@ -1005,9 +946,6 @@ contract Comptroller is
         _ensureMaxLoops(ordersCount / 2);
 
         Liquidation.processLiquidationOrders(orders, borrower, msg.sender, markets);
-
-        VToken[] memory borrowMarkets = getAssetsIn(borrower);
-        uint256 marketsCount = borrowMarkets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
@@ -1541,10 +1479,12 @@ contract Comptroller is
     /// @notice Get the liquidation incentive for a borrower
     /// @param borrower The address of the borrower
     /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
-    function getDynamicLiquidationIncentive(address borrower, address market) public view returns (uint256 incentive) {
+    function getDynamicLiquidationIncentive(address borrower, address vToken) public view returns (uint256 incentive) {
+        Market storage market = markets[vToken];
+        uint256 liquidationIncentiveMantissa = market.liquidationIncentiveMantissa;
+
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
 
-        uint256 liquidationIncentiveMantissa = marketLiquidationIncentiveMantissa[market];
         if (snapshot.healthFactor >= snapshot.healthFactorThreshold) return liquidationIncentiveMantissa;
 
         unchecked {

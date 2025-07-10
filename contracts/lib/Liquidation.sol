@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { ComptrollerStorage } from "../ComptrollerStorage.sol";
+import { ComptrollerInterface } from "../ComptrollerInterface.sol";
 import { VToken } from "../VToken.sol";
 
 library Liquidation {
@@ -11,7 +12,7 @@ library Liquidation {
         uint256 borrowBalance;
         uint256 exchangeRateMantissa;
         uint256 underlyingPrice;
-        uint256 assetWeight;
+        uint256 assetWeight; // Weight of the asset in the context of liquidation
         address vTokenAddress;
     }
 
@@ -62,6 +63,35 @@ library Liquidation {
                 true
             );
         }
+    }
+
+    /**
+     * @notice Calculates the sum of all borrow amounts weighted by their liquidation incentives
+     * @dev Returns Σ (borrowAmount × liquidationIncentive) for all markets
+     * @param borrower The account address
+     * @param markets Array of markets to check
+     * @param comptroller For incentive lookup
+     * @return weightedBorrowSum The incentive-adjusted total borrow value
+     */
+    function calculateIncentiveAdjustedDebt(
+        address borrower,
+        VToken[] memory markets,
+        ComptrollerInterface comptroller
+    ) internal view returns (uint256 weightedBorrowSum) {
+        for (uint256 i; i < markets.length; ++i) {
+            VToken market = markets[i];
+            (, , uint256 borrowBalance, ) = market.getAccountSnapshot(borrower);
+
+            if (borrowBalance > 0) {
+                uint256 marketIncentive = comptroller.getDynamicLiquidationIncentive(borrower, address(market));
+                uint256 scaledBorrow = ExponentialNoError.mul_ScalarTruncate(
+                    ExponentialNoError.Exp({ mantissa: marketIncentive }),
+                    borrowBalance
+                );
+                weightedBorrowSum = ExponentialNoError.add_(weightedBorrowSum, scaledBorrow);
+            }
+        }
+        return weightedBorrowSum;
     }
 
     /**
