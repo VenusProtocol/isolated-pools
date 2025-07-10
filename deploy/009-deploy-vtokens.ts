@@ -66,7 +66,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // Deploy Markets
     for (const vTokenConfig of pool.vtokens) {
-      const { name, asset, symbol, reserveFactor } = vTokenConfig;
+      const {
+        name,
+        asset,
+        symbol,
+        reserveFactor,
+        isFlashLoanAllowed,
+        flashLoanProtocolFeeMantissa,
+        flashLoanSupplierFeeMantissa,
+      } = vTokenConfig;
 
       const token = getTokenConfig(asset, tokensConfig);
       let tokenContract;
@@ -163,6 +171,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         accessControlManagerAddress,
         [AddressOne, protocolShareReserveAddress],
         reserveFactor,
+        isFlashLoanAllowed,
+        flashLoanProtocolFeeMantissa,
+        flashLoanSupplierFeeMantissa,
       ];
       await deploy(`VToken_${symbol}`, {
         from: deployer,

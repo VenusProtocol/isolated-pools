@@ -12,7 +12,7 @@ RUN wget https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-sta
 RUN mkdir -p /usr/app
 WORKDIR /usr/app
 
-ENV NODE_OPTIONS=--max-old-space-size=4096 
+ENV NODE_OPTIONS=--max-old-space-size=8192 
 
 # First add deps
 RUN npm install -g yarn

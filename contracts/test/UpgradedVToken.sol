@@ -57,7 +57,10 @@ contract UpgradedVToken is VToken {
         address payable admin_,
         address accessControlManager_,
         RiskManagementInit memory riskManagement,
-        uint256 reserveFactorMantissa_
+        uint256 reserveFactorMantissa_,
+        bool isFlashLoanEnabled_,
+        uint256 flashLoanProtocolFeeMantissa_,
+        uint256 flashLoanSupplierFeeMantissa_
     ) public reinitializer(2) {
         super._initialize(
             underlying_,
@@ -70,7 +73,10 @@ contract UpgradedVToken is VToken {
             admin_,
             accessControlManager_,
             riskManagement,
-            reserveFactorMantissa_
+            reserveFactorMantissa_,
+            isFlashLoanEnabled_,
+            flashLoanProtocolFeeMantissa_,
+            flashLoanSupplierFeeMantissa_
         );
     }
 

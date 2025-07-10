@@ -38,6 +38,9 @@ interface VTokenParameters {
   isTimeBased: boolean;
   blocksPerYear: BigNumberish;
   maxBorrowRateMantissa: BigNumberish;
+  isFlashLoanAllowed: boolean;
+  flashLoanProtocolFeeMantissa: BigNumberish;
+  flashLoanSupplierFeeMantissa: BigNumberish;
 }
 
 const getNameAndSymbol = async (underlying: AddressOrContract): Promise<[string, string]> => {
@@ -110,6 +113,9 @@ const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory =
     protocolShareReserve: params.protocolShareReserve || (await smock.fake("ProtocolShareReserve")),
     reserveFactorMantissa: params.reserveFactorMantissa || parseUnits("0.3", 18),
     maxBorrowRateMantissa: params.maxBorrowRateMantissa || BigNumber.from(0.0005e16),
+    isFlashLoanAllowed: params.isFlashLoanAllowed || false,
+    flashLoanProtocolFeeMantissa: params.flashLoanProtocolFeeMantissa || 0,
+    flashLoanSupplierFeeMantissa: params.flashLoanSupplierFeeMantissa || 0,
     beacon:
       params.beacon ||
       (await deployVTokenBeacon<VTokenFactory>(
@@ -146,6 +152,9 @@ export const makeVToken = async <VTokenFactory extends AnyVTokenFactory = VToken
       protocolShareReserve: getAddress(params_.protocolShareReserve),
     },
     params_.reserveFactorMantissa,
+    params.isFlashLoanAllowed || false,
+    params.flashLoanProtocolFeeMantissa || 0,
+    params.flashLoanSupplierFeeMantissa || 0,
   ])) as DeployedContract<VTokenFactory>;
 
   return vToken;
