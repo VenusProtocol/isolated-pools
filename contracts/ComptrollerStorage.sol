@@ -118,14 +118,10 @@ contract ComptrollerStorage {
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;
 
-    /// @notice Mapping of liquidation incentives for each vToken
-    /// @dev This is used to determine the incentive for liquidators when they liquidate a borrow
-    mapping(address => uint256) public marketLiquidationIncentiveMantissa;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[46] private __gap;
+    uint256[47] private __gap;
 }

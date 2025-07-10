@@ -104,6 +104,8 @@ interface ComptrollerInterface {
     function getAllMarkets() external view returns (VToken[] memory);
 
     function actionPaused(address market, Action action) external view returns (bool);
+
+    function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
 }
 
 /**
@@ -134,5 +136,5 @@ interface ComptrollerViewInterface {
 
     function approvedDelegates(address user, address delegate) external view returns (bool);
 
-    function getLiquidationIncentive(address borrower) external view returns (uint256);
+    function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
 }
