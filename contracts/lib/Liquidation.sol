@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import { ExponentialNoError } from "./ExponentialNoError.sol";
 import { ComptrollerStorage } from "../ComptrollerStorage.sol";
 import { ComptrollerInterface } from "../ComptrollerInterface.sol";
+import { Comptroller } from "../Comptroller.sol";
 import { VToken } from "../VToken.sol";
 
 library Liquidation {
@@ -12,7 +13,7 @@ library Liquidation {
         uint256 borrowBalance;
         uint256 exchangeRateMantissa;
         uint256 underlyingPrice;
-        uint256 assetWeight; // Weight of the asset in the context of liquidation
+        uint256 assetWeight;
         address vTokenAddress;
     }
 
@@ -21,10 +22,6 @@ library Liquidation {
         uint256 redeemTokens;
         uint256 borrowAmount;
     }
-
-    /// @notice Thrown when a market is not listed in the comptroller.
-    /// @param market The address of the market that is not listed.
-    error MarketNotListed(address market);
 
     /**
      * @notice Processes a batch of liquidation orders for a given borrower.
@@ -48,10 +45,10 @@ library Liquidation {
 
             // Validate markets are listed
             if (!markets[address(order.vTokenBorrowed)].isListed) {
-                revert MarketNotListed(address(order.vTokenBorrowed));
+                revert Comptroller.MarketNotListed(address(order.vTokenBorrowed));
             }
             if (!markets[address(order.vTokenCollateral)].isListed) {
-                revert MarketNotListed(address(order.vTokenCollateral));
+                revert Comptroller.MarketNotListed(address(order.vTokenCollateral));
             }
 
             // Execute liquidation
@@ -95,7 +92,15 @@ library Liquidation {
     }
 
     /**
-     * @notice Creates AssetData struct from raw inputs
+     * @notice Constructs an AssetData struct for a given asset and account.
+     * @dev Fetches the account's vToken balance, borrow balance, and exchange rate for the asset,
+     *      as well as the asset's underlying price and risk weight.
+     * @param asset The VToken asset to query.
+     * @param account The address of the account.
+     * @param assetWeight The risk weight of the asset.
+     * @param getUnderlyingPrice Function to fetch the asset's underlying price.
+     * @param getAccountSnapshot Function to fetch the account's balances for the asset.
+     * @return AssetData struct containing all relevant asset/account data.
      */
     function createAssetData(
         VToken asset,
@@ -121,7 +126,18 @@ library Liquidation {
     }
 
     /**
-     * @notice Processes a single asset's liquidity impact
+     * @notice Processes a single asset for a given account and updates the liquidity snapshot.
+     * @dev
+     * - Constructs AssetData for the asset and account.
+     * - Calculates and applies the asset's effect on the account's liquidity snapshot, including any modifications (redeem/borrow).
+     * @param asset The VToken asset to process.
+     * @param account The address of the account being evaluated.
+     * @param effects Parameters describing any modifications (redeem/borrow) to apply for this asset.
+     * @param assetWeight The risk weight of the asset.
+     * @param getUnderlyingPrice Function to fetch the asset's underlying price.
+     * @param getAccountSnapshot Function to fetch the account's balances for the asset.
+     * @param snapshot The current account liquidity snapshot to update.
+     * @return The updated AccountLiquiditySnapshot struct.
      */
     function processAsset(
         VToken asset,
@@ -143,6 +159,15 @@ library Liquidation {
         return calculateAssetValues(assetData, snapshot, effects);
     }
 
+    /**
+     * @notice Calculates and updates the liquidity snapshot values for a given asset.
+     * @dev Computes weighted collateral, total collateral, and borrow values using asset data and price information.
+     *      If the asset is being modified (redeemed or borrowed), applies the effects to the snapshot as well.
+     * @param asset The asset data struct containing balances, prices, and weights.
+     * @param snapshot The current account liquidity snapshot to update.
+     * @param effectsParams Parameters describing any modifications (redeem/borrow) to apply for this asset.
+     * @return The updated AccountLiquiditySnapshot struct.
+     */
     function calculateAssetValues(
         AssetData memory asset,
         ComptrollerStorage.AccountLiquiditySnapshot memory snapshot,
@@ -193,15 +218,33 @@ library Liquidation {
         return snapshot;
     }
 
+    /**
+     * @notice Finalizes the account liquidity snapshot by calculating weighted averages, health factors, and liquidity/shortfall.
+     * @dev
+     * - Computes the average weight if there are assets.
+     * - Calculates the sum of borrows and effects.
+     * - Determines the health factor as the ratio of weighted collateral to total borrow plus effects.
+     * - Sets the health factor threshold using the weighted average and liquidation incentive.
+     * - Calculates liquidity and shortfall based on the comparison of weighted collateral and borrow plus effects.
+     * @param snapshot The account liquidity snapshot to be finalized.
+     * @param assetsCount The number of assets in the snapshot.
+     * @param liquidationIncentiveMantissa The liquidation incentive, scaled by 1e18.
+     * @return The finalized account liquidity snapshot with updated fields.
+     */
     function finalizeSnapshot(
         ComptrollerStorage.AccountLiquiditySnapshot memory snapshot,
         uint256 assetsCount,
         uint256 liquidationIncentiveMantissa
     ) internal pure returns (ComptrollerStorage.AccountLiquiditySnapshot memory) {
-        snapshot.weightavg = snapshot.weightavg / assetsCount;
+        if (assetsCount > 0) {
+            snapshot.weightavg = snapshot.weightavg / assetsCount;
+        }
+
         uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
 
-        snapshot.healthFactor = ExponentialNoError.div_(snapshot.weightedCollateral, borrowPlusEffects);
+        if (borrowPlusEffects > 0) {
+            snapshot.healthFactor = ExponentialNoError.div_(snapshot.weightedCollateral, borrowPlusEffects);
+        }
         snapshot.healthFactorThreshold = ExponentialNoError.div_(
             snapshot.weightavg * (1e18 + liquidationIncentiveMantissa),
             1e18

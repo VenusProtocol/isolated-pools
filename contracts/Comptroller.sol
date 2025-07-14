@@ -1648,7 +1648,12 @@ contract Comptroller is
             }
         }
 
-        return Liquidation.finalizeSnapshot(snapshot, assetsCount, div_(liquidationIncentiveMantissa, assetsCount));
+        uint256 weightedAvg;
+        if (assetsCount > 0) {
+            weightedAvg = div_(liquidationIncentiveMantissa, assetsCount);
+        }
+
+        return Liquidation.finalizeSnapshot(snapshot, assetsCount, weightedAvg);
     }
 
     /**
