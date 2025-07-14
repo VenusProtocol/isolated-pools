@@ -60,6 +60,7 @@ describe("setters", async () => {
     accessControl.isAllowedToCall.returns(true);
     OMG = await smock.fake<VToken>("VToken");
     OMG.isVToken.returns(true);
+    OMG.comptroller.returns(comptroller.address);
     poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
 
     // Sending transaction cost
@@ -69,7 +70,7 @@ describe("setters", async () => {
   describe("setPriceOracle", async () => {
     let newPriceOracle: FakeContract<ResilientOracleInterface>;
 
-    before(async () => {
+    beforeEach(async () => {
       newPriceOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
     });
 
@@ -111,13 +112,22 @@ describe("setters", async () => {
     });
   });
 
-  describe("setLiquidationIncentive", async () => {
+  describe("setMarketLiquidationIncentive", async () => {
     const newLiquidationIncentive = convertToUnit("1.2", 18);
     it("reverts if access control manager does not allow the call", async () => {
-      accessControl.isAllowedToCall.whenCalledWith(owner.address, "setLiquidationIncentive(uint256)").returns(false);
-      await expect(comptroller.setLiquidationIncentive(newLiquidationIncentive))
+      await comptroller.connect(poolRegistry.wallet).supportMarket(OMG.address);
+      accessControl.isAllowedToCall
+        .whenCalledWith(owner.address, "setMarketLiquidationIncentive(address,uint256)")
+        .returns(false);
+      await expect(comptroller.setMarketLiquidationIncentive(OMG.address, newLiquidationIncentive))
         .to.be.revertedWithCustomError(comptroller, "Unauthorized")
-        .withArgs(owner.address, comptroller.address, "setLiquidationIncentive(uint256)");
+        .withArgs(owner.address, comptroller.address, "setMarketLiquidationIncentive(address,uint256)");
+    });
+
+    it("reverts if market not listed", async () => {
+      await expect(comptroller.setMarketLiquidationIncentive(OMG.address, newLiquidationIncentive))
+        .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
+        .withArgs(OMG.address);
     });
   });
 

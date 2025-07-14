@@ -37,16 +37,16 @@ async function deploySimpleComptroller(): Promise<SimpleComptrollerFixture> {
     initializer: "initialize(uint256,address)",
   });
   await comptroller.setPriceOracle(oracle.address);
-  await comptroller.setLiquidationIncentive(parseUnits("1", 18));
   return { oracle, comptroller, accessControl, poolRegistry };
 }
 
-function configureVToken(vToken: FakeContract<VToken>, comptroller: MockContract<Comptroller>) {
+async function configureVToken(vToken: FakeContract<VToken>, comptroller: MockContract<Comptroller>) {
   vToken.comptroller.returns(comptroller.address);
   vToken.isVToken.returns(true);
   vToken.exchangeRateStored.returns(parseUnits("2", 18));
   vToken.totalSupply.returns(parseUnits("1000000", 18));
   vToken.totalBorrows.returns(parseUnits("900000", 18));
+  await comptroller.setMarketLiquidationIncentive(vToken.address, parseUnits("1.1", 18));
 }
 
 describe("hooks", () => {
@@ -70,7 +70,7 @@ describe("hooks", () => {
     beforeEach(async () => {
       [root] = await ethers.getSigners();
       ({ comptroller, vToken } = await loadFixture(deploy));
-      configureVToken(vToken, comptroller);
+      await configureVToken(vToken, comptroller);
     });
 
     it("allows minting if cap is not reached", async () => {
