@@ -1345,6 +1345,22 @@ contract Comptroller is
     }
 
     /**
+     * @notice Returns the liquidation incentive mantissa for a given vToken market.
+     * @param vToken The address of the vToken market to query.
+     * @return liquidationIncentiveMantissa The liquidation incentive mantissa for the specified market.
+     * @custom:error MarketNotListed is thrown if the market is not listed
+     */
+    function getMarketLiquidationIncentive(
+        address vToken
+    ) external view returns (uint256 liquidationIncentiveMantissa) {
+        Market storage market = markets[vToken];
+        if (!market.isListed) {
+            revert MarketNotListed(vToken);
+        }
+        return market.liquidationIncentiveMantissa;
+    }
+
+    /**
      * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
      * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
      * @param borrower The address of the borrower
