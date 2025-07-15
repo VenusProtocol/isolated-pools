@@ -92,13 +92,7 @@ async function rewardsFixture(isTimeBased: boolean) {
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
   // Registering the first pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptrollerProxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
+  await poolRegistry.addPool("Pool 1", comptrollerProxy.address, _closeFactor, _minLiquidatableCollateral);
 
   if (isTimeBased) {
     blocksPerYear = 0;

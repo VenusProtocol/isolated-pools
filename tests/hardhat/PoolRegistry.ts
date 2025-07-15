@@ -115,26 +115,13 @@ describe("PoolRegistry: Tests", function () {
     );
 
     const _closeFactor = parseUnits("0.05", 18);
-    const _liquidationIncentive = parseUnits("1", 18);
     const _minLiquidatableCollateral = parseUnits("100", 18);
 
     // Registering the first pool
-    await poolRegistry.addPool(
-      "Pool 1",
-      comptroller1Proxy.address,
-      _closeFactor,
-      _liquidationIncentive,
-      _minLiquidatableCollateral,
-    );
+    await poolRegistry.addPool("Pool 1", comptroller1Proxy.address, _closeFactor, _minLiquidatableCollateral);
 
     // Registering the second pool
-    await poolRegistry.addPool(
-      "Pool 2",
-      comptroller2Proxy.address,
-      _closeFactor,
-      _liquidationIncentive,
-      _minLiquidatableCollateral,
-    );
+    await poolRegistry.addPool("Pool 2", comptroller2Proxy.address, _closeFactor, _minLiquidatableCollateral);
 
     // Setup Proxies
     vWBTC = await makeVToken({
@@ -475,38 +462,20 @@ describe("PoolRegistry: Tests", function () {
       const addPoolSignature = "addPool(string,address,uint256,uint256,uint256)";
       fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, addPoolSignature).returns(false);
       await expect(
-        poolRegistry.addPool(
-          "Pool 3",
-          comptroller3Proxy.address,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
+        poolRegistry.addPool("Pool 3", comptroller3Proxy.address, parseUnits("0.5", 18), parseUnits("100", 18)),
       ).to.be.revertedWithCustomError(poolRegistry, "Unauthorized");
     });
 
     it("reverts if pool name is too long", async () => {
       const longName = Array(101).fill("a").join("");
       await expect(
-        poolRegistry.addPool(
-          longName,
-          comptroller3Proxy.address,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
+        poolRegistry.addPool(longName, comptroller3Proxy.address, parseUnits("0.5", 18), parseUnits("100", 18)),
       ).to.be.revertedWith("Pool's name is too large");
     });
 
     it("reverts if Comptroller address is zero", async () => {
       await expect(
-        poolRegistry.addPool(
-          "Pool 3",
-          constants.AddressZero,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
+        poolRegistry.addPool("Pool 3", constants.AddressZero, parseUnits("0.5", 18), parseUnits("100", 18)),
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
 
@@ -516,13 +485,7 @@ describe("PoolRegistry: Tests", function () {
       const Comptroller = await ethers.getContractFactory("Comptroller");
       const comptroller = await Comptroller.deploy(poolRegistry.address);
       await expect(
-        poolRegistry.addPool(
-          "Pool 3",
-          comptroller.address,
-          parseUnits("0.5", 18),
-          parseUnits("1.1", 18),
-          parseUnits("100", 18),
-        ),
+        poolRegistry.addPool("Pool 3", comptroller.address, parseUnits("0.5", 18), parseUnits("100", 18)),
       ).to.be.revertedWithCustomError(poolRegistry, "ZeroAddressNotAllowed");
     });
   });

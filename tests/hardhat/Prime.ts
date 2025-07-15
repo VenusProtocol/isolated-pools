@@ -84,13 +84,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
   // Registering the first pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptrollerProxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
+  await poolRegistry.addPool("Pool 1", comptrollerProxy.address, _closeFactor, _minLiquidatableCollateral);
 
   const vTokenBeacon = await deployVTokenBeacon();
   const vUSDT = await makeVToken({
