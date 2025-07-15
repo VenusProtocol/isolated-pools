@@ -46,7 +46,6 @@ async function deployGateway(): Promise<GatewayFixture> {
   accessControl.isAllowedToCall.returns(true);
 
   const closeFactor = parseUnits("6", 17);
-  const liquidationIncentive = parseUnits("1", 18);
   const minLiquidatableCollateral = parseUnits("100", 18);
 
   const PoolRegistry = await ethers.getContractFactory<PoolRegistry__factory>("PoolRegistry");
@@ -66,15 +65,7 @@ async function deployGateway(): Promise<GatewayFixture> {
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
 
   // Registering the pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptrollerProxy.address,
-    closeFactor,
-    liquidationIncentive,
-    minLiquidatableCollateral,
-  );
-
-  await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+  await poolRegistry.addPool("Pool 1", comptrollerProxy.address, closeFactor, minLiquidatableCollateral);
 
   const wethFactory = await ethers.getContractFactory("WrappedNative");
   const weth = await wethFactory.deploy();
