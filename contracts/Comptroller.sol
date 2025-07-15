@@ -14,7 +14,6 @@ import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
 import { Liquidation } from "./lib/Liquidation.sol";
-import { Rewards } from "./lib/Rewards.sol";
 
 /**
  * @title Comptroller
@@ -449,7 +448,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeSupplyRewards(rewardsDistributors, vToken, minter);
+        _updateAndDistributeSupplyRewards(vToken, minter);
     }
 
     /**
@@ -484,7 +483,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeSupplyRewards(rewardsDistributors, vToken, redeemer);
+        _updateAndDistributeSupplyRewards(vToken, redeemer);
     }
 
     /**
@@ -638,7 +637,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeBorrowRewards(rewardsDistributors, vToken, borrower);
+        _updateAndDistributeBorrowRewards(vToken, borrower);
     }
 
     /**
@@ -672,7 +671,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeBorrowRewards(rewardsDistributors, vToken, borrower);
+        _updateAndDistributeBorrowRewards(vToken, borrower);
     }
 
     /**
@@ -808,7 +807,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeSupplyRewardsMulti(rewardsDistributors, vTokenCollateral, borrower, liquidator);
+        _updateAndDistributeSupplyRewardsMulti(vTokenCollateral, borrower, liquidator);
     }
 
     /**
@@ -832,7 +831,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, src, transferTokens);
 
         // Keep the flywheel moving
-        Rewards.updateAndDistributeSupplyRewardsMulti(rewardsDistributors, vToken, src, dst);
+        _updateAndDistributeSupplyRewardsMulti(vToken, src, dst);
     }
 
     /*** Pool-level operations ***/
@@ -1583,6 +1582,39 @@ contract Comptroller is
         );
         if (snapshot.shortfall > 0) {
             revert InsufficientLiquidity();
+        }
+    }
+
+    function _updateAndDistributeSupplyRewards(address vToken, address user) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user);
+        }
+    }
+
+    function _updateAndDistributeBorrowRewards(address vToken, address user) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, user, borrowIndex);
+        }
+    }
+
+    function _updateAndDistributeSupplyRewardsMulti(address vToken, address user1, address user2) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user1);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user2);
         }
     }
 
