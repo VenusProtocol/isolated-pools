@@ -471,7 +471,10 @@ contract VToken is
      */
     function setProtocolSeizeShare(uint256 newProtocolSeizeShareMantissa_) external {
         _checkAccessAllowed("setProtocolSeizeShare(uint256)");
-        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).liquidationIncentiveMantissa();
+
+        uint256 liquidationIncentive = ComptrollerViewInterface(address(comptroller)).getMarketLiquidationIncentive(
+            address(this)
+        );
         if (newProtocolSeizeShareMantissa_ + MANTISSA_ONE > liquidationIncentive) {
             revert ProtocolSeizeShareTooBig();
         }
