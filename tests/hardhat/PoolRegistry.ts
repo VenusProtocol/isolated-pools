@@ -459,7 +459,7 @@ describe("PoolRegistry: Tests", function () {
 
   describe("addPool", async () => {
     it("reverts if ACM denies the access", async () => {
-      const addPoolSignature = "addPool(string,address,uint256,uint256,uint256)";
+      const addPoolSignature = "addPool(string,address,uint256,uint256)";
       fakeAccessControlManager.isAllowedToCall.whenCalledWith(owner.address, addPoolSignature).returns(false);
       await expect(
         poolRegistry.addPool("Pool 3", comptroller3Proxy.address, parseUnits("0.5", 18), parseUnits("100", 18)),

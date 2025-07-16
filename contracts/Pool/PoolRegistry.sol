@@ -135,7 +135,7 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         uint256 closeFactor,
         uint256 minLiquidatableCollateral
     ) external virtual returns (uint256 index) {
-        _checkAccessAllowed("addPool(string,address,uint256,uint256,uint256)");
+        _checkAccessAllowed("addPool(string,address,uint256,uint256)");
         // Input validation
         ensureNonzeroAddress(address(comptroller));
         ensureNonzeroAddress(address(comptroller.oracle()));

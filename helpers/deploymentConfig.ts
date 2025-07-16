@@ -364,7 +364,7 @@ const poolRegistryPermissions = (): AccessControlEntry[] => {
 const deployerPermissions = (): AccessControlEntry[] => {
   const methods = [
     "swapPoolsAssets(address[],uint256[],address[][])",
-    "addPool(string,address,uint256,uint256,uint256)",
+    "addPool(string,address,uint256,uint256)",
     "addMarket(AddMarketInput)",
     "setRewardTokenSpeeds(address[],uint256[],uint256[])",
     "setReduceReservesBlockDelta(uint256)",
@@ -386,7 +386,7 @@ const normalTimelockPermissions = (timelock: string): AccessControlEntry[] => {
     "setMarketSupplyCaps(address[],uint256[])",
     "setActionsPaused(address[],uint256[],bool)",
     "setMinLiquidatableCollateral(uint256)",
-    "addPool(string,address,uint256,uint256,uint256)",
+    "addPool(string,address,uint256,uint256)",
     "addMarket(AddMarketInput)",
     "setPoolName(address,string)",
     "updatePoolMetadata(address,VenusPoolMetaData)",
