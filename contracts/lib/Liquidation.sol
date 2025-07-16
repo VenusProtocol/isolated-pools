@@ -73,20 +73,31 @@ library Liquidation {
     function calculateIncentiveAdjustedDebt(
         address borrower,
         VToken[] memory markets,
-        ComptrollerInterface comptroller
+        ComptrollerInterface comptroller,
+        function(VToken) internal view returns (uint256) getUnderlyingPrice
     ) internal view returns (uint256 weightedBorrowSum) {
         for (uint256 i; i < markets.length; ++i) {
             VToken market = markets[i];
-            (, , uint256 borrowBalance, ) = market.getAccountSnapshot(borrower);
 
-            if (borrowBalance > 0) {
-                uint256 marketIncentive = comptroller.getDynamicLiquidationIncentive(borrower, address(market));
-                uint256 scaledBorrow = ExponentialNoError.mul_ScalarTruncate(
+            (, , uint256 borrowBalance, ) = market.getAccountSnapshot(borrower);
+            if (borrowBalance == 0) continue;
+
+            // Convert to USD value using oracle price
+            uint256 borrowPrice = getUnderlyingPrice(market);
+            uint256 borrowValueUSD = ExponentialNoError.mul_ScalarTruncate(
+                ExponentialNoError.Exp({ mantissa: borrowPrice }),
+                borrowBalance
+            );
+
+            uint256 marketIncentive = comptroller.getDynamicLiquidationIncentive(borrower, address(market));
+
+            weightedBorrowSum = ExponentialNoError.add_(
+                weightedBorrowSum,
+                ExponentialNoError.mul_ScalarTruncate(
                     ExponentialNoError.Exp({ mantissa: marketIncentive }),
-                    borrowBalance
-                );
-                weightedBorrowSum = ExponentialNoError.add_(weightedBorrowSum, scaledBorrow);
-            }
+                    borrowValueUSD
+                )
+            );
         }
         return weightedBorrowSum;
     }

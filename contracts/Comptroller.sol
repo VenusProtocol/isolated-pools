@@ -872,7 +872,12 @@ contract Comptroller is
 
         Exp memory totalCollateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory totalScaledBorrows = Exp({
-            mantissa: Liquidation.calculateIncentiveAdjustedDebt(user, userAssets, ComptrollerInterface(address(this)))
+            mantissa: Liquidation.calculateIncentiveAdjustedDebt(
+                user,
+                userAssets,
+                ComptrollerInterface(address(this)),
+                _safeGetUnderlyingPrice
+            )
         });
 
         // percentage = collateral / (borrows * liquidation incentive)
@@ -927,7 +932,8 @@ contract Comptroller is
         uint256 collateralToSeize = Liquidation.calculateIncentiveAdjustedDebt(
             borrower,
             borrowMarkets,
-            ComptrollerInterface(address(this))
+            ComptrollerInterface(address(this)),
+            _safeGetUnderlyingPrice
         );
 
         if (collateralToSeize >= snapshot.totalCollateral) {
