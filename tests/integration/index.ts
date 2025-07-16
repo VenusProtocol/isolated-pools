@@ -103,6 +103,12 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setMarketLiquidationIncentive(address,uint256)",
+    deployer,
+  );
+
   // Set supply caps
   const supply = convertToUnit(10, 36);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBTCB.address], [supply, supply]);
@@ -110,6 +116,9 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   // Set borrow caps
   const borrowCap = convertToUnit(10, 36);
   await Comptroller.setMarketBorrowCaps([vBNX.address, vBTCB.address], [borrowCap, borrowCap]);
+
+  await Comptroller.setMarketLiquidationIncentive(vBNX.address, convertToUnit(1, 18));
+  await Comptroller.setMarketLiquidationIncentive(vBTCB.address, convertToUnit(1, 18));
 
   const vBNXPrice: BigNumber = new BigNumber(
     scaleDownBy((await priceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
@@ -624,26 +633,28 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       );
     });
 
-    it("Should revert when liquidation is called through vToken and trying to pay too much", async function () {
-      // Mint and Incrrease collateral of the user
-      udnerlyingMintAmount = convertToUnit("1", 18);
-      const VTokenMintAmount = convertToUnit("1", 8);
+    it("Should allow 100% repay when health factor is below threshold", async function () {
+      // 1. Setup - Mint collateral
+      const underlyingMintAmount = convertToUnit("1", 18);
+      const vTokenMintAmount = convertToUnit("1", 8);
       const expectedTotalBalance = Number(convertToUnit(1, 7)) + Number(convertToUnit(1, 8));
-      await BNX.connect(acc2Signer).faucet(udnerlyingMintAmount);
-      await BNX.connect(acc2Signer).approve(vBNX.address, udnerlyingMintAmount);
 
-      await expect(vBNX.connect(acc2Signer).mint(udnerlyingMintAmount))
+      await BNX.connect(acc2Signer).faucet(underlyingMintAmount);
+      await BNX.connect(acc2Signer).approve(vBNX.address, underlyingMintAmount);
+
+      await expect(vBNX.connect(acc2Signer).mint(underlyingMintAmount))
         .to.emit(vBNX, "Mint")
-        .withArgs(acc2, udnerlyingMintAmount, VTokenMintAmount, expectedTotalBalance);
-      // price manipulation and borrow to overcome insufficient shortfall
+        .withArgs(acc2, underlyingMintAmount, vTokenMintAmount, expectedTotalBalance);
+
+      // 2. Manipulate prices to create severe shortfall (health factor 0)
       const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 20));
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 20)); // High BTCB price
+      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18)); // BNX price
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      // Liquidation
-      await expect(
-        vBTCB.connect(acc1Signer).liquidateBorrow(acc2, convertToUnit("1", 18), vBNX.address),
-      ).to.be.revertedWithCustomError(Comptroller, "TooMuchRepay");
+
+      // 3. Attempt full liquidation (should succeed)
+      const repayAmount = convertToUnit("1", 18);
+      await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, repayAmount, vBNX.address)).to.not.be.reverted;
     });
 
     it("Should success when liquidation is called through vToken", async function () {
