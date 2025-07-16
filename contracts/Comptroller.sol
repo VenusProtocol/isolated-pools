@@ -1691,17 +1691,19 @@ contract Comptroller is
                 snapshot
             );
 
+            liquidationIncentiveMantissa += markets[address(asset)].liquidationIncentiveMantissa;
+
             unchecked {
                 ++i;
             }
         }
 
-        uint256 weightedAvg;
+        uint256 liquidationIncentiveAvg;
         if (assetsCount > 0) {
-            weightedAvg = div_(liquidationIncentiveMantissa, assetsCount);
+            liquidationIncentiveAvg = div_(liquidationIncentiveMantissa, assetsCount);
         }
 
-        return Liquidation.finalizeSnapshot(snapshot, assetsCount, weightedAvg);
+        return Liquidation.finalizeSnapshot(snapshot, assetsCount, liquidationIncentiveAvg);
     }
 
     /**
