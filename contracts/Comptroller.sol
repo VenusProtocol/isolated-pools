@@ -745,7 +745,7 @@ contract Comptroller is
         uint256 closeFactor;
         unchecked {
             if (snapshot.healthFactor >= 1e18) revert InsufficientShortfall();
-            uint256 wtAvg = snapshot.weightavg;
+            uint256 wtAvg = snapshot.averageLT;
             if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
                 uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
                 uint256 denominator = borrowBalance *
@@ -1516,7 +1516,7 @@ contract Comptroller is
         if (snapshot.healthFactor >= snapshot.healthFactorThreshold) return liquidationIncentiveMantissa;
 
         unchecked {
-            uint256 value = ((snapshot.healthFactor * 1e18) / snapshot.weightavg) - 1e18;
+            uint256 value = ((snapshot.healthFactor * 1e18) / snapshot.averageLT) - 1e18;
             return value > liquidationIncentiveMantissa ? liquidationIncentiveMantissa : value;
         }
     }
