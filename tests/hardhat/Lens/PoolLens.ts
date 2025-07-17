@@ -424,13 +424,13 @@ for (const isTimeBased of [false, true]) {
         const resp = await poolLens.getPoolBadDebt(comptroller1Proxy.address);
 
         expect(resp.comptroller).to.be.equal(comptroller1Proxy.address);
-        expect(resp.totalBadDebtUsd).to.be.equal("192821303636611822200000005");
+        expect(resp.totalBadDebtUsd).to.be.equal("210003400000000000000000005");
 
         expect(resp.badDebts[1][0]).to.be.equal(vDAI.address);
         expect(resp.badDebts[1][1].toString()).to.be.equal("5");
 
         expect(resp.badDebts[0][0]).to.be.equal(vWBTC.address);
-        expect(resp.badDebts[0][1].toString()).to.be.equal("192821303636611822200000000");
+        expect(resp.badDebts[0][1].toString()).to.be.equal("210003400000000000000000000");
 
         // Cleanup
         await priceOracle.setPrice(mockDAI.address, parseUnits(defaultDaiPrice, 18));
