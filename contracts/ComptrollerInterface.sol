@@ -106,6 +106,8 @@ interface ComptrollerInterface {
     function actionPaused(address market, Action action) external view returns (bool);
 
     function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
+
+    function getMarketLiquidationIncentive(address vToken) external view returns (uint256);
 }
 
 /**
