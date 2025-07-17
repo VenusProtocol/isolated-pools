@@ -210,7 +210,8 @@ library Liquidation {
             asset.borrowBalance,
             snapshot.borrows
         );
-        snapshot.weightavg += asset.assetWeight;
+        uint256 vTokenBalanceUSD = ExponentialNoError.mul_ScalarTruncate(vTokenPrice, asset.vTokenBalance);
+        snapshot.averageLT += ExponentialNoError.mul_(asset.assetWeight, vTokenBalanceUSD);
 
         // Handle modified asset effects
         if (address(asset.vTokenAddress) == address(effectsParams.vTokenModify)) {
@@ -232,32 +233,27 @@ library Liquidation {
     /**
      * @notice Finalizes the account liquidity snapshot by calculating weighted averages, health factors, and liquidity/shortfall.
      * @dev
-     * - Computes the average weight if there are assets.
+     * - Computes the average weight.
      * - Calculates the sum of borrows and effects.
      * - Determines the health factor as the ratio of weighted collateral to total borrow plus effects.
      * - Sets the health factor threshold using the weighted average and liquidation incentive.
      * - Calculates liquidity and shortfall based on the comparison of weighted collateral and borrow plus effects.
      * @param snapshot The account liquidity snapshot to be finalized.
-     * @param assetsCount The number of assets in the snapshot.
-     * @param liquidationIncentiveMantissa The liquidation incentive, scaled by 1e18.
      * @return The finalized account liquidity snapshot with updated fields.
      */
     function finalizeSnapshot(
-        ComptrollerStorage.AccountLiquiditySnapshot memory snapshot,
-        uint256 assetsCount,
-        uint256 liquidationIncentiveMantissa
+        ComptrollerStorage.AccountLiquiditySnapshot memory snapshot
     ) internal pure returns (ComptrollerStorage.AccountLiquiditySnapshot memory) {
-        if (assetsCount > 0) {
-            snapshot.weightavg = snapshot.weightavg / assetsCount;
+        if (snapshot.totalCollateral > 0) {
+            snapshot.averageLT = ExponentialNoError.div_(snapshot.averageLT, snapshot.totalCollateral);
         }
-
         uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
 
         if (borrowPlusEffects > 0) {
             snapshot.healthFactor = ExponentialNoError.div_(snapshot.weightedCollateral, borrowPlusEffects);
         }
         snapshot.healthFactorThreshold = ExponentialNoError.div_(
-            snapshot.weightavg * (1e18 + liquidationIncentiveMantissa),
+            snapshot.averageLT * (1e18 + snapshot.liquidationIncentiveAvg),
             1e18
         );
 
