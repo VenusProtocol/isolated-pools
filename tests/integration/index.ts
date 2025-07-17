@@ -610,7 +610,7 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       ).to.be.revertedWithCustomError(Comptroller, "InsufficientShortfall");
     });
 
-    it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
+    it("Should revert when liquidation worsens the health of the borrower", async function () {
       // Mint and Incrrease collateral of the user
       udnerlyingMintAmount = convertToUnit("1", 18);
       const VTokenMintAmount = convertToUnit(1, 8);
@@ -628,36 +628,13 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
       // Liquidation
-      await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, 201, vBNX.address)).to.be.revertedWith(
-        "LIQUIDATE_SEIZE_TOO_MUCH",
+      await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, 201, vBNX.address)).to.be.revertedWithCustomError(
+        Comptroller,
+        "ToxicLiquidation",
       );
     });
 
-    it("Should allow 100% repay when health factor is below threshold", async function () {
-      // 1. Setup - Mint collateral
-      const underlyingMintAmount = convertToUnit("1", 18);
-      const vTokenMintAmount = convertToUnit("1", 8);
-      const expectedTotalBalance = Number(convertToUnit(1, 7)) + Number(convertToUnit(1, 8));
-
-      await BNX.connect(acc2Signer).faucet(underlyingMintAmount);
-      await BNX.connect(acc2Signer).approve(vBNX.address, underlyingMintAmount);
-
-      await expect(vBNX.connect(acc2Signer).mint(underlyingMintAmount))
-        .to.emit(vBNX, "Mint")
-        .withArgs(acc2, underlyingMintAmount, vTokenMintAmount, expectedTotalBalance);
-
-      // 2. Manipulate prices to create severe shortfall (health factor 0)
-      const dummyPriceOracle = await smock.fake<MockPriceOracle>("MockPriceOracle");
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("1", 20)); // High BTCB price
-      dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18)); // BNX price
-      await Comptroller.setPriceOracle(dummyPriceOracle.address);
-
-      // 3. Attempt full liquidation (should succeed)
-      const repayAmount = convertToUnit("1", 18);
-      await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, repayAmount, vBNX.address)).to.not.be.reverted;
-    });
-
-    it("Should success when liquidation is called through vToken", async function () {
+    it("Should revert for ToxicLiquidation", async function () {
       // Mint and Incrrease collateral of the user
       mintAmount = convertToUnit("1", 18);
       vTokenMintAmount = convertToUnit("1", 8);
@@ -674,23 +651,10 @@ describe("Straight Cases For Single User Liquidation and healing", function () {
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBTCB.address).returns(convertToUnit("100", 18));
       dummyPriceOracle.getUnderlyingPrice.whenCalledWith(vBNX.address).returns(convertToUnit("100", 18));
       await Comptroller.setPriceOracle(dummyPriceOracle.address);
-      const borrowBalance = await vBTCB.borrowBalanceStored(acc2);
-      const closeFactor = await Comptroller.closeFactorMantissa();
-      const maxClose = (borrowBalance * closeFactor) / 1e18;
-      const seizeAmount = EXPONENT_SCALE * maxClose * (convertToUnit("100", 18) / convertToUnit("100", 18));
-      const exchangeRateStored = await vBNX.exchangeRateStored();
-      const seizeTokensOverall = seizeAmount / exchangeRateStored;
-      const reserveMantissa = await vBTCB.protocolSeizeShareMantissa();
-      const seizeTokens = (seizeTokensOverall - (seizeTokensOverall * reserveMantissa) / EXPONENT_SCALE).toFixed(0);
-      const protocolSeizeToken = seizeTokensOverall - seizeTokens;
-      const protocolSeizeAmount = (exchangeRateStored * protocolSeizeToken) / EXPONENT_SCALE;
 
-      await expect(vBTCB.connect(acc1Signer).liquidateBorrow(acc2, maxClose.toString(), vBNX.address))
-        .to.emit(vBTCB, "LiquidateBorrow")
-        .withArgs(acc1, acc2, maxClose.toString(), vBNX.address, seizeTokensOverall.toFixed(0));
-      expect(protocolSeizeAmount).equal(await BNX.balanceOf(ProtocolShareReserve.address));
-      const liquidatorBalance = await vBNX.connect(acc1Signer).balanceOf(acc1);
-      expect(liquidatorBalance).to.equal(seizeTokens);
+      await expect(
+        vBTCB.connect(acc1Signer).liquidateBorrow(acc2, convertToUnit(1, 18), vBNX.address),
+      ).to.be.revertedWithCustomError(Comptroller, "ToxicLiquidation");
     });
   });
 
