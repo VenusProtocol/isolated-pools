@@ -27,9 +27,10 @@ contract ComptrollerStorage {
         uint256 effects;
         uint256 liquidity;
         uint256 shortfall;
-        uint256 weightavg;
-        uint256 healthFactor;
-        uint256 healthFactorThreshold;
+        uint256 averageLT; // Average liquidation threshold of all assets in the snapshot
+        uint256 healthFactor; // Health factor of the account, calculated as (weightedCollateral / borrows)
+        uint256 healthFactorThreshold; // Health factor threshold for liquidation, calculated as (averageLT * (1e18 + LiquidationIncentiveAvg) / 1e18)
+        uint256 liquidationIncentiveAvg; // Average liquidation incentive of all assets in the snapshot
     }
 
     struct RewardSpeeds {

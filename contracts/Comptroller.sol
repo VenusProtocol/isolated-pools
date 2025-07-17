@@ -204,6 +204,9 @@ contract Comptroller is
     /// @notice Thrown if delegate approval status is already set to the requested value
     error DelegationStatusUnchanged();
 
+    /// @notice Thrown when the liquidation worsens the health factor of the borrower
+    error ToxicLiquidation();
+
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
@@ -731,6 +734,10 @@ contract Comptroller is
 
         if (snapshot.shortfall == 0) {
             revert InsufficientShortfall();
+        }
+
+        if ((snapshot.averageLT * (1e18 + snapshot.liquidationIncentiveAvg)) > snapshot.healthFactor) {
+            revert ToxicLiquidation();
         }
 
         Market storage marketCollateral = markets[vTokenCollateral];
@@ -1704,12 +1711,11 @@ contract Comptroller is
             }
         }
 
-        uint256 liquidationIncentiveAvg;
         if (assetsCount > 0) {
-            liquidationIncentiveAvg = div_(liquidationIncentiveMantissa, assetsCount);
+            snapshot.liquidationIncentiveAvg = div_(liquidationIncentiveMantissa, assetsCount);
         }
 
-        return Liquidation.finalizeSnapshot(snapshot, assetsCount, liquidationIncentiveAvg);
+        return Liquidation.finalizeSnapshot(snapshot);
     }
 
     /**
