@@ -13,7 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
-import { Liquidation } from "./lib/Liquidation.sol";
+import { ILiquidationManager } from "./LiquidationManagerInterface.sol";
 
 /**
  * @title Comptroller
@@ -105,8 +105,12 @@ contract Comptroller is
 
     /// @notice Emitted when a market is unlisted
     event MarketUnlisted(address indexed vToken);
+
     /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
+
+    /// @notice Emitted when the liquidation manager is set
+    event LiquidationModuleSet(address indexed ILiquidationManager);
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -749,7 +753,7 @@ contract Comptroller is
             if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
                 uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
                 uint256 denominator = borrowBalance *
-                    (1e18 - ((wtAvg * (1e18 + marketCollateral.liquidationIncentiveMantissa)) / 1e18));
+                    (1e18 - ((wtAvg * (1e18 + marketCollateral.maxLiquidationIncentiveMantissa)) / 1e18));
                 closeFactor = (numerator * 1e18) / denominator;
                 closeFactor = closeFactor > 1e18 ? 1e18 : closeFactor;
             } else {
@@ -879,11 +883,10 @@ contract Comptroller is
 
         Exp memory totalCollateral = Exp({ mantissa: snapshot.totalCollateral });
         Exp memory totalScaledBorrows = Exp({
-            mantissa: Liquidation.calculateIncentiveAdjustedDebt(
+            mantissa: liquidationManager.calculateIncentiveAdjustedDebt(
                 user,
                 userAssets,
-                ComptrollerInterface(address(this)),
-                _safeGetUnderlyingPrice
+                ComptrollerInterface(address(this))
             )
         });
 
@@ -936,11 +939,10 @@ contract Comptroller is
         VToken[] memory borrowMarkets = getAssetsIn(borrower);
         uint256 marketsCount = borrowMarkets.length;
 
-        uint256 collateralToSeize = Liquidation.calculateIncentiveAdjustedDebt(
+        uint256 collateralToSeize = liquidationManager.calculateIncentiveAdjustedDebt(
             borrower,
             borrowMarkets,
-            ComptrollerInterface(address(this)),
-            _safeGetUnderlyingPrice
+            ComptrollerInterface(address(this))
         );
 
         if (collateralToSeize >= snapshot.totalCollateral) {
@@ -957,7 +959,16 @@ contract Comptroller is
 
         _ensureMaxLoops(ordersCount / 2);
 
-        Liquidation.processLiquidationOrders(orders, borrower, msg.sender, markets);
+        for (uint256 i; i < ordersCount; ++i) {
+            if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
+                revert MarketNotListed(address(orders[i].vTokenBorrowed));
+            }
+            if (!markets[address(orders[i].vTokenCollateral)].isListed) {
+                revert MarketNotListed(address(orders[i].vTokenCollateral));
+            }
+
+            liquidationManager.processLiquidationOrder(orders[i], borrower, msg.sender);
+        }
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
@@ -1059,15 +1070,30 @@ contract Comptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        uint256 oldLiquidationIncentiveMantissa = market.liquidationIncentiveMantissa;
+        uint256 oldLiquidationIncentiveMantissa = market.maxLiquidationIncentiveMantissa;
         if (newLiquidationIncentiveMantissa == oldLiquidationIncentiveMantissa) {
             return; // No change, no need to emit event
         }
 
-        market.liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
+        market.maxLiquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
 
         // Emit event with old incentive, new incentive
         emit NewMarketLiquidationIncentive(vToken, oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+    }
+
+    /**
+     * @notice Sets the address of the liquidation manager module.
+     * @dev Restricted by AccessControlManager. Ensures the address is non-zero.
+     * @param liquidationManager_ Address of the new liquidation manager contract.
+     * @custom:event Emits LiquidationModuleSet on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the address is zero
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setLiquidationModule(address liquidationManager_) external {
+        _checkAccessAllowed("setLiquidationModule(address)");
+        ensureNonzeroAddress(liquidationManager_);
+        liquidationManager = ILiquidationManager(liquidationManager_);
+        emit LiquidationModuleSet(liquidationManager_);
     }
 
     /**
@@ -1370,7 +1396,7 @@ contract Comptroller is
         if (!market.isListed) {
             revert MarketNotListed(vToken);
         }
-        return market.liquidationIncentiveMantissa;
+        return market.maxLiquidationIncentiveMantissa;
     }
 
     /**
@@ -1445,6 +1471,14 @@ contract Comptroller is
     }
 
     /**
+     * @notice Returns the current oracle contract used by the Comptroller.
+     * @return The address of the ResilientOracleInterface contract.
+     */
+    function getOracle() external view returns (ResilientOracleInterface) {
+        return oracle;
+    }
+
+    /**
      * @notice A marker method that returns true for a valid Comptroller contract
      * @return Always true
      */
@@ -1509,7 +1543,7 @@ contract Comptroller is
     /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
     function getDynamicLiquidationIncentive(address borrower, address vToken) public view returns (uint256 incentive) {
         Market storage market = markets[vToken];
-        uint256 liquidationIncentiveMantissa = market.liquidationIncentiveMantissa;
+        uint256 liquidationIncentiveMantissa = market.maxLiquidationIncentiveMantissa;
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
 
@@ -1686,7 +1720,7 @@ contract Comptroller is
         uint256 assetsCount = assets.length;
         uint256 liquidationIncentiveMantissa;
 
-        Liquidation.EffectsParams memory effects = Liquidation.EffectsParams({
+        ILiquidationManager.EffectsParams memory effects = ILiquidationManager.EffectsParams({
             vTokenModify: vTokenModify,
             redeemTokens: redeemTokens,
             borrowAmount: borrowAmount
@@ -1694,17 +1728,16 @@ contract Comptroller is
 
         for (uint256 i; i < assetsCount; ) {
             VToken asset = assets[i];
-            snapshot = Liquidation.processAsset(
+            snapshot = liquidationManager.processAsset(
                 assets[i],
                 account,
                 effects,
                 weight(asset).mantissa,
-                _safeGetUnderlyingPrice,
-                _safeGetAccountSnapshot,
+                _safeGetUnderlyingPrice(asset),
                 snapshot
             );
 
-            liquidationIncentiveMantissa += markets[address(asset)].liquidationIncentiveMantissa;
+            liquidationIncentiveMantissa += markets[address(asset)].maxLiquidationIncentiveMantissa;
 
             unchecked {
                 ++i;
@@ -1715,7 +1748,7 @@ contract Comptroller is
             snapshot.liquidationIncentiveAvg = div_(liquidationIncentiveMantissa, assetsCount);
         }
 
-        return Liquidation.finalizeSnapshot(snapshot);
+        return liquidationManager.finalizeSnapshot(snapshot);
     }
 
     /**
