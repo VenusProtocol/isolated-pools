@@ -277,9 +277,7 @@ contract Comptroller is
 
         Market storage _market = markets[market];
 
-        if (!_market.isListed) {
-            revert MarketNotListed(market);
-        }
+        _checkMarketListed(market);
 
         if (!actionPaused(market, Action.BORROW)) {
             revert BorrowActionNotPaused();
@@ -439,9 +437,7 @@ contract Comptroller is
     function preMintHook(address vToken, address minter, uint256 mintAmount) external override {
         _checkActionPauseState(vToken, Action.MINT);
 
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         uint256 supplyCap = supplyCaps[vToken];
         // Skipping the cap check for uncapped coins to save some gas
@@ -601,9 +597,7 @@ contract Comptroller is
     function preBorrowHook(address vToken, address borrower, uint256 borrowAmount) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
@@ -672,10 +666,7 @@ contract Comptroller is
         _checkActionPauseState(vToken, Action.REPAY);
 
         oracle.updatePrice(vToken);
-
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         // Keep the flywheel moving
         _updateAndDistributeBorrowRewards(vToken, borrower);
@@ -711,12 +702,8 @@ contract Comptroller is
         // Update the prices of tokens
         updatePrices(borrower);
 
-        if (!markets[vTokenBorrowed].isListed) {
-            revert MarketNotListed(address(vTokenBorrowed));
-        }
-        if (!markets[vTokenCollateral].isListed) {
-            revert MarketNotListed(address(vTokenCollateral));
-        }
+        _checkMarketListed(vTokenBorrowed);
+        _checkMarketListed(vTokenCollateral);
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
@@ -792,9 +779,7 @@ contract Comptroller is
 
         Market storage market = markets[vTokenCollateral];
 
-        if (!market.isListed) {
-            revert MarketNotListed(vTokenCollateral);
-        }
+        _checkMarketListed(vTokenCollateral);
 
         if (seizerContract == address(this)) {
             // If Comptroller is the seizer, just check if collateral's comptroller
@@ -805,9 +790,7 @@ contract Comptroller is
         } else {
             // If the seizer is not the Comptroller, check that the seizer is a
             // listed market, and that the markets' comptrollers match
-            if (!markets[seizerContract].isListed) {
-                revert MarketNotListed(seizerContract);
-            }
+            _checkMarketListed(seizerContract);
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
                 revert ComptrollerMismatch();
             }
@@ -960,12 +943,8 @@ contract Comptroller is
         _ensureMaxLoops(ordersCount / 2);
 
         for (uint256 i; i < ordersCount; ++i) {
-            if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenBorrowed));
-            }
-            if (!markets[address(orders[i].vTokenCollateral)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenCollateral));
-            }
+            _checkMarketListed(address(orders[i].vTokenBorrowed));
+            _checkMarketListed(address(orders[i].vTokenCollateral));
 
             liquidationManager.processLiquidationOrder(orders[i], borrower, msg.sender);
         }
@@ -1015,9 +994,7 @@ contract Comptroller is
 
         // Verify market is listed
         Market storage market = markets[address(vToken)];
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(address(vToken));
 
         // Check collateral factor <= 0.9
         if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
@@ -1066,9 +1043,7 @@ contract Comptroller is
         _checkAccessAllowed("setMarketLiquidationIncentive(address,uint256)");
 
         Market storage market = markets[address(vToken)];
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(address(vToken));
 
         uint256 oldLiquidationIncentiveMantissa = market.maxLiquidationIncentiveMantissa;
         if (newLiquidationIncentiveMantissa == oldLiquidationIncentiveMantissa) {
@@ -1288,9 +1263,7 @@ contract Comptroller is
         _checkAccessAllowed("setForcedLiquidation(address,bool)");
         ensureNonzeroAddress(vTokenBorrowed);
 
-        if (!markets[vTokenBorrowed].isListed) {
-            revert MarketNotListed(vTokenBorrowed);
-        }
+        _checkMarketListed(vTokenBorrowed);
 
         isForcedLiquidationEnabled[vTokenBorrowed] = enable;
         emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
@@ -1393,9 +1366,7 @@ contract Comptroller is
         address vToken
     ) external view returns (uint256 liquidationIncentiveMantissa) {
         Market storage market = markets[vToken];
-        if (!market.isListed) {
-            revert MarketNotListed(vToken);
-        }
+        _checkMarketListed(vToken);
         return market.maxLiquidationIncentiveMantissa;
     }
 
@@ -1564,9 +1535,7 @@ contract Comptroller is
         _checkActionPauseState(address(vToken), Action.ENTER_MARKET);
         Market storage marketToJoin = markets[address(vToken)];
 
-        if (!marketToJoin.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(address(vToken));
 
         if (marketToJoin.accountMembership[borrower]) {
             // already joined
@@ -1623,9 +1592,7 @@ contract Comptroller is
     function _checkRedeemAllowed(address vToken, address redeemer, uint256 redeemTokens) internal {
         Market storage market = markets[vToken];
 
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
         if (!market.accountMembership[redeemer]) {
@@ -1678,6 +1645,17 @@ contract Comptroller is
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, user1);
             rewardsDistributor.distributeSupplierRewardToken(vToken, user2);
+        }
+    }
+
+    /**
+     * @notice Checks whether a given market (vToken) is listed.
+     * @param vToken The address of the vToken to check.
+     * @custom:error MarketNotListed error is thrown if the market is not listed
+     */
+    function _checkMarketListed(address vToken) internal view {
+        if (!markets[vToken].isListed) {
+            revert MarketNotListed(vToken);
         }
     }
 
