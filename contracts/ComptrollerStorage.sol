@@ -53,7 +53,7 @@ contract ComptrollerStorage {
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
         // discount on collateral that a liquidator receives when liquidating a borrow in this market
-        uint256 liquidationIncentiveMantissa;
+        uint256 maxLiquidationIncentiveMantissa;
     }
 
     /**
@@ -65,6 +65,11 @@ contract ComptrollerStorage {
      * @notice Multiplier used to calculate the maximum repayAmount when liquidating a borrow
      */
     uint256 public closeFactorMantissa;
+
+    /**
+     * @notice Multiplier representing the discount on collateral that a liquidator receives
+     */
+    uint256 public deprecatedLiquidationIncentiveMantissa;
 
     /**
      * @notice Per-account mapping of "assets you are in"
