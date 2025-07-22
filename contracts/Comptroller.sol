@@ -1615,6 +1615,12 @@ contract Comptroller is
         }
     }
 
+    /**
+     * @notice Updates and distributes supply rewards for a specific user and vToken.
+     * @dev Iterates through all reward distributors, updating the supply index and distributing rewards.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user The address of the supplier to receive the distributed rewards.
+     */
     function _updateAndDistributeSupplyRewards(address vToken, address user) internal {
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
@@ -1625,6 +1631,12 @@ contract Comptroller is
         }
     }
 
+    /**
+     * @notice Updates and distributes borrow rewards for a specific user and vToken.
+     * @dev Iterates through all reward distributors, updating the borrow index and distributing rewards.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user The address of the user to receive the borrow rewards.
+     */
     function _updateAndDistributeBorrowRewards(address vToken, address user) internal {
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
@@ -1637,6 +1649,14 @@ contract Comptroller is
         }
     }
 
+    /**
+     * @dev Updates the supply reward index and distributes supplier reward tokens for multiple users.
+     * Iterates through all registered rewards distributors, updating the supply index for the given vToken,
+     * and distributing reward tokens to the specified users.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user1 The address of the first user to receive supplier reward tokens.
+     * @param user2 The address of the second user to receive supplier reward tokens.
+     */
     function _updateAndDistributeSupplyRewardsMulti(address vToken, address user1, address user2) internal {
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
