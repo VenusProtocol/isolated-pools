@@ -108,6 +108,8 @@ interface ComptrollerInterface {
     function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
 
     function getMarketLiquidationIncentive(address vToken) external view returns (uint256);
+
+    function getOracle() external view returns (ResilientOracleInterface);
 }
 
 /**
