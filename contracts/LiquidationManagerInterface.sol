@@ -21,12 +21,6 @@ interface ILiquidationManager {
         uint256 borrowAmount;
     }
 
-    function processLiquidationOrder(
-        ComptrollerStorage.LiquidationOrder calldata order,
-        address borrower,
-        address liquidator
-    ) external;
-
     function calculateIncentiveAdjustedDebt(
         address borrower,
         VToken[] memory markets,

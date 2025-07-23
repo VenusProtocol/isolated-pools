@@ -11,29 +11,6 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 contract LiquidationManager is ILiquidationManager, ExponentialNoError {
     /**
-     * @notice Processes a batch of liquidation orders for a given borrower.
-     * @dev Iterates through the provided liquidation orders and executes the liquidation for each order using the `forceLiquidateBorrow` function.
-     * @param order Aliquidation orders to process.
-     * @param borrower The address of the borrower whose positions are being liquidated.
-     * @param liquidator The address performing the liquidation.
-     * @custom:reverts MarketNotListed if either the borrowed or collateral market in an order is not listed.
-     */
-    function processLiquidationOrder(
-        ComptrollerStorage.LiquidationOrder calldata order,
-        address borrower,
-        address liquidator
-    ) external {
-        // Execute liquidation
-        order.vTokenBorrowed.forceLiquidateBorrow(
-            liquidator,
-            borrower,
-            order.repayAmount,
-            order.vTokenCollateral,
-            true
-        );
-    }
-
-    /**
      * @notice Calculates incentive-adjusted debt
      */
     function calculateIncentiveAdjustedDebt(

@@ -946,7 +946,14 @@ contract Comptroller is
             _checkMarketListed(address(orders[i].vTokenBorrowed));
             _checkMarketListed(address(orders[i].vTokenCollateral));
 
-            liquidationManager.processLiquidationOrder(orders[i], borrower, msg.sender);
+            LiquidationOrder calldata order = orders[i];
+            order.vTokenBorrowed.forceLiquidateBorrow(
+                msg.sender,
+                borrower,
+                order.repayAmount,
+                order.vTokenCollateral,
+                true
+            );
         }
 
         for (uint256 i; i < marketsCount; ++i) {
@@ -1727,7 +1734,7 @@ contract Comptroller is
         for (uint256 i; i < assetsCount; ) {
             VToken asset = assets[i];
             snapshot = liquidationManager.processAsset(
-                assets[i],
+                asset,
                 account,
                 effects,
                 weight(asset).mantissa,
