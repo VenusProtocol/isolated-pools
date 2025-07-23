@@ -62,9 +62,12 @@ describe("assetListTest", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+    const liquidationManager = await LiquidationManager.deploy();
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
+    await comptroller.setLiquidationModule(liquidationManager.address);
     const names = ["OMG", "ZRX", "BAT", "sketch"];
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async name => {

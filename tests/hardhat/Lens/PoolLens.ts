@@ -108,6 +108,9 @@ for (const isTimeBased of [false, true]) {
       const Comptroller = await ethers.getContractFactory("Comptroller");
       const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
+      const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+      const liquidationManager = await LiquidationManager.deploy();
+
       [comptroller1Proxy, comptroller2Proxy] = await Promise.all(
         [...Array(3)].map(async () => {
           const comptroller = await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
@@ -115,6 +118,7 @@ for (const isTimeBased of [false, true]) {
             fakeAccessControlManager.address,
           ]);
           await comptroller.setPriceOracle(priceOracle.address);
+          await comptroller.setLiquidationModule(liquidationManager.address);
           return comptroller as Comptroller;
         }),
       );

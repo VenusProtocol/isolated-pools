@@ -86,9 +86,12 @@ describe("liquidateAccount", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+    const liquidationManager = await LiquidationManager.deploy();
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
+    await comptroller.setLiquidationModule(liquidationManager.address);
     await comptroller.setMinLiquidatableCollateral(parseUnits("100", 18));
     await setBalance(poolRegistry.address, parseEther("1"));
     const names = ["OMG", "ZRX", "BAT"];

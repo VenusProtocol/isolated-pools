@@ -54,6 +54,9 @@ async function deployGateway(): Promise<GatewayFixture> {
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
+  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const liquidationManager = await LiquidationManager.deploy();
+
   const maxLoopsLimit = 150;
   const fakePriceOracle = await smock.fake<ResilientOracleInterface>(MockPriceOracle__factory.abi);
 
@@ -63,6 +66,7 @@ async function deployGateway(): Promise<GatewayFixture> {
   ])) as Comptroller;
 
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+  await comptrollerProxy.setLiquidationModule(liquidationManager.address);
 
   // Registering the pool
   await poolRegistry.addPool("Pool 1", comptrollerProxy.address, closeFactor, minLiquidatableCollateral);

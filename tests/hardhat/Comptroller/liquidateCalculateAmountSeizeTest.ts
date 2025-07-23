@@ -78,8 +78,11 @@ describe("Comptroller", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+    const liquidationManager = await LiquidationManager.deploy();
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
+    await comptroller.setLiquidationModule(liquidationManager.address);
 
     const vTokenBorrowed = await smock.fake<VToken>("VToken");
     const vTokenCollateral = await smock.fake<VToken>("VToken");
