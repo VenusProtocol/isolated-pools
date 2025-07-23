@@ -52,6 +52,8 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
 
   const pools = await PoolRegistry.callStatic.getAllPools();
   const Comptroller = await ethers.getContractAt("Comptroller", pools[0].comptroller);
+  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const liquidationManager = await LiquidationManager.deploy();
 
   const BNX = await ethers.getContract("MockBNX");
   const BTCB = await ethers.getContract("MockBTCB");
@@ -109,6 +111,12 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
     deployer,
   );
 
+  await AccessControlManager.giveCallPermission(
+    ethers.constants.AddressZero,
+    "setLiquidationModule(address)",
+    deployer,
+  );
+
   // Set supply caps
   const supply = convertToUnit(10, 36);
   await Comptroller.setMarketSupplyCaps([vBNX.address, vBTCB.address], [supply, supply]);
@@ -119,6 +127,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
 
   await Comptroller.setMarketLiquidationIncentive(vBNX.address, convertToUnit(1, 18));
   await Comptroller.setMarketLiquidationIncentive(vBTCB.address, convertToUnit(1, 18));
+  await Comptroller.setLiquidationModule(liquidationManager.address);
 
   const vBNXPrice: BigNumber = new BigNumber(
     scaleDownBy((await priceOracle.getUnderlyingPrice(vBNX.address)).toString(), 18),
