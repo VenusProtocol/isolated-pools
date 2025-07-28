@@ -7,7 +7,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 import { Action } from "./ComptrollerInterface.sol";
-import { ILiquidationManager } from "./LiquidationManagerInterface.sol";
+import { ILLiquidationManager } from "./ILLiquidationManager.sol";
 
 /**
  * @title ComptrollerStorage
@@ -127,7 +127,8 @@ contract ComptrollerStorage {
 
     /// @notice The liquidation manager contract that handles liquidation logic
     // This is an interface to allow for different liquidation strategies
-    ILiquidationManager public liquidationManager;
+    // ILLiquidationManagerInterface public liquidationManager;
+    ILLiquidationManager public liquidationManager;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
