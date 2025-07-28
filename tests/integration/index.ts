@@ -52,7 +52,7 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
 
   const pools = await PoolRegistry.callStatic.getAllPools();
   const Comptroller = await ethers.getContractAt("Comptroller", pools[0].comptroller);
-  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
   const liquidationManager = await LiquidationManager.deploy();
 
   const BNX = await ethers.getContract("MockBNX");

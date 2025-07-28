@@ -108,7 +108,7 @@ for (const isTimeBased of [false, true]) {
       const Comptroller = await ethers.getContractFactory("Comptroller");
       const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
-      const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+      const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
       const liquidationManager = await LiquidationManager.deploy();
 
       [comptroller1Proxy, comptroller2Proxy] = await Promise.all(

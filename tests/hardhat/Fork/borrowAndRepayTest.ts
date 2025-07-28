@@ -116,7 +116,7 @@ if (FORK) {
       await vTokenBeacon.upgradeTo(newVTokenImpl.address);
 
       // --- Deploy and Set New LiquidationManager ---
-      const LiquidationManagerFactory = await ethers.getContractFactory("LiquidationManager");
+      const LiquidationManagerFactory = await ethers.getContractFactory("ILLiquidationManager");
       liquidationManager = await LiquidationManagerFactory.deploy();
       await liquidationManager.deployed();
 

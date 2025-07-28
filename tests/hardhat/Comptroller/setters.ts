@@ -10,6 +10,7 @@ import {
   AccessControlManager,
   Comptroller,
   Comptroller__factory,
+  ILLiquidationManager,
   PoolRegistry,
   ResilientOracleInterface,
   RewardsDistributor,
@@ -109,6 +110,34 @@ describe("setters", async () => {
       await expect(comptroller.addRewardsDistributor(newRewardsDistributor.address)).to.be.revertedWith(
         "already exists",
       );
+    });
+  });
+
+  describe("setLiquidationModule", async () => {
+    let newLiquidationManager: FakeContract<ILLiquidationManager>;
+
+    beforeEach(async () => {
+      newLiquidationManager = await smock.fake<ILLiquidationManager>("ILLiquidationManager");
+    });
+
+    it("reverts if access control manager does not allow the call", async () => {
+      accessControl.isAllowedToCall.whenCalledWith(owner.address, "setLiquidationModule(address)").returns(false);
+      await expect(comptroller.setLiquidationModule(newLiquidationManager.address))
+        .to.be.revertedWithCustomError(comptroller, "Unauthorized")
+        .withArgs(owner.address, comptroller.address, "setLiquidationModule(address)");
+    });
+
+    it("reverts if zero address is passed", async () => {
+      await expect(comptroller.setLiquidationModule(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        comptroller,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("sets the liquidation manager and emits event", async () => {
+      await expect(comptroller.setLiquidationModule(newLiquidationManager.address))
+        .to.emit(comptroller, "NewLiquidationManager")
+        .withArgs(ethers.constants.AddressZero, newLiquidationManager.address);
     });
   });
 

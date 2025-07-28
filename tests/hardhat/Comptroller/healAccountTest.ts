@@ -48,7 +48,7 @@ describe("healAccount", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
-    const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+    const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
     const liquidationManager = await LiquidationManager.deploy();
 
     accessControl.isAllowedToCall.returns(true);

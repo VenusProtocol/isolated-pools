@@ -85,7 +85,7 @@ async function rewardsFixture(isTimeBased: boolean) {
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
-  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
   const liquidationManager = await LiquidationManager.deploy();
 
   comptrollerProxy = (await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [

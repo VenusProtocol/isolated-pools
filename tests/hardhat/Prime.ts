@@ -74,7 +74,7 @@ async function deployProtocol(): Promise<SetupProtocolFixture> {
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
-  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
   const liquidationManager = await LiquidationManager.deploy();
 
   const maxLoopsLimit = 150;
