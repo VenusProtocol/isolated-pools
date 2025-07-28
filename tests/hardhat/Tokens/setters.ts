@@ -40,9 +40,10 @@ describe("VToken", function () {
     ));
     comptroller.isComptroller.returns(true);
     newComptroller.isComptroller.returns(true);
-    comptroller.liquidationIncentiveMantissa.returns(parseUnits("1.1", 18));
     accessControlManager.isAllowedToCall.reset();
     accessControlManager.isAllowedToCall.returns(true);
+    comptroller.getMarketLiquidationIncentive.reset();
+    comptroller.getMarketLiquidationIncentive.returns(parseUnits("1.1", 18)); // 105% liquidation incentive
   });
 
   describe("setProtocolSeizeShare", () => {

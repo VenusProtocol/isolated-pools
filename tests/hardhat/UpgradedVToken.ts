@@ -70,13 +70,7 @@ for (const isTimeBased of [false, true]) {
       await comptroller1Proxy.setPriceOracle(priceOracle.address);
 
       // Registering the first pool
-      await poolRegistry.addPool(
-        "Pool 1",
-        comptroller1Proxy.address,
-        _closeFactor,
-        _liquidationIncentive,
-        _minLiquidatableCollateral,
-      );
+      await poolRegistry.addPool("Pool 1", comptroller1Proxy.address, _closeFactor, _minLiquidatableCollateral);
 
       vTokenBeacon = await deployVTokenBeacon();
       const vWBTC = await makeVToken({

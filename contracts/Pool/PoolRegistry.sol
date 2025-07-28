@@ -124,7 +124,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
      * @param name The name of the pool
      * @param comptroller Pool's Comptroller contract
      * @param closeFactor The pool's close factor (scaled by 1e18)
-     * @param liquidationIncentive The pool's liquidation incentive (scaled by 1e18)
      * @param minLiquidatableCollateral Minimal collateral for regular (non-batch) liquidations flow
      * @return index The index of the registered Venus pool
      * @custom:error ZeroAddressNotAllowed is thrown when Comptroller address is zero
@@ -134,10 +133,9 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
         string calldata name,
         Comptroller comptroller,
         uint256 closeFactor,
-        uint256 liquidationIncentive,
         uint256 minLiquidatableCollateral
     ) external virtual returns (uint256 index) {
-        _checkAccessAllowed("addPool(string,address,uint256,uint256,uint256)");
+        _checkAccessAllowed("addPool(string,address,uint256,uint256)");
         // Input validation
         ensureNonzeroAddress(address(comptroller));
         ensureNonzeroAddress(address(comptroller.oracle()));
@@ -146,7 +144,6 @@ contract PoolRegistry is Ownable2StepUpgradeable, AccessControlledV8, PoolRegist
 
         // Set Venus pool parameters
         comptroller.setCloseFactor(closeFactor);
-        comptroller.setLiquidationIncentive(liquidationIncentive);
         comptroller.setMinLiquidatableCollateral(minLiquidatableCollateral);
 
         return poolId;

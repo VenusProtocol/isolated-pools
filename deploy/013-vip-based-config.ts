@@ -135,15 +135,9 @@ const addPool = (poolRegistry: PoolRegistry, comptroller: Comptroller, pool: Poo
   console.log(`Adding a command to add Comptroller_${pool.id} to PoolRegistry`);
   return {
     contract: poolRegistry.address,
-    signature: "addPool(string,address,uint256,uint256,uint256)",
-    argTypes: ["string", "address", "uint256", "uint256", "uint256"],
-    parameters: [
-      pool.name,
-      comptroller.address,
-      pool.closeFactor,
-      pool.liquidationIncentive,
-      pool.minLiquidatableCollateral,
-    ],
+    signature: "addPool(string,address,uint256,uint256)",
+    argTypes: ["string", "address", "uint256", "uint256"],
+    parameters: [pool.name, comptroller.address, pool.closeFactor, pool.minLiquidatableCollateral],
     value: 0,
   };
 };

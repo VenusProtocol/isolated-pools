@@ -109,7 +109,7 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
     }
 
     function _configureMarkets() internal {
-        (, uint256 wUSDMCollateralFactor, uint256 wUSDMLiquidationThreshold) = COMPTROLLER.markets(address(VWUSDM));
+        (, uint256 wUSDMCollateralFactor, uint256 wUSDMLiquidationThreshold, ) = COMPTROLLER.markets(address(VWUSDM));
         _originalConfig = OriginalConfig({
             minLiquidatableCollateral: COMPTROLLER.minLiquidatableCollateral(),
             closeFactor: COMPTROLLER.closeFactorMantissa(),

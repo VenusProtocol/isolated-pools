@@ -49,7 +49,6 @@ type LiquidateTestFixture = {
 
 async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const comptroller = await fakeComptroller();
-  comptroller.liquidationIncentiveMantissa.returns(parseUnits("1.1", 18));
   const accessControlManager = await smock.fake<AccessControlManager>("AccessControlManager");
   accessControlManager.isAllowedToCall.returns(true);
   const [admin, liquidator, borrower] = await ethers.getSigners();
@@ -90,6 +89,7 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const underlyingCollateral = await collateralVToken.underlying();
   const collateralErc20 = ERC20Harness__factory.connect(underlyingCollateral, admin);
   await collateralErc20.harnessSetBalance(collateralVToken.address, cash);
+
   return {
     accessControlManager,
     comptroller,
@@ -117,6 +117,8 @@ function configure({
 
   comptroller.liquidateCalculateSeizeTokens.reset();
   comptroller.liquidateCalculateSeizeTokens.returns([Error.NO_ERROR, seizeTokens]);
+  comptroller.getDynamicLiquidationIncentive.reset();
+  comptroller.getDynamicLiquidationIncentive.returns(parseUnits("1.1", 18));
 
   borrowedUnderlying.transferFrom.reset();
 

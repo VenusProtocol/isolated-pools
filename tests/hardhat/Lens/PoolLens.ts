@@ -66,8 +66,6 @@ for (const isTimeBased of [false, true]) {
     let fakeAccessControlManager: FakeContract<AccessControlManager>;
     let closeFactor1: BigNumberish;
     let closeFactor2: BigNumberish;
-    let liquidationIncentive1: BigNumberish;
-    let liquidationIncentive2: BigNumberish;
     const minLiquidatableCollateral = parseUnits("100", 18);
     const maxLoopsLimit = 150;
     const defaultBtcPrice = "21000.34";
@@ -106,10 +104,12 @@ for (const isTimeBased of [false, true]) {
       priceOracle = await MockPriceOracle.deploy();
 
       closeFactor1 = parseUnits("0.05", 18);
-      liquidationIncentive1 = parseUnits("1", 18);
 
       const Comptroller = await ethers.getContractFactory("Comptroller");
       const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+      const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
+      const liquidationManager = await LiquidationManager.deploy();
 
       [comptroller1Proxy, comptroller2Proxy] = await Promise.all(
         [...Array(3)].map(async () => {
@@ -118,30 +118,18 @@ for (const isTimeBased of [false, true]) {
             fakeAccessControlManager.address,
           ]);
           await comptroller.setPriceOracle(priceOracle.address);
+          await comptroller.setLiquidationModule(liquidationManager.address);
           return comptroller as Comptroller;
         }),
       );
 
       // Registering the first pool
-      await poolRegistry.addPool(
-        "Pool 1",
-        comptroller1Proxy.address,
-        closeFactor1,
-        liquidationIncentive1,
-        minLiquidatableCollateral,
-      );
+      await poolRegistry.addPool("Pool 1", comptroller1Proxy.address, closeFactor1, minLiquidatableCollateral);
 
       closeFactor2 = parseUnits("0.05", 18);
-      liquidationIncentive2 = parseUnits("1", 18);
 
       // Registering the second pool
-      await poolRegistry.addPool(
-        "Pool 2",
-        comptroller2Proxy.address,
-        closeFactor2,
-        liquidationIncentive2,
-        minLiquidatableCollateral,
-      );
+      await poolRegistry.addPool("Pool 2", comptroller2Proxy.address, closeFactor2, minLiquidatableCollateral);
       const MockToken = await ethers.getContractFactory<MockToken__factory>("MockToken");
       mockDAI = await MockToken.deploy("MakerDAO", "DAI", 18);
       await mockDAI.faucet(parseUnits("1000", 18));
@@ -258,7 +246,6 @@ for (const isTimeBased of [false, true]) {
         expect(venusPool1Actual.description).equal("Pool1 description");
         expect(venusPool1Actual.priceOracle).equal(priceOracle.address);
         expect(venusPool1Actual.closeFactor).equal(closeFactor1);
-        expect(venusPool1Actual.liquidationIncentive).equal(liquidationIncentive1);
         expect(venusPool1Actual.minLiquidatableCollateral).equal(minLiquidatableCollateral);
 
         const vTokensActual = venusPool1Actual.vTokens;
@@ -286,7 +273,6 @@ for (const isTimeBased of [false, true]) {
         expect(venusPool2Actual.description).equal("Pool2 description");
         expect(venusPool1Actual.priceOracle).equal(priceOracle.address);
         expect(venusPool1Actual.closeFactor).equal(closeFactor2);
-        expect(venusPool1Actual.liquidationIncentive).equal(liquidationIncentive2);
         expect(venusPool1Actual.minLiquidatableCollateral).equal(minLiquidatableCollateral);
       });
 
@@ -301,7 +287,6 @@ for (const isTimeBased of [false, true]) {
         expect(poolData.description).equal("Pool1 description");
         expect(poolData.priceOracle).equal(priceOracle.address);
         expect(poolData.closeFactor).equal(closeFactor1);
-        expect(poolData.liquidationIncentive).equal(liquidationIncentive1);
         expect(poolData.minLiquidatableCollateral).equal(minLiquidatableCollateral);
 
         const vTokensActual = poolData.vTokens;
@@ -409,6 +394,9 @@ for (const isTimeBased of [false, true]) {
           [vWBTC.address, vDAI.address],
           [parseUnits("9000000000", 18), parseUnits("9000000000", 18)],
         );
+
+        await comptroller1Proxy.setMarketLiquidationIncentive(vWBTC.address, parseUnits("1.1", 18));
+        await comptroller1Proxy.setMarketLiquidationIncentive(vDAI.address, parseUnits("1.1", 18));
 
         await mockWBTC.connect(borrowerDai).faucet(parseUnits("20", 18));
         await mockWBTC.connect(borrowerDai).approve(vWBTC.address, parseUnits("20", 18));

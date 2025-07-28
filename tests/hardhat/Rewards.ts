@@ -85,20 +85,18 @@ async function rewardsFixture(isTimeBased: boolean) {
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
 
+  const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
+  const liquidationManager = await LiquidationManager.deploy();
+
   comptrollerProxy = (await upgrades.deployBeaconProxy(comptrollerBeacon, Comptroller, [
     maxLoopsLimit,
     fakeAccessControlManager.address,
   ])) as Comptroller;
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+  await comptrollerProxy.setLiquidationModule(liquidationManager.address);
 
   // Registering the first pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptrollerProxy.address,
-    _closeFactor,
-    _liquidationIncentive,
-    _minLiquidatableCollateral,
-  );
+  await poolRegistry.addPool("Pool 1", comptrollerProxy.address, _closeFactor, _minLiquidatableCollateral);
 
   if (isTimeBased) {
     blocksPerYear = 0;

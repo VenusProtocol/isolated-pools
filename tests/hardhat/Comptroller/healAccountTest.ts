@@ -48,21 +48,28 @@ describe("healAccount", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
+    const liquidationManager = await LiquidationManager.deploy();
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
-    await comptroller.setLiquidationIncentive(parseUnits("1.1", 18));
+    await comptroller.setLiquidationModule(liquidationManager.address);
     await comptroller.setMinLiquidatableCollateral(parseUnits("100", 18));
     await setBalance(poolRegistry.address, parseEther("1"));
     const names = ["OMG", "ZRX", "BAT"];
+
     const [OMG, ZRX, BAT, SKT] = await Promise.all(
       names.map(async () => {
         const vToken = await smock.fake<VToken>("VToken");
         vToken.isVToken.returns(true);
         await comptroller.connect(poolRegistry.wallet).supportMarket(vToken.address);
+        await comptroller.setMarketLiquidationIncentive(vToken.address, parseUnits("1.1", 18));
+        oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(parseUnits("1", 18));
+        await comptroller.setCollateralFactor(vToken.address, parseUnits("0.85", 18), parseUnits("0.9", 18));
         return vToken;
       }),
     );
+
     const allTokens = [OMG, ZRX, BAT];
     return { accessControl, comptroller, oracle, OMG, ZRX, BAT, SKT, allTokens, names };
   }
@@ -133,6 +140,23 @@ describe("healAccount", () => {
       expect(ZRX.healBorrow).to.have.been.calledWith(liquidator.address, user.address, zrxToRepay);
       expect(BAT.healBorrow).to.have.been.calledWith(liquidator.address, user.address, batToRepay);
     });
+
+    it("handles different liquidation incentives per market", async () => {
+      // Set different incentives
+      await comptroller.setMarketLiquidationIncentive(OMG.address, parseUnits("1.05", 18)); // 5%
+      await comptroller.setMarketLiquidationIncentive(ZRX.address, parseUnits("1.15", 18)); // 15%
+      await comptroller.setMarketLiquidationIncentive(BAT.address, parseUnits("1.25", 18)); // 25%
+
+      await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
+      OMG.getAccountSnapshot.returns([0, parseUnits("1.05", 18), 0, parseUnits("1", 18)]);
+      ZRX.getAccountSnapshot.returns([0, parseUnits("1.15", 18), parseUnits("1", 18), parseUnits("1", 18)]);
+      BAT.getAccountSnapshot.returns([0, 0, parseUnits("1", 18), parseUnits("1", 18)]);
+
+      await comptroller.connect(liquidator).healAccount(user.address);
+
+      expect(OMG.seize).calledWith(liquidator.address, user.address, parseUnits("1.05", 18));
+      expect(ZRX.seize).calledWith(liquidator.address, user.address, parseUnits("1.15", 18));
+    });
   });
 
   describe("liquidation incentive * debt > collateral", async () => {
@@ -175,6 +199,7 @@ describe("healAccount", () => {
 
   describe("failures", async () => {
     it("fails if liquidation incentive * debt < collateral", async () => {
+      await comptroller.setMinLiquidatableCollateral("2200000000000000000");
       await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
 
       // Supply 5 OMG, borrow 0 OMG
@@ -195,7 +220,7 @@ describe("healAccount", () => {
 
     it("fails if liquidation incentive * debt > collateral but there is no shortfall", async () => {
       // This could happen if liquidation incentive is too high
-      await comptroller.setLiquidationIncentive(parseUnits("100", 18));
+      await comptroller.setMarketLiquidationIncentive(OMG.address, parseUnits("100", 18));
       await comptroller.setCollateralFactor(OMG.address, parseUnits("0.9", 18), parseUnits("0.9", 18));
       await comptroller.connect(user).enterMarkets([OMG.address]);
 

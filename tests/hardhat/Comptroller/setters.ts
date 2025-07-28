@@ -10,6 +10,7 @@ import {
   AccessControlManager,
   Comptroller,
   Comptroller__factory,
+  ILLiquidationManager,
   PoolRegistry,
   ResilientOracleInterface,
   RewardsDistributor,
@@ -60,6 +61,7 @@ describe("setters", async () => {
     accessControl.isAllowedToCall.returns(true);
     OMG = await smock.fake<VToken>("VToken");
     OMG.isVToken.returns(true);
+    OMG.comptroller.returns(comptroller.address);
     poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
 
     // Sending transaction cost
@@ -69,7 +71,7 @@ describe("setters", async () => {
   describe("setPriceOracle", async () => {
     let newPriceOracle: FakeContract<ResilientOracleInterface>;
 
-    before(async () => {
+    beforeEach(async () => {
       newPriceOracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
     });
 
@@ -111,13 +113,50 @@ describe("setters", async () => {
     });
   });
 
-  describe("setLiquidationIncentive", async () => {
+  describe("setLiquidationModule", async () => {
+    let newLiquidationManager: FakeContract<ILLiquidationManager>;
+
+    beforeEach(async () => {
+      newLiquidationManager = await smock.fake<ILLiquidationManager>("ILLiquidationManager");
+    });
+
+    it("reverts if access control manager does not allow the call", async () => {
+      accessControl.isAllowedToCall.whenCalledWith(owner.address, "setLiquidationModule(address)").returns(false);
+      await expect(comptroller.setLiquidationModule(newLiquidationManager.address))
+        .to.be.revertedWithCustomError(comptroller, "Unauthorized")
+        .withArgs(owner.address, comptroller.address, "setLiquidationModule(address)");
+    });
+
+    it("reverts if zero address is passed", async () => {
+      await expect(comptroller.setLiquidationModule(ethers.constants.AddressZero)).to.be.revertedWithCustomError(
+        comptroller,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("sets the liquidation manager and emits event", async () => {
+      await expect(comptroller.setLiquidationModule(newLiquidationManager.address))
+        .to.emit(comptroller, "NewLiquidationManager")
+        .withArgs(ethers.constants.AddressZero, newLiquidationManager.address);
+    });
+  });
+
+  describe("setMarketLiquidationIncentive", async () => {
     const newLiquidationIncentive = convertToUnit("1.2", 18);
     it("reverts if access control manager does not allow the call", async () => {
-      accessControl.isAllowedToCall.whenCalledWith(owner.address, "setLiquidationIncentive(uint256)").returns(false);
-      await expect(comptroller.setLiquidationIncentive(newLiquidationIncentive))
+      await comptroller.connect(poolRegistry.wallet).supportMarket(OMG.address);
+      accessControl.isAllowedToCall
+        .whenCalledWith(owner.address, "setMarketLiquidationIncentive(address,uint256)")
+        .returns(false);
+      await expect(comptroller.setMarketLiquidationIncentive(OMG.address, newLiquidationIncentive))
         .to.be.revertedWithCustomError(comptroller, "Unauthorized")
-        .withArgs(owner.address, comptroller.address, "setLiquidationIncentive(uint256)");
+        .withArgs(owner.address, comptroller.address, "setMarketLiquidationIncentive(address,uint256)");
+    });
+
+    it("reverts if market not listed", async () => {
+      await expect(comptroller.setMarketLiquidationIncentive(OMG.address, newLiquidationIncentive))
+        .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
+        .withArgs(OMG.address);
     });
   });
 

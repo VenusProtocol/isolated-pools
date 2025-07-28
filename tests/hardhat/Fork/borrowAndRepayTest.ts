@@ -4,8 +4,11 @@ import chai from "chai";
 import { BigNumber, BigNumberish, Signer } from "ethers";
 import { ethers } from "hardhat";
 
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import { convertToUnit } from "../../../helpers/utils";
 import {
+  AccessControlManager,
+  AccessControlManager__factory,
   BinanceOracle,
   BinanceOracle__factory,
   ChainlinkOracle__factory,
@@ -13,6 +16,7 @@ import {
   Comptroller__factory,
   IERC20,
   IERC20__factory,
+  LiquidationManager,
   ResilientOracleInterface,
   ResilientOracleInterface__factory,
   VToken,
@@ -31,6 +35,7 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 if (FORK) console.log(`fork tests are running on: ${FORKED_NETWORK}`);
 
 const {
+  ACM,
   ACC1,
   ACC2,
   ADMIN,
@@ -44,13 +49,19 @@ const {
   TOKEN1_HOLDER,
   TOKEN2_HOLDER,
   BLOCK_NUMBER,
+  POOL_REGISTRY,
 } = getContractAddresses(FORKED_NETWORK as string);
+
+const COMPTROLLER_BEACON = "0x38B4Efab9ea1bAcD19dC81f19c4D1C2F9DeAe1B2";
+const VTOKEN_BEACON = "0x2b8A1C539ABaC89CbF7E2Bc6987A0A38A5e660D4";
+const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
 
 let token1: IERC20 | WrappedNative;
 let token2: IERC20;
 let vTOKEN1: VToken;
 let vTOKEN2: VToken;
 let comptroller: Comptroller;
+let liquidationManager: LiquidationManager;
 let acc1Signer: Signer;
 let acc2Signer: Signer;
 let token2Holder: Signer;
@@ -60,6 +71,7 @@ let mintAmount: BigNumber;
 let TOKEN2BorrowAmount: BigNumberish;
 let binanceOracle: BinanceOracle;
 let priceOracle: ResilientOracleInterface;
+let accessControlManager: AccessControlManager;
 
 async function configureTimelock() {
   impersonatedTimelock = await initMainnetUser(ADMIN, ethers.utils.parseUnits("2"));
@@ -78,6 +90,42 @@ if (FORK) {
       await setForkBlock(BLOCK_NUMBER);
 
       await configureTimelock();
+
+      comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
+      vTOKEN2 = await configureVToken(VTOKEN2);
+      vTOKEN1 = await configureVToken(VTOKEN1);
+
+      // --- Upgrade Comptroller Implementation ---
+      const ComptrollerFactory = await ethers.getContractFactory("Comptroller");
+      const newComptrollerImpl = await ComptrollerFactory.deploy(POOL_REGISTRY);
+      await newComptrollerImpl.deployed();
+
+      const comptrollerBeacon = await ethers.getContractAt(
+        "UpgradeableBeacon",
+        COMPTROLLER_BEACON,
+        impersonatedTimelock,
+      );
+      await comptrollerBeacon.upgradeTo(newComptrollerImpl.address);
+
+      // --- Upgrade VToken Implementation ---
+      const VTokenFactory = await ethers.getContractFactory("VToken");
+      const newVTokenImpl = await VTokenFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR, maxBorrowRateMantissa);
+      await newVTokenImpl.deployed();
+
+      const vTokenBeacon = await ethers.getContractAt("UpgradeableBeacon", VTOKEN_BEACON, impersonatedTimelock);
+      await vTokenBeacon.upgradeTo(newVTokenImpl.address);
+
+      // --- Deploy and Set New LiquidationManager ---
+      const LiquidationManagerFactory = await ethers.getContractFactory("ILLiquidationManager");
+      liquidationManager = await LiquidationManagerFactory.deploy();
+      await liquidationManager.deployed();
+
+      accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
+      await accessControlManager
+        .connect(impersonatedTimelock)
+        .giveCallPermission(comptroller.address, "setLiquidationModule(address)", ADMIN);
+      await comptroller.setLiquidationModule(liquidationManager.address);
+
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
       // it will be the depositor
@@ -115,10 +163,6 @@ if (FORK) {
         token1 = WrappedNative__factory.connect(TOKEN1, impersonatedTimelock);
         await token1.connect(token1Holder).deposit({ value: convertToUnit("200000", 18) });
       }
-
-      vTOKEN2 = await configureVToken(VTOKEN2);
-      vTOKEN1 = await configureVToken(VTOKEN1);
-      comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
 
       const oracle = await comptroller.oracle();
       priceOracle = ResilientOracleInterface__factory.connect(oracle, impersonatedTimelock);
