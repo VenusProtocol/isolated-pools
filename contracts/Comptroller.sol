@@ -13,7 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
-import { ILiquidationManager } from "./LiquidationManagerInterface.sol";
+import { ILLiquidationManager } from "./ILLiquidationManager.sol";
 
 /**
  * @title Comptroller
@@ -110,7 +110,10 @@ contract Comptroller is
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
     /// @notice Emitted when the liquidation manager is set
-    event LiquidationModuleSet(address indexed ILiquidationManager);
+    event NewLiquidationManager(
+        ILLiquidationManager indexed oldLiquidationManager,
+        ILLiquidationManager indexed newLiquidationManager
+    );
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -727,26 +730,26 @@ contract Comptroller is
             revert InsufficientShortfall();
         }
 
-        if ((snapshot.averageLT * (1e18 + snapshot.liquidationIncentiveAvg)) > snapshot.healthFactor) {
+        if (
+            liquidationManager.isToxicLiquidation(
+                snapshot.averageLT,
+                snapshot.liquidationIncentiveAvg,
+                snapshot.healthFactor
+            )
+        ) {
             revert ToxicLiquidation();
         }
 
         Market storage marketCollateral = markets[vTokenCollateral];
 
-        uint256 closeFactor;
-        unchecked {
-            if (snapshot.healthFactor >= 1e18) revert InsufficientShortfall();
-            uint256 wtAvg = snapshot.averageLT;
-            if (snapshot.healthFactor >= snapshot.healthFactorThreshold) {
-                uint256 numerator = borrowBalance * 1e18 - wtAvg * snapshot.totalCollateral;
-                uint256 denominator = borrowBalance *
-                    (1e18 - ((wtAvg * (1e18 + marketCollateral.maxLiquidationIncentiveMantissa)) / 1e18));
-                closeFactor = (numerator * 1e18) / denominator;
-                closeFactor = closeFactor > 1e18 ? 1e18 : closeFactor;
-            } else {
-                closeFactor = 1e18;
-            }
-        }
+        uint256 closeFactor = liquidationManager.calculateCloseFactor(
+            borrowBalance,
+            snapshot.averageLT,
+            snapshot.totalCollateral,
+            snapshot.healthFactor,
+            snapshot.healthFactorThreshold,
+            marketCollateral.maxLiquidationIncentiveMantissa
+        );
 
         /* The liquidator may not repay more than what is allowed by the closeFactor */
         uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactor }), borrowBalance);
@@ -1074,8 +1077,9 @@ contract Comptroller is
     function setLiquidationModule(address liquidationManager_) external {
         _checkAccessAllowed("setLiquidationModule(address)");
         ensureNonzeroAddress(liquidationManager_);
-        liquidationManager = ILiquidationManager(liquidationManager_);
-        emit LiquidationModuleSet(liquidationManager_);
+        ILLiquidationManager oldLiquidationManager = liquidationManager;
+        liquidationManager = ILLiquidationManager(liquidationManager_);
+        emit NewLiquidationManager(oldLiquidationManager, liquidationManager);
     }
 
     /**
@@ -1405,17 +1409,15 @@ contract Comptroller is
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
         uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
+        uint256 liquidationIncentiveMantissa = getDynamicLiquidationIncentive(borrower, vTokenCollateral);
 
-        numerator = mul_(
-            Exp({ mantissa: getDynamicLiquidationIncentive(borrower, vTokenCollateral) }),
-            Exp({ mantissa: priceBorrowedMantissa })
+        uint256 seizeTokens = liquidationManager.calculateSeizeTokens(
+            actualRepayAmount,
+            liquidationIncentiveMantissa,
+            priceBorrowedMantissa,
+            priceCollateralMantissa,
+            exchangeRateMantissa
         );
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-
-        seizeTokens = mul_ScalarTruncate(div_(numerator, denominator), actualRepayAmount);
 
         return (NO_ERROR, seizeTokens);
     }
@@ -1521,16 +1523,15 @@ contract Comptroller is
     /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
     function getDynamicLiquidationIncentive(address borrower, address vToken) public view returns (uint256 incentive) {
         Market storage market = markets[vToken];
-        uint256 liquidationIncentiveMantissa = market.maxLiquidationIncentiveMantissa;
-
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
 
-        if (snapshot.healthFactor >= snapshot.healthFactorThreshold) return liquidationIncentiveMantissa;
-
-        unchecked {
-            uint256 value = ((snapshot.healthFactor * 1e18) / snapshot.averageLT) - 1e18;
-            return value > liquidationIncentiveMantissa ? liquidationIncentiveMantissa : value;
-        }
+        return
+            liquidationManager.calculateDynamicLiquidationIncentive(
+                snapshot.healthFactor,
+                snapshot.healthFactorThreshold,
+                snapshot.averageLT,
+                market.maxLiquidationIncentiveMantissa
+            );
     }
 
     /**
@@ -1725,7 +1726,7 @@ contract Comptroller is
         uint256 assetsCount = assets.length;
         uint256 liquidationIncentiveMantissa;
 
-        ILiquidationManager.EffectsParams memory effects = ILiquidationManager.EffectsParams({
+        ILLiquidationManager.EffectsParams memory effects = ILLiquidationManager.EffectsParams({
             vTokenModify: vTokenModify,
             redeemTokens: redeemTokens,
             borrowAmount: borrowAmount
