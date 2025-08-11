@@ -1,3 +1,15 @@
+## [4.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0...v4.4.0-dev.1) (2025-08-11)
+
+
+### Features
+
+* updating deployment files ([966018c](https://github.com/VenusProtocol/isolated-pools/commit/966018c3a983f960655a130a268c5e5f5f69dcde))
+
+
+### Bug Fixes
+
+* removed berachain deployment ([6495a14](https://github.com/VenusProtocol/isolated-pools/commit/6495a145509b36f9957beb28a48d37c8ad7e4f7e))
+
 ## [4.3.0](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0...v4.3.0) (2025-07-10)
 
 
