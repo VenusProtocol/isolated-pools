@@ -46,7 +46,6 @@ async function deployGateway(): Promise<GatewayFixture> {
   accessControl.isAllowedToCall.returns(true);
 
   const closeFactor = parseUnits("6", 17);
-  const liquidationIncentive = parseUnits("1", 18);
   const minLiquidatableCollateral = parseUnits("100", 18);
 
   const PoolRegistry = await ethers.getContractFactory<PoolRegistry__factory>("PoolRegistry");
@@ -54,6 +53,9 @@ async function deployGateway(): Promise<GatewayFixture> {
 
   const Comptroller = await ethers.getContractFactory("Comptroller");
   const comptrollerBeacon = await upgrades.deployBeacon(Comptroller, { constructorArgs: [poolRegistry.address] });
+
+  const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
+  const liquidationManager = await LiquidationManager.deploy();
 
   const maxLoopsLimit = 150;
   const fakePriceOracle = await smock.fake<ResilientOracleInterface>(MockPriceOracle__factory.abi);
@@ -64,17 +66,10 @@ async function deployGateway(): Promise<GatewayFixture> {
   ])) as Comptroller;
 
   await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+  await comptrollerProxy.setLiquidationModule(liquidationManager.address);
 
   // Registering the pool
-  await poolRegistry.addPool(
-    "Pool 1",
-    comptrollerProxy.address,
-    closeFactor,
-    liquidationIncentive,
-    minLiquidatableCollateral,
-  );
-
-  await comptrollerProxy.setPriceOracle(fakePriceOracle.address);
+  await poolRegistry.addPool("Pool 1", comptrollerProxy.address, closeFactor, minLiquidatableCollateral);
 
   const wethFactory = await ethers.getContractFactory("WrappedNative");
   const weth = await wethFactory.deploy();

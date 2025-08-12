@@ -95,6 +95,7 @@ interface ComptrollerInterface {
     /*** Liquidity/Liquidation Calculations ***/
 
     function liquidateCalculateSeizeTokens(
+        address borrower,
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 repayAmount
@@ -103,6 +104,12 @@ interface ComptrollerInterface {
     function getAllMarkets() external view returns (VToken[] memory);
 
     function actionPaused(address market, Action action) external view returns (bool);
+
+    function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
+
+    function getMarketLiquidationIncentive(address vToken) external view returns (uint256);
+
+    function getOracle() external view returns (ResilientOracleInterface);
 }
 
 /**
@@ -132,4 +139,8 @@ interface ComptrollerViewInterface {
     function supplyCaps(address) external view returns (uint256);
 
     function approvedDelegates(address user, address delegate) external view returns (bool);
+
+    function getDynamicLiquidationIncentive(address borrower, address market) external view returns (uint256);
+
+    function getMarketLiquidationIncentive(address vToken) external view returns (uint256);
 }

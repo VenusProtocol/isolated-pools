@@ -4,6 +4,7 @@ import { BigNumberish, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
+import { DEFAULT_BLOCKS_PER_YEAR } from "../../../helpers/deploymentConfig";
 import { convertToUnit } from "../../../helpers/utils";
 import {
   AccessControlManager,
@@ -14,6 +15,7 @@ import {
   Comptroller__factory,
   IERC20,
   IERC20__factory,
+  LiquidationManager,
   MockPriceOracle,
   MockPriceOracle__factory,
   VToken,
@@ -45,15 +47,20 @@ const {
   RESILIENT_ORACLE,
   CHAINLINK_ORACLE,
   BLOCK_NUMBER,
+  POOL_REGISTRY,
 } = getContractAddresses(FORKED_NETWORK as string);
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
+const COMPTROLLER_BEACON = "0x38B4Efab9ea1bAcD19dC81f19c4D1C2F9DeAe1B2";
+const VTOKEN_BEACON = "0x2b8A1C539ABaC89CbF7E2Bc6987A0A38A5e660D4";
+const maxBorrowRateMantissa = ethers.BigNumber.from(0.0005e16);
 
 let token1: IERC20 | WrappedNative;
 let token2: IERC20;
 let vTOKEN1: VToken;
 let vTOKEN2: VToken;
 let comptroller: Comptroller;
+let liquidationManager: LiquidationManager;
 let token1Holder: Signer;
 let token2Holder: Signer;
 let acc1Signer: Signer;
@@ -105,14 +112,46 @@ if (FORK) {
       await setForkBlock(BLOCK_NUMBER);
       await configureTimelock();
 
+      comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
+      vTOKEN2 = await configureVToken(VTOKEN2);
+      vTOKEN1 = await configureVToken(VTOKEN1);
+
+      // --- Upgrade Comptroller Implementation ---
+      const ComptrollerFactory = await ethers.getContractFactory("Comptroller");
+      const newComptrollerImpl = await ComptrollerFactory.deploy(POOL_REGISTRY);
+      await newComptrollerImpl.deployed();
+
+      const comptrollerBeacon = await ethers.getContractAt(
+        "UpgradeableBeacon",
+        COMPTROLLER_BEACON,
+        impersonatedTimelock,
+      );
+      await comptrollerBeacon.upgradeTo(newComptrollerImpl.address);
+
+      // --- Upgrade VToken Implementation ---
+      const VTokenFactory = await ethers.getContractFactory("VToken");
+      const newVTokenImpl = await VTokenFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR, maxBorrowRateMantissa);
+      await newVTokenImpl.deployed();
+
+      const vTokenBeacon = await ethers.getContractAt("UpgradeableBeacon", VTOKEN_BEACON, impersonatedTimelock);
+      await vTokenBeacon.upgradeTo(newVTokenImpl.address);
+
+      // --- Deploy and Set New LiquidationManager ---
+      const LiquidationManagerFactory = await ethers.getContractFactory("ILLiquidationManager");
+      liquidationManager = await LiquidationManagerFactory.deploy();
+      await liquidationManager.deployed();
+
+      accessControlManager = AccessControlManager__factory.connect(ACM, impersonatedTimelock);
+      await accessControlManager
+        .connect(impersonatedTimelock)
+        .giveCallPermission(comptroller.address, "setLiquidationModule(address)", ADMIN);
+      await comptroller.setLiquidationModule(liquidationManager.address);
+
       acc1Signer = await initMainnetUser(ACC1, ethers.utils.parseUnits("2"));
       acc2Signer = await initMainnetUser(ACC2, ethers.utils.parseUnits("2"));
       token2Holder = await initMainnetUser(TOKEN2_HOLDER, ethers.utils.parseUnits("2"));
       token1Holder = await initMainnetUser(TOKEN1_HOLDER, ethers.utils.parseUnits("2000000"));
 
-      vTOKEN2 = await configureVToken(VTOKEN2);
-      vTOKEN1 = await configureVToken(VTOKEN1);
-      comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
       token2 = IERC20__factory.connect(TOKEN2, impersonatedTimelock);
       token1 = IERC20__factory.connect(TOKEN1, impersonatedTimelock);
       if (FORKED_NETWORK == "arbitrumsepolia" || FORKED_NETWORK == "arbitrumone") {
@@ -141,6 +180,7 @@ if (FORK) {
       };
 
       resilientOracle = MockPriceOracle__factory.connect(RESILIENT_ORACLE, impersonatedTimelock);
+
       await resilientOracle.setTokenConfig(tupleForToken1);
       await resilientOracle.setTokenConfig(tupleForToken2);
       await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 18));
@@ -156,6 +196,12 @@ if (FORK) {
       );
       await comptroller.connect(acc1Signer).enterMarkets([vTOKEN2.address]);
       await comptroller.connect(acc2Signer).enterMarkets([vTOKEN1.address]);
+
+      await accessControlManager
+        .connect(impersonatedTimelock)
+        .giveCallPermission(comptroller.address, "setMarketLiquidationIncentive(address,uint256)", ADMIN);
+      await comptroller.setMarketLiquidationIncentive(vTOKEN1.address, parseUnits("1", 18));
+      await comptroller.setMarketLiquidationIncentive(vTOKEN2.address, parseUnits("1", 18));
     }
 
     describe("Liquidate from VToken", async () => {
@@ -200,6 +246,7 @@ if (FORK) {
 
       it("Should revert when liquidation is called through vToken and trying to seize more tokens", async function () {
         await comptroller.setMinLiquidatableCollateral(0);
+        await comptroller.setForcedLiquidation(vTOKEN2.address, true);
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 5));
 
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
@@ -215,6 +262,7 @@ if (FORK) {
       it("Should revert when liquidation is called through vToken and trying to pay too much", async function () {
         // Mint and Incrrease collateral of the user
         await comptroller.setMinLiquidatableCollateral(0);
+        await comptroller.setForcedLiquidation(vTOKEN2.address, true);
         const underlyingMintAmount = convertToUnit("1", 18);
         await token1.connect(token1Holder).transfer(ACC2, underlyingMintAmount);
         await token1.connect(acc2Signer).approve(vTOKEN1.address, underlyingMintAmount);
@@ -237,6 +285,7 @@ if (FORK) {
 
       it("liquidate user", async () => {
         await comptroller.setMinLiquidatableCollateral(0);
+        await comptroller.setForcedLiquidation(vTOKEN2.address, true);
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 6));
         const borrowBalance = await vTOKEN2.borrowBalanceStored(ACC2);
 
@@ -257,7 +306,7 @@ if (FORK) {
 
         const priceBorrowed = await chainlinkOracle.getPrice(TOKEN2);
         const priceCollateral = await chainlinkOracle.getPrice(TOKEN1);
-        const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
+        const liquidationIncentive = await comptroller.getMarketLiquidationIncentive(vTOKEN1.address);
         const exchangeRateCollateralPrev = await vTOKEN1.callStatic.exchangeRateCurrent();
         const num = (liquidationIncentive * priceBorrowed) / 1e18;
         const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
@@ -321,8 +370,7 @@ if (FORK) {
       it("Should success on liquidation when repay amount is equal to borrowing", async function () {
         await comptroller
           .connect(impersonatedTimelock)
-          .setCollateralFactor(vTOKEN1.address, convertToUnit(7, 17), convertToUnit(8, 17));
-        await comptroller.connect(impersonatedTimelock).setLiquidationIncentive(convertToUnit(1, 18));
+          .setCollateralFactor(vTOKEN1.address, convertToUnit(6, 17), convertToUnit(8, 17));
 
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token1.address, convertToUnit("1", 12));
         await chainlinkOracle.connect(impersonatedTimelock).setDirectPrice(token2.address, convertToUnit("1", 12));
@@ -335,39 +383,46 @@ if (FORK) {
         const totalReservesToken1Prev = await vTOKEN1.totalReserves();
         const vTOKEN1BalAcc1Prev = await vTOKEN1.balanceOf(ACC1);
         const vTOKEN1BalAcc2Prev = await vTOKEN1.balanceOf(ACC2);
-        const priceBorrowed = await chainlinkOracle.getPrice(TOKEN2);
+
         const priceCollateral = await chainlinkOracle.getPrice(TOKEN1);
-        const liquidationIncentive = await comptroller.liquidationIncentiveMantissa();
         const exchangeRateCollateralPrev = await vTOKEN1.callStatic.exchangeRateCurrent();
 
-        const num = (liquidationIncentive * priceBorrowed) / 1e18;
-        const den = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
-        const ratio = num / den;
         await token1.connect(token1Holder).transfer(ACC2, convertToUnit(1, 12));
         await token1.connect(acc2Signer).approve(vTOKEN1.address, convertToUnit(1, 12));
         await vTOKEN1.connect(acc2Signer).mint(convertToUnit(1, 12));
 
-        // repayAmount will be calculated after accruing interest and then using borrowBalanceStored to get the repayAmount.
         const NetworkRespectiveRepayAmounts = {
           bsctestnet: 1000000048189326,
           sepolia: 1000000138102911,
-          bscmainnet: 1000000020807824,
+          bscmainnet: 1000000018727042,
           ethereum: 1000000262400450,
           opbnbtestnet: 1000000000288189,
           opbnbmainnet: 1000000008986559,
           arbitrumsepolia: 1000000000046406,
           arbitrumone: 1000000032216389,
         };
-
         const repayAmount = NetworkRespectiveRepayAmounts[FORKED_NETWORK];
-        const seizeTokens = ratio * repayAmount;
+
+        const borrowMarkets = await comptroller.getAssetsIn(ACC2);
+        const collateralToSeize = await liquidationManager.calculateIncentiveAdjustedDebt(
+          ACC2,
+          borrowMarkets,
+          comptroller.address,
+        );
+
+        // Convert collateralToSeize (USD value) to actual vTokens to seize
+        const collateralValue = (priceCollateral * exchangeRateCollateralPrev) / 1e18;
+        const seizeTokens = (collateralToSeize * 1e18) / collateralValue;
+
         const param = {
           vTokenCollateral: vTOKEN1.address,
           vTokenBorrowed: vTOKEN2.address,
           repayAmount: repayAmount,
         };
+
         const result = comptroller.connect(acc1Signer).liquidateAccount(ACC2, [param]);
         await expect(result).to.emit(vTOKEN2, "LiquidateBorrow");
+
         expect(await vTOKEN2.borrowBalanceStored(ACC2)).equals(0);
 
         const vTOKEN1BalAcc1New = await vTOKEN1.balanceOf(ACC1);
@@ -375,15 +430,24 @@ if (FORK) {
         const totalReservesToken1New = await vTOKEN1.totalReserves();
         const exchangeRateCollateralNew = await vTOKEN1.exchangeRateStored();
 
+        // 10. Verify token distribution (95% liquidator, 5% protocol)
         const liquidatorSeizeTokens = Math.floor((seizeTokens * 95) / 100);
         const protocolSeizeTokens = Math.floor((seizeTokens * 5) / 100);
         const reserveIncrease = (protocolSeizeTokens * exchangeRateCollateralNew) / 1e18;
 
-        expect(vTOKEN1BalAcc2Prev.sub(vTOKEN1BalAcc2New)).to.closeTo(Math.floor(seizeTokens), 100);
-        expect(vTOKEN1BalAcc1New.sub(vTOKEN1BalAcc1Prev)).to.closeTo(liquidatorSeizeTokens, 1);
+        expect(vTOKEN1BalAcc2Prev.sub(vTOKEN1BalAcc2New)).to.closeTo(
+          Math.floor(seizeTokens),
+          100, // tolerance for rounding
+        );
+
+        expect(vTOKEN1BalAcc1New.sub(vTOKEN1BalAcc1Prev)).to.closeTo(
+          liquidatorSeizeTokens,
+          1, // tolerance
+        );
+
         expect(totalReservesToken1New.sub(totalReservesToken1Prev)).to.closeTo(
           Math.round(reserveIncrease),
-          parseUnits("1", 17),
+          parseUnits("1", 17), // tolerance
         );
       });
     });

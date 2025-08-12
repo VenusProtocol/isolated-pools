@@ -38,11 +38,21 @@ const fakeSnapshotsAtCalls = (vToken: FakeContract<VToken>, snapshots: AccountSn
   });
 };
 
-const fakeSnaphotsForLiquidation = (
+const fakeSnapshotsForLiquidation = (
   vToken: FakeContract<VToken>,
-  { beforeLiquidation, afterLiquidation }: { beforeLiquidation: AccountSnapshot; afterLiquidation: AccountSnapshot },
+  {
+    firstSnapshot,
+    secondSnapshot,
+    thirdSnapshot,
+    fourthSnapshot,
+  }: {
+    firstSnapshot: AccountSnapshot;
+    secondSnapshot: AccountSnapshot;
+    thirdSnapshot: AccountSnapshot;
+    fourthSnapshot: AccountSnapshot;
+  },
 ) => {
-  fakeSnapshotsAtCalls(vToken, [beforeLiquidation, afterLiquidation]);
+  fakeSnapshotsAtCalls(vToken, [firstSnapshot, secondSnapshot, thirdSnapshot, fourthSnapshot]);
 };
 
 describe("liquidateAccount", () => {
@@ -76,10 +86,12 @@ describe("liquidateAccount", () => {
       initializer: "initialize(uint256,address)",
     });
     const oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
+    const LiquidationManager = await ethers.getContractFactory("ILLiquidationManager");
+    const liquidationManager = await LiquidationManager.deploy();
 
     accessControl.isAllowedToCall.returns(true);
     await comptroller.setPriceOracle(oracle.address);
-    await comptroller.setLiquidationIncentive(parseUnits("1.1", 18));
+    await comptroller.setLiquidationModule(liquidationManager.address);
     await comptroller.setMinLiquidatableCollateral(parseUnits("100", 18));
     await setBalance(poolRegistry.address, parseEther("1"));
     const names = ["OMG", "ZRX", "BAT"];
@@ -92,6 +104,7 @@ describe("liquidateAccount", () => {
         await comptroller
           .connect(poolRegistry.wallet)
           .setCollateralFactor(vToken.address, parseUnits("0.8", 18), parseUnits("0.9", 18));
+        await comptroller.setMarketLiquidationIncentive(vToken.address, parseUnits("1.1", 18));
         return vToken;
       }),
     );
@@ -163,6 +176,17 @@ describe("liquidateAccount", () => {
         .withArgs(parseUnits("100", 18), parseUnits("110", 18));
     });
 
+    it("does not fails if collateral is equal to minLiquidatableCollateral", async () => {
+      await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
+      fakeUserSnapshot(OMG, user.address, { supply: parseUnits("50", 18), borrows: 0 });
+      fakeUserSnapshot(ZRX, user.address, { supply: parseUnits("50", 18), borrows: parseUnits("50", 18) });
+      fakeUserSnapshot(BAT, user.address, { supply: 0, borrows: parseUnits("50", 18) });
+
+      await expect(
+        comptroller.connect(liquidator).liquidateAccount(user.address, []),
+      ).to.not.be.revertedWithCustomError(comptroller, "CollateralExceedsThreshold");
+    });
+
     it("fails if the vToken account snapshot returns an error", async () => {
       await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
       fakeUserSnapshot(OMG, user.address, { supply: parseUnits("1.11", 18), borrows: 0 });
@@ -228,56 +252,71 @@ describe("liquidateAccount", () => {
     });
 
     it("succeeds and calls forceLiquidateBorrow for two orders", async () => {
-      fakeSnaphotsForLiquidation(OMG, {
-        beforeLiquidation: { supply: parseUnits("1.11", 18), borrows: 0 },
-        afterLiquidation: { supply: parseUnits("0.01", 18), borrows: 0 },
+      fakeSnapshotsForLiquidation(OMG, {
+        firstSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        secondSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        thirdSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        fourthSnapshot: { supply: parseUnits("0.01", 18), borrows: 0 },
       });
-      fakeSnaphotsForLiquidation(ZRX, {
-        beforeLiquidation: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: 0 },
+      fakeSnapshotsForLiquidation(ZRX, {
+        firstSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        fourthSnapshot: { supply: 0, borrows: 0 },
       });
-      fakeSnaphotsForLiquidation(BAT, {
-        beforeLiquidation: { supply: 0, borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: 0 },
+      fakeSnapshotsForLiquidation(BAT, {
+        firstSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        fourthSnapshot: { supply: 0, borrows: 0 },
       });
 
       const liquidationOrders = [
         { vTokenCollateral: OMG.address, vTokenBorrowed: ZRX.address, repayAmount: parseUnits("1", 18) },
         { vTokenCollateral: ZRX.address, vTokenBorrowed: BAT.address, repayAmount: parseUnits("1", 18) },
       ];
+
       await comptroller.connect(liquidator).liquidateAccount(user.address, liquidationOrders);
 
+      // Verify forceLiquidateBorrow calls
       expect(ZRX.forceLiquidateBorrow).to.have.been.calledOnceWith(
         liquidator.address,
         user.address,
         parseUnits("1", 18),
-        OMG.address, // collateral
-        true, // whether to skip liquidity check
+        OMG.address,
+        true,
       );
       expect(BAT.forceLiquidateBorrow).to.have.been.calledOnceWith(
         liquidator.address,
         user.address,
         parseUnits("1", 18),
-        ZRX.address, // collateral
-        true, // whether to skip liquidity check
+        ZRX.address,
+        true,
       );
-      expect(OMG.getAccountSnapshot).to.have.been.calledTwice;
-      expect(ZRX.getAccountSnapshot).to.have.been.calledTwice;
-      expect(BAT.getAccountSnapshot).to.have.been.calledTwice;
+
+      expect(OMG.getAccountSnapshot).to.have.callCount(5);
+      expect(ZRX.getAccountSnapshot).to.have.callCount(5);
+      expect(BAT.getAccountSnapshot).to.have.callCount(5);
     });
 
     it("succeeds and calls forceLiquidateBorrow for three orders, including in-kind liquidation", async () => {
-      fakeSnaphotsForLiquidation(OMG, {
-        beforeLiquidation: { supply: parseUnits("1.11", 18), borrows: 0 },
-        afterLiquidation: { supply: parseUnits("0.021", 18), borrows: 0 },
+      fakeSnapshotsForLiquidation(OMG, {
+        firstSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        secondSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        thirdSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        fourthSnapshot: { supply: parseUnits("0.021", 18), borrows: 0 },
       });
-      fakeSnaphotsForLiquidation(ZRX, {
-        beforeLiquidation: { supply: parseUnits("1.11", 18), borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: 0 },
+      fakeSnapshotsForLiquidation(ZRX, {
+        firstSnapshot: { supply: parseUnits("1.11", 18), borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: parseUnits("1.11", 18), borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: parseUnits("1.11", 18), borrows: parseUnits("1", 18) },
+        fourthSnapshot: { supply: 0, borrows: 0 },
       });
-      fakeSnaphotsForLiquidation(BAT, {
-        beforeLiquidation: { supply: 0, borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: 0 },
+      fakeSnapshotsForLiquidation(BAT, {
+        firstSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        fourthSnapshot: { supply: 0, borrows: 0 },
       });
 
       const liquidationOrders = [
@@ -301,7 +340,7 @@ describe("liquidateAccount", () => {
 
       // Two liquidations for BAT borrows:
       // 1. Liquidate BAT seizing ZRX
-      expect(BAT.forceLiquidateBorrow).to.have.been.calledTwice;
+      expect(BAT.forceLiquidateBorrow).to.have.callCount(2);
       expect(BAT.forceLiquidateBorrow.atCall(0)).to.have.been.calledWith(
         liquidator.address,
         user.address,
@@ -317,26 +356,32 @@ describe("liquidateAccount", () => {
         OMG.address, // collateral
         true, // whether to skip liquidity check
       );
-      expect(OMG.getAccountSnapshot).to.have.been.calledTwice;
-      expect(ZRX.getAccountSnapshot).to.have.been.calledTwice;
-      expect(BAT.getAccountSnapshot).to.have.been.calledTwice;
+      expect(OMG.getAccountSnapshot).to.have.been.callCount(5);
+      expect(ZRX.getAccountSnapshot).to.have.been.callCount(5);
+      expect(BAT.getAccountSnapshot).to.have.been.callCount(5);
     });
   });
 
   describe("post-liquidation check", async () => {
     it("fails if there's a borrow balance after liquidation", async () => {
       await comptroller.connect(user).enterMarkets([OMG.address, ZRX.address, BAT.address]);
-      fakeSnaphotsForLiquidation(OMG, {
-        beforeLiquidation: { supply: parseUnits("1.11", 18), borrows: 0 },
-        afterLiquidation: { supply: parseUnits("0.01", 18), borrows: 0 },
+      fakeSnapshotsForLiquidation(OMG, {
+        firstSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        secondSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        thirdSnapshot: { supply: parseUnits("1.11", 18), borrows: 0 },
+        fourthSnapshot: { supply: parseUnits("0.01", 18), borrows: 0 },
       });
-      fakeSnaphotsForLiquidation(ZRX, {
-        beforeLiquidation: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: parseUnits("0.00000000000001", 18) },
+      fakeSnapshotsForLiquidation(ZRX, {
+        firstSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: parseUnits("1.1", 18), borrows: parseUnits("1", 18) },
+        fourthSnapshot: { supply: 0, borrows: parseUnits("0.00000000000001", 18) },
       });
-      fakeSnaphotsForLiquidation(BAT, {
-        beforeLiquidation: { supply: 0, borrows: parseUnits("1", 18) },
-        afterLiquidation: { supply: 0, borrows: 0 },
+      fakeSnapshotsForLiquidation(BAT, {
+        firstSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        secondSnapshot: { supply: 0, borrows: parseUnits("1", 18) },
+        thirdSnapshot: { supply: 0, borrows: 0 },
+        fourthSnapshot: { supply: 0, borrows: 0 },
       });
       await expect(comptroller.connect(liquidator).liquidateAccount(user.address, [])).to.be.revertedWith(
         "Nonzero borrow balance after liquidation",
@@ -436,12 +481,13 @@ describe("liquidateAccount", () => {
     });
 
     it("checks the shortfall if isForcedLiquidationEnabled is set back to false", async () => {
+      await comptroller.connect(user).enterMarkets([OMG.address]);
       await comptroller.setForcedLiquidation(OMG.address, false);
       OMG.borrowBalanceStored.returns(parseUnits("100", 18));
       const tx = comptroller.callStatic.preLiquidateHook(
         OMG.address,
         OMG.address,
-        accounts[0].address,
+        user.address,
         parseUnits("1", 18),
         false,
       );

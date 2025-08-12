@@ -1,5 +1,6 @@
 import { MockContract, MockContractFactory, smock } from "@defi-wonderland/smock";
 import chai from "chai";
+import { ethers } from "hardhat";
 
 import { HarnessMaxLoopsLimitHelper, HarnessMaxLoopsLimitHelper__factory } from "../../typechain";
 
@@ -7,6 +8,10 @@ const { expect } = chai;
 chai.use(smock.matchers);
 
 describe("MaxLoopsLimit: tests", () => {
+  before(async () => {
+    await ethers.provider.ready; // Ensure provider is initialized
+  });
+
   let maxLoopsLimitHelperFactory: MockContractFactory<HarnessMaxLoopsLimitHelper__factory>;
   let maxLoopsLimitHelper: MockContract<HarnessMaxLoopsLimitHelper>;
 

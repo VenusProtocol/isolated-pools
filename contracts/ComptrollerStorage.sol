@@ -7,6 +7,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 import { Action } from "./ComptrollerInterface.sol";
+import { ILLiquidationManager } from "./ILLiquidationManager.sol";
 
 /**
  * @title ComptrollerStorage
@@ -27,6 +28,10 @@ contract ComptrollerStorage {
         uint256 effects;
         uint256 liquidity;
         uint256 shortfall;
+        uint256 averageLT; // Average liquidation threshold of all assets in the snapshot
+        uint256 healthFactor; // Health factor of the account, calculated as (weightedCollateral / borrows)
+        uint256 healthFactorThreshold; // Health factor threshold for liquidation, calculated as (averageLT * (1e18 + LiquidationIncentiveAvg) / 1e18)
+        uint256 liquidationIncentiveAvg; // Average liquidation incentive of all assets in the snapshot
     }
 
     struct RewardSpeeds {
@@ -48,6 +53,8 @@ contract ComptrollerStorage {
         uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;
+        // discount on collateral that a liquidator receives when liquidating a borrow in this market
+        uint256 maxLiquidationIncentiveMantissa;
     }
 
     /**
@@ -63,7 +70,7 @@ contract ComptrollerStorage {
     /**
      * @notice Multiplier representing the discount on collateral that a liquidator receives
      */
-    uint256 public liquidationIncentiveMantissa;
+    uint256 public deprecatedLiquidationIncentiveMantissa;
 
     /**
      * @notice Per-account mapping of "assets you are in"
@@ -118,10 +125,15 @@ contract ComptrollerStorage {
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;
 
+    /// @notice The liquidation manager contract that handles liquidation logic
+    // This is an interface to allow for different liquidation strategies
+    // ILLiquidationManagerInterface public liquidationManager;
+    ILLiquidationManager public liquidationManager;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 }

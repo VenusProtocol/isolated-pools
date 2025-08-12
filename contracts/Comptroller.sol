@@ -13,6 +13,7 @@ import { VToken } from "./VToken.sol";
 import { RewardsDistributor } from "./Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "./MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "./lib/validators.sol";
+import { ILLiquidationManager } from "./ILLiquidationManager.sol";
 
 /**
  * @title Comptroller
@@ -69,7 +70,11 @@ contract Comptroller is
     );
 
     /// @notice Emitted when liquidation incentive is changed by admin
-    event NewLiquidationIncentive(uint256 oldLiquidationIncentiveMantissa, uint256 newLiquidationIncentiveMantissa);
+    event NewMarketLiquidationIncentive(
+        VToken indexed vToken,
+        uint256 oldLiquidationIncentiveMantissa,
+        uint256 newLiquidationIncentiveMantissa
+    );
 
     /// @notice Emitted when price oracle is changed
     event NewPriceOracle(ResilientOracleInterface oldPriceOracle, ResilientOracleInterface newPriceOracle);
@@ -100,8 +105,15 @@ contract Comptroller is
 
     /// @notice Emitted when a market is unlisted
     event MarketUnlisted(address indexed vToken);
+
     /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
+
+    /// @notice Emitted when the liquidation manager is set
+    event NewLiquidationManager(
+        ILLiquidationManager indexed oldLiquidationManager,
+        ILLiquidationManager indexed newLiquidationManager
+    );
 
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
@@ -199,6 +211,9 @@ contract Comptroller is
     /// @notice Thrown if delegate approval status is already set to the requested value
     error DelegationStatusUnchanged();
 
+    /// @notice Thrown when the liquidation worsens the health factor of the borrower
+    error ToxicLiquidation();
+
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
     /// @custom:error ZeroAddressNotAllowed is thrown when pool registry address is zero
@@ -265,9 +280,7 @@ contract Comptroller is
 
         Market storage _market = markets[market];
 
-        if (!_market.isListed) {
-            revert MarketNotListed(market);
-        }
+        _checkMarketListed(market);
 
         if (!actionPaused(market, Action.BORROW)) {
             revert BorrowActionNotPaused();
@@ -427,9 +440,7 @@ contract Comptroller is
     function preMintHook(address vToken, address minter, uint256 mintAmount) external override {
         _checkActionPauseState(vToken, Action.MINT);
 
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         uint256 supplyCap = supplyCaps[vToken];
         // Skipping the cap check for uncapped coins to save some gas
@@ -443,13 +454,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, minter);
-        }
+        _updateAndDistributeSupplyRewards(vToken, minter);
     }
 
     /**
@@ -484,13 +489,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, redeemer, redeemTokens);
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
-        }
+        _updateAndDistributeSupplyRewards(vToken, redeemer);
     }
 
     /**
@@ -601,9 +600,7 @@ contract Comptroller is
     function preBorrowHook(address vToken, address borrower, uint256 borrowAmount) external override {
         _checkActionPauseState(vToken, Action.BORROW);
 
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         if (!markets[vToken].accountMembership[borrower]) {
             // only vTokens may call borrowAllowed if borrower not in market
@@ -643,16 +640,8 @@ contract Comptroller is
             revert InsufficientLiquidity();
         }
 
-        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
+        _updateAndDistributeBorrowRewards(vToken, borrower);
     }
 
     /**
@@ -680,20 +669,10 @@ contract Comptroller is
         _checkActionPauseState(vToken, Action.REPAY);
 
         oracle.updatePrice(vToken);
-
-        if (!markets[vToken].isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
-            rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
+        _updateAndDistributeBorrowRewards(vToken, borrower);
     }
 
     /**
@@ -726,12 +705,8 @@ contract Comptroller is
         // Update the prices of tokens
         updatePrices(borrower);
 
-        if (!markets[vTokenBorrowed].isListed) {
-            revert MarketNotListed(address(vTokenBorrowed));
-        }
-        if (!markets[vTokenCollateral].isListed) {
-            revert MarketNotListed(address(vTokenCollateral));
-        }
+        _checkMarketListed(vTokenBorrowed);
+        _checkMarketListed(vTokenCollateral);
 
         uint256 borrowBalance = VToken(vTokenBorrowed).borrowBalanceStored(borrower);
 
@@ -755,8 +730,29 @@ contract Comptroller is
             revert InsufficientShortfall();
         }
 
+        if (
+            liquidationManager.isToxicLiquidation(
+                snapshot.averageLT,
+                snapshot.liquidationIncentiveAvg,
+                snapshot.healthFactor
+            )
+        ) {
+            revert ToxicLiquidation();
+        }
+
+        Market storage marketCollateral = markets[vTokenCollateral];
+
+        uint256 closeFactor = liquidationManager.calculateCloseFactor(
+            borrowBalance,
+            snapshot.averageLT,
+            snapshot.totalCollateral,
+            snapshot.healthFactor,
+            snapshot.healthFactorThreshold,
+            marketCollateral.maxLiquidationIncentiveMantissa
+        );
+
         /* The liquidator may not repay more than what is allowed by the closeFactor */
-        uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactorMantissa }), borrowBalance);
+        uint256 maxClose = mul_ScalarTruncate(Exp({ mantissa: closeFactor }), borrowBalance);
         if (repayAmount > maxClose) {
             revert TooMuchRepay();
         }
@@ -786,9 +782,7 @@ contract Comptroller is
 
         Market storage market = markets[vTokenCollateral];
 
-        if (!market.isListed) {
-            revert MarketNotListed(vTokenCollateral);
-        }
+        _checkMarketListed(vTokenCollateral);
 
         if (seizerContract == address(this)) {
             // If Comptroller is the seizer, just check if collateral's comptroller
@@ -799,9 +793,7 @@ contract Comptroller is
         } else {
             // If the seizer is not the Comptroller, check that the seizer is a
             // listed market, and that the markets' comptrollers match
-            if (!markets[seizerContract].isListed) {
-                revert MarketNotListed(seizerContract);
-            }
+            _checkMarketListed(seizerContract);
             if (VToken(vTokenCollateral).comptroller() != VToken(seizerContract).comptroller()) {
                 revert ComptrollerMismatch();
             }
@@ -812,14 +804,7 @@ contract Comptroller is
         }
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vTokenCollateral);
-            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, borrower);
-            rewardsDistributor.distributeSupplierRewardToken(vTokenCollateral, liquidator);
-        }
+        _updateAndDistributeSupplyRewardsMulti(vTokenCollateral, borrower, liquidator);
     }
 
     /**
@@ -843,14 +828,7 @@ contract Comptroller is
         _checkRedeemAllowed(vToken, src, transferTokens);
 
         // Keep the flywheel moving
-        uint256 rewardDistributorsCount = rewardsDistributors.length;
-
-        for (uint256 i; i < rewardDistributorsCount; ++i) {
-            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
-            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, src);
-            rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
-        }
+        _updateAndDistributeSupplyRewardsMulti(vToken, src, dst);
     }
 
     /*** Pool-level operations ***/
@@ -885,21 +863,23 @@ contract Comptroller is
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
-
         if (snapshot.shortfall == 0) {
             revert InsufficientShortfall();
         }
 
-        // percentage = collateral / (borrows * liquidation incentive)
-        Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
-        Exp memory scaledBorrows = mul_(
-            Exp({ mantissa: snapshot.borrows }),
-            Exp({ mantissa: liquidationIncentiveMantissa })
-        );
+        Exp memory totalCollateral = Exp({ mantissa: snapshot.totalCollateral });
+        Exp memory totalScaledBorrows = Exp({
+            mantissa: liquidationManager.calculateIncentiveAdjustedDebt(
+                user,
+                userAssets,
+                ComptrollerInterface(address(this))
+            )
+        });
 
-        Exp memory percentage = div_(collateral, scaledBorrows);
+        // percentage = collateral / (borrows * liquidation incentive)
+        Exp memory percentage = div_(totalCollateral, totalScaledBorrows);
         if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
-            revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
+            revert CollateralExceedsThreshold(totalScaledBorrows.mantissa, totalCollateral.mantissa);
         }
 
         for (uint256 i; i < userAssetsCount; ++i) {
@@ -942,10 +922,15 @@ contract Comptroller is
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
-        uint256 collateralToSeize = mul_ScalarTruncate(
-            Exp({ mantissa: liquidationIncentiveMantissa }),
-            snapshot.borrows
+        VToken[] memory borrowMarkets = getAssetsIn(borrower);
+        uint256 marketsCount = borrowMarkets.length;
+
+        uint256 collateralToSeize = liquidationManager.calculateIncentiveAdjustedDebt(
+            borrower,
+            borrowMarkets,
+            ComptrollerInterface(address(this))
         );
+
         if (collateralToSeize >= snapshot.totalCollateral) {
             // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
             // and record bad debt.
@@ -961,12 +946,8 @@ contract Comptroller is
         _ensureMaxLoops(ordersCount / 2);
 
         for (uint256 i; i < ordersCount; ++i) {
-            if (!markets[address(orders[i].vTokenBorrowed)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenBorrowed));
-            }
-            if (!markets[address(orders[i].vTokenCollateral)].isListed) {
-                revert MarketNotListed(address(orders[i].vTokenCollateral));
-            }
+            _checkMarketListed(address(orders[i].vTokenBorrowed));
+            _checkMarketListed(address(orders[i].vTokenCollateral));
 
             LiquidationOrder calldata order = orders[i];
             order.vTokenBorrowed.forceLiquidateBorrow(
@@ -977,9 +958,6 @@ contract Comptroller is
                 true
             );
         }
-
-        VToken[] memory borrowMarkets = getAssetsIn(borrower);
-        uint256 marketsCount = borrowMarkets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
@@ -1026,9 +1004,7 @@ contract Comptroller is
 
         // Verify market is listed
         Market storage market = markets[address(vToken)];
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(address(vToken));
 
         // Check collateral factor <= 0.9
         if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
@@ -1064,25 +1040,46 @@ contract Comptroller is
     }
 
     /**
-     * @notice Sets liquidationIncentive
+     * @notice Sets liquidationIncentive for a specific market
      * @dev This function is restricted by the AccessControlManager
+     * @param vToken The market to set the liquidation incentive on
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
-     * @custom:event Emits NewLiquidationIncentive on success
+     * @custom:event Emits NewMarketLiquidationIncentive on success
      * @custom:access Controlled by AccessControlManager
      */
-    function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
+    function setMarketLiquidationIncentive(VToken vToken, uint256 newLiquidationIncentiveMantissa) external {
         require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
 
-        _checkAccessAllowed("setLiquidationIncentive(uint256)");
+        _checkAccessAllowed("setMarketLiquidationIncentive(address,uint256)");
 
-        // Save current value for use in log
-        uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
+        Market storage market = markets[address(vToken)];
+        _checkMarketListed(address(vToken));
 
-        // Set liquidation incentive to new incentive
-        liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
+        uint256 oldLiquidationIncentiveMantissa = market.maxLiquidationIncentiveMantissa;
+        if (newLiquidationIncentiveMantissa == oldLiquidationIncentiveMantissa) {
+            return; // No change, no need to emit event
+        }
+
+        market.maxLiquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
 
         // Emit event with old incentive, new incentive
-        emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+        emit NewMarketLiquidationIncentive(vToken, oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+    }
+
+    /**
+     * @notice Sets the address of the liquidation manager module.
+     * @dev Restricted by AccessControlManager. Ensures the address is non-zero.
+     * @param liquidationManager_ Address of the new liquidation manager contract.
+     * @custom:event Emits LiquidationModuleSet on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the address is zero
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setLiquidationModule(address liquidationManager_) external {
+        _checkAccessAllowed("setLiquidationModule(address)");
+        ensureNonzeroAddress(liquidationManager_);
+        ILLiquidationManager oldLiquidationManager = liquidationManager;
+        liquidationManager = ILLiquidationManager(liquidationManager_);
+        emit NewLiquidationManager(oldLiquidationManager, liquidationManager);
     }
 
     /**
@@ -1277,9 +1274,7 @@ contract Comptroller is
         _checkAccessAllowed("setForcedLiquidation(address,bool)");
         ensureNonzeroAddress(vTokenBorrowed);
 
-        if (!markets[vTokenBorrowed].isListed) {
-            revert MarketNotListed(vTokenBorrowed);
-        }
+        _checkMarketListed(vTokenBorrowed);
 
         isForcedLiquidationEnabled[vTokenBorrowed] = enable;
         emit IsForcedLiquidationEnabledUpdated(vTokenBorrowed, enable);
@@ -1373,8 +1368,23 @@ contract Comptroller is
     }
 
     /**
+     * @notice Returns the liquidation incentive mantissa for a given vToken market.
+     * @param vToken The address of the vToken market to query.
+     * @return liquidationIncentiveMantissa The liquidation incentive mantissa for the specified market.
+     * @custom:error MarketNotListed is thrown if the market is not listed
+     */
+    function getMarketLiquidationIncentive(
+        address vToken
+    ) external view returns (uint256 liquidationIncentiveMantissa) {
+        Market storage market = markets[vToken];
+        _checkMarketListed(vToken);
+        return market.maxLiquidationIncentiveMantissa;
+    }
+
+    /**
      * @notice Calculate number of tokens of collateral asset to seize given an underlying amount
      * @dev Used in liquidation (called in vToken.liquidateBorrowFresh)
+     * @param borrower The address of the borrower
      * @param vTokenBorrowed The address of the borrowed vToken
      * @param vTokenCollateral The address of the collateral vToken
      * @param actualRepayAmount The amount of vTokenBorrowed underlying to convert into vTokenCollateral tokens
@@ -1383,6 +1393,7 @@ contract Comptroller is
      * @custom:error PriceError if the oracle returns an invalid price
      */
     function liquidateCalculateSeizeTokens(
+        address borrower,
         address vTokenBorrowed,
         address vTokenCollateral,
         uint256 actualRepayAmount
@@ -1398,16 +1409,15 @@ contract Comptroller is
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
         uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
-        Exp memory ratio;
+        uint256 liquidationIncentiveMantissa = getDynamicLiquidationIncentive(borrower, vTokenCollateral);
 
-        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
-
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+        uint256 seizeTokens = liquidationManager.calculateSeizeTokens(
+            actualRepayAmount,
+            liquidationIncentiveMantissa,
+            priceBorrowedMantissa,
+            priceCollateralMantissa,
+            exchangeRateMantissa
+        );
 
         return (NO_ERROR, seizeTokens);
     }
@@ -1438,6 +1448,14 @@ contract Comptroller is
      */
     function getRewardDistributors() external view returns (RewardsDistributor[] memory) {
         return rewardsDistributors;
+    }
+
+    /**
+     * @notice Returns the current oracle contract used by the Comptroller.
+     * @return The address of the ResilientOracleInterface contract.
+     */
+    function getOracle() external view returns (ResilientOracleInterface) {
+        return oracle;
     }
 
     /**
@@ -1500,6 +1518,22 @@ contract Comptroller is
         return assetsIn;
     }
 
+    /// @notice Get the liquidation incentive for a borrower
+    /// @param borrower The address of the borrower
+    /// @return incentive The liquidation incentive for the borrower, scaled by 1e18
+    function getDynamicLiquidationIncentive(address borrower, address vToken) public view returns (uint256 incentive) {
+        Market storage market = markets[vToken];
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
+
+        return
+            liquidationManager.calculateDynamicLiquidationIncentive(
+                snapshot.healthFactor,
+                snapshot.healthFactorThreshold,
+                snapshot.averageLT,
+                market.maxLiquidationIncentiveMantissa
+            );
+    }
+
     /**
      * @notice Add the market to the borrower's "assets in" for liquidity calculations
      * @param vToken The market to enter
@@ -1509,9 +1543,7 @@ contract Comptroller is
         _checkActionPauseState(address(vToken), Action.ENTER_MARKET);
         Market storage marketToJoin = markets[address(vToken)];
 
-        if (!marketToJoin.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(address(vToken));
 
         if (marketToJoin.accountMembership[borrower]) {
             // already joined
@@ -1568,9 +1600,7 @@ contract Comptroller is
     function _checkRedeemAllowed(address vToken, address redeemer, uint256 redeemTokens) internal {
         Market storage market = markets[vToken];
 
-        if (!market.isListed) {
-            revert MarketNotListed(address(vToken));
-        }
+        _checkMarketListed(vToken);
 
         /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
         if (!market.accountMembership[redeemer]) {
@@ -1590,6 +1620,70 @@ contract Comptroller is
         );
         if (snapshot.shortfall > 0) {
             revert InsufficientLiquidity();
+        }
+    }
+
+    /**
+     * @notice Updates and distributes supply rewards for a specific user and vToken.
+     * @dev Iterates through all reward distributors, updating the supply index and distributing rewards.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user The address of the supplier to receive the distributed rewards.
+     */
+    function _updateAndDistributeSupplyRewards(address vToken, address user) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user);
+        }
+    }
+
+    /**
+     * @notice Updates and distributes borrow rewards for a specific user and vToken.
+     * @dev Iterates through all reward distributors, updating the borrow index and distributing rewards.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user The address of the user to receive the borrow rewards.
+     */
+    function _updateAndDistributeBorrowRewards(address vToken, address user) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        Exp memory borrowIndex = Exp({ mantissa: VToken(vToken).borrowIndex() });
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
+            rewardsDistributor.distributeBorrowerRewardToken(vToken, user, borrowIndex);
+        }
+    }
+
+    /**
+     * @dev Updates the supply reward index and distributes supplier reward tokens for multiple users.
+     * Iterates through all registered rewards distributors, updating the supply index for the given vToken,
+     * and distributing reward tokens to the specified users.
+     * @param vToken The address of the vToken for which rewards are being updated and distributed.
+     * @param user1 The address of the first user to receive supplier reward tokens.
+     * @param user2 The address of the second user to receive supplier reward tokens.
+     */
+    function _updateAndDistributeSupplyRewardsMulti(address vToken, address user1, address user2) internal {
+        uint256 rewardDistributorsCount = rewardsDistributors.length;
+
+        for (uint256 i; i < rewardDistributorsCount; ++i) {
+            RewardsDistributor rewardsDistributor = rewardsDistributors[i];
+            rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user1);
+            rewardsDistributor.distributeSupplierRewardToken(vToken, user2);
+        }
+    }
+
+    /**
+     * @notice Checks whether a given market (vToken) is listed.
+     * @param vToken The address of the vToken to check.
+     * @custom:error MarketNotListed error is thrown if the market is not listed
+     */
+    function _checkMarketListed(address vToken) internal view {
+        if (!markets[vToken].isListed) {
+            revert MarketNotListed(vToken);
         }
     }
 
@@ -1628,64 +1722,39 @@ contract Comptroller is
         uint256 borrowAmount,
         function(VToken) internal view returns (Exp memory) weight
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
-        // For each asset the account is in
         VToken[] memory assets = getAssetsIn(account);
         uint256 assetsCount = assets.length;
+        uint256 liquidationIncentiveMantissa;
 
-        for (uint256 i; i < assetsCount; ++i) {
+        ILLiquidationManager.EffectsParams memory effects = ILLiquidationManager.EffectsParams({
+            vTokenModify: vTokenModify,
+            redeemTokens: redeemTokens,
+            borrowAmount: borrowAmount
+        });
+
+        for (uint256 i; i < assetsCount; ) {
             VToken asset = assets[i];
-
-            // Read the balances and exchange rate from the vToken
-            (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
+            snapshot = liquidationManager.processAsset(
                 asset,
-                account
+                account,
+                effects,
+                weight(asset).mantissa,
+                _safeGetUnderlyingPrice(asset),
+                snapshot
             );
 
-            // Get the normalized price of the asset
-            Exp memory oraclePrice = Exp({ mantissa: _safeGetUnderlyingPrice(asset) });
+            liquidationIncentiveMantissa += markets[address(asset)].maxLiquidationIncentiveMantissa;
 
-            // Pre-compute conversion factors from vTokens -> usd
-            Exp memory vTokenPrice = mul_(Exp({ mantissa: exchangeRateMantissa }), oraclePrice);
-            Exp memory weightedVTokenPrice = mul_(weight(asset), vTokenPrice);
-
-            // weightedCollateral += weightedVTokenPrice * vTokenBalance
-            snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
-                weightedVTokenPrice,
-                vTokenBalance,
-                snapshot.weightedCollateral
-            );
-
-            // totalCollateral += vTokenPrice * vTokenBalance
-            snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
-
-            // borrows += oraclePrice * borrowBalance
-            snapshot.borrows = mul_ScalarTruncateAddUInt(oraclePrice, borrowBalance, snapshot.borrows);
-
-            // Calculate effects of interacting with vTokenModify
-            if (asset == vTokenModify) {
-                // redeem effect
-                // effects += tokensToDenom * redeemTokens
-                snapshot.effects = mul_ScalarTruncateAddUInt(weightedVTokenPrice, redeemTokens, snapshot.effects);
-
-                // borrow effect
-                // effects += oraclePrice * borrowAmount
-                snapshot.effects = mul_ScalarTruncateAddUInt(oraclePrice, borrowAmount, snapshot.effects);
+            unchecked {
+                ++i;
             }
         }
 
-        uint256 borrowPlusEffects = snapshot.borrows + snapshot.effects;
-        // These are safe, as the underflow condition is checked first
-        unchecked {
-            if (snapshot.weightedCollateral > borrowPlusEffects) {
-                snapshot.liquidity = snapshot.weightedCollateral - borrowPlusEffects;
-                snapshot.shortfall = 0;
-            } else {
-                snapshot.liquidity = 0;
-                snapshot.shortfall = borrowPlusEffects - snapshot.weightedCollateral;
-            }
+        if (assetsCount > 0) {
+            snapshot.liquidationIncentiveAvg = div_(liquidationIncentiveMantissa, assetsCount);
         }
 
-        return snapshot;
+        return liquidationManager.finalizeSnapshot(snapshot);
     }
 
     /**

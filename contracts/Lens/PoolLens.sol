@@ -20,7 +20,7 @@ import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeM
  * for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be
  * looked up for specific pools and markets:
 - the vToken balance of a given user;
-- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
+- the pool data (oracle address, associated vToken etc) of a pool via its associated comptroller address;
 - the vToken address in a pool for a given asset;
 - a list of all pools that support an asset;
 - the underlying asset price of a vToken;
@@ -41,7 +41,6 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         string description;
         address priceOracle;
         uint256 closeFactor;
-        uint256 liquidationIncentive;
         uint256 minLiquidatableCollateral;
         VTokenMetadata[] vTokens;
     }
@@ -270,7 +269,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
      *
      * @param comptrollerAddress Address of the comptroller
      *
-     * @return badDebtSummary A struct with comptroller address, total bad debut denominated in usd, and
+     * @return badDebtSummary A struct with comptroller address, total bad debt denominated in usd, and
      *   a break down of bad debt by market
      */
     function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
@@ -287,7 +286,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         badDebtSummary.comptroller = comptrollerAddress;
         badDebtSummary.badDebts = badDebts;
 
-        // // Calculate the bad debt is USD per market
+        // Calculate the bad debt in USD per market
         for (uint256 i; i < markets.length; ++i) {
             BadDebt memory badDebt;
             badDebt.vTokenAddress = address(markets[i]);
@@ -368,7 +367,6 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
             vTokens: vTokenMetadataItems,
             priceOracle: address(comptrollerViewInstance.oracle()),
             closeFactor: comptrollerViewInstance.closeFactorMantissa(),
-            liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
             minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral()
         });
 
