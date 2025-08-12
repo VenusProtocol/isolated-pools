@@ -338,8 +338,9 @@ describe("liquidateAccount", () => {
         beforeLiquidation: { supply: 0, borrows: parseUnits("1", 18) },
         afterLiquidation: { supply: 0, borrows: 0 },
       });
-      await expect(comptroller.connect(liquidator).liquidateAccount(user.address, [])).to.be.revertedWith(
-        "Nonzero borrow balance after liquidation",
+      await expect(comptroller.connect(liquidator).liquidateAccount(user.address, [])).to.be.revertedWithCustomError(
+        comptroller,
+        "NonzeroBorrowBalance",
       );
     });
   });
