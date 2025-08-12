@@ -395,11 +395,17 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
             pausedActions |= paused << i;
         }
 
+        uint256 supplyRatePerBlock;
+
+        if (vToken.totalSupply() > 0) {
+            supplyRatePerBlock = vToken.supplyRatePerBlock();
+        }
+
         return
             VTokenMetadata({
                 vToken: address(vToken),
                 exchangeRateCurrent: exchangeRateCurrent,
-                supplyRatePerBlockOrTimestamp: vToken.supplyRatePerBlock(),
+                supplyRatePerBlockOrTimestamp: supplyRatePerBlock,
                 borrowRatePerBlockOrTimestamp: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
                 supplyCaps: comptroller.supplyCaps(address(vToken)),

@@ -44,7 +44,6 @@ export type NetworkConfig = {
   basemainnet: DeploymentConfig;
   unichainsepolia: DeploymentConfig;
   unichainmainnet: DeploymentConfig;
-  berachainbartio: DeploymentConfig;
 };
 
 export type PreconfiguredAddresses = { [contract: string]: string };
@@ -147,8 +146,8 @@ export enum InterestRateModels {
 
 const ANY_CONTRACT = ethers.constants.AddressZero;
 
-export const DEFAULT_BLOCKS_PER_YEAR = 21_024_000; // assuming a block is mined every 1.5 seconds
-export const BSC_BLOCKS_PER_YEAR = 21_024_000; // assuming a block is mined every 1.5 seconds
+export const DEFAULT_BLOCKS_PER_YEAR = 42_048_000; // assuming a block is mined every 0.75 seconds
+export const BSC_BLOCKS_PER_YEAR = 42_048_000; // assuming a block is mined every 0.75 seconds
 export const ETH_BLOCKS_PER_YEAR = 2_628_000; // assuming a block is mined every 12 seconds
 export const OPBNB_BLOCKS_PER_YEAR = 63_072_000; // assuming a block is mined every 0.5 seconds
 export const SECONDS_PER_YEAR = 31_536_000; // seconds per year
@@ -173,7 +172,6 @@ export const blocksPerYear: Record<string, BlocksPerYear> = {
   basemainnet: "time-based",
   unichainsepolia: "time-based",
   unichainmainnet: "time-based",
-  berachainbartio: "time-based",
   isTimeBased: "time-based",
 };
 
@@ -337,13 +335,6 @@ export const preconfiguredAddresses = {
     FastTrackTimelock: UNICHAIN_MAINNET_MULTISIG,
     CriticalTimelock: UNICHAIN_MAINNET_MULTISIG,
     AccessControlManager: "0x1f12014c497a9d905155eB9BfDD9FaC6885e61d0",
-  },
-  berachainbartio: {
-    VTreasury: "0xF2f878a9cF9a43409F673CfA17B4F1E9D8169211",
-    NormalTimelock: "0x8699D418D8bae5CFdc566E4fce897B08bd9B03B0",
-    FastTrackTimelock: "0x723b7CB226d86bd89638ec77936463453a46C656",
-    CriticalTimelock: "0x920eeE8A5581e80Ca9C47CbF11B7A6cDB30204BD",
-    AccessControlManager: "0xEf368e4c1f9ACC9241E66CD67531FEB195fF7536",
   },
 };
 
@@ -8619,118 +8610,6 @@ export const globalConfig: NetworkConfig = {
     ],
     preconfiguredAddresses: preconfiguredAddresses.unichainmainnet,
   },
-  berachainbartio: {
-    tokensConfig: [
-      {
-        isMock: true,
-        name: "Bridged USDC (Stargate)",
-        symbol: "USDC.e",
-        decimals: 6,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: true,
-        name: "Wrapped Ether",
-        symbol: "WETH",
-        decimals: 18,
-        tokenAddress: ethers.constants.AddressZero,
-      },
-      {
-        isMock: false,
-        name: "Wrapped Bera",
-        symbol: "WBERA",
-        decimals: 18,
-        tokenAddress: "0x7507c1dc16935B82698e4C63f2746A2fCf994dF8",
-      },
-      {
-        isMock: false,
-        name: "Venus",
-        symbol: "XVS",
-        decimals: 18,
-        tokenAddress: "0x75A3668f0b0d06E45601C883b0c66f7Dd2364208",
-      },
-    ],
-    poolConfig: [
-      {
-        id: "Core",
-        name: "Core",
-        closeFactor: convertToUnit("0.5", 18),
-        liquidationIncentive: convertToUnit("1.1", 18),
-        minLiquidatableCollateral: convertToUnit("100", 18),
-        vtokens: [
-          {
-            name: "Venus USDC.e (Core)",
-            asset: "USDC.e",
-            symbol: "vUSDC.e_Core",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.0875", 18),
-            jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.8", 18),
-            collateralFactor: convertToUnit("0.78", 18),
-            liquidationThreshold: convertToUnit("0.8", 18),
-            reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("5000", 6),
-            supplyCap: convertToUnit("20000000", 6),
-            borrowCap: convertToUnit("18000000", 6),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
-            isFlashLoanAllowed: false,
-            flashLoanProtocolFeeMantissa: "0",
-            flashLoanSupplierFeeMantissa: "0",
-          },
-          {
-            name: "Venus WETH (Core)",
-            asset: "WETH",
-            symbol: "vWETH_Core",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.0875", 18),
-            jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.8", 18),
-            collateralFactor: convertToUnit("0.78", 18),
-            liquidationThreshold: convertToUnit("0.8", 18),
-            reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("2", 18),
-            supplyCap: convertToUnit("700", 18),
-            borrowCap: convertToUnit("350", 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
-            isFlashLoanAllowed: false,
-            flashLoanProtocolFeeMantissa: "0",
-            flashLoanSupplierFeeMantissa: "0",
-          },
-          {
-            name: "Venus WBERA (Core)",
-            asset: "WBERA",
-            symbol: "vWBERA_Core",
-            rateModel: InterestRateModels.JumpRate.toString(),
-            baseRatePerYear: "0",
-            multiplierPerYear: convertToUnit("0.0875", 18),
-            jumpMultiplierPerYear: convertToUnit("2.5", 18),
-            kink_: convertToUnit("0.8", 18),
-            collateralFactor: convertToUnit("0.78", 18),
-            liquidationThreshold: convertToUnit("0.8", 18),
-            reserveFactor: convertToUnit("0.1", 18),
-            initialSupply: convertToUnit("1000", 18),
-            supplyCap: convertToUnit("4000000", 18),
-            borrowCap: convertToUnit("3500000", 18),
-            reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA_BERA_CHAIN_BARTIO,
-            vTokenReceiver: preconfiguredAddresses.berachainbartio.VTreasury,
-            isFlashLoanAllowed: false,
-            flashLoanProtocolFeeMantissa: "0",
-            flashLoanSupplierFeeMantissa: "0",
-          },
-        ],
-        rewards: [],
-      },
-    ],
-    accessControlConfig: [
-      ...poolRegistryPermissions(),
-      ...normalTimelockPermissions(preconfiguredAddresses.berachainbartio.NormalTimelock),
-    ],
-    preconfiguredAddresses: preconfiguredAddresses.berachainbartio,
-  },
 };
 
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
@@ -8769,8 +8648,6 @@ export async function getConfig(networkName: string): Promise<DeploymentConfig> 
       return globalConfig.unichainsepolia;
     case "unichainmainnet":
       return globalConfig.unichainmainnet;
-    case "berachainbartio":
-      return globalConfig.berachainbartio;
     case "development":
       return globalConfig.bsctestnet;
     default:

@@ -3398,41 +3398,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@venusprotocol/isolated-pools@npm:^3.4.0":
-  version: 3.9.0
-  resolution: "@venusprotocol/isolated-pools@npm:3.9.0"
-  dependencies:
-    "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/solidity-utilities": 2.0.3
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: f72d664e73667aff1ad773bf7464f07110f1a7a150efe31e59805ef92c58c94405cfcefef15983182c339f3812365b72f9ac8fdd13ddd6876e1c0ef9739cc4d2
-  languageName: node
-  linkType: hard
-
-"@venusprotocol/isolated-pools@npm:^4.0.0":
-  version: 4.2.0
-  resolution: "@venusprotocol/isolated-pools@npm:4.2.0"
-  dependencies:
-    "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@openzeppelin/contracts": ^4.8.3
-    "@openzeppelin/contracts-upgradeable": ^4.8.3
-    "@openzeppelin/hardhat-upgrades": ^1.21.0
-    "@solidity-parser/parser": ^0.13.2
-    "@venusprotocol/solidity-utilities": 2.0.3
-    ethers: ^5.7.0
-    hardhat-deploy: ^0.11.14
-    module-alias: ^2.2.2
-  checksum: 95e907e9aefaad460793b79a2817cdf0897bb61d0999b813a2cadd20105ca583f6cc544895b5597d8f14739cb6d41175d825aae588d6b0a46963af337ca344d2
-  languageName: node
-  linkType: hard
-
-"@venusprotocol/isolated-pools@workspace:.":
+"@venusprotocol/isolated-pools@^4.0.0, @venusprotocol/isolated-pools@workspace:.":
   version: 0.0.0-use.local
   resolution: "@venusprotocol/isolated-pools@workspace:."
   dependencies:
@@ -3499,6 +3465,23 @@ __metadata:
     zksync-ethers: ^5.9.1
   languageName: unknown
   linkType: soft
+
+"@venusprotocol/isolated-pools@npm:^3.4.0":
+  version: 3.9.0
+  resolution: "@venusprotocol/isolated-pools@npm:3.9.0"
+  dependencies:
+    "@nomiclabs/hardhat-ethers": ^2.2.3
+    "@openzeppelin/contracts": ^4.8.3
+    "@openzeppelin/contracts-upgradeable": ^4.8.3
+    "@openzeppelin/hardhat-upgrades": ^1.21.0
+    "@solidity-parser/parser": ^0.13.2
+    "@venusprotocol/solidity-utilities": 2.0.3
+    ethers: ^5.7.0
+    hardhat-deploy: ^0.11.14
+    module-alias: ^2.2.2
+  checksum: f72d664e73667aff1ad773bf7464f07110f1a7a150efe31e59805ef92c58c94405cfcefef15983182c339f3812365b72f9ac8fdd13ddd6876e1c0ef9739cc4d2
+  languageName: node
+  linkType: hard
 
 "@venusprotocol/oracle@npm:2.11.0, @venusprotocol/oracle@npm:^2.11.0":
   version: 2.11.0

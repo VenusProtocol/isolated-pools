@@ -22,11 +22,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 func.tags = ["Shortfall-impl", "il"];
 
-// RiskFund not deployed on these networks
-func.skip = async hre =>
-  hre.getNetworkName() === "sepolia" ||
-  hre.getNetworkName() === "opbnbtestnet" ||
-  hre.getNetworkName() === "opbnbmainnet" ||
-  hre.getNetworkName() === "ethereum";
+func.skip = async hre => hre.getNetworkName() !== "bscmainnet" && hre.getNetworkName() !== "bsctestnet";
 
 export default func;
