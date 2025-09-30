@@ -56,7 +56,7 @@
   "devDependencies": {
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
-    "@defi-wonderland/smock": "^2.2.0",
+    "@defi-wonderland/smock": "2.4.0",
     "@matterlabs/hardhat-zksync": "^0.2.0",
     "@matterlabs/hardhat-zksync-deploy": "^0.11.0",
     "@matterlabs/hardhat-zksync-solc": "^1.2.1",
@@ -112,7 +112,7 @@
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
     "ganache-core": "github:compound-finance/ganache-core.git#jflatow/unbreak-fork",
     "solidity-parser-antlr": "https://github.com/solidity-parser/parser#0.8.2",
-    "@defi-wonderland/smock": "2.3.5",
+    "@defi-wonderland/smock": "2.4.0",
     "hardhat": "2.22.18",
     "@venusprotocol/solidity-utilities": "2.1.0"
   },
