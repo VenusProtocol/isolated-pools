@@ -5,13 +5,11 @@ import fs from "fs";
 
 import { Prime } from "../typechain";
 
-
 const func: DeployFunction = async function () {
     const prime: Prime = await ethers.getContract(`Prime`);
 
-    const ScoreUpdate = JSON.parse(fs.readFileSync("prime-users.json", "utf8"));
-    const primeUsers = Object.keys(ScoreUpdate);
-
+    const primeUsers = JSON.parse(fs.readFileSync("prime-users.json", "utf8"));
+    console.log('prime users', primeUsers);
 
     // update every batchSize users
     const batchSize = 50;
