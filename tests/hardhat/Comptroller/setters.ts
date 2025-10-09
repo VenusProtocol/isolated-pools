@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { Signer } from "ethers";
@@ -61,6 +61,7 @@ describe("setters", async () => {
     OMG = await smock.fake<VToken>("VToken");
     OMG.isVToken.returns(true);
     poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+    await setBalance(poolRegistry.address, 100n ** 18n);
 
     // Sending transaction cost
     await owner.sendTransaction({ to: poolRegistry.address, value: ethers.utils.parseEther("1") });

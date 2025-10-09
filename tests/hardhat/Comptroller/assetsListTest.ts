@@ -80,6 +80,7 @@ describe("assetListTest", () => {
             });
           }
           const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+          await setBalance(poolRegistry.address, 100n ** 18n);
           await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
         }
         return vToken;
