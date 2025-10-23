@@ -1,3 +1,19 @@
+## [4.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.1...v4.4.0-dev.2) (2025-10-09)
+
+
+### Bug Fixes
+
+* added patch ([2aebca2](https://github.com/VenusProtocol/isolated-pools/commit/2aebca24d703b0f624e3babd6862a7d6af044494))
+* fix provider.init ([e00cafe](https://github.com/VenusProtocol/isolated-pools/commit/e00cafebc1bd336624bb5b87dce3c60bb17c6607))
+* fixed hardhat version ([8b2a199](https://github.com/VenusProtocol/isolated-pools/commit/8b2a199ce3a5b00d476fe45759a24b53e180dd06))
+* fixed provider.init ([4f728f0](https://github.com/VenusProtocol/isolated-pools/commit/4f728f0e48419bfed70d4e2e35f28aa3c86ecf77))
+* fixed solidity utilities version ([cde43f4](https://github.com/VenusProtocol/isolated-pools/commit/cde43f4a05c1b48f3b45d5e4ad31ce278c5053b8))
+* fixed tests ([5d70112](https://github.com/VenusProtocol/isolated-pools/commit/5d701120cff66103d493e791b823760b2989fa82))
+* fixed tests ([b542456](https://github.com/VenusProtocol/isolated-pools/commit/b542456353eae0dae14303876bac4effbaf20e92))
+* removed evm version ([642dfea](https://github.com/VenusProtocol/isolated-pools/commit/642dfea7c7f91eca9deab20aca2f501bfb978899))
+* revert evm version ([3d40136](https://github.com/VenusProtocol/isolated-pools/commit/3d401361c8d803889594bb904e998c8ab2dffe89))
+* updated evm version ([6253248](https://github.com/VenusProtocol/isolated-pools/commit/6253248d83934d08cee624775fbc8f915edd9a5e))
+
 ## [4.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0...v4.4.0-dev.1) (2025-08-11)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "4.4.0-dev.1",
+  "version": "4.4.0-dev.2",
   "description": "",
   "files": [
     "artifacts",
@@ -26,7 +26,8 @@
     "build": "rm -rf dist && hardhat compile && hardhat compile --config hardhat.config.zksync.ts && tsc --declaration",
     "docgen": "hardhat docgen",
     "prepare": "husky install",
-    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts"
+    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts",
+    "postinstall": "yarn patch-package"
   },
   "repository": {
     "type": "git",
@@ -48,15 +49,16 @@
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
     "@solidity-parser/parser": "^0.13.2",
-    "@venusprotocol/solidity-utilities": "2.0.3",
+    "@venusprotocol/solidity-utilities": "2.1.0",
     "ethers": "^5.7.0",
     "hardhat-deploy": "^0.11.14",
-    "module-alias": "^2.2.2"
+    "module-alias": "^2.2.2",
+    "patch-package": "^8.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
-    "@defi-wonderland/smock": "^2.2.0",
+    "@defi-wonderland/smock": "2.4.0",
     "@matterlabs/hardhat-zksync": "^0.2.0",
     "@matterlabs/hardhat-zksync-deploy": "^0.11.0",
     "@matterlabs/hardhat-zksync-solc": "^1.2.1",
@@ -76,10 +78,10 @@
     "@types/node": "^12.20.50",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
-    "@venusprotocol/governance-contracts": "2.9.0",
-    "@venusprotocol/oracle": "2.11.0",
-    "@venusprotocol/protocol-reserve": "3.3.0",
-    "@venusprotocol/venus-protocol": "9.7.0",
+    "@venusprotocol/governance-contracts": "2.13.0",
+    "@venusprotocol/oracle": "2.14.0",
+    "@venusprotocol/protocol-reserve": "3.4.0",
+    "@venusprotocol/venus-protocol": "10.0.0",
     "bignumber.js": "9.0.0",
     "chai": "^4.3.6",
     "dotenv": "^10.0.0",
@@ -89,7 +91,7 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "3.4.1",
     "eslint-plugin-promise": "^5.2.0",
-    "hardhat": "^2.16.1",
+    "hardhat": "2.22.18",
     "hardhat-dependency-compiler": "^1.2.1",
     "hardhat-deploy": "^0.12.4",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
@@ -111,9 +113,9 @@
     "scrypt.js": "https://registry.npmjs.org/@compound-finance/ethereumjs-wallet/-/ethereumjs-wallet-0.6.3.tgz",
     "ganache-core": "github:compound-finance/ganache-core.git#jflatow/unbreak-fork",
     "solidity-parser-antlr": "https://github.com/solidity-parser/parser#0.8.2",
-    "@defi-wonderland/smock": "2.3.5",
-    "hardhat": "2.19.4",
-    "@venusprotocol/solidity-utilities": "2.0.3"
+    "@defi-wonderland/smock": "2.4.0",
+    "hardhat": "2.22.18",
+    "@venusprotocol/solidity-utilities": "2.1.0"
   },
   "publishConfig": {
     "access": "public",
