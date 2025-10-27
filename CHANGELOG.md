@@ -1,3 +1,11 @@
+## [4.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.2...v4.4.0-dev.3) (2025-10-27)
+
+
+### Bug Fixes
+
+* remove quote ([7391a52](https://github.com/VenusProtocol/isolated-pools/commit/7391a52975b712933710510916b2f827ca6e1e12))
+* use hardhat verify ([a91e873](https://github.com/VenusProtocol/isolated-pools/commit/a91e8737d4d7ad96b28fd579d690150a686647fa))
+
 ## [4.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.1...v4.4.0-dev.2) (2025-10-09)
 
 
