@@ -2,6 +2,7 @@
   "name": "@venusprotocol/isolated-pools",
   "version": "4.4.0-dev.2",
   "description": "",
+  "repository": "git@github.com:VenusProtocol/isolated-pools.git",
   "files": [
     "artifacts",
     "typechain",
