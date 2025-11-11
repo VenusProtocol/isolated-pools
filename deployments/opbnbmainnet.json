@@ -6636,7 +6636,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0xF51edd35B1d4cDd95378Ba40eAB6C23123bCE3e8",
+      "address": "0xA21E48d143818aB0b5231542A486609dFcc20Ee8",
       "abi": [
         {
           "inputs": [
@@ -9585,7 +9585,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0x8Fa6460437F6Ba76808C93108F2134c5D6394D94",
+      "address": "0x8778088536607917cBb5F1428988fe7088daE971",
       "abi": [
         {
           "inputs": [
