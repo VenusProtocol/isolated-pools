@@ -28480,7 +28480,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0xa6cDad72854d338d75C40f1a863A0f9c488f4D7F",
+      "address": "0xD9142f79C3aDF8A5B86594Bd012d828e5B39bB78",
       "abi": [
         {
           "inputs": [
@@ -62623,7 +62623,7 @@
       ]
     },
     "Shortfall_Implementation": {
-      "address": "0xdD939b73C40cE3fe540bE46cA378f74196Dc86b7",
+      "address": "0x84B09BC76ABA4c0FC45616AdD44017b678FBCA87",
       "abi": [
         {
           "inputs": [
@@ -79180,7 +79180,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xaaCe28600A02E42198AfEe60A2cCDADC9FFe513B",
+      "address": "0x6109c4E3BaaF98da6A9822B1d16AB101088208B7",
       "abi": [
         {
           "inputs": [
