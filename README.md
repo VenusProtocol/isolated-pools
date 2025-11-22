@@ -205,8 +205,8 @@ https://github.com/compound-finance/compound-protocol/tree/a3214f67b73310d547e00
 # Links
 
 - Website : https://venus.io
-- Twitter : https://twitter.com/venusprotocol
+- X/Twitter : https://x.com/venusprotocol
 - Telegram : https://t.me/venusprotocol
-- Discord : https://discord.com/invite/pTQ9EBHYtF
+- Discord : https://discord.com/invite/venus-protocol-912811548651708448
 - Github: https://github.com/VenusProtocol
 - Youtube: https://www.youtube.com/@venusprotocolofficial
