@@ -1,3 +1,19 @@
+## 4.4.0-dev.4 (2025-12-12)
+
+* ci: fix the release flow through Trusted Publishing ([6ab87cb](https://github.com/VenusProtocol/isolated-pools/commit/6ab87cb))
+* Merge pull request #547 from VenusProtocol/feat/VPD-267 ([49799f3](https://github.com/VenusProtocol/isolated-pools/commit/49799f3)), closes [#547](https://github.com/VenusProtocol/isolated-pools/issues/547)
+* Merge pull request #548 from VenusProtocol/feat/VPD-280 ([58172c2](https://github.com/VenusProtocol/isolated-pools/commit/58172c2)), closes [#548](https://github.com/VenusProtocol/isolated-pools/issues/548)
+* Merge pull request #550 from VenusProtocol/chore/fix-release ([b3d1bdc](https://github.com/VenusProtocol/isolated-pools/commit/b3d1bdc)), closes [#550](https://github.com/VenusProtocol/isolated-pools/issues/550)
+* chore: fix CI/release ([1c9f2b3](https://github.com/VenusProtocol/isolated-pools/commit/1c9f2b3))
+* fix: tests ([1dd43d8](https://github.com/VenusProtocol/isolated-pools/commit/1dd43d8))
+* feat: add bsctestnet checkpoint IRMs for Fermi upgrade ([eb9dc57](https://github.com/VenusProtocol/isolated-pools/commit/eb9dc57))
+* feat: update BNB chain blocksPerYear to 70080000 ([451e7c3](https://github.com/VenusProtocol/isolated-pools/commit/451e7c3))
+* feat: update bscmainnet deployments ([5e2081e](https://github.com/VenusProtocol/isolated-pools/commit/5e2081e))
+* feat: update bsctestnet deployments ([68805e9](https://github.com/VenusProtocol/isolated-pools/commit/68805e9))
+* feat: updating deployment files ([b0170b4](https://github.com/VenusProtocol/isolated-pools/commit/b0170b4))
+* feat: updating deployment files ([ed9ce15](https://github.com/VenusProtocol/isolated-pools/commit/ed9ce15))
+* feat: updating deployment files ([fcdf9ae](https://github.com/VenusProtocol/isolated-pools/commit/fcdf9ae))
+
 ## [4.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.2...v4.4.0-dev.3) (2025-10-27)
 
 
