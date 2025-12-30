@@ -17,14 +17,14 @@ const checkpoints = {
     toBlocksPerYear: 42_048_000,
   },
   opbnbtestnet: {
-    at: 1743562800, // 2025-04-02 03:00:00 AM UTC,
-    fromBlocksPerYear: 31_536_000,
-    toBlocksPerYear: 63_072_000,
+    at: 1762398000, // 2025-11-06 03:00:00 AM UTC
+    fromBlocksPerYear: 63_072_000,
+    toBlocksPerYear: 126_144_000,
   },
   opbnbmainnet: {
-    at: 1745204400, // 2025-04-21 03:00:00 AM UTC
-    fromBlocksPerYear: 31_536_000,
-    toBlocksPerYear: 63_072_000,
+    at: 1767754800, // 2026-01-07 03:00:00 AM UTC
+    fromBlocksPerYear: 63_072_000,
+    toBlocksPerYear: 126_144_000,
   },
 };
 
