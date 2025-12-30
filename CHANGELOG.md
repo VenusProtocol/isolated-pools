@@ -1,3 +1,13 @@
+## 4.4.0-dev.5 (2025-12-30)
+
+* Merge pull request #546 from VenusProtocol/feat/VPD-245 ([f7f0920](https://github.com/VenusProtocol/isolated-pools/commit/f7f0920)), closes [#546](https://github.com/VenusProtocol/isolated-pools/issues/546)
+* feat: add OPBNB deployments ([34caf09](https://github.com/VenusProtocol/isolated-pools/commit/34caf09))
+* feat: configure for Fourier hardfork on OPBNB testnet ([5637c1c](https://github.com/VenusProtocol/isolated-pools/commit/5637c1c))
+* feat: update IRM for OPBNB ([80f9c89](https://github.com/VenusProtocol/isolated-pools/commit/80f9c89))
+* feat: updating deployment files ([4b40d53](https://github.com/VenusProtocol/isolated-pools/commit/4b40d53))
+* feat: updating deployment files ([6c04f16](https://github.com/VenusProtocol/isolated-pools/commit/6c04f16))
+* feat: updating deployment files ([87c2438](https://github.com/VenusProtocol/isolated-pools/commit/87c2438))
+
 ## 4.4.0-dev.4 (2025-12-12)
 
 * ci: fix the release flow through Trusted Publishing ([6ab87cb](https://github.com/VenusProtocol/isolated-pools/commit/6ab87cb))
