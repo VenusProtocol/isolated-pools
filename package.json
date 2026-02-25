@@ -2,6 +2,10 @@
   "name": "@venusprotocol/isolated-pools",
   "version": "4.4.0-dev.5",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VenusProtocol/isolated-pools.git"
+  },
   "files": [
     "artifacts",
     "typechain",
@@ -28,10 +32,6 @@
     "prepare": "husky install",
     "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts",
     "postinstall": "yarn patch-package"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/VenusProtocol/isolated-pools.git"
   },
   "keywords": [],
   "author": "",
@@ -65,7 +65,9 @@
     "@matterlabs/hardhat-zksync-verify": "0.7.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.4",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.14",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "3.4.0",
