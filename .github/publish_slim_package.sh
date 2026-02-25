@@ -1,5 +1,5 @@
-# Set npm authentication
-echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+# Ensure npm 11.5.1 or later is installed
+npm install -g npm@latest
 
 cd slim
 
