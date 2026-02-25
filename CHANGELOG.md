@@ -1,3 +1,12 @@
+## 4.4.0-dev.6 (2026-02-25)
+
+* Merge branch 'develop' into chore/slim-package ([dfedc9f](https://github.com/VenusProtocol/isolated-pools/commit/dfedc9f))
+* Merge pull request #544 from VenusProtocol/chore/slim-package ([04b8af8](https://github.com/VenusProtocol/isolated-pools/commit/04b8af8)), closes [#544](https://github.com/VenusProtocol/isolated-pools/issues/544)
+* build: accommodate the Trusted Publisher way to release ([8c0d6c0](https://github.com/VenusProtocol/isolated-pools/commit/8c0d6c0))
+* fix: add repo URL ([6cd35fb](https://github.com/VenusProtocol/isolated-pools/commit/6cd35fb))
+* cd: publish slim package ([e511e6b](https://github.com/VenusProtocol/isolated-pools/commit/e511e6b))
+* feat: add slim package scripts ([b36a73b](https://github.com/VenusProtocol/isolated-pools/commit/b36a73b))
+
 ## 4.4.0-dev.5 (2025-12-30)
 
 * Merge pull request #546 from VenusProtocol/feat/VPD-245 ([f7f0920](https://github.com/VenusProtocol/isolated-pools/commit/f7f0920)), closes [#546](https://github.com/VenusProtocol/isolated-pools/issues/546)
