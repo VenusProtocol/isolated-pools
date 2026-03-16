@@ -1,4 +1,3 @@
-import { setStorageAt } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, Signer } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
@@ -10,20 +9,19 @@ import {
   UpgradeableBeacon__factory,
   VToken,
   VToken__factory,
-} from "../../../typechain";
-import { getContractAddresses, initMainnetUser, setForkBlock } from "./utils";
+} from "../../../../../typechain";
+import { initMainnetUser, setForkBlock } from "../../utils";
+import { BEACON_SLOT, findBalanceSlot, setTokenBalance } from "./helpers";
 
 const { expect } = chai;
 
 const FORK = process.env.FORK === "true";
-const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
+const FORKED_NETWORK = "ethereum";
 
-const { ADMIN, ACM, COMPTROLLER } = getContractAddresses(FORKED_NETWORK as string);
-
-// Use the same block number as the core pool donation attack test
-const ATTACK_BLOCK = 86731940;
-
-const BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
+const COMPTROLLER = "0x687a01ecF6d3907658f7A7c714749fAC32336D1B";
+const ADMIN = "0x285960C5B22fD66A736C7136967A3eB15e93CC67";
+const ACM = "0x230058da2D23eb8836EC5DB7037ef7250c56E25E";
+const BLOCK_NUMBER = 19781700;
 
 type MarketInfo = {
   name: string;
@@ -32,45 +30,17 @@ type MarketInfo = {
   vToken: VToken;
 };
 
-async function findBalanceSlot(tokenAddress: string): Promise<number | null> {
-  const probeAddress = "0x" + "ba1".padStart(40, "0");
-  const probeAmount = BigNumber.from("1234567890");
-  const token = IERC20__factory.connect(tokenAddress, ethers.provider);
+if (FORK && process.env.FORKED_NETWORK === FORKED_NETWORK) {
+  console.log(`fork tests running on: ${FORKED_NETWORK}, block: ${BLOCK_NUMBER}`);
 
-  for (let slot = 0; slot <= 10; slot++) {
-    const storageSlot = ethers.utils.keccak256(
-      ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [probeAddress, slot]),
-    );
-    const prevValue = await ethers.provider.getStorageAt(tokenAddress, storageSlot);
-    await setStorageAt(tokenAddress, storageSlot, ethers.utils.hexZeroPad(probeAmount.toHexString(), 32));
-    try {
-      const balance = await token.balanceOf(probeAddress);
-      await setStorageAt(tokenAddress, storageSlot, prevValue);
-      if (balance.eq(probeAmount)) return slot;
-    } catch {
-      await setStorageAt(tokenAddress, storageSlot, prevValue);
-    }
-  }
-  return null;
-}
-
-async function setTokenBalance(tokenAddress: string, account: string, amount: BigNumber, slot: number) {
-  const storageSlot = ethers.utils.keccak256(
-    ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [account, slot]),
-  );
-  await setStorageAt(tokenAddress, storageSlot, ethers.utils.hexZeroPad(amount.toHexString(), 32));
-}
-
-if (FORK) {
-  describe("Donation Attack Prevention - Isolated Pools", () => {
+  describe("Donation Attack Prevention - Ethereum", () => {
     let impersonatedTimelock: Signer;
     let allMarketAddresses: string[];
 
     before(async () => {
-      await setForkBlock(ATTACK_BLOCK);
+      await setForkBlock(BLOCK_NUMBER);
       impersonatedTimelock = await initMainnetUser(ADMIN, parseUnits("10"));
 
-      // Dynamically fetch all markets from the comptroller
       const comptroller = Comptroller__factory.connect(COMPTROLLER, ethers.provider);
       allMarketAddresses = await comptroller.getAllMarkets();
     });
@@ -100,31 +70,30 @@ if (FORK) {
 
             const totalSupply = await vToken.totalSupply();
             const cash = await underlying.balanceOf(marketAddr);
+            const name = await vToken.symbol();
             if (totalSupply.isZero() || cash.isZero()) {
+              console.log(`      ⏭ ${name}: skipped (empty market — totalSupply: ${totalSupply}, cash: ${cash})`);
               await ethers.provider.send("evm_revert", [snapshotId]);
               continue;
             }
 
             const balanceSlot = await findBalanceSlot(underlyingAddr);
             if (balanceSlot === null) {
+              console.log(`      ⏭ ${name}: skipped (balance slot not found)`);
               await ethers.provider.send("evm_revert", [snapshotId]);
               continue;
             }
 
-            // Checkpoint interest so exchangeRateStored is up-to-date
             await vToken.accrueInterest();
 
             const exchangeRateBefore = await vToken.exchangeRateStored();
-            const name = await vToken.symbol();
 
-            // Donate 50% of current cash directly to the vToken
             const donationAmount = cash.div(2);
             await setTokenBalance(underlyingAddr, attacker.address, donationAmount, balanceSlot);
             await underlying.connect(attacker).transfer(marketAddr, donationAmount);
 
             const exchangeRateAfter = await vToken.exchangeRateStored();
 
-            // Before upgrade: getCash uses balanceOf, so donation inflates exchange rate
             expect(exchangeRateAfter).to.be.gt(
               exchangeRateBefore as any,
               `${name}: exchange rate should increase after donation (vulnerable)`,
@@ -151,19 +120,16 @@ if (FORK) {
       let upgradedMarkets: MarketInfo[];
 
       before(async () => {
-        // Deploy new VToken implementation
         const VTokenFactory = await ethers.getContractFactory("VToken");
         const vTokenImpl = await VTokenFactory.deploy(false, 10512000, BigNumber.from("5000000000000"));
         await vTokenImpl.deployed();
 
-        // All markets in this pool share the same beacon — read it from the first market
         const beaconSlotValue = await ethers.provider.getStorageAt(allMarketAddresses[0], BEACON_SLOT);
         const beaconAddress = ethers.utils.getAddress("0x" + beaconSlotValue.slice(26));
 
         const beacon = UpgradeableBeacon__factory.connect(beaconAddress, impersonatedTimelock);
         await beacon.upgradeTo(vTokenImpl.address);
 
-        // Grant syncCash permission and call it for every market
         const acm = await ethers.getContractAt("AccessControlManager", ACM, impersonatedTimelock);
 
         upgradedMarkets = [];
@@ -236,29 +202,30 @@ if (FORK) {
             const totalSupply = await vToken.totalSupply();
             const internalCash = await market.vToken.internalCash();
             if (totalSupply.isZero() || internalCash.isZero()) {
+              console.log(
+                `      ⏭ ${market.name}: skipped (empty market — totalSupply: ${totalSupply}, internalCash: ${internalCash})`,
+              );
               await ethers.provider.send("evm_revert", [snapshotId]);
               continue;
             }
 
             const balanceSlot = await findBalanceSlot(market.underlying);
             if (balanceSlot === null) {
+              console.log(`      ⏭ ${market.name}: skipped (balance slot not found)`);
               await ethers.provider.send("evm_revert", [snapshotId]);
               continue;
             }
 
-            // Checkpoint interest so exchangeRateStored is up-to-date
             await vToken.connect(attacker).accrueInterest();
 
             const exchangeRateBefore = await vToken.exchangeRateStored();
             const cashBefore = await vToken.getCash();
             const internalCashBefore = await market.vToken.internalCash();
 
-            // Donate 50% of current cash directly to the vToken
             const donationAmount = internalCash.div(2);
             await setTokenBalance(market.underlying, attacker.address, donationAmount, balanceSlot);
             await underlying.connect(attacker).transfer(market.address, donationAmount);
 
-            // Exchange rate, getCash, and internalCash must all be unchanged
             const exchangeRateAfter = await vToken.exchangeRateStored();
             expect(exchangeRateAfter).to.equal(exchangeRateBefore, `${market.name}: exchange rate changed`);
             expect(await vToken.getCash()).to.equal(cashBefore, `${market.name}: getCash changed`);
@@ -267,7 +234,6 @@ if (FORK) {
               `${market.name}: internalCash changed`,
             );
 
-            // Actual balance increased (tokens are there but ignored)
             const balanceAfter = await underlying.balanceOf(market.address);
             expect(balanceAfter).to.be.gt(internalCashBefore as any, `${market.name}: excess should exist`);
 
@@ -288,7 +254,6 @@ if (FORK) {
         let snapshotId: string;
 
         before(async () => {
-          // Unpause mint/redeem/borrow/repay and bump caps so operations are not blocked
           const comptroller = Comptroller__factory.connect(COMPTROLLER, impersonatedTimelock);
           const vTokens = upgradedMarkets.map(m => m.vToken);
           const actions = [0, 1, 2, 3, 7]; // MINT, REDEEM, BORROW, REPAY, ENTER_MARKET
@@ -337,15 +302,13 @@ if (FORK) {
             try {
               await vToken.connect(minter).mint(mintAmount);
             } catch {
-              continue; // supply cap, paused, or other restriction
+              continue;
             }
 
-            // internalCash must equal actual balanceOf after mint
             const internalCashAfter = await market.vToken.internalCash();
             const actualBalance = await underlying.balanceOf(market.address);
             expect(internalCashAfter).to.equal(actualBalance, `${market.name}: internalCash != balanceOf after mint`);
 
-            // Exchange rate stable (within 0.01%)
             const exchangeRateAfter = await vToken.callStatic.exchangeRateCurrent();
             const tolerance = exchangeRateBefore.div(10000);
             expect(exchangeRateAfter.sub(exchangeRateBefore).abs()).to.be.lte(
@@ -397,7 +360,6 @@ if (FORK) {
             const internalCashAfter = await market.vToken.internalCash();
             expect(internalCashAfter).to.be.lt(internalCashBefore, `${market.name}: internalCash should decrease`);
 
-            // internalCash must equal actual balanceOf after redeem
             const actualBalance = await underlying.balanceOf(market.address);
             expect(internalCashAfter).to.equal(actualBalance, `${market.name}: internalCash != balanceOf after redeem`);
 
@@ -440,7 +402,7 @@ if (FORK) {
             try {
               await vToken.connect(user).borrow(borrowAmount);
             } catch {
-              continue; // insufficient liquidity or other restriction
+              continue;
             }
 
             const internalCashAfter = await market.vToken.internalCash();
@@ -453,8 +415,6 @@ if (FORK) {
             if (verified >= 3) break;
           }
           console.log(`        Borrow verified on ${verified} markets`);
-          // Borrow may fail on all markets due to collateral factor / liquidity constraints
-          // in single-pool stablecoin setups. Borrow tracking is also tested in unit tests.
         });
 
         it("repay increases internalCash correctly", async () => {
@@ -486,7 +446,6 @@ if (FORK) {
               continue;
             }
 
-            // Now repay
             await setTokenBalance(market.underlying, user.address, borrowAmount.mul(2), balanceSlot);
             await underlying.connect(user).approve(market.address, borrowAmount.mul(2));
 
@@ -501,7 +460,6 @@ if (FORK) {
             const internalCashAfter = await market.vToken.internalCash();
             expect(internalCashAfter).to.be.gt(internalCashBefore, `${market.name}: internalCash should increase`);
 
-            // internalCash must equal actual balanceOf after repay
             const actualBalance = await underlying.balanceOf(market.address);
             expect(internalCashAfter).to.equal(actualBalance, `${market.name}: internalCash != balanceOf after repay`);
 
@@ -509,7 +467,6 @@ if (FORK) {
             if (verified >= 3) break;
           }
           console.log(`        Repay verified on ${verified} markets`);
-          // Repay depends on borrow succeeding first — same collateral factor constraints apply.
         });
       });
     });
