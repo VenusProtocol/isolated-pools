@@ -698,6 +698,20 @@ contract VToken is
     }
 
     /**
+     * @notice Sync internalCash with the actual underlying token balance
+     * @dev Used for one-time migration after upgrade to initialize internalCash
+     * @custom:event Emits CashSynced
+     * @custom:access Controlled by AccessControlManager
+     */
+    function syncCash() external override nonReentrant {
+        _checkAccessAllowed("syncCash()");
+        uint256 oldInternalCash = internalCash;
+        uint256 actualCash = IERC20Upgradeable(underlying).balanceOf(address(this));
+        internalCash = actualCash;
+        emit CashSynced(oldInternalCash, actualCash);
+    }
+
+    /**
      * @notice A public function to set new threshold of slot(block or second) difference after which funds will be sent to the protocol share reserve
      * @param _newReduceReservesBlockOrTimestampDelta slot(block or second) difference value
      * @custom:access Only Governance
@@ -1462,8 +1476,10 @@ contract VToken is
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));
+        uint256 actualAmount = balanceAfter - balanceBefore;
+        internalCash += actualAmount;
         // Return the amount that was *actually* transferred
-        return balanceAfter - balanceBefore;
+        return actualAmount;
     }
 
     /**
@@ -1473,6 +1489,7 @@ contract VToken is
      */
     function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        internalCash -= amount;
         token.safeTransfer(to, amount);
     }
 
@@ -1611,7 +1628,7 @@ contract VToken is
      * @return The quantity of underlying tokens owned by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        return IERC20Upgradeable(underlying).balanceOf(address(this));
+        return internalCash;
     }
 
     /**

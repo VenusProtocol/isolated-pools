@@ -114,6 +114,7 @@ describe("VToken", function () {
       ({ vToken, underlying, protocolShareReserve: psr } = await vTokenTestFixture());
       await vToken.connect(root).harnessSetTotalReserves(reserves);
       await underlying.harnessSetBalance(vToken.address, cash);
+      await vToken.harnessSetInternalCash(cash);
     });
 
     afterEach(async () => {
@@ -147,6 +148,7 @@ describe("VToken", function () {
       // Reduce cash to zero
       await vToken.harnessSetTotalReserves(reserves);
       await underlying.harnessSetBalance(vToken.address, cash);
+      await vToken.harnessSetInternalCash(cash);
       await expect(vToken.harnessReduceReservesFresh(reserves.mul(2))).to.be.revertedWithCustomError(
         vToken,
         "ReduceReservesCashValidation",
@@ -169,6 +171,7 @@ describe("VToken", function () {
     it("increases admin balance and reduces reserves on success", async () => {
       // setup
       await underlying.harnessSetBalance(vToken.address, cash);
+      await vToken.harnessSetInternalCash(cash);
       await vToken.harnessSetTotalReserves(reserves);
       const balance = await underlying.balanceOf(psr.address);
       await vToken.harnessSetBlockNumber(await ethers.provider.getBlockNumber());
@@ -191,6 +194,7 @@ describe("VToken", function () {
       ({ vToken, underlying, interestRateModel } = await vTokenTestFixture());
       await vToken.harnessSetTotalReserves(reserves);
       await underlying.harnessSetBalance(vToken.address, cash);
+      await vToken.harnessSetInternalCash(cash);
     });
 
     it("emits a reserve-reduction failure if interest accrual fails", async () => {

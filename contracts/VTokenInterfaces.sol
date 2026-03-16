@@ -132,11 +132,17 @@ contract VTokenStorage {
     uint256 public reduceReservesBlockNumber;
 
     /**
+     * @notice Tracked internal cash balance, immune to direct token transfers (donation attacks)
+     * @dev Updated only via _doTransferIn/_doTransferOut. Must be initialized via syncCash() after upgrade.
+     */
+    uint256 public internalCash;
+
+    /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 }
 
 /**
@@ -288,6 +294,11 @@ abstract contract VTokenInterface is VTokenStorage {
      */
     event ProtocolSeize(address indexed from, address indexed to, uint256 amount);
 
+    /**
+     * @notice Event emitted when internalCash is synced with actual token balance
+     */
+    event CashSynced(uint256 oldInternalCash, uint256 newInternalCash);
+
     /*** User Interface ***/
 
     function mint(uint256 mintAmount) external virtual returns (uint256);
@@ -349,6 +360,8 @@ abstract contract VTokenInterface is VTokenStorage {
     function setInterestRateModel(InterestRateModel newInterestRateModel) external virtual;
 
     function addReserves(uint256 addAmount) external virtual;
+
+    function syncCash() external virtual;
 
     function totalBorrowsCurrent() external virtual returns (uint256);
 
