@@ -1,5 +1,5 @@
-import { BigNumber } from "ethers";
 import chai from "chai";
+import { BigNumber } from "ethers";
 
 import { VToken } from "../../../../../typechain";
 

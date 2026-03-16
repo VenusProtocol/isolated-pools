@@ -45,11 +45,11 @@ A new storage variable `internalCash` (`VTokenInterfaces.sol:138`) tracks cash b
 
 `internalCash` is only updated through protocol entry points:
 
-| Entry point | Update |
-|---|---|
-| `_doTransferIn()` | `internalCash += actualAmount` (on mint, repay, etc.) |
-| `_doTransferOut()` | `internalCash -= amount` (on redeem, borrow, etc.) |
-| `syncCash()` | One-time ACM-gated call: `internalCash = balanceOf(address(this))` |
+| Entry point        | Update                                                             |
+| ------------------ | ------------------------------------------------------------------ |
+| `_doTransferIn()`  | `internalCash += actualAmount` (on mint, repay, etc.)              |
+| `_doTransferOut()` | `internalCash -= amount` (on redeem, borrow, etc.)                 |
+| `syncCash()`       | One-time ACM-gated call: `internalCash = balanceOf(address(this))` |
 
 `syncCash()` is a migration function — called once after upgrading each vToken to bootstrap `internalCash` from the existing balance. It's gated by AccessControlManager so only authorized callers can invoke it.
 
@@ -65,13 +65,13 @@ Proves the vulnerability exists **before** upgrade and is blocked **after** upgr
 
 Each chain file tests:
 
-| Phase | What's verified |
-|---|---|
-| Before upgrade | Donation attack succeeds on all markets |
-| After upgrade — `syncCash` | `internalCash` initialized correctly |
-| After upgrade — exchange rates | Rates unaffected by direct transfers |
-| After upgrade — donation attack | Attack reverts |
-| After upgrade — normal operations | mint, borrow, repay, redeem still work |
+| Phase                             | What's verified                         |
+| --------------------------------- | --------------------------------------- |
+| Before upgrade                    | Donation attack succeeds on all markets |
+| After upgrade — `syncCash`        | `internalCash` initialized correctly    |
+| After upgrade — exchange rates    | Rates unaffected by direct transfers    |
+| After upgrade — donation attack   | Attack reverts                          |
+| After upgrade — normal operations | mint, borrow, repay, redeem still work  |
 
 ### `vTokenStorageChecks/`
 
@@ -79,13 +79,13 @@ Pre/post upgrade storage snapshot comparison on the same 7 chains.
 
 Each chain file tests:
 
-| Check | What's verified |
-|---|---|
-| Storage layout | No slot collisions after upgrade |
-| `syncCash` | `internalCash` matches `balanceOf` after sync |
-| `accrueInterest` | Interest accrual unaffected by upgrade |
-| Donation attack | Blocked post-upgrade |
-| Normal operations | Standard protocol flows still work |
+| Check             | What's verified                               |
+| ----------------- | --------------------------------------------- |
+| Storage layout    | No slot collisions after upgrade              |
+| `syncCash`        | `internalCash` matches `balanceOf` after sync |
+| `accrueInterest`  | Interest accrual unaffected by upgrade        |
+| Donation attack   | Blocked post-upgrade                          |
+| Normal operations | Standard protocol flows still work            |
 
 ### Running Fork Tests
 
@@ -103,7 +103,7 @@ FORK=arbitrumone npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/vT
 
 ## Key Contract Files
 
-| File | What changed |
-|---|---|
-| `contracts/VToken.sol` | `_getCashPrior()` returns `internalCash`; `_doTransferIn()` / `_doTransferOut()` update it; `syncCash()` added |
-| `contracts/VTokenInterfaces.sol` | `internalCash` storage variable (slot from `__gap`), `CashSynced` event |
+| File                             | What changed                                                                                                   |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `contracts/VToken.sol`           | `_getCashPrior()` returns `internalCash`; `_doTransferIn()` / `_doTransferOut()` update it; `syncCash()` added |
+| `contracts/VTokenInterfaces.sol` | `internalCash` storage variable (slot from `__gap`), `CashSynced` event                                        |
