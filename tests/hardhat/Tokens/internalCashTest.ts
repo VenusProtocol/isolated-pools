@@ -36,9 +36,7 @@ describe("VToken internalCash", function () {
       await underlying.harnessSetBalance(vToken.address, amount);
       expect(await vToken.internalCash()).to.equal(0);
 
-      await expect(vToken.syncCash())
-        .to.emit(vToken, "CashSynced")
-        .withArgs(0, amount);
+      await expect(vToken.syncCash()).to.emit(vToken, "CashSynced").withArgs(0, amount);
 
       expect(await vToken.internalCash()).to.equal(amount);
     });
@@ -50,11 +48,17 @@ describe("VToken internalCash", function () {
       await vToken.syncCash();
       expect(await vToken.internalCash()).to.equal(amount);
 
-      await expect(vToken.syncCash())
-        .to.emit(vToken, "CashSynced")
-        .withArgs(amount, amount);
+      await expect(vToken.syncCash()).to.emit(vToken, "CashSynced").withArgs(amount, amount);
 
       expect(await vToken.internalCash()).to.equal(amount);
+    });
+
+    it("works when balance is zero", async () => {
+      expect(await vToken.internalCash()).to.equal(0);
+
+      await expect(vToken.syncCash()).to.emit(vToken, "CashSynced").withArgs(0, 0);
+
+      expect(await vToken.internalCash()).to.equal(0);
     });
 
     it("rejects call when ACM disallows", async () => {
@@ -77,7 +81,10 @@ describe("VToken internalCash", function () {
 
       // Simulate a direct donation
       const donationAmount = parseUnits("5000", 18);
-      await underlying.harnessSetBalance(vToken.address, (await underlying.balanceOf(vToken.address)).add(donationAmount));
+      await underlying.harnessSetBalance(
+        vToken.address,
+        (await underlying.balanceOf(vToken.address)).add(donationAmount),
+      );
 
       // getCash and internalCash should be unchanged
       expect(await vToken.getCash()).to.equal(cashBefore);
@@ -94,7 +101,10 @@ describe("VToken internalCash", function () {
 
       // Simulate a direct donation
       const donationAmount = parseUnits("5000", 18);
-      await underlying.harnessSetBalance(vToken.address, (await underlying.balanceOf(vToken.address)).add(donationAmount));
+      await underlying.harnessSetBalance(
+        vToken.address,
+        (await underlying.balanceOf(vToken.address)).add(donationAmount),
+      );
 
       const exchangeRateAfter = await vToken.exchangeRateStored();
       expect(exchangeRateAfter).to.equal(exchangeRateBefore);

@@ -273,6 +273,14 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       loggingEnabled: false,
       live: !!process.env.HARDHAT_FORK_NETWORK,
+      chains: {
+        56: {
+          hardforkHistory: {
+            berlin: 0,
+            london: 13000000,
+          },
+        },
+      },
       forking: process.env.HARDHAT_FORK_NETWORK
         ? {
             url: getRpcUrl(process.env.HARDHAT_FORK_NETWORK),
