@@ -280,6 +280,31 @@ const config: HardhatUserConfig = {
             london: 13000000,
           },
         },
+        8453: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        204: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        10: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        130: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        42161: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
       },
       forking: process.env.HARDHAT_FORK_NETWORK
         ? {
