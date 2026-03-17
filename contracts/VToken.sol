@@ -763,8 +763,8 @@ contract VToken is
     }
 
     /**
-     * @notice Get cash balance of this vToken in the underlying asset
-     * @return cash The quantity of underlying asset owned by this contract
+     * @notice Get the internally tracked cash balance of this vToken in the underlying asset
+     * @return cash The quantity of underlying asset tracked internally by this contract
      */
     function getCash() external view override returns (uint256) {
         return _getCashPrior();
@@ -1152,8 +1152,8 @@ contract VToken is
      *  The collateral seized is transferred to the liquidator.
      * @param liquidator The address repaying the borrow and seizing collateral
      * @param borrower The borrower of this vToken to be liquidated
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
      */
@@ -1180,8 +1180,8 @@ contract VToken is
      *  The collateral seized is transferred to the liquidator.
      * @param liquidator The address repaying the borrow and seizing collateral
      * @param borrower The borrower of this vToken to be liquidated
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
      */
@@ -1623,9 +1623,9 @@ contract VToken is
     }
 
     /**
-     * @notice Gets balance of this contract in terms of the underlying
-     * @dev This excludes the value of the current message, if any
-     * @return The quantity of underlying tokens owned by this contract
+     * @notice Gets the internally tracked cash balance of this market
+     * @dev Returns the internalCash state variable, which is updated on transfers in/out
+     * @return The quantity of underlying tokens tracked internally by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
         return internalCash;
