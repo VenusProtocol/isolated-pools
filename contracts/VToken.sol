@@ -647,7 +647,7 @@ contract VToken is
 
     /**
      * @notice Updates bad debt
-     * @dev Called only when bad debt is recovered from auction
+     * @dev Called only when bad debt is recovered from auction. Updates internal cash balance.
      * @param recoveredAmount_ The amount of bad debt recovered
      * @custom:event Emits BadDebtRecovered event
      * @custom:access Only Shortfall contract
@@ -659,6 +659,7 @@ contract VToken is
         uint256 badDebtOld = badDebt;
         uint256 badDebtNew = badDebtOld - recoveredAmount_;
         badDebt = badDebtNew;
+        internalCash += recoveredAmount_;
 
         emit BadDebtRecovered(badDebtOld, badDebtNew);
     }
