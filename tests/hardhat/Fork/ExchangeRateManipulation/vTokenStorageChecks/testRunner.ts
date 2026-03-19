@@ -381,6 +381,7 @@ export function runStorageCheckTests(config: NetworkTestConfig): void {
           verified++;
           if (verified >= 3) break;
         }
+        expect(verified).to.be.gt(0, "Borrow could not be verified on any market");
       });
 
       it("repay increases internalCash", async () => {
@@ -437,6 +438,7 @@ export function runStorageCheckTests(config: NetworkTestConfig): void {
           verified++;
           if (verified >= 3) break;
         }
+        expect(verified).to.be.gt(0, "Repay could not be verified on any market");
       });
     });
   });

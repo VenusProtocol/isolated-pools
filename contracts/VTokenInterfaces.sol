@@ -133,7 +133,7 @@ contract VTokenStorage {
 
     /**
      * @notice Tracked internal cash balance, immune to direct token transfers (donation attacks)
-     * @dev Updated only via _doTransferIn/_doTransferOut. Must be initialized via syncCash() after upgrade.
+     * @dev Updated via _doTransferIn(), _doTransferOut(), syncCash(), and badDebtRecovered(). Must be initialized via syncCash() after upgrade.
      */
     uint256 public internalCash;
 

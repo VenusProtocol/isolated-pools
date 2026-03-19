@@ -93,12 +93,12 @@ Each test requires a fork RPC endpoint via environment variable:
 
 ```bash
 # Donation attack tests
-FORK=ethereum npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/DonationAttack/ethereum.ts
-FORK=arbitrumone npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/DonationAttack/arbitrumone.ts
+FORK=true FORKED_NETWORK=ethereum HARDHAT_FORK_NETWORK=ethereum npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/DonationAttack/ethereum.ts
+FORK=true FORKED_NETWORK=arbitrumone HARDHAT_FORK_NETWORK=arbitrumone npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/DonationAttack/arbitrumone.ts
 
 # Storage checks
-FORK=ethereum npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/vTokenStorageChecks/ethereum.ts
-FORK=arbitrumone npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/vTokenStorageChecks/arbitrumone.ts
+FORK=true FORKED_NETWORK=ethereum HARDHAT_FORK_NETWORK=ethereum npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/vTokenStorageChecks/ethereum.ts
+FORK=true FORKED_NETWORK=arbitrumone HARDHAT_FORK_NETWORK=arbitrumone npx hardhat test tests/hardhat/Fork/ExchangeRateManipulation/vTokenStorageChecks/arbitrumone.ts
 ```
 
 ## Key Contract Files
