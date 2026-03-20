@@ -31624,7 +31624,7 @@
       ]
     },
     "VTokenImpl": {
-      "address": "0xefdf5CcC12d8cff4a7ed4e421b95F8f69Cf2F766",
+      "address": "0x33bE30B31f07c8a2bfb705FBcE55E983c47ba864",
       "abi": [
         {
           "inputs": [
@@ -31955,6 +31955,25 @@
             }
           ],
           "name": "Borrow",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "oldInternalCash",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "newInternalCash",
+              "type": "uint256"
+            }
+          ],
+          "name": "CashSynced",
           "type": "event"
         },
         {
@@ -33044,6 +33063,19 @@
         },
         {
           "inputs": [],
+          "name": "internalCash",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "isTimeBased",
           "outputs": [
             {
@@ -33557,6 +33589,13 @@
             }
           ],
           "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "syncCash",
+          "outputs": [],
+          "stateMutability": "nonpayable",
           "type": "function"
         },
         {
