@@ -566,7 +566,7 @@ describe("Prime Token", () => {
 
     it("APR Estimation", async () => {
       const apr = await prime.calculateAPR(vmatic.address, await user1.getAddress());
-      expect(apr.supplyAPR.toString()).to.be.equal("4672000000");
+      expect(apr.supplyAPR.toString()).to.be.equal("7786666666");
     });
 
     it("Hypothetical APR Estimation", async () => {
@@ -577,8 +577,8 @@ describe("Prime Token", () => {
         bigNumber18.mul(100),
         bigNumber18.mul(1000000),
       );
-      expect(apr.supplyAPR.toString()).to.be.equal("2102400000");
-      expect(apr.borrowAPR.toString()).to.be.equal("2102400000");
+      expect(apr.supplyAPR.toString()).to.be.equal("3504000000");
+      expect(apr.borrowAPR.toString()).to.be.equal("3504000000");
 
       apr = await prime.estimateAPR(
         vmatic.address,
@@ -587,8 +587,8 @@ describe("Prime Token", () => {
         bigNumber18.mul(50),
         bigNumber18.mul(1000000),
       );
-      expect(apr.supplyAPR.toString()).to.be.equal("2803200000");
-      expect(apr.borrowAPR.toString()).to.be.equal("2803200000");
+      expect(apr.supplyAPR.toString()).to.be.equal("4672000000");
+      expect(apr.borrowAPR.toString()).to.be.equal("4672000000");
 
       apr = await prime.estimateAPR(
         vmatic.address,
@@ -598,7 +598,7 @@ describe("Prime Token", () => {
         bigNumber18.mul(1000000),
       );
       expect(apr.supplyAPR.toString()).to.be.equal("0");
-      expect(apr.borrowAPR.toString()).to.be.equal("4204800000");
+      expect(apr.borrowAPR.toString()).to.be.equal("7008000000");
     });
   });
 });

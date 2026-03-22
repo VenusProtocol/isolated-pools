@@ -1,0 +1,37 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/generated/SetCheckpointOpbnbmainnet.sol": {
+      "content": "\n// SPDX-License-Identifier: BSD-3-Clause\npragma solidity 0.8.25;\n\ninterface VTokenInterface {\n    function setInterestRateModel(address) external;\n}\n\ncontract SetCheckpointOpbnbmainnet {\n    error Unauthorized();\n\n    function run() external {\n        if (msg.sender != 0x10f504e939b912569Dca611851fDAC9E3Ef86819) {\n            revert Unauthorized();\n        }\n        \n        // vBTCB_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_bpy63072000_To_bpy126144000_At_1767754800\n        VTokenInterface(0xED827b80Bd838192EA95002C01B5c6dA8354219a).setInterestRateModel(0x89C26d3dA99E5306a321057AE962Ec111617AE20);\n        \n        // vETH_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope300bps_jump45000bps_kink9000bps_bpy63072000_To_bpy126144000_At_1767754800\n        VTokenInterface(0x509e81eF638D489936FA85BC58F52Df01190d26C).setInterestRateModel(0x2980ec65adAa92b6C2FFF3820C0139Ebe9aA100c);\n        \n        // vUSDT_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy63072000_To_bpy126144000_At_1767754800\n        VTokenInterface(0xb7a01Ba126830692238521a1aA7E7A7509410b8e).setInterestRateModel(0x1Bcd0BDF70d6EB8DA6Ada5380c98E1017F71cDB6);\n        \n        // vWBNB_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope1500bps_jump30000bps_kink6000bps_bpy63072000_To_bpy126144000_At_1767754800\n        VTokenInterface(0x53d11cB8A0e5320Cd7229C3acc80d1A0707F2672).setInterestRateModel(0x4Dbf897B188d8498c1060e6C819b5a4dA610cc61);\n        \n        // vFDUSD_Core -> CheckpointView_From_JumpRateModelV2_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy63072000_To_bpy126144000_At_1767754800\n        VTokenInterface(0x13B492B8A03d072Bab5C54AC91Dba5b830a50917).setInterestRateModel(0x1Bcd0BDF70d6EB8DA6Ada5380c98E1017F71cDB6);\n    }\n}"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200,
+      "details": {
+        "yul": true
+      }
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "storageLayout",
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "evm.gasEstimates"
+        ],
+        "": ["ast"]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}

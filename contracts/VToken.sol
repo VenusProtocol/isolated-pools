@@ -399,7 +399,7 @@ contract VToken is
      * @custom:event Emits Borrow event; may emit AccrueInterest
      * @custom:access Not restricted
      */
-    function borrowBehalf(address borrower, uint256 borrowAmount) external override returns (uint256) {
+    function borrowBehalf(address borrower, uint256 borrowAmount) external override nonReentrant returns (uint256) {
         _ensureSenderIsDelegateOf(borrower);
         accrueInterest();
 

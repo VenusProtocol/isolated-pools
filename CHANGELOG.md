@@ -1,3 +1,74 @@
+## 4.4.0-dev.6 (2026-02-25)
+
+* Merge branch 'develop' into chore/slim-package ([dfedc9f](https://github.com/VenusProtocol/isolated-pools/commit/dfedc9f))
+* Merge pull request #544 from VenusProtocol/chore/slim-package ([04b8af8](https://github.com/VenusProtocol/isolated-pools/commit/04b8af8)), closes [#544](https://github.com/VenusProtocol/isolated-pools/issues/544)
+* build: accommodate the Trusted Publisher way to release ([8c0d6c0](https://github.com/VenusProtocol/isolated-pools/commit/8c0d6c0))
+* fix: add repo URL ([6cd35fb](https://github.com/VenusProtocol/isolated-pools/commit/6cd35fb))
+* cd: publish slim package ([e511e6b](https://github.com/VenusProtocol/isolated-pools/commit/e511e6b))
+* feat: add slim package scripts ([b36a73b](https://github.com/VenusProtocol/isolated-pools/commit/b36a73b))
+
+## 4.4.0-dev.5 (2025-12-30)
+
+* Merge pull request #546 from VenusProtocol/feat/VPD-245 ([f7f0920](https://github.com/VenusProtocol/isolated-pools/commit/f7f0920)), closes [#546](https://github.com/VenusProtocol/isolated-pools/issues/546)
+* feat: add OPBNB deployments ([34caf09](https://github.com/VenusProtocol/isolated-pools/commit/34caf09))
+* feat: configure for Fourier hardfork on OPBNB testnet ([5637c1c](https://github.com/VenusProtocol/isolated-pools/commit/5637c1c))
+* feat: update IRM for OPBNB ([80f9c89](https://github.com/VenusProtocol/isolated-pools/commit/80f9c89))
+* feat: updating deployment files ([4b40d53](https://github.com/VenusProtocol/isolated-pools/commit/4b40d53))
+* feat: updating deployment files ([6c04f16](https://github.com/VenusProtocol/isolated-pools/commit/6c04f16))
+* feat: updating deployment files ([87c2438](https://github.com/VenusProtocol/isolated-pools/commit/87c2438))
+
+## 4.4.0-dev.4 (2025-12-12)
+
+* ci: fix the release flow through Trusted Publishing ([6ab87cb](https://github.com/VenusProtocol/isolated-pools/commit/6ab87cb))
+* Merge pull request #547 from VenusProtocol/feat/VPD-267 ([49799f3](https://github.com/VenusProtocol/isolated-pools/commit/49799f3)), closes [#547](https://github.com/VenusProtocol/isolated-pools/issues/547)
+* Merge pull request #548 from VenusProtocol/feat/VPD-280 ([58172c2](https://github.com/VenusProtocol/isolated-pools/commit/58172c2)), closes [#548](https://github.com/VenusProtocol/isolated-pools/issues/548)
+* Merge pull request #550 from VenusProtocol/chore/fix-release ([b3d1bdc](https://github.com/VenusProtocol/isolated-pools/commit/b3d1bdc)), closes [#550](https://github.com/VenusProtocol/isolated-pools/issues/550)
+* chore: fix CI/release ([1c9f2b3](https://github.com/VenusProtocol/isolated-pools/commit/1c9f2b3))
+* fix: tests ([1dd43d8](https://github.com/VenusProtocol/isolated-pools/commit/1dd43d8))
+* feat: add bsctestnet checkpoint IRMs for Fermi upgrade ([eb9dc57](https://github.com/VenusProtocol/isolated-pools/commit/eb9dc57))
+* feat: update BNB chain blocksPerYear to 70080000 ([451e7c3](https://github.com/VenusProtocol/isolated-pools/commit/451e7c3))
+* feat: update bscmainnet deployments ([5e2081e](https://github.com/VenusProtocol/isolated-pools/commit/5e2081e))
+* feat: update bsctestnet deployments ([68805e9](https://github.com/VenusProtocol/isolated-pools/commit/68805e9))
+* feat: updating deployment files ([b0170b4](https://github.com/VenusProtocol/isolated-pools/commit/b0170b4))
+* feat: updating deployment files ([ed9ce15](https://github.com/VenusProtocol/isolated-pools/commit/ed9ce15))
+* feat: updating deployment files ([fcdf9ae](https://github.com/VenusProtocol/isolated-pools/commit/fcdf9ae))
+
+## [4.4.0-dev.3](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.2...v4.4.0-dev.3) (2025-10-27)
+
+
+### Bug Fixes
+
+* remove quote ([7391a52](https://github.com/VenusProtocol/isolated-pools/commit/7391a52975b712933710510916b2f827ca6e1e12))
+* use hardhat verify ([a91e873](https://github.com/VenusProtocol/isolated-pools/commit/a91e8737d4d7ad96b28fd579d690150a686647fa))
+
+## [4.4.0-dev.2](https://github.com/VenusProtocol/isolated-pools/compare/v4.4.0-dev.1...v4.4.0-dev.2) (2025-10-09)
+
+
+### Bug Fixes
+
+* added patch ([2aebca2](https://github.com/VenusProtocol/isolated-pools/commit/2aebca24d703b0f624e3babd6862a7d6af044494))
+* fix provider.init ([e00cafe](https://github.com/VenusProtocol/isolated-pools/commit/e00cafebc1bd336624bb5b87dce3c60bb17c6607))
+* fixed hardhat version ([8b2a199](https://github.com/VenusProtocol/isolated-pools/commit/8b2a199ce3a5b00d476fe45759a24b53e180dd06))
+* fixed provider.init ([4f728f0](https://github.com/VenusProtocol/isolated-pools/commit/4f728f0e48419bfed70d4e2e35f28aa3c86ecf77))
+* fixed solidity utilities version ([cde43f4](https://github.com/VenusProtocol/isolated-pools/commit/cde43f4a05c1b48f3b45d5e4ad31ce278c5053b8))
+* fixed tests ([5d70112](https://github.com/VenusProtocol/isolated-pools/commit/5d701120cff66103d493e791b823760b2989fa82))
+* fixed tests ([b542456](https://github.com/VenusProtocol/isolated-pools/commit/b542456353eae0dae14303876bac4effbaf20e92))
+* removed evm version ([642dfea](https://github.com/VenusProtocol/isolated-pools/commit/642dfea7c7f91eca9deab20aca2f501bfb978899))
+* revert evm version ([3d40136](https://github.com/VenusProtocol/isolated-pools/commit/3d401361c8d803889594bb904e998c8ab2dffe89))
+* updated evm version ([6253248](https://github.com/VenusProtocol/isolated-pools/commit/6253248d83934d08cee624775fbc8f915edd9a5e))
+
+## [4.4.0-dev.1](https://github.com/VenusProtocol/isolated-pools/compare/v4.3.0...v4.4.0-dev.1) (2025-08-11)
+
+
+### Features
+
+* updating deployment files ([966018c](https://github.com/VenusProtocol/isolated-pools/commit/966018c3a983f960655a130a268c5e5f5f69dcde))
+
+
+### Bug Fixes
+
+* removed berachain deployment ([6495a14](https://github.com/VenusProtocol/isolated-pools/commit/6495a145509b36f9957beb28a48d37c8ad7e4f7e))
+
 ## [4.3.0](https://github.com/VenusProtocol/isolated-pools/compare/v4.2.0...v4.3.0) (2025-07-10)
 
 

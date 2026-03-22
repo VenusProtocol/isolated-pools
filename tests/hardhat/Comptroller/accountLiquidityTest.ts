@@ -68,6 +68,7 @@ async function makeFakeVToken({
   await comptroller.setMaxLoopsLimit(maxLoopsLimit);
   if (supportMarket) {
     const poolRegistrySigner = await ethers.getSigner(poolRegistry.address);
+    await setBalance(poolRegistry.address, 100n ** 18n);
     await comptroller.connect(poolRegistrySigner).supportMarket(vToken.address);
   }
   if (underlyingPrice) {
