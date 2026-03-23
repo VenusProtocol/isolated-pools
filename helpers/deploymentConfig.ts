@@ -8040,7 +8040,7 @@ export function getBidderDeploymentValues(networkName: string): BidderDeployment
 }
 
 export function getMaxBorrowRateMantissa(networkName: string): BigNumber {
-  const isTimeBased = process.env.IS_TIME_BASED_DEPLOYMENT === "true";
+  const isTimeBased = blocksPerYear[networkName] === "time-based" || process.env.IS_TIME_BASED_DEPLOYMENT === "true";
 
   if (isTimeBased) {
     return BigNumber.from(0.00016667e16); // (0.0005e16 / 3) for per second

@@ -90,6 +90,7 @@ async function liquidateTestFixture(): Promise<LiquidateTestFixture> {
   const underlyingCollateral = await collateralVToken.underlying();
   const collateralErc20 = ERC20Harness__factory.connect(underlyingCollateral, admin);
   await collateralErc20.harnessSetBalance(collateralVToken.address, cash);
+  await collateralVToken.harnessSetInternalCash(cash);
   return {
     accessControlManager,
     comptroller,
