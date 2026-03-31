@@ -15,7 +15,9 @@ const { expect } = chai;
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 
-const { POOL_REGISTRY, COMPTROLLER, ACC1, BLOCK_NUMBER } = getContractAddresses(FORKED_NETWORK as string);
+const { POOL_REGISTRY, COMPTROLLER, CORE_COMPTROLLER, ACC1, BLOCK_NUMBER } = getContractAddresses(
+  FORKED_NETWORK as string,
+);
 
 // BSC uses block-based, Arbitrum/Optimism/Base/zkSync use time-based
 const TIME_BASED_NETWORKS = [
@@ -69,7 +71,11 @@ if (FORK) {
       await setForkBlock(BLOCK_NUMBER);
 
       const poolLensFactory = (await ethers.getContractFactory("PoolLens")) as PoolLens__factory;
-      poolLens = await poolLensFactory.deploy(isTimeBased, getBlocksPerYear(FORKED_NETWORK));
+      poolLens = await poolLensFactory.deploy(
+        isTimeBased,
+        getBlocksPerYear(FORKED_NETWORK),
+        CORE_COMPTROLLER || ethers.constants.AddressZero,
+      );
       await poolLens.deployed();
 
       comptroller = Comptroller__factory.connect(COMPTROLLER, ethers.provider);
@@ -149,8 +155,13 @@ if (FORK) {
       });
     });
 
-    describe("deprecated markets are excluded", () => {
-      it("should not include unlisted or MINT+BORROW paused markets", async () => {
+    describe("deprecated markets filtering", () => {
+      it("should not include unlisted or MINT+BORROW paused markets for non-core pools", async () => {
+        // Skip this test if the tested comptroller is the core pool (core pool returns all markets)
+        if (COMPTROLLER === CORE_COMPTROLLER) {
+          return;
+        }
+
         const allMarkets = await comptroller.getAllMarkets();
         const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, COMPTROLLER);
         const returnedAddresses = pool.vTokens.map(v => v.vToken.toLowerCase());
@@ -163,6 +174,22 @@ if (FORK) {
               `Deprecated market ${market} should not be in PoolLens results`,
             );
           }
+        }
+      });
+
+      it("should include all markets for core pool", async () => {
+        if (!CORE_COMPTROLLER || CORE_COMPTROLLER === ethers.constants.AddressZero) {
+          return;
+        }
+
+        const coreComptroller = Comptroller__factory.connect(CORE_COMPTROLLER, ethers.provider);
+        const allMarkets = await coreComptroller.getAllMarkets();
+        const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, CORE_COMPTROLLER);
+        const returnedAddresses = pool.vTokens.map(v => v.vToken.toLowerCase());
+
+        expect(returnedAddresses.length).to.equal(allMarkets.length);
+        for (const market of allMarkets) {
+          expect(returnedAddresses).to.include(market.toLowerCase());
         }
       });
     });
