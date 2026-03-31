@@ -250,7 +250,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         address account,
         address comptrollerAddress
     ) external view returns (RewardSummary[] memory) {
-        VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
+        VToken[] memory markets = _getActiveMarkets(ComptrollerInterface(comptrollerAddress));
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
             .getRewardDistributors();
         RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
@@ -276,9 +276,9 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
-        // Get every market in the pool
+        // Get every listed market in the pool
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
-        VToken[] memory markets = comptroller.getAllMarkets();
+        VToken[] memory markets = _getActiveMarkets(ComptrollerInterface(comptrollerAddress));
         ResilientOracleInterface priceOracle = comptroller.oracle();
 
         BadDebt[] memory badDebts = new BadDebt[](markets.length);
@@ -344,7 +344,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         // Get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
-        VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
+        VToken[] memory vTokens = _getActiveMarkets(comptrollerInstance);
 
         VTokenMetadata[] memory vTokenMetadataItems = vTokenMetadataAll(vTokens);
 
@@ -451,6 +451,54 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
                 vToken: address(vToken),
                 underlyingPrice: priceOracle.getUnderlyingPrice(address(vToken))
             });
+    }
+
+    /**
+     * @notice Returns only active (non-deprecated) markets from a comptroller
+     * @dev A market is considered deprecated if it is unlisted or has both MINT and BORROW actions paused
+     * @param comptroller The comptroller to query
+     * @return activeMarkets An array of VToken addresses that are currently active
+     */
+    function _getActiveMarkets(ComptrollerInterface comptroller) internal view returns (VToken[] memory) {
+        VToken[] memory allMarkets = comptroller.getAllMarkets();
+        uint256 marketsCount = allMarkets.length;
+
+        // Single loop: store active markets at the front of allMarkets, track count
+        uint256 activeCount;
+        for (uint256 i; i < marketsCount; ++i) {
+            if (_isActiveMarket(comptroller, allMarkets[i])) {
+                allMarkets[activeCount] = allMarkets[i];
+                ++activeCount;
+            }
+        }
+
+        // Resize by updating the array length in memory
+        assembly {
+            mstore(allMarkets, activeCount)
+        }
+
+        return allMarkets;
+    }
+
+    /**
+     * @notice Checks if a market is active (listed and not fully paused)
+     * @param comptroller The comptroller to query
+     * @param vToken The market to check
+     * @return True if the market is listed and does not have both MINT and BORROW paused
+     */
+    function _isActiveMarket(ComptrollerInterface comptroller, VToken vToken) internal view returns (bool) {
+        (bool isListed, ) = ComptrollerViewInterface(address(comptroller)).markets(address(vToken));
+        if (!isListed) {
+            return false;
+        }
+
+        bool mintPaused = comptroller.actionPaused(address(vToken), Action.MINT);
+        bool borrowPaused = comptroller.actionPaused(address(vToken), Action.BORROW);
+        if (mintPaused && borrowPaused) {
+            return false;
+        }
+
+        return true;
     }
 
     function _calculateNotDistributedAwards(
