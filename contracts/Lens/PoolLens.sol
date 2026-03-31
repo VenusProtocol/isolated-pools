@@ -464,7 +464,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @notice Returns markets from a comptroller, skipping deprecated market filtering for the core pool
+     * @notice Returns markets from a comptroller, returning an empty list for non-core-pool comptrollers
      * @param comptroller The comptroller to query
      * @return An array of VToken addresses
      */
@@ -472,55 +472,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         if (address(comptroller) == corePoolComptroller) {
             return comptroller.getAllMarkets();
         }
-        return _getActiveMarkets(comptroller);
-    }
-
-    /**
-     * @notice Returns only active (non-deprecated) markets from a comptroller
-     * @dev A market is considered deprecated if it is unlisted or has both MINT and BORROW actions paused
-     * @param comptroller The comptroller to query
-     * @return activeMarkets An array of VToken addresses that are currently active
-     */
-    function _getActiveMarkets(ComptrollerInterface comptroller) internal view returns (VToken[] memory) {
-        VToken[] memory allMarkets = comptroller.getAllMarkets();
-        uint256 marketsCount = allMarkets.length;
-
-        // Single loop: store active markets at the front of allMarkets, track count
-        uint256 activeCount;
-        for (uint256 i; i < marketsCount; ++i) {
-            if (_isActiveMarket(comptroller, allMarkets[i])) {
-                allMarkets[activeCount] = allMarkets[i];
-                ++activeCount;
-            }
-        }
-
-        // Resize by updating the array length in memory
-        assembly {
-            mstore(allMarkets, activeCount)
-        }
-
-        return allMarkets;
-    }
-
-    /**
-     * @notice Checks if a market is active (listed and not fully paused)
-     * @param comptroller The comptroller to query
-     * @param vToken The market to check
-     * @return True if the market is listed and does not have both MINT and BORROW paused
-     */
-    function _isActiveMarket(ComptrollerInterface comptroller, VToken vToken) internal view returns (bool) {
-        (bool isListed, ) = ComptrollerViewInterface(address(comptroller)).markets(address(vToken));
-        if (!isListed) {
-            return false;
-        }
-
-        bool mintPaused = comptroller.actionPaused(address(vToken), Action.MINT);
-        bool borrowPaused = comptroller.actionPaused(address(vToken), Action.BORROW);
-        if (mintPaused && borrowPaused) {
-            return false;
-        }
-
-        return true;
+        return new VToken[](0);
     }
 
     function _calculateNotDistributedAwards(

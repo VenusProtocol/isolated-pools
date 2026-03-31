@@ -29,6 +29,8 @@ const TIME_BASED_NETWORKS = [
   "opsepolia",
   "basemainnet",
   "basesepolia",
+  "unichainmainnet",
+  "unichainsepolia",
 ];
 
 const isTimeBased = TIME_BASED_NETWORKS.includes(FORKED_NETWORK);
@@ -36,30 +38,11 @@ const BSC_BLOCKS_PER_YEAR = 70_080_000;
 const ETH_BLOCKS_PER_YEAR = 2_628_000;
 const OPBNB_BLOCKS_PER_YEAR = 126_144_000;
 
-// Action enum values matching ComptrollerInterface.sol
-const ACTION_MINT = 0;
-const ACTION_BORROW = 2;
-
 function getBlocksPerYear(network: string): number {
   if (TIME_BASED_NETWORKS.includes(network)) return 0;
   if (network.includes("opbnb")) return OPBNB_BLOCKS_PER_YEAR;
   if (network === "ethereum" || network === "sepolia") return ETH_BLOCKS_PER_YEAR;
   return BSC_BLOCKS_PER_YEAR;
-}
-
-/**
- * Checks if a market is active (listed and not both MINT+BORROW paused).
- * Mirrors the _isActiveMarket logic in PoolLens.sol.
- */
-async function isActiveMarket(comptroller: Comptroller, market: string): Promise<boolean> {
-  const [isListed] = await comptroller.markets(market);
-  if (!isListed) return false;
-
-  const mintPaused = await comptroller.actionPaused(market, ACTION_MINT);
-  const borrowPaused = await comptroller.actionPaused(market, ACTION_BORROW);
-  if (mintPaused && borrowPaused) return false;
-
-  return true;
 }
 
 if (FORK) {
@@ -82,25 +65,28 @@ if (FORK) {
     });
 
     describe("getAllPools", () => {
-      it("should not revert and only return active markets", async () => {
+      it("should not revert", async () => {
         const pools = await poolLens.getAllPools(POOL_REGISTRY);
         expect(pools.length).to.be.greaterThan(0);
 
         for (const pool of pools) {
           expect(pool.comptroller).to.not.equal(ethers.constants.AddressZero);
-          for (const vToken of pool.vTokens) {
-            expect(vToken.isListed).to.equal(true);
-          }
         }
       });
     });
 
     describe("getPoolByComptroller", () => {
-      it("should not revert and only return active markets", async () => {
+      it("should not revert and return markets for core pool or empty list for non-core pool", async () => {
         const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, COMPTROLLER);
         expect(pool.comptroller).to.equal(COMPTROLLER);
-        for (const vToken of pool.vTokens) {
-          expect(vToken.isListed).to.equal(true);
+
+        if (COMPTROLLER === CORE_COMPTROLLER) {
+          expect(pool.vTokens.length).to.be.greaterThan(0);
+          for (const vToken of pool.vTokens) {
+            expect(vToken.isListed).to.equal(true);
+          }
+        } else {
+          expect(pool.vTokens.length).to.equal(0);
         }
       });
     });
@@ -125,56 +111,33 @@ if (FORK) {
     });
 
     describe("vTokenMetadataAll", () => {
-      it("should not revert for active markets in pool", async () => {
+      it("should not revert for markets in pool", async () => {
         const allMarkets = await comptroller.getAllMarkets();
 
-        const activeMarkets: string[] = [];
-        for (const market of allMarkets) {
-          if (await isActiveMarket(comptroller, market)) {
-            activeMarkets.push(market);
-          }
-        }
-
-        if (activeMarkets.length > 0) {
-          const metadata = await poolLens.vTokenMetadataAll(activeMarkets);
-          expect(metadata.length).to.equal(activeMarkets.length);
+        if (allMarkets.length > 0) {
+          const metadata = await poolLens.vTokenMetadataAll(allMarkets);
+          expect(metadata.length).to.equal(allMarkets.length);
         }
       });
     });
 
     describe("getPoolDataFromVenusPool", () => {
-      it("should not revert and only return active markets", async () => {
+      it("should not revert", async () => {
         const poolRegistry = PoolRegistry__factory.connect(POOL_REGISTRY, ethers.provider);
         const venusPool = await poolRegistry.getPoolByComptroller(COMPTROLLER);
         const poolData = await poolLens.getPoolDataFromVenusPool(POOL_REGISTRY, venusPool);
         expect(poolData.comptroller).to.equal(COMPTROLLER);
-
-        for (const vToken of poolData.vTokens) {
-          expect(vToken.isListed).to.equal(true);
-        }
       });
     });
 
-    describe("deprecated markets filtering", () => {
-      it("should not include unlisted or MINT+BORROW paused markets for non-core pools", async () => {
-        // Skip this test if the tested comptroller is the core pool (core pool returns all markets)
+    describe("non-core pool returns empty list", () => {
+      it("should return empty vTokens for non-core pool comptrollers", async () => {
         if (COMPTROLLER === CORE_COMPTROLLER) {
           return;
         }
 
-        const allMarkets = await comptroller.getAllMarkets();
         const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, COMPTROLLER);
-        const returnedAddresses = pool.vTokens.map(v => v.vToken.toLowerCase());
-
-        for (const market of allMarkets) {
-          const active = await isActiveMarket(comptroller, market);
-          if (!active) {
-            expect(returnedAddresses).to.not.include(
-              market.toLowerCase(),
-              `Deprecated market ${market} should not be in PoolLens results`,
-            );
-          }
-        }
+        expect(pool.vTokens.length).to.equal(0);
       });
 
       it("should include all markets for core pool", async () => {
