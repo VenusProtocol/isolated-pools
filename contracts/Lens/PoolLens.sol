@@ -464,15 +464,34 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @notice Returns markets from a comptroller, returning an empty list for non-core-pool comptrollers
+     * @notice Returns markets from a comptroller. For the core pool, all markets are returned.
+     * For other pools, markets with zero internalCash are filtered.
      * @param comptroller The comptroller to query
      * @return An array of VToken addresses
      */
     function _getMarkets(ComptrollerInterface comptroller) internal view returns (VToken[] memory) {
+        VToken[] memory allMarkets = comptroller.getAllMarkets();
+
         if (address(comptroller) == corePoolComptroller) {
-            return comptroller.getAllMarkets();
+            return allMarkets;
         }
-        return new VToken[](0);
+
+        // Single-loop filter: pack active markets to the front of allMarkets
+        uint256 count;
+        uint256 len = allMarkets.length;
+        for (uint256 i; i < len; ++i) {
+            if (allMarkets[i].internalCash() > 0) {
+                allMarkets[count] = allMarkets[i];
+                ++count;
+            }
+        }
+
+        // Trim the array to the active count
+        assembly {
+            mstore(allMarkets, count)
+        }
+
+        return allMarkets;
     }
 
     function _calculateNotDistributedAwards(

@@ -72,7 +72,7 @@ export const contractAddresses = {
     ACC1: "0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5",
     ACC2: "0x29182006a4967e9a50C0A66076dA514993D3B4D4",
     ACC3: "0xa27CEF8aF2B6575903b676e5644657FAe96F491F",
-    BLOCK_NUMBER: 24770000,
+    BLOCK_NUMBER: 24777279,
   },
   bsctestnet: {
     ADMIN: GovernanceBscTestnet.contracts.NormalTimelock.address,

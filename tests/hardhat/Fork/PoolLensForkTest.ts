@@ -46,7 +46,8 @@ function getBlocksPerYear(network: string): number {
 }
 
 if (FORK) {
-  describe(`PoolLens Fork Test (${FORKED_NETWORK})`, () => {
+  describe(`PoolLens Fork Test (${FORKED_NETWORK})`, function () {
+    this.timeout(120_000); // fork tests need more time due to RPC calls
     let poolLens: PoolLens;
     let comptroller: Comptroller;
 
@@ -61,7 +62,7 @@ if (FORK) {
       );
       await poolLens.deployed();
 
-      comptroller = Comptroller__factory.connect(COMPTROLLER, ethers.provider);
+      comptroller = Comptroller__factory.connect(CORE_COMPTROLLER, ethers.provider);
     });
 
     describe("getAllPools", () => {
@@ -76,17 +77,12 @@ if (FORK) {
     });
 
     describe("getPoolByComptroller", () => {
-      it("should not revert and return markets for core pool or empty list for non-core pool", async () => {
-        const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, COMPTROLLER);
-        expect(pool.comptroller).to.equal(COMPTROLLER);
-
-        if (COMPTROLLER === CORE_COMPTROLLER) {
-          expect(pool.vTokens.length).to.be.greaterThan(0);
-          for (const vToken of pool.vTokens) {
-            expect(vToken.isListed).to.equal(true);
-          }
-        } else {
-          expect(pool.vTokens.length).to.equal(0);
+      it("should not revert and return all markets for core pool", async () => {
+        const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, CORE_COMPTROLLER);
+        expect(pool.comptroller).to.equal(CORE_COMPTROLLER);
+        expect(pool.vTokens.length).to.be.greaterThan(0);
+        for (const vToken of pool.vTokens) {
+          expect(vToken.isListed).to.equal(true);
         }
       });
     });
@@ -94,15 +90,15 @@ if (FORK) {
     describe("getPendingRewards", () => {
       it("should not revert", async () => {
         const account = ACC1 || ethers.constants.AddressZero;
-        const rewards = await poolLens.getPendingRewards(account, COMPTROLLER);
+        const rewards = await poolLens.getPendingRewards(account, CORE_COMPTROLLER);
         expect(rewards).to.be.an("array");
       });
     });
 
     describe("getPoolBadDebt", () => {
       it("should not revert", async () => {
-        const badDebtSummary = await poolLens.getPoolBadDebt(COMPTROLLER);
-        expect(badDebtSummary.comptroller).to.equal(COMPTROLLER);
+        const badDebtSummary = await poolLens.getPoolBadDebt(CORE_COMPTROLLER);
+        expect(badDebtSummary.comptroller).to.equal(CORE_COMPTROLLER);
         expect(badDebtSummary.badDebts).to.be.an("array");
         for (const badDebt of badDebtSummary.badDebts) {
           expect(badDebt.vTokenAddress).to.not.equal(ethers.constants.AddressZero);
@@ -124,22 +120,30 @@ if (FORK) {
     describe("getPoolDataFromVenusPool", () => {
       it("should not revert", async () => {
         const poolRegistry = PoolRegistry__factory.connect(POOL_REGISTRY, ethers.provider);
-        const venusPool = await poolRegistry.getPoolByComptroller(COMPTROLLER);
+        const venusPool = await poolRegistry.getPoolByComptroller(CORE_COMPTROLLER);
         const poolData = await poolLens.getPoolDataFromVenusPool(POOL_REGISTRY, venusPool);
-        expect(poolData.comptroller).to.equal(COMPTROLLER);
+        expect(poolData.comptroller).to.equal(CORE_COMPTROLLER);
       });
     });
 
-    describe("non-core pool returns empty list", () => {
-      it("should return empty vTokens for non-core pool comptrollers", async () => {
+    describe("non-core pool filters out vTokens with internalCash == 0", () => {
+      it("should not include vTokens with zero internalCash for non-core pools", async () => {
         if (COMPTROLLER === CORE_COMPTROLLER) {
           return;
         }
 
-        const pool = await poolLens.getPoolByComptroller(POOL_REGISTRY, COMPTROLLER);
-        expect(pool.vTokens.length).to.equal(0);
-      });
+        const pools = await poolLens.getAllPools(POOL_REGISTRY);
+        for (const pool of pools) {
+          if (pool.comptroller === CORE_COMPTROLLER) continue;
 
+          for (const vToken of pool.vTokens) {
+            expect(vToken.totalCash).to.be.gt(0, `vToken ${vToken.vToken} in pool ${pool.comptroller} has zero cash`);
+          }
+        }
+      });
+    });
+
+    describe("core pool includes all markets", () => {
       it("should include all markets for core pool", async () => {
         if (!CORE_COMPTROLLER || CORE_COMPTROLLER === ethers.constants.AddressZero) {
           return;
