@@ -27,6 +27,7 @@
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_bpy126144000": "0xEDb8479949e7e20BF108730da875F9Af4Ef332CC",
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_bpy31536000": "0x48C8a6A591f8f0943bF5FeEFB5E1Cbc803Eda89e",
     "JumpRateModelV2_base0bps_slope900bps_jump30000bps_kink4500bps_bpy63072000": "0x36D00Ae4A2efF223179DDF7535425400f7Fa93d9",
+    "JumpRateModelV2_base30000bps_slope0bps_jump36364bps_kink4500bps_bpy126144000": "0xDA141Df6D89B83Db101F13C24174C2a3B6308962",
     "JumpRateModel_base0bps_slope1000bps_jump25000bps_kink8000bps_bpy31536000": "0xaf6862b20280818FA24fA6D17097517608Fe65d4",
     "NativeTokenGateway_vWBNB_Core": "0x7bAf6019C90B93aD30f8aD6a2EcCD2B11427b29f",
     "PoolLens": "0xA21E48d143818aB0b5231542A486609dFcc20Ee8",

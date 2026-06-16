@@ -9,6 +9,7 @@
     "JumpRateModelV2_base0bps_slope1500bps_jump25000bps_kink4500bps_timeBased": "0x3Bc6dA50ff7E427eE1336C83d4ceBaBd5ccc5ab3",
     "JumpRateModelV2_base0bps_slope350bps_jump25000bps_kink8000bps_timeBased": "0x365B3a4dA73D000E06d250F86e4Fb1d7a2F63e57",
     "JumpRateModelV2_base0bps_slope687bps_jump25000bps_kink8000bps_timeBased": "0x8AB36EBdBd4873bd1613Cc77D21A0bE29a34EFD9",
+    "JumpRateModelV2_base30000bps_slope0bps_jump36364bps_kink4500bps_timeBased": "0x00a7e1641077Bd0e70A87cA9b631523E1D4B7A91",
     "NativeTokenGateway_vWETH_Core": "0x5B1b7465cfDE450e267b562792b434277434413c",
     "PoolLens": "0x142160A2E699e33af337741f157D96aAd6bC72aA",
     "PoolRegistry": "0x147780799840d541C1d7c998F0cbA996d11D62bb",
