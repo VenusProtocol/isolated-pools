@@ -1,9 +1,8 @@
 import "module-alias/register";
 
 import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "@typechain/hardhat";
 import * as dotenv from "dotenv";
@@ -105,11 +104,6 @@ extendConfig((config: HardhatConfig) => {
           "node_modules/@venusprotocol/oracle/deployments/unichainmainnet",
           "node_modules/@venusprotocol/protocol-reserve/deployments/unichainmainnet",
           "node_modules/@venusprotocol/governance-contracts/deployments/unichainmainnet",
-        ],
-        berachainbartio: [
-          "node_modules/@venusprotocol/oracle/deployments/berachainbartio",
-          "node_modules/@venusprotocol/protocol-reserve/deployments/berachainbartio",
-          "node_modules/@venusprotocol/governance-contracts/deployments/berachainbartio",
         ],
       },
     };
@@ -279,6 +273,39 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       loggingEnabled: false,
       live: !!process.env.HARDHAT_FORK_NETWORK,
+      chains: {
+        56: {
+          hardforkHistory: {
+            berlin: 0,
+            london: 13000000,
+          },
+        },
+        8453: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        204: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        10: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        130: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+        42161: {
+          hardforkHistory: {
+            london: 0,
+          },
+        },
+      },
       forking: process.env.HARDHAT_FORK_NETWORK
         ? {
             url: getRpcUrl(process.env.HARDHAT_FORK_NETWORK),
@@ -386,52 +413,17 @@ const config: HardhatUserConfig = {
       live: true,
       accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
     },
-    berachainbartio: {
-      url: process.env.ARCHIVE_NODE_berachainbartio || "https://bartio.rpc.berachain.com",
-      chainId: 80084,
-      live: true,
-      accounts: DEPLOYER_PRIVATE_KEY ? [`0x${DEPLOYER_PRIVATE_KEY}`] : [],
-      tags: ["testnet"],
-    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
   },
+  sourcify: {
+    enabled: true,
+  },
   etherscan: {
+    enabled: true,
     customChains: [
-      {
-        network: "bsctestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com",
-        },
-      },
-      {
-        network: "bscmainnet",
-        chainId: 56,
-        urls: {
-          apiURL: "https://api.bscscan.com/api",
-          browserURL: "https://bscscan.com",
-        },
-      },
-      {
-        network: "sepolia",
-        chainId: 11155111,
-        urls: {
-          apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io",
-        },
-      },
-      {
-        network: "ethereum",
-        chainId: 1,
-        urls: {
-          apiURL: "https://api.etherscan.io/api",
-          browserURL: "https://etherscan.io",
-        },
-      },
       {
         network: "opbnbtestnet",
         chainId: 5611,
@@ -456,52 +448,13 @@ const config: HardhatUserConfig = {
           browserURL: "https://etherscan.io",
         },
       },
-      {
-        network: "arbitrumsepolia",
-        chainId: 421614,
-        urls: {
-          apiURL: `https://api-sepolia.arbiscan.io/api`,
-          browserURL: "https://sepolia.arbiscan.io/",
-        },
-      },
-      {
-        network: "arbitrumone",
-        chainId: 42161,
-        urls: {
-          apiURL: `https://api.arbiscan.io/api/`,
-          browserURL: "https://arbiscan.io/",
-        },
-      },
+
       {
         network: "opsepolia",
         chainId: 11155420,
         urls: {
           apiURL: "https://api-sepolia-optimistic.etherscan.io/api/",
           browserURL: "https://sepolia-optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "opmainnet",
-        chainId: 10,
-        urls: {
-          apiURL: "https://api-optimistic.etherscan.io/api",
-          browserURL: "https://optimistic.etherscan.io/",
-        },
-      },
-      {
-        network: "basesepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org/",
-        },
-      },
-      {
-        network: "basemainnet",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org/",
         },
       },
       {
@@ -521,31 +474,23 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        network: "berachainbartio",
-        chainId: 80084,
+        network: "basemainnet",
+        chainId: 8453,
         urls: {
-          apiURL: "https://api.routescan.io/v2/network/testnet/evm/80084/etherscan",
-          browserURL: "https://bartio.beratrail.io",
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "basesepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
         },
       },
     ],
-    apiKey: {
-      bscmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      bsctestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      ethereum: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      sepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opbnbtestnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumone: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      arbitrumsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      opmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basesepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      basemainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainsepolia: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      unichainmainnet: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-      berachainbartio: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
-    },
+    apiKey: process.env.ETHERSCAN_API_KEY || "ETHERSCAN_API_KEY",
   },
   paths: {
     tests: "./tests",

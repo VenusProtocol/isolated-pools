@@ -56,6 +56,10 @@ contract VTokenHarness is VToken {
         totalReserves = totalReserves_;
     }
 
+    function harnessSetInternalCash(uint256 cash_) external {
+        internalCash = cash_;
+    }
+
     function harnessExchangeRateDetails(uint256 totalSupply_, uint256 totalBorrows_, uint256 totalReserves_) external {
         totalSupply = totalSupply_;
         totalBorrows = totalBorrows_;

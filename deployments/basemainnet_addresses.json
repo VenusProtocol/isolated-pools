@@ -17,7 +17,7 @@
     "PoolRegistry_Proxy": "0xeef902918DdeCD773D4B422aa1C6e1673EB9136F",
     "TwoKinks_base0bps_slope1000bps_kink8000bps_slope27000bps_base20bps_kink29000bps_jump25000bps_timeBased": "0x453c1f3fC0354DBb10e27E3F13FB5b9D7A263DE4",
     "VTokenBeacon": "0x87a6476510368c4Bfb70d04A3B0e5a881eC7f0d1",
-    "VTokenImpl": "0x15976Af57CBDEA05aB1c338822E397519f096C67",
+    "VTokenImpl": "0x107bA74c87e75b6cc291510D3A85D0c8EAa73e82",
     "VToken_vUSDC_Core": "0x3cb752d175740043Ec463673094e06ACDa2F9a2e",
     "VToken_vWETH_Core": "0xEB8A79bD44cF4500943bf94a2b4434c95C008599",
     "VToken_vcbBTC_Core": "0x7bBd1005bB24Ec84705b04e1f2DfcCad533b6D72",

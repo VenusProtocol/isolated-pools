@@ -28,7 +28,7 @@
     "TwoKinks_base0bps_slope1000bps_kink8000bps_slope27000bps_base20bps_kink29000bps_jump30000bps_timeBased": "0x35Caeb98849C5464Ee9F01C370729eb3775e5D57",
     "TwoKinks_base0bps_slope1500bps_kink8000bps_slope29000bps_base20bps_kink29000bps_jump30000bps_timeBased": "0x8fd05f11a175A9b7E6dDcA8Ee2713E2c7f94c011",
     "VTokenBeacon": "0xE9381D8CA7006c12Ae9eB97890575E705996fa66",
-    "VTokenImpl": "0xfC0df4d5b0FCEb410985a13fC2be7df793453649",
+    "VTokenImpl": "0x1986Fb53535953711265d5fD329cd7A690411669",
     "VToken_vARB_Core": "0xAeB0FEd69354f34831fe1D16475D9A83ddaCaDA6",
     "VToken_vUSDC_Core": "0x7D8609f8da70fF9027E9bc5229Af4F6727662707",
     "VToken_vUSDT_Core": "0xB9F9117d4200dC296F9AcD1e8bE1937df834a2fD",

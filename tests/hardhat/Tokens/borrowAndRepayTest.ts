@@ -25,6 +25,7 @@ async function preBorrow(contracts: VTokenTestFixture, borrower: SignerWithAddre
   interestRateModel.getSupplyRate.reset();
 
   await underlying.harnessSetBalance(vToken.address, borrowAmount);
+  await vToken.harnessSetInternalCash(borrowAmount);
   await vToken.harnessSetFailTransferToAddress(borrower.address, false);
   await vToken.harnessSetAccountBorrows(borrower.address, 0, 0);
   await vToken.harnessSetTotalBorrows(0);

@@ -76,6 +76,7 @@ async function preRedeem(
   interestRateModel.getBorrowRate.reset();
   interestRateModel.getSupplyRate.reset();
   await underlying.harnessSetBalance(vToken.address, redeemAmount);
+  await vToken.harnessSetInternalCash(redeemAmount);
   await underlying.harnessSetBalance(redeemer.address, 0);
   await underlying.harnessSetFailTransferToAddress(redeemer.address, false);
   await vToken.harnessSetExchangeRate(exchangeRate);
@@ -299,6 +300,7 @@ describe("VToken", function () {
 
       it("fails if insufficient protocol cash to transfer out", async () => {
         await underlying.harnessSetBalance(vToken.address, 1);
+        await vToken.harnessSetInternalCash(1);
         await expect(redeemFresh(vToken, redeemer, redeemTokens, redeemAmount)).to.be.revertedWithCustomError(
           vToken,
           "RedeemTransferOutNotPossible",
@@ -374,6 +376,7 @@ describe("VToken", function () {
 
     it("returns error from redeemFresh without emitting any extra logs", async () => {
       await underlying.harnessSetBalance(vToken.address, 0);
+      await vToken.harnessSetInternalCash(0);
       await expect(quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate })).to.be.revertedWithCustomError(
         vToken,
         "RedeemTransferOutNotPossible",
@@ -382,6 +385,7 @@ describe("VToken", function () {
 
     it("returns success from redeemFresh and redeems the right amount", async () => {
       await underlying.harnessSetBalance(vToken.address, redeemAmount);
+      await vToken.harnessSetInternalCash(redeemAmount);
       await quickRedeem(vToken, redeemer, redeemTokens, { exchangeRate });
       expect(redeemAmount).to.not.equal(0);
       expect(await underlying.balanceOf(redeemer.address)).to.equal(redeemAmount);
@@ -391,6 +395,7 @@ describe("VToken", function () {
       const redeemAmount = parseUnits("1", 5);
       const exchangeRate = parseUnits("1", 25);
       await underlying.harnessSetBalance(vToken.address, redeemAmount);
+      await vToken.harnessSetInternalCash(redeemAmount);
       await expect(quickRedeemUnderlying(vToken, redeemer, redeemAmount, { exchangeRate })).to.be.revertedWith(
         "redeemAmount is zero",
       );
@@ -398,6 +403,7 @@ describe("VToken", function () {
 
     it("returns success from redeemFresh and redeems the right amount of underlying", async () => {
       await underlying.harnessSetBalance(vToken.address, redeemAmount);
+      await vToken.harnessSetInternalCash(redeemAmount);
       await quickRedeemUnderlying(vToken, redeemer, redeemAmount, { exchangeRate });
       expect(redeemAmount).to.not.equal(0);
       expect(await underlying.balanceOf(redeemer.address)).to.equal(redeemAmount);

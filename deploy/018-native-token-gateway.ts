@@ -6,7 +6,6 @@ import { contracts as ilArbOne } from "../deployments/arbitrumone.json";
 import { contracts as ilArbSepolia } from "../deployments/arbitrumsepolia.json";
 import { contracts as ilBaseMainnet } from "../deployments/basemainnet.json";
 import { contracts as ilBaseSepolia } from "../deployments/basesepolia.json";
-import { contracts as ilBerachainbartio } from "../deployments/berachainbartio.json";
 import { contracts as ilBscMainnet } from "../deployments/bscmainnet.json";
 import { contracts as ilBscTestnet } from "../deployments/bsctestnet.json";
 import { contracts as ilEthereum } from "../deployments/ethereum.json";
@@ -137,12 +136,6 @@ const VWNativeInfo: { [key: string]: VTokenConfig[] } = {
     {
       name: "vWETH_Core",
       address: ilUnichainMainnet.VToken_vWETH_Core.address,
-    },
-  ],
-  berachainbartio: [
-    {
-      name: "vWBERA_Core",
-      address: ilBerachainbartio.VToken_vWBERA_Core.address,
     },
   ],
 };

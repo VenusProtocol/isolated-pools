@@ -647,7 +647,7 @@ contract VToken is
 
     /**
      * @notice Updates bad debt
-     * @dev Called only when bad debt is recovered from auction
+     * @dev Called only when bad debt is recovered from auction. Updates internal cash balance.
      * @param recoveredAmount_ The amount of bad debt recovered
      * @custom:event Emits BadDebtRecovered event
      * @custom:access Only Shortfall contract
@@ -659,6 +659,7 @@ contract VToken is
         uint256 badDebtOld = badDebt;
         uint256 badDebtNew = badDebtOld - recoveredAmount_;
         badDebt = badDebtNew;
+        internalCash += recoveredAmount_;
 
         emit BadDebtRecovered(badDebtOld, badDebtNew);
     }
@@ -695,6 +696,20 @@ contract VToken is
         token.safeTransfer(owner(), balance);
 
         emit SweepToken(address(token));
+    }
+
+    /**
+     * @notice Sync internalCash with the actual underlying token balance
+     * @dev Used for one-time migration after upgrade to initialize internalCash
+     * @custom:event Emits CashSynced
+     * @custom:access Controlled by AccessControlManager
+     */
+    function syncCash() external override nonReentrant {
+        _checkAccessAllowed("syncCash()");
+        uint256 oldInternalCash = internalCash;
+        uint256 actualCash = IERC20Upgradeable(underlying).balanceOf(address(this));
+        internalCash = actualCash;
+        emit CashSynced(oldInternalCash, actualCash);
     }
 
     /**
@@ -749,8 +764,8 @@ contract VToken is
     }
 
     /**
-     * @notice Get cash balance of this vToken in the underlying asset
-     * @return cash The quantity of underlying asset owned by this contract
+     * @notice Get the internally tracked cash balance of this vToken in the underlying asset
+     * @return cash The quantity of underlying asset tracked internally by this contract
      */
     function getCash() external view override returns (uint256) {
         return _getCashPrior();
@@ -1138,8 +1153,8 @@ contract VToken is
      *  The collateral seized is transferred to the liquidator.
      * @param liquidator The address repaying the borrow and seizing collateral
      * @param borrower The borrower of this vToken to be liquidated
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
      */
@@ -1166,8 +1181,8 @@ contract VToken is
      *  The collateral seized is transferred to the liquidator.
      * @param liquidator The address repaying the borrow and seizing collateral
      * @param borrower The borrower of this vToken to be liquidated
-     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param vTokenCollateral The market in which to seize collateral from the borrower
      * @param skipLiquidityCheck If set to true, allows to liquidate up to 100% of the borrow
      *   regardless of the account liquidity
      */
@@ -1462,8 +1477,10 @@ contract VToken is
         uint256 balanceBefore = token.balanceOf(address(this));
         token.safeTransferFrom(from, address(this), amount);
         uint256 balanceAfter = token.balanceOf(address(this));
+        uint256 actualAmount = balanceAfter - balanceBefore;
+        internalCash += actualAmount;
         // Return the amount that was *actually* transferred
-        return balanceAfter - balanceBefore;
+        return actualAmount;
     }
 
     /**
@@ -1473,6 +1490,7 @@ contract VToken is
      */
     function _doTransferOut(address to, uint256 amount) internal virtual {
         IERC20Upgradeable token = IERC20Upgradeable(underlying);
+        internalCash -= amount;
         token.safeTransfer(to, amount);
     }
 
@@ -1606,12 +1624,12 @@ contract VToken is
     }
 
     /**
-     * @notice Gets balance of this contract in terms of the underlying
-     * @dev This excludes the value of the current message, if any
-     * @return The quantity of underlying tokens owned by this contract
+     * @notice Gets the internally tracked cash balance of this market
+     * @dev Returns the internalCash state variable, which is updated on transfers in/out
+     * @return The quantity of underlying tokens tracked internally by this contract
      */
     function _getCashPrior() internal view virtual returns (uint256) {
-        return IERC20Upgradeable(underlying).balanceOf(address(this));
+        return internalCash;
     }
 
     /**
