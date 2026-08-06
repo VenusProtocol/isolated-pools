@@ -384,11 +384,11 @@ Instead of calling `redeem` directly, use the `NativeTokenGateway` contract
 
 **Liquid Staked ETH Pool** — Comptroller: `0x52bAB1aF7Ff770551BD05b9FC2329a0Bf5E23F16`
 
-| vToken Symbol | vToken Address                                |
-| ------------- | --------------------------------------------- |
-| vWETH         | `0x39D6d13Ea59548637104E40e729E4aAABE27FE106` |
-| vweETH        | `0x246a35E79a3a0618535A469aDaF5091cAA9f7E88`  |
-| vwstETH       | `0x9df6B5132135f14719696bBAe3C54BAb272fDb16`  |
+| vToken Symbol | vToken Address                               |
+| ------------- | -------------------------------------------- |
+| vWETH         | `0x39D6d13Ea59548637104E40e729E4aABE27FE106` |
+| vweETH        | `0x246a35E79a3a0618535A469aDaF5091cAA9f7E88` |
+| vwstETH       | `0x9df6B5132135f14719696bBAe3C54BAb272fDb16` |
 
 ---
 
@@ -419,12 +419,15 @@ Instead of calling `redeem` directly, use the `NativeTokenGateway` contract
 
 ### Advanced: discovering positions with PoolLens
 
-If you are comfortable with on-chain reads, you can enumerate all your positions across a pool
-at once using the `PoolLens` contract:
+If you are comfortable with on-chain reads, you can batch-query balances across multiple markets
+using the `PoolLens` contract:
 
 1. Open the `PoolLens` address for the chain (see Reference Tables above) → **Read Contract**.
-2. Call `getPoolBorrowerVTokenBalances(comptroller, account)` with the pool's Comptroller address
-   and your wallet address to get all borrow balances in one call.
-3. Call `getPoolVTokenBalances(comptroller, account)` to get all supply positions.
+2. Call `vTokenBalances(vTokenAddress, yourWalletAddress)` for a single market — the return struct
+   includes `balanceOf` (your vToken supply balance) and `borrowBalanceCurrent` (your outstanding
+   borrow).
+3. For multiple markets at once, call `vTokenBalancesAll(vTokenAddresses[], yourWalletAddress)`,
+   passing an array of vToken addresses from the reference tables above. This returns the same
+   struct for every market in one call.
 
-These calls let you scan all markets in a pool without checking each vToken individually.
+These calls let you scan several markets without checking each vToken individually.
