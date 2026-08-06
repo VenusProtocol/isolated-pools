@@ -1,5 +1,9 @@
 # Overview
 
+> **Isolated pools are deprecated and are no longer shown in the Venus dApp.** The contracts remain
+> live and withdrawals are open — see **[HOW-TO-WITHDRAW.md](./HOW-TO-WITHDRAW.md)** for a
+> step-by-step guide to repaying and withdrawing directly from a block explorer.
+
 [Venus](https://app.venus.io) is a decentralized finance (DeFi) algorithmic money market protocol on BNB Chain.
 
 Decentralized lending pools are very similar to traditional lending services offered by banks, except that they are offered by P2P decentralized platforms. Users can leverage assets by borrowing and lending assets listed in a pool. Lending pools help crypto holders earn a substantial income through interest paid on their supplied assets and access assets they don't currently own without selling any of their portfolio.
