@@ -29,6 +29,10 @@ contract SpokeComptrollerStorage {
         uint256 effects;
         uint256 liquidity;
         uint256 shortfall;
+        // The largest borrow value the account's collateral can clear without leaving bad debt behind, computed as
+        // the sum over the account's collateral markets of `collateralValue / liquidationIncentive`, each market at
+        // its own incentive. Used to route an under-threshold account between `liquidateAccount` and `healAccount`.
+        uint256 maxClearableDebt;
     }
 
     struct RewardSpeeds {
@@ -117,13 +121,38 @@ contract SpokeComptrollerStorage {
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;
 
+    /// @notice Whether a market accepts supply only from the accounts on its supply allowlist. Keyed by market, and
+    /// disabled by default, so a newly listed market accepts supply from anyone.
+    mapping(address => bool) public isSupplyAllowlistEnabled;
+
+    /// @notice The accounts a market accepts supply from while its supply allowlist is enabled. Keyed by market,
+    /// then by account.
+    mapping(address => mapping(address => bool)) public isAllowedSupplier;
+
+    /// @notice Whether seizing collateral in this pool is restricted to the accounts on the liquidation allowlist.
+    /// Disabled by default.
+    /// @dev Pool-wide rather than per market, because `healAccount` seizes across every market the borrower is in and
+    /// so cannot attribute a seizure to a single one of them.
+    bool public isLiquidationAllowlistEnabled;
+
+    /// @notice The accounts allowed to seize collateral in this pool while the liquidation allowlist is enabled
+    mapping(address => bool) public isAllowedLiquidator;
+
+    /// @notice Per-market discount a liquidator receives on the collateral it seizes, scaled by 1e18. Keyed by the
+    /// collateral market, since that is what the discount prices.
+    /// @dev Zero means no market value has been set, in which case `liquidationIncentiveMantissa` applies. That
+    /// pool-wide value is always at least 1e18 for a listed market: `PoolRegistry.addMarket` refuses to add one to an
+    /// unregistered pool, and registering a pool goes through `setLiquidationIncentive`, which enforces the floor.
+    mapping(address => uint256) public liquidationIncentives;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     * It reserves one slot more than the same gap in `ComptrollerStorage`, which reserves 47: the slot that contract
-     * uses for the Prime token is unused here, so it is returned to the gap instead of being left as a hole. This
-     * contract therefore occupies the same number of slots as the one it was forked from.
+     * The size is derived from the 47 slots `ComptrollerStorage` reserves: plus one for the Prime token slot, which
+     * is unused here and is returned to the gap rather than left as a hole, minus the five slots the allowlists and
+     * the per-market liquidation incentives above take. This contract therefore occupies the same number of slots as
+     * the one it was forked from.
      */
-    uint256[48] private __gap;
+    uint256[43] private __gap;
 }

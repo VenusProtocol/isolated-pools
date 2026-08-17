@@ -29,12 +29,16 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
  * the `minLiquidatableCollateral` for the `SpokeComptroller`:
  *
  * - `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage
- * of the debt calculated by `collateral/(borrows*liquidationIncentive)`. The function can only be called if the calculated percentage does not exceed
- * 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of debt
- * and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the associated pool.
+ * of the debt calculated by `maxClearableDebt/borrows`, where `maxClearableDebt` is the sum over the user's collateral markets of
+ * `collateralValue/liquidationIncentive`, each market taken at its own incentive. The function can only be called if the calculated percentage does
+ * not exceed 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual
+ * amount of debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the pool.
  * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation
- * incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic
- * verifying that the repay amount does not exceed the close factor.
+ * incentive of each collateral market, which is the same condition stated as `borrows < maxClearableDebt`. Otherwise, the pool will incur bad debt,
+ * in which case the function `healAccount()` should be used instead. This function skips the logic verifying that the repay amount does not exceed
+ * the close factor.
+ *
+ * The two conditions are complements, so every account below `minLiquidatableCollateral` is served by exactly one of them.
  *
  * @dev Fork of `Comptroller` (`contracts/Comptroller.sol`). It is a separate implementation because `Comptroller` is
  * the one every other pool in this repo shares, here and on other chains, so policy that applies only to a spoke pool
@@ -76,6 +80,13 @@ contract SpokeComptroller is
     /// @notice Emitted when liquidation incentive is changed by admin
     event NewLiquidationIncentive(uint256 oldLiquidationIncentiveMantissa, uint256 newLiquidationIncentiveMantissa);
 
+    /// @notice Emitted when the liquidation incentive of a single market is changed by admin
+    event NewMarketLiquidationIncentive(
+        address indexed vToken,
+        uint256 oldLiquidationIncentiveMantissa,
+        uint256 newLiquidationIncentiveMantissa
+    );
+
     /// @notice Emitted when price oracle is changed
     event NewPriceOracle(ResilientOracleInterface oldPriceOracle, ResilientOracleInterface newPriceOracle);
 
@@ -105,11 +116,26 @@ contract SpokeComptroller is
     /// @notice Emitted when the borrowing or redeeming delegate rights are updated for an account
     event DelegateUpdated(address indexed approver, address indexed delegate, bool approved);
 
+    /// @notice Emitted when a market's supply allowlist is enabled or disabled
+    event SupplyAllowlistEnabledUpdated(address indexed vToken, bool enabled);
+
+    /// @notice Emitted when an account is added to or removed from a market's supply allowlist
+    event AllowedSupplierUpdated(address indexed vToken, address indexed supplier, bool allowed);
+
+    /// @notice Emitted when the pool's liquidation allowlist is enabled or disabled
+    event LiquidationAllowlistEnabledUpdated(bool enabled);
+
+    /// @notice Emitted when an account is added to or removed from the pool's liquidation allowlist
+    event AllowedLiquidatorUpdated(address indexed liquidator, bool allowed);
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
     /// @notice Thrown when liquidation threshold exceeds the collateral factor
     error InvalidLiquidationThreshold();
+
+    /// @notice Thrown when a liquidation incentive is below 1e18, which would seize less value than was repaid
+    error InvalidLiquidationIncentive();
 
     /// @notice Thrown when the action is only available to specific sender, but the real sender was different
     error UnexpectedSender(address expectedSender, address actualSender);
@@ -172,13 +198,18 @@ contract SpokeComptroller is
      */
     error MinimalCollateralViolated(uint256 expectedGreaterThan, uint256 actual);
     error CollateralExceedsThreshold(uint256 expectedLessThanOrEqualTo, uint256 actual);
-    error InsufficientCollateral(uint256 collateralToSeize, uint256 availableCollateral);
+    /// @notice Thrown when an account's debt is too large for its collateral to clear, so `healAccount` has to be
+    ///   used instead of `liquidateAccount`. Reports the debt and the largest debt the collateral could have cleared.
+    error InsufficientCollateral(uint256 borrows, uint256 maxClearableDebt);
 
     /// @notice Thrown when the account doesn't have enough liquidity to redeem or borrow
     error InsufficientLiquidity();
 
     /// @notice Thrown when trying to liquidate a healthy account
     error InsufficientShortfall();
+
+    /// @notice Thrown if the liquidation allowlist is enabled and the account liquidating is not on it
+    error LiquidationNotAllowed(address liquidator);
 
     /// @notice Thrown when trying to repay more than allowed by close factor
     error TooMuchRepay();
@@ -194,6 +225,9 @@ contract SpokeComptroller is
 
     /// @notice Thrown if the supply cap is exceeded
     error SupplyCapExceeded(address market, uint256 cap);
+
+    /// @notice Thrown if the account being credited with the minted vTokens is not on the market's supply allowlist
+    error SupplyNotAllowed(address market, address supplier);
 
     /// @notice Thrown if the borrow cap is exceeded
     error BorrowCapExceeded(address market, uint256 cap);
@@ -423,6 +457,8 @@ contract SpokeComptroller is
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
      * @custom:error ActionPaused error is thrown if supplying to this market is paused
      * @custom:error MarketNotListed error is thrown when the market is not listed
+     * @custom:error SupplyNotAllowed error is thrown if the market's supply allowlist is enabled and the minter is
+     *   not on it
      * @custom:error SupplyCapExceeded error is thrown if the total supply exceeds the cap after minting
      * @custom:access Not restricted
      */
@@ -431,6 +467,13 @@ contract SpokeComptroller is
 
         if (!markets[vToken].isListed) {
             revert MarketNotListed(address(vToken));
+        }
+
+        // `minter` is the account credited with the newly minted vTokens, not necessarily the account paying for
+        // them: `mintBehalf` lets a third party fund a mint attributed to someone else. Metering the recipient is
+        // what bounds the market's supply, so the payer is deliberately not checked.
+        if (isSupplyAllowlistEnabled[vToken] && !isAllowedSupplier[vToken][minter]) {
+            revert SupplyNotAllowed(vToken, minter);
         }
 
         uint256 supplyCap = supplyCaps[vToken];
@@ -695,6 +738,10 @@ contract SpokeComptroller is
             revert MarketNotCollateral(vTokenCollateral, borrower);
         }
 
+        // Every seizure reaches this hook with the account that receives the collateral, whichever entry point it
+        // came from, so this is the check that actually enforces the allowlist.
+        _checkLiquidationAllowed(liquidator);
+
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
 
@@ -778,12 +825,19 @@ contract SpokeComptroller is
      *   The sender has to repay a certain percentage of the debt, computed as
      *   collateral / (borrows * liquidationIncentive).
      * @param user account to heal
+     * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
-     * @custom:access Not restricted
+     * @custom:access Not restricted while the liquidation allowlist is disabled, otherwise restricted to the accounts
+     *   on it
      */
     function healAccount(address user) external {
+        // Checked here as well as in `preSeizeHook`, because a borrower holding no vTokens at all takes the branch
+        // below that only calls `healBorrow`, which reaches no hook carrying the caller. Without this the whole
+        // remaining principal could be moved into bad debt by anyone, at no cost.
+        _checkLiquidationAllowed(msg.sender);
+
         VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
 
@@ -807,17 +861,16 @@ contract SpokeComptroller is
             revert InsufficientShortfall();
         }
 
-        // percentage = collateral / (borrows * liquidation incentive)
-        Exp memory collateral = Exp({ mantissa: snapshot.totalCollateral });
-        Exp memory scaledBorrows = mul_(
-            Exp({ mantissa: snapshot.borrows }),
-            Exp({ mantissa: liquidationIncentiveMantissa })
-        );
-
-        Exp memory percentage = div_(collateral, scaledBorrows);
-        if (lessThanExp(Exp({ mantissa: MANTISSA_ONE }), percentage)) {
-            revert CollateralExceedsThreshold(scaledBorrows.mantissa, collateral.mantissa);
+        // The collateral covers the whole debt at every market's own incentive, so healing would forgive nothing and
+        // the account should go through `liquidateAccount` instead.
+        if (snapshot.maxClearableDebt > snapshot.borrows) {
+            revert CollateralExceedsThreshold(snapshot.borrows, snapshot.maxClearableDebt);
         }
+
+        // percentage = maxClearableDebt / borrows. Repaying that share of every borrow is what seizing each
+        // collateral market at its own liquidation incentive amounts to, so the discount the caller receives on a
+        // given piece of collateral matches that market's configured value.
+        Exp memory percentage = div_(Exp({ mantissa: snapshot.maxClearableDebt }), Exp({ mantissa: snapshot.borrows }));
 
         for (uint256 i; i < userAssetsCount; ++i) {
             VToken market = userAssets[i];
@@ -843,13 +896,19 @@ contract SpokeComptroller is
      *   below the threshold, and the account is insolvent, use healAccount.
      * @param borrower the borrower address
      * @param orders an array of liquidation orders
+     * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for a batch liquidation
      * @custom:error InsufficientCollateral error is thrown when there is not enough collateral to cover the debt
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
-     * @custom:access Not restricted
+     * @custom:access Not restricted while the liquidation allowlist is disabled, otherwise restricted to the accounts
+     *   on it
      */
     function liquidateAccount(address borrower, LiquidationOrder[] calldata orders) external {
+        // Every order seizes, so `preSeizeHook` would reject a caller that is not allowed anyway. Checking at the
+        // entry keeps the two batch operations symmetric and fails before any interest is accrued or debt repaid.
+        _checkLiquidationAllowed(msg.sender);
+
         // We will accrue interest and update the oracle prices later during the liquidation
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
@@ -859,14 +918,10 @@ contract SpokeComptroller is
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
         }
 
-        uint256 collateralToSeize = mul_ScalarTruncate(
-            Exp({ mantissa: liquidationIncentiveMantissa }),
-            snapshot.borrows
-        );
-        if (collateralToSeize >= snapshot.totalCollateral) {
-            // There is not enough collateral to seize. Use healBorrow to repay some part of the borrow
+        if (snapshot.borrows >= snapshot.maxClearableDebt) {
+            // There is not enough collateral to seize. Use healAccount to repay some part of the borrow
             // and record bad debt.
-            revert InsufficientCollateral(collateralToSeize, snapshot.totalCollateral);
+            revert InsufficientCollateral(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
         if (snapshot.shortfall == 0) {
@@ -981,14 +1036,22 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Sets liquidationIncentive
+     * @notice Sets the liquidation incentive applied to any market that has no incentive of its own
      * @dev This function is restricted by the AccessControlManager
+     * @dev `PoolRegistry.addPool` calls this while registering the pool, so the value is always at least 1e18 by the
+     * time any market can be listed. Keep it at or above the highest per-market incentive, so that the value the
+     * shared `PoolLens` reports for this pool is not misleadingly low.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
+     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
-        require(newLiquidationIncentiveMantissa >= MANTISSA_ONE, "liquidation incentive should be greater than 1e18");
+        // Upstream `Comptroller` rejects this with a revert string. Reduced to the custom error the per-market setter
+        // uses, so that the same condition reports the same way from both.
+        if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
+            revert InvalidLiquidationIncentive();
+        }
 
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
@@ -1192,6 +1255,121 @@ contract SpokeComptroller is
     }
 
     /**
+     * @notice Sets the discount a liquidator receives on the collateral it seizes from a single market
+     * @dev This function is restricted by the AccessControlManager
+     * @dev Keyed on the collateral market, since that is what the discount prices. Setting it steers liquidators
+     * toward one collateral over another, and it feeds the routing between `liquidateAccount` and `healAccount`
+     * through `AccountLiquiditySnapshot.maxClearableDebt`.
+     *
+     * There is no way back to "unset" once a value is stored: `0` is the sentinel that means the pool-wide
+     * `liquidationIncentiveMantissa` applies, and it is rejected here so that a mistaken zero cannot silently move a
+     * market back onto the pool-wide value. Pass that value explicitly to get the same effect.
+     * @param vToken The collateral market to set the incentive for
+     * @param newLiquidationIncentiveMantissa New incentive for this market, scaled by 1e18, at least 1e18
+     * @custom:event Emits NewMarketLiquidationIncentive on success
+     * @custom:error MarketNotListed is thrown if the market is not listed
+     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setMarketLiquidationIncentive(address vToken, uint256 newLiquidationIncentiveMantissa) external {
+        _checkAccessAllowed("setMarketLiquidationIncentive(address,uint256)");
+
+        if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
+            revert InvalidLiquidationIncentive();
+        }
+
+        if (!markets[vToken].isListed) {
+            revert MarketNotListed(vToken);
+        }
+
+        uint256 oldLiquidationIncentiveMantissa = liquidationIncentives[vToken];
+        liquidationIncentives[vToken] = newLiquidationIncentiveMantissa;
+        emit NewMarketLiquidationIncentive(vToken, oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+    }
+
+    /**
+     * @notice Restricts supplying to a market to the accounts on its supply allowlist, or lifts the restriction
+     * @dev Enforced in `preMintHook`, so only supply is metered. Redeeming is never restricted, and an account
+     * removed from the allowlist keeps the position it already holds and can still exit.
+     *
+     * Enable this only after the market has been listed. `PoolRegistry.addMarket` seeds the market by calling
+     * `mintBehalf(vTokenReceiver, ...)`, which reaches `preMintHook` with `minter` set to that receiver, so a market
+     * whose allowlist is already enabled cannot be listed unless the receiver is on the allowlist.
+     * @param vToken The market to change the setting for
+     * @param enabled Whether the market should accept supply only from allowlisted accounts
+     * @custom:event Emits SupplyAllowlistEnabledUpdated on success
+     * @custom:error MarketNotListed is thrown if the market is not listed
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setSupplyAllowlistEnabled(address vToken, bool enabled) external {
+        _checkAccessAllowed("setSupplyAllowlistEnabled(address,bool)");
+
+        if (!markets[vToken].isListed) {
+            revert MarketNotListed(vToken);
+        }
+
+        isSupplyAllowlistEnabled[vToken] = enabled;
+        emit SupplyAllowlistEnabledUpdated(vToken, enabled);
+    }
+
+    /**
+     * @notice Adds an account to a market's supply allowlist or removes it
+     * @dev Takes effect only while the market's supply allowlist is enabled. Setting an account to the value it
+     * already holds is not an error, so a governance action that overlaps an earlier one still executes.
+     * @param vToken The market whose allowlist to update
+     * @param supplier The account to add or remove
+     * @param allowed Whether the account should be allowed to supply
+     * @custom:event Emits AllowedSupplierUpdated on success
+     * @custom:error MarketNotListed is thrown if the market is not listed
+     * @custom:error ZeroAddressNotAllowed is thrown if the account is the zero address
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setAllowedSupplier(address vToken, address supplier, bool allowed) external {
+        _checkAccessAllowed("setAllowedSupplier(address,address,bool)");
+        ensureNonzeroAddress(supplier);
+
+        if (!markets[vToken].isListed) {
+            revert MarketNotListed(vToken);
+        }
+
+        isAllowedSupplier[vToken][supplier] = allowed;
+        emit AllowedSupplierUpdated(vToken, supplier, allowed);
+    }
+
+    /**
+     * @notice Restricts seizing collateral in this pool to the accounts on the liquidation allowlist, or lifts the
+     * restriction
+     * @dev Pool-wide rather than per market, for the reason given on `isLiquidationAllowlistEnabled`. Enabling this
+     * also restricts `healAccount`, so any keeper relied on to record bad debt has to be allowlisted too.
+     * @param enabled Whether seizing collateral should be restricted to allowlisted accounts
+     * @custom:event Emits LiquidationAllowlistEnabledUpdated on success
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setLiquidationAllowlistEnabled(bool enabled) external {
+        _checkAccessAllowed("setLiquidationAllowlistEnabled(bool)");
+
+        isLiquidationAllowlistEnabled = enabled;
+        emit LiquidationAllowlistEnabledUpdated(enabled);
+    }
+
+    /**
+     * @notice Adds an account to the pool's liquidation allowlist or removes it
+     * @dev Takes effect only while the liquidation allowlist is enabled.
+     * @param liquidator The account to add or remove
+     * @param allowed Whether the account should be allowed to seize collateral
+     * @custom:event Emits AllowedLiquidatorUpdated on success
+     * @custom:error ZeroAddressNotAllowed is thrown if the account is the zero address
+     * @custom:access Controlled by AccessControlManager
+     */
+    function setAllowedLiquidator(address liquidator, bool allowed) external {
+        _checkAccessAllowed("setAllowedLiquidator(address,bool)");
+        ensureNonzeroAddress(liquidator);
+
+        isAllowedLiquidator[liquidator] = allowed;
+        emit AllowedLiquidatorUpdated(liquidator, allowed);
+    }
+
+    /**
      * @notice Determine the current account liquidity with respect to liquidation threshold requirements
      * @dev The interface of this function is intentionally kept compatible with Compound and Venus Core
      * @param account The account get liquidity for
@@ -1309,7 +1487,10 @@ contract SpokeComptroller is
         Exp memory denominator;
         Exp memory ratio;
 
-        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
+        numerator = mul_(
+            Exp({ mantissa: _liquidationIncentive(vTokenCollateral) }),
+            Exp({ mantissa: priceBorrowedMantissa })
+        );
         denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
         ratio = div_(numerator, denominator);
 
@@ -1564,6 +1745,17 @@ contract SpokeComptroller is
             // totalCollateral += vTokenPrice * vTokenBalance
             snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
 
+            // maxClearableDebt += (vTokenPrice * vTokenBalance) / liquidationIncentive, at this market's own
+            // incentive. Skipped when the account holds none of this market: the term would be zero, and a borrower is
+            // a member of every market it borrows from, including ones it holds no collateral in, so this is the
+            // common case. The repeated product costs nothing, the optimizer shares it with the line above.
+            if (vTokenBalance != 0) {
+                snapshot.maxClearableDebt += div_(
+                    mul_ScalarTruncate(vTokenPrice, vTokenBalance),
+                    Exp({ mantissa: _liquidationIncentive(address(asset)) })
+                );
+            }
+
             // borrows += oraclePrice * borrowBalance
             snapshot.borrows = mul_ScalarTruncateAddUInt(oraclePrice, borrowBalance, snapshot.borrows);
 
@@ -1626,6 +1818,17 @@ contract SpokeComptroller is
     }
 
     /**
+     * @dev Returns the liquidation incentive that applies when a market's collateral is seized
+     * @param vTokenCollateral Market whose collateral would be seized
+     * @return The market's own incentive, or the pool-wide one if the market has none. Never zero for a listed
+     *   market, so callers may divide by it: see the note on `liquidationIncentives`.
+     */
+    function _liquidationIncentive(address vTokenCollateral) internal view returns (uint256) {
+        uint256 incentive = liquidationIncentives[vTokenCollateral];
+        return incentive != 0 ? incentive : liquidationIncentiveMantissa;
+    }
+
+    /**
      * @dev Returns supply and borrow balances of user in vToken, reverts on failure
      * @param vToken Market to query
      * @param user Account address
@@ -1659,6 +1862,14 @@ contract SpokeComptroller is
     function _checkActionPauseState(address market, Action action) private view {
         if (actionPaused(market, action)) {
             revert ActionPaused(market, action);
+        }
+    }
+
+    /// @notice Reverts if the liquidation allowlist is enabled and the given account is not on it
+    /// @param liquidator Account that would receive the seized collateral
+    function _checkLiquidationAllowed(address liquidator) private view {
+        if (isLiquidationAllowlistEnabled && !isAllowedLiquidator[liquidator]) {
+            revert LiquidationNotAllowed(liquidator);
         }
     }
 }
