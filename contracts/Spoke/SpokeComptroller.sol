@@ -128,6 +128,10 @@ contract SpokeComptroller is
     /// @notice Emitted when an account is added to or removed from the pool's liquidation allowlist
     event AllowedLiquidatorUpdated(address indexed liquidator, bool allowed);
 
+    /// @notice Thrown when the close factor is outside the bounds set by `MIN_CLOSE_FACTOR_MANTISSA` and
+    ///   `MAX_CLOSE_FACTOR_MANTISSA`
+    error InvalidCloseFactor();
+
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
@@ -217,11 +221,21 @@ contract SpokeComptroller is
     /// @notice Thrown if the user is trying to exit a market in which they have an outstanding debt
     error NonzeroBorrowBalance();
 
+    /// @notice Thrown if a debt remains in any of the borrower's markets once every liquidation order has been
+    ///   executed, which means the orders passed to `liquidateAccount` did not cover the whole position
+    error NonzeroBorrowBalanceAfterLiquidation();
+
     /// @notice Thrown when trying to perform an action that is paused
     error ActionPaused(address market, Action action);
 
     /// @notice Thrown when trying to add a market that is already listed
     error MarketAlreadyListed(address market);
+
+    /// @notice Thrown when the market being listed does not identify itself as a VToken
+    error InvalidVToken();
+
+    /// @notice Thrown when an array argument is empty, or when two array arguments have different lengths
+    error InvalidArrayLength();
 
     /// @notice Thrown if the supply cap is exceeded
     error SupplyCapExceeded(address market, uint256 cap);
@@ -234,6 +248,9 @@ contract SpokeComptroller is
 
     /// @notice Thrown if delegate approval status is already set to the requested value
     error DelegationStatusUnchanged();
+
+    /// @notice Thrown when adding a rewards distributor that this pool already has
+    error RewardsDistributorAlreadyExists();
 
     /// @param poolRegistry_ Pool registry address
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -899,6 +916,7 @@ contract SpokeComptroller is
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for a batch liquidation
      * @custom:error InsufficientCollateral error is thrown when there is not enough collateral to cover the debt
+     * @custom:error NonzeroBorrowBalanceAfterLiquidation is thrown if the orders do not clear every borrow
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
      * @custom:access Not restricted while the liquidation allowlist is disabled, otherwise restricted to the accounts
@@ -955,7 +973,9 @@ contract SpokeComptroller is
 
         for (uint256 i; i < marketsCount; ++i) {
             (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
-            require(borrowBalance == 0, "Nonzero borrow balance after liquidation");
+            if (borrowBalance != 0) {
+                revert NonzeroBorrowBalanceAfterLiquidation();
+            }
         }
     }
 
@@ -963,12 +983,18 @@ contract SpokeComptroller is
      * @notice Sets the closeFactor to use when liquidating borrows
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @custom:event Emits NewCloseFactor on success
+     * @custom:error InvalidCloseFactor is thrown if the new close factor is outside the allowed bounds
      * @custom:access Controlled by AccessControlManager
      */
     function setCloseFactor(uint256 newCloseFactorMantissa) external {
         _checkAccessAllowed("setCloseFactor(uint256)");
-        require(MAX_CLOSE_FACTOR_MANTISSA >= newCloseFactorMantissa, "Close factor greater than maximum close factor");
-        require(MIN_CLOSE_FACTOR_MANTISSA <= newCloseFactorMantissa, "Close factor smaller than minimum close factor");
+        if (newCloseFactorMantissa > MAX_CLOSE_FACTOR_MANTISSA) {
+            revert InvalidCloseFactor();
+        }
+
+        if (newCloseFactorMantissa < MIN_CLOSE_FACTOR_MANTISSA) {
+            revert InvalidCloseFactor();
+        }
 
         uint256 oldCloseFactorMantissa = closeFactorMantissa;
         closeFactorMantissa = newCloseFactorMantissa;
@@ -1070,6 +1096,7 @@ contract SpokeComptroller is
      * @dev Only callable by the PoolRegistry
      * @param vToken The address of the market (token) to list
      * @custom:error MarketAlreadyListed is thrown if the market is already listed in this pool
+     * @custom:error InvalidVToken is thrown if the market does not identify itself as a VToken
      * @custom:access Only PoolRegistry
      */
     function supportMarket(VToken vToken) external {
@@ -1079,7 +1106,10 @@ contract SpokeComptroller is
             revert MarketAlreadyListed(address(vToken));
         }
 
-        require(vToken.isVToken(), "Comptroller: Invalid vToken"); // Sanity check to make sure its really a VToken
+        // Sanity check to make sure its really a VToken
+        if (!vToken.isVToken()) {
+            revert InvalidVToken();
+        }
 
         Market storage newMarket = markets[address(vToken)];
         newMarket.isListed = true;
@@ -1105,6 +1135,7 @@ contract SpokeComptroller is
             until the total borrows amount goes below the new borrow cap
      * @param vTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of type(uint256).max corresponds to unlimited borrowing.
+     * @custom:error InvalidArrayLength is thrown if the arrays are empty or their lengths do not match
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketBorrowCaps(VToken[] calldata vTokens, uint256[] calldata newBorrowCaps) external {
@@ -1113,7 +1144,9 @@ contract SpokeComptroller is
         uint256 numMarkets = vTokens.length;
         uint256 numBorrowCaps = newBorrowCaps.length;
 
-        require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
+        if (numMarkets == 0 || numMarkets != numBorrowCaps) {
+            revert InvalidArrayLength();
+        }
 
         _ensureMaxLoops(numMarkets);
 
@@ -1131,14 +1164,16 @@ contract SpokeComptroller is
             until the total supplies amount goes below the new supply cap
      * @param vTokens The addresses of the markets (tokens) to change the supply caps for
      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of type(uint256).max corresponds to unlimited supply.
+     * @custom:error InvalidArrayLength is thrown if the arrays are empty or their lengths do not match
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketSupplyCaps(VToken[] calldata vTokens, uint256[] calldata newSupplyCaps) external {
         _checkAccessAllowed("setMarketSupplyCaps(address[],uint256[])");
         uint256 vTokensCount = vTokens.length;
 
-        require(vTokensCount != 0, "invalid number of markets");
-        require(vTokensCount == newSupplyCaps.length, "invalid number of markets");
+        if (vTokensCount == 0 || vTokensCount != newSupplyCaps.length) {
+            revert InvalidArrayLength();
+        }
 
         _ensureMaxLoops(vTokensCount);
 
@@ -1154,6 +1189,7 @@ contract SpokeComptroller is
      * @param marketsList Markets to pause/unpause the actions on
      * @param actionsList List of action ids to pause/unpause
      * @param paused The new paused state (true=paused, false=unpaused)
+     * @custom:error MarketNotListed is thrown if any of the markets is not listed
      * @custom:access Controlled by AccessControlManager
      */
     function setActionsPaused(VToken[] calldata marketsList, Action[] calldata actionsList, bool paused) external {
@@ -1194,9 +1230,12 @@ contract SpokeComptroller is
      * @param _rewardsDistributor Address of the RewardDistributor contract to add
      * @custom:access Only Governance
      * @custom:event Emits NewRewardsDistributor with distributor address
+     * @custom:error RewardsDistributorAlreadyExists is thrown if this pool already has the given distributor
      */
     function addRewardsDistributor(RewardsDistributor _rewardsDistributor) external onlyOwner {
-        require(!rewardsDistributorExists[address(_rewardsDistributor)], "already exists");
+        if (rewardsDistributorExists[address(_rewardsDistributor)]) {
+            revert RewardsDistributorAlreadyExists();
+        }
 
         uint256 rewardsDistributorsLen = rewardsDistributors.length;
         _ensureMaxLoops(rewardsDistributorsLen + 1);
@@ -1641,7 +1680,9 @@ contract SpokeComptroller is
      * @param paused The new paused state (true=paused, false=unpaused)
      */
     function _setActionPaused(address market, Action action, bool paused) internal {
-        require(markets[market].isListed, "cannot pause a market that is not listed");
+        if (!markets[market].isListed) {
+            revert MarketNotListed(market);
+        }
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
     }
