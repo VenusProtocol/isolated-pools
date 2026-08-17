@@ -5,7 +5,6 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { VToken } from "../VToken.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
-import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 import { Action } from "../ComptrollerInterface.sol";
 
 /**
@@ -114,9 +113,6 @@ contract SpokeComptrollerStorage {
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.95e18; // 0.95
 
-    /// Prime token address
-    IPrime public prime;
-
     /// @notice Whether the delegate is allowed to borrow or redeem on behalf of the user
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;
@@ -125,6 +121,9 @@ contract SpokeComptrollerStorage {
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     * It reserves one slot more than the same gap in `ComptrollerStorage`, which reserves 47: the slot that contract
+     * uses for the Prime token is unused here, so it is returned to the gap instead of being left as a hole. This
+     * contract therefore occupies the same number of slots as the one it was forked from.
      */
-    uint256[47] private __gap;
+    uint256[48] private __gap;
 }

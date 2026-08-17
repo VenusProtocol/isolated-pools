@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { IPrime } from "@venusprotocol/venus-protocol/contracts/Tokens/Prime/Interfaces/IPrime.sol";
 
 import { ComptrollerInterface, Action } from "../ComptrollerInterface.sol";
 import { SpokeComptrollerStorage } from "./SpokeComptrollerStorage.sol";
@@ -37,11 +36,11 @@ import { ensureNonzeroAddress } from "../lib/validators.sol";
  * incentive. Otherwise, the pool will incur bad debt, in which case the function `healAccount()` should be used instead. This function skips the logic
  * verifying that the repay amount does not exceed the close factor.
  *
- * @dev Fork of `Comptroller` (`contracts/Comptroller.sol`). It is a separate implementation rather than a flag inside
- * `Comptroller` because that implementation backs pools on several chains and declares no `virtual` functions, so its
- * hooks cannot be overridden. The two files are meant to stay in sync: `yarn spoke:upstream` pins the hashes of the
- * upstream sources this fork was derived from and fails when they change, so a change to `Comptroller` is surfaced for
- * manual review and re-application here. `yarn spoke:upstream --diff` prints the current textual difference.
+ * @dev Fork of `Comptroller` (`contracts/Comptroller.sol`). It is a separate implementation because `Comptroller` is
+ * the one every other pool in this repo shares, here and on other chains, so policy that applies only to a spoke pool
+ * does not belong in it. The two files are meant to stay in sync: `yarn spoke:upstream` pins the hashes of the upstream
+ * sources this fork was derived from and fails when they change, so a change to `Comptroller` is surfaced for review
+ * and re-application here. `yarn spoke:upstream --diff` prints the current difference.
  */
 contract SpokeComptroller is
     Ownable2StepUpgradeable,
@@ -97,9 +96,6 @@ contract SpokeComptroller is
 
     /// @notice Emitted when a market is supported
     event MarketSupported(VToken vToken);
-
-    /// @notice Emitted when prime token contract address is changed
-    event NewPrimeToken(IPrime oldPrimeToken, IPrime newPrimeToken);
 
     /// @notice Emitted when forced liquidation is enabled or disabled for a market
     event IsForcedLiquidationEnabledUpdated(address indexed vToken, bool enable);
@@ -459,20 +455,6 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Validates mint, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vToken Asset being minted
-     * @param minter The address minting the tokens
-     * @param actualMintAmount The amount of the underlying asset being minted
-     * @param mintTokens The number of tokens being minted
-     */
-    // solhint-disable-next-line no-unused-vars
-    function mintVerify(address vToken, address minter, uint256 actualMintAmount, uint256 mintTokens) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(minter, vToken);
-        }
-    }
-
-    /**
      * @notice Checks if the account should be allowed to redeem tokens in the given market
      * @param vToken The market to verify the redeem against
      * @param redeemer The account which would redeem the tokens
@@ -496,97 +478,6 @@ contract SpokeComptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenSupplyIndex(vToken);
             rewardsDistributor.distributeSupplierRewardToken(vToken, redeemer);
-        }
-    }
-
-    /**
-     * @notice Validates redeem, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vToken Asset being redeemed
-     * @param redeemer The address redeeming the tokens
-     * @param redeemAmount The amount of the underlying asset being redeemed
-     * @param redeemTokens The number of tokens being redeemed
-     */
-    function redeemVerify(address vToken, address redeemer, uint256 redeemAmount, uint256 redeemTokens) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(redeemer, vToken);
-        }
-    }
-
-    /**
-     * @notice Validates repayBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vToken Asset being repaid
-     * @param payer The address repaying the borrow
-     * @param borrower The address of the borrower
-     * @param actualRepayAmount The amount of underlying being repaid
-     */
-    function repayBorrowVerify(
-        address vToken,
-        address payer, // solhint-disable-line no-unused-vars
-        address borrower,
-        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
-        uint256 borrowerIndex // solhint-disable-line no-unused-vars
-    ) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vToken);
-        }
-    }
-
-    /**
-     * @notice Validates liquidateBorrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vTokenBorrowed Asset which was borrowed by the borrower
-     * @param vTokenCollateral Asset which was used as collateral and will be seized
-     * @param liquidator The address repaying the borrow and seizing the collateral
-     * @param borrower The address of the borrower
-     * @param actualRepayAmount The amount of underlying being repaid
-     * @param seizeTokens The amount of collateral token that will be seized
-     */
-    function liquidateBorrowVerify(
-        address vTokenBorrowed,
-        address vTokenCollateral, // solhint-disable-line no-unused-vars
-        address liquidator,
-        address borrower,
-        uint256 actualRepayAmount, // solhint-disable-line no-unused-vars
-        uint256 seizeTokens // solhint-disable-line no-unused-vars
-    ) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vTokenBorrowed);
-            prime.accrueInterestAndUpdateScore(liquidator, vTokenBorrowed);
-        }
-    }
-
-    /**
-     * @notice Validates seize, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vTokenCollateral Asset which was used as collateral and will be seized
-     * @param vTokenBorrowed Asset which was borrowed by the borrower
-     * @param liquidator The address repaying the borrow and seizing the collateral
-     * @param borrower The address of the borrower
-     * @param seizeTokens The number of collateral tokens to seize
-     */
-    function seizeVerify(
-        address vTokenCollateral,
-        address vTokenBorrowed, // solhint-disable-line no-unused-vars
-        address liquidator,
-        address borrower,
-        uint256 seizeTokens // solhint-disable-line no-unused-vars
-    ) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vTokenCollateral);
-            prime.accrueInterestAndUpdateScore(liquidator, vTokenCollateral);
-        }
-    }
-
-    /**
-     * @notice Validates transfer, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vToken Asset being transferred
-     * @param src The account which sources the tokens
-     * @param dst The account which receives the tokens
-     * @param transferTokens The number of vTokens to transfer
-     */
-    // solhint-disable-next-line no-unused-vars
-    function transferVerify(address vToken, address src, address dst, uint256 transferTokens) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(src, vToken);
-            prime.accrueInterestAndUpdateScore(dst, vToken);
         }
     }
 
@@ -658,19 +549,6 @@ contract SpokeComptroller is
             RewardsDistributor rewardsDistributor = rewardsDistributors[i];
             rewardsDistributor.updateRewardTokenBorrowIndex(vToken, borrowIndex);
             rewardsDistributor.distributeBorrowerRewardToken(vToken, borrower, borrowIndex);
-        }
-    }
-
-    /**
-     * @notice Validates borrow, accrues interest and updates score in prime. Reverts on rejection. May emit logs.
-     * @param vToken Asset whose underlying is being borrowed
-     * @param borrower The address borrowing the underlying
-     * @param borrowAmount The amount of the underlying asset requested to borrow
-     */
-    // solhint-disable-next-line no-unused-vars
-    function borrowVerify(address vToken, address borrower, uint256 borrowAmount) external {
-        if (address(prime) != address(0)) {
-            prime.accrueInterestAndUpdateScore(borrower, vToken);
         }
     }
 
@@ -858,6 +736,39 @@ contract SpokeComptroller is
             rewardsDistributor.distributeSupplierRewardToken(vToken, dst);
         }
     }
+
+    /*** Post-action Hooks ***/
+
+    // The vToken calls one of the seven functions below as the last step of every successful mint, redeem, borrow,
+    // repayment, liquidation, seizure and transfer. All of them are no-ops here, and none of them can be dropped:
+    // `ComptrollerInterface` declares all seven, so omitting one leaves this contract abstract, and the vToken calls
+    // each of them with a plain external call against a comptroller that has no fallback, so a missing function would
+    // revert the operation it belongs to. They are unrestricted, which is harmless because they do nothing, and their
+    // parameters are unnamed because the bodies are empty.
+    // solhint-disable no-empty-blocks
+
+    /// @notice Called by the vToken once a mint has succeeded. No-op, see the note above.
+    function mintVerify(address, address, uint256, uint256) external {}
+
+    /// @notice Called by the vToken once a redeem has succeeded. No-op, see the note above.
+    function redeemVerify(address, address, uint256, uint256) external {}
+
+    /// @notice Called by the vToken once a borrow has succeeded. No-op, see the note above.
+    function borrowVerify(address, address, uint256) external {}
+
+    /// @notice Called by the vToken once a repayment has succeeded. No-op, see the note above.
+    function repayBorrowVerify(address, address, address, uint256, uint256) external {}
+
+    /// @notice Called by the vToken once a liquidation has succeeded. No-op, see the note above.
+    function liquidateBorrowVerify(address, address, address, address, uint256, uint256) external {}
+
+    /// @notice Called by the vToken once a seizure has succeeded. No-op, see the note above.
+    function seizeVerify(address, address, address, address, uint256) external {}
+
+    /// @notice Called by the vToken once a transfer has succeeded. No-op, see the note above.
+    function transferVerify(address, address, address, uint256) external {}
+
+    // solhint-enable no-empty-blocks
 
     /*** Pool-level operations ***/
 
@@ -1260,17 +1171,6 @@ contract SpokeComptroller is
      */
     function setMaxLoopsLimit(uint256 limit) external onlyOwner {
         _setMaxLoopsLimit(limit);
-    }
-
-    /**
-     * @notice Sets the prime token contract for the comptroller
-     * @param _prime Address of the Prime contract
-     */
-    function setPrimeToken(IPrime _prime) external onlyOwner {
-        ensureNonzeroAddress(address(_prime));
-
-        emit NewPrimeToken(prime, _prime);
-        prime = _prime;
     }
 
     /**
