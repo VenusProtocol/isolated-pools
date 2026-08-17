@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 
 import { VToken } from "../VToken.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
@@ -22,6 +23,10 @@ contract SpokeComptrollerStorage {
         uint256 repayAmount;
     }
 
+    /// @dev `totalCollateral` and `maxClearableDebt` are only meaningful under
+    /// `WeightFunction.USE_LIQUIDATION_THRESHOLD`, which is the weighting every caller that reads them passes. Under
+    /// the collateral factor they are derived from the deviation-bounded collateral price rather than spot, so a new
+    /// caller on that weighting must not start reading them without deciding what price they should be based on.
     struct AccountLiquiditySnapshot {
         uint256 totalCollateral;
         uint256 weightedCollateral;
@@ -145,14 +150,19 @@ contract SpokeComptrollerStorage {
     /// unregistered pool, and registering a pool goes through `setLiquidationIncentive`, which enforces the floor.
     mapping(address => uint256) public liquidationIncentives;
 
+    /// @notice Oracle that bounds an asset's price against a recent window, so a deviating print cannot inflate
+    /// borrowing capacity. Read only where the collateral factor weights the position; the liquidation-threshold
+    /// paths stay on `oracle`, because they route liquidations.
+    IDeviationBoundedOracle public deviationBoundedOracle;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      * The size is derived from the 47 slots `ComptrollerStorage` reserves: plus one for the Prime token slot, which
-     * is unused here and is returned to the gap rather than left as a hole, minus the five slots the allowlists and
-     * the per-market liquidation incentives above take. This contract therefore occupies the same number of slots as
-     * the one it was forked from.
+     * is unused here and is returned to the gap rather than left as a hole, minus the six slots the allowlists, the
+     * per-market liquidation incentives and the deviation-bounded oracle above take. This contract therefore occupies
+     * the same number of slots as the one it was forked from.
      */
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 }

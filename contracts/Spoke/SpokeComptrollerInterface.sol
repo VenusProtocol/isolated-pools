@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 
 import { ComptrollerInterface, Action } from "../ComptrollerInterface.sol";
 import { VToken } from "../VToken.sol";
@@ -45,6 +46,9 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
 
     /// @notice Emitted when price oracle is changed
     event NewPriceOracle(ResilientOracleInterface oldPriceOracle, ResilientOracleInterface newPriceOracle);
+
+    /// @notice Emitted when the deviation-bounded oracle is changed
+    event NewDeviationBoundedOracle(IDeviationBoundedOracle oldBoundedOracle, IDeviationBoundedOracle newBoundedOracle);
 
     /// @notice Emitted when an action is paused on a market
     event ActionPausedMarket(VToken vToken, Action action, bool pauseState);

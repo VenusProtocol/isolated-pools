@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 
 import { Action } from "../ComptrollerInterface.sol";
@@ -13,6 +14,14 @@ import { VToken } from "../VToken.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 import { MaxLoopsLimitHelper } from "../MaxLoopsLimitHelper.sol";
 import { ensureNonzeroAddress } from "../lib/validators.sol";
+
+/// @notice Which per-market risk parameter weights an account's collateral in a liquidity snapshot. Internal to the
+/// implementation: no event, error or external function exposes it, so it is deliberately not part of
+/// `SpokeComptrollerInterface`.
+enum WeightFunction {
+    USE_COLLATERAL_FACTOR,
+    USE_LIQUIDATION_THRESHOLD
+}
 
 /**
  * @title SpokeComptroller
@@ -379,6 +388,7 @@ contract SpokeComptroller is
 
         // Update the prices of tokens
         updatePrices(borrower);
+        _updateProtectionStates(borrower);
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
@@ -400,7 +410,7 @@ contract SpokeComptroller is
             VToken(vToken),
             0,
             borrowAmount,
-            _getCollateralFactor
+            WeightFunction.USE_COLLATERAL_FACTOR
         );
 
         if (snapshot.shortfall > 0) {
@@ -495,7 +505,10 @@ contract SpokeComptroller is
         }
 
         /* The borrower must have shortfall and collateral > threshold in order to be liquidatable */
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
+            borrower,
+            WeightFunction.USE_LIQUIDATION_THRESHOLD
+        );
 
         if (snapshot.totalCollateral <= minLiquidatableCollateral) {
             /* The liquidator should use either liquidateAccount or healAccount */
@@ -675,7 +688,10 @@ contract SpokeComptroller is
             }
         }
 
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(user, _getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
+            user,
+            WeightFunction.USE_LIQUIDATION_THRESHOLD
+        );
 
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             revert CollateralExceedsThreshold(minLiquidatableCollateral, snapshot.totalCollateral);
@@ -736,7 +752,10 @@ contract SpokeComptroller is
 
         // We will accrue interest and update the oracle prices later during the liquidation
 
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(borrower, _getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
+            borrower,
+            WeightFunction.USE_LIQUIDATION_THRESHOLD
+        );
 
         if (snapshot.totalCollateral > minLiquidatableCollateral) {
             // You should use the regular vToken.liquidateBorrow(...) call
@@ -1075,6 +1094,24 @@ contract SpokeComptroller is
     }
 
     /**
+     * @notice Sets a new deviation-bounded oracle for the Comptroller
+     * @dev Only callable by the admin. Nothing falls back to spot when this is unset: `_safeGetPrices` reverts on the
+     *  empty return data of its call to the zero address, so borrow and redeem fail closed rather than running
+     *  unbounded. It therefore has to be set before the pool serves either action. Note that `_updateProtectionStates`
+     *  does not fail the same way, its call returns no data to check, so the guarantee rests on the price read.
+     * @param newBoundedOracle Address of the new deviation-bounded oracle to set
+     * @custom:event Emits NewDeviationBoundedOracle on success
+     * @custom:error ZeroAddressNotAllowed is thrown when the new oracle address is zero
+     */
+    function setDeviationBoundedOracle(IDeviationBoundedOracle newBoundedOracle) external onlyOwner {
+        ensureNonzeroAddress(address(newBoundedOracle));
+
+        IDeviationBoundedOracle oldBoundedOracle = deviationBoundedOracle;
+        deviationBoundedOracle = newBoundedOracle;
+        emit NewDeviationBoundedOracle(oldBoundedOracle, newBoundedOracle);
+    }
+
+    /**
      * @notice Set the for loop iteration limit to avoid DOS
      * @param limit Limit for the max loops can execute at a time
      */
@@ -1226,7 +1263,10 @@ contract SpokeComptroller is
     function getAccountLiquidity(
         address account
     ) external view returns (uint256 error, uint256 liquidity, uint256 shortfall) {
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getLiquidationThreshold);
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
+            account,
+            WeightFunction.USE_LIQUIDATION_THRESHOLD
+        );
         return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
 
@@ -1241,7 +1281,10 @@ contract SpokeComptroller is
     function getBorrowingPower(
         address account
     ) external view returns (uint256 error, uint256 liquidity, uint256 shortfall) {
-        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(account, _getCollateralFactor);
+        AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
+            account,
+            WeightFunction.USE_COLLATERAL_FACTOR
+        );
         return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
 
@@ -1267,7 +1310,7 @@ contract SpokeComptroller is
             VToken(vTokenModify),
             redeemTokens,
             borrowAmount,
-            _getCollateralFactor
+            WeightFunction.USE_COLLATERAL_FACTOR
         );
         return (NO_ERROR, snapshot.liquidity, snapshot.shortfall);
     }
@@ -1495,6 +1538,25 @@ contract SpokeComptroller is
     }
 
     /**
+     * @dev Persists the deviation-bounded oracle's price window and protection state for every market the account
+     *  is in. Runs before the borrow and redeem liquidity checks, the ones weighted by the collateral factor, so
+     *  that a deviating print latches protection and starts its cooldown instead of evaporating once the price
+     *  returns to the window. The liquidation-threshold paths never call this, matching how they read spot prices:
+     *  see `_safeGetPrices`.
+     * @param account Address of the account whose entered markets to update
+     */
+    function _updateProtectionStates(address account) internal {
+        VToken[] memory vTokens = getAssetsIn(account);
+        uint256 vTokensCount = vTokens.length;
+
+        IDeviationBoundedOracle boundedOracle = deviationBoundedOracle;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            boundedOracle.updateProtectionState(address(vTokens[i]));
+        }
+    }
+
+    /**
      * @dev Internal function to check that vTokens can be safely redeemed for the underlying asset.
      * @param vToken Address of the vTokens to redeem
      * @param redeemer Account redeeming the tokens
@@ -1514,6 +1576,7 @@ contract SpokeComptroller is
 
         // Update the prices of tokens
         updatePrices(redeemer);
+        _updateProtectionStates(redeemer);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
@@ -1521,7 +1584,7 @@ contract SpokeComptroller is
             VToken(vToken),
             redeemTokens,
             0,
-            _getCollateralFactor
+            WeightFunction.USE_COLLATERAL_FACTOR
         );
         if (snapshot.shortfall > 0) {
             revert InsufficientLiquidity();
@@ -1531,17 +1594,17 @@ contract SpokeComptroller is
     /**
      * @notice Get the total collateral, weighted collateral, borrow balance, liquidity, shortfall
      * @param account The account to get the snapshot for
-     * @param weight The function to compute the weight of the collateral – either collateral factor or
-     *  liquidation threshold. Accepts the address of the vToken and returns the weight as Exp.
+     * @param weighting Which per-market risk parameter weights the collateral, either the collateral factor or
+     *  the liquidation threshold
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
      */
     function _getCurrentLiquiditySnapshot(
         address account,
-        function(VToken) internal view returns (Exp memory) weight
+        WeightFunction weighting
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
-        return _getHypotheticalLiquiditySnapshot(account, VToken(address(0)), 0, 0, weight);
+        return _getHypotheticalLiquiditySnapshot(account, VToken(address(0)), 0, 0, weighting);
     }
 
     /**
@@ -1550,8 +1613,8 @@ contract SpokeComptroller is
      * @param account The account to determine liquidity for
      * @param redeemTokens The number of tokens to hypothetically redeem
      * @param borrowAmount The amount of underlying to hypothetically borrow
-     * @param weight The function to compute the weight of the collateral – either collateral factor or
-         liquidation threshold. Accepts the address of the VToken and returns the weight
+     * @param weighting Which per-market risk parameter weights the collateral, either the collateral factor or
+     *  the liquidation threshold
      * @dev Note that we calculate the exchangeRateStored for each collateral vToken using stored data,
      *  without calculating accumulated interest.
      * @return snapshot Account liquidity snapshot
@@ -1561,7 +1624,7 @@ contract SpokeComptroller is
         VToken vTokenModify,
         uint256 redeemTokens,
         uint256 borrowAmount,
-        function(VToken) internal view returns (Exp memory) weight
+        WeightFunction weighting
     ) internal view returns (AccountLiquiditySnapshot memory snapshot) {
         // For each asset the account is in
         VToken[] memory assets = getAssetsIn(account);
@@ -1569,43 +1632,12 @@ contract SpokeComptroller is
 
         for (uint256 i; i < assetsCount; ++i) {
             VToken asset = assets[i];
-
-            // Read the balances and exchange rate from the vToken
-            (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
+            (Exp memory weightedVTokenPrice, Exp memory debtPrice) = _accumulateMarket(
+                snapshot,
                 asset,
-                account
+                account,
+                weighting
             );
-
-            // Get the normalized price of the asset
-            Exp memory oraclePrice = Exp({ mantissa: _safeGetUnderlyingPrice(asset) });
-
-            // Pre-compute conversion factors from vTokens -> usd
-            Exp memory vTokenPrice = mul_(Exp({ mantissa: exchangeRateMantissa }), oraclePrice);
-            Exp memory weightedVTokenPrice = mul_(weight(asset), vTokenPrice);
-
-            // weightedCollateral += weightedVTokenPrice * vTokenBalance
-            snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
-                weightedVTokenPrice,
-                vTokenBalance,
-                snapshot.weightedCollateral
-            );
-
-            // totalCollateral += vTokenPrice * vTokenBalance
-            snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
-
-            // maxClearableDebt += (vTokenPrice * vTokenBalance) / liquidationIncentive, at this market's own
-            // incentive. Skipped when the account holds none of this market: the term would be zero, and a borrower is
-            // a member of every market it borrows from, including ones it holds no collateral in, so this is the
-            // common case. The repeated product costs nothing, the optimizer shares it with the line above.
-            if (vTokenBalance != 0) {
-                snapshot.maxClearableDebt += div_(
-                    mul_ScalarTruncate(vTokenPrice, vTokenBalance),
-                    Exp({ mantissa: _liquidationIncentive(address(asset)) })
-                );
-            }
-
-            // borrows += oraclePrice * borrowBalance
-            snapshot.borrows = mul_ScalarTruncateAddUInt(oraclePrice, borrowBalance, snapshot.borrows);
 
             // Calculate effects of interacting with vTokenModify
             if (asset == vTokenModify) {
@@ -1614,8 +1646,8 @@ contract SpokeComptroller is
                 snapshot.effects = mul_ScalarTruncateAddUInt(weightedVTokenPrice, redeemTokens, snapshot.effects);
 
                 // borrow effect
-                // effects += oraclePrice * borrowAmount
-                snapshot.effects = mul_ScalarTruncateAddUInt(oraclePrice, borrowAmount, snapshot.effects);
+                // effects += debtPrice * borrowAmount
+                snapshot.effects = mul_ScalarTruncateAddUInt(debtPrice, borrowAmount, snapshot.effects);
             }
         }
 
@@ -1635,6 +1667,64 @@ contract SpokeComptroller is
     }
 
     /**
+     * @dev Adds one market's collateral and debt to an account's liquidity snapshot, and returns the two prices the
+     *  caller needs to apply a hypothetical redeem or borrow in that market. Split out of
+     *  `_getHypotheticalLiquiditySnapshot` because holding this market's prices and the loop's own variables in one
+     *  frame exceeds the stack the legacy code generator can address, and this repo does not enable `viaIR`.
+     *  `snapshot` is a memory reference, so the accumulated fields are updated in place.
+     * @param snapshot The snapshot to accumulate into
+     * @param asset The market to value
+     * @param account The account whose position in the market is being valued
+     * @param weighting Which per-market risk parameter weights the collateral
+     * @return weightedVTokenPrice Value of one vToken after the risk weight, which prices a hypothetical redeem
+     * @return debtPrice Price valuing the market's debt, which prices a hypothetical borrow
+     */
+    function _accumulateMarket(
+        AccountLiquiditySnapshot memory snapshot,
+        VToken asset,
+        address account,
+        WeightFunction weighting
+    ) internal view returns (Exp memory weightedVTokenPrice, Exp memory debtPrice) {
+        // Read the balances and exchange rate from the vToken
+        (uint256 vTokenBalance, uint256 borrowBalance, uint256 exchangeRateMantissa) = _safeGetAccountSnapshot(
+            asset,
+            account
+        );
+
+        // Get the normalized prices that value this market's collateral and debt
+        Exp memory collateralPrice;
+        (collateralPrice, debtPrice) = _safeGetPrices(asset, weighting);
+
+        // Pre-compute conversion factors from vTokens -> usd
+        Exp memory vTokenPrice = mul_(Exp({ mantissa: exchangeRateMantissa }), collateralPrice);
+        weightedVTokenPrice = mul_(_weight(asset, weighting), vTokenPrice);
+
+        // weightedCollateral += weightedVTokenPrice * vTokenBalance
+        snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
+            weightedVTokenPrice,
+            vTokenBalance,
+            snapshot.weightedCollateral
+        );
+
+        // totalCollateral += vTokenPrice * vTokenBalance
+        snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
+
+        // maxClearableDebt += (vTokenPrice * vTokenBalance) / liquidationIncentive, at this market's own
+        // incentive. Skipped when the account holds none of this market: the term would be zero, and a borrower is
+        // a member of every market it borrows from, including ones it holds no collateral in, so this is the
+        // common case. The repeated product costs nothing, the optimizer shares it with the line above.
+        if (vTokenBalance != 0) {
+            snapshot.maxClearableDebt += div_(
+                mul_ScalarTruncate(vTokenPrice, vTokenBalance),
+                Exp({ mantissa: _liquidationIncentive(address(asset)) })
+            );
+        }
+
+        // borrows += debtPrice * borrowBalance
+        snapshot.borrows = mul_ScalarTruncateAddUInt(debtPrice, borrowBalance, snapshot.borrows);
+    }
+
+    /**
      * @dev Retrieves price from oracle for an asset and checks it is nonzero
      * @param asset Address for asset to query price
      * @return Underlying price
@@ -1648,21 +1738,50 @@ contract SpokeComptroller is
     }
 
     /**
-     * @dev Return collateral factor for a market
-     * @param asset Address for asset
-     * @return Collateral factor as exponential
+     * @dev Retrieves the two prices that value a market's collateral and its debt, and checks they are nonzero.
+     *  Under the collateral factor both come from `deviationBoundedOracle`: while protection is active for the asset
+     *  it values collateral at the low end of the asset's recent price window and debt at the high end, and it returns
+     *  spot on both legs otherwise, including for an asset it holds no configuration for. A deviating print can
+     *  therefore only ever shrink an account's borrowing capacity, never inflate it. Under the liquidation threshold
+     *  both legs are spot, because those snapshots route an unhealthy account between `liquidateAccount` and
+     *  `healAccount` and set how much of its debt healing repays, which has to track the live price.
+     * @param asset Address for asset to query prices for
+     * @param weighting Which risk parameter weights the position being valued
+     * @return collateralPrice Price valuing the collateral held in the market
+     * @return debtPrice Price valuing the debt owed to the market
      */
-    function _getCollateralFactor(VToken asset) internal view returns (Exp memory) {
-        return Exp({ mantissa: markets[address(asset)].collateralFactorMantissa });
+    function _safeGetPrices(
+        VToken asset,
+        WeightFunction weighting
+    ) internal view returns (Exp memory collateralPrice, Exp memory debtPrice) {
+        if (weighting == WeightFunction.USE_LIQUIDATION_THRESHOLD) {
+            uint256 spotPriceMantissa = _safeGetUnderlyingPrice(asset);
+            return (Exp({ mantissa: spotPriceMantissa }), Exp({ mantissa: spotPriceMantissa }));
+        }
+
+        (uint256 collateralPriceMantissa, uint256 debtPriceMantissa) = deviationBoundedOracle.getBoundedPricesView(
+            address(asset)
+        );
+        if (collateralPriceMantissa == 0 || debtPriceMantissa == 0) {
+            revert PriceError(address(asset));
+        }
+        return (Exp({ mantissa: collateralPriceMantissa }), Exp({ mantissa: debtPriceMantissa }));
     }
 
     /**
-     * @dev Retrieves liquidation threshold for a market as an exponential
-     * @param asset Address for asset to liquidation threshold
-     * @return Liquidation threshold as exponential
+     * @dev Returns the risk parameter that weights a market's collateral in a liquidity snapshot
+     * @param asset Address for asset whose parameter to read
+     * @param weighting Which of the two parameters to read
+     * @return The market's collateral factor or liquidation threshold, as an exponential
      */
-    function _getLiquidationThreshold(VToken asset) internal view returns (Exp memory) {
-        return Exp({ mantissa: markets[address(asset)].liquidationThresholdMantissa });
+    function _weight(VToken asset, WeightFunction weighting) internal view returns (Exp memory) {
+        Market storage market = markets[address(asset)];
+        return
+            Exp({
+                mantissa: weighting == WeightFunction.USE_COLLATERAL_FACTOR
+                    ? market.collateralFactorMantissa
+                    : market.liquidationThresholdMantissa
+            });
     }
 
     /**

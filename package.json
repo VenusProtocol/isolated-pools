@@ -80,7 +80,7 @@
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "@venusprotocol/governance-contracts": "2.13.0",
-    "@venusprotocol/oracle": "2.14.0",
+    "@venusprotocol/oracle": "2.15.0",
     "@venusprotocol/protocol-reserve": "3.4.0",
     "@venusprotocol/venus-protocol": "10.0.0",
     "bignumber.js": "9.0.0",
