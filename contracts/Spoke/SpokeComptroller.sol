@@ -26,35 +26,43 @@ enum WeightFunction {
 /**
  * @title SpokeComptroller
  * @author Venus
- * @notice The `SpokeComptroller` is designed to provide checks for all minting, redeeming, transferring, borrowing, lending, repaying, liquidating,
- * and seizing done by the `vToken` contract. Each pool has one `SpokeComptroller` checking these interactions across markets. When a user interacts
- * with a given market by one of these main actions, a call is made to a corresponding hook in the associated `SpokeComptroller`, which either allows
- * or reverts the transaction. These hooks also update supply and borrow rewards as they are called. The comptroller holds the logic for assessing
- * liquidity snapshots of an account via the collateral factor and liquidation threshold. This check determines the collateral needed for a borrow,
- * as well as how much of a borrow may be liquidated. A user may borrow a portion of their collateral with the maximum amount determined by the
- * markets collateral factor. However, if their borrowed amount exceeds an amount calculated using the market’s corresponding liquidation threshold,
- * the borrow is eligible for liquidation.
+ * @notice The `SpokeComptroller` provides checks for all minting, redeeming, transferring, borrowing, repaying,
+ * liquidating and seizing done by the `vToken` contract. It is the comptroller of a single pool and checks those
+ * interactions across every market in it: when a user interacts with a market by one of these actions, the market
+ * calls a corresponding hook here, which either allows or reverts the transaction. These hooks also update supply and
+ * borrow rewards as they are called. The comptroller holds the logic for assessing liquidity snapshots of an account
+ * via the collateral factor and liquidation threshold. This check determines the collateral needed for a borrow, as
+ * well as how much of a borrow may be liquidated. A user may borrow a portion of their collateral with the maximum
+ * amount determined by the market's collateral factor, applied to a collateral value the deviation-bounded oracle
+ * caps against the asset's recent price window. However, if their borrowed amount exceeds an amount calculated using
+ * the market's corresponding liquidation threshold, the borrow is eligible for liquidation. Liquidations themselves
+ * are priced at spot.
  *
- * The `SpokeComptroller` also includes two functions `liquidateAccount()` and `healAccount()`, which are meant to handle accounts that do not exceed
- * the `minLiquidatableCollateral` for the `SpokeComptroller`:
+ * The `SpokeComptroller` also includes two functions `liquidateAccount()` and `healAccount()`, which are meant to
+ * handle accounts that do not exceed the `minLiquidatableCollateral` for the `SpokeComptroller`:
  *
- * - `healAccount()`: This function is called to seize all of a given user’s collateral, requiring the `msg.sender` repay a certain percentage
- * of the debt calculated by `maxClearableDebt/borrows`, where `maxClearableDebt` is the sum over the user's collateral markets of
- * `collateralValue/liquidationIncentive`, each market taken at its own incentive. The function can only be called if the calculated percentage does
- * not exceed 100%, because otherwise no `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual
- * amount of debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk reserves of the pool.
- * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an account, as well as the liquidation
- * incentive of each collateral market, which is the same condition stated as `borrows < maxClearableDebt`. Otherwise, the pool will incur bad debt,
- * in which case the function `healAccount()` should be used instead. This function skips the logic verifying that the repay amount does not exceed
- * the close factor.
+ * - `healAccount()`: This function is called to seize all of a given user's collateral, requiring the `msg.sender`
+ * repay a certain percentage of the debt calculated by `maxClearableDebt/borrows`, where `maxClearableDebt` is the
+ * sum over the user's collateral markets of `collateralValue/liquidationIncentive`, each market taken at its own
+ * incentive. The function can only be called if the calculated percentage does not exceed 100%, because otherwise no
+ * `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of
+ * debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk
+ * reserves of the pool.
+ * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an
+ * account, as well as the liquidation incentive of each collateral market, which is the same condition stated as
+ * `borrows < maxClearableDebt`. Otherwise, the pool will incur bad debt, in which case the function `healAccount()`
+ * should be used instead. This function skips the logic verifying that the repay amount does not exceed the close
+ * factor.
  *
- * The two conditions are complements, so every account below `minLiquidatableCollateral` is served by exactly one of them.
+ * The two conditions are complements, so every account below `minLiquidatableCollateral` is served by exactly one of
+ * them.
  *
  * @dev Fork of `Comptroller` (`contracts/Comptroller.sol`). It is a separate implementation because `Comptroller` is
  * the one every other pool in this repo shares, here and on other chains, so policy that applies only to a spoke pool
- * does not belong in it. The two files are meant to stay in sync: `yarn spoke:upstream` pins the hashes of the upstream
- * sources this fork was derived from and fails when they change, so a change to `Comptroller` is surfaced for review
- * and re-application here. `yarn spoke:upstream --diff` prints the current difference.
+ * does not belong in it: bounded collateral pricing, the supply and liquidation allowlists, and per-market liquidation
+ * incentives. Nothing keeps the two in sync automatically: a change to `Comptroller` has to be reviewed and
+ * re-applied here by hand, and `diff contracts/Comptroller.sol contracts/Spoke/SpokeComptroller.sol` shows what this
+ * fork currently changes.
  */
 contract SpokeComptroller is
     Ownable2StepUpgradeable,
@@ -535,7 +543,10 @@ contract SpokeComptroller is
      * @custom:error ActionPaused error is thrown if seizing this type of collateral is paused
      * @custom:error MarketNotListed error is thrown if either collateral or borrowed token is not listed
      * @custom:error ComptrollerMismatch error is when seizer contract or seized asset belong to different pools
-     * @custom:access Not restricted
+     * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the liquidator is not
+     *   on it
+     * @custom:access Not restricted while the liquidation allowlist is disabled, otherwise the liquidator has to be
+     *   on it
      */
     function preSeizeHook(
         address vTokenCollateral,
@@ -659,8 +670,8 @@ contract SpokeComptroller is
     /**
      * @notice Seizes all the remaining collateral, makes msg.sender repay the existing
      *   borrows, and treats the rest of the debt as bad debt (for each market).
-     *   The sender has to repay a certain percentage of the debt, computed as
-     *   collateral / (borrows * liquidationIncentive).
+     *   The sender has to repay a certain percentage of the debt, computed as `maxClearableDebt / borrows`: see the
+     *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
@@ -707,9 +718,9 @@ contract SpokeComptroller is
             revert CollateralExceedsThreshold(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
-        // percentage = maxClearableDebt / borrows. Repaying that share of every borrow is what seizing each
-        // collateral market at its own liquidation incentive amounts to, so the discount the caller receives on a
-        // given piece of collateral matches that market's configured value.
+        // percentage = maxClearableDebt / borrows. One blended share applies to every borrow, so what the caller
+        // pays in total is the sum over the collateral markets of each market's value at its own liquidation
+        // incentive. The discount is exact in aggregate; it is not attributed per piece of collateral.
         Exp memory percentage = div_(Exp({ mantissa: snapshot.maxClearableDebt }), Exp({ mantissa: snapshot.borrows }));
 
         for (uint256 i; i < userAssetsCount; ++i) {
@@ -891,8 +902,11 @@ contract SpokeComptroller is
      * @notice Sets the liquidation incentive applied to any market that has no incentive of its own
      * @dev This function is restricted by the AccessControlManager
      * @dev `PoolRegistry.addPool` calls this while registering the pool, so the value is always at least 1e18 by the
-     * time any market can be listed. Keep it at or above the highest per-market incentive, so that the value the
-     * shared `PoolLens` reports for this pool is not misleadingly low.
+     * time any market can be listed. Keep it at or above the highest per-market incentive: `VToken._seize` divides
+     * the protocol seize share by this value, not by the market's own, so a lower value here makes the protocol take
+     * more than `protocolSeizeShareMantissa` of the repaid value and pays the liquidator less than the market's
+     * configured discount. Equal values remove the skew. It also keeps the figure the shared `PoolLens` reports for
+     * this pool from reading low.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18

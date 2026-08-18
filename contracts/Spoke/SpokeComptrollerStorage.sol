@@ -13,8 +13,8 @@ import { Action } from "../ComptrollerInterface.sol";
  * @author Venus
  * @notice Storage layout for the `SpokeComptroller` contract.
  * @dev Fork of `ComptrollerStorage` (`contracts/ComptrollerStorage.sol`), kept separate so the spoke layout and the
- * `AccountLiquiditySnapshot` struct can change without touching the shared implementation. See the note on
- * `SpokeComptroller` for how the two are kept in sync.
+ * `AccountLiquiditySnapshot` struct can change without touching the shared implementation. Re-synced by hand when
+ * `ComptrollerStorage` changes, like the implementation it accompanies.
  */
 contract SpokeComptrollerStorage {
     struct LiquidationOrder {
