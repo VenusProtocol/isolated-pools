@@ -72,9 +72,13 @@ contract SpokeComptrollerStorage {
     uint256 public closeFactorMantissa;
 
     /**
-     * @notice Multiplier representing the discount on collateral that a liquidator receives
+     * @notice Multiplier representing the discount on collateral that a liquidator receives, applied to every market
+     * that has no discount of its own
+     * @dev Internal rather than public, because the `liquidationIncentiveMantissa()` getter has to resolve the
+     * caller's market before answering: `VToken` reads that getter on itself and needs the discount that prices its
+     * own collateral, not the pool-wide default. See `SpokeComptroller.liquidationIncentiveMantissa`.
      */
-    uint256 public liquidationIncentiveMantissa;
+    uint256 internal _poolLiquidationIncentiveMantissa;
 
     /**
      * @notice Per-account mapping of "assets you are in"
@@ -145,7 +149,7 @@ contract SpokeComptrollerStorage {
 
     /// @notice Per-market discount a liquidator receives on the collateral it seizes, scaled by 1e18. Keyed by the
     /// collateral market, since that is what the discount prices.
-    /// @dev Zero means no market value has been set, in which case `liquidationIncentiveMantissa` applies. That
+    /// @dev Zero means no market value has been set, in which case `_poolLiquidationIncentiveMantissa` applies. That
     /// pool-wide value is always at least 1e18 for a listed market: `PoolRegistry.addMarket` refuses to add one to an
     /// unregistered pool, and registering a pool goes through `setLiquidationIncentive`, which enforces the floor.
     mapping(address => uint256) public liquidationIncentives;

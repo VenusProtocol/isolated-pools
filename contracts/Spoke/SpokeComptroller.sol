@@ -902,11 +902,13 @@ contract SpokeComptroller is
      * @notice Sets the liquidation incentive applied to any market that has no incentive of its own
      * @dev This function is restricted by the AccessControlManager
      * @dev `PoolRegistry.addPool` calls this while registering the pool, so the value is always at least 1e18 by the
-     * time any market can be listed. Keep it at or above the highest per-market incentive: `VToken._seize` divides
-     * the protocol seize share by this value, not by the market's own, so a lower value here makes the protocol take
-     * more than `protocolSeizeShareMantissa` of the repaid value and pays the liquidator less than the market's
-     * configured discount. Equal values remove the skew. It also keeps the figure the shared `PoolLens` reports for
-     * this pool from reading low.
+     * time any market can be listed.
+     *
+     * This value has to stay at or above `1e18 + protocolSeizeShareMantissa` of every market that has no incentive of
+     * its own, or a liquidator of that market's collateral receives less than the debt it repaid. Nothing enforces
+     * that here, because the markets it applies to are only known market by market: `setMarketLiquidationIncentive`
+     * enforces the bound for the market it sets, and `VToken.setProtocolSeizeShare` enforces it from the other side,
+     * but neither sees a later change to this value.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18
@@ -922,10 +924,10 @@ contract SpokeComptroller is
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
         // Save current value for use in log
-        uint256 oldLiquidationIncentiveMantissa = liquidationIncentiveMantissa;
+        uint256 oldLiquidationIncentiveMantissa = _poolLiquidationIncentiveMantissa;
 
         // Set liquidation incentive to new incentive
-        liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
+        _poolLiquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
 
         // Emit event with old incentive, new incentive
         emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
@@ -1158,25 +1160,34 @@ contract SpokeComptroller is
      * toward one collateral over another, and it feeds the routing between `liquidateAccount` and `healAccount`
      * through `AccountLiquiditySnapshot.maxClearableDebt`.
      *
-     * There is no way back to "unset" once a value is stored: `0` is the sentinel that means the pool-wide
-     * `liquidationIncentiveMantissa` applies, and it is rejected here so that a mistaken zero cannot silently move a
-     * market back onto the pool-wide value. Pass that value explicitly to get the same effect.
+     * There is no way back to "unset" once a value is stored: `0` is the sentinel that means the pool-wide discount
+     * applies, and it is rejected here so that a mistaken zero cannot silently move a market back onto the pool-wide
+     * value. Pass that value explicitly to get the same effect.
      * @param vToken The collateral market to set the incentive for
-     * @param newLiquidationIncentiveMantissa New incentive for this market, scaled by 1e18, at least 1e18
+     * @param newLiquidationIncentiveMantissa New incentive for this market, scaled by 1e18, at least
+     *   1e18 + the market's `protocolSeizeShareMantissa`
      * @custom:event Emits NewMarketLiquidationIncentive on success
      * @custom:error MarketNotListed is thrown if the market is not listed
-     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18
+     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive would leave the liquidator with less
+     *   collateral than the debt it repaid
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketLiquidationIncentive(address vToken, uint256 newLiquidationIncentiveMantissa) external {
         _checkAccessAllowed("setMarketLiquidationIncentive(address,uint256)");
 
-        if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
-            revert InvalidLiquidationIncentive();
-        }
-
+        // Checked before reading from `vToken` below, so this never calls out to an arbitrary address
         if (!markets[vToken].isListed) {
             revert MarketNotListed(vToken);
+        }
+
+        // The incentive is a multiplier on the debt repaid, and `VToken._seize` hands the protocol
+        // `protocolSeizeShareMantissa` of that debt out of the seized collateral, so an incentive below
+        // `1e18 + protocolSeizeShareMantissa` pays the liquidator less collateral than it repaid and no one liquidates
+        // this collateral. The 1e18 floor falls out of the same bound, since the seize share is never negative.
+        // `VToken.setProtocolSeizeShare` holds the bound from the other side: it reads the incentive back through
+        // `liquidationIncentiveMantissa()`, which answers for the calling market.
+        if (newLiquidationIncentiveMantissa < MANTISSA_ONE + VToken(vToken).protocolSeizeShareMantissa()) {
+            revert InvalidLiquidationIncentive();
         }
 
         uint256 oldLiquidationIncentiveMantissa = liquidationIncentives[vToken];
@@ -1345,6 +1356,31 @@ contract SpokeComptroller is
      */
     function isMarketListed(VToken vToken) external view returns (bool) {
         return markets[address(vToken)].isListed;
+    }
+
+    /**
+     * @notice Returns the discount a liquidator receives on the collateral it seizes from the calling market
+     * @dev Answers for `msg.sender` instead of taking the market as an argument, because this is the getter
+     * `ComptrollerViewInterface` declares and `VToken` calls on itself: `_seize` divides the protocol seize share by
+     * it, and `setProtocolSeizeShare` bounds that share against it. Both have to see the discount that prices the
+     * calling market's own collateral, or the protocol takes more than its configured share of the repaid debt and the
+     * liquidator is paid less than the market's configured discount.
+     *
+     * Any caller that is not a market of this pool, a lens or a liquidation bot, reads the pool-wide discount. Ask
+     * about a specific market through `effectiveLiquidationIncentive`.
+     * @return The discount that applies to the caller, scaled by 1e18
+     */
+    function liquidationIncentiveMantissa() external view returns (uint256) {
+        return _liquidationIncentive(msg.sender);
+    }
+
+    /**
+     * @notice Returns the discount a liquidator receives on the collateral it seizes from a market
+     * @param vToken The collateral market to read the discount of
+     * @return The market's own discount if it has one, otherwise the pool-wide discount, scaled by 1e18
+     */
+    function effectiveLiquidationIncentive(address vToken) external view returns (uint256) {
+        return _liquidationIncentive(vToken);
     }
 
     /*** Assets You Are In ***/
@@ -1802,11 +1838,13 @@ contract SpokeComptroller is
      * @dev Returns the liquidation incentive that applies when a market's collateral is seized
      * @param vTokenCollateral Market whose collateral would be seized
      * @return The market's own incentive, or the pool-wide one if the market has none. Never zero for a listed
-     *   market, so callers may divide by it: see the note on `liquidationIncentives`.
+     *   market, so callers may divide by it: see the note on `liquidationIncentives`. An unlisted market still reads
+     *   back whatever incentive it was last given, which no seizure can reach, since every path that divides by this
+     *   is gated on the market being listed.
      */
     function _liquidationIncentive(address vTokenCollateral) internal view returns (uint256) {
         uint256 incentive = liquidationIncentives[vTokenCollateral];
-        return incentive != 0 ? incentive : liquidationIncentiveMantissa;
+        return incentive != 0 ? incentive : _poolLiquidationIncentiveMantissa;
     }
 
     /**
