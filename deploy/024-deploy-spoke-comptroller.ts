@@ -12,6 +12,13 @@ const POOL_ID = "HubSpoke";
 
 const MAX_LOOPS_LIMIT = 100;
 
+// Addresses reach this script in three casings: the `@venusprotocol/*-deployments` packages record some of them
+// all-lowercase, hardhat-deploy records its own checksummed, and everything read back from the chain is checksummed by
+// ethers. Comparing them as strings therefore rejects addresses that are equal. On bscmainnet the governance package
+// records the access control manager lowercase, so the check below refused the very address the proxy had just been
+// initialized with, and the run stopped before either ownership handover. Compare parsed addresses, never the strings.
+const sameAddress = (a: string, b: string): boolean => ethers.utils.getAddress(a) === ethers.utils.getAddress(b);
+
 // Verification is best effort: it reaches an external explorer API, so a failure here must not abort a deployment that
 // already succeeded on chain. Re-run the script to retry.
 const verify = async (
@@ -46,7 +53,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager || "AccessControlManager");
   const ownerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer");
-  if (ownerAddress === deployer) {
+  if (sameAddress(ownerAddress, deployer)) {
     console.log(`WARNING: no NormalTimelock configured, the spoke pool will be left owned by the deployer ${deployer}`);
   }
 
@@ -111,7 +118,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Checked on its own, because it is the one mismatch with a recovery procedure rather than a redeployment: a fresh
   // implementation from the step above leaves the beacon behind until something points it forward.
   const beaconImplementation = await beacon.implementation();
-  if (beaconImplementation !== spokeComptrollerImpl.address) {
+  if (!sameAddress(beaconImplementation, spokeComptrollerImpl.address)) {
     throw new Error(
       `Beacon ${spokeComptrollerBeacon.address} still points at ${beaconImplementation}, while this run produced ` +
         `implementation ${spokeComptrollerImpl.address}. Point the beacon forward with upgradeTo, through a VIP if ` +
@@ -120,20 +127,27 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
   console.log(`Verified beacon implementation: ${beaconImplementation}`);
 
-  const checks: [string, string, string][] = [
+  const addressChecks: [string, string, string][] = [
     ["comptroller pool registry", await comptroller.poolRegistry(), poolRegistry.address],
     ["comptroller access control manager", await comptroller.accessControlManager(), accessControlManager],
-    ["comptroller max loops limit", (await comptroller.maxLoopsLimit()).toString(), MAX_LOOPS_LIMIT.toString()],
   ];
-  for (const [label, actual, expected] of checks) {
-    if (actual !== expected) {
+  for (const [label, actual, expected] of addressChecks) {
+    if (!sameAddress(actual, expected)) {
       throw new Error(`Refusing to transfer ownership: ${label} is ${actual}, expected ${expected}`);
     }
     console.log(`Verified ${label}: ${actual}`);
   }
 
+  const maxLoopsLimit = (await comptroller.maxLoopsLimit()).toString();
+  if (maxLoopsLimit !== MAX_LOOPS_LIMIT.toString()) {
+    throw new Error(
+      `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${MAX_LOOPS_LIMIT}`,
+    );
+  }
+  console.log(`Verified comptroller max loops limit: ${maxLoopsLimit}`);
+
   // `UpgradeableBeacon` is plain `Ownable`, so this hands over within this transaction.
-  if ((await beacon.owner()) === ownerAddress) {
+  if (sameAddress(await beacon.owner(), ownerAddress)) {
     console.log(`SpokeComptrollerBeacon is already owned by ${ownerAddress}`);
   } else {
     await (await beacon.transferOwnership(ownerAddress)).wait(1);
@@ -142,9 +156,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // The comptroller is `Ownable2Step`, so this only nominates. The deployer stays the live owner until the listing VIP
   // calls `acceptOwnership`, which is why that call has to come first in the VIP, before any owner-gated setter.
-  if ((await comptroller.owner()) === ownerAddress) {
+  if (sameAddress(await comptroller.owner(), ownerAddress)) {
     console.log(`Comptroller_${POOL_ID} is already owned by ${ownerAddress}`);
-  } else if ((await comptroller.pendingOwner()) === ownerAddress) {
+  } else if (sameAddress(await comptroller.pendingOwner(), ownerAddress)) {
     console.log(`Comptroller_${POOL_ID} already nominated ${ownerAddress}, awaiting acceptOwnership in the VIP`);
   } else {
     await (await comptroller.transferOwnership(ownerAddress)).wait(1);

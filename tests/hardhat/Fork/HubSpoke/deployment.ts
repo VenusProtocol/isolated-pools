@@ -38,19 +38,12 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     };
 
     it("runs to completion", () => {
-      // KNOWN FAILURE - reports a real defect in the deploy script, not a test artifact.
-      //
-      // The script compares addresses as strings. `toAddress` returns whatever
-      // `preconfiguredAddresses` holds, and `@venusprotocol/governance-contracts` records the
-      // bscmainnet AccessControlManager in lower case, while the on-chain read returns it
-      // checksummed. The equality in the pre-handover checks therefore fails on a value that is
-      // correct, and the script throws BEFORE either ownership transfer.
-      //
-      // The consequences are the two assertions below: the beacon stays owned by the deployer and
-      // the comptroller never nominates the Timelock, so a listing VIP that opens with
-      // `acceptOwnership` reverts. The same defect is latent in the `owner()` / `pendingOwner()`
-      // comparisons further down the script; those pass today only because this package happens to
-      // record the NormalTimelock checksummed, which is per-network data rather than a guarantee.
+      // Regression guard for a defect this suite found. The script used to compare addresses as
+      // strings, and `toAddress` returns whatever `preconfiguredAddresses` holds:
+      // `@venusprotocol/governance-contracts` records the bscmainnet AccessControlManager in lower
+      // case while the on-chain read returns it checksummed, so a pre-handover check rejected a
+      // correct value and the script threw before either ownership transfer. Only a fork run
+      // catches it, because the casing comes from the network's own deployments package.
       expect(scriptError?.message).to.equal(undefined);
     });
 
@@ -89,16 +82,15 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     });
 
     it("hands the beacon to the Normal Timelock inside the deployment transaction", async () => {
-      // KNOWN FAILURE - a consequence of the string comparison above. `UpgradeableBeacon` is plain
-      // `Ownable`, so this handover completes inside the run when it is reached at all.
+      // `UpgradeableBeacon` is plain `Ownable`, so this handover completes inside the run itself,
+      // unlike the comptroller's below.
       const beacon = await ethers.getContractAt("UpgradeableBeacon", await deployed("SpokeComptrollerBeacon"));
       expect(await beacon.owner()).to.equal(bscmainnet.NORMAL_TIMELOCK);
     });
 
     it("nominates the Normal Timelock on the comptroller and leaves the deployer as owner", async () => {
-      // KNOWN FAILURE - same cause. `Ownable2Step` means the script can only nominate; the deployer
-      // stays the live owner until the VIP calls `acceptOwnership`, which is why that call has to be
-      // the VIP's first action. Today the script throws before it nominates at all.
+      // `Ownable2Step` means the script can only nominate; the deployer stays the live owner until
+      // the VIP calls `acceptOwnership`, which is why that call has to be the VIP's first action.
       const spoke = await ethers.getContractAt("SpokeComptroller", await deployed("Comptroller_HubSpoke"));
       expect(await spoke.owner()).to.equal(deployer);
       expect(await spoke.pendingOwner()).to.equal(bscmainnet.NORMAL_TIMELOCK);
