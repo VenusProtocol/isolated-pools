@@ -305,6 +305,13 @@ const config: HardhatUserConfig = {
           hardforkHistory: {
             berlin: 0,
             london: 13000000,
+            // BSC activates its hardforks on a timestamp, which `hardforkHistory` cannot express, so these are the
+            // first blocks at or after each activation time in `bnb-chain/bsc` `params/config.go`: ShanghaiTime
+            // 1705996800 and CancunTime 1718863500. Without them a fork of a recent block runs the London EVM and
+            // every live contract compiled for a later target - the ResilientOracle and the DeviationBoundedOracle
+            // among them - reverts with "invalid opcode" on PUSH0 or TSTORE.
+            shanghai: 35490444,
+            cancun: 39769787,
           },
         },
         8453: {
