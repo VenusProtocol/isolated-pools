@@ -13,6 +13,12 @@ import { VToken } from "../VToken.sol";
  * @notice Interface implemented by the `SpokeComptroller` contract. It declares the events and errors that make up the
  * contract's observable surface, so integrators and off-chain consumers can decode them without depending on the
  * implementation.
+ * @dev The getters this fork adds are declared separately, in `SpokeComptrollerViewInterface` below. They cannot live
+ * here: `SpokeComptroller` implements this interface, and it serves those getters from public variables declared in
+ * `SpokeComptrollerStorage`, which is a sibling base rather than a derived one. Solidity will not let a public
+ * variable in one base satisfy a function declared in another, so declaring them here would force
+ * `SpokeComptrollerStorage` to inherit this interface and mark six variables `override` - noise in the file that has
+ * to be diffed by hand against `ComptrollerStorage`, for no gain over a standalone view interface.
  */
 interface SpokeComptrollerInterface is ComptrollerInterface {
     /// @notice Emitted when an account enters a market
@@ -164,15 +170,22 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
     error MinimalCollateralViolated(uint256 expectedGreaterThan, uint256 actual);
 
     /**
-     * @notice Thrown by `healAccount` when a value that had to stay at or below a threshold exceeded it, either the
-     *   account's total collateral against `minLiquidatableCollateral`, or `maxClearableDebt` against the account's
-     *   total borrows. In the second case the collateral covers the whole debt, so `liquidateAccount` has to be used.
+     * @notice Thrown by the batch operations when the account's total collateral is above
+     *   `minLiquidatableCollateral`, which means it is large enough for a regular `VToken.liquidateBorrow`
+     * @dev Same name, arguments and meaning as the shared `Comptroller`, so a decoder written against either one
+     *   reads this correctly.
      */
     error CollateralExceedsThreshold(uint256 expectedLessThanOrEqualTo, uint256 actual);
 
-    /// @notice Thrown when an account's debt is too large for its collateral to clear, so `healAccount` has to be
-    ///   used instead of `liquidateAccount`. Reports the debt and the largest debt the collateral could have cleared.
-    error InsufficientCollateral(uint256 borrows, uint256 maxClearableDebt);
+    /// @notice Thrown by `healAccount` when the collateral can clear the whole debt at each market's own liquidation
+    ///   incentive, so healing would forgive nothing and `liquidateAccount` has to be used instead
+    error CollateralCoversDebt(uint256 borrows, uint256 maxClearableDebt);
+
+    /// @notice Thrown by `liquidateAccount` when the debt is too large for the collateral to clear, so `healAccount`
+    ///   has to be used instead. Reports the debt and the largest debt the collateral could have cleared.
+    /// @dev Deliberately not the shared `Comptroller`'s `InsufficientCollateral`: both arguments here are debt values
+    ///   rather than collateral values, and reusing that name would leave the two versions sharing one selector.
+    error DebtExceedsClearableAmount(uint256 borrows, uint256 maxClearableDebt);
 
     /// @notice Thrown when the account doesn't have enough liquidity to redeem or borrow
     error InsufficientLiquidity();
@@ -219,4 +232,105 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
 
     /// @notice Thrown when adding a rewards distributor that this pool already has
     error RewardsDistributorAlreadyExists();
+}
+
+/**
+ * @title SpokeComptrollerViewInterface
+ * @author Venus
+ * @notice The getters `SpokeComptroller` adds on top of the pooled `Comptroller`, for integrators that read this pool
+ * rather than implement it - the Liquidity Hub's spoke adapter, lenses, keepers and VIP tooling.
+ * @dev Standalone and not implemented by `SpokeComptroller`, matching how `ComptrollerViewInterface` exposes the
+ * shared pool's getters.
+ *
+ * Scope is the supply side: what an integrator that funds this pool has to read before and while it supplies, plus
+ * the two allowlists and the per-market discount that only exist on this fork. `supplyCaps` and `actionPaused` are
+ * repeated from `ComptrollerViewInterface` and `ComptrollerInterface` rather than inherited, so that a consumer of a
+ * spoke pool needs one import and not three. `actionPaused` also has to be repeated on its own terms: the shared
+ * declaration types its second argument as the `Action` enum, and a consumer that does not want this repo's enum in
+ * its build needs the ABI-equivalent `uint8` form. The two share a selector, so they cannot both be declared in one
+ * inheritance chain - which is the reason this interface inherits nothing.
+ *
+ * Anything else the fork shares with the pooled `Comptroller` - `borrowCaps`, `markets`, `oracle`,
+ * `closeFactorMantissa`, `minLiquidatableCollateral` - is read through `ComptrollerViewInterface` as usual.
+ */
+interface SpokeComptrollerViewInterface {
+    /**
+     * @notice The most underlying a market will hold before it stops accepting supply
+     * @dev `type(uint256).max` disables the check. Zero is a real cap of zero rather than an "unset" sentinel:
+     *   `preMintHook` compares `nextTotalSupply > supplyCap`, so a market left at zero rejects every mint.
+     * @param vToken The market to query
+     * @return cap The market's supply cap, in underlying units
+     */
+    function supplyCaps(address vToken) external view returns (uint256 cap);
+
+    /**
+     * @notice Whether a market accepts supply only from the accounts on its supply allowlist
+     * @dev Enforced in `preMintHook` alone. Redeeming is never restricted, and a market that has never had this
+     *   enabled accepts supply from anyone.
+     * @param vToken The market to read the setting of
+     * @return enabled True if the market's supply allowlist is armed
+     */
+    function isSupplyAllowlistEnabled(address vToken) external view returns (bool enabled);
+
+    /**
+     * @notice Whether an account may supply to a market while that market's supply allowlist is enabled
+     * @dev The account this meters is the one CREDITED with the newly minted vTokens, not the one paying for them:
+     *   `mintBehalf` lets a third party fund a mint attributed to someone else, and metering the recipient is what
+     *   bounds the market's supply.
+     * @param vToken The market whose allowlist to read
+     * @param supplier The account to test
+     * @return allowed True if `supplier` may be credited with this market's vTokens
+     */
+    function isAllowedSupplier(address vToken, address supplier) external view returns (bool allowed);
+
+    /**
+     * @notice Whether seizing collateral in this pool is restricted to the accounts on the liquidation allowlist
+     * @dev Pool-wide rather than per market, because `healAccount` seizes across every market the borrower is in and
+     *   so cannot attribute a seizure to a single one of them.
+     * @return enabled True if the pool's liquidation allowlist is armed
+     */
+    function isLiquidationAllowlistEnabled() external view returns (bool enabled);
+
+    /**
+     * @notice Whether an account may seize collateral in this pool while the liquidation allowlist is enabled
+     * @param liquidator The account to test
+     * @return allowed True if `liquidator` may seize collateral in this pool
+     */
+    function isAllowedLiquidator(address liquidator) external view returns (bool allowed);
+
+    /**
+     * @notice The discount a market has of its own, or zero when it takes the pool-wide one
+     * @dev Zero is the "unset" sentinel rather than a real discount. Read `effectiveLiquidationIncentive` to get the
+     *   value that actually applies to a market.
+     * @param vToken The collateral market to read the discount of
+     * @return incentiveMantissa The market's own discount scaled by 1e18, or zero if it has none
+     */
+    function liquidationIncentives(address vToken) external view returns (uint256 incentiveMantissa);
+
+    /**
+     * @notice The discount that applies to a market: its own if it has one, otherwise the pool-wide value
+     * @param vToken The collateral market to read the discount of
+     * @return incentiveMantissa The discount that prices this market's collateral, scaled by 1e18
+     */
+    function effectiveLiquidationIncentive(address vToken) external view returns (uint256 incentiveMantissa);
+
+    /**
+     * @notice The oracle that bounds an asset's price against a recent window
+     * @dev Read only where the collateral factor weights a position. The liquidation-threshold paths stay on the
+     *   `oracle`, because they route liquidations. Zero until governance sets it, and while it is zero borrowing and
+     *   redeeming fail closed.
+     * @return boundedOracle The deviation-bounded oracle this pool prices borrowing capacity through
+     */
+    function deviationBoundedOracle() external view returns (IDeviationBoundedOracle boundedOracle);
+
+    /**
+     * @notice Whether an action is paused on a market
+     * @dev Typed as `uint8` rather than `Action` so that a consumer can read this without importing the enum. The
+     *   encoding is identical; the deployed ordering is
+     *   `{ MINT, REDEEM, BORROW, REPAY, SEIZE, LIQUIDATE, TRANSFER, ENTER_MARKET, EXIT_MARKET }`.
+     * @param market The market to query
+     * @param action The action, as its position in `Action`
+     * @return paused True if the action is paused on this market
+     */
+    function actionPaused(address market, uint8 action) external view returns (bool paused);
 }

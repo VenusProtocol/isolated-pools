@@ -85,7 +85,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
 
       // 110 / 1.1 + 120 / 1.2 = 200, surfaced through the revert rather than read directly.
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
-        .to.be.revertedWithCustomError(comptroller, "InsufficientCollateral")
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(parseUnits("250", 18), MAX_CLEARABLE_DEBT);
     });
 
@@ -98,7 +98,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
         .div(POOL_WIDE_INCENTIVE)
         .add(COLLATERAL_B.mul(ONE).div(POOL_WIDE_INCENTIVE));
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
-        .to.be.revertedWithCustomError(comptroller, "InsufficientCollateral")
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(parseUnits("250", 18), expected);
     });
 
@@ -119,7 +119,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       expect(ONE.add(ONE).mul(ONE).div(incentive)).to.equal(perMarketTruncation.add(1));
 
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
-        .to.be.revertedWithCustomError(comptroller, "InsufficientCollateral")
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(parseUnits("2", 18), perMarketTruncation);
     });
   });
@@ -129,7 +129,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       await givePositionWithDebt(parseUnits("150", 18));
 
       await expect(comptroller.connect(liquidator).healAccount(borrower.address))
-        .to.be.revertedWithCustomError(comptroller, "CollateralExceedsThreshold")
+        .to.be.revertedWithCustomError(comptroller, "CollateralCoversDebt")
         .withArgs(parseUnits("150", 18), MAX_CLEARABLE_DEBT);
       // Past the collateral gate; it now fails on the closing check, which fake markets cannot satisfy.
       await expect(
@@ -142,7 +142,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
 
       await expect(
         comptroller.connect(liquidator).liquidateAccount(borrower.address, []),
-      ).to.be.revertedWithCustomError(comptroller, "InsufficientCollateral");
+      ).to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount");
       await comptroller.connect(liquidator).healAccount(borrower.address);
     });
 
@@ -150,7 +150,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       await givePositionWithDebt(MAX_CLEARABLE_DEBT);
 
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
-        .to.be.revertedWithCustomError(comptroller, "InsufficientCollateral")
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(MAX_CLEARABLE_DEBT, MAX_CLEARABLE_DEBT);
 
       // percentage is exactly 1, so healing repays the whole debt and forgives nothing.
@@ -437,7 +437,7 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       // A keeps its own 1.1 while B now divides by the new pool-wide 1.5.
       const expected = COLLATERAL_A.mul(ONE).div(MARKET_A_INCENTIVE).add(COLLATERAL_B.mul(ONE).div(updated));
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
-        .to.be.revertedWithCustomError(comptroller, "InsufficientCollateral")
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(parseUnits("250", 18), expected);
     });
   });

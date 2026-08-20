@@ -394,9 +394,11 @@ contract SpokeComptroller is
             _addToMarket(VToken(msg.sender), borrower);
         }
 
-        // Update the prices of tokens
-        updatePrices(borrower);
-        _updateProtectionStates(borrower);
+        // Update the prices of tokens. Resolved once here, after the membership change above, and reused for both
+        // updates.
+        VToken[] memory borrowerAssets = getAssetsIn(borrower);
+        _updatePrices(borrowerAssets);
+        _updateProtectionStates(borrowerAssets);
 
         if (oracle.getUnderlyingPrice(vToken) == 0) {
             revert PriceError(address(vToken));
@@ -675,6 +677,8 @@ contract SpokeComptroller is
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
+     * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
+     *   to heal
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
      * @custom:access Not restricted while the liquidation allowlist is disabled, otherwise restricted to the accounts
@@ -715,7 +719,7 @@ contract SpokeComptroller is
         // The collateral covers the whole debt at every market's own incentive, so healing would forgive nothing and
         // the account should go through `liquidateAccount` instead.
         if (snapshot.maxClearableDebt > snapshot.borrows) {
-            revert CollateralExceedsThreshold(snapshot.borrows, snapshot.maxClearableDebt);
+            revert CollateralCoversDebt(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
         // percentage = maxClearableDebt / borrows. One blended share applies to every borrow, so what the caller
@@ -749,7 +753,8 @@ contract SpokeComptroller is
      * @param orders an array of liquidation orders
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for a batch liquidation
-     * @custom:error InsufficientCollateral error is thrown when there is not enough collateral to cover the debt
+     * @custom:error DebtExceedsClearableAmount is thrown when the collateral cannot clear the whole debt, which
+     *   means the account has to go through `healAccount`
      * @custom:error NonzeroBorrowBalanceAfterLiquidation is thrown if the orders do not clear every borrow
      * @custom:error SnapshotError is thrown if some vToken fails to return the account's supply and borrows
      * @custom:error PriceError is thrown if the oracle returns an incorrect price for some asset
@@ -761,7 +766,11 @@ contract SpokeComptroller is
         // entry keeps the two batch operations symmetric and fails before any interest is accrued or debt repaid.
         _checkLiquidationAllowed(msg.sender);
 
-        // We will accrue interest and update the oracle prices later during the liquidation
+        // We will accrue interest and update the oracle prices later during the liquidation. `healAccount` does the
+        // opposite and refreshes both before its snapshot, so the two entry points do not route on the same view of
+        // the position: the snapshot below decides both the `minLiquidatableCollateral` gate and, through
+        // `maxClearableDebt`, whether this account belongs in `healAccount` instead, and it decides them on stored
+        // exchange rates and whatever price the oracle last recorded.
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
             borrower,
@@ -776,7 +785,7 @@ contract SpokeComptroller is
         if (snapshot.borrows >= snapshot.maxClearableDebt) {
             // There is not enough collateral to seize. Use healAccount to repay some part of the borrow
             // and record bad debt.
-            revert InsufficientCollateral(snapshot.borrows, snapshot.maxClearableDebt);
+            revert DebtExceedsClearableAmount(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
         if (snapshot.shortfall == 0) {
@@ -1111,10 +1120,12 @@ contract SpokeComptroller is
 
     /**
      * @notice Sets a new deviation-bounded oracle for the Comptroller
-     * @dev Only callable by the admin. Nothing falls back to spot when this is unset: `_safeGetPrices` reverts on the
-     *  empty return data of its call to the zero address, so borrow and redeem fail closed rather than running
-     *  unbounded. It therefore has to be set before the pool serves either action. Note that `_updateProtectionStates`
-     *  does not fail the same way, its call returns no data to check, so the guarantee rests on the price read.
+     * @dev Only callable by the admin. Nothing falls back to spot when this is unset: both of the calls into the zero
+     *  address revert, so borrow and redeem fail closed rather than running unbounded, and this has to be set before
+     *  the pool serves either action. `_updateProtectionStates` is the one that fails first and it is the stronger of
+     *  the two guards, because solc emits an `extcodesize` existence check ahead of a call whose return data it does
+     *  not decode, which is exactly that call. `_safeGetPrices` gets no such check and instead relies on the ABI
+     *  decoder rejecting the empty return data.
      * @param newBoundedOracle Address of the new deviation-bounded oracle to set
      * @custom:event Emits NewDeviationBoundedOracle on success
      * @custom:error ZeroAddressNotAllowed is thrown when the new oracle address is zero
@@ -1198,11 +1209,8 @@ contract SpokeComptroller is
     /**
      * @notice Restricts supplying to a market to the accounts on its supply allowlist, or lifts the restriction
      * @dev Enforced in `preMintHook`, so only supply is metered. Redeeming is never restricted, and an account
-     * removed from the allowlist keeps the position it already holds and can still exit.
-     *
-     * Enable this only after the market has been listed. `PoolRegistry.addMarket` seeds the market by calling
-     * `mintBehalf(vTokenReceiver, ...)`, which reaches `preMintHook` with `minter` set to that receiver, so a market
-     * whose allowlist is already enabled cannot be listed unless the receiver is on the allowlist.
+     * removed from the allowlist keeps the position it already holds and can still exit. Enabling it on a market that
+     * is already serving supply cuts off every account that is not on the list, the seed supplier included.
      * @param vToken The market to change the setting for
      * @param enabled Whether the market should accept supply only from allowlisted accounts
      * @custom:event Emits SupplyAllowlistEnabledUpdated on success
@@ -1415,7 +1423,9 @@ contract SpokeComptroller is
         uint256 priceCollateralMantissa = _safeGetUnderlyingPrice(VToken(vTokenCollateral));
 
         /*
-         * Get the exchange rate and calculate the number of collateral tokens to seize:
+         * Get the exchange rate and calculate the number of collateral tokens to seize, where
+         * `liquidationIncentive` is the collateral market's own discount if it has one and the pool-wide default
+         * otherwise, the same value `VToken._seize` reads back through `liquidationIncentiveMantissa()`:
          *  seizeAmount = actualRepayAmount * liquidationIncentive * priceBorrowed / priceCollateral
          *  seizeTokens = seizeAmount / exchangeRate
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
@@ -1479,14 +1489,7 @@ contract SpokeComptroller is
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
-        VToken[] memory vTokens = getAssetsIn(account);
-        uint256 vTokensCount = vTokens.length;
-
-        ResilientOracleInterface oracle_ = oracle;
-
-        for (uint256 i; i < vTokensCount; ++i) {
-            oracle_.updatePrice(address(vTokens[i]));
-        }
+        _updatePrices(getAssetsIn(account));
     }
 
     /**
@@ -1588,15 +1591,30 @@ contract SpokeComptroller is
     }
 
     /**
-     * @dev Persists the deviation-bounded oracle's price window and protection state for every market the account
-     *  is in. Runs before the borrow and redeem liquidity checks, the ones weighted by the collateral factor, so
-     *  that a deviating print latches protection and starts its cooldown instead of evaporating once the price
-     *  returns to the window. The liquidation-threshold paths never call this, matching how they read spot prices:
-     *  see `_safeGetPrices`.
-     * @param account Address of the account whose entered markets to update
+     * @dev Pushes an oracle update for each of the given markets. Takes the resolved market list rather than an
+     *  account, because the two callers that need protection state as well would otherwise walk `getAssetsIn` twice
+     *  for the same account in the same call.
+     * @param vTokens The markets to update, as returned by `getAssetsIn`
      */
-    function _updateProtectionStates(address account) internal {
-        VToken[] memory vTokens = getAssetsIn(account);
+    function _updatePrices(VToken[] memory vTokens) internal {
+        uint256 vTokensCount = vTokens.length;
+
+        ResilientOracleInterface oracle_ = oracle;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            oracle_.updatePrice(address(vTokens[i]));
+        }
+    }
+
+    /**
+     * @dev Persists the deviation-bounded oracle's price window and protection state for each of the given markets.
+     *  Runs before the borrow and redeem liquidity checks, the ones weighted by the collateral factor, so that a
+     *  deviating print latches protection and starts its cooldown instead of evaporating once the price returns to
+     *  the window. The liquidation-threshold paths never call this, matching how they read spot prices: see
+     *  `_safeGetPrices`.
+     * @param vTokens The markets to update, as returned by `getAssetsIn`
+     */
+    function _updateProtectionStates(VToken[] memory vTokens) internal {
         uint256 vTokensCount = vTokens.length;
 
         IDeviationBoundedOracle boundedOracle = deviationBoundedOracle;
@@ -1625,8 +1643,9 @@ contract SpokeComptroller is
         }
 
         // Update the prices of tokens
-        updatePrices(redeemer);
-        _updateProtectionStates(redeemer);
+        VToken[] memory redeemerAssets = getAssetsIn(redeemer);
+        _updatePrices(redeemerAssets);
+        _updateProtectionStates(redeemerAssets);
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
         AccountLiquiditySnapshot memory snapshot = _getHypotheticalLiquiditySnapshot(
@@ -1759,11 +1778,14 @@ contract SpokeComptroller is
         // totalCollateral += vTokenPrice * vTokenBalance
         snapshot.totalCollateral = mul_ScalarTruncateAddUInt(vTokenPrice, vTokenBalance, snapshot.totalCollateral);
 
-        // maxClearableDebt += (vTokenPrice * vTokenBalance) / liquidationIncentive, at this market's own
-        // incentive. Skipped when the account holds none of this market: the term would be zero, and a borrower is
-        // a member of every market it borrows from, including ones it holds no collateral in, so this is the
-        // common case. The repeated product costs nothing, the optimizer shares it with the line above.
-        if (vTokenBalance != 0) {
+        // maxClearableDebt += (vTokenPrice * vTokenBalance) / liquidationIncentive, at this market's own incentive.
+        // Only the liquidation-threshold weighting gives this field a meaning and only that weighting's callers read
+        // it, so a collateral-factor snapshot would read the incentive and divide only to discard the result: see the
+        // note on `AccountLiquiditySnapshot.maxClearableDebt`. Also skipped when the account holds none of this
+        // market, since the term would be zero and a borrower is a member of every market it borrows from, including
+        // ones it holds no collateral in. The repeated product costs nothing, the optimizer shares it with the line
+        // above.
+        if (weighting == WeightFunction.USE_LIQUIDATION_THRESHOLD && vTokenBalance != 0) {
             snapshot.maxClearableDebt += div_(
                 mul_ScalarTruncate(vTokenPrice, vTokenBalance),
                 Exp({ mantissa: _liquidationIncentive(address(asset)) })

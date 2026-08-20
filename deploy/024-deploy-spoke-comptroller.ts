@@ -59,6 +59,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       `(currently holds ${registeredPoolCount} pool(s))`,
   );
 
+  // The implementation is the one deployment here that does not set `skipIfAlreadyDeployed`. That flag makes
+  // hardhat-deploy return the recorded address before it compares anything, so a re-run after a source change would
+  // hand back the old implementation and the checks below would compare stale state against itself and report success.
+  // Left off, hardhat-deploy compares the original creation transaction and redeploys only when the bytecode or the
+  // constructor argument actually changed. The beacon and the proxy keep the flag, because their constructor arguments
+  // carry the implementation address and comparing those would build a second beacon and orphan the pool.
   const implArgs = [poolRegistry.address];
   const spokeComptrollerImpl: DeployResult = await deploy("SpokeComptrollerImpl", {
     contract: "SpokeComptroller",
@@ -66,8 +72,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: implArgs,
     log: true,
     autoMine: true,
-    skipIfAlreadyDeployed: true,
   });
+  // Submitted here rather than at the end, because the checks below can stop the run and by the next run this
+  // implementation is no longer newly deployed, which is what `verify` keys off.
+  await verify(hre, "SpokeComptrollerImpl", spokeComptrollerImpl, implArgs);
 
   // A beacon of its own, never the shared `ComptrollerBeacon`. Sharing it would put every other pool in this repo on
   // the spoke implementation the moment either side is upgraded.
@@ -100,8 +108,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const beacon = await ethers.getContractAt("UpgradeableBeacon", spokeComptrollerBeacon.address);
   const comptroller = await ethers.getContractAt("SpokeComptroller", comptrollerProxy.address);
 
+  // Checked on its own, because it is the one mismatch with a recovery procedure rather than a redeployment: a fresh
+  // implementation from the step above leaves the beacon behind until something points it forward.
+  const beaconImplementation = await beacon.implementation();
+  if (beaconImplementation !== spokeComptrollerImpl.address) {
+    throw new Error(
+      `Beacon ${spokeComptrollerBeacon.address} still points at ${beaconImplementation}, while this run produced ` +
+        `implementation ${spokeComptrollerImpl.address}. Point the beacon forward with upgradeTo, through a VIP if ` +
+        `governance already owns it, then re-run this script to verify.`,
+    );
+  }
+  console.log(`Verified beacon implementation: ${beaconImplementation}`);
+
   const checks: [string, string, string][] = [
-    ["beacon implementation", await beacon.implementation(), spokeComptrollerImpl.address],
     ["comptroller pool registry", await comptroller.poolRegistry(), poolRegistry.address],
     ["comptroller access control manager", await comptroller.accessControlManager(), accessControlManager],
     ["comptroller max loops limit", (await comptroller.maxLoopsLimit()).toString(), MAX_LOOPS_LIMIT.toString()],
@@ -135,7 +154,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     );
   }
 
-  await verify(hre, "SpokeComptrollerImpl", spokeComptrollerImpl, implArgs);
   await verify(hre, "SpokeComptrollerBeacon", spokeComptrollerBeacon, beaconArgs);
   await verify(hre, `Comptroller_${POOL_ID}`, comptrollerProxy, proxyArgs);
 

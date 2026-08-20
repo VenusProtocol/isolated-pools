@@ -25,8 +25,10 @@ contract SpokeComptrollerStorage {
 
     /// @dev `totalCollateral` and `maxClearableDebt` are only meaningful under
     /// `WeightFunction.USE_LIQUIDATION_THRESHOLD`, which is the weighting every caller that reads them passes. Under
-    /// the collateral factor they are derived from the deviation-bounded collateral price rather than spot, so a new
-    /// caller on that weighting must not start reading them without deciding what price they should be based on.
+    /// the collateral factor `totalCollateral` is derived from the deviation-bounded collateral price rather than spot,
+    /// and `maxClearableDebt` is not accumulated at all, so it stays at zero. A new caller on that weighting must not
+    /// start reading either one without deciding what it wants first: a zero `maxClearableDebt` puts `healAccount` on a
+    /// repayment percentage of zero, which forgives the whole position as bad debt.
     struct AccountLiquiditySnapshot {
         uint256 totalCollateral;
         uint256 weightedCollateral;
@@ -167,6 +169,11 @@ contract SpokeComptrollerStorage {
      * is unused here and is returned to the gap rather than left as a hole, minus the six slots the allowlists, the
      * per-market liquidation incentives and the deviation-bounded oracle above take. This contract therefore occupies
      * the same number of slots as the one it was forked from.
+     *
+     * That is not layout compatibility. Reclaiming the Prime slot moved every variable declared after it up by one,
+     * so `approvedDelegates` here sits in the slot `ComptrollerStorage` gives to `prime`, and the two layouts cannot
+     * be swapped under a live pool in either direction. They do not have to be: a spoke pool upgrades through its own
+     * beacon. `tests/hardhat/Spoke/storageLayout.ts` pins the slot list, the divergence and this gap size.
      */
     uint256[42] private __gap;
 }
