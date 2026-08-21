@@ -422,11 +422,21 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
   });
 
   describe("setLiquidationIncentive", () => {
-    it("still guards the 1e18 floor, now with a custom error", async () => {
-      await expect(comptroller.setLiquidationIncentive(ONE.sub(1))).to.be.revertedWithCustomError(
+    it("guards the floor a default-share market needs, with a custom error", async () => {
+      // Upstream stops at 1e18. This fork refuses anything below `1e18 + the default protocol seize share`, because a
+      // market listed with no incentive of its own falls back to this value and carries that share.
+      const floor = parseUnits("1.05", 18);
+
+      await expect(comptroller.setLiquidationIncentive(floor.sub(1))).to.be.revertedWithCustomError(
         comptroller,
         "InvalidLiquidationIncentive",
       );
+      await expect(comptroller.setLiquidationIncentive(ONE)).to.be.revertedWithCustomError(
+        comptroller,
+        "InvalidLiquidationIncentive",
+      );
+
+      await expect(comptroller.setLiquidationIncentive(floor)).to.emit(comptroller, "NewLiquidationIncentive");
     });
 
     it("keeps serving as the fallback for markets without a value of their own", async () => {

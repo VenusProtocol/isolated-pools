@@ -105,7 +105,9 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
     /// @notice Thrown when liquidation threshold exceeds the collateral factor
     error InvalidLiquidationThreshold();
 
-    /// @notice Thrown when a liquidation incentive is below 1e18, which would seize less value than was repaid
+    /// @notice Thrown when a liquidation incentive is low enough that a liquidator would seize less value than it
+    ///   repaid: below `1e18 + protocolSeizeShareMantissa` for a single market, below
+    ///   `MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA` for the pool-wide fallback
     error InvalidLiquidationIncentive();
 
     /// @notice Thrown when the action is only available to specific sender, but the real sender was different

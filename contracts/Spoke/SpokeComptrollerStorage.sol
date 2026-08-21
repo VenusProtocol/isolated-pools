@@ -128,6 +128,15 @@ contract SpokeComptrollerStorage {
     // No collateralFactorMantissa may exceed this value
     uint256 internal constant MAX_COLLATERAL_FACTOR_MANTISSA = 0.95e18; // 0.95
 
+    // No pool-wide liquidation incentive may fall below this value. It is `1e18 + VToken`'s
+    // `DEFAULT_PROTOCOL_SEIZE_SHARE_MANTISSA`, restated here because that constant is internal to `VToken` and a
+    // market's share is only readable once the market exists. A newly listed market carries the default share and no
+    // incentive of its own, so this floor is what keeps its first liquidation from paying the liquidator less than it
+    // repaid. It is a backstop for that case, not a full guarantee: a market whose share is later raised above the
+    // default needs an incentive of its own, which `setMarketLiquidationIncentive` and `VToken.setProtocolSeizeShare`
+    // bound from both sides.
+    uint256 internal constant MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18; // 1e18 + 0.05e18
+
     /// @notice Whether the delegate is allowed to borrow or redeem on behalf of the user
     //mapping(address user => mapping (address delegate => bool approved)) public approvedDelegates;
     mapping(address => mapping(address => bool)) public approvedDelegates;

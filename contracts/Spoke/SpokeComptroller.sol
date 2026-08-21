@@ -910,25 +910,30 @@ contract SpokeComptroller is
     /**
      * @notice Sets the liquidation incentive applied to any market that has no incentive of its own
      * @dev This function is restricted by the AccessControlManager
-     * @dev `PoolRegistry.addPool` calls this while registering the pool, so the value is always at least 1e18 by the
+     * @dev `PoolRegistry.addPool` calls this while registering the pool, so the value clears the floor below by the
      * time any market can be listed.
      *
      * This value has to stay at or above `1e18 + protocolSeizeShareMantissa` of every market that has no incentive of
-     * its own, or a liquidator of that market's collateral receives less than the debt it repaid. Nothing enforces
-     * that here, because the markets it applies to are only known market by market: `setMarketLiquidationIncentive`
-     * enforces the bound for the market it sets, and `VToken.setProtocolSeizeShare` enforces it from the other side,
-     * but neither sees a later change to this value.
+     * its own, or a liquidator of that market's collateral receives less than the debt it repaid. The shares of those
+     * markets are only readable market by market, so what is enforced here is the floor for a market at the default
+     * share: `MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA`. That covers a freshly listed market, which is the case
+     * nothing else was watching, and it is where this fork parts with upstream `Comptroller` - which stops at 1e18
+     * and would let a pool be registered one that pays every default-share market's liquidator less than it repaid.
+     * A market whose share is raised above the default still needs an incentive of its own;
+     * `setMarketLiquidationIncentive` bounds that from one side and `VToken.setProtocolSeizeShare` from the other.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
-     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below 1e18
+     * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below
+     *   `MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA`
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
         _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
-        // Upstream `Comptroller` rejects this with a revert string. Reduced to the custom error the per-market setter
-        // uses, so that the same condition reports the same way from both.
-        if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
+        // Upstream `Comptroller` stops at 1e18 and rejects with a revert string. Raised to the floor a default-share
+        // market needs, and reduced to the custom error the per-market setter uses, so that the same condition
+        // reports the same way from both.
+        if (newLiquidationIncentiveMantissa < MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA) {
             revert InvalidLiquidationIncentive();
         }
 

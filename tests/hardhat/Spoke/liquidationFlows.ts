@@ -214,9 +214,10 @@ describe("SpokeComptroller: liquidation flows against real vTokens", () => {
     it("still repays the liquidator in full at the lowest incentive the setter allows", async () => {
       // `1e18 + protocolSeizeShareMantissa` is the floor `setMarketLiquidationIncentive` enforces, and it is the
       // break-even point: the liquidator recovers exactly what it repaid and the protocol takes the whole discount.
-      // The pool-wide value is parked below it to show it no longer feeds this split.
+      // The pool-wide value is parked well above it to show it no longer feeds this split - were it leaking in, the
+      // seizure below would price at 150 rather than 105.
       const floor = ONE.add(await collateral.protocolSeizeShareMantissa());
-      await comptroller.setLiquidationIncentive(ONE);
+      await comptroller.setLiquidationIncentive(parseUnits("1.5", 18));
       await comptroller.setMarketLiquidationIncentive(collateral.address, floor);
 
       const [, seizeTokens] = await comptroller.liquidateCalculateSeizeTokens(

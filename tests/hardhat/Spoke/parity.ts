@@ -267,9 +267,20 @@ describe("SpokeComptroller: parity with the shared Comptroller", () => {
       await bothReject(pool => weights(pool, parseUnits("0.5", 18), parseUnits("0.4", 18)));
     });
 
-    it("holds the same floor under the pool-wide liquidation incentive", async () => {
-      await bothAccept(pool => pool.comptroller.setLiquidationIncentive(ONE));
+    it("draws a higher floor under the pool-wide liquidation incentive than the shared pool", async () => {
+      // Deliberate divergence. The shared pool stops at 1e18, which pays a default-share market's liquidator 5% less
+      // than it repaid. The spoke refuses anything below `1e18 + the default seize share`.
+      const spokeFloor = parseUnits("1.05", 18);
+
+      await bothAccept(pool => pool.comptroller.setLiquidationIncentive(spokeFloor));
       await bothReject(pool => pool.comptroller.setLiquidationIncentive(ONE.sub(1)));
+
+      // The gap between the two floors: accepted by the shared pool, refused by the spoke.
+      await pools[SHARED].comptroller.setLiquidationIncentive(ONE);
+      await expect(pools[SPOKE].comptroller.setLiquidationIncentive(spokeFloor.sub(1))).to.be.revertedWithCustomError(
+        pools[SPOKE].comptroller,
+        "InvalidLiquidationIncentive",
+      );
     });
 
     it("meters supply against the cap the same way", async () => {
