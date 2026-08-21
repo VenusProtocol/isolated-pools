@@ -924,13 +924,13 @@ contract SpokeComptroller is
      * @custom:access Controlled by AccessControlManager
      */
     function setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external {
+        _checkAccessAllowed("setLiquidationIncentive(uint256)");
+
         // Upstream `Comptroller` rejects this with a revert string. Reduced to the custom error the per-market setter
         // uses, so that the same condition reports the same way from both.
         if (newLiquidationIncentiveMantissa < MANTISSA_ONE) {
             revert InvalidLiquidationIncentive();
         }
-
-        _checkAccessAllowed("setLiquidationIncentive(uint256)");
 
         // Save current value for use in log
         uint256 oldLiquidationIncentiveMantissa = _poolLiquidationIncentiveMantissa;
