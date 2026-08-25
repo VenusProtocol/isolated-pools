@@ -108,6 +108,8 @@ export const YIELD_GROUP_ABI = [
   "function maxWithdraw() view returns (uint256)",
   "function deposit(uint256 amount) returns (uint256)",
   "function withdraw(uint256 amount, address to)",
+  "function depositResource(address resource, uint256 amount) returns (uint256)",
+  "function withdrawResource(address resource, uint256 amount, address to)",
   "function addResource(address resource, address adapter)",
   "function removeResource(address resource)",
   "function setInnerDepositQueue(address[] queue)",
