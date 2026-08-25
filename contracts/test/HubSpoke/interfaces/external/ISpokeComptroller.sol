@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
 import { SpokeComptrollerViewInterface } from "../../../../Spoke/SpokeComptrollerInterface.sol";
