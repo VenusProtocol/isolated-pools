@@ -590,7 +590,7 @@ contract SpokeComptroller is
 
         // Every seizure reaches this hook with the account that receives the collateral, whichever entry point it
         // came from, so this is the check that actually enforces the allowlist.
-        _checkLiquidationAllowed(liquidator);
+        _checkLiquidatorAllowlisted(liquidator);
 
         // Keep the flywheel moving
         uint256 rewardDistributorsCount = rewardsDistributors.length;
@@ -688,7 +688,7 @@ contract SpokeComptroller is
         // Checked here as well as in `preSeizeHook`, because a borrower holding no vTokens at all takes the branch
         // below that only calls `healBorrow`, which reaches no hook carrying the caller. Without this the whole
         // remaining principal could be moved into bad debt by anyone, at no cost.
-        _checkLiquidationAllowed(msg.sender);
+        _checkLiquidatorAllowlisted(msg.sender);
 
         VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
@@ -1129,8 +1129,8 @@ contract SpokeComptroller is
      *  address revert, so borrow and redeem fail closed rather than running unbounded, and this has to be set before
      *  the pool serves either action. `_updateProtectionStates` is the one that fails first and it is the stronger of
      *  the two guards, because solc emits an `extcodesize` existence check ahead of a call whose return data it does
-     *  not decode, which is exactly that call. `_safeGetPrices` gets no such check and instead relies on the ABI
-     *  decoder rejecting the empty return data.
+     *  not decode, which is exactly that call. `_safeGetUnderlyingPrices` gets no such check and instead relies on
+     *  the ABI decoder rejecting the empty return data.
      * @param newBoundedOracle Address of the new deviation-bounded oracle to set
      * @custom:event Emits NewDeviationBoundedOracle on success
      * @custom:error ZeroAddressNotAllowed is thrown when the new oracle address is zero
@@ -1616,7 +1616,7 @@ contract SpokeComptroller is
      *  Runs before the borrow and redeem liquidity checks, the ones weighted by the collateral factor, so that a
      *  deviating print latches protection and starts its cooldown instead of evaporating once the price returns to
      *  the window. The liquidation-threshold paths never call this, matching how they read spot prices: see
-     *  `_safeGetPrices`.
+     *  `_safeGetUnderlyingPrices`.
      * @param vTokens The markets to update, as returned by `getAssetsIn`
      */
     function _updateProtectionStates(VToken[] memory vTokens) internal {
@@ -1706,7 +1706,7 @@ contract SpokeComptroller is
 
         for (uint256 i; i < assetsCount; ++i) {
             VToken asset = assets[i];
-            (Exp memory weightedVTokenPrice, Exp memory debtPrice) = _accumulateMarket(
+            (Exp memory weightedVTokenPrice, Exp memory debtPrice) = _accumulateMarketPosition(
                 snapshot,
                 asset,
                 account,
@@ -1753,7 +1753,7 @@ contract SpokeComptroller is
      * @return weightedVTokenPrice Value of one vToken after the risk weight, which prices a hypothetical redeem
      * @return debtPrice Price valuing the market's debt, which prices a hypothetical borrow
      */
-    function _accumulateMarket(
+    function _accumulateMarketPosition(
         AccountLiquiditySnapshot memory snapshot,
         VToken asset,
         address account,
@@ -1767,11 +1767,11 @@ contract SpokeComptroller is
 
         // Get the normalized prices that value this market's collateral and debt
         Exp memory collateralPrice;
-        (collateralPrice, debtPrice) = _safeGetPrices(asset, weighting);
+        (collateralPrice, debtPrice) = _safeGetUnderlyingPrices(asset, weighting);
 
         // Pre-compute conversion factors from vTokens -> usd
         Exp memory vTokenPrice = mul_(Exp({ mantissa: exchangeRateMantissa }), collateralPrice);
-        weightedVTokenPrice = mul_(_weight(asset, weighting), vTokenPrice);
+        weightedVTokenPrice = mul_(_getWeightingFactor(asset, weighting), vTokenPrice);
 
         // weightedCollateral += weightedVTokenPrice * vTokenBalance
         snapshot.weightedCollateral = mul_ScalarTruncateAddUInt(
@@ -1827,7 +1827,7 @@ contract SpokeComptroller is
      * @return collateralPrice Price valuing the collateral held in the market
      * @return debtPrice Price valuing the debt owed to the market
      */
-    function _safeGetPrices(
+    function _safeGetUnderlyingPrices(
         VToken asset,
         WeightFunction weighting
     ) internal view returns (Exp memory collateralPrice, Exp memory debtPrice) {
@@ -1851,7 +1851,7 @@ contract SpokeComptroller is
      * @param weighting Which of the two parameters to read
      * @return The market's collateral factor or liquidation threshold, as an exponential
      */
-    function _weight(VToken asset, WeightFunction weighting) internal view returns (Exp memory) {
+    function _getWeightingFactor(VToken asset, WeightFunction weighting) internal view returns (Exp memory) {
         Market storage market = markets[address(asset)];
         return
             Exp({
@@ -1913,7 +1913,7 @@ contract SpokeComptroller is
 
     /// @notice Reverts if the liquidation allowlist is enabled and the given account is not on it
     /// @param liquidator Account that would receive the seized collateral
-    function _checkLiquidationAllowed(address liquidator) private view {
+    function _checkLiquidatorAllowlisted(address liquidator) private view {
         if (isLiquidationAllowlistEnabled && !isAllowedLiquidator[liquidator]) {
             revert LiquidationNotAllowed(liquidator);
         }

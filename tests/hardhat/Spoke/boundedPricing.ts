@@ -24,7 +24,7 @@ chai.use(smock.matchers);
 // The collateral market: 10 vTokens at an exchange rate of 1, priced at 100, weighted 0.5 for borrowing and 0.8
 // for liquidation. The debt market carries 400 of borrow at a price of 1.
 //
-// Every figure below follows from those, through `_accumulateMarket`:
+// Every figure below follows from those, through `_accumulateMarketPosition`:
 //   weightedCollateral = collateralFactor * collateralPrice * balance
 //   borrows            = debtPrice * borrowBalance
 const COLLATERAL_BALANCE = parseUnits("10", 18);
@@ -372,7 +372,7 @@ describe("SpokeComptroller: deviation-bounded pricing", () => {
   });
 
   describe("with no bounded oracle set", () => {
-    // `_safeGetPrices` calls the zero address, which returns no data, and decoding the missing return values
+    // `_safeGetUnderlyingPrices` calls the zero address, which returns no data, and decoding the missing return values
     // reverts. Borrowing capacity therefore fails closed rather than falling back to unbounded spot.
     it("reverts the borrowing-power path once an account holds a position", async () => {
       const f = await deploySpokeComptroller({ setBoundedOracle: false });
