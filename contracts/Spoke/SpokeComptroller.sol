@@ -751,7 +751,8 @@ contract SpokeComptroller is
      *   below the threshold, and the account is insolvent, use healAccount.
      * @param borrower the borrower address
      * @param orders an array of liquidation orders
-     * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
+     * @custom:error LiquidationNotAllowed is thrown by `preSeizeHook`, while seizing for the first order, if the
+     *   liquidation allowlist is enabled and the caller is not on it
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for a batch liquidation
      * @custom:error DebtExceedsClearableAmount is thrown when the collateral cannot clear the whole debt, which
      *   means the account has to go through `healAccount`
@@ -762,9 +763,8 @@ contract SpokeComptroller is
      *   on it
      */
     function liquidateAccount(address borrower, LiquidationOrder[] calldata orders) external {
-        // Every order seizes, so `preSeizeHook` would reject a caller that is not allowed anyway. Checking at the
-        // entry keeps the two batch operations symmetric and fails before any interest is accrued or debt repaid.
-        _checkLiquidationAllowed(msg.sender);
+        // No entry check on the liquidation allowlist here, unlike `healAccount`: every order ends in a seizure and
+        // `preSeizeHook` carries the caller, so the allowlist is enforced there.
 
         // We will accrue interest and update the oracle prices later during the liquidation. `healAccount` does the
         // opposite and refreshes both before its snapshot, so the two entry points do not route on the same view of

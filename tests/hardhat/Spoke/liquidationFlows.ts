@@ -326,6 +326,28 @@ describe("SpokeComptroller: liquidation flows against real vTokens", () => {
       expect(await collateral.balanceOf(liquidator.address)).to.equal(parseUnits("630", 18));
     });
 
+    // The entry point holds no allowlist check of its own, so this proves the seizure on the first order is what
+    // stops a liquidator that is not on the list. Same scenario as the clearing test above, which passes with the
+    // allowlist disabled.
+    it("gates liquidateAccount through the seizure on the first order", async () => {
+      const debt = parseUnits("600", 18);
+      await borrowed.harnessSetAccountBorrows(borrower.address, debt, ONE);
+      await borrowed.harnessSetTotalBorrows(debt);
+      await fixture.borrowedUnderlying.harnessSetBalance(liquidator.address, debt);
+      await fixture.borrowedUnderlying.connect(liquidator).approve(borrowed.address, debt);
+      await comptroller.setLiquidationAllowlistEnabled(true);
+
+      await expect(
+        comptroller
+          .connect(liquidator)
+          .liquidateAccount(borrower.address, [
+            { vTokenCollateral: collateral.address, vTokenBorrowed: borrowed.address, repayAmount: debt },
+          ]),
+      )
+        .to.be.revertedWithCustomError(comptroller, "LiquidationNotAllowed")
+        .withArgs(liquidator.address);
+    });
+
     it("rejects orders that leave a borrow outstanding", async () => {
       const debt = parseUnits("600", 18);
       await borrowed.harnessSetAccountBorrows(borrower.address, debt, ONE);

@@ -195,17 +195,14 @@ describe("SpokeComptroller: allowlists", () => {
         .withArgs(outsider.address);
     });
 
-    it("blocks both batch operations for a liquidator that is not on the allowlist", async () => {
+    // `liquidateAccount` carries no entry check of its own, because every order ends in a seizure. It is covered
+    // end to end in `liquidationFlows.ts`, against a set of orders that clears the account when the allowlist is off.
+    it("blocks healAccount for a liquidator that is not on the allowlist", async () => {
       await comptroller.setLiquidationAllowlistEnabled(true);
 
-      for (const call of [
-        comptroller.connect(outsider).healAccount(borrower.address),
-        comptroller.connect(outsider).liquidateAccount(borrower.address, []),
-      ]) {
-        await expect(call)
-          .to.be.revertedWithCustomError(comptroller, "LiquidationNotAllowed")
-          .withArgs(outsider.address);
-      }
+      await expect(comptroller.connect(outsider).healAccount(borrower.address))
+        .to.be.revertedWithCustomError(comptroller, "LiquidationNotAllowed")
+        .withArgs(outsider.address);
     });
 
     // A borrower holding no vTokens at all can have its whole debt written off through `healBorrow` alone, and
