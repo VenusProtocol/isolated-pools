@@ -133,3 +133,10 @@ export const skipMainnets = () => async (hre: HardhatRuntimeEnvironment) => {
   const isMainnet = hre.network.live && !hre.network.tags["testnet"];
   return isMainnet;
 };
+
+// Addresses reach the deploy scripts in three casings: the `@venusprotocol/*-deployments` packages record some of them
+// all-lowercase, hardhat-deploy records its own checksummed, and everything read back from the chain is checksummed by
+// ethers. Comparing them as strings therefore rejects addresses that are equal. On bscmainnet the governance package
+// records the access control manager lowercase, so a pre-handover check refused the very address the proxy had just
+// been initialized with, and the run stopped before either ownership transfer. Compare parsed addresses, never strings.
+export const sameAddress = (a: string, b: string): boolean => ethers.utils.getAddress(a) === ethers.utils.getAddress(b);

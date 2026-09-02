@@ -4,6 +4,7 @@ import { ethers } from "hardhat";
 
 import { bscmainnet } from "./constants";
 import {
+  REGISTRY_DRIVEN_ROLES,
   SPOKE_ROLES,
   SpokeStack,
   addSpokeMarkets,
@@ -25,16 +26,6 @@ async function mayCall(onBehalfOf: string, account: string, sig: string): Promis
   const res = await ethers.provider.call({ to: bscmainnet.ACM, data, from: onBehalfOf });
   return ACM_IFACE.decodeFunctionResult("isAllowedToCall", res)[0];
 }
-
-/// The calls `PoolRegistry` makes into a comptroller while registering a pool and its markets.
-const REGISTRY_DRIVEN_ROLES = [
-  SPOKE_ROLES.setCloseFactor,
-  SPOKE_ROLES.setLiquidationIncentive,
-  SPOKE_ROLES.setMinLiquidatableCollateral,
-  SPOKE_ROLES.setCollateralFactor,
-  SPOKE_ROLES.setMarketSupplyCaps,
-  SPOKE_ROLES.setMarketBorrowCaps,
-];
 
 /// The role strings that exist only on the spoke fork. No pre-existing grant can cover them,
 /// because no other Venus contract checks a string with these names.
@@ -73,13 +64,20 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         );
       });
 
-      it("already lets the live PoolRegistry drive every setter it needs, with no new grant", async () => {
-        // These are wildcard roles (keyed on address(0)) the ACM already holds, so a brand-new
-        // comptroller inherits them. If this ever flips to false the listing VIP has to carry six
-        // extra `giveCallPermission` calls or `addPool`/`addMarket` revert on execution.
+      it("inherits the live PoolRegistry's wildcard grants, which are of no use to this pool", async () => {
+        // The wildcard roles (keyed on address(0)) the ACM already holds name the live registry as
+        // the account. A brand-new comptroller inherits them, so the live registry could drive these
+        // setters here...
         for (const sig of REGISTRY_DRIVEN_ROLES) {
           expect(await mayCall(s.spoke.address, bscmainnet.POOL_REGISTRY, sig), `PoolRegistry may call ${sig}`).to.be
             .true;
+        }
+
+        // ...and it is not the registry this pool is listed through. The registry that is has no
+        // grant at all, which is six `giveCallPermission` calls the listing VIP has to carry or
+        // `addPool` reverts on execution.
+        for (const sig of REGISTRY_DRIVEN_ROLES) {
+          expect(await mayCall(s.spoke.address, s.registry.address, sig), `spoke registry may call ${sig}`).to.be.false;
         }
       });
 
@@ -132,6 +130,11 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         await s.spoke.connect(s.timelock).acceptOwnership();
         await s.spoke.connect(s.timelock).setPriceOracle(bscmainnet.RESILIENT_ORACLE);
         expect(await s.spoke.deviationBoundedOracle()).to.equal(ethers.constants.AddressZero);
+        // The pool's own registry has none of the wildcard grants the live one relies on, so the six
+        // setters `addPool` and `addMarket` drive have to be granted to it first.
+        for (const sig of REGISTRY_DRIVEN_ROLES) {
+          await grant(s.acm, s.timelock, s.spoke.address, sig, s.registry.address);
+        }
         await listSpokePool(s);
         for (const sig of Object.values(SPOKE_ROLES)) {
           await grant(s.acm, s.timelock, s.spoke.address, sig, bscmainnet.NORMAL_TIMELOCK);
@@ -167,8 +170,9 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       });
       afterEach(async () => snap.restore());
 
-      it("registers as one more pool in the live registry", async () => {
+      it("registers as the only pool in its own registry", async () => {
         const pools = await s.registry.getAllPools();
+        expect(poolCountBefore).to.equal(0);
         expect(pools.length).to.equal(poolCountBefore + 1);
         const pool = await s.registry.getPoolByComptroller(s.spoke.address);
         expect(pool.comptroller).to.equal(s.spoke.address);

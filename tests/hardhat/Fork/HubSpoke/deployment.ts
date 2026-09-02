@@ -11,7 +11,7 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 const EIP_170_LIMIT = 24_576;
 
 /**
- * Runs the real `deploy/024-deploy-spoke-comptroller.ts` against live bscmainnet, which is the only
+ * Runs the real `deploy/025-deploy-spoke-comptroller.ts` against live bscmainnet, which is the only
  * way to find out what it does with the addresses this chain actually reports. The behavioural
  * suites deploy the same stack directly, because they need the pool in a listed and configured state
  * the script deliberately leaves to the listing VIP.
@@ -47,9 +47,27 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(scriptError?.message).to.equal(undefined);
     });
 
-    it("constructs the implementation with the live PoolRegistry", async () => {
+    it("deploys a pool registry of its own rather than reusing this chain's", async () => {
+      // `getAllPools` on the live registry is what the indexer, the frontend pool list and the risk
+      // tooling iterate. A hub-funded pool whose supply, borrow and liquidation sides are all
+      // restricted does not belong in that directory, and once it is in there every one of those
+      // consumers needs a special case keyed on its address.
+      const registryAddress = await deployed("SpokePoolRegistry");
+      expect(registryAddress).to.not.equal(bscmainnet.POOL_REGISTRY);
+
+      const registry = await ethers.getContractAt("PoolRegistry", registryAddress);
+      expect(await registry.accessControlManager()).to.equal(bscmainnet.ACM);
+      expect(await registry.getAllPools()).to.have.lengthOf(0);
+
+      // `Ownable2Step`, like the comptroller: the script can only nominate.
+      expect(await registry.owner()).to.equal(deployer);
+      expect(await registry.pendingOwner()).to.equal(bscmainnet.NORMAL_TIMELOCK);
+    });
+
+    it("constructs the implementation with that registry, not the live one", async () => {
+      // Immutable, so this is the one wiring decision no setter can walk back.
       const spoke = await ethers.getContractAt("SpokeComptroller", await deployed("SpokeComptrollerImpl"));
-      expect(await spoke.poolRegistry()).to.equal(bscmainnet.POOL_REGISTRY);
+      expect(await spoke.poolRegistry()).to.equal(await deployed("SpokePoolRegistry"));
     });
 
     it("points its own beacon at that implementation, never the shared ComptrollerBeacon", async () => {
@@ -75,10 +93,15 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(await spoke.getAllMarkets()).to.have.lengthOf(0);
     });
 
-    it("does not register the pool, so the live PoolRegistry is untouched", async () => {
-      const registry = await ethers.getContractAt("PoolRegistry", bscmainnet.POOL_REGISTRY);
-      const pool = await registry.getPoolByComptroller(await deployed("Comptroller_HubSpoke"));
-      expect(pool.comptroller).to.equal(ethers.constants.AddressZero);
+    it("registers the pool in neither registry, which is the listing VIP's job", async () => {
+      const comptroller = await deployed("Comptroller_HubSpoke");
+      for (const registryAddress of [bscmainnet.POOL_REGISTRY, await deployed("SpokePoolRegistry")]) {
+        const registry = await ethers.getContractAt("PoolRegistry", registryAddress);
+        const pool = await registry.getPoolByComptroller(comptroller);
+        expect(pool.comptroller, `registry ${registryAddress} should not hold the pool`).to.equal(
+          ethers.constants.AddressZero,
+        );
+      }
     });
 
     it("hands the beacon to the Normal Timelock inside the deployment transaction", async () => {

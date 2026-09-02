@@ -19,7 +19,7 @@ import { contracts as MainnetContracts } from "../../../../deployments/bscmainne
  * consistent about case - `@venusprotocol/governance-contracts` stores the bscmainnet
  * AccessControlManager lower case and the NormalTimelock checksummed - and an on-chain read always
  * returns the checksummed form, so a raw `===` against a recorded value is a coin flip. That is not
- * a hypothetical: `deploy/024-deploy-spoke-comptroller.ts` compares them raw and aborts on this
+ * a hypothetical: `deploy/025-deploy-spoke-comptroller.ts` compares them raw and aborts on this
  * chain because of it (see `deployment.ts`).
  */
 const addr = (a: string) => getAddress(a);
@@ -39,8 +39,15 @@ export const bscmainnet = {
 
   PSR: addr(PsrBscMainnet.contracts.ProtocolShareReserve.address),
 
+  // The chain's shared transparent-proxy admin, owned by the Normal Timelock. The spoke pool
+  // registry goes behind this one rather than a fresh admin, exactly as the deploy script does.
+  DEFAULT_PROXY_ADMIN: addr(MainnetContracts.DefaultProxyAdmin.address),
+
   // ── Oracles ──────────────────────────────────────────────────────────────
   RESILIENT_ORACLE: addr(OracleBscMainnet.contracts.ResilientOracle.address),
+  // Main and pivot behind the ResilientOracle for both of this suite's assets. See `relaxPriceStaleness`.
+  CHAINLINK_ORACLE: addr(OracleBscMainnet.contracts.ChainlinkOracle.address),
+  REDSTONE_ORACLE: addr(OracleBscMainnet.contracts.RedStoneOracle.address),
   DEVIATION_BOUNDED_ORACLE: addr(OracleBscMainnet.contracts.DeviationBoundedOracle.address),
 
   // ── Assets ───────────────────────────────────────────────────────────────

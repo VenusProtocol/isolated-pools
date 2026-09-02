@@ -36,11 +36,26 @@ describe("SpokeComptroller: deployment", function () {
     expect(spokeBeacon.address).to.not.equal(sharedBeacon.address);
   });
 
+  it("binds the spoke to its own pool registry, not the isolated-pools one", async () => {
+    // The registry is the directory every consumer iterates to answer "which pools exist". Sharing it would hand the
+    // indexer, the frontend and the risk tooling a pool whose supply, borrow and liquidation sides are all restricted.
+    const spokeRegistry = (await deployments.get("SpokePoolRegistry")).address;
+    const isolatedRegistry = (await deployments.get("PoolRegistry")).address;
+
+    expect(spokeRegistry).to.not.equal(isolatedRegistry);
+    expect(await (await spokeComptroller()).poolRegistry()).to.equal(spokeRegistry);
+
+    // Same implementation, so the only thing keeping the two directories apart is that they are separate instances.
+    const registry = await ethers.getContract("SpokePoolRegistry");
+    expect(await registry.accessControlManager()).to.equal((await deployments.get("AccessControlManager")).address);
+    expect(await registry.getAllPools()).to.have.lengthOf(0);
+  });
+
   it("deploys the proxy as a SpokeComptroller, initialized, owned by the deployer", async () => {
     const { deployer } = await getNamedAccounts();
     const comptroller = await spokeComptroller();
 
-    expect(await comptroller.poolRegistry()).to.equal((await deployments.get("PoolRegistry")).address);
+    expect(await comptroller.poolRegistry()).to.equal((await deployments.get("SpokePoolRegistry")).address);
     expect(await comptroller.accessControlManager()).to.equal((await deployments.get("AccessControlManager")).address);
     expect(await comptroller.maxLoopsLimit()).to.equal(100);
     expect(await comptroller.owner()).to.equal(deployer);
@@ -52,10 +67,12 @@ describe("SpokeComptroller: deployment", function () {
 
   it("leaves the pool unregistered and unconfigured, which is the listing VIP's job", async () => {
     const comptroller = await spokeComptroller();
-    const registry = await ethers.getContract("PoolRegistry");
 
-    const registered = (await registry.getAllPools()).map((p: { comptroller: string }) => p.comptroller);
-    expect(registered).to.not.include(comptroller.address);
+    for (const name of ["SpokePoolRegistry", "PoolRegistry"]) {
+      const registry = await ethers.getContract(name);
+      const registered = (await registry.getAllPools()).map((p: { comptroller: string }) => p.comptroller);
+      expect(registered, `${name} should not hold the spoke pool`).to.not.include(comptroller.address);
+    }
 
     expect(await comptroller.oracle()).to.equal(ethers.constants.AddressZero);
     expect(await comptroller.closeFactorMantissa()).to.equal(0);

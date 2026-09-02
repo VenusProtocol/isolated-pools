@@ -4,20 +4,16 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { toAddress } from "../helpers/deploymentUtils";
+import { sameAddress, toAddress } from "../helpers/deploymentUtils";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
 const POOL_ID = "HubSpoke";
 
-const MAX_LOOPS_LIMIT = 100;
+// Deployed by `024-deploy-spoke-pool-registry.ts`, which explains why this pool does not share the isolated-pools one.
+const POOL_REGISTRY_NAME = "SpokePoolRegistry";
 
-// Addresses reach this script in three casings: the `@venusprotocol/*-deployments` packages record some of them
-// all-lowercase, hardhat-deploy records its own checksummed, and everything read back from the chain is checksummed by
-// ethers. Comparing them as strings therefore rejects addresses that are equal. On bscmainnet the governance package
-// records the access control manager lowercase, so the check below refused the very address the proxy had just been
-// initialized with, and the run stopped before either ownership handover. Compare parsed addresses, never the strings.
-const sameAddress = (a: string, b: string): boolean => ethers.utils.getAddress(a) === ethers.utils.getAddress(b);
+const MAX_LOOPS_LIMIT = 100;
 
 // Verification is best effort: it reaches an external explorer API, so a failure here must not abort a deployment that
 // already succeeded on chain. Re-run the script to retry.
@@ -58,13 +54,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // The pool registry is baked into the implementation as an immutable, so a wrong value cannot be fixed by any setter,
-  // only by redeploying the implementation and re-pointing the beacon. Read it back before using it.
-  const poolRegistry = await ethers.getContract("PoolRegistry");
-  const registeredPoolCount = (await poolRegistry.getAllPools()).length;
-  console.log(
-    `Spoke implementation will be constructed with PoolRegistry ${poolRegistry.address} ` +
-      `(currently holds ${registeredPoolCount} pool(s))`,
-  );
+  // only by redeploying the implementation and re-pointing the beacon. Read it back before using it, and refuse the
+  // isolated-pools registry outright: this pool has to stay out of the directory every existing consumer iterates.
+  const poolRegistry = await ethers.getContract(POOL_REGISTRY_NAME);
+  const isolatedPoolRegistry = await deployments.getOrNull("PoolRegistry");
+  if (isolatedPoolRegistry && sameAddress(poolRegistry.address, isolatedPoolRegistry.address)) {
+    throw new Error(
+      `${POOL_REGISTRY_NAME} resolved to the isolated-pools PoolRegistry at ${isolatedPoolRegistry.address}. The ` +
+        `spoke pool needs a registry of its own; run 024-deploy-spoke-pool-registry.ts first.`,
+    );
+  }
+  console.log(`Spoke implementation will be constructed with ${POOL_REGISTRY_NAME} ${poolRegistry.address}`);
 
   // The implementation is the one deployment here that does not set `skipIfAlreadyDeployed`. That flag makes
   // hardhat-deploy return the recorded address before it compares anything, so a re-run after a source change would
@@ -128,7 +128,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Verified beacon implementation: ${beaconImplementation}`);
 
   const addressChecks: [string, string, string][] = [
-    ["comptroller pool registry", await comptroller.poolRegistry(), poolRegistry.address],
+    [`comptroller pool registry (${POOL_REGISTRY_NAME})`, await comptroller.poolRegistry(), poolRegistry.address],
     ["comptroller access control manager", await comptroller.accessControlManager(), accessControlManager],
   ];
   for (const [label, actual, expected] of addressChecks) {
@@ -171,12 +171,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await verify(hre, "SpokeComptrollerBeacon", spokeComptrollerBeacon, beaconArgs);
   await verify(hre, `Comptroller_${POOL_ID}`, comptrollerProxy, proxyArgs);
 
-  // Everything else this pool needs is governance-owned and belongs in the listing VIP, in this order: accept the
-  // comptroller ownership, `setPriceOracle` and `setDeviationBoundedOracle` (the latter is dereferenced without a zero
-  // check, so borrow and redeem fail closed until it is set), then `PoolRegistry.addPool`, which requires a nonzero
-  // oracle, and only then the markets.
+  // Everything else this pool needs is governance-owned and belongs in the listing VIP, in this order: accept ownership
+  // of both the comptroller and the spoke pool registry, grant the ACM roles both of them need (listed in
+  // 024-deploy-spoke-pool-registry.ts, and they go in both directions), `setPriceOracle` and
+  // `setDeviationBoundedOracle` (the latter is dereferenced without a zero check, so borrow and redeem fail closed
+  // until it is set), then `SpokePoolRegistry.addPool`, which requires a nonzero oracle, and only then the markets.
 };
 
 func.tags = ["HubSpokeComptroller", "HubSpoke"];
+// Tag-selected runs (`--tags HubSpokeComptroller`, and the fork suite's fixture) skip everything not tagged, so the
+// registry has to be named as a dependency rather than left to the file ordering a full run relies on.
+func.dependencies = [POOL_REGISTRY_NAME];
 
 export default func;
