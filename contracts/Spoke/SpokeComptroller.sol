@@ -694,14 +694,9 @@ contract SpokeComptroller is
         uint256 userAssetsCount = userAssets.length;
 
         address liquidator = msg.sender;
-        {
-            ResilientOracleInterface oracle_ = oracle;
-            // We need all user's markets to be fresh for the computations to be correct
-            for (uint256 i; i < userAssetsCount; ++i) {
-                userAssets[i].accrueInterest();
-                oracle_.updatePrice(address(userAssets[i]));
-            }
-        }
+
+        // We need all user's markets to be fresh for the computations to be correct
+        _refreshMarkets(userAssets);
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
             user,
@@ -766,11 +761,12 @@ contract SpokeComptroller is
         // No entry check on the liquidation allowlist here, unlike `healAccount`: every order ends in a seizure and
         // `preSeizeHook` carries the caller, so the allowlist is enforced there.
 
-        // We will accrue interest and update the oracle prices later during the liquidation. `healAccount` does the
-        // opposite and refreshes both before its snapshot, so the two entry points do not route on the same view of
-        // the position: the snapshot below decides both the `minLiquidatableCollateral` gate and, through
-        // `maxClearableDebt`, whether this account belongs in `healAccount` instead, and it decides them on stored
-        // exchange rates and whatever price the oracle last recorded.
+        VToken[] memory borrowerAssets = getAssetsIn(borrower);
+
+        // We need all borrower's markets to be fresh for the computations to be correct. The orders below run with
+        // the liquidity check skipped, so this snapshot is the only thing standing between a solvent account and a
+        // full liquidation, and it decides on the same state the orders will execute against.
+        _refreshMarkets(borrowerAssets);
 
         AccountLiquiditySnapshot memory snapshot = _getCurrentLiquiditySnapshot(
             borrower,
@@ -814,11 +810,10 @@ contract SpokeComptroller is
             );
         }
 
-        VToken[] memory borrowMarkets = getAssetsIn(borrower);
-        uint256 marketsCount = borrowMarkets.length;
+        uint256 marketsCount = borrowerAssets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
-            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowMarkets[i], borrower);
+            (, uint256 borrowBalance, ) = _safeGetAccountSnapshot(borrowerAssets[i], borrower);
             if (borrowBalance != 0) {
                 revert NonzeroBorrowBalanceAfterLiquidation();
             }
@@ -1593,6 +1588,22 @@ contract SpokeComptroller is
         }
         _actionPaused[market][action] = paused;
         emit ActionPausedMarket(VToken(market), action, paused);
+    }
+
+    /**
+     * @dev Accrues interest and pushes an oracle update for each of the given markets, so that a snapshot taken
+     *  afterwards values the account on live balances and prices. Used by the two batch liquidation entry points,
+     *  which decide on their snapshot and then execute with the per-order liquidity check skipped.
+     * @param vTokens The markets to refresh, as returned by `getAssetsIn`
+     */
+    function _refreshMarkets(VToken[] memory vTokens) internal {
+        uint256 vTokensCount = vTokens.length;
+
+        for (uint256 i; i < vTokensCount; ++i) {
+            vTokens[i].accrueInterest();
+        }
+
+        _updatePrices(vTokens);
     }
 
     /**

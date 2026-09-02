@@ -326,6 +326,35 @@ describe("SpokeComptroller: liquidation flows against real vTokens", () => {
       expect(await collateral.balanceOf(liquidator.address)).to.equal(parseUnits("630", 18));
     });
 
+    // `liquidateAccount` runs its orders with the liquidity check skipped, so the entry snapshot is the only thing
+    // that decides whether the account belongs here at all. Taken on stored balances it would route on a debt the
+    // market has already outgrown: 900 owed sits under the 909.09 the collateral can clear, while the interest
+    // pending since the last accrual puts the real debt above it, which is `healAccount`'s case.
+    it("routes liquidateAccount on accrued debt rather than the stored balance", async () => {
+      const debt = parseUnits("900", 18);
+      await borrowed.harnessSetAccountBorrows(borrower.address, debt, ONE);
+      await borrowed.harnessSetTotalBorrows(debt);
+
+      // 5e12 per block over 5000 blocks compounds the debt by 2.5%, to 922.5.
+      const interestRateModel = await fakeInterestRateModel();
+      interestRateModel.getBorrowRate.returns(parseUnits("5", 12));
+      await borrowed.harnessSetInterestRateModel(interestRateModel.address);
+      await borrowed.harnessFastForward(5000);
+
+      const accruedDebt = parseUnits("922.5", 18);
+      const maxClearableDebt = BigNumber.from("909090909090909090909");
+
+      await expect(
+        comptroller
+          .connect(liquidator)
+          .liquidateAccount(borrower.address, [
+            { vTokenCollateral: collateral.address, vTokenBorrowed: borrowed.address, repayAmount: debt },
+          ]),
+      )
+        .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
+        .withArgs(accruedDebt, maxClearableDebt);
+    });
+
     // The entry point holds no allowlist check of its own, so this proves the seizure on the first order is what
     // stops a liquidator that is not on the list. Same scenario as the clearing test above, which passes with the
     // allowlist disabled.
