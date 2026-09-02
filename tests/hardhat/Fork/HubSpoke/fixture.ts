@@ -25,7 +25,7 @@ export const BLOCK_NUMBER = 116_847_000;
 
 const MAX_LOOPS_LIMIT = 100;
 
-/// Ten years, i.e. longer than any run. See `relaxChainlinkStaleness`.
+/// Longer than any run. See `relaxPriceStaleness`.
 const STALE_PERIOD = 10 * 365 * 24 * 60 * 60;
 const EXP_SCALE = ethers.utils.parseUnits("1", 18);
 
@@ -55,10 +55,9 @@ export const SPOKE_ROLES = {
   setAllowedLiquidator: "setAllowedLiquidator(address,bool)",
 };
 
-/// The calls `PoolRegistry` makes into a comptroller while registering a pool and its markets. On
-/// the live registry these are covered by wildcard grants the ACM already holds, keyed on
-/// `address(0)` and handed to that registry's address. A registry deployed for this pool is a
-/// different address, so none of them carries over and the listing VIP has to grant all six.
+/// The calls `PoolRegistry` makes into a comptroller while registering a pool and its markets. The
+/// ACM's wildcard grants covering these are keyed on `address(0)` but name the live registry as the
+/// account, so a registry deployed for this pool inherits none of them and the VIP grants all six.
 export const REGISTRY_DRIVEN_ROLES = [
   SPOKE_ROLES.setCloseFactor,
   SPOKE_ROLES.setLiquidationIncentive,
@@ -68,8 +67,8 @@ export const REGISTRY_DRIVEN_ROLES = [
   SPOKE_ROLES.setMarketBorrowCaps,
 ];
 
-/// Role strings `PoolRegistry` checks, verbatim. `addMarket` is the well-known trap: the ACM hashes
-/// whatever string the contract passes, and this one passes the struct name, not the expanded tuple.
+/// Role strings `PoolRegistry` checks, verbatim. `addMarket` passes the struct name, not the expanded
+/// tuple, and the ACM hashes whatever string the contract passes.
 export const REGISTRY_ROLES = {
   addPool: "addPool(string,address,uint256,uint256,uint256)",
   addMarket: "addMarket(AddMarketInput)",
@@ -145,8 +144,8 @@ export const YIELD_GROUP_ABI = [
   "function resourceCap(address resource) view returns (uint256)",
 ];
 
-/// The slice of `ProtocolShareReserve` this suite touches. Only one pool registry fits in it, which
-/// is what makes re-pointing it a protocol-wide decision rather than a spoke-local one.
+/// The slice of `ProtocolShareReserve` this suite touches. It holds one pool registry, which is what
+/// makes re-pointing it a protocol-wide decision rather than a spoke-local one.
 export const PSR_ABI = [
   "function owner() view returns (address)",
   "function poolRegistry() view returns (address)",
@@ -168,18 +167,15 @@ export async function grant(acm: AccessControlManager, timelock: Signer, target:
 /**
  * Take the pinned block's price rounds out of the picture.
  *
- * Hardhat advances a forked chain's block timestamp with real elapsed time, so every transaction a
- * suite runs eats into whatever staleness budget the pinned block happened to leave. At
- * `BLOCK_NUMBER` that budget is about 77 seconds for BTCB: past it the main oracle stops answering,
- * `ResilientOracle` runs out of oracles that agree and reverts "invalid resilient oracle price", and
- * anything that prices collateral fails. Which tests fell over would then depend on how many
- * transactions ran ahead of them and how fast the machine was.
+ * Hardhat advances a forked chain's timestamp with real elapsed time, so every transaction a suite
+ * runs eats into the staleness budget the pinned block leaves. At `BLOCK_NUMBER` that is about 77
+ * seconds for BTCB, past which `ResilientOracle` runs out of oracles that agree and reverts
+ * "invalid resilient oracle price", failing anything that prices collateral.
  *
- * Widening `maxStalePeriod` on the pinned rounds is the same thing the other fork suites in this
- * repo do. Both the main and the pivot oracle are widened, so `ResilientOracle` still validates one
- * against the other rather than being reduced to a single feed. No price changes: the rounds, the
- * bound validator and the deviation-bounded oracle are all still the live ones, and only the clock
- * stops being a variable.
+ * Widening `maxStalePeriod` is what the other fork suites here do. Main and pivot are both widened,
+ * so `ResilientOracle` still validates one against the other. No price changes: the rounds, the
+ * bound validator and the deviation-bounded oracle are the live ones, and only the clock stops
+ * being a variable.
  */
 async function relaxPriceStaleness(timelock: Signer) {
   const acm = AccessControlManager__factory.connect(bscmainnet.ACM, timelock);
@@ -203,9 +199,9 @@ async function relaxPriceStaleness(timelock: Signer) {
 }
 
 /// The spoke pool's own `PoolRegistry`, behind the chain's shared proxy admin, standing in for
-/// `deploy/024-deploy-spoke-pool-registry.ts`. The live isolated-pools registry is deliberately not
-/// reused: it is the directory the indexer, the frontend pool list and the risk tooling iterate, and
-/// a pool whose supply, borrow and liquidation sides are all restricted does not belong in it.
+/// `deploy/024-deploy-spoke-pool-registry.ts`. The live isolated-pools registry is the directory the
+/// indexer, the frontend pool list and the risk tooling iterate, and a pool whose supply, borrow and
+/// liquidation sides are each restricted does not belong in it.
 async function deploySpokePoolRegistry(deployer: SignerWithAddress): Promise<PoolRegistry> {
   const implFactory = await ethers.getContractFactory("PoolRegistry", deployer);
   const impl = await implFactory.deploy();
@@ -329,8 +325,8 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
   const btcb = IERC20__factory.connect(bscmainnet.BTCB, deployer);
 
   const implFactory = await ethers.getContractFactory("SpokeComptroller", deployer);
-  // Immutable, and `supportMarket` only answers this address, so the pool can never be listed
-  // through any registry but this one.
+  // Immutable, and `supportMarket` only answers this address, so no other registry can list markets
+  // in this pool.
   const impl = await implFactory.deploy(registry.address);
   await impl.deployed();
 
@@ -346,8 +342,8 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
   await proxy.deployed();
   const spoke = SpokeComptroller__factory.connect(proxy.address, deployer);
 
-  // Ownable2Step, so the script can only nominate; the VIP accepts. The registry is a second
-  // contract in exactly the same position, and a second acceptOwnership the VIP has to carry.
+  // Ownable2Step, so the script can only nominate; the VIP accepts. Two of them, comptroller and
+  // registry, so the VIP carries two `acceptOwnership` calls.
   await spoke.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
   await registry.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
   await spokeBeacon.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
@@ -384,17 +380,16 @@ export async function configureSpokeStack(s: SpokeStack) {
     await grant(s.acm, s.timelock, s.spoke.address, sig, bscmainnet.NORMAL_TIMELOCK);
   }
 
-  // The registry is a second contract governance has to take over and permission. ACM roles are
-  // `keccak256(contractAddress, roleString)`, so nothing the isolated-pools registry was granted
-  // reaches this one: every role it needs has to be granted again against this address.
+  // A second contract governance has to take over and permission. ACM roles are
+  // `keccak256(contractAddress, roleString)`, so nothing granted against the isolated-pools registry
+  // reaches this address.
   await s.registry.connect(s.timelock).acceptOwnership();
   for (const sig of Object.values(REGISTRY_ROLES)) {
     await grant(s.acm, s.timelock, s.registry.address, sig, bscmainnet.NORMAL_TIMELOCK);
   }
 
-  // And the other direction: `addPool` and `addMarket` drive six setters on the comptroller as the
-  // registry, and the wildcard grants that let the live registry do that name its address, not this
-  // one. Without these, `addPool` reverts at execution.
+  // The other direction: `addPool` and `addMarket` drive six comptroller setters as the registry, and
+  // the wildcard grants covering those name the live registry's address, not this one.
   for (const sig of REGISTRY_DRIVEN_ROLES) {
     await grant(s.acm, s.timelock, s.spoke.address, sig, s.registry.address);
   }
@@ -403,14 +398,13 @@ export async function configureSpokeStack(s: SpokeStack) {
 }
 
 /**
- * `ProtocolShareReserve` rejects income from any non-core pool whose vToken its single configured
- * registry does not know, and every `liquidateBorrow` and `reduceReserves` in this pool goes through
- * that check. So the pool cannot take income until the PSR points here.
+ * `ProtocolShareReserve` rejects income from any non-core pool whose vToken its one configured
+ * registry does not know, and every `liquidateBorrow` and `reduceReserves` here goes through that
+ * check, so the pool takes no income until PSR points at its registry.
  *
- * On a fork that is one owner call. On chain it is not: PSR stores one registry address, so pointing
- * it here takes the isolated pools out, and their liquidations start reverting - see
- * `psrRegistryConflict.ts`, which pins that. The real fix is PSR support for more than one registry,
- * which ships from its own repo and has to be live before this pool is wired into it.
+ * On a fork that is one owner call. On chain it takes the isolated pools out and their liquidations
+ * start reverting, which `psrRegistryConflict.ts` pins. PSR support for more than one registry ships
+ * from its own repo and has to be live before this pool is wired into it.
  */
 export async function pointProtocolShareReserveAtSpokeRegistry(s: SpokeStack) {
   const psr = await ethers.getContractAt(PSR_ABI, bscmainnet.PSR);
