@@ -55,7 +55,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   rewardToken2 = await smock.fake<MockToken>("MockToken");
   rewardToken3 = await smock.fake<MockToken>("MockToken");
   const poolLensFactory = await smock.mock<PoolLens__factory>("PoolLens");
-  poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear);
+  poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear, comptroller.address);
 
   const startBlock = await ethers.provider.getBlockNumber();
 
@@ -168,7 +168,7 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
 
   isTimeBased = true;
   blocksPerYear = 0;
-  poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear);
+  poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear, comptroller.address);
 
   const startBlock = (await ethers.provider.getBlock("latest")).number;
   const startBlockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
