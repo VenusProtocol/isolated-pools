@@ -192,6 +192,10 @@ describe("SpokeComptroller: errors, events and access control", () => {
         role: "setAllowedLiquidator(address,bool)",
         call: (c, m) => c.setAllowedLiquidator(m.vToken.address, true),
       },
+      {
+        role: "enterMarketBehalf(address,address)",
+        call: (c, m) => c.enterMarketBehalf(m.vToken.address, m.vToken.address),
+      },
     ];
 
     for (const { role, call } of roles) {

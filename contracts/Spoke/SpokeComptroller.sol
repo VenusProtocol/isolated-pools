@@ -121,6 +121,26 @@ contract SpokeComptroller is
     }
 
     /**
+     * @notice Add an asset to another account's liquidity calculation, enabling it as collateral for that account
+     * @dev `enterMarkets` reads `msg.sender`, so a router supplying through `VToken.mintBehalf` would enter itself
+     *   rather than the supplier. This enters the supplier, so both steps fit in one user transaction. Grant the
+     *   permission only to a router that passes its own caller as `account`.
+     * @param vToken The address of the vToken market to be enabled
+     * @param account The account to enable the market for
+     * @custom:event MarketEntered is emitted on success
+     * @custom:error ActionPaused error is thrown if entering the market is paused
+     * @custom:error MarketNotListed error is thrown if the market is not listed
+     * @custom:error ZeroAddressNotAllowed is thrown when the account address is zero
+     * @custom:access Controlled by AccessControlManager
+     */
+    function enterMarketBehalf(address vToken, address account) external {
+        _checkAccessAllowed("enterMarketBehalf(address,address)");
+        ensureNonzeroAddress(account);
+
+        _addToMarket(VToken(vToken), account);
+    }
+
+    /**
      * @notice Unlist a market by setting isListed to false
      * @dev Checks if all actions are paused, borrow/supply caps is set to 0 and collateral factor is to 0.
      * @param market The address of the market (token) to unlist

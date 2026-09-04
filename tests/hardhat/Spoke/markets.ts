@@ -7,6 +7,7 @@ import { ethers } from "hardhat";
 
 import { SpokeComptroller, VToken } from "../../../typechain";
 import {
+  Action,
   ONE,
   SpokeFixture,
   TestMarket,
@@ -33,12 +34,13 @@ describe("SpokeComptroller: market membership", () => {
   let marketB: TestMarket;
   let marketC: TestMarket;
   let account: SignerWithAddress;
+  let router: SignerWithAddress;
 
   const assetsIn = () => comptroller.getAssetsIn(account.address);
   const addresses = async () => (await assetsIn()).map(asset => asset.toString());
 
   beforeEach(async () => {
-    [, account] = await ethers.getSigners();
+    [, account, router] = await ethers.getSigners();
     fixture = await loadFixture(threeMarkets);
     fixture.resetPrices();
     ({ comptroller } = fixture);
@@ -85,6 +87,51 @@ describe("SpokeComptroller: market membership", () => {
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(unlisted.address);
       expect(await addresses()).to.deep.equal([]);
+    });
+  });
+
+  describe("enterMarketBehalf", () => {
+    it("enters the account rather than the caller", async () => {
+      // The whole point of the function: a supply router mints with `mintBehalf` and collateralises in the same
+      // transaction, so membership has to land on the supplier and not on the router that called it.
+      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address))
+        .to.emit(comptroller, "MarketEntered")
+        .withArgs(marketA.vToken.address, account.address);
+
+      expect(await addresses()).to.deep.equal([marketA.vToken.address]);
+      expect(await comptroller.getAssetsIn(router.address)).to.deep.equal([]);
+    });
+
+    it("is a no-op when the account is already in the market", async () => {
+      await comptroller.connect(account).enterMarkets([marketA.vToken.address]);
+
+      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address)).to.not.emit(
+        comptroller,
+        "MarketEntered",
+      );
+      expect(await addresses()).to.deep.equal([marketA.vToken.address]);
+    });
+
+    it("rejects a market that is not listed", async () => {
+      const unlisted = await smock.fake<VToken>("VToken");
+
+      await expect(comptroller.connect(router).enterMarketBehalf(unlisted.address, account.address))
+        .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
+        .withArgs(unlisted.address);
+    });
+
+    it("rejects the zero account", async () => {
+      await expect(
+        comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, ethers.constants.AddressZero),
+      ).to.be.revertedWithCustomError(comptroller, "ZeroAddressNotAllowed");
+    });
+
+    it("respects the market's enter-market pause", async () => {
+      await comptroller.setActionsPaused([marketA.vToken.address], [Action.ENTER_MARKET], true);
+
+      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address))
+        .to.be.revertedWithCustomError(comptroller, "ActionPaused")
+        .withArgs(marketA.vToken.address, Action.ENTER_MARKET);
     });
   });
 
