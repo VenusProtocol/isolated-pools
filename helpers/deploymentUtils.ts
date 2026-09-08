@@ -1,4 +1,5 @@
 import { deployments, ethers, getNamedAccounts } from "hardhat";
+import { DeployResult } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
@@ -133,3 +134,78 @@ export const skipMainnets = () => async (hre: HardhatRuntimeEnvironment) => {
   const isMainnet = hre.network.live && !hre.network.tags["testnet"];
   return isMainnet;
 };
+
+// Addresses reach the deploy scripts in three casings: the `@venusprotocol/*-deployments` packages record some of them
+// all-lowercase, hardhat-deploy records its own checksummed, and everything read back from the chain is checksummed by
+// ethers. Comparing them as strings therefore rejects addresses that are equal. On bscmainnet the governance package
+// records the access control manager lowercase, so a pre-handover check refused the very address the proxy had just
+// been initialized with, and the run stopped before either ownership transfer. Compare parsed addresses, never strings.
+export const sameAddress = (a: string, b: string): boolean => ethers.utils.getAddress(a) === ethers.utils.getAddress(b);
+
+// Verification reaches an external explorer API, so a failure here must not abort a deployment that already succeeded on
+// chain. Re-run the script to retry.
+export const verifyDeployment = async (
+  hre: HardhatRuntimeEnvironment,
+  name: string,
+  deployment: DeployResult,
+  constructorArguments: unknown[],
+): Promise<void> => {
+  if (!hre.network.live || !deployment.newlyDeployed) {
+    return;
+  }
+
+  console.log(`Verifying ${name}...`);
+  try {
+    await hre.run("verify:verify", { address: deployment.address, constructorArguments });
+    console.log(`${name} verified successfully`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // The plugin words this several ways depending on which explorer answered, "Already Verified" from one and
+    // "has already been verified on the block explorer" from another, so match on the part they share.
+    if (message.toLowerCase().includes("already verified")) {
+      console.log(`${name} already verified`);
+    } else {
+      console.error(`${name} verification failed: ${message}`);
+    }
+  }
+};
+
+// A proxy deployment is two contracts on the explorer: the implementation, which carries the source every reader wants,
+// and the proxy, whose constructor arguments name that implementation and the admin. Verifying one leaves the other
+// unreadable, so verify both off the single `DeployResult` hardhat-deploy returns for the pair.
+export const verifyProxyDeployment = async (
+  hre: HardhatRuntimeEnvironment,
+  name: string,
+  deployment: DeployResult,
+): Promise<void> => {
+  if (deployment.implementation) {
+    await verifyDeployment(hre, `${name} implementation`, { ...deployment, address: deployment.implementation }, []);
+  }
+  await verifyDeployment(hre, `${name} proxy`, deployment, deployment.args ?? []);
+};
+
+// A live RPC behind a load balancer can answer a read from a node that has not yet applied the transaction that was
+// just mined, so a value read straight after a write can be the pre-write one. Both shapes of that showed up on a BSC
+// testnet run: an `Ownable` beacon still naming the deployer after a successful `transferOwnership`, and an
+// `Ownable2Step` registry reporting a zero pending owner after a successful nomination. Reading once and believing it
+// is what turns that into a misleading log line, or worse aborts a correct deployment on a check that throws.
+//
+// Retry until the read matches what the transaction should have produced. A genuine misconfiguration reads the same
+// wrong value on every attempt and still fails, only later; a stale read catches up within a block or two.
+export const readBackUntil = async <T>(
+  read: () => Promise<T>,
+  matches: (value: T) => boolean,
+  attempts = 5,
+  delayMs = 3000,
+): Promise<T> => {
+  let value = await read();
+  for (let attempt = 1; attempt < attempts && !matches(value); attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    value = await read();
+  }
+  return value;
+};
+
+// `readBackUntil` for the common case, an address the caller already knows the expected value of.
+export const readBackAddress = (read: () => Promise<string>, expected: string): Promise<string> =>
+  readBackUntil(read, value => sameAddress(value, expected));

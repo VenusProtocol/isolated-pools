@@ -267,6 +267,33 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+    overrides: {
+      // SpokeComptroller does not fit under EIP-170 at the default 200 runs: it compiles to 24,806 bytes, 230 over
+      // the limit. Optimizing it for size instead brings it to 24,337 and costs +1,901 gas on a borrow and +1,825 on
+      // a redeem (measured over four markets), i.e. under 1.5%. 30 is the knee of that curve: 200 -> 100 buys 264
+      // bytes, 100 -> 30 another 205, and 30 -> 1 only 81 more for a further +1,232 gas. Should this contract ever
+      // need materially more room than the ~240 bytes this leaves, move the liquidity snapshot into an external
+      // library rather than lowering runs again: a DELEGATECALL costs 2,600 gas for the cold account access alone,
+      // which is worse than this setting, but it frees kilobytes instead of bytes.
+      "contracts/Spoke/SpokeComptroller.sol": {
+        version: "0.8.25",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 30,
+            details: {
+              yul: !process.env.CI,
+            },
+          },
+          evmVersion: "paris",
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+    },
   },
   networks: {
     hardhat: {
@@ -278,6 +305,13 @@ const config: HardhatUserConfig = {
           hardforkHistory: {
             berlin: 0,
             london: 13000000,
+            // BSC activates its hardforks on a timestamp, which `hardforkHistory` cannot express, so these are the
+            // first blocks at or after each activation time in `bnb-chain/bsc` `params/config.go`: ShanghaiTime
+            // 1705996800 and CancunTime 1718863500. Without them a fork of a recent block runs the London EVM and
+            // every live contract compiled for a later target - the ResilientOracle and the DeviationBoundedOracle
+            // among them - reverts with "invalid opcode" on PUSH0 or TSTORE.
+            shanghai: 35490444,
+            cancun: 39769787,
           },
         },
         8453: {

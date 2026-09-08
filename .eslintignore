@@ -8,3 +8,4 @@ dist
 # ignoring scenario dir because it contains deprecated saddle code and will be removed
 scenario
 typechain
+tmp

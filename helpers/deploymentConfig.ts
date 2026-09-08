@@ -772,6 +772,14 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: "0x16227D60f7a0e586C66B005219dfc887D13C9531",
+        faucetInitialLiquidity: false,
+      },
+      {
+        isMock: false,
         name: "lisUSD",
         symbol: "lisUSD",
         decimals: 18,
