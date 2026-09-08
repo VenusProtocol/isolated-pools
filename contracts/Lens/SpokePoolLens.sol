@@ -4,35 +4,38 @@ pragma solidity 0.8.25;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-
-import { ExponentialNoError } from "../../ExponentialNoError.sol";
-import { VToken } from "../../VToken.sol";
-import { Action, ComptrollerInterface, ComptrollerViewInterface } from "../../ComptrollerInterface.sol";
-import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
-import { PoolRegistry } from "../../Pool/PoolRegistry.sol";
-import { RewardsDistributor } from "../../Rewards/RewardsDistributor.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
+import { ExponentialNoError } from "../ExponentialNoError.sol";
+import { VToken } from "../VToken.sol";
+import { Action, ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
+import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
+import { PoolRegistry } from "../Pool/PoolRegistry.sol";
+import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
+import { SpokeComptrollerViewInterface } from "../Spoke/SpokeComptrollerInterface.sol";
+
 /**
- * @title PoolLens
+ * @title SpokePoolLens
  * @author Venus
- * @dev Archived revision, kept as the source of the addresses still running it. No script here deploys it; edit
- * `Lens/PoolLens.sol` instead.
- * @notice The `PoolLens` contract is designed to retrieve important information for each registered pool. A list of essential information
- * for all pools within the lending protocol can be acquired through the function `getAllPools()`. Additionally, the following records can be
- * looked up for specific pools and markets:
-- the vToken balance of a given user;
-- the pool data (oracle address, associated vToken, liquidation incentive, etc) of a pool via its associated comptroller address;
-- the vToken address in a pool for a given asset;
-- a list of all pools that support an asset;
-- the underlying asset price of a vToken;
-- the metadata (exchange/borrow/supply rate, total supply, collateral factor, etc) of any vToken.
+ * @notice Reads pool and market state specific to a spoke pool
+ *
+ * @dev Spoke pools expose additional state that is not included in the shared PoolLens data, including the
+ * deviation-bounded oracle, the supply and liquidation allowlists, liquidation thresholds and liquidation incentives.
+ * Those reads are named `spoke*` or `getSpokePool*` and return spoke-shaped structs.
+ *
+ * The rest of the surface mirrors `PoolLens` under the same names and struct shapes, so that reading a spoke pool
+ * takes one address rather than two. Those reads go through getters both kinds of pool share.
+ *
+ * Access-controlled call permissions are deliberately not reported: `AccessControlManager` derives the role from its
+ * own caller, so asked from a lens it answers `false` for an account that can in fact call.
+ *
+ * This contract holds no state and is versioned by redeployment.
  */
-contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
+contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     /**
-     * @dev Struct for PoolDetails.
+     * @dev Mirrors `PoolLens.PoolData` with spoke-pool-specific fields.
      */
-    struct PoolData {
+    struct SpokePoolData {
         string name;
         address creator;
         address comptroller;
@@ -43,15 +46,21 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
         string description;
         address priceOracle;
         uint256 closeFactor;
-        uint256 liquidationIncentive;
+        /// @notice The pool-wide liquidation incentive, scaled by 1e18
+        uint256 poolLiquidationIncentiveMantissa;
         uint256 minLiquidatableCollateral;
-        VTokenMetadata[] vTokens;
+        /// @notice Oracle used to bound collateral prices for borrowing and redeeming. Zero until governance sets it,
+        /// and while it is zero both actions revert
+        address deviationBoundedOracle;
+        /// @notice Whether liquidation is restricted to allowlisted accounts
+        bool liquidationAllowlistEnabled;
+        SpokeVTokenMetadata[] vTokens;
     }
 
     /**
-     * @dev Struct for VToken.
+     * @dev Mirrors `PoolLens.VTokenMetadata` with spoke-pool-specific fields.
      */
-    struct VTokenMetadata {
+    struct SpokeVTokenMetadata {
         address vToken;
         uint256 exchangeRateCurrent;
         uint256 supplyRatePerBlockOrTimestamp;
@@ -65,10 +74,31 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
         uint256 totalCash;
         bool isListed;
         uint256 collateralFactorMantissa;
+        /// @notice The collateral weight above which a position becomes liquidatable, scaled by 1e18
+        uint256 liquidationThresholdMantissa;
         address underlyingAssetAddress;
         uint256 vTokenDecimals;
         uint256 underlyingDecimals;
         uint256 pausedActions;
+        /// @notice The liquidation incentive effective for this market, scaled by 1e18
+        uint256 effectiveLiquidationIncentiveMantissa;
+        /// @notice The market-specific liquidation incentive, or zero when using the pool-wide value
+        uint256 ownLiquidationIncentiveMantissa;
+        /// @notice Whether supply is restricted to allowlisted accounts
+        bool supplyAllowlistEnabled;
+        /// @notice Whether the market allows full liquidation without a shortfall
+        bool forcedLiquidationEnabled;
+    }
+
+    /**
+     * @dev Returns both the market's allowlist status and whether the account is allowlisted.
+     */
+    struct SpokeSupplyPermission {
+        address vToken;
+        /// @notice Whether supply is restricted to allowlisted accounts
+        bool allowlistEnabled;
+        /// @notice Whether the account is allowlisted for the market
+        bool accountAllowlisted;
     }
 
     /**
@@ -139,7 +169,7 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @param timeBased_ A boolean indicating whether the contract is based on time or block.
+     * @param timeBased_ A boolean indicating whether the contract is based on time or block
      * @param blocksPerYear_ The number of blocks per year
      * @custom:oz-upgrades-unsafe-allow constructor
      */
@@ -161,69 +191,82 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @notice Queries all pools with addtional details for each of them
-     * @dev This function is not designed to be called in a transaction: it is too gas-intensive
-     * @param poolRegistryAddress The address of the PoolRegistry contract
-     * @return Arrays of all Venus pools' data
+     * @notice Queries every pool and market in a spoke pool registry
+     * @dev Not intended to be called in a transaction due to its gas cost. The registry must contain only spoke pools.
+     * @param poolRegistryAddress The registry to enumerate
+     * @return The data of every pool in the registry
      */
-    function getAllPools(address poolRegistryAddress) external view returns (PoolData[] memory) {
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        PoolRegistry.VenusPool[] memory venusPools = poolRegistryInterface.getAllPools();
-        uint256 poolLength = venusPools.length;
+    function getAllSpokePools(address poolRegistryAddress) external view returns (SpokePoolData[] memory) {
+        PoolRegistry.VenusPool[] memory pools = PoolRegistryInterface(poolRegistryAddress).getAllPools();
+        uint256 poolLength = pools.length;
 
-        PoolData[] memory poolDataItems = new PoolData[](poolLength);
+        SpokePoolData[] memory poolDataItems = new SpokePoolData[](poolLength);
 
         for (uint256 i; i < poolLength; ++i) {
-            PoolRegistry.VenusPool memory venusPool = venusPools[i];
-            PoolData memory poolData = getPoolDataFromVenusPool(poolRegistryAddress, venusPool);
-            poolDataItems[i] = poolData;
+            poolDataItems[i] = getSpokePoolData(poolRegistryAddress, pools[i]);
         }
 
         return poolDataItems;
     }
 
     /**
-     * @notice Queries the details of a pool identified by Comptroller address
-     * @param poolRegistryAddress The address of the PoolRegistry contract
-     * @param comptroller The Comptroller implementation address
-     * @return PoolData structure containing the details of the pool
+     * @notice Queries a spoke pool by its comptroller address
+     * @param poolRegistryAddress The registry containing the pool
+     * @param comptroller The pool's comptroller
+     * @return The pool's data
      */
-    function getPoolByComptroller(
+    function getSpokePoolByComptroller(
         address poolRegistryAddress,
         address comptroller
-    ) external view returns (PoolData memory) {
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        return getPoolDataFromVenusPool(poolRegistryAddress, poolRegistryInterface.getPoolByComptroller(comptroller));
+    ) external view returns (SpokePoolData memory) {
+        PoolRegistryInterface poolRegistry = PoolRegistryInterface(poolRegistryAddress);
+        return getSpokePoolData(poolRegistryAddress, poolRegistry.getPoolByComptroller(comptroller));
     }
 
     /**
-     * @notice Returns vToken holding the specified underlying asset in the specified pool
-     * @param poolRegistryAddress The address of the PoolRegistry contract
-     * @param comptroller The pool comptroller
-     * @param asset The underlyingAsset of VToken
-     * @return Address of the vToken
+     * @notice Returns whether an account may supply to each specified market
+     * @dev The account checked is the one receiving the minted vTokens, which can differ from the payer when using
+     * `mintBehalf`.
+     * @param comptroller The spoke pool's comptroller
+     * @param vTokens The markets to test
+     * @param account The account to test
+     * @return One entry per market, in the order given
      */
-    function getVTokenForAsset(
-        address poolRegistryAddress,
+    function spokeSupplyPermissions(
         address comptroller,
-        address asset
-    ) external view returns (address) {
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        return poolRegistryInterface.getVTokenForAsset(comptroller, asset);
+        VToken[] memory vTokens,
+        address account
+    ) external view returns (SpokeSupplyPermission[] memory) {
+        SpokeComptrollerViewInterface spoke = SpokeComptrollerViewInterface(comptroller);
+        uint256 len = vTokens.length;
+
+        SpokeSupplyPermission[] memory permissions = new SpokeSupplyPermission[](len);
+
+        for (uint256 i; i < len; ++i) {
+            address vToken = address(vTokens[i]);
+            permissions[i] = SpokeSupplyPermission({
+                vToken: vToken,
+                allowlistEnabled: spoke.isSupplyAllowlistEnabled(vToken),
+                accountAllowlisted: spoke.isAllowedSupplier(vToken, account)
+            });
+        }
+
+        return permissions;
     }
 
     /**
-     * @notice Returns all pools that support the specified underlying asset
-     * @param poolRegistryAddress The address of the PoolRegistry contract
-     * @param asset The underlying asset of vToken
-     * @return A list of Comptroller contracts
+     * @notice Returns whether an account may seize collateral in a spoke pool
+     * @param comptroller The spoke pool's comptroller
+     * @param liquidator The account to test
+     * @return allowlistEnabled Whether liquidation is restricted to allowlisted accounts
+     * @return accountAllowlisted Whether the account is allowlisted
      */
-    function getPoolsSupportedByAsset(
-        address poolRegistryAddress,
-        address asset
-    ) external view returns (address[] memory) {
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-        return poolRegistryInterface.getPoolsSupportedByAsset(asset);
+    function spokeLiquidationPermission(
+        address comptroller,
+        address liquidator
+    ) external view returns (bool allowlistEnabled, bool accountAllowlisted) {
+        SpokeComptrollerViewInterface spoke = SpokeComptrollerViewInterface(comptroller);
+        return (spoke.isLiquidationAllowlistEnabled(), spoke.isAllowedLiquidator(liquidator));
     }
 
     /**
@@ -306,6 +349,36 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
+     * @notice Returns vToken holding the specified underlying asset in the specified pool
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param comptroller The pool comptroller
+     * @param asset The underlyingAsset of VToken
+     * @return Address of the vToken
+     */
+    function getVTokenForAsset(
+        address poolRegistryAddress,
+        address comptroller,
+        address asset
+    ) external view returns (address) {
+        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
+        return poolRegistryInterface.getVTokenForAsset(comptroller, asset);
+    }
+
+    /**
+     * @notice Returns all pools that support the specified underlying asset
+     * @param poolRegistryAddress The address of the PoolRegistry contract
+     * @param asset The underlying asset of vToken
+     * @return A list of Comptroller contracts
+     */
+    function getPoolsSupportedByAsset(
+        address poolRegistryAddress,
+        address asset
+    ) external view returns (address[] memory) {
+        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
+        return poolRegistryInterface.getPoolsSupportedByAsset(asset);
+    }
+
+    /**
      * @notice Queries the user's supply/borrow balances in the specified vToken
      * @param vToken vToken address
      * @param account The user Account
@@ -334,109 +407,111 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @notice Queries additional information for the pool
-     * @param poolRegistryAddress Address of the PoolRegistry
-     * @param venusPool The VenusPool Object from PoolRegistry
-     * @return Enriched PoolData
+     * @notice Queries a spoke pool from its registry entry
+     * @param poolRegistryAddress The registry containing the pool
+     * @param venusPool The pool's registry entry
+     * @return The pool's data, including its markets
      */
-    function getPoolDataFromVenusPool(
+    function getSpokePoolData(
         address poolRegistryAddress,
         PoolRegistry.VenusPool memory venusPool
-    ) public view returns (PoolData memory) {
-        // Get tokens in the Pool
-        ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
+    ) public view returns (SpokePoolData memory) {
+        address comptroller = venusPool.comptroller;
 
-        VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
-
-        VTokenMetadata[] memory vTokenMetadataItems = vTokenMetadataAll(vTokens);
-
-        PoolRegistryInterface poolRegistryInterface = PoolRegistryInterface(poolRegistryAddress);
-
-        PoolRegistry.VenusPoolMetaData memory venusPoolMetaData = poolRegistryInterface.getVenusPoolMetadata(
-            venusPool.comptroller
+        SpokeVTokenMetadata[] memory vTokenMetadataItems = spokeVTokenMetadataAll(
+            ComptrollerInterface(comptroller).getAllMarkets()
         );
 
-        ComptrollerViewInterface comptrollerViewInstance = ComptrollerViewInterface(venusPool.comptroller);
+        PoolRegistry.VenusPoolMetaData memory metaData = PoolRegistryInterface(poolRegistryAddress)
+            .getVenusPoolMetadata(comptroller);
 
-        PoolData memory poolData = PoolData({
-            name: venusPool.name,
-            creator: venusPool.creator,
-            comptroller: venusPool.comptroller,
-            blockPosted: venusPool.blockPosted,
-            timestampPosted: venusPool.timestampPosted,
-            category: venusPoolMetaData.category,
-            logoURL: venusPoolMetaData.logoURL,
-            description: venusPoolMetaData.description,
-            vTokens: vTokenMetadataItems,
-            priceOracle: address(comptrollerViewInstance.oracle()),
-            closeFactor: comptrollerViewInstance.closeFactorMantissa(),
-            liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
-            minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral()
-        });
+        ComptrollerViewInterface pooledView = ComptrollerViewInterface(comptroller);
+        SpokeComptrollerViewInterface spokeView = SpokeComptrollerViewInterface(comptroller);
+
+        SpokePoolData memory poolData;
+        poolData.name = venusPool.name;
+        poolData.creator = venusPool.creator;
+        poolData.comptroller = comptroller;
+        poolData.blockPosted = venusPool.blockPosted;
+        poolData.timestampPosted = venusPool.timestampPosted;
+        poolData.category = metaData.category;
+        poolData.logoURL = metaData.logoURL;
+        poolData.description = metaData.description;
+        poolData.priceOracle = address(pooledView.oracle());
+        poolData.closeFactor = pooledView.closeFactorMantissa();
+        // This call is made from the lens, so the comptroller returns the pool-wide incentive.
+        poolData.poolLiquidationIncentiveMantissa = pooledView.liquidationIncentiveMantissa();
+        poolData.minLiquidatableCollateral = pooledView.minLiquidatableCollateral();
+        poolData.deviationBoundedOracle = address(spokeView.deviationBoundedOracle());
+        poolData.liquidationAllowlistEnabled = spokeView.isLiquidationAllowlistEnabled();
+        poolData.vTokens = vTokenMetadataItems;
 
         return poolData;
     }
 
     /**
-     * @notice Returns the metadata of VToken
-     * @param vToken The address of vToken
-     * @return VTokenMetadata struct
+     * @notice Queries the metadata of every given market of a spoke pool
+     * @param vTokens The markets to read
+     * @return One entry per market, in the order given
      */
-    function vTokenMetadata(VToken vToken) public view returns (VTokenMetadata memory) {
-        uint256 exchangeRateCurrent = vToken.exchangeRateStored();
-        address comptrollerAddress = address(vToken.comptroller());
-        ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
-        (bool isListed, uint256 collateralFactorMantissa) = comptroller.markets(address(vToken));
+    function spokeVTokenMetadataAll(VToken[] memory vTokens) public view returns (SpokeVTokenMetadata[] memory) {
+        uint256 len = vTokens.length;
 
-        address underlyingAssetAddress = vToken.underlying();
-        uint256 underlyingDecimals = IERC20Metadata(underlyingAssetAddress).decimals();
+        SpokeVTokenMetadata[] memory metadataItems = new SpokeVTokenMetadata[](len);
 
-        uint256 pausedActions;
-        for (uint8 i; i <= uint8(type(Action).max); ++i) {
-            uint256 paused = ComptrollerInterface(comptrollerAddress).actionPaused(address(vToken), Action(i)) ? 1 : 0;
-            pausedActions |= paused << i;
+        for (uint256 i; i < len; ++i) {
+            metadataItems[i] = spokeVTokenMetadata(vTokens[i]);
         }
 
-        uint256 supplyRatePerBlock;
+        return metadataItems;
+    }
 
-        if (vToken.totalSupply() > 0) {
-            supplyRatePerBlock = vToken.supplyRatePerBlock();
-        }
+    /**
+     * @notice Queries the metadata of one market of a spoke pool
+     * @param vToken The market to read
+     * @return The market's metadata
+     */
+    function spokeVTokenMetadata(VToken vToken) public view returns (SpokeVTokenMetadata memory) {
+        address vTokenAddress = address(vToken);
+        address comptroller = address(vToken.comptroller());
+
+        ComptrollerViewInterface pooledView = ComptrollerViewInterface(comptroller);
+        SpokeComptrollerViewInterface spokeView = SpokeComptrollerViewInterface(comptroller);
+
+        // Read through the spoke interface, which declares all three returns. `ComptrollerViewInterface` declares
+        // the first two, so reading it there drops the liquidation threshold with no error.
+        (bool isListed, uint256 collateralFactorMantissa, uint256 liquidationThresholdMantissa) = spokeView.markets(
+            vTokenAddress
+        );
+
+        address underlying = vToken.underlying();
 
         return
-            VTokenMetadata({
-                vToken: address(vToken),
-                exchangeRateCurrent: exchangeRateCurrent,
-                supplyRatePerBlockOrTimestamp: supplyRatePerBlock,
+            SpokeVTokenMetadata({
+                vToken: vTokenAddress,
+                exchangeRateCurrent: vToken.exchangeRateStored(),
+                // Zero for an empty market, as `PoolLens` reports: the rate model divides by the market's supply.
+                supplyRatePerBlockOrTimestamp: vToken.totalSupply() > 0 ? vToken.supplyRatePerBlock() : 0,
                 borrowRatePerBlockOrTimestamp: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
-                supplyCaps: comptroller.supplyCaps(address(vToken)),
-                borrowCaps: comptroller.borrowCaps(address(vToken)),
+                supplyCaps: pooledView.supplyCaps(vTokenAddress),
+                borrowCaps: pooledView.borrowCaps(vTokenAddress),
                 totalBorrows: vToken.totalBorrows(),
                 totalReserves: vToken.totalReserves(),
                 totalSupply: vToken.totalSupply(),
                 totalCash: vToken.getCash(),
                 isListed: isListed,
                 collateralFactorMantissa: collateralFactorMantissa,
-                underlyingAssetAddress: underlyingAssetAddress,
+                liquidationThresholdMantissa: liquidationThresholdMantissa,
+                underlyingAssetAddress: underlying,
                 vTokenDecimals: vToken.decimals(),
-                underlyingDecimals: underlyingDecimals,
-                pausedActions: pausedActions
+                underlyingDecimals: IERC20Metadata(underlying).decimals(),
+                pausedActions: _pausedActions(comptroller, vTokenAddress),
+                effectiveLiquidationIncentiveMantissa: spokeView.effectiveLiquidationIncentive(vTokenAddress),
+                ownLiquidationIncentiveMantissa: spokeView.liquidationIncentives(vTokenAddress),
+                supplyAllowlistEnabled: spokeView.isSupplyAllowlistEnabled(vTokenAddress),
+                forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress)
             });
-    }
-
-    /**
-     * @notice Returns the metadata of all VTokens
-     * @param vTokens The list of vToken addresses
-     * @return An array of VTokenMetadata structs
-     */
-    function vTokenMetadataAll(VToken[] memory vTokens) public view returns (VTokenMetadata[] memory) {
-        uint256 vTokenCount = vTokens.length;
-        VTokenMetadata[] memory res = new VTokenMetadata[](vTokenCount);
-        for (uint256 i; i < vTokenCount; ++i) {
-            res[i] = vTokenMetadata(vTokens[i]);
-        }
-        return res;
     }
 
     /**
@@ -617,5 +692,22 @@ contract PoolLensR3 is ExponentialNoError, TimeManagerV8 {
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
         return supplierDelta;
+    }
+
+    /**
+     * @dev Encodes paused actions using the same bit positions as `PoolLens`.
+     * @param comptroller The market's comptroller
+     * @param vToken The market to read
+     * @return A bitmask of the paused actions
+     */
+    function _pausedActions(address comptroller, address vToken) private view returns (uint256) {
+        uint256 pausedActions;
+
+        for (uint8 i; i <= uint8(type(Action).max); ++i) {
+            uint256 paused = ComptrollerInterface(comptroller).actionPaused(vToken, Action(i)) ? 1 : 0;
+            pausedActions |= paused << i;
+        }
+
+        return pausedActions;
     }
 }

@@ -252,10 +252,38 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
  * its build needs the ABI-equivalent `uint8` form. The two share a selector, so they cannot both be declared in one
  * inheritance chain - which is the reason this interface inherits nothing.
  *
- * Anything else the fork shares with the pooled `Comptroller` - `borrowCaps`, `markets`, `oracle`,
- * `closeFactorMantissa`, `minLiquidatableCollateral` - is read through `ComptrollerViewInterface` as usual.
+ * `markets` is repeated for a different reason: the shared declaration returns two of the three words the getter
+ * actually produces, so a consumer reading it there silently loses `liquidationThresholdMantissa`. The form declared
+ * here returns all three.
+ *
+ * Anything else the fork shares with the pooled `Comptroller` - `borrowCaps`, `oracle`, `closeFactorMantissa`,
+ * `minLiquidatableCollateral` - is read through `ComptrollerViewInterface` as usual.
  */
 interface SpokeComptrollerViewInterface {
+    /**
+     * @notice The listing state and both collateral weights of a market
+     * @dev The auto-generated getter over the `markets` mapping. It returns three words, one per non-mapping member
+     *   of `Market`. `ComptrollerViewInterface` declares only the first two, so a caller reading the getter through
+     *   that declaration drops `liquidationThresholdMantissa` without any error: the extra word is simply trailing
+     *   return data the decoder ignores. Read it here to get all three.
+     * @param vToken The market to query
+     * @return isListed True once the market has been added to the pool
+     * @return collateralFactorMantissa The most an account may borrow against this collateral, scaled by 1e18
+     * @return liquidationThresholdMantissa The weighting past which the position becomes liquidatable, scaled by 1e18
+     */
+    function markets(
+        address vToken
+    ) external view returns (bool isListed, uint256 collateralFactorMantissa, uint256 liquidationThresholdMantissa);
+
+    /**
+     * @notice Whether a market may be liquidated while the borrower is still above the liquidation threshold
+     * @dev Read in `preLiquidateHook`. While this is set the close factor no longer bounds the repayment, so a
+     *   position in the market can be closed in full in one call.
+     * @param vToken The market to read the setting of
+     * @return enabled True if this market allows liquidation without a shortfall
+     */
+    function isForcedLiquidationEnabled(address vToken) external view returns (bool enabled);
+
     /**
      * @notice The most underlying a market will hold before it stops accepting supply
      * @dev `type(uint256).max` disables the check. Zero is a real cap of zero rather than an "unset" sentinel:

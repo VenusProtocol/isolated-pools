@@ -9,7 +9,6 @@ import { ExponentialNoError } from "../ExponentialNoError.sol";
 import { VToken } from "../VToken.sol";
 import { Action, ComptrollerInterface, ComptrollerViewInterface } from "../ComptrollerInterface.sol";
 import { PoolRegistryInterface } from "../Pool/PoolRegistryInterface.sol";
-import { SpokeComptrollerViewInterface } from "../Spoke/SpokeComptrollerInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { RewardsDistributor } from "../Rewards/RewardsDistributor.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
@@ -45,10 +44,6 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 liquidationIncentive;
         uint256 minLiquidatableCollateral;
         VTokenMetadata[] vTokens;
-        /// @notice Oracle a spoke pool bounds collateral prices with. Zero for a pool that has none
-        address deviationBoundedOracle;
-        /// @notice True while only allowlisted accounts may liquidate in this pool. False for a pool with no allowlist
-        bool liquidationAllowlistEnabled;
     }
 
     /**
@@ -72,11 +67,6 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 vTokenDecimals;
         uint256 underlyingDecimals;
         uint256 pausedActions;
-        /// @notice Discount a liquidator receives on this market's collateral: the market's own value if it has one,
-        /// otherwise the pool-wide value
-        uint256 liquidationIncentiveMantissa;
-        /// @notice True while only allowlisted accounts may supply to this market. False for a market with no allowlist
-        bool supplyAllowlistEnabled;
     }
 
     /**
@@ -378,18 +368,8 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
             vTokens: vTokenMetadataItems,
             priceOracle: address(comptrollerViewInstance.oracle()),
             closeFactor: comptrollerViewInstance.closeFactorMantissa(),
-            // The pool-wide value on either kind of pool: a spoke resolves this getter against `msg.sender`, and a
-            // lens is not one of its markets. Per market, read `VTokenMetadata.liquidationIncentiveMantissa`.
             liquidationIncentive: comptrollerViewInstance.liquidationIncentiveMantissa(),
-            minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral(),
-            deviationBoundedOracle: _probeAddress(
-                venusPool.comptroller,
-                abi.encodeCall(SpokeComptrollerViewInterface.deviationBoundedOracle, ())
-            ),
-            liquidationAllowlistEnabled: _probeBool(
-                venusPool.comptroller,
-                abi.encodeCall(SpokeComptrollerViewInterface.isLiquidationAllowlistEnabled, ())
-            )
+            minLiquidatableCollateral: comptrollerViewInstance.minLiquidatableCollateral()
         });
 
         return poolData;
@@ -439,12 +419,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
                 underlyingAssetAddress: underlyingAssetAddress,
                 vTokenDecimals: vToken.decimals(),
                 underlyingDecimals: underlyingDecimals,
-                pausedActions: pausedActions,
-                liquidationIncentiveMantissa: _marketLiquidationIncentive(comptrollerAddress, address(vToken)),
-                supplyAllowlistEnabled: _probeBool(
-                    comptrollerAddress,
-                    abi.encodeCall(SpokeComptrollerViewInterface.isSupplyAllowlistEnabled, (address(vToken)))
-                )
+                pausedActions: pausedActions
             });
     }
 
@@ -640,54 +615,5 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
         return supplierDelta;
-    }
-
-    /**
-     * @dev The discount a liquidator receives on this market's collateral. A spoke pool answers per market through
-     *  `effectiveLiquidationIncentive`; any other comptroller has one incentive for the whole pool, and that is the
-     *  value applying to each of its markets.
-     * @param comptroller The market's comptroller
-     * @param vToken The market to read the discount of
-     * @return The discount that applies to this market, scaled by 1e18
-     */
-    function _marketLiquidationIncentive(address comptroller, address vToken) private view returns (uint256) {
-        (bool success, bytes memory data) = comptroller.staticcall(
-            abi.encodeCall(SpokeComptrollerViewInterface.effectiveLiquidationIncentive, (vToken))
-        );
-        if (success && data.length == 32) {
-            return abi.decode(data, (uint256));
-        }
-        return ComptrollerViewInterface(comptroller).liquidationIncentiveMantissa();
-    }
-
-    /**
-     * @dev Reads an address a comptroller only answers if it is a spoke pool. `staticcall` rather than a typed call,
-     *  so a comptroller without the function reverts here instead of reverting the whole read, and that is taken to
-     *  mean "this pool has none". Encode with `abi.encodeCall` so the selector stays checked against the interface.
-     * @param comptroller The comptroller to ask
-     * @param call The encoded call
-     * @return The address the comptroller answered, or zero if it does not answer this call
-     */
-    function _probeAddress(address comptroller, bytes memory call) private view returns (address) {
-        (bool success, bytes memory data) = comptroller.staticcall(call);
-        if (!success || data.length != 32) {
-            return address(0);
-        }
-        return abi.decode(data, (address));
-    }
-
-    /**
-     * @dev Reads a flag a comptroller only answers if it is a spoke pool. See `_probeAddress`. A comptroller that does
-     *  not answer has no such restriction, which is what false reports.
-     * @param comptroller The comptroller to ask
-     * @param call The encoded call
-     * @return True if the comptroller answered true, false if it answered false or does not answer this call
-     */
-    function _probeBool(address comptroller, bytes memory call) private view returns (bool) {
-        (bool success, bytes memory data) = comptroller.staticcall(call);
-        if (!success || data.length != 32) {
-            return false;
-        }
-        return abi.decode(data, (bool));
     }
 }
