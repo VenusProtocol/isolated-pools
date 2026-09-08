@@ -36,6 +36,30 @@ describe("SpokeComptroller: deployment", function () {
     expect(spokeBeacon.address).to.not.equal(sharedBeacon.address);
   });
 
+  it("gives the spoke markets a VToken beacon of their own", async () => {
+    const spokeBeacon = await ethers.getContractAt(BEACON_ABI, (await deployments.get("SpokeVTokenBeacon")).address);
+    const sharedBeacon = await ethers.getContractAt(BEACON_ABI, (await deployments.get("VTokenBeacon")).address);
+
+    const spokeImpl = (await deployments.get("SpokeVTokenImpl")).address;
+    const sharedImpl = (await deployments.get("VTokenImpl")).address;
+
+    expect(await spokeBeacon.implementation()).to.equal(spokeImpl);
+    // `upgradeTo` moves every proxy behind a beacon at once, so sharing this one would tie a VToken change for the
+    // spoke pool to every isolated market on the chain, in both directions.
+    expect(await sharedBeacon.implementation()).to.equal(sharedImpl);
+    expect(spokeImpl).to.not.equal(sharedImpl);
+    expect(spokeBeacon.address).to.not.equal(sharedBeacon.address);
+  });
+
+  it("hands the VToken beacon to the configured owner inside the deployment run", async () => {
+    const { deployer } = await getNamedAccounts();
+    const beacon = await ethers.getContractAt(BEACON_ABI, (await deployments.get("SpokeVTokenBeacon")).address);
+
+    // `UpgradeableBeacon` is plain `Ownable`, so unlike the comptroller there is nothing left for the VIP to accept.
+    // No timelock is configured on the hardhat network, so the deployer is the expected owner here.
+    expect(await beacon.owner()).to.equal(deployer);
+  });
+
   it("binds the spoke to its own pool registry, not the isolated-pools one", async () => {
     // The registry is the directory every consumer iterates to answer "which pools exist". Sharing it would hand the
     // indexer, the frontend and the risk tooling a pool whose supply, borrow and liquidation sides are all restricted.

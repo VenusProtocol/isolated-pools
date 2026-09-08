@@ -11,8 +11,9 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
 const EIP_170_LIMIT = 24_576;
 
 /**
- * Runs the real `deploy/025-deploy-spoke-comptroller.ts` against live bscmainnet, which is the only
- * way to find out what it does with the addresses this chain actually reports. The behavioural
+ * Runs the real `deploy/025-deploy-spoke-comptroller.ts` and `deploy/027-deploy-spoke-vtoken-beacon.ts`
+ * against live bscmainnet, which is the only way to find out what they do with the addresses this chain
+ * actually reports. The behavioural
  * suites deploy the same stack directly, because they need the pool in a listed and configured state
  * the script deliberately leaves to the listing VIP.
  */
@@ -25,7 +26,9 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       await setForkBlock(BLOCK_NUMBER);
       ({ deployer } = await getNamedAccounts());
       try {
-        await deployments.fixture(["HubSpokeComptroller"], { keepExistingDeployments: true });
+        await deployments.fixture(["HubSpokeComptroller", "HubSpokeVTokenBeacon"], {
+          keepExistingDeployments: true,
+        });
       } catch (e) {
         scriptError = e as Error;
       }
@@ -102,6 +105,23 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
           ethers.constants.AddressZero,
         );
       }
+    });
+
+    it("points a VToken beacon of its own at a fresh implementation, never the shared VTokenBeacon", async () => {
+      const impl = await deployed("SpokeVTokenImpl");
+      const beacon = await ethers.getContractAt("UpgradeableBeacon", await deployed("SpokeVTokenBeacon"));
+      expect(beacon.address).to.not.equal(bscmainnet.VTOKEN_BEACON);
+      expect(await beacon.implementation()).to.equal(impl);
+
+      // `upgradeTo` moves every proxy behind a beacon at once. Sharing this one would tie a VToken change
+      // for the spoke pool to every isolated market on the chain, in both directions.
+      const shared = await ethers.getContractAt("UpgradeableBeacon", bscmainnet.VTOKEN_BEACON);
+      expect(await shared.implementation()).to.not.equal(impl);
+    });
+
+    it("hands the VToken beacon to the Normal Timelock inside the deployment transaction", async () => {
+      const beacon = await ethers.getContractAt("UpgradeableBeacon", await deployed("SpokeVTokenBeacon"));
+      expect(await beacon.owner()).to.equal(bscmainnet.NORMAL_TIMELOCK);
     });
 
     it("hands the beacon to the Normal Timelock inside the deployment transaction", async () => {

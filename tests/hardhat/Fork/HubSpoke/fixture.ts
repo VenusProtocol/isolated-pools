@@ -34,6 +34,11 @@ const EXP_SCALE = ethers.utils.parseUnits("1", 18);
 /// off by the ratio between the two.
 const BLOCKS_PER_YEAR = 42_048_000;
 
+/// What `getMaxBorrowRateMantissa` returns for this chain, i.e. the value `009-deploy-vtokens.ts` and
+/// `027-deploy-spoke-vtoken-beacon.ts` both construct a VToken implementation with. It is an internal immutable with
+/// no getter, so it cannot be read back off the live implementation to compare.
+const MAX_BORROW_RATE_MANTISSA = BigNumber.from("5000000000000");
+
 /// Role strings the spoke comptroller checks, verbatim. A VIP that grants anything else grants
 /// nothing: the ACM hashes the string, so a near-miss is silently a different role.
 export const SPOKE_ROLES = {
@@ -235,6 +240,7 @@ async function deployIrm(acm: string, deployer: SignerWithAddress): Promise<Jump
 
 async function deployVToken(
   deployer: SignerWithAddress,
+  beacon: string,
   underlying: string,
   comptroller: string,
   irm: string,
@@ -245,8 +251,6 @@ async function deployVToken(
   underlyingDecimals: number,
   initialExchangeRateMantissa?: BigNumber,
 ): Promise<VToken> {
-  // Minted from the chain's live VTokenBeacon, so the market runs the same implementation every
-  // other isolated pool on this chain runs, with the same immutables.
   const vTokenFactory = await ethers.getContractFactory("VToken");
   const initData = vTokenFactory.interface.encodeFunctionData("initialize", [
     underlying,
@@ -264,8 +268,10 @@ async function deployVToken(
     { shortfall: bscmainnet.SHORTFALL, protocolShareReserve: bscmainnet.PSR },
     reserveFactorMantissa,
   ]);
+  // Behind the spoke pool's own beacon, never the chain's shared `VTokenBeacon`. This is where the
+  // separation is actually decided: the beacon is inert until the markets point at it.
   const proxyFactory = await ethers.getContractFactory("BeaconProxy", deployer);
-  const proxy = await proxyFactory.deploy(bscmainnet.VTOKEN_BEACON, initData);
+  const proxy = await proxyFactory.deploy(beacon, initData);
   await proxy.deployed();
   return VToken__factory.connect(proxy.address, deployer);
 }
@@ -281,9 +287,9 @@ export async function fundFrom(token: IERC20, whale: string, to: string, amount:
  * to use. Everything it binds is live; everything it deploys is a contract that genuinely has to be
  * deployed to ship this feature.
  *
- * Deliberately NOT run through `deploy/025-deploy-spoke-comptroller.ts`: `deployment.ts` covers that
- * script on its own, and the behavioural suites need the pool in a listed, configured state that the
- * script explicitly leaves to the VIP.
+ * Deliberately NOT run through `deploy/025-deploy-spoke-comptroller.ts` and
+ * `deploy/027-deploy-spoke-vtoken-beacon.ts`: `deployment.ts` covers those scripts on their own, and the
+ * behavioural suites need the pool in a listed, configured state that they explicitly leave to the VIP.
  */
 export interface SpokeStack {
   timelock: Signer;
@@ -301,11 +307,13 @@ export interface SpokeStack {
   spoke: SpokeComptroller;
   spokeBeacon: Contract;
   spokeImpl: string;
+  vTokenBeacon: Contract;
 }
 
 /**
- * Deploy the spoke stack exactly as `deploy/025-deploy-spoke-comptroller.ts` does, then hand it to
- * governance. Stops short of registering the pool, which is where the listing VIP starts.
+ * Deploy the spoke stack exactly as `deploy/025-deploy-spoke-comptroller.ts` and
+ * `deploy/027-deploy-spoke-vtoken-beacon.ts` do, then hand it to governance. Stops short of registering
+ * the pool, which is where the listing VIP starts.
  *
  * `configure: false` leaves the pool in the raw state the deploy script produces - no oracle, no
  * ACM grants, deployer still the live owner - so a test can assert what the VIP has to supply.
@@ -334,6 +342,16 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
   const spokeBeacon = await beaconFactory.deploy(impl.address);
   await spokeBeacon.deployed();
 
+  // A VToken beacon of its own, as `027-deploy-spoke-vtoken-beacon.ts` deploys. `upgradeTo` moves every proxy behind a
+  // beacon in one call, so markets on the chain's shared `VTokenBeacon` could only take a VToken change that every
+  // isolated market on the chain takes with them. Same `VToken` and same immutables as the live implementation, so
+  // the markets behave identically until an upgrade separates them.
+  const vTokenImplFactory = await ethers.getContractFactory("VToken", deployer);
+  const vTokenImpl = await vTokenImplFactory.deploy(false, BLOCKS_PER_YEAR, MAX_BORROW_RATE_MANTISSA);
+  await vTokenImpl.deployed();
+  const vTokenBeacon = await beaconFactory.deploy(vTokenImpl.address);
+  await vTokenBeacon.deployed();
+
   const proxyFactory = await ethers.getContractFactory("BeaconProxy", deployer);
   const proxy = await proxyFactory.deploy(
     spokeBeacon.address,
@@ -347,6 +365,7 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
   await spoke.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
   await registry.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
   await spokeBeacon.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
+  await vTokenBeacon.transferOwnership(bscmainnet.NORMAL_TIMELOCK);
 
   const stack: SpokeStack = {
     timelock,
@@ -364,6 +383,7 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
     spoke,
     spokeBeacon,
     spokeImpl: impl.address,
+    vTokenBeacon,
   };
 
   if (configure) await configureSpokeStack(stack);
@@ -438,6 +458,7 @@ export async function addSpokeMarkets(s: SpokeStack): Promise<SpokeMarkets> {
   const irm = await deployIrm(bscmainnet.ACM, s.deployer);
   const vUSDT = await deployVToken(
     s.deployer,
+    s.vTokenBeacon.address,
     bscmainnet.USDT,
     s.spoke.address,
     irm.address,
@@ -449,6 +470,7 @@ export async function addSpokeMarkets(s: SpokeStack): Promise<SpokeMarkets> {
   );
   const vBTCB = await deployVToken(
     s.deployer,
+    s.vTokenBeacon.address,
     bscmainnet.BTCB,
     s.spoke.address,
     irm.address,
@@ -607,6 +629,7 @@ export async function addLowDecimalMarket(
   const trx = IERC20__factory.connect(bscmainnet.TRX, f.deployer);
   const vTRX = await deployVToken(
     f.deployer,
+    f.vTokenBeacon.address,
     bscmainnet.TRX,
     f.spoke.address,
     f.irm.address,

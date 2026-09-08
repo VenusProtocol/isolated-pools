@@ -4,7 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { sameAddress, toAddress } from "../helpers/deploymentUtils";
+import { sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
@@ -14,32 +14,6 @@ const POOL_ID = "HubSpoke";
 const POOL_REGISTRY_NAME = "SpokePoolRegistry";
 
 const MAX_LOOPS_LIMIT = 100;
-
-// Verification is best effort: it reaches an external explorer API, so a failure here must not abort a deployment that
-// already succeeded on chain. Re-run the script to retry.
-const verify = async (
-  hre: HardhatRuntimeEnvironment,
-  name: string,
-  deployment: DeployResult,
-  constructorArguments: unknown[],
-) => {
-  if (!hre.network.live || !deployment.newlyDeployed) {
-    return;
-  }
-
-  console.log(`Verifying ${name}...`);
-  try {
-    await hre.run("verify:verify", { address: deployment.address, constructorArguments });
-    console.log(`${name} verified successfully`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("Already Verified")) {
-      console.log(`${name} already verified`);
-    } else {
-      console.error(`${name} verification failed: ${message}`);
-    }
-  }
-};
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -81,8 +55,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     autoMine: true,
   });
   // Submitted here rather than at the end, because the checks below can stop the run and by the next run this
-  // implementation is no longer newly deployed, which is what `verify` keys off.
-  await verify(hre, "SpokeComptrollerImpl", spokeComptrollerImpl, implArgs);
+  // implementation is no longer newly deployed, which is what `verifyDeployment` keys off.
+  await verifyDeployment(hre, "SpokeComptrollerImpl", spokeComptrollerImpl, implArgs);
 
   // A beacon of its own, never the shared `ComptrollerBeacon`. Sharing it would put every other pool in this repo on
   // the spoke implementation the moment either side is upgraded.
@@ -168,8 +142,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     );
   }
 
-  await verify(hre, "SpokeComptrollerBeacon", spokeComptrollerBeacon, beaconArgs);
-  await verify(hre, `Comptroller_${POOL_ID}`, comptrollerProxy, proxyArgs);
+  await verifyDeployment(hre, "SpokeComptrollerBeacon", spokeComptrollerBeacon, beaconArgs);
+  await verifyDeployment(hre, `Comptroller_${POOL_ID}`, comptrollerProxy, proxyArgs);
 
   // Everything else this pool needs is governance-owned and belongs in the listing VIP, in this order: accept ownership
   // of both the comptroller and the spoke pool registry, grant the ACM roles both of them need (listed in

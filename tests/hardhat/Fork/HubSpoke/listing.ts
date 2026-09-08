@@ -201,21 +201,29 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         }
       });
 
-      it("runs its markets on the same VToken implementation as every other isolated pool", async () => {
-        const beacon = await ethers.getContractAt("UpgradeableBeacon", bscmainnet.VTOKEN_BEACON);
-        const impl = await beacon.implementation();
+      it("runs its markets on a VToken beacon of its own, not the chain's shared one", async () => {
+        const shared = await ethers.getContractAt("UpgradeableBeacon", bscmainnet.VTOKEN_BEACON);
+        const sharedImpl = await ethers.getContractAt("VToken", await shared.implementation());
+        const spokeImpl = await s.vTokenBeacon.implementation();
+
+        // `upgradeTo` moves every proxy behind a beacon in one call. On the shared beacon these
+        // markets could only take a VToken change that every isolated market on the chain takes
+        // with them, and the other way round.
+        expect(s.vTokenBeacon.address).to.not.equal(bscmainnet.VTOKEN_BEACON);
+        expect(spokeImpl).to.not.equal(sharedImpl.address);
+        expect(spokeImpl).to.not.equal(ethers.constants.AddressZero);
+
         const markets = await s.spoke.getAllMarkets();
         for (const market of markets) {
           const vToken = await ethers.getContractAt("VToken", market);
           expect(await vToken.comptroller()).to.equal(s.spoke.address);
           expect(await vToken.protocolShareReserve()).to.equal(bscmainnet.PSR);
           expect(await vToken.shortfall()).to.equal(bscmainnet.SHORTFALL);
-          // `isTimeBased`/`blocksOrSecondsPerYear` are immutables of the shared implementation, so
-          // reading them back proves the market really is running that implementation.
-          expect(await vToken.isTimeBased()).to.equal(false);
-          expect(await vToken.blocksOrSecondsPerYear()).to.equal(42_048_000);
+          // A separate implementation, constructed with the same immutables as the live one: the
+          // split buys upgrade independence, not different behaviour on day one.
+          expect(await vToken.isTimeBased()).to.equal(await sharedImpl.isTimeBased());
+          expect(await vToken.blocksOrSecondsPerYear()).to.equal(await sharedImpl.blocksOrSecondsPerYear());
         }
-        expect(impl).to.not.equal(ethers.constants.AddressZero);
       });
 
       it("bounds a market's liquidation incentive by that market's own protocol seize share", async () => {

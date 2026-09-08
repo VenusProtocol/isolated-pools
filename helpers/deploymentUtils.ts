@@ -1,4 +1,5 @@
 import { deployments, ethers, getNamedAccounts } from "hardhat";
+import { DeployResult } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
@@ -140,3 +141,29 @@ export const skipMainnets = () => async (hre: HardhatRuntimeEnvironment) => {
 // records the access control manager lowercase, so a pre-handover check refused the very address the proxy had just
 // been initialized with, and the run stopped before either ownership transfer. Compare parsed addresses, never strings.
 export const sameAddress = (a: string, b: string): boolean => ethers.utils.getAddress(a) === ethers.utils.getAddress(b);
+
+// Verification reaches an external explorer API, so a failure here must not abort a deployment that already succeeded on
+// chain. Re-run the script to retry.
+export const verifyDeployment = async (
+  hre: HardhatRuntimeEnvironment,
+  name: string,
+  deployment: DeployResult,
+  constructorArguments: unknown[],
+): Promise<void> => {
+  if (!hre.network.live || !deployment.newlyDeployed) {
+    return;
+  }
+
+  console.log(`Verifying ${name}...`);
+  try {
+    await hre.run("verify:verify", { address: deployment.address, constructorArguments });
+    console.log(`${name} verified successfully`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("Already Verified")) {
+      console.log(`${name} already verified`);
+    } else {
+      console.error(`${name} verification failed: ${message}`);
+    }
+  }
+};
