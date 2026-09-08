@@ -1,8 +1,21 @@
 import { expect } from "chai";
 import { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
 
+import { getBlockOrTimestampBasedDeploymentInfo } from "../../../helpers/deploymentUtils";
+import { getRateModelName, getRateModelParams } from "../../../helpers/rateModelHelpers";
+import { getSpokePoolConfig } from "../../../helpers/spokeDeploymentConfig";
+
 const EIP_170_LIMIT = 24576;
 const BEACON_ABI = ["function implementation() view returns (address)", "function owner() view returns (address)"];
+
+// `bytes32(uint256(keccak256("eip1967.proxy.beacon")) - 1)`, where a `BeaconProxy` keeps the beacon it delegates to.
+// There is no getter for it, and it is the only place the market records which beacon it will follow through upgrades.
+const EIP_1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
+
+// The markets the deploy scripts build on this network. `009-deploy-vtokens.ts` never sees these, which is why they
+// live outside `deploymentConfig.ts`.
+const spokeMarkets = getSpokePoolConfig("hardhat")?.vtokens ?? [];
+const timeManagerParams = getBlockOrTimestampBasedDeploymentInfo("hardhat");
 
 async function spokeComptroller() {
   return ethers.getContractAt("SpokeComptroller", (await deployments.get("Comptroller_HubSpoke")).address);
@@ -58,6 +71,41 @@ describe("SpokeComptroller: deployment", function () {
     // `UpgradeableBeacon` is plain `Ownable`, so unlike the comptroller there is nothing left for the VIP to accept.
     // No timelock is configured on the hardhat network, so the deployer is the expected owner here.
     expect(await beacon.owner()).to.equal(deployer);
+  });
+
+  it("builds every configured market behind the spoke VToken beacon", async () => {
+    const spokeBeacon = (await deployments.get("SpokeVTokenBeacon")).address;
+    const sharedBeacon = (await deployments.get("VTokenBeacon")).address;
+    const comptroller = await spokeComptroller();
+
+    expect(spokeMarkets, "no spoke markets configured for this network").to.not.have.lengthOf(0);
+    for (const { symbol } of spokeMarkets) {
+      const market = (await deployments.get(`VToken_${symbol}`)).address;
+      const slot = await ethers.provider.getStorageAt(market, EIP_1967_BEACON_SLOT);
+      const beacon = ethers.utils.getAddress(ethers.utils.hexDataSlice(slot, 12));
+
+      // The whole point of 027 is decided here: a market on the shared beacon could only take a VToken change that
+      // every isolated market on the chain takes with it, and the other way round.
+      expect(beacon, `${symbol} beacon`).to.equal(spokeBeacon);
+      expect(beacon, `${symbol} beacon`).to.not.equal(sharedBeacon);
+      expect(await (await ethers.getContractAt("VToken", market)).comptroller()).to.equal(comptroller.address);
+    }
+  });
+
+  it("initializes each market with its configured token metadata and rate model", async () => {
+    for (const config of spokeMarkets) {
+      const market = await ethers.getContractAt("VToken", (await deployments.get(`VToken_${config.symbol}`)).address);
+
+      expect(await market.name()).to.equal(config.name);
+      expect(await market.symbol()).to.equal(config.symbol);
+      expect(await market.decimals()).to.equal(8);
+      expect(await market.reserveFactorMantissa()).to.equal(config.reserveFactor);
+
+      // The rate model name is a pure function of the curve, so resolving it from the same config the script read is
+      // what proves the market took the configured curve rather than whichever model happened to be deployed first.
+      const rateModelName = getRateModelName(getRateModelParams(config), timeManagerParams);
+      expect(await market.interestRateModel()).to.equal((await deployments.get(rateModelName)).address);
+    }
   });
 
   it("binds the spoke to its own pool registry, not the isolated-pools one", async () => {

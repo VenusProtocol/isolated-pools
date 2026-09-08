@@ -1,9 +1,10 @@
 import { ethers } from "hardhat";
+import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { sameAddress, toAddress } from "../helpers/deploymentUtils";
+import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "../helpers/deploymentUtils";
 
 // A registry of its own, never the isolated-pools `PoolRegistry`. The registry is the directory every consumer reads to
 // answer "which pools exist": `getAllPools` drives the indexer, the frontend pool list and the risk tooling, and
@@ -37,7 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // `viaAdminContract` resolves the chain's existing `DefaultProxyAdmin` when there is one, and only deploys a fresh
   // admin on a chain that has none. Reusing it is deliberate: it is the admin the isolated pools already upgrade
   // through, it is owned by governance, and a second admin would be one more contract with its own ownership to track.
-  await deploy(DEPLOYMENT_NAME, {
+  const registryDeployment: DeployResult = await deploy(DEPLOYMENT_NAME, {
     from: deployer,
     contract: "PoolRegistry",
     proxy: {
@@ -58,11 +59,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     skipIfAlreadyDeployed: true,
   });
 
+  // Submitted here rather than at the end, because the checks below can stop the run and by the next run neither the
+  // implementation nor the proxy is newly deployed, which is what `verifyProxyDeployment` keys off.
+  await verifyProxyDeployment(hre, DEPLOYMENT_NAME, registryDeployment);
+
   const registry = await ethers.getContract(DEPLOYMENT_NAME);
 
   // The access control manager is the only address this registry is initialized with, and `setAccessControlManager` is
   // owner-gated, so a wrong value here becomes governance's problem the moment ownership moves. Read it back first.
-  const wiredAccessControlManager = await registry.accessControlManager();
+  const wiredAccessControlManager = await readBackAddress(() => registry.accessControlManager(), accessControlManager);
   if (!sameAddress(wiredAccessControlManager, accessControlManager)) {
     throw new Error(
       `Refusing to transfer ownership: ${DEPLOYMENT_NAME} access control manager is ${wiredAccessControlManager}, ` +
@@ -89,9 +94,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(`${DEPLOYMENT_NAME} already nominated ${ownerAddress}, awaiting acceptOwnership in the VIP`);
   } else {
     await (await registry.transferOwnership(ownerAddress)).wait(1);
+    const nominated = await readBackAddress(() => registry.pendingOwner(), ownerAddress);
     console.log(
-      `${DEPLOYMENT_NAME} nominated ${await registry.pendingOwner()}; ${deployer} stays the owner until the VIP ` +
-        `calls acceptOwnership`,
+      `${DEPLOYMENT_NAME} nominated ${nominated}; ${deployer} stays the owner until the VIP ` + `calls acceptOwnership`,
     );
   }
 

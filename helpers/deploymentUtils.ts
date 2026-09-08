@@ -160,10 +160,52 @@ export const verifyDeployment = async (
     console.log(`${name} verified successfully`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("Already Verified")) {
+    // The plugin words this several ways depending on which explorer answered, "Already Verified" from one and
+    // "has already been verified on the block explorer" from another, so match on the part they share.
+    if (message.toLowerCase().includes("already verified")) {
       console.log(`${name} already verified`);
     } else {
       console.error(`${name} verification failed: ${message}`);
     }
   }
 };
+
+// A proxy deployment is two contracts on the explorer: the implementation, which carries the source every reader wants,
+// and the proxy, whose constructor arguments name that implementation and the admin. Verifying one leaves the other
+// unreadable, so verify both off the single `DeployResult` hardhat-deploy returns for the pair.
+export const verifyProxyDeployment = async (
+  hre: HardhatRuntimeEnvironment,
+  name: string,
+  deployment: DeployResult,
+): Promise<void> => {
+  if (deployment.implementation) {
+    await verifyDeployment(hre, `${name} implementation`, { ...deployment, address: deployment.implementation }, []);
+  }
+  await verifyDeployment(hre, `${name} proxy`, deployment, deployment.args ?? []);
+};
+
+// A live RPC behind a load balancer can answer a read from a node that has not yet applied the transaction that was
+// just mined, so a value read straight after a write can be the pre-write one. Both shapes of that showed up on a BSC
+// testnet run: an `Ownable` beacon still naming the deployer after a successful `transferOwnership`, and an
+// `Ownable2Step` registry reporting a zero pending owner after a successful nomination. Reading once and believing it
+// is what turns that into a misleading log line, or worse aborts a correct deployment on a check that throws.
+//
+// Retry until the read matches what the transaction should have produced. A genuine misconfiguration reads the same
+// wrong value on every attempt and still fails, only later; a stale read catches up within a block or two.
+export const readBackUntil = async <T>(
+  read: () => Promise<T>,
+  matches: (value: T) => boolean,
+  attempts = 5,
+  delayMs = 3000,
+): Promise<T> => {
+  let value = await read();
+  for (let attempt = 1; attempt < attempts && !matches(value); attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    value = await read();
+  }
+  return value;
+};
+
+// `readBackUntil` for the common case, an address the caller already knows the expected value of.
+export const readBackAddress = (read: () => Promise<string>, expected: string): Promise<string> =>
+  readBackUntil(read, value => sameAddress(value, expected));

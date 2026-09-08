@@ -4,7 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
+import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
@@ -91,7 +91,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // Checked on its own, because it is the one mismatch with a recovery procedure rather than a redeployment: a fresh
   // implementation from the step above leaves the beacon behind until something points it forward.
-  const beaconImplementation = await beacon.implementation();
+  const beaconImplementation = await readBackAddress(() => beacon.implementation(), spokeComptrollerImpl.address);
   if (!sameAddress(beaconImplementation, spokeComptrollerImpl.address)) {
     throw new Error(
       `Beacon ${spokeComptrollerBeacon.address} still points at ${beaconImplementation}, while this run produced ` +
@@ -102,8 +102,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Verified beacon implementation: ${beaconImplementation}`);
 
   const addressChecks: [string, string, string][] = [
-    [`comptroller pool registry (${POOL_REGISTRY_NAME})`, await comptroller.poolRegistry(), poolRegistry.address],
-    ["comptroller access control manager", await comptroller.accessControlManager(), accessControlManager],
+    [
+      `comptroller pool registry (${POOL_REGISTRY_NAME})`,
+      await readBackAddress(() => comptroller.poolRegistry(), poolRegistry.address),
+      poolRegistry.address,
+    ],
+    [
+      "comptroller access control manager",
+      await readBackAddress(() => comptroller.accessControlManager(), accessControlManager),
+      accessControlManager,
+    ],
   ];
   for (const [label, actual, expected] of addressChecks) {
     if (!sameAddress(actual, expected)) {
@@ -112,7 +120,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(`Verified ${label}: ${actual}`);
   }
 
-  const maxLoopsLimit = (await comptroller.maxLoopsLimit()).toString();
+  const maxLoopsLimit = await readBackUntil(
+    async () => (await comptroller.maxLoopsLimit()).toString(),
+    value => value === MAX_LOOPS_LIMIT.toString(),
+  );
   if (maxLoopsLimit !== MAX_LOOPS_LIMIT.toString()) {
     throw new Error(
       `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${MAX_LOOPS_LIMIT}`,
@@ -125,7 +136,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(`SpokeComptrollerBeacon is already owned by ${ownerAddress}`);
   } else {
     await (await beacon.transferOwnership(ownerAddress)).wait(1);
-    console.log(`SpokeComptrollerBeacon ownership transferred to ${await beacon.owner()}`);
+    const beaconOwner = await readBackAddress(() => beacon.owner(), ownerAddress);
+    console.log(`SpokeComptrollerBeacon ownership transferred to ${beaconOwner}`);
   }
 
   // The comptroller is `Ownable2Step`, so this only nominates. The deployer stays the live owner until the listing VIP
@@ -136,8 +148,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(`Comptroller_${POOL_ID} already nominated ${ownerAddress}, awaiting acceptOwnership in the VIP`);
   } else {
     await (await comptroller.transferOwnership(ownerAddress)).wait(1);
+    const nominated = await readBackAddress(() => comptroller.pendingOwner(), ownerAddress);
     console.log(
-      `Comptroller_${POOL_ID} nominated ${await comptroller.pendingOwner()}; ${deployer} stays the owner until the ` +
+      `Comptroller_${POOL_ID} nominated ${nominated}; ${deployer} stays the owner until the ` +
         `VIP calls acceptOwnership`,
     );
   }

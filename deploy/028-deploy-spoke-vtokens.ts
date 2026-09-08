@@ -7,6 +7,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { InterestRateModels, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import {
   getBlockOrTimestampBasedDeploymentInfo,
+  readBackAddress,
   sameAddress,
   toAddress,
   verifyDeployment,
@@ -171,9 +172,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     // VIP calls `addMarket` it is governance's problem. Read both back off the chain now.
     const vToken = await ethers.getContractAt("VToken", market.address);
     const checks: [string, string, string][] = [
-      [`${symbol} comptroller`, await vToken.comptroller(), comptroller.address],
-      [`${symbol} underlying`, await vToken.underlying(), underlying.address],
-      [`${symbol} interest rate model`, await vToken.interestRateModel(), rateModel.address],
+      [
+        `${symbol} comptroller`,
+        await readBackAddress(() => vToken.comptroller(), comptroller.address),
+        comptroller.address,
+      ],
+      [
+        `${symbol} underlying`,
+        await readBackAddress(() => vToken.underlying(), underlying.address),
+        underlying.address,
+      ],
+      [
+        `${symbol} interest rate model`,
+        await readBackAddress(() => vToken.interestRateModel(), rateModel.address),
+        rateModel.address,
+      ],
     ];
     for (const [label, actual, expected] of checks) {
       if (!sameAddress(actual, expected)) {

@@ -6,6 +6,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getConfig, getMaxBorrowRateMantissa } from "../helpers/deploymentConfig";
 import {
   getBlockOrTimestampBasedDeploymentInfo,
+  readBackAddress,
   sameAddress,
   toAddress,
   verifyDeployment,
@@ -13,9 +14,13 @@ import {
 
 // A VToken beacon of its own, never the shared `VTokenBeacon`. `UpgradeableBeacon.upgradeTo` moves every proxy behind
 // the beacon in one call, so a spoke market sharing that beacon could only take a VToken change that every isolated
-// market on the chain takes at the same time, and the other way round. The implementation deployed here is the same
-// `VToken` with the same constructor arguments as the one the shared beacon points at, so the two behave identically
-// until an upgrade deliberately separates them.
+// market on the chain takes at the same time, and the other way round.
+//
+// A fresh implementation rather than the one the shared beacon already points at, because on both BSC networks that one
+// is an older `VToken` than this repo builds, 20,052 bytes against 20,424. Pointing this beacon at it would list the
+// spoke markets on code the repo no longer has. Same constructor arguments, so the immutables match, but the code does
+// not: compare the two before deploying and expect a difference, rather than reading these markets as behaving
+// identically to the isolated ones on day one.
 //
 // The markets are not deployed here. Each is a `BeaconProxy` pointed at `SpokeVTokenBeacon`, created and registered by
 // the listing VIP after `SpokePoolRegistry.addPool`.
@@ -63,7 +68,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Read the wiring back from the chain before handing the beacon over. While the deployer still owns it a mistake
   // costs one `upgradeTo`; once the Timelock owns it, the same fix needs a VIP.
   const beacon = await ethers.getContractAt("UpgradeableBeacon", spokeVTokenBeacon.address);
-  const beaconImplementation = await beacon.implementation();
+  const beaconImplementation = await readBackAddress(() => beacon.implementation(), spokeVTokenImpl.address);
   if (!sameAddress(beaconImplementation, spokeVTokenImpl.address)) {
     throw new Error(
       `Beacon ${spokeVTokenBeacon.address} still points at ${beaconImplementation}, while this run produced ` +
@@ -78,7 +83,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(`SpokeVTokenBeacon is already owned by ${ownerAddress}`);
   } else {
     await (await beacon.transferOwnership(ownerAddress)).wait(1);
-    console.log(`SpokeVTokenBeacon ownership transferred to ${await beacon.owner()}`);
+    const owner = await readBackAddress(() => beacon.owner(), ownerAddress);
+    console.log(`SpokeVTokenBeacon ownership transferred to ${owner}`);
   }
 
   await verifyDeployment(hre, "SpokeVTokenBeacon", spokeVTokenBeacon, beaconArgs);

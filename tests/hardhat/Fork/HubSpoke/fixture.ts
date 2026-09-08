@@ -344,8 +344,9 @@ export async function deploySpokeStack(configure = true): Promise<SpokeStack> {
 
   // A VToken beacon of its own, as `027-deploy-spoke-vtoken-beacon.ts` deploys. `upgradeTo` moves every proxy behind a
   // beacon in one call, so markets on the chain's shared `VTokenBeacon` could only take a VToken change that every
-  // isolated market on the chain takes with them. Same `VToken` and same immutables as the live implementation, so
-  // the markets behave identically until an upgrade separates them.
+  // isolated market on the chain takes with them. Built from this repo's `VToken` with the same immutables as the live
+  // implementation, but not the same code: the one the shared beacon points at is older, so these markets run what the
+  // repo builds today and the isolated ones do not.
   const vTokenImplFactory = await ethers.getContractFactory("VToken", deployer);
   const vTokenImpl = await vTokenImplFactory.deploy(false, BLOCKS_PER_YEAR, MAX_BORROW_RATE_MANTISSA);
   await vTokenImpl.deployed();

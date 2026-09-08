@@ -219,8 +219,9 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
           expect(await vToken.comptroller()).to.equal(s.spoke.address);
           expect(await vToken.protocolShareReserve()).to.equal(bscmainnet.PSR);
           expect(await vToken.shortfall()).to.equal(bscmainnet.SHORTFALL);
-          // A separate implementation, constructed with the same immutables as the live one: the
-          // split buys upgrade independence, not different behaviour on day one.
+          // A separate implementation, constructed with the same immutables as the live one. The
+          // code differs from day one, because the shared beacon points at an older `VToken` than
+          // this repo builds; the immutables are what has to match, and they are checked here.
           expect(await vToken.isTimeBased()).to.equal(await sharedImpl.isTimeBased());
           expect(await vToken.blocksOrSecondsPerYear()).to.equal(await sharedImpl.blocksOrSecondsPerYear());
         }
