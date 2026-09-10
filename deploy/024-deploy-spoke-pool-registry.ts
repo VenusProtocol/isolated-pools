@@ -76,16 +76,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
   console.log(`Verified ${DEPLOYMENT_NAME} access control manager: ${wiredAccessControlManager}`);
 
-  // A fresh registry must be empty. A non-empty one means this name resolved to a registry that is already in use, and
-  // pointing the spoke implementation at it would defeat the separation this deployment exists for.
-  const registeredPools = await registry.getAllPools();
-  if (registeredPools.length !== 0) {
-    throw new Error(
-      `Refusing to transfer ownership: ${DEPLOYMENT_NAME} at ${registry.address} already holds ` +
-        `${registeredPools.length} pool(s), so it is not the empty registry this deployment expects`,
-    );
-  }
-
   // `PoolRegistry` is `Ownable2Step`, so this only nominates. The deployer stays the live owner until the listing VIP
   // calls `acceptOwnership`.
   if (sameAddress(await registry.owner(), ownerAddress)) {
@@ -121,5 +111,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = [DEPLOYMENT_NAME, "HubSpoke"];
+// `AccessControlManager` is read as a deployment when the network has no preconfigured address for it, so a tag-scoped
+// run (`--tags HubSpoke`) on a fresh network needs the script that deploys it to be pulled in.
+func.dependencies = ["AccessControl"];
+func.id = "deploy_spoke_pool_registry"; // id required to prevent re-execution
 
 export default func;

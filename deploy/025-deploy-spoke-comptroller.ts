@@ -168,6 +168,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 func.tags = ["HubSpokeComptroller", "HubSpoke"];
 // Tag-selected runs (`--tags HubSpokeComptroller`, and the fork suite's fixture) skip everything not tagged, so the
 // registry has to be named as a dependency rather than left to the file ordering a full run relies on.
-func.dependencies = [POOL_REGISTRY_NAME];
+func.dependencies = [POOL_REGISTRY_NAME, "AccessControl"];
+func.id = "deploy_spoke_comptroller"; // id required to prevent re-execution
 
 export default func;
