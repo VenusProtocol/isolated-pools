@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
@@ -88,6 +89,12 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         bool supplyAllowlistEnabled;
         /// @notice Whether the market allows full liquidation without a shortfall
         bool forcedLiquidationEnabled;
+        /// @notice Whether the deviation-bounded oracle applies bounded pricing to this market's underlying.
+        ///  When false the pool prices this market at spot on the borrow and redeem paths, with no window
+        ///  around it. The oracle returns the spot price for both bounds in that case rather than failing,
+        ///  so the prices alone cannot tell the two states apart, and this is the only place the pool's
+        ///  output says which one is in force.
+        bool boundedPricingEnabled;
     }
 
     /**
@@ -510,7 +517,8 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
                 effectiveLiquidationIncentiveMantissa: spokeView.effectiveLiquidationIncentive(vTokenAddress),
                 ownLiquidationIncentiveMantissa: spokeView.liquidationIncentives(vTokenAddress),
                 supplyAllowlistEnabled: spokeView.isSupplyAllowlistEnabled(vTokenAddress),
-                forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress)
+                forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress),
+                boundedPricingEnabled: _boundedPricingEnabled(spokeView, underlying)
             });
     }
 
@@ -700,6 +708,24 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
      * @param vToken The market to read
      * @return A bitmask of the paused actions
      */
+    /**
+     * @dev Reports whether bounded pricing covers `underlying`, without assuming the pool has an oracle.
+     *  A market can be listed before `setDeviationBoundedOracle` runs, and the lens has to stay readable in
+     *  that window: the reference is zero there, so the answer is false, which is also what it means for the
+     *  market. `isBoundedPricingEnabled` is keyed on the underlying asset rather than the market.
+     */
+    function _boundedPricingEnabled(
+        SpokeComptrollerViewInterface spokeView,
+        address underlying
+    ) internal view returns (bool) {
+        IDeviationBoundedOracle boundedOracle = spokeView.deviationBoundedOracle();
+        if (address(boundedOracle) == address(0)) {
+            return false;
+        }
+
+        return boundedOracle.isBoundedPricingEnabled(underlying);
+    }
+
     function _pausedActions(address comptroller, address vToken) private view returns (uint256) {
         uint256 pausedActions;
 
