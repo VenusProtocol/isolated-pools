@@ -24,7 +24,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       f = await spokeForkFixture();
     });
 
-    it("answers every one of those members on the live pool", async () => {
+    it("answers every ISpokeComptroller member the adapter calls on the live pool", async () => {
       const spoke = await ethers.getContractAt("ISpokeComptroller", f.spoke.address);
       expect(await spoke.supplyCaps(f.vUSDT.address)).to.be.gt(0);
       expect(await spoke.actionPaused(f.vUSDT.address, 0)).to.be.false; // MINT

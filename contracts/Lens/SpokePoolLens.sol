@@ -89,11 +89,8 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         bool supplyAllowlistEnabled;
         /// @notice Whether the market allows full liquidation without a shortfall
         bool forcedLiquidationEnabled;
-        /// @notice Whether the deviation-bounded oracle applies bounded pricing to this market's underlying.
-        ///  When false the pool prices this market at spot on the borrow and redeem paths, with no window
-        ///  around it. The oracle returns the spot price for both bounds in that case rather than failing,
-        ///  so the prices alone cannot tell the two states apart, and this is the only place the pool's
-        ///  output says which one is in force.
+        /// @notice Whether bounded pricing applies to this market's underlying. When false, borrow and redeem
+        ///  use the spot price, which the prices alone cannot show
         bool boundedPricingEnabled;
     }
 
@@ -703,12 +700,6 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @dev Encodes paused actions using the same bit positions as `PoolLens`.
-     * @param comptroller The market's comptroller
-     * @param vToken The market to read
-     * @return A bitmask of the paused actions
-     */
-    /**
      * @dev Reports whether bounded pricing covers `underlying`, without assuming the pool has an oracle.
      *  A market can be listed before `setDeviationBoundedOracle` runs, and the lens has to stay readable in
      *  that window: the reference is zero there, so the answer is false, which is also what it means for the
@@ -717,7 +708,7 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     function _boundedPricingEnabled(
         SpokeComptrollerViewInterface spokeView,
         address underlying
-    ) internal view returns (bool) {
+    ) private view returns (bool) {
         IDeviationBoundedOracle boundedOracle = spokeView.deviationBoundedOracle();
         if (address(boundedOracle) == address(0)) {
             return false;
@@ -726,6 +717,12 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         return boundedOracle.isBoundedPricingEnabled(underlying);
     }
 
+    /**
+     * @dev Encodes paused actions using the same bit positions as `PoolLens`.
+     * @param comptroller The market's comptroller
+     * @param vToken The market to read
+     * @return A bitmask of the paused actions
+     */
     function _pausedActions(address comptroller, address vToken) private view returns (uint256) {
         uint256 pausedActions;
 

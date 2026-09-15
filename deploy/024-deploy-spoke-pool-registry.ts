@@ -114,6 +114,5 @@ func.tags = [DEPLOYMENT_NAME, "HubSpoke"];
 // `AccessControlManager` is read as a deployment when the network has no preconfigured address for it, so a tag-scoped
 // run (`--tags HubSpoke`) on a fresh network needs the script that deploys it to be pulled in.
 func.dependencies = ["AccessControl"];
-func.id = "deploy_spoke_pool_registry"; // id required to prevent re-execution
 
 export default func;
