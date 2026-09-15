@@ -202,6 +202,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // What the listing VIP still owes these markets, beyond `addMarket`: the spoke-only state lives on
   // `SpokeComptroller`, not on the vToken, so each market needs its liquidation threshold and, where it differs from
   // the pool default, its own liquidation incentive, plus the supply allowlist entries this pool restricts supply with.
+  //
+  // One vToken parameter belongs on that list too: `reduceReservesBlockDelta`, which this config carries and nothing
+  // here applies. It is the only market parameter that needs a call of its own, since every other one is a mandatory
+  // argument of `addPool` or `AddMarketInput` and so cannot be left out by accident. Left at its zero default the
+  // sweep to the ProtocolShareReserve runs on every accrual rather than once per window, which costs every caller gas
+  // and changes no computed value. `setReduceReservesBlockDelta` is governance-gated, so the VIP has to make the call;
+  // a deploy script cannot.
 };
 
 func.tags = ["HubSpokeVTokens", "HubSpoke"];

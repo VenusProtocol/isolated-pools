@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { TimeManagerV8 } from "@venusprotocol/solidity-utilities/contracts/TimeManagerV8.sol";
 
@@ -88,6 +89,9 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         bool supplyAllowlistEnabled;
         /// @notice Whether the market allows full liquidation without a shortfall
         bool forcedLiquidationEnabled;
+        /// @notice Whether bounded pricing applies to this market's underlying. When false, borrow and redeem
+        ///  use the spot price, which the prices alone cannot show
+        bool boundedPricingEnabled;
     }
 
     /**
@@ -510,7 +514,8 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
                 effectiveLiquidationIncentiveMantissa: spokeView.effectiveLiquidationIncentive(vTokenAddress),
                 ownLiquidationIncentiveMantissa: spokeView.liquidationIncentives(vTokenAddress),
                 supplyAllowlistEnabled: spokeView.isSupplyAllowlistEnabled(vTokenAddress),
-                forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress)
+                forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress),
+                boundedPricingEnabled: _boundedPricingEnabled(spokeView, underlying)
             });
     }
 
@@ -530,6 +535,13 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
             });
     }
 
+    /**
+     * @notice Calculates the pending rewards for a user across multiple markets.
+     * @param account The address of the user
+     * @param markets An array of vToken addresses
+     * @param rewardsDistributor The address of the rewards distributor
+     * @return An array of pending rewards
+     */
     function _calculateNotDistributedAwards(
         address account,
         VToken[] memory markets,
@@ -595,6 +607,13 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         return pendingRewards;
     }
 
+    /**
+     * @notice Updates the borrow index for a given vToken.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param borrowState The current borrow state
+     * @param marketBorrowIndex The market's borrow index
+     */
     function updateMarketBorrowIndex(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -625,6 +644,12 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         }
     }
 
+    /**
+     * @notice Updates the supply index for a given vToken.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param supplyState The current supply state
+     */
     function updateMarketSupplyIndex(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -653,6 +678,15 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         }
     }
 
+    /**
+     * @notice Calculates the reward for a borrower based on the current borrow state.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param borrower The address of the borrower
+     * @param borrowState The current borrow state
+     * @param marketBorrowIndex The market's borrow index
+     * @return The calculated borrower reward
+     */
     function calculateBorrowerReward(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -674,6 +708,14 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         return borrowerDelta;
     }
 
+    /**
+     * @notice Calculates the reward for a supplier based on the current supply state.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param supplier The address of the supplier
+     * @param supplyState The current supply state
+     * @return The calculated supplier reward
+     */
     function calculateSupplierReward(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -695,7 +737,28 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @dev Encodes paused actions using the same bit positions as `PoolLens`.
+     * @notice Reports whether bounded pricing covers `underlying`, without assuming the pool has an oracle.
+     *  A market can be listed before `setDeviationBoundedOracle` runs, and the lens has to stay readable in
+     *  that window: the reference is zero there, so the answer is false, which is also what it means for the
+     *  market. `isBoundedPricingEnabled` is keyed on the underlying asset rather than the market.
+     * @param spokeView The pool's SpokeComptrollerViewInterface
+     * @param underlying The underlying asset to check
+     * @return True if bounded pricing is enabled for the underlying asset, false otherwise
+     */
+    function _boundedPricingEnabled(
+        SpokeComptrollerViewInterface spokeView,
+        address underlying
+    ) private view returns (bool) {
+        IDeviationBoundedOracle boundedOracle = spokeView.deviationBoundedOracle();
+        if (address(boundedOracle) == address(0)) {
+            return false;
+        }
+
+        return boundedOracle.isBoundedPricingEnabled(underlying);
+    }
+
+    /**
+     * @notice Encodes paused actions using the same bit positions as `PoolLens`.
      * @param comptroller The market's comptroller
      * @param vToken The market to read
      * @return A bitmask of the paused actions

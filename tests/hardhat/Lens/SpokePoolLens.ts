@@ -1,4 +1,4 @@
-import { smock } from "@defi-wonderland/smock";
+import { FakeContract, smock } from "@defi-wonderland/smock";
 import { impersonateAccount, loadFixture, mine, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
@@ -69,7 +69,8 @@ describe("SpokePoolLens", function () {
     unconfigured: SpokeComptroller;
     control: Comptroller;
     spokeMarkets: VToken[];
-    boundedOracle: IDeviationBoundedOracle;
+    boundedOracle: FakeContract<IDeviationBoundedOracle>;
+    marketWithoutOracle: VToken;
     rewardsDistributor: RewardsDistributor;
     rewardToken: MockToken;
     borrower: SignerWithAddress;
@@ -205,6 +206,22 @@ describe("SpokePoolLens", function () {
     // The reward indices only move once blocks pass, so every account reads zero until some do.
     await mine(1000);
 
+    // A market whose pool has no bounded oracle, which is the window between listing a market and the
+    // VIP calling `setDeviationBoundedOracle`. It is left out of the registry's market list so the two
+    // assertions about an untouched pool keep holding; what it is read for does not depend on listing.
+    const underlyingWithoutOracle = await MockTokenFactory.deploy("UNC1", "UNC1", 18);
+    const marketWithoutOracle = (await makeVToken({
+      underlying: underlyingWithoutOracle,
+      comptroller: unconfigured,
+      accessControlManager: acm,
+      decimals: 8,
+      initialExchangeRateMantissa: parseUnits("1", 18),
+      admin: owner,
+      interestRateModel: rateModel,
+      isTimeBased: false,
+      blocksPerYear: DEFAULT_BLOCKS_PER_YEAR,
+    })) as VToken;
+
     const SpokePoolLensFactory = await ethers.getContractFactory<SpokePoolLens__factory>("SpokePoolLens");
     const spokeLens = await SpokePoolLensFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR);
 
@@ -221,6 +238,7 @@ describe("SpokePoolLens", function () {
       control,
       spokeMarkets,
       boundedOracle,
+      marketWithoutOracle,
       rewardsDistributor,
       rewardToken,
       borrower,
@@ -293,6 +311,27 @@ describe("SpokePoolLens", function () {
       expect((await f.spokeLens.spokeVTokenMetadata(f.spokeMarkets[0].address)).forcedLiquidationEnabled).to.equal(
         true,
       );
+    });
+
+    it("reports whether bounded pricing covers each market, which the prices alone cannot show", async () => {
+      // The oracle returns the spot price on both bounds for an asset it is not enabled for, so a consumer
+      // reading prices cannot tell an unprotected market from a protected one whose window sits at spot.
+      const [first, second] = f.spokeMarkets;
+      f.boundedOracle.isBoundedPricingEnabled.whenCalledWith(await first.underlying()).returns(true);
+      f.boundedOracle.isBoundedPricingEnabled.whenCalledWith(await second.underlying()).returns(false);
+
+      const markets = (await poolData(f.spoke)).vTokens;
+
+      expect(markets[0].boundedPricingEnabled).to.equal(true);
+      expect(markets[1].boundedPricingEnabled).to.equal(false);
+    });
+
+    it("reports false for a market whose pool has no bounded oracle yet", async () => {
+      // The reference is zero until the listing VIP sets it. Reading it has to answer rather than revert
+      // on a call into the zero address, and false is what the absent protection means for the market.
+      const metadata = await f.spokeLens.spokeVTokenMetadata(f.marketWithoutOracle.address);
+
+      expect(metadata.boundedPricingEnabled).to.equal(false);
     });
 
     it("reports the liquidation threshold, which no other lens field carries", async () => {
