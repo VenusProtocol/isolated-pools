@@ -67,3 +67,7 @@ deployments/localhost
 
 tmp/*
 .vscode
+
+# Foundry
+out
+cache-foundry
