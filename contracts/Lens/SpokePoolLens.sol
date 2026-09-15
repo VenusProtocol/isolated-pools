@@ -535,6 +535,13 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
             });
     }
 
+    /**
+     * @notice Calculates the pending rewards for a user across multiple markets.
+     * @param account The address of the user
+     * @param markets An array of vToken addresses
+     * @param rewardsDistributor The address of the rewards distributor
+     * @return An array of pending rewards
+     */
     function _calculateNotDistributedAwards(
         address account,
         VToken[] memory markets,
@@ -600,6 +607,13 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         return pendingRewards;
     }
 
+    /**
+     * @notice Updates the borrow index for a given vToken.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param borrowState The current borrow state
+     * @param marketBorrowIndex The market's borrow index
+     */
     function updateMarketBorrowIndex(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -630,6 +644,12 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         }
     }
 
+    /**
+     * @notice Updates the supply index for a given vToken.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param supplyState The current supply state
+     */
     function updateMarketSupplyIndex(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -658,6 +678,15 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         }
     }
 
+    /**
+     * @notice Calculates the reward for a borrower based on the current borrow state.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param borrower The address of the borrower
+     * @param borrowState The current borrow state
+     * @param marketBorrowIndex The market's borrow index
+     * @return The calculated borrower reward
+     */
     function calculateBorrowerReward(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -679,6 +708,14 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         return borrowerDelta;
     }
 
+    /**
+     * @notice Calculates the reward for a supplier based on the current supply state.
+     * @param vToken The address of the vToken
+     * @param rewardsDistributor The address of the rewards distributor
+     * @param supplier The address of the supplier
+     * @param supplyState The current supply state
+     * @return The calculated supplier reward
+     */
     function calculateSupplierReward(
         address vToken,
         RewardsDistributor rewardsDistributor,
@@ -700,10 +737,13 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @dev Reports whether bounded pricing covers `underlying`, without assuming the pool has an oracle.
+     * @notice Reports whether bounded pricing covers `underlying`, without assuming the pool has an oracle.
      *  A market can be listed before `setDeviationBoundedOracle` runs, and the lens has to stay readable in
      *  that window: the reference is zero there, so the answer is false, which is also what it means for the
      *  market. `isBoundedPricingEnabled` is keyed on the underlying asset rather than the market.
+     * @param spokeView The pool's SpokeComptrollerViewInterface
+     * @param underlying The underlying asset to check
+     * @return True if bounded pricing is enabled for the underlying asset, false otherwise
      */
     function _boundedPricingEnabled(
         SpokeComptrollerViewInterface spokeView,
@@ -718,7 +758,7 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @dev Encodes paused actions using the same bit positions as `PoolLens`.
+     * @notice Encodes paused actions using the same bit positions as `PoolLens`.
      * @param comptroller The market's comptroller
      * @param vToken The market to read
      * @return A bitmask of the paused actions
