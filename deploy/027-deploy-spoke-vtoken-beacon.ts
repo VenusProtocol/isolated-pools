@@ -84,6 +84,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } else {
     await (await beacon.transferOwnership(ownerAddress)).wait(1);
     const owner = await readBackAddress(() => beacon.owner(), ownerAddress);
+    if (!sameAddress(owner, ownerAddress)) {
+      throw new Error(
+        `SpokeVTokenBeacon ${spokeVTokenBeacon.address} still reports owner ${owner} after ` +
+          `transferOwnership(${ownerAddress}). Re-run this script once the transfer has landed.`,
+      );
+    }
     console.log(`SpokeVTokenBeacon ownership transferred to ${owner}`);
   }
 

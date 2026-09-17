@@ -137,6 +137,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } else {
     await (await beacon.transferOwnership(ownerAddress)).wait(1);
     const beaconOwner = await readBackAddress(() => beacon.owner(), ownerAddress);
+    if (!sameAddress(beaconOwner, ownerAddress)) {
+      throw new Error(
+        `SpokeComptrollerBeacon ${spokeComptrollerBeacon.address} still reports owner ${beaconOwner} after ` +
+          `transferOwnership(${ownerAddress}). Re-run this script once the transfer has landed.`,
+      );
+    }
     console.log(`SpokeComptrollerBeacon ownership transferred to ${beaconOwner}`);
   }
 
@@ -149,6 +155,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } else {
     await (await comptroller.transferOwnership(ownerAddress)).wait(1);
     const nominated = await readBackAddress(() => comptroller.pendingOwner(), ownerAddress);
+    if (!sameAddress(nominated, ownerAddress)) {
+      throw new Error(
+        `Comptroller_${POOL_ID} ${comptrollerProxy.address} still reports pendingOwner ${nominated} after ` +
+          `transferOwnership(${ownerAddress}). Re-run this script once the nomination has landed.`,
+      );
+    }
     console.log(
       `Comptroller_${POOL_ID} nominated ${nominated}; ${deployer} stays the owner until the ` +
         `VIP calls acceptOwnership`,

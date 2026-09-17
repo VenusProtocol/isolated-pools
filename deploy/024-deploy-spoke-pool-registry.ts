@@ -85,6 +85,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   } else {
     await (await registry.transferOwnership(ownerAddress)).wait(1);
     const nominated = await readBackAddress(() => registry.pendingOwner(), ownerAddress);
+    if (!sameAddress(nominated, ownerAddress)) {
+      throw new Error(
+        `${DEPLOYMENT_NAME} ${registry.address} still reports pendingOwner ${nominated} after ` +
+          `transferOwnership(${ownerAddress}). Re-run this script once the nomination has landed.`,
+      );
+    }
     console.log(
       `${DEPLOYMENT_NAME} nominated ${nominated}; ${deployer} stays the owner until the VIP ` + `calls acceptOwnership`,
     );

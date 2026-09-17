@@ -39,6 +39,8 @@ contract SpokeHandler is CommonBase, StdUtils {
     RewardsDistributor internal distributor;
     SpokePoolLens internal lens;
     address[] internal accounts;
+    /// @notice Subset of `accounts` used for positions small enough to sit inside the batch-liquidation band
+    address[] internal smallAccounts;
 
     mapping(bytes32 => string) public violations;
 
@@ -60,7 +62,8 @@ contract SpokeHandler is CommonBase, StdUtils {
         MockPriceOracle oracle_,
         RewardsDistributor distributor_,
         SpokePoolLens lens_,
-        address[] memory accounts_
+        address[] memory accounts_,
+        address[] memory smallAccounts_
     ) {
         comptroller = comptroller_;
         markets = markets_;
@@ -68,6 +71,7 @@ contract SpokeHandler is CommonBase, StdUtils {
         distributor = distributor_;
         lens = lens_;
         accounts = accounts_;
+        smallAccounts = smallAccounts_;
     }
 
     // ----- users -----
@@ -174,9 +178,9 @@ contract SpokeHandler is CommonBase, StdUtils {
         uint256 amount,
         uint256 borrowBps
     ) external {
-        address account = _account(accountSeed);
+        address account = smallAccounts[accountSeed % smallAccounts.length];
         VToken collateral = markets[1 + (collateralSeed % 2)];
-        amount = bound(amount, 1e18, 150e18);
+        amount = bound(amount, 1e18, 40e18);
         _fund(account, collateral, amount);
         address[] memory one = new address[](1);
         one[0] = address(collateral);
@@ -229,6 +233,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     ) external {
         address liquidator = _account(liquidatorSeed);
         address borrower = _underwaterAccount(borrowerSeed);
+        if (borrower == address(0)) return;
         VToken collateral = markets[1 + (collateralSeed % 2)];
         markets[0].accrueInterest();
         collateral.accrueInterest();
@@ -250,6 +255,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     function liquidateAccount(uint256 liquidatorSeed, uint256 borrowerSeed, uint256 collateralSeed) external {
         address liquidator = _account(liquidatorSeed);
         address borrower = _smallUnderwaterAccount(borrowerSeed);
+        if (borrower == address(0)) return;
         // Accrued here so the debt repaid below is the debt the comptroller sees after its own refresh.
         for (uint256 i; i < 3; ++i) markets[i].accrueInterest();
         uint256 debt = markets[0].borrowBalanceStored(borrower);
@@ -272,7 +278,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     function healAccount(uint256 liquidatorSeed, uint256 borrowerSeed) external {
         address liquidator = _account(liquidatorSeed);
         address borrower = _smallUnderwaterAccount(borrowerSeed);
-        if (liquidator == borrower) return;
+        if (borrower == address(0) || liquidator == borrower) return;
         _fund(liquidator, markets[0], 10_000_000e18);
         vm.prank(liquidator);
         try comptroller.healAccount(borrower) {
@@ -290,6 +296,7 @@ contract SpokeHandler is CommonBase, StdUtils {
      */
     function probeBatchRouting(uint256 borrowerSeed) external {
         address borrower = _smallUnderwaterAccount(borrowerSeed);
+        if (borrower == address(0)) return;
         address prober = address(0xB0B0);
         uint256 snapshot = vm.snapshotState();
 
@@ -404,7 +411,7 @@ contract SpokeHandler is CommonBase, StdUtils {
         return accounts[seed % accounts.length];
     }
 
-    /// @notice The first account from `seed` onwards in shortfall at the liquidation threshold, else the one at `seed`.
+    /// @notice The first account from `seed` onwards in shortfall at the liquidation threshold, else `address(0)`.
     /// Only picks the target: the call is still checked in full
     function _underwaterAccount(uint256 seed) internal view returns (address) {
         for (uint256 i; i < accounts.length; ++i) {
@@ -412,7 +419,7 @@ contract SpokeHandler is CommonBase, StdUtils {
             (, , uint256 shortfall) = comptroller.getAccountLiquidity(account);
             if (shortfall > 0) return account;
         }
-        return _account(seed);
+        return address(0);
     }
 
     /// @notice As `_underwaterAccount`, limited to accounts with collateral at or under `minLiquidatableCollateral`
@@ -422,7 +429,7 @@ contract SpokeHandler is CommonBase, StdUtils {
             (, , uint256 shortfall) = comptroller.getAccountLiquidity(account);
             if (shortfall > 0 && _collateralValue(account) <= comptroller.minLiquidatableCollateral()) return account;
         }
-        return _account(seed);
+        return address(0);
     }
 
     /// @notice Spot value of the markets `account` has entered, as the comptroller's `totalCollateral` counts it
@@ -467,6 +474,11 @@ contract SpokeInvariantTest is SpokeFuzzBase {
     address internal dave = makeAddr("dave");
     address internal erin = makeAddr("erin");
     address[] internal accounts;
+    address[] internal smallAccounts;
+    /// @notice Collateral for a `smallAccounts` position, kept under `MIN_LIQUIDATABLE_COLLATERAL` (100e18)
+    uint256 internal constant SMALL_COLLATERAL = 60e18;
+    /// @notice `COLLATERAL_A` price after seeding: puts the `smallAccounts` positions just into shortfall
+    uint256 internal constant SMALL_POSITION_START_PRICE = 0.85e18;
 
     SpokeHandler internal handler;
     SpokePoolLens internal lens;
@@ -501,13 +513,35 @@ contract SpokeInvariantTest is SpokeFuzzBase {
             markets[LIQUIDITY].borrow(5_000e18);
         }
 
+        // Two accounts seeded inside the batch-liquidation band: collateral below `minLiquidatableCollateral`
+        // (100e18) and a borrow at the edge of the collateral factor, so an ordinary price move puts them in
+        // shortfall. Without these no account ever satisfies `_smallUnderwaterAccount`, and `liquidateAccount`
+        // and `healAccount` are never reached.
+        smallAccounts = [dave, erin];
+        for (uint256 i; i < smallAccounts.length; ++i) {
+            _supply(smallAccounts[i], COLLATERAL_A, SMALL_COLLATERAL);
+            _enter(smallAccounts[i], COLLATERAL_A);
+            // Borrowed to within 0.01% of what the collateral factor allows, at $1 a unit, so a short
+            // `passTime` is enough to put the account in shortfall. Without that these accounts sit healthy for
+            // the whole run and the batch-liquidation paths are never reachable.
+            vm.prank(smallAccounts[i]);
+            markets[LIQUIDITY].borrow((((SMALL_COLLATERAL * COLLATERAL_FACTOR) / 1e18) * 9_999) / 10_000);
+        }
+
+        // A borrow is capped by the collateral factor (0.7) while shortfall is measured at the liquidation
+        // threshold (0.8), so no account can borrow itself into shortfall. This one price step does it, and
+        // leaves the larger positions above healthy. Without it `_smallUnderwaterAccount` has nothing to
+        // return and the batch-liquidation paths stay unreachable.
+        _setPrice(COLLATERAL_A, SMALL_POSITION_START_PRICE);
+
         handler = new SpokeHandler(
             comptroller,
             [markets[0], markets[1], markets[2]],
             oracle,
             distributor,
             lens,
-            accounts
+            accounts,
+            smallAccounts
         );
         targetContract(address(handler));
 
@@ -690,6 +724,30 @@ contract SpokeInvariantTest is SpokeFuzzBase {
             assertEq(meta.supplyAllowlistEnabled, comptroller.isSupplyAllowlistEnabled(address(market)));
             assertEq(meta.forcedLiquidationEnabled, comptroller.isForcedLiquidationEnabled(address(market)));
         }
+    }
+
+    /// @notice Each liquidation path is reachable from the seeded state, through the same handler the fuzzer uses
+    /// @dev Four of the invariants below only assert inside a liquidation: `_checkLiquidatorAllowed` and
+    /// `_checkLiquidatorPaid` run nowhere else. A run that reaches no liquidation passes them without testing
+    /// anything, which is what this test rules out. `afterInvariant` prints the per-run counts.
+    function test_liquidationPathsAreReachable() public {
+        uint256 daveSeed = 6; // accounts[6]
+
+        handler.liquidateAccount(4, daveSeed, 0);
+        assertGt(handler.liquidateAccounts(), 0, "liquidateAccount unreachable");
+
+        // Erin's collateral still covers her debt, so `healAccount` would revert `CollateralCoversDebt`.
+        // This step is what leaves a position the batch path can only heal.
+        _setPrice(COLLATERAL_A, 0.1e18);
+
+        handler.healAccount(4, daveSeed + 1);
+        assertGt(handler.heals(), 0, "healAccount unreachable");
+
+        // Alice holds both collateral markets and is far above `minLiquidatableCollateral`, so she routes to
+        // the single-market path. Both prices have to fall for her to be in shortfall at all.
+        _setPrice(COLLATERAL_B, 0.1e18);
+        handler.liquidateBorrow(4, 1, 0, 5_000);
+        assertGt(handler.liquidations(), 0, "liquidateBorrow unreachable");
     }
 
     /// @notice Logs how often each path was reached. Shown with `-vv`
