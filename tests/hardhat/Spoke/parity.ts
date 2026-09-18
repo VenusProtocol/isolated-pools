@@ -30,7 +30,7 @@ const REMOVED_EVENTS = ["NewPrimeToken(address,address)"];
 const ADDED_FUNCTIONS = [
   "deviationBoundedOracle()",
   "effectiveLiquidationIncentive(address)",
-  "enterMarketBehalf(address,address)",
+  "enterMarketForAccount(address,address)",
   "isAllowedLiquidator(address)",
   "isAllowedSupplier(address,address)",
   "isLiquidationAllowlistEnabled()",
@@ -54,7 +54,7 @@ const ADDED_EVENTS = [
 
 /// Roles the spoke adds. Everything upstream checks has to still be checked under the same string.
 const ADDED_ROLES = [
-  "enterMarketBehalf(address,address)",
+  "enterMarketForAccount(address,address)",
   "setAllowedLiquidator(address,bool)",
   "setAllowedSupplier(address,address,bool)",
   "setLiquidationAllowlistEnabled(bool)",

@@ -90,11 +90,11 @@ describe("SpokeComptroller: market membership", () => {
     });
   });
 
-  describe("enterMarketBehalf", () => {
+  describe("enterMarketForAccount", () => {
     it("enters the account rather than the caller", async () => {
       // The whole point of the function: a supply router mints with `mintBehalf` and collateralises in the same
       // transaction, so membership has to land on the supplier and not on the router that called it.
-      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address))
+      await expect(comptroller.connect(router).enterMarketForAccount(account.address, marketA.vToken.address))
         .to.emit(comptroller, "MarketEntered")
         .withArgs(marketA.vToken.address, account.address);
 
@@ -105,7 +105,7 @@ describe("SpokeComptroller: market membership", () => {
     it("is a no-op when the account is already in the market", async () => {
       await comptroller.connect(account).enterMarkets([marketA.vToken.address]);
 
-      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address)).to.not.emit(
+      await expect(comptroller.connect(router).enterMarketForAccount(account.address, marketA.vToken.address)).to.not.emit(
         comptroller,
         "MarketEntered",
       );
@@ -115,21 +115,21 @@ describe("SpokeComptroller: market membership", () => {
     it("rejects a market that is not listed", async () => {
       const unlisted = await smock.fake<VToken>("VToken");
 
-      await expect(comptroller.connect(router).enterMarketBehalf(unlisted.address, account.address))
+      await expect(comptroller.connect(router).enterMarketForAccount(account.address, unlisted.address))
         .to.be.revertedWithCustomError(comptroller, "MarketNotListed")
         .withArgs(unlisted.address);
     });
 
     it("rejects the zero account", async () => {
       await expect(
-        comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, ethers.constants.AddressZero),
+        comptroller.connect(router).enterMarketForAccount(ethers.constants.AddressZero, marketA.vToken.address),
       ).to.be.revertedWithCustomError(comptroller, "ZeroAddressNotAllowed");
     });
 
     it("respects the market's enter-market pause", async () => {
       await comptroller.setActionsPaused([marketA.vToken.address], [Action.ENTER_MARKET], true);
 
-      await expect(comptroller.connect(router).enterMarketBehalf(marketA.vToken.address, account.address))
+      await expect(comptroller.connect(router).enterMarketForAccount(account.address, marketA.vToken.address))
         .to.be.revertedWithCustomError(comptroller, "ActionPaused")
         .withArgs(marketA.vToken.address, Action.ENTER_MARKET);
     });
