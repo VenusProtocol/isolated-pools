@@ -7919,6 +7919,7 @@ export const globalConfig: NetworkConfig = {
   },
 };
 
+// eslint-disable-next-line complexity -- predates the complexity gates, tracked for refactor
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
   switch (networkName) {
     case "hardhat":
