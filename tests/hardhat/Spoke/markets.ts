@@ -105,10 +105,9 @@ describe("SpokeComptroller: market membership", () => {
     it("is a no-op when the account is already in the market", async () => {
       await comptroller.connect(account).enterMarkets([marketA.vToken.address]);
 
-      await expect(comptroller.connect(router).enterMarketForAccount(account.address, marketA.vToken.address)).to.not.emit(
-        comptroller,
-        "MarketEntered",
-      );
+      await expect(
+        comptroller.connect(router).enterMarketForAccount(account.address, marketA.vToken.address),
+      ).to.not.emit(comptroller, "MarketEntered");
       expect(await addresses()).to.deep.equal([marketA.vToken.address]);
     });
 
