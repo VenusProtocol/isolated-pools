@@ -6,13 +6,103 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { getConfig, getMaxBorrowRateMantissa, getTokenConfig } from "../helpers/deploymentConfig";
+import {
+  DeploymentInfo,
+  VTokenConfig,
+  getConfig,
+  getMaxBorrowRateMantissa,
+  getTokenConfig,
+} from "../helpers/deploymentConfig";
 import { InterestRateModels } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddress } from "../helpers/deploymentUtils";
 import { getRateModelName, getRateModelParams } from "../helpers/rateModelHelpers";
 import { AddressOne } from "../helpers/utils";
 
-// eslint-disable-next-line complexity, sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
+/** Deploy the interest rate model a vToken asks for, returning its address. */
+async function deployInterestRateModel(
+  hre: HardhatRuntimeEnvironment,
+  vTokenConfig: VTokenConfig,
+  ctx: { deployer: string; accessControlManagerAddress: string; deploymentInfo: DeploymentInfo },
+): Promise<string> {
+  const { deploy } = hre.deployments;
+  const { deployer, accessControlManagerAddress, deploymentInfo } = ctx;
+  const { isTimeBased, blocksPerYear } = deploymentInfo;
+
+  const rateModelParams = getRateModelParams(vTokenConfig);
+  const rateModelName = getRateModelName(rateModelParams, deploymentInfo);
+
+  if (rateModelParams.model === InterestRateModels.JumpRate) {
+    const result: DeployResult = await deploy(rateModelName, {
+      from: deployer,
+      contract: "JumpRateModelV2",
+      args: [
+        rateModelParams.baseRatePerYear,
+        rateModelParams.multiplierPerYear,
+        rateModelParams.jumpMultiplierPerYear,
+        rateModelParams.kink,
+        accessControlManagerAddress,
+        isTimeBased,
+        blocksPerYear,
+      ],
+      log: true,
+      autoMine: true,
+      skipIfAlreadyDeployed: true,
+    });
+    return result.address;
+  }
+
+  if (rateModelParams.model === InterestRateModels.WhitePaper) {
+    const result: DeployResult = await deploy(rateModelName, {
+      from: deployer,
+      contract: "WhitePaperInterestRateModel",
+      args: [rateModelParams.baseRatePerYear, rateModelParams.multiplierPerYear, isTimeBased, blocksPerYear],
+      log: true,
+      autoMine: true,
+      skipIfAlreadyDeployed: true,
+    });
+    return result.address;
+  }
+
+  if (rateModelParams.model === InterestRateModels.TwoKinks) {
+    console.log(`Deploying interest rate model ${rateModelName}`);
+    const result: DeployResult = await deploy(rateModelName, {
+      from: deployer,
+      contract: "TwoKinksInterestRateModel",
+      args: [
+        rateModelParams.baseRatePerYear,
+        rateModelParams.multiplierPerYear,
+        rateModelParams.kink,
+        rateModelParams.multiplierPerYear2,
+        rateModelParams.baseRatePerYear2,
+        rateModelParams.kink2,
+        rateModelParams.jumpMultiplierPerYear,
+        isTimeBased,
+        blocksPerYear,
+      ],
+      log: true,
+      autoMine: true,
+      skipIfAlreadyDeployed: true,
+    });
+    return result.address;
+  }
+
+  throw new Error(`Unreachable ${rateModelParams}`);
+}
+
+/** Address of the ProtocolShareReserve, deploying one first on non-live networks. */
+async function resolveProtocolShareReserve(hre: HardhatRuntimeEnvironment): Promise<string> {
+  try {
+    return (await ethers.getContract("ProtocolShareReserve")).address;
+  } catch (e) {
+    if (!hre.network.live) {
+      console.warn("ProtocolShareReserve contract not found. Deploying address");
+      await deployProtocolShareReserve(hre);
+      return (await ethers.getContract("ProtocolShareReserve")).address;
+    }
+    throw e;
+  }
+}
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -20,7 +110,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const networkName = hre.getNetworkName();
   const { tokensConfig, poolConfig, preconfiguredAddresses } = await getConfig(networkName);
 
-  const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
+  const deploymentInfo = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
+  const { isTimeBased, blocksPerYear } = deploymentInfo;
   const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
 
   if (networkName === "bscmainnet" || networkName === "bsctestnet" || networkName === "hardhat") {
@@ -80,77 +171,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         );
       }
 
-      let rateModelAddress: string;
-      const rateModelParams = getRateModelParams(vTokenConfig);
-      const rateModelName = getRateModelName(rateModelParams, { isTimeBased, blocksPerYear });
-      if (rateModelParams.model === InterestRateModels.JumpRate) {
-        const result: DeployResult = await deploy(rateModelName, {
-          from: deployer,
-          contract: "JumpRateModelV2",
-          args: [
-            rateModelParams.baseRatePerYear,
-            rateModelParams.multiplierPerYear,
-            rateModelParams.jumpMultiplierPerYear,
-            rateModelParams.kink,
-            accessControlManagerAddress,
-            isTimeBased,
-            blocksPerYear,
-          ],
-          log: true,
-          autoMine: true,
-          skipIfAlreadyDeployed: true,
-        });
-        rateModelAddress = result.address;
-      } else if (rateModelParams.model === InterestRateModels.WhitePaper) {
-        const result: DeployResult = await deploy(rateModelName, {
-          from: deployer,
-          contract: "WhitePaperInterestRateModel",
-          args: [rateModelParams.baseRatePerYear, rateModelParams.multiplierPerYear, isTimeBased, blocksPerYear],
-          log: true,
-          autoMine: true,
-          skipIfAlreadyDeployed: true,
-        });
-        rateModelAddress = result.address;
-      } else if (rateModelParams.model === InterestRateModels.TwoKinks) {
-        console.log(`Deploying interest rate model ${rateModelName}`);
-        const result: DeployResult = await deploy(rateModelName, {
-          from: deployer,
-          contract: "TwoKinksInterestRateModel",
-          args: [
-            rateModelParams.baseRatePerYear,
-            rateModelParams.multiplierPerYear,
-            rateModelParams.kink,
-            rateModelParams.multiplierPerYear2,
-            rateModelParams.baseRatePerYear2,
-            rateModelParams.kink2,
-            rateModelParams.jumpMultiplierPerYear,
-            isTimeBased,
-            blocksPerYear,
-          ],
-          log: true,
-          autoMine: true,
-          skipIfAlreadyDeployed: true,
-        });
-        rateModelAddress = result.address;
-      } else {
-        throw new Error(`Unreachable ${rateModelParams}`);
-      }
+      const rateModelAddress = await deployInterestRateModel(hre, vTokenConfig, {
+        deployer,
+        accessControlManagerAddress,
+        deploymentInfo,
+      });
 
       const VToken = await ethers.getContractFactory("VToken");
       const underlyingDecimals = Number(await tokenContract.decimals());
       const vTokenDecimals = 8;
-      let protocolShareReserveAddress;
-      try {
-        protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
-      } catch (e) {
-        if (!hre.network.live) {
-          console.warn("ProtocolShareReserve contract not found. Deploying address");
-          await deployProtocolShareReserve(hre);
-          protocolShareReserveAddress = (await ethers.getContract("ProtocolShareReserve")).address;
-        } else {
-          throw e;
-        }
-      }
+      const protocolShareReserveAddress = await resolveProtocolShareReserve(hre);
 
       const args = [
         tokenContract.address,
