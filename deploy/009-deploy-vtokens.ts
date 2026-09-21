@@ -12,6 +12,7 @@ import { getBlockOrTimestampBasedDeploymentInfo, getUnregisteredVTokens, toAddre
 import { getRateModelName, getRateModelParams } from "../helpers/rateModelHelpers";
 import { AddressOne } from "../helpers/utils";
 
+// eslint-disable-next-line complexity, sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
