@@ -7919,47 +7919,16 @@ export const globalConfig: NetworkConfig = {
   },
 };
 
+// Every supported network maps to the globalConfig entry of the same name; the only
+// exception is "development", which reuses the bsctestnet config.
+const CONFIG_ALIASES = new Map<string, keyof NetworkConfig>([["development", "bsctestnet"]]);
+
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
-  switch (networkName) {
-    case "hardhat":
-      return globalConfig.hardhat;
-    case "bsctestnet":
-      return globalConfig.bsctestnet;
-    case "bscmainnet":
-      return globalConfig.bscmainnet;
-    case "sepolia":
-      return globalConfig.sepolia;
-    case "ethereum":
-      return globalConfig.ethereum;
-    case "opbnbtestnet":
-      return globalConfig.opbnbtestnet;
-    case "opbnbmainnet":
-      return globalConfig.opbnbmainnet;
-    case "arbitrumsepolia":
-      return globalConfig.arbitrumsepolia;
-    case "arbitrumone":
-      return globalConfig.arbitrumone;
-    case "zksyncsepolia":
-      return globalConfig.zksyncsepolia;
-    case "zksyncmainnet":
-      return globalConfig.zksyncmainnet;
-    case "opsepolia":
-      return globalConfig.opsepolia;
-    case "opmainnet":
-      return globalConfig.opmainnet;
-    case "basesepolia":
-      return globalConfig.basesepolia;
-    case "basemainnet":
-      return globalConfig.basemainnet;
-    case "unichainsepolia":
-      return globalConfig.unichainsepolia;
-    case "unichainmainnet":
-      return globalConfig.unichainmainnet;
-    case "development":
-      return globalConfig.bsctestnet;
-    default:
-      throw new Error(`config for network ${networkName} is not available.`);
+  const key = CONFIG_ALIASES.get(networkName) ?? networkName;
+  if (!Object.prototype.hasOwnProperty.call(globalConfig, key)) {
+    throw new Error(`config for network ${networkName} is not available.`);
   }
+  return globalConfig[key as keyof NetworkConfig];
 }
 
 export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): TokenConfig {
