@@ -72284,7 +72284,7 @@
       ]
     },
     "SpokePoolLens": {
-      "address": "0xfbCBFF4ca8b2fFe3231b0c0BBEa25C79F4B0597c",
+      "address": "0x372978251378CCE54cf9Ca3D3f4cFA58e84e5da8",
       "abi": [
         {
           "inputs": [
@@ -72517,6 +72517,11 @@
                     {
                       "internalType": "bool",
                       "name": "forcedLiquidationEnabled",
+                      "type": "bool"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "boundedPricingEnabled",
                       "type": "bool"
                     }
                   ],
@@ -72874,6 +72879,11 @@
                       "internalType": "bool",
                       "name": "forcedLiquidationEnabled",
                       "type": "bool"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "boundedPricingEnabled",
+                      "type": "bool"
                     }
                   ],
                   "internalType": "struct SpokePoolLens.SpokeVTokenMetadata[]",
@@ -73113,6 +73123,11 @@
                     {
                       "internalType": "bool",
                       "name": "forcedLiquidationEnabled",
+                      "type": "bool"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "boundedPricingEnabled",
                       "type": "bool"
                     }
                   ],
@@ -73367,6 +73382,11 @@
                   "internalType": "bool",
                   "name": "forcedLiquidationEnabled",
                   "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "boundedPricingEnabled",
+                  "type": "bool"
                 }
               ],
               "internalType": "struct SpokePoolLens.SpokeVTokenMetadata",
@@ -73497,6 +73517,11 @@
                 {
                   "internalType": "bool",
                   "name": "forcedLiquidationEnabled",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "boundedPricingEnabled",
                   "type": "bool"
                 }
               ],

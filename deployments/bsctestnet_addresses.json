@@ -190,7 +190,7 @@
     "Shortfall_Proxy": "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
     "SpokeComptrollerBeacon": "0x076f3fb34C8937a62aD562c33249798367542d75",
     "SpokeComptrollerImpl": "0x7F81dC61F3D75569A67155fb188171Aef173a52b",
-    "SpokePoolLens": "0xfbCBFF4ca8b2fFe3231b0c0BBEa25C79F4B0597c",
+    "SpokePoolLens": "0x372978251378CCE54cf9Ca3D3f4cFA58e84e5da8",
     "SpokePoolRegistry": "0xeAA45288d804971e5a76f33559e629F5b2b1Cb8B",
     "SpokePoolRegistry_Implementation": "0x266e65b6D81802F2BAFa0c07288A62891172DAD8",
     "SpokePoolRegistry_Proxy": "0xeAA45288d804971e5a76f33559e629F5b2b1Cb8B",
