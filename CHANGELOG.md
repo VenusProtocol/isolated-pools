@@ -1,3 +1,17 @@
+## 4.4.0-dev.8 (2026-09-23)
+
+* Merge pull request #549 from Olexandr88/patch-1 ([d3e8670](https://github.com/VenusProtocol/isolated-pools/commit/d3e8670)), closes [#549](https://github.com/VenusProtocol/isolated-pools/issues/549)
+* Merge pull request #561 from VenusProtocol/feat/code-complexity-gates ([32c5ef8](https://github.com/VenusProtocol/isolated-pools/commit/32c5ef8)), closes [#561](https://github.com/VenusProtocol/isolated-pools/issues/561)
+* Update README.md ([21b57be](https://github.com/VenusProtocol/isolated-pools/commit/21b57be))
+* chore: bump eslint to v8 for sonarjs plugin compatibility ([520e2a6](https://github.com/VenusProtocol/isolated-pools/commit/520e2a6))
+* chore: drop four unused eslint plugins ([ff66bbe](https://github.com/VenusProtocol/isolated-pools/commit/ff66bbe))
+* chore: enforce function complexity limits in eslint and sonarjs ([802ec8c](https://github.com/VenusProtocol/isolated-pools/commit/802ec8c))
+* chore: suppress complexity gate on getConfig network switch ([85d91ce](https://github.com/VenusProtocol/isolated-pools/commit/85d91ce))
+* chore: suppress complexity gates on deployVTokenDependencies ([72861f6](https://github.com/VenusProtocol/isolated-pools/commit/72861f6))
+* chore: suppress complexity gates on vtoken deploy script ([10e37d0](https://github.com/VenusProtocol/isolated-pools/commit/10e37d0))
+* refactor: extract rate model and psr resolution from vtoken deploy ([fa66fef](https://github.com/VenusProtocol/isolated-pools/commit/fa66fef))
+* refactor: replace getConfig network switch with a keyed lookup ([3336aff](https://github.com/VenusProtocol/isolated-pools/commit/3336aff))
+
 ## 4.4.0-dev.7 (2026-03-23)
 
 * Merge pull request #551 from VenusProtocol/feat/VPD-808 ([199942a](https://github.com/VenusProtocol/isolated-pools/commit/199942a)), closes [#551](https://github.com/VenusProtocol/isolated-pools/issues/551)
