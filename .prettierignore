@@ -10,3 +10,6 @@ scenario
 typechain
 contracts/oracle
 CHANGELOG.md
+tmp
+out
+cache-foundry

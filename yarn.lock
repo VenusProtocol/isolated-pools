@@ -3349,7 +3349,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.1
     "@typescript-eslint/parser": ^5.27.1
     "@venusprotocol/governance-contracts": 2.13.0
-    "@venusprotocol/oracle": 2.14.0
+    "@venusprotocol/oracle": 2.15.0
     "@venusprotocol/protocol-reserve": 3.4.0
     "@venusprotocol/solidity-utilities": 2.1.0
     "@venusprotocol/venus-protocol": 10.0.0
@@ -3363,6 +3363,7 @@ __metadata:
     eslint-plugin-prettier: 3.4.1
     eslint-plugin-promise: ^5.2.0
     ethers: ^5.7.0
+    forge-std: "github:foundry-rs/forge-std#v1.16.2"
     hardhat: 2.22.18
     hardhat-dependency-compiler: ^1.2.1
     hardhat-deploy: ^0.12.4
@@ -3385,7 +3386,29 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@venusprotocol/oracle@npm:2.14.0, @venusprotocol/oracle@npm:^2.12.0":
+"@venusprotocol/oracle@npm:2.15.0":
+  version: 2.15.0
+  resolution: "@venusprotocol/oracle@npm:2.15.0"
+  dependencies:
+    "@chainlink/contracts": ^0.5.1
+    "@defi-wonderland/smock": 2.4.0
+    "@nomicfoundation/hardhat-network-helpers": ^1.0.8
+    "@openzeppelin/contracts": ^4.6.0
+    "@openzeppelin/contracts-upgradeable": ^4.7.3
+    "@venusprotocol/governance-contracts": ^2.13.0
+    "@venusprotocol/solidity-utilities": ^2.0.0
+    "@venusprotocol/venus-protocol": ^9.7.0
+    ethers: ^5.6.8
+    hardhat: 2.22.18
+    hardhat-deploy: ^0.12.4
+    module-alias: ^2.2.2
+    patch-package: ^8.0.0
+    solidity-docgen: ^0.6.0-beta.29
+  checksum: c1d6a6eacedc9f6883a5a2cc85530fe5e9390ecb9cfcc0f526f09cf059ea25098c1c9e208767e74f73cd8e13ae04bb4acd6f6a43431db8686a0e75bd72794af9
+  languageName: node
+  linkType: hard
+
+"@venusprotocol/oracle@npm:^2.12.0":
   version: 2.14.0
   resolution: "@venusprotocol/oracle@npm:2.14.0"
   dependencies:
@@ -6932,6 +6955,13 @@ __metadata:
     cross-spawn: ^7.0.0
     signal-exit: ^4.0.1
   checksum: 1989698488f725b05b26bc9afc8a08f08ec41807cd7b92ad85d96004ddf8243fd3e79486b8348c64a3011ae5cc2c9f0936af989e1f28339805d8bc178a75b451
+  languageName: node
+  linkType: hard
+
+"forge-std@github:foundry-rs/forge-std#v1.16.2":
+  version: 1.16.2
+  resolution: "forge-std@https://github.com/foundry-rs/forge-std.git#commit=bf647bd6046f2f7da30d0c2bf435e5c76a780c1b"
+  checksum: 2d0e2b8dfec7d112ff2d87da3579f6f4b8ac15ea4661db355cbf3079ba7f6318e2d8cf664fba6878694b3d14c564fdf39162fb7dd2e6def76ecba689eb872092
   languageName: node
   linkType: hard
 

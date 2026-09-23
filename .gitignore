@@ -64,3 +64,10 @@ deployments/localhost
 
 # OSX
 .DS_Store
+
+tmp/*
+.vscode
+
+# Foundry
+out
+cache-foundry
