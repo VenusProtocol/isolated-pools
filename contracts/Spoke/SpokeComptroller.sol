@@ -830,6 +830,8 @@ contract SpokeComptroller is
             );
         }
 
+        // Re-read the markets: the orders make external calls, so the borrower may have entered new ones meanwhile
+        borrowerAssets = getAssetsIn(borrower);
         uint256 marketsCount = borrowerAssets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
