@@ -1193,7 +1193,8 @@ contract SpokeComptroller is
      *
      * There is no way back to "unset" once a value is stored: `0` is the sentinel that means the pool-wide discount
      * applies, and it is rejected here so that a mistaken zero cannot silently move a market back onto the pool-wide
-     * value. Pass that value explicitly to get the same effect.
+     * value. Passing the current pool-wide value is not the same as unsetting: the market is pinned at that number and
+     * no longer follows later `setLiquidationIncentive` changes, so a pool-wide change has to update such markets too.
      * @param vToken The collateral market to set the incentive for
      * @param newLiquidationIncentiveMantissa New incentive for this market, scaled by 1e18, at least
      *   1e18 + the market's `protocolSeizeShareMantissa`
