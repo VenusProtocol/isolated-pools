@@ -46,8 +46,8 @@ enum WeightFunction {
  * sum over the user's collateral markets of `collateralValue/liquidationIncentive`, each market taken at its own
  * incentive. The function can only be called if the calculated percentage does not exceed 100%, because otherwise no
  * `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of
- * debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk
- * reserves of the pool.
+ * debt and debt paid off is recorded as `badDebt` for each market. `Shortfall` cannot auction it off, because
+ * `Shortfall` only finds pools in the pool registry it is configured with, and that registry does not hold spoke pools.
  * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an
  * account, as well as the liquidation incentive of each collateral market, which is the same condition stated as
  * `borrows < maxClearableDebt`. Otherwise, the pool will incur bad debt, in which case the function `healAccount()`
