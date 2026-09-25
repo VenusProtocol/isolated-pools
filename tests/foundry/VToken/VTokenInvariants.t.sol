@@ -5,8 +5,8 @@ import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 
-import { VToken } from "../../contracts/VToken.sol";
-import { MockToken } from "../../contracts/test/Mocks/MockToken.sol";
+import { VToken } from "../../../contracts/VToken.sol";
+import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
 import { VTokenBase } from "./VTokenBase.t.sol";
 
 contract VTokenHandler is CommonBase, StdCheats, StdUtils {

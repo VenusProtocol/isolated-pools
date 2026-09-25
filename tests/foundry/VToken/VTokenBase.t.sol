@@ -6,14 +6,14 @@ import { AccessControlManager } from "@venusprotocol/governance-contracts/contra
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { Test } from "forge-std/Test.sol";
 
-import { Comptroller } from "../../contracts/Comptroller.sol";
-import { ComptrollerInterface } from "../../contracts/ComptrollerInterface.sol";
-import { InterestRateModel } from "../../contracts/InterestRateModel.sol";
-import { TwoKinksInterestRateModel } from "../../contracts/TwoKinksInterestRateModel.sol";
-import { VToken } from "../../contracts/VToken.sol";
-import { VTokenInterface } from "../../contracts/VTokenInterfaces.sol";
-import { MockPriceOracle } from "../../contracts/test/Mocks/MockPriceOracle.sol";
-import { MockToken } from "../../contracts/test/Mocks/MockToken.sol";
+import { Comptroller } from "../../../contracts/Comptroller.sol";
+import { ComptrollerInterface } from "../../../contracts/ComptrollerInterface.sol";
+import { InterestRateModel } from "../../../contracts/InterestRateModel.sol";
+import { TwoKinksInterestRateModel } from "../../../contracts/TwoKinksInterestRateModel.sol";
+import { VToken } from "../../../contracts/VToken.sol";
+import { VTokenInterface } from "../../../contracts/VTokenInterfaces.sol";
+import { MockPriceOracle } from "../../../contracts/test/Mocks/MockPriceOracle.sol";
+import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
 
 /// @notice One real VToken listed on a real Comptroller, both behind proxies as deployed. Only the
 ///  oracle is a double.
