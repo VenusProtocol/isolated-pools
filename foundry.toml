@@ -1,0 +1,39 @@
+# Foundry runs alongside Hardhat, it does not replace it. Hardhat keeps the TypeScript tests,
+# deployments and the zkSync build. Foundry only runs tests/foundry, for what Hardhat cannot do:
+# in-EVM fuzzing, stateful invariants and cheatcode-driven fork tests.
+#
+#   forge test             the fuzz budget the edit loop wants
+#   FOUNDRY_PROFILE=ci     the thorough budget CI uses
+
+[profile.default]
+src = 'contracts'
+test = 'tests/foundry'
+# Not the default here: with Hardhat's artifacts/ present, Foundry would write into it.
+out = 'out'
+cache_path = 'cache-foundry'
+# node_modules first so @openzeppelin/, @venusprotocol/ and the other Solidity dependencies resolve
+# from the yarn install, at the versions package.json pins, with no remappings.
+libs = ['node_modules', 'lib']
+
+# contracts/ spans 0.5.16, 0.6.6 and 0.8.25, so a single solc_version cannot build the tree.
+auto_detect_solc = true
+
+# Matches the 0.8.25 compiler in hardhat.config.ts, whose optimizer runs default to 200.
+evm_version = 'paris'
+optimizer = true
+optimizer_runs = 200
+
+[profile.default.fuzz]
+runs = 256
+# Default is cache/fuzz, which is Hardhat's cache directory.
+failure_persist_dir = 'cache-foundry/fuzz'
+
+[profile.default.invariant]
+runs = 64
+depth = 32
+failure_persist_dir = 'cache-foundry/invariant'
+
+# Everything not set here is inherited from the default profile.
+[profile.ci]
+fuzz = { runs = 2000 }
+invariant = { runs = 1000, depth = 100 }
