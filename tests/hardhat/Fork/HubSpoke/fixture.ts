@@ -205,8 +205,8 @@ async function relaxPriceStaleness(timelock: Signer) {
 
 /// The spoke pool's own `PoolRegistry`, behind the chain's shared proxy admin, standing in for
 /// `deploy/024-deploy-spoke-pool-registry.ts`. The live isolated-pools registry is the directory the
-/// indexer, the frontend pool list and the risk tooling iterate, and a pool whose supply, borrow and
-/// liquidation sides are each restricted does not belong in it.
+/// indexer, the frontend pool list and the risk tooling iterate, and a pool whose liquidity market
+/// only the Hub may supply does not belong in it.
 async function deploySpokePoolRegistry(deployer: SignerWithAddress): Promise<PoolRegistry> {
   const implFactory = await ethers.getContractFactory("PoolRegistry", deployer);
   const impl = await implFactory.deploy();

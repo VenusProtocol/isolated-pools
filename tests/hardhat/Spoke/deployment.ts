@@ -110,7 +110,7 @@ describe("SpokeComptroller: deployment", function () {
 
   it("binds the spoke to its own pool registry, not the isolated-pools one", async () => {
     // The registry is the directory every consumer iterates to answer "which pools exist". Sharing it would hand the
-    // indexer, the frontend and the risk tooling a pool whose supply, borrow and liquidation sides are all restricted.
+    // indexer, the frontend and the risk tooling a pool whose liquidity market only the Hub may supply.
     const spokeRegistry = (await deployments.get("SpokePoolRegistry")).address;
     const isolatedRegistry = (await deployments.get("PoolRegistry")).address;
 

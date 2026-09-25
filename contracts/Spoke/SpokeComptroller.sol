@@ -1231,9 +1231,10 @@ contract SpokeComptroller is
 
     /**
      * @notice Restricts supplying to a market to the accounts on its supply allowlist, or lifts the restriction
-     * @dev Enforced in `preMintHook`, so only supply is metered. Redeeming is never restricted, and an account
-     * removed from the allowlist keeps the position it already holds and can still exit. Enabling it on a market that
-     * is already serving supply cuts off every account that is not on the list, the seed supplier included.
+     * @dev Enforced in `preMintHook`, so only supply is metered. Transfers and seizures do not check the list, so
+     * vTokens can still reach accounts that are not on it. Redeeming is never restricted, and an account removed from
+     * the allowlist keeps the position it already holds and can still exit. Enabling it on a market that is already
+     * serving supply cuts off every account that is not on the list, the seed supplier included.
      * @param vToken The market to change the setting for
      * @param enabled Whether the market should accept supply only from allowlisted accounts
      * @custom:event Emits SupplyAllowlistEnabledUpdated on success
