@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "compile": "hardhat compile && hardhat compile --config hardhat.config.zksync.ts",
-    "test": "hardhat test",
+    "test": "hardhat test && forge test",
     "test:integration": "hardhat test tests/integration/index.ts",
     "test:fork": "hardhat test tests/hardhat/Fork/*",
     "hardhat:compile": "hardhat compile",
@@ -31,7 +31,7 @@
     "build": "rm -rf dist && hardhat compile && hardhat compile --config hardhat.config.zksync.ts && tsc --declaration",
     "docgen": "hardhat docgen",
     "prepare": "husky install",
-    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts",
+    "clean": "hardhat clean && hardhat clean --config hardhat.config.zksync.ts && forge clean",
     "postinstall": "yarn patch-package"
   },
   "keywords": [],
