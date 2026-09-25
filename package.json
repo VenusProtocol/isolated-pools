@@ -14,7 +14,7 @@
     "deployments"
   ],
   "scripts": {
-    "compile": "hardhat compile && hardhat compile --config hardhat.config.zksync.ts && forge build",
+    "compile": "hardhat compile && hardhat compile --config hardhat.config.zksync.ts",
     "test": "hardhat test && forge test",
     "test:integration": "hardhat test tests/integration/index.ts",
     "test:fork": "hardhat test tests/hardhat/Fork/*",
