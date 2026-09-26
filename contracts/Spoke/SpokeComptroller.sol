@@ -696,6 +696,7 @@ contract SpokeComptroller is
      *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
+     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
      *   to heal
@@ -712,8 +713,6 @@ contract SpokeComptroller is
 
         VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
-
-        address liquidator = msg.sender;
 
         // We need all user's markets to be fresh for the computations to be correct
         _refreshMarkets(userAssets);
@@ -746,15 +745,18 @@ contract SpokeComptroller is
             VToken market = userAssets[i];
 
             (uint256 tokens, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, user);
-            uint256 repaymentAmount = mul_ScalarTruncate(percentage, borrowBalance);
 
             // Seize the entire collateral
             if (tokens != 0) {
-                market.seize(liquidator, user, tokens);
+                market.seize(msg.sender, user, tokens);
             }
             // Repay a certain percentage of the borrow, forgive the rest
             if (borrowBalance != 0) {
-                market.healBorrow(liquidator, user, repaymentAmount);
+                // A heal is a liquidation, so pausing liquidations in this market has to stop it too. Nothing on the
+                // way checks it otherwise: `healBorrow` never reaches `preLiquidateHook`, and when it repays nothing it
+                // reaches no hook at all.
+                _checkActionPauseState(address(market), Action.LIQUIDATE);
+                market.healBorrow(msg.sender, user, mul_ScalarTruncate(percentage, borrowBalance));
             }
         }
     }
