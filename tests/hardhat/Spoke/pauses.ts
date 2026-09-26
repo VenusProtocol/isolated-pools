@@ -233,4 +233,49 @@ describe("SpokeComptroller: action pauses", () => {
         .not.be.reverted;
     });
   });
+
+  // A heal reaches no `preLiquidateHook`, and one that repays nothing reaches no hook at all, so the comptroller
+  // checks the pause itself. Like `preLiquidateHook`, it reads the pause from the markets whose debt is being cleared.
+  describe("healAccount", () => {
+    let insolvent: SignerWithAddress;
+
+    beforeEach(async () => {
+      [, , , insolvent] = await ethers.getSigners();
+      // Debt in two markets and no collateral, so the heal repays nothing and writes both debts off.
+      await givePosition(comptroller, insolvent, [
+        { market: debt, borrow: BORROW },
+        { market: spare, borrow: BORROW },
+      ]);
+    });
+
+    it("goes through while nothing is paused", async () => {
+      await expect(comptroller.connect(liquidator).healAccount(insolvent.address)).to.not.be.reverted;
+    });
+
+    it("stops while liquidating is paused in a market the account borrows from", async () => {
+      await comptroller.setActionsPaused([debt.vToken.address], [Action.LIQUIDATE], true);
+
+      await expect(comptroller.connect(liquidator).healAccount(insolvent.address))
+        .to.be.revertedWithCustomError(comptroller, "ActionPaused")
+        .withArgs(debt.vToken.address, Action.LIQUIDATE);
+    });
+
+    it("checks every market the account borrows from, not only the first", async () => {
+      await comptroller.setActionsPaused([spare.vToken.address], [Action.LIQUIDATE], true);
+
+      await expect(comptroller.connect(liquidator).healAccount(insolvent.address))
+        .to.be.revertedWithCustomError(comptroller, "ActionPaused")
+        .withArgs(spare.vToken.address, Action.LIQUIDATE);
+    });
+
+    // Seizing the collateral is paused through SEIZE on the collateral market, as in a regular liquidation.
+    it("takes the pause from the borrowed markets, not from the collateral being seized", async () => {
+      const seized = parseUnits("50", 18);
+      await givePosition(comptroller, insolvent, [{ market: collateral, collateral: seized }]);
+      await comptroller.setActionsPaused([collateral.vToken.address], [Action.LIQUIDATE], true);
+
+      await expect(comptroller.connect(liquidator).healAccount(insolvent.address)).to.not.be.reverted;
+      expect(collateral.vToken.seize).to.have.been.calledWith(liquidator.address, insolvent.address, seized);
+    });
+  });
 });

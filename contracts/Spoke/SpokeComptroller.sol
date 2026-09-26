@@ -46,8 +46,8 @@ enum WeightFunction {
  * sum over the user's collateral markets of `collateralValue/liquidationIncentive`, each market taken at its own
  * incentive. The function can only be called if the calculated percentage does not exceed 100%, because otherwise no
  * `badDebt` would be created and `liquidateAccount()` should be used instead. The difference in the actual amount of
- * debt and debt paid off is recorded as `badDebt` for each market, which can then be auctioned off for the risk
- * reserves of the pool.
+ * debt and debt paid off is recorded as `badDebt` for each market. `Shortfall` cannot auction it off, because
+ * `Shortfall` only finds pools in the pool registry it is configured with, and that registry does not hold spoke pools.
  * - `liquidateAccount()`: This function can only be called if the collateral seized will cover all borrows of an
  * account, as well as the liquidation incentive of each collateral market, which is the same condition stated as
  * `borrows < maxClearableDebt`. Otherwise, the pool will incur bad debt, in which case the function `healAccount()`
@@ -696,6 +696,7 @@ contract SpokeComptroller is
      *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
+     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
      *   to heal
@@ -712,8 +713,6 @@ contract SpokeComptroller is
 
         VToken[] memory userAssets = getAssetsIn(user);
         uint256 userAssetsCount = userAssets.length;
-
-        address liquidator = msg.sender;
 
         // We need all user's markets to be fresh for the computations to be correct
         _refreshMarkets(userAssets);
@@ -746,15 +745,18 @@ contract SpokeComptroller is
             VToken market = userAssets[i];
 
             (uint256 tokens, uint256 borrowBalance, ) = _safeGetAccountSnapshot(market, user);
-            uint256 repaymentAmount = mul_ScalarTruncate(percentage, borrowBalance);
 
             // Seize the entire collateral
             if (tokens != 0) {
-                market.seize(liquidator, user, tokens);
+                market.seize(msg.sender, user, tokens);
             }
             // Repay a certain percentage of the borrow, forgive the rest
             if (borrowBalance != 0) {
-                market.healBorrow(liquidator, user, repaymentAmount);
+                // A heal is a liquidation, so pausing liquidations in this market has to stop it too. Nothing on the
+                // way checks it otherwise: `healBorrow` never reaches `preLiquidateHook`, and when it repays nothing it
+                // reaches no hook at all.
+                _checkActionPauseState(address(market), Action.LIQUIDATE);
+                market.healBorrow(msg.sender, user, mul_ScalarTruncate(percentage, borrowBalance));
             }
         }
     }
@@ -830,6 +832,8 @@ contract SpokeComptroller is
             );
         }
 
+        // Re-read the markets: the orders make external calls, so the borrower may have entered new ones meanwhile
+        borrowerAssets = getAssetsIn(borrower);
         uint256 marketsCount = borrowerAssets.length;
 
         for (uint256 i; i < marketsCount; ++i) {
@@ -1193,7 +1197,8 @@ contract SpokeComptroller is
      *
      * There is no way back to "unset" once a value is stored: `0` is the sentinel that means the pool-wide discount
      * applies, and it is rejected here so that a mistaken zero cannot silently move a market back onto the pool-wide
-     * value. Pass that value explicitly to get the same effect.
+     * value. Passing the current pool-wide value is not the same as unsetting: the market is pinned at that number and
+     * no longer follows later `setLiquidationIncentive` changes, so a pool-wide change has to update such markets too.
      * @param vToken The collateral market to set the incentive for
      * @param newLiquidationIncentiveMantissa New incentive for this market, scaled by 1e18, at least
      *   1e18 + the market's `protocolSeizeShareMantissa`
@@ -1228,9 +1233,10 @@ contract SpokeComptroller is
 
     /**
      * @notice Restricts supplying to a market to the accounts on its supply allowlist, or lifts the restriction
-     * @dev Enforced in `preMintHook`, so only supply is metered. Redeeming is never restricted, and an account
-     * removed from the allowlist keeps the position it already holds and can still exit. Enabling it on a market that
-     * is already serving supply cuts off every account that is not on the list, the seed supplier included.
+     * @dev Enforced in `preMintHook`, so only supply is metered. Transfers and seizures do not check the list, so
+     * vTokens can still reach accounts that are not on it. Redeeming is never restricted, and an account removed from
+     * the allowlist keeps the position it already holds and can still exit. Enabling it on a market that is already
+     * serving supply cuts off every account that is not on the list, the seed supplier included.
      * @param vToken The market to change the setting for
      * @param enabled Whether the market should accept supply only from allowlisted accounts
      * @custom:event Emits SupplyAllowlistEnabledUpdated on success
