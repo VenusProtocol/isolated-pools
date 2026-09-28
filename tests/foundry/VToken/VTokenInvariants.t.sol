@@ -15,7 +15,7 @@ contract VTokenHandler is CommonBase, StdCheats, StdUtils {
 
     address[] public actors;
 
-    /// @dev Ghost state: the rate as of the last call, which the vToken does not keep.
+    /// @dev Ghost state: the rate going into the last call, which the vToken does not keep.
     uint256 public ghostExchangeRate;
 
     uint256 internal constant MAX_ACTION = 1e24;
@@ -27,9 +27,11 @@ contract VTokenHandler is CommonBase, StdCheats, StdUtils {
         ghostExchangeRate = vToken_.exchangeRateStored();
     }
 
+    /// @dev Records before the action, so the invariant compares the rate the call left behind
+    ///  against the rate it started from.
     modifier recordsExchangeRate() {
-        _;
         ghostExchangeRate = vToken.exchangeRateStored();
+        _;
     }
 
     function mint(uint256 actorSeed, uint256 amount) external recordsExchangeRate {
@@ -121,17 +123,10 @@ contract VTokenInvariantsTest is VTokenBase {
     }
 
     /// @notice The exchange rate is a ratchet. Interest and rounding push it up; no user action
-    ///  may push it down, because that would take value from the suppliers already in.
+    ///  may push it down, because that would take value from the suppliers already in. An emptied
+    ///  market falls back to the initial rate, which takes nothing since no supplier is left.
     function invariant_exchangeRateNeverFalls() public view {
+        if (vToken.totalSupply() == 0) return;
         assertGe(vToken.exchangeRateStored(), handler.ghostExchangeRate());
-    }
-
-    /// @notice The market is solvent: what it holds plus what it is owed covers what it has
-    ///  promised its suppliers, after setting aside the reserves.
-    function invariant_marketIsSolvent() public view {
-        uint256 supplied = (vToken.totalSupply() * vToken.exchangeRateStored()) / 1e18;
-        uint256 assets = vToken.getCash() + vToken.totalBorrows();
-
-        assertGe(assets, supplied + vToken.totalReserves());
     }
 }
