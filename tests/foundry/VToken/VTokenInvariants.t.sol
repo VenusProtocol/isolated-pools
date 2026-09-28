@@ -5,6 +5,7 @@ import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 
+import { Comptroller } from "../../../contracts/Comptroller.sol";
 import { VToken } from "../../../contracts/VToken.sol";
 import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
 import { VTokenBase } from "./VTokenBase.t.sol";
@@ -12,17 +13,24 @@ import { VTokenBase } from "./VTokenBase.t.sol";
 contract VTokenHandler is CommonBase, StdCheats, StdUtils {
     VToken public immutable vToken;
     MockToken public immutable underlying;
+    Comptroller public immutable comptroller;
 
     address[] public actors;
 
     /// @dev Ghost state: the rate going into the last call, which the vToken does not keep.
     uint256 public ghostExchangeRate;
 
+    /// @dev Ghost state: a bound on how far rounding has let the borrowers' summed debts fall behind
+    ///  totalBorrows. Rebasing a debt on borrow or repay loses under a wei. Each accrual rounds the
+    ///  borrow index down by under a unit, which loses under totalBorrows / 1e18 across the debts.
+    uint256 public ghostRoundingDust;
+
     uint256 internal constant MAX_ACTION = 1e24;
 
     constructor(VToken vToken_, MockToken underlying_, address[] memory actors_) {
         vToken = vToken_;
         underlying = underlying_;
+        comptroller = Comptroller(address(vToken_.comptroller()));
         actors = actors_;
         ghostExchangeRate = vToken_.exchangeRateStored();
     }
@@ -56,14 +64,20 @@ contract VTokenHandler is CommonBase, StdCheats, StdUtils {
         vToken.redeem(shares);
     }
 
+    /// @dev Borrows within what the actor's collateral allows, so the call rarely reverts. Accrues
+    ///  first because borrow does, and the interest moves the limit.
     function borrow(uint256 actorSeed, uint256 amount) external recordsExchangeRate {
         address actor = _actor(actorSeed);
+        vToken.accrueInterest();
+        (, uint256 borrowingPower, ) = comptroller.getBorrowingPower(actor);
         uint256 cash = vToken.getCash();
-        if (cash == 0) return;
-        amount = bound(amount, 1, cash);
+        uint256 limit = borrowingPower < cash ? borrowingPower : cash;
+        if (limit == 0) return;
+        amount = bound(amount, 1, limit);
 
         vm.prank(actor);
         vToken.borrow(amount);
+        ++ghostRoundingDust;
     }
 
     function repay(uint256 actorSeed, uint256 amount) external recordsExchangeRate {
@@ -78,10 +92,13 @@ contract VTokenHandler is CommonBase, StdCheats, StdUtils {
         underlying.approve(address(vToken), amount);
         vToken.repayBorrow(amount);
         vm.stopPrank();
+        ++ghostRoundingDust;
     }
 
-    /// @dev The market accrues per block, so time only moves when blocks do.
+    /// @dev The market accrues per block, so time only moves when blocks do, and this is the only
+    ///  action that accrues.
     function passBlocks(uint256 count) external recordsExchangeRate {
+        ghostRoundingDust += vToken.totalBorrows() / 1e18 + 1;
         vm.roll(block.number + bound(count, 1, 100_000));
         vToken.accrueInterest();
     }
@@ -95,11 +112,12 @@ contract VTokenHandler is CommonBase, StdCheats, StdUtils {
 ///  and elapsed blocks. Foundry drives the handler; nothing here assumes an order.
 contract VTokenInvariantsTest is VTokenBase {
     VTokenHandler internal handler;
+    address[] internal actors;
 
     function setUp() public {
         _deployMarket();
 
-        address[] memory actors = new address[](4);
+        actors = new address[](4);
         actors[0] = makeAddr("alice");
         actors[1] = makeAddr("bob");
         actors[2] = makeAddr("carol");
@@ -128,5 +146,20 @@ contract VTokenInvariantsTest is VTokenBase {
     function invariant_exchangeRateNeverFalls() public view {
         if (vToken.totalSupply() == 0) return;
         assertGe(vToken.exchangeRateStored(), handler.ghostExchangeRate());
+    }
+
+    /// @notice The market is solvent: what it holds plus what its borrowers owe covers what it has
+    ///  promised its suppliers, after setting aside the reserves.
+    /// @dev The debts are summed per borrower, because totalBorrows feeds the exchange rate and would
+    ///  make this hold by definition. Rounding lets that sum fall behind totalBorrows by the dust
+    ///  the handler bounds.
+    function invariant_marketIsSolvent() public view {
+        uint256 owed;
+        for (uint256 i; i < actors.length; ++i) {
+            owed += vToken.borrowBalanceStored(actors[i]);
+        }
+        uint256 supplied = (vToken.totalSupply() * vToken.exchangeRateStored()) / 1e18;
+
+        assertGe(vToken.getCash() + owed + handler.ghostRoundingDust(), supplied + vToken.totalReserves());
     }
 }
