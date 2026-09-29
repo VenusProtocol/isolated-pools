@@ -1858,10 +1858,12 @@ contract SpokeComptroller is
      * @dev Retrieves the two prices that value a market's collateral and its debt, and checks they are nonzero.
      *  Under the collateral factor both come from `deviationBoundedOracle`: while protection is active for the asset
      *  it values collateral at the low end of the asset's recent price window and debt at the high end, and it returns
-     *  spot on both legs otherwise, including for an asset it holds no configuration for. A deviating print can
-     *  therefore only ever shrink an account's borrowing capacity, never inflate it. Under the liquidation threshold
-     *  both legs are spot, because those snapshots route an unhealthy account between `liquidateAccount` and
-     *  `healAccount` and set how much of its debt healing repays, which has to track the live price.
+     *  spot on both legs otherwise, including for an asset it holds no configuration for. A print that triggers
+     *  protection can therefore only shrink an account's borrowing capacity, never inflate it. While protection is
+     *  off, a move too small to trigger it is priced at spot, as the upstream Comptroller prices every check, so
+     *  capacity follows it up or down. Under the liquidation threshold both legs are spot, because those snapshots
+     *  route an unhealthy account between `liquidateAccount` and `healAccount` and set how much of its debt healing
+     *  repays, which has to track the live price.
      * @param asset Address for asset to query prices for
      * @param weighting Which risk parameter weights the position being valued
      * @return collateralPrice Price valuing the collateral held in the market
