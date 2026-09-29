@@ -313,6 +313,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Checks if the account should be allowed to mint tokens in the given market
+     * @dev No minimum amount is enforced. The vToken rounds the minted amount down, so a mint worth less than one
+     *   vToken unit takes the underlying and mints nothing. Callers that need a minimum have to enforce it.
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
