@@ -893,7 +893,7 @@ contract SpokeComptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        // Check collateral factor <= 0.9
+        // Check collateral factor <= 0.95
         if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
             revert InvalidCollateralFactor();
         }
