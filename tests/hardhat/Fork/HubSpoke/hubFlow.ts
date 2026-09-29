@@ -4,7 +4,15 @@ import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
 import { Action, bscmainnet } from "./constants";
-import { SpokeForkFixture, fundFrom, grant, registerOnHub, registerSpokeResource, spokeForkFixture } from "./fixture";
+import {
+  SpokeForkFixture,
+  deployVToken,
+  fundFrom,
+  grant,
+  registerOnHub,
+  registerSpokeResource,
+  spokeForkFixture,
+} from "./fixture";
 
 const FORK = process.env.FORK === "true";
 const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
@@ -59,6 +67,27 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
 
       it("rejects a spoke market whose underlying is not the source's asset", async () => {
         await expect(f.spokeSource.connect(f.timelock).addResource(f.vBTCB.address, f.adapter.address)).to.be.reverted;
+      });
+
+      it("rejects a spoke market its comptroller does not list", async () => {
+        // The state `028-deploy-spoke-vtokens.ts` leaves a market in until the listing VIP runs: built
+        // against the spoke pool in the source's own asset, but not listed. `preMintHook` would revert
+        // every deposit into it, so the resource could never be filled.
+        const unlisted = await deployVToken(
+          f.deployer,
+          f.vTokenBeacon.address,
+          bscmainnet.USDT,
+          f.spoke.address,
+          f.irm.address,
+          "Venus USDT (unlisted)",
+          "vUSDT_Unlisted",
+          8,
+          ethers.utils.parseUnits("0.1", 18),
+          18,
+        );
+        await expect(f.spokeSource.connect(f.timelock).addResource(unlisted.address, f.adapter.address))
+          .to.be.revertedWithCustomError(f.adapter, "MarketNotListed")
+          .withArgs(unlisted.address);
       });
     });
 

@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { IResourceAdapter } from "./interfaces/IResourceAdapter.sol";
@@ -18,7 +19,8 @@ import { ISpokeComptroller } from "./interfaces/external/ISpokeComptroller.sol";
  * @dev Dispatch model: mutating functions (`deposit`, `withdraw`) MUST be invoked via DELEGATECALL
  *      from a YieldGroup. They execute in the YieldGroup's storage context, so vTokens are credited
  *      to / burned from the YieldGroup, not this adapter. View functions are invoked via normal
- *      CALL / STATICCALL with an explicit `holder` argument.
+ *      CALL / STATICCALL; those that name a `holder` read the position from that argument, while
+ *      {maxDeposit} and {validateRegistration} read `msg.sender` instead (see below).
  *
  *      Storage-safety invariants enforced by this contract:
  *      1. Zero `internal`/`private`/`public` state variables are declared. Only `immutable` values
@@ -30,7 +32,7 @@ import { ISpokeComptroller } from "./interfaces/external/ISpokeComptroller.sol";
  *         preventing accidents that would orphan vTokens here.
  *
  *      **Why this is not `AdapterCoreV1`.** The two speak nearly the same selectors and disagree on
- *      every number that matters. Four differences, each verified against `isolated-pools`:
+ *      every number that matters. Five differences, each verified against `isolated-pools`:
  *
  *      - **NAV excludes `badDebt`.** The market's exchange rate keeps `badDebt` in its numerator, so
  *        it does not fall when `healAccount` writes a loss off; the loss surfaces only as redemptions
@@ -41,22 +43,29 @@ import { ISpokeComptroller } from "./interfaces/external/ISpokeComptroller.sol";
  *        is pro-rata (`balance / totalSupply`), so it stays correct whether or not the Hub is the
  *        market's only supplier. A Shortfall auction that later recovers the debt raises cash and
  *        lowers `badDebt` by the same amount, so the mark recovers on its own.
- *      - **Liquidity is cash NET of reserves**, floored to what a whole number of vTokens is worth
- *        and then checked against the market's own redeem arithmetic, so a certified amount is
- *        always one the market will actually settle.
+ *      - **Liquidity is cash NET of reserves**, and both it and the position are floored to a whole
+ *        number of vTokens, because {withdraw} redeems by vToken COUNT rather than by underlying
+ *        amount. Naming the burn instead of letting `redeemUnderlying` derive it is what keeps a
+ *        certified amount inside the position's own balance: the derived burn rounds UP and is
+ *        subtracted in checked arithmetic, so an amount one unit too large panics rather than
+ *        failing gracefully.
  *      - **No exit fee to gross up.** Isolated pools have no `treasuryPercent`; their cut is the
  *        reserve factor, already netted out of the exchange rate. There is nothing unmodeled to
- *        reject at registration, so {validateRegistration} guards the supply allowlist instead.
- *      - **The supply-cap sentinels are inverted** (see {ISpokeComptroller-supplyCaps}).
+ *        reject at registration, so {validateRegistration} guards the market listing and the supply
+ *        allowlist instead.
+ *      - **The supply cap has an uncapped sentinel**, `type(uint256).max` (see
+ *        {ISpokeComptroller-supplyCaps}).
+ *      - **Mutating calls carry no error code to check.** `mint`, `redeem` and `accrueInterest`
+ *        return `NO_ERROR` or revert; the Compound-style codes `AdapterCoreV1` inspects are set by
+ *        the legacy Core pool alone.
  *
  *      **The supply allowlist and caller identity.** A spoke market can restrict minting to
  *      allowlisted accounts, and the account it checks is the one CREDITED with the vTokens. Under
- *      delegatecall that is the YieldGroup. {maxDeposit} and {validateRegistration} are the two
- *      `IResourceAdapter` members that take no `holder`, and both are invoked by the YieldGroup as a
- *      plain call — so `msg.sender` IS the prospective supplier, and reading the allowlist against it
- *      is exact rather than a convention. This matters operationally: a YieldGroup whose grant is
- *      revoked reports zero room and is routed around, instead of advertising capacity that every
- *      deposit then reverts on.
+ *      delegatecall that is the YieldGroup. {maxDeposit} and {validateRegistration} take no `holder`,
+ *      and both are invoked by the YieldGroup as a plain call, so `msg.sender` IS the prospective
+ *      supplier and reading the allowlist against it is exact rather than a convention. This matters
+ *      operationally: a YieldGroup whose grant is revoked reports zero room and is routed around,
+ *      instead of advertising capacity that every deposit then reverts on.
  *
  *      Fee-on-transfer underlyings are unsupported, matching the Hub. The market itself tolerates
  *      them (it mints against the measured delta) but {deposit} reports the requested amount, so the
@@ -106,21 +115,6 @@ contract AdapterSpokeV1 is IResourceAdapter {
     /// @notice A mutating function was invoked directly (not via delegatecall).
     error NotDelegateCall();
 
-    /// @notice A vToken `mint` call returned a non-zero error code.
-    /// @param resource Market that rejected the mint.
-    /// @param errorCode Compound-style error code returned by the market.
-    error VTokenMintFailed(address resource, uint256 errorCode);
-
-    /// @notice A vToken `redeemUnderlying` call returned a non-zero error code.
-    /// @param resource Market that rejected the redeem.
-    /// @param errorCode Compound-style error code returned by the market.
-    error VTokenRedeemFailed(address resource, uint256 errorCode);
-
-    /// @notice A vToken `accrueInterest` call returned a non-zero error code.
-    /// @param resource Market that failed to accrue.
-    /// @param errorCode Compound-style error code returned by the market.
-    error VTokenAccrueFailed(address resource, uint256 errorCode);
-
     /**
      * @notice A redeem succeeded but delivered less than the requested amount. Indicates a
      *         fee-on-transfer underlying or a market bug — an isolated-pools redeem otherwise
@@ -149,6 +143,12 @@ contract AdapterSpokeV1 is IResourceAdapter {
      * @param supplier Account that would be credited with the vTokens (the YieldGroup).
      */
     error SupplyNotAllowed(address resource, address supplier);
+
+    /**
+     * @notice The market is not listed by the Comptroller it names, so it can never be minted.
+     * @param resource Market that its own Comptroller does not list.
+     */
+    error MarketNotListed(address resource);
 
     // ============================== Modifiers ================================
 
@@ -180,26 +180,32 @@ contract AdapterSpokeV1 is IResourceAdapter {
 
         IERC20 assetToken = IERC20(IVTokenIsolated(resource).underlying());
         assetToken.forceApprove(resource, amount);
-        uint256 errCode = IVTokenIsolated(resource).mint(amount);
-        if (errCode != 0) revert VTokenMintFailed(resource, errCode);
+        IVTokenIsolated(resource).mint(amount);
         return amount;
     }
 
     /// @inheritdoc IResourceAdapter
-    /// @dev `address(this)` here is the YieldGroup, so `redeemUnderlying` burns its vTokens and
-    ///      credits the underlying back to it. The market over-delivers: it burns
-    ///      `ceil(request / exchangeRate)` tokens and pays out `truncate(exchangeRate x tokens)`,
-    ///      which exceeds the request by up to one vToken unit. We forward exactly `amount` and leave
-    ///      the surplus as idle on the YieldGroup, where `totalAssets` counts it and the next
-    ///      withdrawal consumes it idle-first — the same treatment `AdapterCoreV1` gives its
-    ///      gross-up surplus, and what keeps the YieldGroup's `received == requested` invariant true.
+    /// @dev `address(this)` here is the YieldGroup, so the redeem burns its vTokens and credits the
+    ///      underlying back to it.
+    ///
+    ///      Denominated in vTokens, not in underlying. `redeemUnderlying` DERIVES the burn from the
+    ///      request by rounding up, and that derived count is not bounded by the caller's balance —
+    ///      `_redeemFresh` subtracts it in checked arithmetic and panics when it overshoots. Naming
+    ///      the burn removes the derivation: {_burnFor} is the fewest vTokens worth at least
+    ///      `amount`, and {maxWithdraw} certifies nothing the position cannot cover that many times
+    ///      over.
+    ///
+    ///      The payout is `truncate(exchangeRate x tokens)`, so it is `>= amount` and exceeds it by
+    ///      up to one vToken unit. We forward exactly `amount` and leave the surplus as idle on the
+    ///      YieldGroup, where `totalAssets` counts it and the next withdrawal consumes it
+    ///      idle-first — the same treatment `AdapterCoreV1` gives its gross-up surplus, and what
+    ///      keeps the YieldGroup's `received == requested` invariant true.
     function withdraw(address resource, uint256 amount, address to) external override onlyDelegateCall {
         IERC20 assetToken = IERC20(IVTokenIsolated(resource).underlying());
 
         uint256 exchangeRate = IVTokenIsolated(resource).exchangeRateStored();
         uint256 preBal = assetToken.balanceOf(address(this));
-        uint256 errCode = IVTokenIsolated(resource).redeemUnderlying(_bumpToSettleable(exchangeRate, amount));
-        if (errCode != 0) revert VTokenRedeemFailed(resource, errCode);
+        IVTokenIsolated(resource).redeem(_burnFor(exchangeRate, amount));
         uint256 received = assetToken.balanceOf(address(this)) - preBal;
         if (received < amount) revert VTokenUnderfilled(resource, amount, received);
 
@@ -211,8 +217,7 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      index, not this caller's position, so it is safe (and cheaper) to run in the adapter's
     ///      context. After it returns, every view below is fresh to the current block or timestamp.
     function accrue(address resource) external override {
-        uint256 errCode = IVTokenIsolated(resource).accrueInterest();
-        if (errCode != 0) revert VTokenAccrueFailed(resource, errCode);
+        IVTokenIsolated(resource).accrueInterest();
     }
 
     // ============================== External — view ==========================
@@ -225,14 +230,13 @@ contract AdapterSpokeV1 is IResourceAdapter {
     /// @inheritdoc IResourceAdapter
     /// @dev The position's RECOVERABLE value: its pro-rata share of `cash + totalBorrows -
     ///      totalReserves`, i.e. the market's exchange rate with `badDebt` excluded from the
-    ///      numerator. See the contract NatSpec for why the market's own rate is unusable here.
-    ///      Deliberately conservative in one direction: because a redeem still burns tokens at the
-    ///      market's un-haircut rate, an exit costs fewer tokens than this mark implies, so the mark
-    ///      can never overstate what the position delivers.
+    ///      numerator, and never above what the market itself would pay for the same tokens. See the
+    ///      contract NatSpec for why the market's own rate is unusable as the basis, and
+    ///      {_recoverableValue} for why it is still needed as a ceiling.
     function totalAssets(address resource, address holder) external view override returns (uint256) {
         uint256 vBal = IVTokenIsolated(resource).balanceOf(holder);
         if (vBal == 0) return 0;
-        return _recoverableValue(resource, vBal);
+        return _recoverableValue(resource, vBal, IVTokenIsolated(resource).exchangeRateStored());
     }
 
     /// @inheritdoc IResourceAdapter
@@ -280,19 +284,14 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      invariant across the reserve sweep `accrueInterest` performs, which lowers cash and
     ///      reserves by the same amount.
     ///
-    ///      The cash side is floored to what a WHOLE number of vTokens is worth, because a redeem
-    ///      rounds its burn up: asking for an amount that is not a whole-token multiple pays out the
-    ///      next token up, and asking for exactly the payable cash would therefore overshoot it and
-    ///      revert `RedeemTransferOutNotPossible`. Flooring is exact rather than conservative — the
-    ///      round-up can never exceed the token count this floor is taken at — so unlike a flat
-    ///      margin it still lets the last vToken out, which is what lets a market be drained to zero
-    ///      and deregistered.
-    ///
-    ///      The floor is necessary but not sufficient, so the bound is finally checked against the
-    ///      market's own redeem arithmetic: whatever request {withdraw} would issue for it has to
-    ///      produce a non-zero payout AND settle within the payable cash, or this reports zero. That
-    ///      check is exact rather than a safety margin, so a market holding real liquidity still
-    ///      reports all of it.
+    ///      Both are expressed as a whole number of vTokens and valued back into underlying, because
+    ///      {withdraw} redeems by count: an amount at or below `truncate(exchangeRate x t)` is
+    ///      coverable by `t` tokens, so flooring at `t` is what makes the bound executable rather
+    ///      than merely arithmetically true. The position side gets its floor from
+    ///      {_recoverableValue}, which is capped at the market's own valuation of the same tokens;
+    ///      the cash side is floored to the tokens the market can pay for. Flooring is exact rather
+    ///      than conservative — no margin is withheld — so the last vToken stays withdrawable, which
+    ///      is what lets a market be drained to zero and deregistered.
     ///
     ///      Reads stored state, so the figure is exact only for a caller that has already settled
     ///      this market's interest in the same transaction — the Hub's routing paths all do, via
@@ -304,32 +303,21 @@ contract AdapterSpokeV1 is IResourceAdapter {
 
         uint256 vBal = IVTokenIsolated(resource).balanceOf(holder);
         if (vBal == 0) return 0;
-        uint256 ourValue = _recoverableValue(resource, vBal);
+
+        uint256 exchangeRate = IVTokenIsolated(resource).exchangeRateStored();
+        if (exchangeRate == 0) return 0;
+
+        uint256 ourValue = _recoverableValue(resource, vBal, exchangeRate);
         if (ourValue == 0) return 0;
 
         uint256 cash = IVTokenIsolated(resource).getCash();
         uint256 reserves = IVTokenIsolated(resource).totalReserves();
         if (cash <= reserves) return 0;
 
-        uint256 exchangeRate = IVTokenIsolated(resource).exchangeRateStored();
-        if (exchangeRate == 0) return 0;
         uint256 payableTokens = ((cash - reserves) * EXP_SCALE) / exchangeRate;
         uint256 cashBound = (payableTokens * exchangeRate) / EXP_SCALE;
 
-        uint256 liquid = ourValue < cashBound ? ourValue : cashBound;
-        if (liquid == 0) return 0;
-
-        // Certify the bound only if the redeem it implies actually settles. Re-run the market's own
-        // arithmetic on the request {withdraw} would issue for `liquid`, because the whole-vToken
-        // floor above is not sufficient on its own in two cases. A bound worth less than one vToken
-        // is raised by {_bumpToSettleable} to a request whose round-up burns a SECOND token,
-        // doubling the payout past the cash this bound was sized for. And at an exchange rate below
-        // `1e18` — normal for an underlying with fewer decimals — the payout can truncate to zero,
-        // which the market rejects outright. Mirroring beats a blanket safety margin here: a market
-        // holding real liquidity still reports all of it, so a position stays fully drainable.
-        uint256 payout = _redeemPayout(exchangeRate, _bumpToSettleable(exchangeRate, liquid));
-        if (payout == 0 || payout > cash - reserves) return 0;
-        return liquid;
+        return ourValue < cashBound ? ourValue : cashBound;
     }
 
     /// @inheritdoc IResourceAdapter
@@ -351,13 +339,21 @@ contract AdapterSpokeV1 is IResourceAdapter {
     }
 
     /// @inheritdoc IResourceAdapter
-    /// @dev Rejects a market whose supply allowlist is enabled without the registering YieldGroup on
-    ///      it: minting would revert on every deposit, so the resource would occupy a queue slot it
-    ///      can never fill. `msg.sender` is the YieldGroup (see the contract NatSpec), which is the
-    ///      account the market's allowlist gates.
+    function resourceName(address resource) external view override returns (string memory) {
+        return IERC20Metadata(resource).name();
+    }
+
+    /// @inheritdoc IResourceAdapter
+    /// @dev Rejects the two configurations `preMintHook` would reject on every deposit, either of
+    ///      which would leave the resource holding a queue slot it can never fill: a market its own
+    ///      Comptroller does not list, and a market whose supply allowlist is enabled without the
+    ///      registering YieldGroup on it. `msg.sender` is the YieldGroup (see the contract NatSpec),
+    ///      which is the account the market's allowlist gates.
     ///
-    ///      This doubles as the check that `resource` really belongs to a spoke pool: the allowlist
-    ///      accessors exist only on `SpokeComptroller`, so the call itself reverts against any other
+    ///      The listing check is also what ties `resource` to the Comptroller it names: any contract
+    ///      can return a real `SpokeComptroller` from `comptroller()`, but only a market that
+    ///      Comptroller actually lists passes here. The allowlist accessors then pin the Comptroller
+    ///      to the spoke fork, since they exist nowhere else and the call reverts against any other
     ///      Comptroller. Nothing else is asserted. In particular an unset `deviationBoundedOracle`
     ///      is NOT grounds for rejection: it blocks borrowing, and so the market's yield, but leaves
     ///      the Hub's own paths intact — `preMintHook` never reads a price, and `preRedeemHook`
@@ -365,6 +361,7 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      which a supply-only YieldGroup never becomes.
     function validateRegistration(address resource) external view override {
         ISpokeComptroller comptrollerContract = ISpokeComptroller(IVTokenIsolated(resource).comptroller());
+        if (!comptrollerContract.isMarketListed(resource)) revert MarketNotListed(resource);
         if (
             comptrollerContract.isSupplyAllowlistEnabled(resource) &&
             !comptrollerContract.isAllowedSupplier(resource, msg.sender)
@@ -376,14 +373,32 @@ contract AdapterSpokeV1 is IResourceAdapter {
     // ============================== Private — view ===========================
 
     /**
-     * @notice Value `vBal` vTokens at the market's backing EXCLUDING written-off debt.
+     * @notice Value `vBal` vTokens at the market's backing EXCLUDING written-off debt, capped at the
+     *         market's own valuation of the same tokens.
      * @dev `vBal x (cash + totalBorrows - totalReserves) / totalSupply`, in one rounding step. This
      *      is `exchangeRateStored` with `badDebt` dropped from the numerator.
+     *
+     *      The cap exists because of that single step. The market reaches the same figure in TWO —
+     *      it floors the backing into a `1e18` mantissa, then floors `vBal x mantissa` back into
+     *      underlying — and each floor discards a remainder this one keeps. With no `badDebt` the
+     *      numerators are identical, so the one-step figure can land a unit ABOVE
+     *      `balanceOfUnderlying`, the most the market will ever pay for these tokens. That is value
+     *      no redeem can reach, and a bound taken from it is one no redeem can cover.
+     *
+     *      Capping does not reintroduce the `badDebt` over-mark the contract NatSpec describes:
+     *      `badDebt` sits in the numerator of the market's rate, so whenever it is non-zero the cap
+     *      is the looser of the two and the recoverable figure is kept. The cap binds only where the
+     *      two bases agree on the value and disagree on the rounding.
      * @param resource Market holding the position.
      * @param vBal vToken units held (caller has already established this is non-zero).
+     * @param exchangeRate Market's stored exchange rate, scaled by `1e18`, read by the caller.
      * @return value Recoverable underlying value of the position.
      */
-    function _recoverableValue(address resource, uint256 vBal) private view returns (uint256 value) {
+    function _recoverableValue(
+        address resource,
+        uint256 vBal,
+        uint256 exchangeRate
+    ) private view returns (uint256 value) {
         uint256 supply = IVTokenIsolated(resource).totalSupply();
         // Unreachable while `vBal` is non-zero, which every caller has already established. Kept as
         // a division guard rather than an assumption about a contract this one does not own.
@@ -395,7 +410,9 @@ contract AdapterSpokeV1 is IResourceAdapter {
         // of reserves), so this only guards a pathological state rather than an expected one.
         if (backing <= reserves) return 0;
 
-        return (vBal * (backing - reserves)) / supply;
+        uint256 recoverable = (vBal * (backing - reserves)) / supply;
+        uint256 marketValue = (vBal * exchangeRate) / EXP_SCALE;
+        return recoverable < marketValue ? recoverable : marketValue;
     }
 
     /**
@@ -408,52 +425,21 @@ contract AdapterSpokeV1 is IResourceAdapter {
     }
 
     /**
-     * @notice Raise a redeem the market would settle for nothing up to the smallest one it settles.
-     * @dev The market burns `floor(amount x 1e18 / exchangeRate)` vTokens, rounds that up when those
-     *      tokens are not worth exactly `amount`, then truncates the payout back to underlying — and
-     *      reverts `"redeemAmount is zero"` if the payout truncates away. A withdraw cascade can
-     *      legitimately hand this adapter a dust `amount` (e.g. a 1-wei remainder left after an
-     *      upstream ERC-4626 resource rounds its own redeem down), which would otherwise revert an
-     *      entirely valid, within-{maxWithdraw} withdrawal. Redeem the smallest settleable amount
-     *      instead; {withdraw} still forwards only `amount` and leaves the surplus idle on the
-     *      YieldGroup. A no-op for normal-sized redeems.
+     * @notice Fewest vTokens worth at least `amount` of underlying.
+     * @dev `ceil(amount x 1e18 / exchangeRate)`. A token-denominated redeem pays
+     *      `truncate(exchangeRate x tokens)`, and this ceiling is the smallest count whose payout
+     *      reaches `amount` — so {withdraw} never under-delivers, and never burns more than
+     *      {maxWithdraw} certified the position and the market's cash can cover.
      *
-     *      The trigger is the PAYOUT truncating to zero, not the burn. Those coincide only while the
-     *      rate is at or above `1e18`. Below it — the normal state for an underlying with fewer
-     *      decimals than the vToken, e.g. a 6-decimal stablecoin listed at a `1e16` initial rate — a
-     *      dust request burns plenty of tokens and still pays out nothing, so a burn-based test
-     *      would never fire on exactly the markets that need it.
+     *      Non-increasing in the exchange rate. The market accrues before redeeming and that rate
+     *      only ever rises, so a count sized here stays inside the balance at execution and its
+     *      payout stays at or above `amount`.
      * @param exchangeRate Market's stored exchange rate, scaled by `1e18`.
      * @param amount Underlying units the caller intends to redeem.
-     * @return bumped `amount`, or the value of the fewest vTokens worth a non-zero payout.
+     * @return tokens vToken units to burn.
      */
-    function _bumpToSettleable(uint256 exchangeRate, uint256 amount) private pure returns (uint256 bumped) {
-        if (exchangeRate == 0) return amount;
-        if (_redeemPayout(exchangeRate, amount) != 0) return amount;
-
-        // Fewest vTokens worth at least one unit of underlying, then the smallest request that
-        // redeems that many. Reduces to `ceil(exchangeRate / 1e18)` — one whole vToken — whenever the
-        // rate is at or above `1e18`.
-        uint256 minTokens = (EXP_SCALE + exchangeRate - 1) / exchangeRate;
-        return (minTokens * exchangeRate + EXP_SCALE - 1) / EXP_SCALE;
-    }
-
-    /**
-     * @notice Underlying the market would pay out for a `redeemUnderlying(request)` call.
-     * @dev A line-for-line mirror of `_redeemFresh`: floor the request into vTokens, round the burn
-     *      up when that many tokens are not worth exactly the request, then truncate the payout back
-     *      to underlying. The payout is therefore `>= request` (the over-delivery {withdraw} retains
-     *      as idle) except when it truncates to `0`, which is the market's own reject condition.
-     *      Used by {maxWithdraw} to avoid certifying a bound the market will not settle.
-     * @param exchangeRate Market's stored exchange rate, scaled by `1e18`. Caller has established
-     *        this is non-zero.
-     * @param request Underlying units that would be passed to `redeemUnderlying`.
-     * @return payout Underlying units the market would transfer out.
-     */
-    function _redeemPayout(uint256 exchangeRate, uint256 request) private pure returns (uint256 payout) {
-        uint256 tokens = (request * EXP_SCALE) / exchangeRate;
-        uint256 probe = (tokens * exchangeRate) / EXP_SCALE;
-        if (probe != 0 && probe != request) ++tokens;
-        return (tokens * exchangeRate) / EXP_SCALE;
+    function _burnFor(uint256 exchangeRate, uint256 amount) private pure returns (uint256 tokens) {
+        if (exchangeRate == 0) return 0;
+        return (amount * EXP_SCALE + exchangeRate - 1) / exchangeRate;
     }
 }
