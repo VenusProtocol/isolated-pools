@@ -1,3 +1,17 @@
+## 4.4.0-dev.9 (2026-09-29)
+
+* Merge pull request #564 from VenusProtocol/feat/foundry-setup ([c4780b1](https://github.com/VenusProtocol/isolated-pools/commit/c4780b1)), closes [#564](https://github.com/VenusProtocol/isolated-pools/issues/564)
+* test: add a foundry base listing a vtoken on a real comptroller ([de8af87](https://github.com/VenusProtocol/isolated-pools/commit/de8af87))
+* test: add explicit vtoken solvency and liquidity-bound borrows ([1b7e42c](https://github.com/VenusProtocol/isolated-pools/commit/1b7e42c))
+* test: add vtoken cash, exchange rate and solvency invariants ([c551936](https://github.com/VenusProtocol/isolated-pools/commit/c551936))
+* test: fix the vtoken invariants and add foundry setup steps ([e8897b6](https://github.com/VenusProtocol/isolated-pools/commit/e8897b6))
+* test: fuzz vtoken mint and redeem rounding in foundry ([5ee6134](https://github.com/VenusProtocol/isolated-pools/commit/5ee6134))
+* test: group the vtoken foundry tests under tests/foundry/VToken ([e68ef14](https://github.com/VenusProtocol/isolated-pools/commit/e68ef14))
+* test: trim foundry to the vtoken suite, decouple forge from yarn ([00d27fa](https://github.com/VenusProtocol/isolated-pools/commit/00d27fa))
+* chore: drop redundant foundry config and forge build from compile ([222424e](https://github.com/VenusProtocol/isolated-pools/commit/222424e))
+* chore: drop the foundry failure dirs and unused invariant config ([0011c2d](https://github.com/VenusProtocol/isolated-pools/commit/0011c2d))
+* feat: add foundry alongside hardhat with forge-std and a ci job ([ad6a653](https://github.com/VenusProtocol/isolated-pools/commit/ad6a653))
+
 ## 4.4.0-dev.8 (2026-09-23)
 
 * Merge pull request #549 from Olexandr88/patch-1 ([d3e8670](https://github.com/VenusProtocol/isolated-pools/commit/d3e8670)), closes [#549](https://github.com/VenusProtocol/isolated-pools/issues/549)
