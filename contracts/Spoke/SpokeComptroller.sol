@@ -1517,6 +1517,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Update the prices of all the tokens associated with the provided account
+     * @dev Refreshes the resilient oracle only. The borrow, redeem, transfer and exit checks, which use bounded
+     *   prices, update the deviation-bounded oracle's protection state themselves before they read those prices.
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
