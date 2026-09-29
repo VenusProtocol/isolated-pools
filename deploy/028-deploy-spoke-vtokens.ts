@@ -69,6 +69,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Both are the chain's live contracts, matching what the fork suite's listing model asserts of these markets. The
   // ProtocolShareReserve still resolves vTokens through a single pool registry, so `reduceReserves` on these markets
   // stays broken until that repo's multi-registry change is live, as `024-deploy-spoke-pool-registry.ts` notes.
+  // Shortfall has the same single-registry limit: `startAuction` reverts for this pool, so bad debt that `healAccount`
+  // records in these markets cannot be auctioned through it.
   const protocolShareReserve = (await ethers.getContract("ProtocolShareReserve")).address;
   const shortfall = preconfiguredAddresses.Shortfall ? await toAddress(preconfiguredAddresses.Shortfall) : AddressOne;
 
