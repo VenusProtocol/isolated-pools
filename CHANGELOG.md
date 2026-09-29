@@ -1,3 +1,10 @@
+## 4.4.0-dev.10 (2026-09-29)
+
+* Merge pull request #563 from VenusProtocol/feat/storage-layout-check ([7acf887](https://github.com/VenusProtocol/isolated-pools/commit/7acf887)), closes [#563](https://github.com/VenusProtocol/isolated-pools/issues/563)
+* fix: fail storage layout check on missing or unlisted networks ([cdc1966](https://github.com/VenusProtocol/isolated-pools/commit/cdc1966))
+* feat: check storage layout and upgrade safety in ci ([653843f](https://github.com/VenusProtocol/isolated-pools/commit/653843f))
+* chore: annotate WUSDMLiquidator constructor as upgrade-safe ([f6fbc3d](https://github.com/VenusProtocol/isolated-pools/commit/f6fbc3d))
+
 ## 4.4.0-dev.9 (2026-09-29)
 
 * Merge pull request #564 from VenusProtocol/feat/foundry-setup ([c4780b1](https://github.com/VenusProtocol/isolated-pools/commit/c4780b1)), closes [#564](https://github.com/VenusProtocol/isolated-pools/issues/564)
