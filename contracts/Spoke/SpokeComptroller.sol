@@ -693,10 +693,13 @@ contract SpokeComptroller is
      * @notice Seizes all the remaining collateral, makes msg.sender repay the existing
      *   borrows, and treats the rest of the debt as bad debt (for each market).
      *   The sender has to repay a certain percentage of the debt, computed as `maxClearableDebt / borrows`: see the
-     *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
+     *   note on `AccountLiquiditySnapshot.maxClearableDebt`. The heal is all-or-nothing: every seizure and repayment
+     *   runs in this one call, so a pause that blocks any of them reverts the whole heal.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
-     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from
+     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from,
+     *   seizing is paused in any entered market where the account holds vTokens, or repayments are paused in any
+     *   market where the heal repays a nonzero amount
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
      *   to heal
