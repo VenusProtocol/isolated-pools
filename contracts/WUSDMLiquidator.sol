@@ -53,6 +53,7 @@ contract WUSDMLiquidator is Ownable2StepUpgradeable {
 
     /**
      * @notice Constructor to initialize immutable token references and disable initializers
+     * @custom:oz-upgrades-unsafe-allow constructor
      */
     constructor() {
         WUSDM = IERC20Upgradeable(VWUSDM.underlying());
