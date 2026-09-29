@@ -4,7 +4,14 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
+import {
+  getProxyBeacon,
+  readBackAddress,
+  readBackUntil,
+  sameAddress,
+  toAddress,
+  verifyDeployment,
+} from "../helpers/deploymentUtils";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
@@ -102,6 +109,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Verified beacon implementation: ${beaconImplementation}`);
 
   const addressChecks: [string, string, string][] = [
+    // `skipIfAlreadyDeployed` hands back the recorded proxy without comparing its constructor arguments. The beacon it
+    // actually follows decides which implementation the pool runs, and which beacon an upgrade VIP has to target.
+    [
+      "comptroller beacon (SpokeComptrollerBeacon)",
+      await readBackAddress(() => getProxyBeacon(comptrollerProxy.address), spokeComptrollerBeacon.address),
+      spokeComptrollerBeacon.address,
+    ],
     [
       `comptroller pool registry (${POOL_REGISTRY_NAME})`,
       await readBackAddress(() => comptroller.poolRegistry(), poolRegistry.address),

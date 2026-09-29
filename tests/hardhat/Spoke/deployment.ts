@@ -9,7 +9,7 @@ const EIP_170_LIMIT = 24576;
 const BEACON_ABI = ["function implementation() view returns (address)", "function owner() view returns (address)"];
 
 // `bytes32(uint256(keccak256("eip1967.proxy.beacon")) - 1)`, where a `BeaconProxy` keeps the beacon it delegates to.
-// There is no getter for it, and it is the only place the market records which beacon it will follow through upgrades.
+// There is no getter for it, and it is the only place the proxy records which beacon it will follow through upgrades.
 const EIP_1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
 
 // The markets the deploy scripts build on this network. `009-deploy-vtokens.ts` never sees these, which is why they
@@ -42,6 +42,9 @@ describe("SpokeComptroller: deployment", function () {
     const spokeImpl = (await deployments.get("SpokeComptrollerImpl")).address;
     const sharedImpl = (await deployments.get("ComptrollerImpl")).address;
 
+    const proxy = (await deployments.get("Comptroller_HubSpoke")).address;
+    const slot = await ethers.provider.getStorageAt(proxy, EIP_1967_BEACON_SLOT);
+    expect(ethers.utils.getAddress(ethers.utils.hexDataSlice(slot, 12))).to.equal(spokeBeacon.address);
     expect(await spokeBeacon.implementation()).to.equal(spokeImpl);
     // The shared beacon every other pool in this repo upgrades through must be untouched.
     expect(await sharedBeacon.implementation()).to.equal(sharedImpl);

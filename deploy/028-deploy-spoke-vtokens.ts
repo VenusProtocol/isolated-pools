@@ -7,6 +7,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { InterestRateModels, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import {
   getBlockOrTimestampBasedDeploymentInfo,
+  getProxyBeacon,
   readBackAddress,
   sameAddress,
   toAddress,
@@ -173,6 +174,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const vToken = await ethers.getContractAt("VToken", market.address);
     const checks: [string, string, string][] = [
       [
+        `${symbol} beacon`,
+        await readBackAddress(() => getProxyBeacon(market.address), spokeVTokenBeacon.address),
+        spokeVTokenBeacon.address,
+      ],
+      [
         `${symbol} comptroller`,
         await readBackAddress(() => vToken.comptroller(), comptroller.address),
         comptroller.address,
@@ -193,7 +199,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         throw new Error(`${label} is ${actual}, expected ${expected}`);
       }
     }
-    console.log(`Verified ${symbol} at ${market.address}: comptroller, underlying and rate model`);
+    console.log(`Verified ${symbol} at ${market.address}: beacon, comptroller, underlying and rate model`);
 
     await verifyDeployment(hre, `VToken_${symbol}`, market, args);
     console.log(`-----------------------------------------`);
