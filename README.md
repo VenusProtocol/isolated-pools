@@ -89,12 +89,17 @@ The `Comptroller` also includes two functions `liquidateAccount()` and `healAcco
 
 - NodeJS - 12.x
 - Solc - v0.8.25 (https://github.com/ethereum/solidity/releases/tag/v0.8.25)
+- Foundry - v1.5.1 (https://getfoundry.sh)
 
 ## Installing
 
 ```bash
 
 yarn install
+
+git submodule update --init --recursive
+
+foundryup --install v1.5.1
 
 ```
 

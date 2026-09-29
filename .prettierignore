@@ -3,6 +3,9 @@ artifacts
 artifacts-zk
 cache
 cache-zk
+/cache-foundry
+/lib
+/out
 coverage*
 gasReporterOutput.json
 dist
