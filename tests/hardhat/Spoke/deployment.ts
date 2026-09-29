@@ -1,6 +1,7 @@
 import { expect } from "chai";
-import { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
+import hre, { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
 
+import deploySpokeComptroller from "../../../deploy/025-deploy-spoke-comptroller";
 import { getBlockOrTimestampBasedDeploymentInfo } from "../../../helpers/deploymentUtils";
 import { getRateModelName, getRateModelParams } from "../../../helpers/rateModelHelpers";
 import { getSpokePoolConfig } from "../../../helpers/spokeDeploymentConfig";
@@ -166,6 +167,30 @@ describe("SpokeComptroller: deployment", function () {
     const [, liquidity, shortfall] = await comptroller.getBorrowingPower(deployer);
     expect(liquidity).to.equal(0);
     expect(shortfall).to.equal(0);
+  });
+
+  it("refuses to hand over a comptroller proxy that follows another beacon", async () => {
+    // `skipIfAlreadyDeployed` hands back a recorded proxy without comparing its constructor arguments. This one follows
+    // a second beacon over the same implementation and is initialized the same way, so reading the beacon off the
+    // chain is the only check in 025 that can tell it apart.
+    const recorded = await deployments.get("Comptroller_HubSpoke");
+    const otherBeacon = await (
+      await ethers.getContractFactory("UpgradeableBeacon")
+    ).deploy((await deployments.get("SpokeComptrollerImpl")).address);
+    const initData = (await ethers.getContractFactory("SpokeComptroller")).interface.encodeFunctionData("initialize", [
+      100,
+      (await deployments.get("AccessControlManager")).address,
+    ]);
+    const proxy = await (await ethers.getContractFactory("BeaconProxy")).deploy(otherBeacon.address, initData);
+
+    await deployments.save("Comptroller_HubSpoke", { abi: recorded.abi, address: proxy.address });
+    try {
+      await expect(deploySpokeComptroller(hre)).to.be.rejectedWith(
+        "Refusing to transfer ownership: comptroller beacon",
+      );
+    } finally {
+      await deployments.save("Comptroller_HubSpoke", recorded);
+    }
   });
 
   describe("contract size", () => {
