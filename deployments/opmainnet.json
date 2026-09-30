@@ -3932,7 +3932,7 @@
       ]
     },
     "PoolLens": {
-      "address": "0x142160A2E699e33af337741f157D96aAd6bC72aA",
+      "address": "0x10f849a22f16DF086EF44B97ef8DF8D78B8Ac74E",
       "abi": [
         {
           "inputs": [
@@ -3945,6 +3945,11 @@
               "internalType": "uint256",
               "name": "blocksPerYear_",
               "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "corePoolComptroller_",
+              "type": "address"
             }
           ],
           "stateMutability": "nonpayable",
@@ -3968,6 +3973,19 @@
               "internalType": "uint256",
               "name": "",
               "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "corePoolComptroller",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
             }
           ],
           "stateMutability": "view",

@@ -136,12 +136,22 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         BadDebt[] badDebts;
     }
 
+    /// @notice Address of the core pool comptroller (all markets are returned for this pool, including paused ones)
+    address public immutable corePoolComptroller;
+
     /**
      * @param timeBased_ A boolean indicating whether the contract is based on time or block.
      * @param blocksPerYear_ The number of blocks per year
+     * @param corePoolComptroller_ The address of the core pool comptroller
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {}
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        address corePoolComptroller_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        corePoolComptroller = corePoolComptroller_;
+    }
 
     /**
      * @notice Queries the user's supply/borrow balances in vTokens
@@ -250,7 +260,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         address account,
         address comptrollerAddress
     ) external view returns (RewardSummary[] memory) {
-        VToken[] memory markets = ComptrollerInterface(comptrollerAddress).getAllMarkets();
+        VToken[] memory markets = _getMarkets(ComptrollerInterface(comptrollerAddress));
         RewardsDistributor[] memory rewardsDistributors = ComptrollerViewInterface(comptrollerAddress)
             .getRewardDistributors();
         RewardSummary[] memory rewardSummary = new RewardSummary[](rewardsDistributors.length);
@@ -276,9 +286,9 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
     function getPoolBadDebt(address comptrollerAddress) external view returns (BadDebtSummary memory) {
         uint256 totalBadDebtUsd;
 
-        // Get every market in the pool
+        // Get every listed market in the pool
         ComptrollerViewInterface comptroller = ComptrollerViewInterface(comptrollerAddress);
-        VToken[] memory markets = comptroller.getAllMarkets();
+        VToken[] memory markets = _getMarkets(ComptrollerInterface(comptrollerAddress));
         ResilientOracleInterface priceOracle = comptroller.oracle();
 
         BadDebt[] memory badDebts = new BadDebt[](markets.length);
@@ -344,7 +354,7 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
         // Get tokens in the Pool
         ComptrollerInterface comptrollerInstance = ComptrollerInterface(venusPool.comptroller);
 
-        VToken[] memory vTokens = comptrollerInstance.getAllMarkets();
+        VToken[] memory vTokens = _getMarkets(comptrollerInstance);
 
         VTokenMetadata[] memory vTokenMetadataItems = vTokenMetadataAll(vTokens);
 
@@ -451,6 +461,37 @@ contract PoolLens is ExponentialNoError, TimeManagerV8 {
                 vToken: address(vToken),
                 underlyingPrice: priceOracle.getUnderlyingPrice(address(vToken))
             });
+    }
+
+    /**
+     * @notice Returns markets from a comptroller. For the core pool, all markets are returned.
+     * For other pools, markets with zero internalCash are filtered.
+     * @param comptroller The comptroller to query
+     * @return An array of VToken addresses
+     */
+    function _getMarkets(ComptrollerInterface comptroller) internal view returns (VToken[] memory) {
+        VToken[] memory allMarkets = comptroller.getAllMarkets();
+
+        if (address(comptroller) == corePoolComptroller) {
+            return allMarkets;
+        }
+
+        // Single-loop filter: pack active markets to the front of allMarkets
+        uint256 count;
+        uint256 len = allMarkets.length;
+        for (uint256 i; i < len; ++i) {
+            if (allMarkets[i].internalCash() > 0) {
+                allMarkets[count] = allMarkets[i];
+                ++count;
+            }
+        }
+
+        // Trim the array to the active count
+        assembly {
+            mstore(allMarkets, count)
+        }
+
+        return allMarkets;
     }
 
     function _calculateNotDistributedAwards(
