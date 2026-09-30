@@ -48,11 +48,14 @@ export const SPOKE_ROLES = {
   setMinLiquidatableCollateral: "setMinLiquidatableCollateral(uint256)",
   setMarketSupplyCaps: "setMarketSupplyCaps(address[],uint256[])",
   setMarketBorrowCaps: "setMarketBorrowCaps(address[],uint256[])",
-  setActionsPaused: "setActionsPaused(address[],uint8[],bool)",
+  // `uint256[]`, not the ABI's `uint8[]`: the contract checks this string, and the `uint8[]` form is
+  // a different role that nothing checks.
+  setActionsPaused: "setActionsPaused(address[],uint256[],bool)",
   setForcedLiquidation: "setForcedLiquidation(address,bool)",
   unlistMarket: "unlistMarket(address)",
-  // The five the fork of the shared Comptroller adds. None of these role strings exists on any
-  // other Venus contract, so no pre-existing grant covers them.
+  // Five of the six the fork of the shared Comptroller adds. None of these role strings exists on any
+  // other Venus contract, so no pre-existing grant covers them. The sixth, `enterMarketForAccount`, is
+  // left out because the listing grants it to nobody.
   setMarketLiquidationIncentive: "setMarketLiquidationIncentive(address,uint256)",
   setSupplyAllowlistEnabled: "setSupplyAllowlistEnabled(address,bool)",
   setAllowedSupplier: "setAllowedSupplier(address,address,bool)",
