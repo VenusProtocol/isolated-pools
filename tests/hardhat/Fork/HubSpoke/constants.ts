@@ -61,8 +61,8 @@ export const bscmainnet = {
 
   // TRX is the one BEP-20 in the live DeviationBoundedOracle's initialized set with fewer than 18
   // decimals (it has 6). A market listed against it carries an initial exchange rate BELOW 1e18,
-  // which is the regime `AdapterSpokeV1._bumpToSettleable` and `_redeemPayout` exist for and which
-  // no 18-decimal market can reach.
+  // where one vToken is worth less than one base unit of the underlying, which no 18-decimal market
+  // can reach.
   TRX: addr("0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3"),
 
   // Whales impersonated to fund actors. Both are contracts holding far more than the suite moves.

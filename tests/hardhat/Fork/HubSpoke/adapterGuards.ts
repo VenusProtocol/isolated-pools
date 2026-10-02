@@ -23,13 +23,12 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
  * The half of `AdapterSpokeV1` a live spoke market cannot drive.
  *
  * Every other file in this directory funds a real market through the real Hub, and between them they
- * exercise each of the adapter's ten members. What none of them can reach is the adapter's defensive
- * half. An isolated-pools `VToken` always returns `NO_ERROR` and reverts on failure, so the three
- * `VToken*Failed` branches never fire against one. No spoke pool lists a fee-on-transfer underlying,
- * so `VTokenUnderfilled` never fires. No live market carries a holder balance against a zero total
- * supply, holds reserves above its entire backing, or reports a zero exchange rate. Those branches
- * exist precisely because the adapter does not own the contracts it reads, and a fork suite is
- * structurally unable to put a contract it does not own into a state it refuses to enter.
+ * exercise each of the adapter's eleven members. What none of them can reach is the adapter's
+ * defensive half. No spoke pool lists a fee-on-transfer underlying, so `VTokenUnderfilled` never
+ * fires. No live market carries a holder balance against a zero total supply, holds reserves above
+ * its entire backing, or reports a zero exchange rate. Those branches exist precisely because the
+ * adapter does not own the contracts it reads, and a fork suite is structurally unable to put a
+ * contract it does not own into a state it refuses to enter.
  *
  * So the MARKET is faked here and nothing else is. The `YieldGroup` is the real one, minted from the
  * implementation deployed on this chain, reached through its own `depositResource` /
@@ -102,11 +101,12 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       market.totalReserves.returns(0);
       market.badDebt.returns(0);
       market.mint.returns(0);
-      market.redeemUnderlying.returns(0);
+      market.redeem.returns(0);
       market.accrueInterest.returns(0);
       market.supplyRatePerBlock.returns(0);
       market.blocksOrSecondsPerYear.returns(0);
 
+      comptroller.isMarketListed.returns(true);
       comptroller.isSupplyAllowlistEnabled.returns(false);
       comptroller.isAllowedSupplier.returns(true);
       comptroller.actionPaused.returns(false);
@@ -139,16 +139,6 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         expect(market.mint).to.have.been.calledWith(ONE_VTOKEN_UNIT);
       });
 
-      it("surfaces a non-zero mint error code instead of booking the deposit", async () => {
-        // Isolated pools revert rather than return a code, so this is only reachable if a future market
-        // reintroduces Compound's convention. Swallowed, it would leave the YieldGroup accounting for
-        // underlying it holds no vTokens against.
-        market.mint.returns(7);
-        await expect(depositAsHub(parseUnits("1000", 18)))
-          .to.be.revertedWithCustomError(adapter, "VTokenMintFailed")
-          .withArgs(market.address, 7);
-      });
-
       it("approves the market out of the YieldGroup's balance, never the adapter's", async () => {
         // The approval is what proves the delegatecall context: it is granted in the YieldGroup's
         // storage, from the YieldGroup's own balance, which is what lets the market pull the
@@ -169,13 +159,6 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     describe("withdraw", () => {
       const amount = parseUnits("1000", 18);
 
-      it("surfaces a non-zero redeem error code", async () => {
-        market.redeemUnderlying.returns(9);
-        await expect(yieldGroup.connect(hubSigner).withdrawResource(market.address, amount, deployer.address))
-          .to.be.revertedWithCustomError(adapter, "VTokenRedeemFailed")
-          .withArgs(market.address, 9);
-      });
-
       it("rejects a redeem that reported success but delivered nothing", async () => {
         // The shape a fee-on-transfer underlying takes, and the shape a market bug takes: the call
         // returns `NO_ERROR` and the YieldGroup's balance does not move. Forwarding `amount` anyway
@@ -192,18 +175,11 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         const liquid = await adapter.maxWithdraw(market.address, yieldGroup.address);
         await expect(yieldGroup.connect(hubSigner).withdrawResource(market.address, liquid.add(1), deployer.address)).to
           .be.reverted;
-        expect(market.redeemUnderlying).to.have.callCount(0);
+        expect(market.redeem).to.have.callCount(0);
       });
     });
 
     describe("accrue", () => {
-      it("surfaces a non-zero accrual error code", async () => {
-        market.accrueInterest.returns(3);
-        await expect(adapter.accrue(market.address))
-          .to.be.revertedWithCustomError(adapter, "VTokenAccrueFailed")
-          .withArgs(market.address, 3);
-      });
-
       it("needs no delegatecall context, because it settles the market and not the caller", async () => {
         await adapter.accrue(market.address);
         expect(market.accrueInterest).to.have.callCount(1);
@@ -229,13 +205,17 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       it("values the position off the components, with written-off debt excluded", async () => {
         // The market's own rate keeps `badDebt` in its numerator. Dropping it is what marks every Hub
         // depositor down at the same instant instead of by exit order. `badDebt` is set absurdly high
-        // here so that any path still reading `exchangeRateStored` would be obvious.
+        // here, and the market's rate with it, so that a path counting it would be obvious. The
+        // adapter reads that rate only as a ceiling, and a rate that carries `badDebt` puts the
+        // ceiling above the figure it reports.
         market.balanceOf.returns(parseUnits("1", 18));
         market.totalSupply.returns(parseUnits("2", 18));
         market.getCash.returns(parseUnits("100", 18));
         market.totalBorrows.returns(parseUnits("60", 18));
         market.totalReserves.returns(parseUnits("10", 18));
         market.badDebt.returns(parseUnits("1000000", 18));
+        // (100 + 60 + 1,000,000 - 10) / 2 per vToken, the rate the market itself reports.
+        market.exchangeRateStored.returns(parseUnits("500075", 18));
 
         // (100 + 60 - 10) / 2 = 75, with `badDebt` playing no part.
         expect(await adapter.totalAssets(market.address, yieldGroup.address)).to.equal(parseUnits("75", 18));
@@ -262,22 +242,27 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       });
 
       it("certifies only a bound the market's own redeem arithmetic settles", async () => {
-        // The invariant the whole-vToken floor and the payout mirror exist to hold, checked across the
-        // rate regimes a real market spans: at `1e18`, above it, at a seeded 1e28 rate, and below it -
-        // the last being the case where a redeem burns plenty of tokens and still truncates its payout
-        // to zero. Whatever this certifies has to survive the market's round-up against payable cash.
+        // The invariant the whole-vToken floor exists to hold, checked across the rate regimes a real
+        // market spans: at `1e18`, above it, at a seeded 1e28 rate, and below it - the last being the
+        // case where one vToken is worth less than one unit of underlying. Whatever this certifies,
+        // the burn `withdraw` sizes for it has to fit the holder's balance, and its payout has to
+        // reach the amount without exceeding the market's payable cash.
         const cash = parseUnits("1234567", 18);
         const reserves = parseUnits("7", 18);
+        const held = parseUnits("1", 18);
         market.getCash.returns(cash);
         market.totalReserves.returns(reserves);
         market.totalBorrows.returns(0);
+        market.balanceOf.returns(held);
 
         for (const rate of [EXP, parseUnits("3", 18), RATE_SEEDED, parseUnits("1", 16)]) {
           market.exchangeRateStored.returns(rate);
           const liquid: BigNumber = await adapter.maxWithdraw(market.address, yieldGroup.address);
           if (liquid.isZero()) continue;
-          const payout = marketPayout(rate, bumpToSettleable(rate, liquid));
-          expect(payout, `rate ${rate.toString()}`).to.be.gt(0);
+          const burn = burnFor(rate, liquid);
+          const payout = burn.mul(rate).div(EXP);
+          expect(burn, `rate ${rate.toString()}`).to.be.lte(held);
+          expect(payout, `rate ${rate.toString()}`).to.be.gte(liquid);
           expect(payout, `rate ${rate.toString()}`).to.be.lte(cash.sub(reserves));
         }
       });
@@ -411,18 +396,8 @@ async function impersonate(who: string): Promise<SignerWithAddress> {
   return ethers.getSigner(who);
 }
 
-/// Mirror of `AdapterSpokeV1._redeemPayout`: what the market pays out for `redeemUnderlying(request)`.
-function marketPayout(rate: BigNumber, request: BigNumber): BigNumber {
-  let tokens = request.mul(EXP).div(rate);
-  const probe = tokens.mul(rate).div(EXP);
-  if (!probe.isZero() && !probe.eq(request)) tokens = tokens.add(1);
-  return tokens.mul(rate).div(EXP);
-}
-
-/// Mirror of `AdapterSpokeV1._bumpToSettleable`: the request `withdraw` actually issues for `amount`.
-function bumpToSettleable(rate: BigNumber, amount: BigNumber): BigNumber {
-  if (rate.isZero()) return amount;
-  if (!marketPayout(rate, amount).isZero()) return amount;
-  const minTokens = EXP.add(rate).sub(1).div(rate);
-  return minTokens.mul(rate).add(EXP).sub(1).div(EXP);
+/// Mirror of `AdapterSpokeV1._burnFor`: the vTokens `withdraw` burns to deliver `amount`.
+function burnFor(rate: BigNumber, amount: BigNumber): BigNumber {
+  if (rate.isZero()) return BigNumber.from(0);
+  return amount.mul(EXP).add(rate).sub(1).div(rate);
 }

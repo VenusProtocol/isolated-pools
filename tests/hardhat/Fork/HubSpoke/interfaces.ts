@@ -29,6 +29,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(await spoke.supplyCaps(f.vUSDT.address)).to.be.gt(0);
       expect(await spoke.actionPaused(f.vUSDT.address, 0)).to.be.false; // MINT
       expect(await spoke.actionPaused(f.vUSDT.address, 1)).to.be.false; // REDEEM
+      expect(await spoke.isMarketListed(f.vUSDT.address)).to.be.true;
       expect(await spoke.isSupplyAllowlistEnabled(f.vUSDT.address)).to.be.false;
       expect(await spoke.isAllowedSupplier(f.vUSDT.address, f.spokeSource.address)).to.be.false;
     });
@@ -57,6 +58,10 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(await market.badDebt()).to.equal(0);
       expect(await market.blocksOrSecondsPerYear()).to.equal(42_048_000);
       expect(await market.balanceOf(f.spokeSource.address)).to.equal(0);
+    });
+
+    it("answers the ERC-20 name `resourceName` reads, which `IVTokenIsolated` does not declare", async () => {
+      expect(await f.adapter.resourceName(f.vUSDT.address)).to.equal(await f.vUSDT.name());
     });
   });
 }

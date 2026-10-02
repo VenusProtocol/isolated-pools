@@ -313,6 +313,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Checks if the account should be allowed to mint tokens in the given market
+     * @dev No minimum amount is enforced. The vToken rounds the minted amount down, so a mint worth less than one
+     *   vToken unit takes the underlying and mints nothing. Callers that need a minimum have to enforce it.
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
@@ -693,10 +695,13 @@ contract SpokeComptroller is
      * @notice Seizes all the remaining collateral, makes msg.sender repay the existing
      *   borrows, and treats the rest of the debt as bad debt (for each market).
      *   The sender has to repay a certain percentage of the debt, computed as `maxClearableDebt / borrows`: see the
-     *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
+     *   note on `AccountLiquiditySnapshot.maxClearableDebt`. The heal is all-or-nothing: every seizure and repayment
+     *   runs in this one call, so a pause that blocks any of them reverts the whole heal.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
-     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from
+     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from,
+     *   seizing is paused in any entered market where the account holds vTokens, or repayments are paused in any
+     *   market where the heal repays a nonzero amount
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
      *   to heal
@@ -893,7 +898,7 @@ contract SpokeComptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        // Check collateral factor <= 0.9
+        // Check collateral factor <= 0.95
         if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
             revert InvalidCollateralFactor();
         }
@@ -1512,6 +1517,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Update the prices of all the tokens associated with the provided account
+     * @dev Refreshes the resilient oracle only. The borrow, redeem, transfer and exit checks, which use bounded
+     *   prices, update the deviation-bounded oracle's protection state themselves before they read those prices.
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
@@ -1855,10 +1862,12 @@ contract SpokeComptroller is
      * @dev Retrieves the two prices that value a market's collateral and its debt, and checks they are nonzero.
      *  Under the collateral factor both come from `deviationBoundedOracle`: while protection is active for the asset
      *  it values collateral at the low end of the asset's recent price window and debt at the high end, and it returns
-     *  spot on both legs otherwise, including for an asset it holds no configuration for. A deviating print can
-     *  therefore only ever shrink an account's borrowing capacity, never inflate it. Under the liquidation threshold
-     *  both legs are spot, because those snapshots route an unhealthy account between `liquidateAccount` and
-     *  `healAccount` and set how much of its debt healing repays, which has to track the live price.
+     *  spot on both legs otherwise, including for an asset it holds no configuration for. A print that triggers
+     *  protection can therefore only shrink an account's borrowing capacity, never inflate it. While protection is
+     *  off, a move too small to trigger it is priced at spot, as the upstream Comptroller prices every check, so
+     *  capacity follows it up or down. Under the liquidation threshold both legs are spot, because those snapshots
+     *  route an unhealthy account between `liquidateAccount` and `healAccount` and set how much of its debt healing
+     *  repays, which has to track the live price.
      * @param asset Address for asset to query prices for
      * @param weighting Which risk parameter weights the position being valued
      * @return collateralPrice Price valuing the collateral held in the market

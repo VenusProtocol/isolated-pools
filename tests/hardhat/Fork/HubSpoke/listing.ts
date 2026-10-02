@@ -1,10 +1,13 @@
 import { SnapshotRestorer, takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { readFileSync } from "fs";
 import { ethers } from "hardhat";
+import { resolve } from "path";
 
 import { bscmainnet } from "./constants";
 import {
   REGISTRY_DRIVEN_ROLES,
+  REGISTRY_ROLES,
   SPOKE_ROLES,
   SpokeStack,
   addSpokeMarkets,
@@ -37,8 +40,21 @@ const SPOKE_ONLY_ROLES = [
   SPOKE_ROLES.setAllowedLiquidator,
 ];
 
+/// Every role string a contract passes to `_checkAccessAllowed`, verbatim.
+function checkedRoles(sourcePath: string): string[] {
+  const source = readFileSync(resolve(__dirname, "../../../..", sourcePath), "utf8");
+  return [...source.matchAll(/_checkAccessAllowed\("([^"]+)"\)/g)].map(match => match[1]);
+}
+
 if (FORK && FORKED_NETWORK === "bscmainnet") {
   describe("HubSpoke: listing a spoke pool on the live PoolRegistry", () => {
+    it("grants only role strings the comptroller and registry check", () => {
+      // The ACM hashes the string, so a near-miss such as the ABI's `uint8[]` form of
+      // `setActionsPaused` is a different role and granting it grants nothing.
+      expect(checkedRoles("contracts/Spoke/SpokeComptroller.sol")).to.include.members(Object.values(SPOKE_ROLES));
+      expect(checkedRoles("contracts/Pool/PoolRegistry.sol")).to.include.members(Object.values(REGISTRY_ROLES));
+    });
+
     describe("before the VIP runs", () => {
       let s: SpokeStack;
       let snap: SnapshotRestorer;
