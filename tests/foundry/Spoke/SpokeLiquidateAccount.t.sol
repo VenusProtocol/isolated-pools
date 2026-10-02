@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { SpokeComptrollerInterface } from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
-import { SpokeComptrollerStorage } from "../../../contracts/Spoke/SpokeComptrollerStorage.sol";
-import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
-import { SpokeFuzzBase } from "./SpokeFuzzBase.t.sol";
+import {SpokeComptrollerInterface} from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
+import {SpokeComptrollerStorage} from "../../../contracts/Spoke/SpokeComptrollerStorage.sol";
+import {MockToken} from "../../../contracts/test/Mocks/MockToken.sol";
+import {SpokeFuzzBase} from "./SpokeFuzzBase.t.sol";
 
 interface ITransferHook {
     function onTransferFrom() external;
@@ -97,9 +97,7 @@ contract SpokeLiquidateAccountTest is SpokeFuzzBase, ITransferHook {
     function _orders() internal view returns (SpokeComptrollerStorage.LiquidationOrder[] memory orders) {
         orders = new SpokeComptrollerStorage.LiquidationOrder[](1);
         orders[0] = SpokeComptrollerStorage.LiquidationOrder({
-            vTokenCollateral: markets[COLLATERAL_A],
-            vTokenBorrowed: markets[LIQUIDITY],
-            repayAmount: BORROWED
+            vTokenCollateral: markets[COLLATERAL_A], vTokenBorrowed: markets[LIQUIDITY], repayAmount: BORROWED
         });
     }
 }

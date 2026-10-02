@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { CommonBase } from "forge-std/Base.sol";
-import { StdUtils } from "forge-std/StdUtils.sol";
-import { console } from "forge-std/console.sol";
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {CommonBase} from "forge-std/Base.sol";
+import {StdUtils} from "forge-std/StdUtils.sol";
+import {console} from "forge-std/console.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import { Comptroller } from "../../../contracts/Comptroller.sol";
-import { SpokeComptroller } from "../../../contracts/Spoke/SpokeComptroller.sol";
-import { SpokeComptrollerInterface } from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
-import { SpokeComptrollerStorage } from "../../../contracts/Spoke/SpokeComptrollerStorage.sol";
-import { VToken } from "../../../contracts/VToken.sol";
-import { SpokePoolLens } from "../../../contracts/Lens/SpokePoolLens.sol";
-import { PoolRegistryInterface } from "../../../contracts/Pool/PoolRegistryInterface.sol";
-import { RewardsDistributor } from "../../../contracts/Rewards/RewardsDistributor.sol";
-import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
-import { MockPriceOracle } from "../../../contracts/test/Mocks/MockPriceOracle.sol";
-import { SpokeFuzzBase, liquidationRoundingAllowance } from "./SpokeFuzzBase.t.sol";
+import {Comptroller} from "../../../contracts/Comptroller.sol";
+import {SpokeComptroller} from "../../../contracts/Spoke/SpokeComptroller.sol";
+import {SpokeComptrollerInterface} from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
+import {SpokeComptrollerStorage} from "../../../contracts/Spoke/SpokeComptrollerStorage.sol";
+import {VToken} from "../../../contracts/VToken.sol";
+import {SpokePoolLens} from "../../../contracts/Lens/SpokePoolLens.sol";
+import {PoolRegistryInterface} from "../../../contracts/Pool/PoolRegistryInterface.sol";
+import {RewardsDistributor} from "../../../contracts/Rewards/RewardsDistributor.sol";
+import {MockToken} from "../../../contracts/test/Mocks/MockToken.sol";
+import {MockPriceOracle} from "../../../contracts/test/Mocks/MockPriceOracle.sol";
+import {SpokeFuzzBase, liquidationRoundingAllowance} from "./SpokeFuzzBase.t.sol";
 
 /**
  * @title SpokeHandler
@@ -99,8 +99,8 @@ contract SpokeHandler is CommonBase, StdUtils {
 
         ++mints;
         if (
-            comptroller.isSupplyAllowlistEnabled(address(market)) &&
-            !comptroller.isAllowedSupplier(address(market), minter)
+            comptroller.isSupplyAllowlistEnabled(address(market))
+                && !comptroller.isAllowedSupplier(address(market), minter)
         ) {
             _flag(SUPPLY_ALLOWLIST, "a mint credited an account that is not on the market's supply allowlist");
         }
@@ -172,12 +172,9 @@ contract SpokeHandler is CommonBase, StdUtils {
 
     /// @notice Supplies at most 150 collateral tokens and borrows up to the limit. The batch paths serve only positions
     /// at or under `minLiquidatableCollateral`, which random supplies rarely produce
-    function openSmallPosition(
-        uint256 accountSeed,
-        uint256 collateralSeed,
-        uint256 amount,
-        uint256 borrowBps
-    ) external {
+    function openSmallPosition(uint256 accountSeed, uint256 collateralSeed, uint256 amount, uint256 borrowBps)
+        external
+    {
         address account = smallAccounts[accountSeed % smallAccounts.length];
         VToken collateral = markets[1 + (collateralSeed % 2)];
         amount = bound(amount, 1e18, 40e18);
@@ -185,14 +182,15 @@ contract SpokeHandler is CommonBase, StdUtils {
         address[] memory one = new address[](1);
         one[0] = address(collateral);
         vm.startPrank(account);
-        try collateral.mint(amount) {} catch {
+        try collateral.mint(amount) {}
+        catch {
             vm.stopPrank();
             return;
         }
         comptroller.enterMarkets(one);
         vm.stopPrank();
 
-        (, uint256 liquidity, ) = comptroller.getBorrowingPower(account);
+        (, uint256 liquidity,) = comptroller.getBorrowingPower(account);
         uint256 price = oracle.getUnderlyingPrice(address(markets[0]));
         uint256 amountToBorrow = (((liquidity * 1e18) / price) * bound(borrowBps, 1, 10_000)) / 10_000;
         if (amountToBorrow == 0) return;
@@ -225,12 +223,9 @@ contract SpokeHandler is CommonBase, StdUtils {
 
     // ----- liquidators -----
 
-    function liquidateBorrow(
-        uint256 liquidatorSeed,
-        uint256 borrowerSeed,
-        uint256 collateralSeed,
-        uint256 fractionBps
-    ) external {
+    function liquidateBorrow(uint256 liquidatorSeed, uint256 borrowerSeed, uint256 collateralSeed, uint256 fractionBps)
+        external
+    {
         address liquidator = _account(liquidatorSeed);
         address borrower = _underwaterAccount(borrowerSeed);
         if (borrower == address(0)) return;
@@ -257,15 +252,15 @@ contract SpokeHandler is CommonBase, StdUtils {
         address borrower = _smallUnderwaterAccount(borrowerSeed);
         if (borrower == address(0)) return;
         // Accrued here so the debt repaid below is the debt the comptroller sees after its own refresh.
-        for (uint256 i; i < 3; ++i) markets[i].accrueInterest();
+        for (uint256 i; i < 3; ++i) {
+            markets[i].accrueInterest();
+        }
         uint256 debt = markets[0].borrowBalanceStored(borrower);
         if (debt == 0 || liquidator == borrower) return;
 
         SpokeComptrollerStorage.LiquidationOrder[] memory orders = new SpokeComptrollerStorage.LiquidationOrder[](1);
         orders[0] = SpokeComptrollerStorage.LiquidationOrder({
-            vTokenCollateral: markets[1 + (collateralSeed % 2)],
-            vTokenBorrowed: markets[0],
-            repayAmount: debt
+            vTokenCollateral: markets[1 + (collateralSeed % 2)], vTokenBorrowed: markets[0], repayAmount: debt
         });
         _fund(liquidator, markets[0], debt);
         vm.prank(liquidator);
@@ -309,10 +304,9 @@ contract SpokeHandler is CommonBase, StdUtils {
         } catch (bytes memory reason) {
             bytes4 selector = bytes4(reason);
             liquidateSaysHeal = selector == SpokeComptrollerInterface.DebtExceedsClearableAmount.selector;
-            liquidateAccepted =
-                !liquidateSaysHeal &&
-                selector != SpokeComptrollerInterface.CollateralExceedsThreshold.selector &&
-                selector != SpokeComptrollerInterface.InsufficientShortfall.selector;
+            liquidateAccepted = !liquidateSaysHeal
+                && selector != SpokeComptrollerInterface.CollateralExceedsThreshold.selector
+                && selector != SpokeComptrollerInterface.InsufficientShortfall.selector;
         }
         vm.revertToState(snapshot);
 
@@ -325,10 +319,9 @@ contract SpokeHandler is CommonBase, StdUtils {
         } catch (bytes memory reason) {
             bytes4 selector = bytes4(reason);
             healSaysLiquidate = selector == SpokeComptrollerInterface.CollateralCoversDebt.selector;
-            healAccepted =
-                !healSaysLiquidate &&
-                selector != SpokeComptrollerInterface.CollateralExceedsThreshold.selector &&
-                selector != SpokeComptrollerInterface.InsufficientShortfall.selector;
+            healAccepted = !healSaysLiquidate
+                && selector != SpokeComptrollerInterface.CollateralExceedsThreshold.selector
+                && selector != SpokeComptrollerInterface.InsufficientShortfall.selector;
         }
         vm.revertToStateAndDelete(snapshot);
 
@@ -383,7 +376,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     // ----- rules checked after a call succeeds -----
 
     function _checkNoShortfall(address account, string memory action) internal {
-        (, , uint256 shortfall) = comptroller.getBorrowingPower(account);
+        (,, uint256 shortfall) = comptroller.getBorrowingPower(account);
         if (shortfall > 0) {
             _flag(NO_SHORTFALL, string.concat(action, " succeeded and left the account over its limit"));
         }
@@ -416,7 +409,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     function _underwaterAccount(uint256 seed) internal view returns (address) {
         for (uint256 i; i < accounts.length; ++i) {
             address account = accounts[((seed % accounts.length) + i) % accounts.length];
-            (, , uint256 shortfall) = comptroller.getAccountLiquidity(account);
+            (,, uint256 shortfall) = comptroller.getAccountLiquidity(account);
             if (shortfall > 0) return account;
         }
         return address(0);
@@ -426,7 +419,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     function _smallUnderwaterAccount(uint256 seed) internal view returns (address) {
         for (uint256 i; i < accounts.length; ++i) {
             address account = accounts[((seed % accounts.length) + i) % accounts.length];
-            (, , uint256 shortfall) = comptroller.getAccountLiquidity(account);
+            (,, uint256 shortfall) = comptroller.getAccountLiquidity(account);
             if (shortfall > 0 && _collateralValue(account) <= comptroller.minLiquidatableCollateral()) return account;
         }
         return address(0);
@@ -436,8 +429,8 @@ contract SpokeHandler is CommonBase, StdUtils {
     function _collateralValue(address account) internal view returns (uint256 value) {
         VToken[] memory assets = comptroller.getAssetsIn(account);
         for (uint256 i; i < assets.length; ++i) {
-            uint256 vTokenPrice = (assets[i].exchangeRateStored() * oracle.getUnderlyingPrice(address(assets[i]))) /
-                1e18;
+            uint256 vTokenPrice = (assets[i].exchangeRateStored() * oracle.getUnderlyingPrice(address(assets[i])))
+                / 1e18;
             value += (vTokenPrice * assets[i].balanceOf(account)) / 1e18;
         }
     }
@@ -535,13 +528,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         _setPrice(COLLATERAL_A, SMALL_POSITION_START_PRICE);
 
         handler = new SpokeHandler(
-            comptroller,
-            [markets[0], markets[1], markets[2]],
-            oracle,
-            distributor,
-            lens,
-            accounts,
-            smallAccounts
+            comptroller, [markets[0], markets[1], markets[2]], oracle, distributor, lens, accounts, smallAccounts
         );
         targetContract(address(handler));
 
@@ -567,7 +554,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         actions[18] = SpokeHandler.setAllowedSupplier.selector;
         actions[19] = SpokeHandler.setMarketLiquidationIncentive.selector;
         // Without this the fuzzer also spends calls on the handler's getters.
-        targetSelector(FuzzSelector({ addr: address(handler), selectors: actions }));
+        targetSelector(FuzzSelector({addr: address(handler), selectors: actions}));
     }
 
     function _deployRewards() internal {
@@ -649,9 +636,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
     function invariant_boundedBorrowingPowerNeverAboveSpot() public view {
         for (uint256 i; i < accounts.length; ++i) {
             assertLe(
-                _borrowingNet(accounts[i]),
-                _spotBorrowingNet(accounts[i]),
-                "bounded pricing raised borrowing power"
+                _borrowingNet(accounts[i]), _spotBorrowingNet(accounts[i]), "bounded pricing raised borrowing power"
             );
         }
     }
@@ -660,7 +645,9 @@ contract SpokeInvariantTest is SpokeFuzzBase {
     function invariant_vTokenSupplyEqualsHolderBalances() public view {
         for (uint256 m; m < MARKET_COUNT; ++m) {
             uint256 held;
-            for (uint256 i; i < accounts.length; ++i) held += markets[m].balanceOf(accounts[i]);
+            for (uint256 i; i < accounts.length; ++i) {
+                held += markets[m].balanceOf(accounts[i]);
+            }
             assertEq(held, markets[m].totalSupply(), "vToken supply does not match holder balances");
         }
     }
@@ -683,12 +670,12 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         assertLe(distributed, emitted, "rewards distributed beyond emission");
     }
 
-    /// @notice Every field `SpokePoolLens` reports for the pool and its markets equals the direct read
-    function invariant_lensMatchesPool() public view {
+    /// @notice Every field `SpokePoolLens` reports for the pool and its markets equals the direct read. The
+    /// exchange rate, borrows and reserves, which the lens accrues without writing, equal what accruing books
+    function invariant_lensMatchesPool() public {
         VToken[] memory all = comptroller.getAllMarkets();
         SpokePoolLens.SpokePoolData memory pool = lens.getSpokePoolData(
-            poolRegistry,
-            PoolRegistryInterface.VenusPool("Spoke", address(this), address(comptroller), 0, 0)
+            poolRegistry, PoolRegistryInterface.VenusPool("Spoke", address(this), address(comptroller), 0, 0)
         );
         assertEq(pool.priceOracle, address(comptroller.oracle()));
         assertEq(pool.closeFactor, comptroller.closeFactorMantissa());
@@ -701,28 +688,35 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         for (uint256 i; i < all.length; ++i) {
             SpokePoolLens.SpokeVTokenMetadata memory meta = pool.vTokens[i];
             VToken market = all[i];
-            (bool isListed, uint256 collateralFactor, uint256 liquidationThreshold) = comptroller.markets(
-                address(market)
-            );
+            (bool isListed, uint256 collateralFactor, uint256 liquidationThreshold) =
+                comptroller.markets(address(market));
             assertEq(meta.vToken, address(market));
             assertEq(meta.isListed, isListed);
             assertEq(meta.collateralFactorMantissa, collateralFactor);
             assertEq(meta.liquidationThresholdMantissa, liquidationThreshold);
             assertEq(meta.supplyCaps, comptroller.supplyCaps(address(market)));
             assertEq(meta.borrowCaps, comptroller.borrowCaps(address(market)));
-            assertEq(meta.totalBorrows, market.totalBorrows());
-            assertEq(meta.totalReserves, market.totalReserves());
             assertEq(meta.totalSupply, market.totalSupply());
             assertEq(meta.totalCash, market.getCash());
-            assertEq(meta.exchangeRateCurrent, market.exchangeRateStored());
             assertEq(meta.underlyingAssetAddress, market.underlying());
             assertEq(
-                meta.effectiveLiquidationIncentiveMantissa,
-                comptroller.effectiveLiquidationIncentive(address(market))
+                meta.effectiveLiquidationIncentiveMantissa, comptroller.effectiveLiquidationIncentive(address(market))
             );
             assertEq(meta.ownLiquidationIncentiveMantissa, comptroller.liquidationIncentives(address(market)));
             assertEq(meta.supplyAllowlistEnabled, comptroller.isSupplyAllowlistEnabled(address(market)));
             assertEq(meta.forcedLiquidationEnabled, comptroller.isForcedLiquidationEnabled(address(market)));
+
+            // Last, since accruing can move cash out of the market. That move also lowers the market's reserves
+            // below the lens figure, which leaves it out, so reserves are pinned through the exchange rate.
+            assertEq(meta.exchangeRateCurrent, market.exchangeRateCurrent());
+            assertEq(meta.totalBorrows, market.totalBorrows());
+            if (meta.totalSupply != 0) {
+                assertEq(
+                    meta.exchangeRateCurrent,
+                    ((meta.totalCash + meta.totalBorrows + market.badDebt() - meta.totalReserves) * 1e18)
+                        / meta.totalSupply
+                );
+            }
         }
     }
 
