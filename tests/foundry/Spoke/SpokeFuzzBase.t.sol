@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import {Test} from "forge-std/Test.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {IDeviationBoundedOracle} from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
+import { Test } from "forge-std/Test.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 
-import {SpokeComptroller} from "../../../contracts/Spoke/SpokeComptroller.sol";
-import {ComptrollerInterface} from "../../../contracts/ComptrollerInterface.sol";
-import {VToken} from "../../../contracts/VToken.sol";
-import {VTokenInterface} from "../../../contracts/VTokenInterfaces.sol";
-import {InterestRateModel} from "../../../contracts/InterestRateModel.sol";
-import {WhitePaperInterestRateModel} from "../../../contracts/WhitePaperInterestRateModel.sol";
-import {MockToken} from "../../../contracts/test/Mocks/MockToken.sol";
-import {MockPriceOracle} from "../../../contracts/test/Mocks/MockPriceOracle.sol";
+import { SpokeComptroller } from "../../../contracts/Spoke/SpokeComptroller.sol";
+import { ComptrollerInterface } from "../../../contracts/ComptrollerInterface.sol";
+import { VToken } from "../../../contracts/VToken.sol";
+import { VTokenInterface } from "../../../contracts/VTokenInterfaces.sol";
+import { InterestRateModel } from "../../../contracts/InterestRateModel.sol";
+import { WhitePaperInterestRateModel } from "../../../contracts/WhitePaperInterestRateModel.sol";
+import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
+import { MockPriceOracle } from "../../../contracts/test/Mocks/MockPriceOracle.sol";
 
 /**
  * @notice Value a liquidator can lose to rounding, in the same 1e36 scale as `underlying amount * price`
@@ -22,10 +22,11 @@ import {MockPriceOracle} from "../../../contracts/test/Mocks/MockPriceOracle.sol
  * each unit costs `repayAmount / 1e18` seized vTokens, plus one when the product is truncated. Converting the received
  * vTokens back to underlying truncates once more. The protocol's cut rounds down, which only helps the liquidator.
  */
-function liquidationRoundingAllowance(uint256 repayAmount, uint256 exchangeRate, uint256 collateralPrice)
-    pure
-    returns (uint256)
-{
+function liquidationRoundingAllowance(
+    uint256 repayAmount,
+    uint256 exchangeRate,
+    uint256 collateralPrice
+) pure returns (uint256) {
     uint256 lostVTokens = (2 * repayAmount) / 1e18 + 1;
     return ((lostVTokens * exchangeRate) / 1e18 + 1) * collateralPrice;
 }
@@ -129,10 +130,11 @@ abstract contract SpokeFuzzBase is Test {
         comptroller.setAllowedSupplier(address(markets[LIQUIDITY]), hub, true);
     }
 
-    function _listMarket(string memory symbol, uint8 decimals, uint256 initialExchangeRate)
-        internal
-        returns (VToken vToken)
-    {
+    function _listMarket(
+        string memory symbol,
+        uint8 decimals,
+        uint256 initialExchangeRate
+    ) internal returns (VToken vToken) {
         vToken = _deployMarket(symbol, decimals, initialExchangeRate);
 
         vm.prank(poolRegistry);
@@ -147,10 +149,11 @@ abstract contract SpokeFuzzBase is Test {
     }
 
     /// @notice A market on the pool's beacon with its underlying priced at $1, not yet listed
-    function _deployMarket(string memory symbol, uint8 decimals, uint256 initialExchangeRate)
-        internal
-        returns (VToken vToken)
-    {
+    function _deployMarket(
+        string memory symbol,
+        uint8 decimals,
+        uint256 initialExchangeRate
+    ) internal returns (VToken vToken) {
         MockToken underlying = new MockToken(symbol, symbol, decimals);
         vToken = VToken(
             address(
@@ -189,7 +192,9 @@ abstract contract SpokeFuzzBase is Test {
         bounded = IDeviationBoundedOracle(
             address(
                 new TransparentUpgradeableProxy(
-                    implementation, proxyAdmin, abi.encodeWithSignature("initialize(address)", acm)
+                    implementation,
+                    proxyAdmin,
+                    abi.encodeWithSignature("initialize(address)", acm)
                 )
             )
         );
@@ -198,19 +203,18 @@ abstract contract SpokeFuzzBase is Test {
         }
     }
 
-    function _boundedPricingConfig(address asset)
-        internal
-        pure
-        returns (IDeviationBoundedOracle.TokenConfigInput memory)
-    {
-        return IDeviationBoundedOracle.TokenConfigInput({
-            asset: asset,
-            cooldownPeriod: 3600,
-            triggerThreshold: 0.2e18,
-            resetThreshold: 0.05e18,
-            enableBoundedPricing: true,
-            enableCaching: true
-        });
+    function _boundedPricingConfig(
+        address asset
+    ) internal pure returns (IDeviationBoundedOracle.TokenConfigInput memory) {
+        return
+            IDeviationBoundedOracle.TokenConfigInput({
+                asset: asset,
+                cooldownPeriod: 3600,
+                triggerThreshold: 0.2e18,
+                resetThreshold: 0.05e18,
+                enableBoundedPricing: true,
+                enableCaching: true
+            });
     }
 
     function _supply(address account, uint256 marketIndex, uint256 amount) internal {
@@ -252,7 +256,7 @@ abstract contract SpokeFuzzBase is Test {
         for (uint256 i; i < assets.length; ++i) {
             (, uint256 balance, uint256 borrowBalance, uint256 exchangeRate) = assets[i].getAccountSnapshot(account);
             uint256 price = oracle.getUnderlyingPrice(address(assets[i]));
-            (, uint256 collateralFactor,) = comptroller.markets(address(assets[i]));
+            (, uint256 collateralFactor, ) = comptroller.markets(address(assets[i]));
             uint256 vTokenPrice = (exchangeRate * price) / 1e18;
             uint256 weightedVTokenPrice = (collateralFactor * vTokenPrice) / 1e18;
             weightedCollateral += (weightedVTokenPrice * balance) / 1e18;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import {TokenErrorReporter} from "../../../contracts/ErrorReporter.sol";
-import {SpokeComptrollerInterface} from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
-import {VToken} from "../../../contracts/VToken.sol";
-import {MockToken} from "../../../contracts/test/Mocks/MockToken.sol";
-import {SpokeFuzzBase, liquidationRoundingAllowance} from "./SpokeFuzzBase.t.sol";
+import { TokenErrorReporter } from "../../../contracts/ErrorReporter.sol";
+import { SpokeComptrollerInterface } from "../../../contracts/Spoke/SpokeComptrollerInterface.sol";
+import { VToken } from "../../../contracts/VToken.sol";
+import { MockToken } from "../../../contracts/test/Mocks/MockToken.sol";
+import { SpokeFuzzBase, liquidationRoundingAllowance } from "./SpokeFuzzBase.t.sol";
 
 /**
  * @title SpokeFuzzTest
@@ -33,9 +33,11 @@ contract SpokeFuzzTest is SpokeFuzzBase {
 
     /// @notice A market's own incentive and its seize share each cap the other, so `incentive >= 1e18 + share` holds
     /// whichever of the two is set last
-    function testFuzz_marketIncentiveAndSeizeShareBoundEachOther(uint256 share, uint256 incentive, uint256 laterShare)
-        public
-    {
+    function testFuzz_marketIncentiveAndSeizeShareBoundEachOther(
+        uint256 share,
+        uint256 incentive,
+        uint256 laterShare
+    ) public {
         VToken market = markets[COLLATERAL_A];
         // Up to 0.1e18, which the pool's 1.1e18 incentive allows before the market has an incentive of its own.
         share = bound(share, 0, 0.1e18);
@@ -57,7 +59,10 @@ contract SpokeFuzzTest is SpokeFuzzBase {
         } else {
             market.setProtocolSeizeShare(laterShare);
         }
-        assertGe(comptroller.effectiveLiquidationIncentive(address(market)), 1e18 + market.protocolSeizeShareMantissa());
+        assertGe(
+            comptroller.effectiveLiquidationIncentive(address(market)),
+            1e18 + market.protocolSeizeShareMantissa()
+        );
     }
 
     // ----- liquidation payout -----
