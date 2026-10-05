@@ -304,9 +304,10 @@ describe("SpokeComptroller: liquidation flows against real vTokens", () => {
 
     it("heals an underwater account, repaying maxClearableDebt and recording the rest as bad debt", async () => {
       // 1000 of collateral at an incentive of 1.1 clears 909.090909090909090909 of debt, against 1000 owed, so
-      // the percentage is that ratio and the shortfall between it and the debt becomes bad debt.
+      // the percentage is that ratio and the shortfall between it and the debt becomes bad debt. With a single
+      // borrow the repayment is maxClearableDebt itself, where upstream's two roundings down left it 909 wei short.
       const maxClearableDebt = BigNumber.from("909090909090909090909");
-      const repayment = BigNumber.from("909090909090909090000");
+      const repayment = maxClearableDebt;
       const expectedBadDebt = BORROW_BALANCE.sub(repayment);
 
       await fixture.borrowedUnderlying.harnessSetBalance(liquidator.address, repayment);

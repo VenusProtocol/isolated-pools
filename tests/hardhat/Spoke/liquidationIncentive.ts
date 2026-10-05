@@ -271,6 +271,21 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
         parseUnits("155", 18),
       );
     });
+
+    it("rounds each repayment up, so the rounding never adds to the bad debt", async () => {
+      // At a debt price of 3 the 250 owed is worth 750, so 250 * 200/750 = 66.666... is repaid. Upstream rounds the
+      // share down to 18 decimals and then the repayment down again, which comes out 167 wei lower.
+      fixture.setSpotPrice(debtMarket, parseUnits("3", 18));
+      await givePositionWithDebt(parseUnits("250", 18));
+
+      await comptroller.connect(liquidator).healAccount(borrower.address);
+
+      expect(debtMarket.vToken.healBorrow).to.have.been.calledOnceWith(
+        liquidator.address,
+        borrower.address,
+        BigNumber.from("66666666666666666667"),
+      );
+    });
   });
 
   describe("liquidateCalculateSeizeTokens", () => {

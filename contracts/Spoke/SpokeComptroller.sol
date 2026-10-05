@@ -695,9 +695,9 @@ contract SpokeComptroller is
     /**
      * @notice Seizes all the remaining collateral, makes msg.sender repay the existing
      *   borrows, and treats the rest of the debt as bad debt (for each market).
-     *   The sender has to repay a certain percentage of the debt, computed as `maxClearableDebt / borrows`: see the
-     *   note on `AccountLiquiditySnapshot.maxClearableDebt`. The heal is all-or-nothing: every seizure and repayment
-     *   runs in this one call, so a pause that blocks any of them reverts the whole heal.
+     *   The sender repays `maxClearableDebt / borrows` of each borrow, with each repayment rounded up: see the note on
+     *   `AccountLiquiditySnapshot.maxClearableDebt`. The heal is all-or-nothing: every seizure and repayment runs in
+     *   this one call, so a pause that blocks any of them reverts the whole heal.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
      * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from,
@@ -742,11 +742,12 @@ contract SpokeComptroller is
             revert CollateralCoversDebt(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
-        // percentage = maxClearableDebt / borrows. One blended share applies to every borrow, so what the caller
-        // pays in total is the sum over the collateral markets of each market's value at its own liquidation
-        // incentive. The discount is exact in aggregate; it is not attributed per piece of collateral.
-        Exp memory percentage = div_(Exp({ mantissa: snapshot.maxClearableDebt }), Exp({ mantissa: snapshot.borrows }));
-
+        // Every borrow is repaid at the same share, maxClearableDebt / borrows, so in total the caller pays
+        // maxClearableDebt, rounded up: the collateral's value with each market discounted at its own incentive. The
+        // discount holds for the position as a whole; it is not attributed to each piece of collateral.
+        // Each repayment is computed in one division and rounded up, so this step's rounding falls on the caller, not
+        // on the market's suppliers. It cannot exceed borrowBalance, because the check above keeps maxClearableDebt at
+        // or below borrows, and the shortfall check keeps borrows above zero.
         for (uint256 i; i < userAssetsCount; ++i) {
             VToken market = userAssets[i];
 
@@ -762,7 +763,11 @@ contract SpokeComptroller is
                 // way checks it otherwise: `healBorrow` never reaches `preLiquidateHook`, and when it repays nothing it
                 // reaches no hook at all.
                 _checkActionPauseState(address(market), Action.LIQUIDATE);
-                market.healBorrow(msg.sender, user, mul_ScalarTruncate(percentage, borrowBalance));
+                market.healBorrow(
+                    msg.sender,
+                    user,
+                    (borrowBalance * snapshot.maxClearableDebt + snapshot.borrows - 1) / snapshot.borrows
+                );
             }
         }
     }
