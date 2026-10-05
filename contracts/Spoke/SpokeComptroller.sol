@@ -1023,7 +1023,7 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
+     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows plus bad debt above the borrow cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A borrow cap of type(uint256).max corresponds to unlimited borrowing.
      * @dev Borrow caps smaller than the current total borrows are accepted. This way, new borrows will not be allowed
@@ -1052,7 +1052,7 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
+     * @notice Set the given supply caps for the given vToken markets. Supply that brings total supply above the supply cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A supply cap of type(uint256).max corresponds to unlimited supply.
      * @dev Supply caps smaller than the current total supplies are accepted. This way, new supplies will not be allowed
