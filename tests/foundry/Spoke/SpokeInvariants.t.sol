@@ -116,11 +116,13 @@ contract SpokeHandler is CommonBase, StdUtils {
     function exitMarket(uint256 accountSeed, uint256 marketSeed) external {
         address account = _account(accountSeed);
         VToken market = markets[marketSeed % 3];
-        // Only a member is liquidity-checked on exit, so only a member's result says anything about the check.
-        bool wasMember = comptroller.checkMembership(account, market);
+        // Only a member holding tokens is liquidity-checked on exit, so only that exit's result says anything about
+        // the check. Leaving a market the account holds nothing in cannot change its liquidity, even while it is
+        // over its limit.
+        bool checked = comptroller.checkMembership(account, market) && market.balanceOf(account) != 0;
         vm.prank(account);
         try comptroller.exitMarket(address(market)) {
-            if (wasMember) _checkNoShortfall(account, "exitMarket");
+            if (checked) _checkNoShortfall(account, "exitMarket");
         } catch {}
     }
 

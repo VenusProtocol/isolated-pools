@@ -247,7 +247,8 @@ contract SpokeComptroller is
     /**
      * @notice Removes asset from sender's account liquidity calculation; disabling them as collateral
      * @dev Sender must not have an outstanding borrow balance in the asset,
-     *  or be providing necessary collateral for an outstanding borrow.
+     *  or be providing necessary collateral for an outstanding borrow. Leaving a market the sender holds no tokens in
+     *  prices no market, so it works while a price feed is broken.
      * @param vTokenAddress The address of the asset to be removed
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event MarketExited is emitted on success
@@ -296,8 +297,8 @@ contract SpokeComptroller is
             }
         }
 
-        // We *must* have found the asset in the list or our redundant data structure is broken
-        assert(assetIndex < len);
+        // Membership and this list are kept in sync, so the asset is always found. Were they ever out of sync,
+        // `assetIndex` would equal `len` and the write below would revert on the out-of-bounds index.
 
         // copy last item in list to location of item to be removed, reduce length by 1
         VToken[] storage storedList = accountAssets[msg.sender];
@@ -1686,8 +1687,9 @@ contract SpokeComptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!market.accountMembership[redeemer]) {
+        // Redeeming nothing, or from a market the redeemer is not in, cannot lower its liquidity. Skipping the check
+        // also skips pricing, so an account can leave a market it holds nothing in while some market's feed is broken.
+        if (redeemTokens == 0 || !market.accountMembership[redeemer]) {
             return;
         }
 
