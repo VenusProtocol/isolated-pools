@@ -326,7 +326,13 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      constant would misprice whichever kind it was not configured for; the market's own value
     ///      always matches the unit of its own rate. Deploy the spoke YieldGroup with
     ///      `blocksPerYear = 0`, as the Flux family already does.
+    ///
+    ///      An emptied market reports 0 rather than reverting: `JumpRateModelV2.getSupplyRate`
+    ///      divides by `cash + borrows + badDebt - reserves` with no zero guard. `PoolLens` guards
+    ///      the same read.
     function spotAPYBps(address resource, uint256 /* blocksPerYear */) external view override returns (uint64) {
+        if (IVTokenIsolated(resource).totalSupply() == 0) return 0;
+
         uint256 annualised = (IVTokenIsolated(resource).supplyRatePerBlock() *
             IVTokenIsolated(resource).blocksOrSecondsPerYear()) / MANTISSA_TO_BPS;
         // forge-lint: disable-next-line(unsafe-typecast)

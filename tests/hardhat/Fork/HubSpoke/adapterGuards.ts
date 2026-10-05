@@ -339,6 +339,15 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         expect(await adapter.spotAPYBps(market.address, 0)).to.equal(expected);
         expect(await adapter.spotAPYBps(market.address, 123_456_789)).to.equal(expected);
       });
+
+      it("reports zero on an emptied market instead of reverting", async () => {
+        // `JumpRateModelV2.getSupplyRate` divides by `cash + borrows + badDebt - reserves` with no
+        // zero guard, so the read panics once the market is drained. The rate is faked as reverting
+        // to model that; the guard must return before it is reached.
+        market.totalSupply.returns(0);
+        market.supplyRatePerBlock.reverts();
+        expect(await adapter.spotAPYBps(market.address, 0)).to.equal(0);
+      });
     });
 
     describe("asset and receiptBalance", () => {
