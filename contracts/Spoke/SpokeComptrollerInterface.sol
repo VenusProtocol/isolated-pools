@@ -110,6 +110,10 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
     ///   `MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA` for the pool-wide fallback
     error InvalidLiquidationIncentive();
 
+    /// @notice Thrown when a market's liquidation threshold times its liquidation incentive would be 1 or more, from
+    ///   which point a liquidation no longer reduces the account's shortfall
+    error UnsafeLiquidationParams(uint256 liquidationThresholdMantissa, uint256 liquidationIncentiveMantissa);
+
     /// @notice Thrown when the action is only available to specific sender, but the real sender was different
     error UnexpectedSender(address expectedSender, address actualSender);
 

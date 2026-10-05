@@ -49,6 +49,18 @@ contract SpokeFuzzTest is SpokeFuzzBase {
             comptroller.setMarketLiquidationIncentive(address(market), incentive);
             return;
         }
+        // From 1.25e18 up, the market's 0.8 liquidation threshold brings `threshold * incentive` to 1
+        if (LIQUIDATION_THRESHOLD * incentive >= 1e36) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    SpokeComptrollerInterface.UnsafeLiquidationParams.selector,
+                    LIQUIDATION_THRESHOLD,
+                    incentive
+                )
+            );
+            comptroller.setMarketLiquidationIncentive(address(market), incentive);
+            return;
+        }
         comptroller.setMarketLiquidationIncentive(address(market), incentive);
         assertEq(comptroller.effectiveLiquidationIncentive(address(market)), incentive);
 
@@ -80,7 +92,12 @@ contract SpokeFuzzTest is SpokeFuzzBase {
         share = bound(share, 0, 0.1e18);
         collateral.setProtocolSeizeShare(share);
         if (marketHasOwnIncentive) {
-            comptroller.setMarketLiquidationIncentive(address(collateral), bound(ownIncentive, 1e18 + share, 1.5e18));
+            // Up to the largest incentive the 0.8 liquidation threshold allows
+            uint256 maxIncentive = (1e36 - 1) / LIQUIDATION_THRESHOLD;
+            comptroller.setMarketLiquidationIncentive(
+                address(collateral),
+                bound(ownIncentive, 1e18 + share, maxIncentive)
+            );
         }
 
         _supply(alice, COLLATERAL_A, 10_000e18);
@@ -89,7 +106,7 @@ contract SpokeFuzzTest is SpokeFuzzBase {
         markets[LIQUIDITY].borrow(6_900e18);
 
         // A 15% drop takes 6,900 of debt past the 80% threshold on 10,000 of collateral. At 45% the collateral still
-        // covers the largest seizure: half the debt at a 1.5x incentive.
+        // covers the largest seizure: half the debt at a 1.25x incentive.
         uint256 collateralPrice = (1e18 * (10_000 - bound(priceDropBps, 1_500, 4_500))) / 10_000;
         _setPrice(COLLATERAL_A, collateralPrice);
 

@@ -451,4 +451,59 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
         .withArgs(parseUnits("250", 18), expected);
     });
   });
+
+  /// From `liquidationThreshold * incentive = 1` up, a liquidation no longer reduces the account's shortfall, so the
+  /// per-market setters keep the product below 1. 0.8 * 1.25 is exactly 1, which puts the boundary itself in reach.
+  describe("liquidation threshold times incentive", () => {
+    const BOUNDARY_INCENTIVE = parseUnits("1.25", 18);
+
+    it("setCollateralFactor rejects a threshold that brings it to 1 at the market's own incentive", async () => {
+      await comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE);
+
+      await expect(
+        comptroller.setCollateralFactor(collateralA.vToken.address, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD),
+      )
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(LIQUIDATION_THRESHOLD, BOUNDARY_INCENTIVE);
+
+      await setRiskWeights(comptroller, collateralA, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD.sub(1));
+      expect((await comptroller.markets(collateralA.vToken.address)).liquidationThresholdMantissa).to.equal(
+        LIQUIDATION_THRESHOLD.sub(1),
+      );
+    });
+
+    it("setCollateralFactor checks a market with no incentive of its own against the pool-wide one", async () => {
+      // B falls back to the pool-wide 1.2, so the smallest threshold that reaches 1 is 1e36 / 1.2e18 rounded up.
+      const threshold = ONE.mul(ONE).add(POOL_WIDE_INCENTIVE).sub(1).div(POOL_WIDE_INCENTIVE);
+
+      await expect(comptroller.setCollateralFactor(collateralB.vToken.address, COLLATERAL_FACTOR, threshold))
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(threshold, POOL_WIDE_INCENTIVE);
+
+      await setRiskWeights(comptroller, collateralB, COLLATERAL_FACTOR, threshold.sub(1));
+      expect((await comptroller.markets(collateralB.vToken.address)).liquidationThresholdMantissa).to.equal(
+        threshold.sub(1),
+      );
+    });
+
+    it("setMarketLiquidationIncentive rejects an incentive that brings it to 1 at the market's threshold", async () => {
+      await setRiskWeights(comptroller, collateralA, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD);
+
+      await expect(comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE))
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(LIQUIDATION_THRESHOLD, BOUNDARY_INCENTIVE);
+
+      await comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE.sub(1));
+      expect(await comptroller.liquidationIncentives(collateralA.vToken.address)).to.equal(BOUNDARY_INCENTIVE.sub(1));
+    });
+
+    it("is not checked by setLiquidationIncentive for the markets that fall back to it", async () => {
+      // Checking would need a loop over every market, which does not fit under the contract size limit. Collateral
+      // markets get an incentive of their own instead, and the per-market setter does check that.
+      await setRiskWeights(comptroller, collateralB, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD);
+
+      await comptroller.setLiquidationIncentive(BOUNDARY_INCENTIVE);
+      expect(await comptroller.effectiveLiquidationIncentive(collateralB.vToken.address)).to.equal(BOUNDARY_INCENTIVE);
+    });
+  });
 });

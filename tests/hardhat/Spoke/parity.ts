@@ -261,12 +261,29 @@ describe("SpokeComptroller: parity with the shared Comptroller", () => {
     it("draws the collateral factor and threshold bounds in the same place", async () => {
       const weights = (pool: Pool, factor: BigNumber, threshold: BigNumber) =>
         pool.comptroller.setCollateralFactor(pool.markets[0].address, factor, threshold);
+      // At the spoke's lowest pool-wide incentive, a threshold of 0.95 stays clear of the spoke's own bound below.
+      await bothAccept(pool => pool.comptroller.setLiquidationIncentive(parseUnits("1.05", 18)));
 
-      await bothAccept(pool => weights(pool, parseUnits("0.95", 18), ONE));
-      await bothReject(pool => weights(pool, parseUnits("0.95", 18).add(1), ONE));
+      await bothAccept(pool => weights(pool, parseUnits("0.95", 18), parseUnits("0.95", 18)));
+      await bothReject(pool => weights(pool, parseUnits("0.95", 18).add(1), parseUnits("0.95", 18).add(1)));
       await bothReject(pool => weights(pool, parseUnits("0.5", 18), ONE.add(1)));
       // A threshold below the collateral factor would let an account borrow itself straight into liquidation.
       await bothReject(pool => weights(pool, parseUnits("0.5", 18), parseUnits("0.4", 18)));
+    });
+
+    it("refuses a threshold whose product with the incentive reaches 1, which the shared pool accepts", async () => {
+      // Deliberate divergence, the same bound the core pool enforces. From 1 up a liquidation no longer reduces the
+      // account's shortfall. This is the smallest threshold that reaches 1 at the pool-wide 1.1.
+      const threshold = ONE.mul(ONE).div(POOL_INCENTIVE).add(1);
+      const weights = (pool: Pool, liquidationThreshold: BigNumber) =>
+        pool.comptroller.setCollateralFactor(pool.markets[0].address, parseUnits("0.5", 18), liquidationThreshold);
+
+      await bothAccept(pool => weights(pool, threshold.sub(1)));
+
+      await weights(pools[SHARED], threshold);
+      await expect(weights(pools[SPOKE], threshold))
+        .to.be.revertedWithCustomError(pools[SPOKE].comptroller, "UnsafeLiquidationParams")
+        .withArgs(threshold, POOL_INCENTIVE);
     });
 
     it("draws a higher floor under the pool-wide liquidation incentive than the shared pool", async () => {

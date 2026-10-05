@@ -381,7 +381,10 @@ contract SpokeHandler is CommonBase, StdUtils {
     function setMarketLiquidationIncentive(uint256 marketSeed, uint256 incentive) external {
         VToken market = markets[1 + (marketSeed % 2)];
         uint256 floor = 1e18 + market.protocolSeizeShareMantissa();
-        comptroller.setMarketLiquidationIncentive(address(market), bound(incentive, floor, 1.5e18));
+        // The largest incentive that keeps `liquidationThreshold * incentive` below 1, which the setter enforces
+        (, , uint256 liquidationThreshold) = comptroller.markets(address(market));
+        uint256 ceiling = (1e36 - 1) / liquidationThreshold;
+        comptroller.setMarketLiquidationIncentive(address(market), bound(incentive, floor, ceiling));
     }
 
     // ----- rules checked after a call succeeds -----

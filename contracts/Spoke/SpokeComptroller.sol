@@ -883,6 +883,8 @@ contract SpokeComptroller is
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
      * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is lower than collateral factor
+     * @custom:error UnsafeLiquidationParams is thrown when the new liquidation threshold times the market's effective
+     *   liquidation incentive is 1 or more
      * @custom:error PriceError is thrown when the oracle returns an invalid price for the asset
      * @custom:access Controlled by AccessControlManager
      */
@@ -913,6 +915,8 @@ contract SpokeComptroller is
         if (newLiquidationThresholdMantissa < newCollateralFactorMantissa) {
             revert InvalidLiquidationThreshold();
         }
+
+        _ensureSafeLiquidationParams(newLiquidationThresholdMantissa, _liquidationIncentive(address(vToken)));
 
         // If collateral factor != 0, fail if price == 0
         if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
@@ -946,6 +950,11 @@ contract SpokeComptroller is
      * and would let a pool be registered one that pays every default-share market's liquidator less than it repaid.
      * A market whose share is raised above the default still needs an incentive of its own;
      * `setMarketLiquidationIncentive` bounds that from one side and `VToken.setProtocolSeizeShare` from the other.
+     *
+     * `setCollateralFactor` and `setMarketLiquidationIncentive` require `liquidationThreshold * incentive < 1` for the
+     * market they change. This setter does not recheck the markets that fall back to this value: that needs a loop over
+     * every market, which does not fit under the contract size limit at this contract's optimizer setting. Give every
+     * market with a nonzero liquidation threshold an incentive of its own, so this value never applies to one.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below
@@ -1212,6 +1221,8 @@ contract SpokeComptroller is
      * @custom:error MarketNotListed is thrown if the market is not listed
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive would leave the liquidator with less
      *   collateral than the debt it repaid
+     * @custom:error UnsafeLiquidationParams is thrown when the market's liquidation threshold times the new incentive
+     *   is 1 or more
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketLiquidationIncentive(address vToken, uint256 newLiquidationIncentiveMantissa) external {
@@ -1231,6 +1242,8 @@ contract SpokeComptroller is
         if (newLiquidationIncentiveMantissa < MANTISSA_ONE + VToken(vToken).protocolSeizeShareMantissa()) {
             revert InvalidLiquidationIncentive();
         }
+
+        _ensureSafeLiquidationParams(markets[vToken].liquidationThresholdMantissa, newLiquidationIncentiveMantissa);
 
         uint256 oldLiquidationIncentiveMantissa = liquidationIncentives[vToken];
         liquidationIncentives[vToken] = newLiquidationIncentiveMantissa;
@@ -1947,6 +1960,21 @@ contract SpokeComptroller is
     function _checkSenderIs(address expectedSender) internal view {
         if (msg.sender != expectedSender) {
             revert UnexpectedSender(expectedSender, msg.sender);
+        }
+    }
+
+    /**
+     * @dev Reverts unless `liquidationThreshold * liquidationIncentive < 1`, the same bound the core pool enforces.
+     *   Repaying debt worth R seizes collateral worth R * incentive, which lowers the weighted collateral by
+     *   R * incentive * threshold, so the shortfall changes by R * (threshold * incentive - 1). Below 1 every
+     *   liquidation shrinks the shortfall. From 1 up it no longer does, and repeated liquidations can drain the
+     *   collateral and leave bad debt.
+     * @param liquidationThreshold The market's liquidation threshold, scaled by 1e18
+     * @param liquidationIncentive The market's liquidation incentive, scaled by 1e18
+     */
+    function _ensureSafeLiquidationParams(uint256 liquidationThreshold, uint256 liquidationIncentive) internal pure {
+        if (liquidationThreshold * liquidationIncentive >= MANTISSA_ONE * MANTISSA_ONE) {
+            revert UnsafeLiquidationParams(liquidationThreshold, liquidationIncentive);
         }
     }
 
