@@ -306,6 +306,20 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       expect(seizeFromA).to.equal(parseUnits("110", 18)); // market A's own 1.1
       expect(seizeFromB).to.equal(parseUnits("120", 18)); // pool-wide 1.2, market B has no value of its own
     });
+
+    it("rounds once, after multiplying every factor", async () => {
+      // At a collateral price of 3, 100 repaid at A's 1.1 seizes 110 / 3 = 36.666... Upstream rounds 1.1 / 3 to 18
+      // decimals before scaling it by the repayment, which comes out 66 wei lower.
+      fixture.setSpotPrice(collateralA, parseUnits("3", 18));
+
+      const [, seizeTokens] = await comptroller.liquidateCalculateSeizeTokens(
+        debtMarket.vToken.address,
+        collateralA.vToken.address,
+        parseUnits("100", 18),
+      );
+
+      expect(seizeTokens).to.equal(BigNumber.from("36666666666666666666"));
+    });
   });
 
   // A pool that `PoolRegistry.addPool` has not registered has no pool-wide incentive, so a market with no value of

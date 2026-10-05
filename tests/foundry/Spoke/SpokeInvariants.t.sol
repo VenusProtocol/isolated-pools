@@ -406,7 +406,7 @@ contract SpokeHandler is CommonBase, StdUtils {
         uint256 collateralPrice = oracle.getUnderlyingPrice(address(collateral));
         uint256 exchangeRate = collateral.exchangeRateStored();
         uint256 receivedValue = ((tokensReceived * exchangeRate) / 1e18) * collateralPrice;
-        uint256 allowance = liquidationRoundingAllowance(repaid, exchangeRate, collateralPrice);
+        uint256 allowance = liquidationRoundingAllowance(exchangeRate, collateralPrice);
         if (receivedValue + allowance < repaid * oracle.getUnderlyingPrice(address(markets[0]))) {
             _flag(LIQUIDATOR_PAYOUT, "a liquidator received less collateral value than the debt it repaid");
         }

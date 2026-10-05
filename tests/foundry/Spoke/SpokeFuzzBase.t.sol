@@ -18,17 +18,12 @@ import { MockPriceOracle } from "../../../contracts/test/Mocks/MockPriceOracle.s
 
 /**
  * @notice Value a liquidator can lose to rounding, in the same 1e36 scale as `underlying amount * price`
- * @dev `liquidateCalculateSeizeTokens` truncates the incentive-weighted price ratio short by at most two units, and
- * each unit costs `repayAmount / 1e18` seized vTokens, plus one when the product is truncated. Converting the received
- * vTokens back to underlying truncates once more. The protocol's cut rounds down, which only helps the liquidator.
+ * @dev `liquidateCalculateSeizeTokens` rounds down once, so the seizure is short by less than one vToken. Converting
+ * the received vTokens back to underlying truncates once more. The protocol's cut rounds down, which only helps the
+ * liquidator.
  */
-function liquidationRoundingAllowance(
-    uint256 repayAmount,
-    uint256 exchangeRate,
-    uint256 collateralPrice
-) pure returns (uint256) {
-    uint256 lostVTokens = (2 * repayAmount) / 1e18 + 1;
-    return ((lostVTokens * exchangeRate) / 1e18 + 1) * collateralPrice;
+function liquidationRoundingAllowance(uint256 exchangeRate, uint256 collateralPrice) pure returns (uint256) {
+    return (exchangeRate / 1e18 + 1) * collateralPrice;
 }
 
 /// @notice Access control stand-in that allows every call, as the Hardhat spoke fixture does

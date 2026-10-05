@@ -1481,19 +1481,11 @@ contract SpokeComptroller is
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
         uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
-        Exp memory ratio;
 
-        numerator = mul_(
-            Exp({ mantissa: _liquidationIncentive(vTokenCollateral) }),
-            Exp({ mantissa: priceBorrowedMantissa })
-        );
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
-
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+        // Every factor is multiplied before the one division, so the result is rounded down once. Upstream rounds the
+        // ratio to 18 decimals first and then scales it by the repayment, which scales the rounding loss up with it.
+        uint256 seizeTokens = (actualRepayAmount * _liquidationIncentive(vTokenCollateral) * priceBorrowedMantissa) /
+            (priceCollateralMantissa * exchangeRateMantissa);
 
         return (NO_ERROR, seizeTokens);
     }

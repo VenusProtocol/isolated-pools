@@ -123,7 +123,7 @@ contract SpokeFuzzTest is SpokeFuzzBase {
         uint256 exchangeRate = collateral.exchangeRateStored();
         uint256 receivedValue = ((collateral.balanceOf(liquidator) * exchangeRate) / 1e18) * collateralPrice;
         assertGe(
-            receivedValue + liquidationRoundingAllowance(repay, exchangeRate, collateralPrice),
+            receivedValue + liquidationRoundingAllowance(exchangeRate, collateralPrice),
             repay * INITIAL_PRICE,
             "liquidator repaid more than it received"
         );
