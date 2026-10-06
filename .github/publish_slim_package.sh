@@ -1,3 +1,5 @@
+set -euo pipefail
+
 # Ensure npm 11.5.1 or later is installed. Pin to the v11 line: npm@latest
 # now resolves to npm@12, which requires a newer Node than CI provides
 # (node ^22.22.2 || ^24.15.0 || >=26.0.0) and fails with EBADENGINE.
