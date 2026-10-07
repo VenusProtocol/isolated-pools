@@ -20,4 +20,12 @@ interface IXVSVault {
      * @param amount The amount to unlock
      */
     function unlock(address account, uint256 amount) external;
+
+    /**
+     * @notice Takes locked XVS stake out of the vault
+     * @param account The account whose locked stake is taken
+     * @param amount The amount to take
+     * @param to The receiver of the XVS
+     */
+    function seizeLocked(address account, uint256 amount, address to) external;
 }

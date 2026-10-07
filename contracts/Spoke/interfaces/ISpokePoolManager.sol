@@ -178,6 +178,14 @@ interface ISpokePoolManager {
     event PoolHandedOver(address indexed comptroller, address indexed deployer, uint256 amount);
 
     /**
+     * @notice Emitted when XVS is taken from a pool's locked stake for the account that covered its bad debt
+     * @param comptroller The pool's comptroller
+     * @param to The receiver of the XVS
+     * @param amount The XVS taken
+     */
+    event StakeSeized(address indexed comptroller, address indexed to, uint256 amount);
+
+    /**
      * @notice Thrown when `completeRequest` is called by an account other than the factory
      * @param caller The caller
      */
@@ -314,6 +322,13 @@ interface ISpokePoolManager {
      * @param vToken The market
      */
     error BadDebtOutstanding(address vToken);
+
+    /**
+     * @notice Thrown when the XVS owed to a coverer exceeds the pool's locked stake
+     * @param required The XVS owed
+     * @param available The pool's locked stake
+     */
+    error InsufficientLockedStake(uint256 required, uint256 available);
 
     /// @notice Thrown when the liquidation thresholds of an exit do not match the pool's markets
     error InvalidArrayLength();
@@ -676,4 +691,16 @@ interface ISpokePoolManager {
         address[] calldata vTokens,
         address executor
     ) external;
+
+    /**
+     * @notice Takes XVS from a pool's locked stake and sends it to the account that covered the pool's bad debt
+     * @param comptroller The pool's comptroller
+     * @param amount The XVS to take
+     * @param to The receiver of the XVS
+     * @custom:event Emits StakeSeized; the vault emits Claim and LockedStakeSeized
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
+     * @custom:error InsufficientLockedStake is thrown when the amount exceeds the pool's locked stake
+     * @custom:access Controlled by AccessControlManager, granted to the SpokePoolShortfallReceiver
+     */
+    function seizeStake(address comptroller, uint256 amount, address to) external;
 }

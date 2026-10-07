@@ -29,9 +29,11 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * pool within its tier through the manager, which holds the pool-specific ACM roles the deployer does not, and can
  * sunset a market by zeroing its caps and collateral factor. The team also proposes the pool's exit.
  * @dev The manager must hold GovernorBravo's Normal proposal threshold in votes (delegated, or whitelisted) and the
- * XVSVault `lock` and `unlock` roles. GovernorBravo allows one live proposal per proposer, so the manager's proposals
- * run one after another. The proposals' actions are built by the linked `SpokeProposalBuilder`. Public variable getters
- * are not in `ISpokePoolManager`: they live in the sibling base `SpokePoolManagerStorage`.
+ * XVSVault `lock`, `unlock` and `seizeLocked` roles. Bad debt is covered through `SpokePoolShortfallReceiver`, every
+ * market's `shortfall`, which pays coverers from the pool's locked stake through `seizeStake`. GovernorBravo allows one
+ * live proposal per proposer, so the manager's proposals run one after another. The proposals' actions are built by
+ * the linked `SpokeProposalBuilder`. Public variable getters are not in `ISpokePoolManager`: they live in the sibling
+ * base `SpokePoolManagerStorage`.
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable external-library-linking
  */
 contract SpokePoolManager is
@@ -490,6 +492,26 @@ contract SpokePoolManager is
             }
         }
         _sendSeeds(request, executor);
+    }
+
+    /*** Shortfall receiver functions ***/
+
+    /// @inheritdoc ISpokePoolManager
+    function seizeStake(address comptroller, uint256 amount, address to) external {
+        _checkAccessAllowed("seizeStake(address,uint256,address)");
+
+        Pool storage pool = pools[comptroller];
+        if (pool.status == PoolStatus.None) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        uint256 lockedStake = pool.lockedStake;
+        if (amount > lockedStake) {
+            revert InsufficientLockedStake(amount, lockedStake);
+        }
+        pool.lockedStake = lockedStake - amount;
+        XVS_VAULT.seizeLocked(pool.deployer, amount, to);
+
+        emit StakeSeized(comptroller, to, amount);
     }
 
     /*** Internal functions ***/
