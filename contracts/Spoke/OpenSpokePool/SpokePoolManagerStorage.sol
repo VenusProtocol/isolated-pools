@@ -35,7 +35,8 @@ contract SpokePoolManagerStorage {
         uint256 maxCollateralFactor;
         // Upper bound on a collateral market's liquidation threshold, scaled by 1e18
         uint256 maxLiquidationThreshold;
-        // Lower bound on a collateral market's liquidation threshold, scaled by 1e18
+        // Lower bound on a collateral market's liquidation threshold, scaled by 1e18; stops a deployer from
+        // force-liquidating its borrowers by dropping the threshold to zero
         uint256 minLiquidationThreshold;
     }
 
@@ -106,6 +107,8 @@ contract SpokePoolManagerStorage {
     struct Pool {
         address deployer;
         PoolStatus status;
+        // True while the Venus team has frozen the deployer's functions
+        bool deployerFrozen;
         uint256 tierId;
         // XVS still locked for the pool
         uint256 lockedStake;

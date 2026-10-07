@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
+import { VToken } from "../../VToken.sol";
 import { SpokePoolFactory } from "../OpenSpokePool/SpokePoolFactory.sol";
 import { SpokePoolManagerStorage } from "../OpenSpokePool/SpokePoolManagerStorage.sol";
 
@@ -100,6 +101,27 @@ interface ISpokePoolManager {
     event MarketsAdded(uint256 indexed requestId, address indexed comptroller, address[] vTokens);
 
     /**
+     * @notice Emitted when the deployer's functions are frozen or unfrozen
+     * @param comptroller The pool's comptroller
+     * @param frozen True if the deployer's functions are now frozen
+     */
+    event DeployerFrozenUpdated(address indexed comptroller, bool frozen);
+
+    /**
+     * @notice Emitted when a deployer asks to move its pool to another tier
+     * @param comptroller The pool's comptroller
+     * @param tierId The requested tier
+     */
+    event TierChangeRequested(address indexed comptroller, uint256 indexed tierId);
+
+    /**
+     * @notice Emitted when the Venus team moves a pool to another tier
+     * @param comptroller The pool's comptroller
+     * @param tierId The pool's new tier
+     */
+    event TierChanged(address indexed comptroller, uint256 indexed tierId);
+
+    /**
      * @notice Thrown when `completeRequest` is called by an account other than the factory
      * @param caller The caller
      */
@@ -193,10 +215,40 @@ interface ISpokePoolManager {
     error NotDeployer(address comptroller, address caller);
 
     /**
+     * @notice Thrown when a market is not listed in the pool
+     * @param vToken The market
+     */
+    error MarketNotInPool(address vToken);
+
+    /**
+     * @notice Thrown when a collateral-only setting is applied to a loan market
+     * @param vToken The market
+     */
+    error NotCollateralMarket(address vToken);
+
+    /**
+     * @notice Thrown when a loan-only setting is applied to a market that is not a loan market of the pool
+     * @param vToken The market
+     */
+    error NotLoanMarket(address vToken);
+
+    /**
+     * @notice Thrown when the deployer's functions are frozen
+     * @param comptroller The pool's comptroller
+     */
+    error DeployerFrozen(address comptroller);
+
+    /**
      * @notice Thrown when a pool is not in a status the function accepts
      * @param comptroller The pool's comptroller
      */
     error InvalidPoolStatus(address comptroller);
+
+    /**
+     * @notice Thrown when a pool changes tier while a market still has bad debt
+     * @param vToken The market
+     */
+    error BadDebtOutstanding(address vToken);
 
     /**
      * @notice Requests a new pool of a tier, or new markets in the caller's pool. A request for a new pool locks the
@@ -212,6 +264,7 @@ interface ISpokePoolManager {
      * @custom:error TooManyMarkets is thrown when the request has more than `maxMarketsPerRequest` markets
      * @custom:error InvalidTier is thrown when the tier of a new pool is not set
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, MissingSpokeSource or ExceedsTierLimit is thrown
      *   when the markets do not fit the tier
      * @custom:error SeedBelowMinimum is thrown when a seed is worth less than `minSeedUsd`
@@ -223,6 +276,82 @@ interface ISpokePoolManager {
         uint256 tierId,
         SpokePoolManagerStorage.PoolParams calldata params
     ) external returns (uint256 requestId);
+
+    /**
+     * @notice Sets the collateral factor and liquidation threshold of a collateral market of the deployer's pool,
+     *   within the pool's tier
+     * @param comptroller The pool's comptroller
+     * @param vToken The collateral market
+     * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
+     * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
+     * @custom:event The comptroller emits NewCollateralFactor and NewLiquidationThreshold
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error NotCollateralMarket is thrown when the market is a loan market
+     * @custom:error ExceedsTierLimit is thrown when either value is beyond the tier's maximum, or the liquidation
+     *   threshold is below the tier's minimum
+     * @custom:error The comptroller's `setCollateralFactor` errors, such as MarketNotListed for a market of another pool
+     * @custom:access Only the pool's deployer
+     */
+    function setCollateralFactor(
+        address comptroller,
+        VToken vToken,
+        uint256 newCollateralFactorMantissa,
+        uint256 newLiquidationThresholdMantissa
+    ) external;
+
+    /**
+     * @notice Sets supply caps of markets of the deployer's pool. A loan market's supply cap is the liquidity the Hub
+     *   supplies it up to, so the loan markets' caps together must stay within the tier's liquidity in USD; collateral
+     *   caps are not bounded
+     * @param comptroller The pool's comptroller
+     * @param vTokens The markets
+     * @param newSupplyCaps The new supply caps, in each market's underlying
+     * @custom:event The comptroller emits NewSupplyCap for each market
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error MarketNotInPool is thrown when a market is not listed in the pool
+     * @custom:error ExceedsTierLimit is thrown when the loan markets' caps exceed the tier's liquidity
+     * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
+     * @custom:access Only the pool's deployer
+     */
+    function setMarketSupplyCaps(
+        address comptroller,
+        VToken[] calldata vTokens,
+        uint256[] calldata newSupplyCaps
+    ) external;
+
+    /**
+     * @notice Sets borrow caps of loan markets of the deployer's pool. Borrows are already bounded by the liquidity
+     *   the tier allows, so the caps are not bounded further
+     * @param comptroller The pool's comptroller
+     * @param vTokens The loan markets
+     * @param newBorrowCaps The new borrow caps, in each market's underlying
+     * @custom:event The comptroller emits NewBorrowCap for each market
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error NotLoanMarket is thrown when a market is not a loan market of the pool
+     * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
+     * @custom:access Only the pool's deployer
+     */
+    function setMarketBorrowCaps(
+        address comptroller,
+        VToken[] calldata vTokens,
+        uint256[] calldata newBorrowCaps
+    ) external;
+
+    /**
+     * @notice Asks the Venus team to move the deployer's pool to another tier. The team moves it with `setPoolTier`
+     *   once the pool's risk parameters fit the new tier; the stake difference is locked or unlocked then
+     * @param comptroller The pool's comptroller
+     * @param newTierId The requested tier
+     * @custom:event Emits TierChangeRequested
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error InvalidTier is thrown when the tier is not set or is the pool's current tier
+     * @custom:access Only the pool's deployer
+     */
+    function requestTierChange(address comptroller, uint256 newTierId) external;
 
     /**
      * @notice Proposes a request to GovernorBravo with its final parameters, agreed with the project off-chain. A
@@ -260,6 +389,34 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function rejectRequest(uint256 requestId) external;
+
+    /**
+     * @notice Moves a pool to the tier its deployer asked for with `requestTierChange`, once the pool's current
+     *   collateral factors, liquidation thresholds and loan liquidity fit that tier and no market has bad debt. The
+     *   pool's locked stake becomes the new tier's stake: the difference is locked from or unlocked to the deployer's
+     *   XVSVault stake. Only recorded bad debt is checked: the team heals or liquidates underwater accounts first
+     * @param comptroller The pool's comptroller
+     * @param newTierId The pool's new tier
+     * @custom:event Emits TierChanged; the vault emits StakeLocked or StakeUnlocked
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
+     * @custom:error InvalidTier is thrown when the tier is not set or is the pool's current tier
+     * @custom:error DeployerFrozen is thrown while the deployer's functions are frozen
+     * @custom:error ExceedsTierLimit is thrown when a risk parameter or the loan liquidity does not fit the new tier
+     * @custom:error BadDebtOutstanding is thrown when a market has bad debt
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function setPoolTier(address comptroller, uint256 newTierId) external;
+
+    /**
+     * @notice Freezes or unfreezes a pool deployer's functions, e.g. while a compromised or misbehaving project is
+     *   investigated. The pool itself keeps running and its stake stays locked
+     * @param comptroller The pool's comptroller
+     * @param frozen True to freeze the deployer's functions
+     * @custom:event Emits DeployerFrozenUpdated
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team and the Guardian
+     */
+    function setDeployerFrozen(address comptroller, bool frozen) external;
 
     /**
      * @notice Adds the next tier or updates an existing one, so tier ids stay sequential from 0. Pools of the tier are

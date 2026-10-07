@@ -25,7 +25,9 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * @notice Entry point of open spoke pools. A project stakes XVS in the XVSVault and requests a pool of a tier: the
  * manager locks the tier's stake in the vault and escrows one seed per market. A pool's deployer requests new markets
  * the same way, escrowing their seeds. The Venus team proposes an approved request to GovernorBravo on the Normal route
- * with its final parameters; the proposal deploys, lists and funds the pool or the markets.
+ * with its final parameters; the proposal deploys, lists and funds the pool or the markets. The deployer then tunes the
+ * pool within its tier through the manager, which holds the pool-specific ACM roles the deployer does not, and can
+ * sunset a market by zeroing its caps and collateral factor.
  * @dev The manager must hold GovernorBravo's Normal proposal threshold in votes (delegated, or whitelisted) and the
  * XVSVault `lock` and `unlock` roles. GovernorBravo allows one live proposal per proposer, so the manager's proposals
  * run one after another. The proposals' actions are built by the linked `SpokeProposalBuilder`. Public variable getters
@@ -127,6 +129,77 @@ contract SpokePoolManager is
         emit RequestSubmitted(requestId, msg.sender, comptroller, tierId, params);
     }
 
+    /*** Deployer functions ***/
+
+    /// @inheritdoc ISpokePoolManager
+    function setCollateralFactor(
+        address comptroller,
+        VToken vToken,
+        uint256 newCollateralFactorMantissa,
+        uint256 newLiquidationThresholdMantissa
+    ) external {
+        Pool storage pool = _ensureDeployer(comptroller);
+        if (isLoanMarket[address(vToken)]) {
+            revert NotCollateralMarket(address(vToken));
+        }
+        _checkCollateralParams(tiers[pool.tierId], newCollateralFactorMantissa, newLiquidationThresholdMantissa);
+
+        SpokeComptroller(comptroller).setCollateralFactor(
+            vToken,
+            newCollateralFactorMantissa,
+            newLiquidationThresholdMantissa
+        );
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setMarketSupplyCaps(
+        address comptroller,
+        VToken[] calldata vTokens,
+        uint256[] calldata newSupplyCaps
+    ) external {
+        Pool storage pool = _ensureDeployer(comptroller);
+        uint256 marketCount = vTokens.length;
+        for (uint256 i; i < marketCount; ++i) {
+            if (!SpokeComptroller(comptroller).isMarketListed(vTokens[i])) {
+                revert MarketNotInPool(address(vTokens[i]));
+            }
+        }
+
+        SpokeComptroller(comptroller).setMarketSupplyCaps(vTokens, newSupplyCaps);
+
+        if (_loanLiquidityUsd(comptroller) > tiers[pool.tierId].maxLiquidityUsd) {
+            revert ExceedsTierLimit();
+        }
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setMarketBorrowCaps(
+        address comptroller,
+        VToken[] calldata vTokens,
+        uint256[] calldata newBorrowCaps
+    ) external {
+        _ensureDeployer(comptroller);
+        uint256 marketCount = vTokens.length;
+        for (uint256 i; i < marketCount; ++i) {
+            if (!isLoanMarket[address(vTokens[i])] || !SpokeComptroller(comptroller).isMarketListed(vTokens[i])) {
+                revert NotLoanMarket(address(vTokens[i]));
+            }
+        }
+
+        SpokeComptroller(comptroller).setMarketBorrowCaps(vTokens, newBorrowCaps);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function requestTierChange(address comptroller, uint256 newTierId) external {
+        Pool storage pool = _ensureDeployer(comptroller);
+        _ensureTier(newTierId);
+        if (newTierId == pool.tierId) {
+            revert InvalidTier(newTierId);
+        }
+
+        emit TierChangeRequested(comptroller, newTierId);
+    }
+
     /*** Venus team functions ***/
 
     /// @inheritdoc ISpokePoolManager
@@ -175,6 +248,46 @@ contract SpokePoolManager is
         _returnEscrow(request);
 
         emit RequestRejected(requestId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setPoolTier(address comptroller, uint256 newTierId) external nonReentrant {
+        _checkAccessAllowed("setPoolTier(address,uint256)");
+
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
+        Tier storage tier = _ensureTier(newTierId);
+        if (newTierId == pool.tierId) {
+            revert InvalidTier(newTierId);
+        }
+        if (pool.deployerFrozen) {
+            revert DeployerFrozen(comptroller);
+        }
+        uint256 newStake = tier.stakeAmount;
+        uint256 lockedStake = pool.lockedStake;
+        _checkPoolFitsTier(comptroller, tier);
+
+        pool.tierId = newTierId;
+        pool.lockedStake = newStake;
+        if (newStake > lockedStake) {
+            XVS_VAULT.lock(pool.deployer, newStake - lockedStake);
+        } else if (newStake < lockedStake) {
+            XVS_VAULT.unlock(pool.deployer, lockedStake - newStake);
+        }
+
+        emit TierChanged(comptroller, newTierId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setDeployerFrozen(address comptroller, bool frozen) external {
+        _checkAccessAllowed("setDeployerFrozen(address,bool)");
+
+        Pool storage pool = pools[comptroller];
+        if (pool.status == PoolStatus.None) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        pool.deployerFrozen = frozen;
+
+        emit DeployerFrozenUpdated(comptroller, frozen);
     }
 
     /*** Governance functions ***/
@@ -447,6 +560,35 @@ contract SpokePoolManager is
     }
 
     /**
+     * @dev Checks a live pool against a tier: every collateral market's collateral factor and liquidation threshold
+     * within the tier, the loan markets' supply caps within the tier's liquidity in USD, and no bad debt in any market
+     * @param comptroller The pool's comptroller
+     * @param tier The tier
+     * @custom:error ExceedsTierLimit is thrown when a parameter or the loan liquidity does not fit the tier
+     * @custom:error BadDebtOutstanding is thrown when a market has bad debt
+     */
+    function _checkPoolFitsTier(address comptroller, Tier storage tier) internal view {
+        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = markets.length;
+        for (uint256 i; i < marketCount; ++i) {
+            address vToken = address(markets[i]);
+            if (!isLoanMarket[vToken]) {
+                (bool isListed, uint256 collateralFactor, uint256 liquidationThreshold) = SpokeComptroller(comptroller)
+                    .markets(vToken);
+                if (isListed) {
+                    _checkCollateralParams(tier, collateralFactor, liquidationThreshold);
+                }
+            }
+            if (markets[i].badDebt() != 0) {
+                revert BadDebtOutstanding(vToken);
+            }
+        }
+        if (_loanLiquidityUsd(comptroller) > tier.maxLiquidityUsd) {
+            revert ExceedsTierLimit();
+        }
+    }
+
+    /**
      * @dev Checks a collateral factor and liquidation threshold against a tier's bounds
      * @param tier The tier
      * @param collateralFactor The collateral factor, scaled by 1e18
@@ -550,11 +692,15 @@ contract SpokePoolManager is
      * @param comptroller The pool's comptroller
      * @return pool The pool's storage
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      */
     function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
         pool = pools[comptroller];
         if (pool.deployer != msg.sender) {
             revert NotDeployer(comptroller, msg.sender);
+        }
+        if (pool.deployerFrozen) {
+            revert DeployerFrozen(comptroller);
         }
     }
 

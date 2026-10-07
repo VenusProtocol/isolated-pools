@@ -45,9 +45,9 @@ library SpokeProposalBuilder {
     /// @dev Most actions a proposal adds per new market: a loan market's listing and Hub registration
     uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
 
-    /// @dev Actions of a pool-creation proposal besides its markets': the 8 role grants, `createPool`, `acceptOwnership`
+    /// @dev Actions of a pool-creation proposal besides its markets': the 11 role grants, `createPool`, `acceptOwnership`
     /// and `addPool`
-    uint256 internal constant POOL_CREATION_ACTIONS = 11;
+    uint256 internal constant POOL_CREATION_ACTIONS = 14;
 
     /**
      * @notice Builds the actions of a request's pool-creation proposal, in execution order: the pool's role grants,
@@ -244,8 +244,8 @@ library SpokeProposalBuilder {
     }
 
     /**
-     * @dev Adds the grants a new pool needs on its comptroller: the six setters the registry drives while listing and
-     * the allowlist functions no wildcard grants the executor
+     * @dev Adds the grants a new pool needs on its comptroller: the six setters the registry drives while listing,
+     * the allowlist functions no wildcard grants the executor, and the setters the manager drives for the deployer
      * @param proposal The proposal to add to
      * @param manager The manager
      * @param comptroller The pool's comptroller
@@ -264,6 +264,10 @@ library SpokeProposalBuilder {
 
         _addGrant(proposal, acm, comptroller, "setSupplyAllowlistEnabled(address,bool)", executor);
         _addGrant(proposal, acm, comptroller, "setAllowedSupplier(address,address,bool)", executor);
+
+        _addGrant(proposal, acm, comptroller, "setCollateralFactor(address,uint256,uint256)", address(manager));
+        _addGrant(proposal, acm, comptroller, "setMarketSupplyCaps(address[],uint256[])", address(manager));
+        _addGrant(proposal, acm, comptroller, "setMarketBorrowCaps(address[],uint256[])", address(manager));
     }
 
     /**
