@@ -22,7 +22,12 @@ contract SpokePoolManagerStorage {
     /// @notice Lifecycle of a pool
     enum PoolStatus {
         None,
-        Live
+        Live,
+        ExitRequested,
+        ExitApproved,
+        WindingDown,
+        Closed,
+        HandedOver
     }
 
     /// @notice Limits a pool of a tier is created and tuned within
@@ -112,6 +117,8 @@ contract SpokePoolManagerStorage {
         uint256 tierId;
         // XVS still locked for the pool
         uint256 lockedStake;
+        // When the exit's first proposal executed and the repayment window opened
+        uint256 windDownStartedAt;
     }
 
     /// @notice GovernorBravo `ProposalType.NORMAL`, the route the manager proposes on
@@ -134,6 +141,14 @@ contract SpokePoolManagerStorage {
 
     /// @notice Minimum USD value of each seed, scaled by 1e18
     uint256 public minSeedUsd;
+
+    /// @notice Time borrowers have to repay after an exit's first proposal executes, in seconds
+    uint256 public repaymentWindow;
+
+    /// @notice Borrows and bad debt a wound-down pool may still hold when its stake is released, in USD scaled by 1e18.
+    ///   Interest rounding can leave `totalBorrows` above the sum of the accounts' borrows with no account left to repay
+    ///   it, and bad debt worth less than one unit of XVS cannot be covered
+    uint256 public maxResidualDebtUsd;
 
     /// @notice Most markets a request may add, so its proposal fits GovernorBravo's action limit
     uint256 public maxMarketsPerRequest;
@@ -164,5 +179,5 @@ contract SpokePoolManagerStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[39] private __gap;
+    uint256[37] private __gap;
 }

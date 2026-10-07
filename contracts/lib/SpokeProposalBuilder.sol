@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
+import { Action } from "../ComptrollerInterface.sol";
 import { PoolRegistry } from "../Pool/PoolRegistry.sol";
 import { SpokePoolFactory } from "../Spoke/OpenSpokePool/SpokePoolFactory.sol";
 import { SpokePoolManager } from "../Spoke/OpenSpokePool/SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "../Spoke/OpenSpokePool/SpokePoolManagerStorage.sol";
+import { SpokeComptroller } from "../Spoke/SpokeComptroller.sol";
+import { ISpokePoolManager } from "../Spoke/interfaces/ISpokePoolManager.sol";
 import { IYieldGroup } from "../Spoke/interfaces/IYieldGroup.sol";
 import { VToken } from "../VToken.sol";
 import { EXP_SCALE } from "./constants.sol";
@@ -12,9 +15,9 @@ import { EXP_SCALE } from "./constants.sol";
 /**
  * @title SpokeProposalBuilder
  * @author Venus
- * @notice Builds the actions of the governance proposals `SpokePoolManager` submits: creating a pool and adding markets
- * to a pool. The manager links it and passes itself, and the builder reads the manager's configuration through its
- * getters.
+ * @notice Builds the actions of the governance proposals `SpokePoolManager` submits: creating a pool, adding markets to
+ * a pool, and the two proposals of an exit. The manager links it and passes itself, and the builder reads the
+ * manager's configuration through its getters.
  */
 library SpokeProposalBuilder {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
@@ -45,9 +48,9 @@ library SpokeProposalBuilder {
     /// @dev Most actions a proposal adds per new market: a loan market's listing and Hub registration
     uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
 
-    /// @dev Actions of a pool-creation proposal besides its markets': the 11 role grants, `createPool`, `acceptOwnership`
+    /// @dev Actions of a pool-creation proposal besides its markets': the 12 role grants, `createPool`, `acceptOwnership`
     /// and `addPool`
-    uint256 internal constant POOL_CREATION_ACTIONS = 14;
+    uint256 internal constant POOL_CREATION_ACTIONS = 15;
 
     /**
      * @notice Builds the actions of a request's pool-creation proposal, in execution order: the pool's role grants,
@@ -88,6 +91,45 @@ library SpokeProposalBuilder {
         SpokePoolManagerStorage.PoolParams calldata params
     ) external view returns (address[] memory targets, string[] memory signatures, bytes[] memory calldatas) {
         return _toArrays(_marketAdditionProposal(manager, requestId, comptroller, params));
+    }
+
+    /**
+     * @notice Builds the actions of an exit's first proposal: pause minting, borrowing and entering markets and zero the
+     *   supply and borrow caps on every listed market, zero each collateral market's collateral factor and lower its
+     *   liquidation threshold, then open the repayment window in the manager
+     * @param manager The manager
+     * @param comptroller The pool's comptroller
+     * @param liquidationThresholds The new liquidation threshold of each market, in `getAllMarkets` order, scaled by
+     *   1e18; each at most the market's current one. Entries of loan markets and unlisted markets are ignored
+     * @return targets The contract each action calls
+     * @return signatures The function signature each action calls
+     * @return calldatas The ABI-encoded arguments of each action
+     * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's markets
+     * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
+     */
+    function buildExitProposal(
+        SpokePoolManager manager,
+        address comptroller,
+        uint256[] calldata liquidationThresholds
+    ) external view returns (address[] memory targets, string[] memory signatures, bytes[] memory calldatas) {
+        return _toArrays(_exitProposal(manager, comptroller, liquidationThresholds));
+    }
+
+    /**
+     * @notice Builds the actions of an exit's second proposal: zero every collateral market's collateral factor and
+     *   liquidation threshold, and enable forced liquidation on every loan market with borrows
+     * @param manager The manager
+     * @param comptroller The pool's comptroller
+     * @return targets The contract each action calls
+     * @return signatures The function signature each action calls
+     * @return calldatas The ABI-encoded arguments of each action
+     * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
+     */
+    function buildForceCloseProposal(
+        SpokePoolManager manager,
+        address comptroller
+    ) external view returns (address[] memory targets, string[] memory signatures, bytes[] memory calldatas) {
+        return _toArrays(_forceCloseProposal(manager, comptroller));
     }
 
     /**
@@ -147,6 +189,75 @@ library SpokeProposalBuilder {
     }
 
     /**
+     * @dev Builds an exit's first proposal
+     * @param manager The manager
+     * @param comptroller The pool's comptroller
+     * @param liquidationThresholds The new liquidation threshold of each market, in `getAllMarkets` order
+     * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's markets
+     * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
+     * @return proposal The proposal's actions
+     */
+    function _exitProposal(
+        SpokePoolManager manager,
+        address comptroller,
+        uint256[] calldata liquidationThresholds
+    ) private view returns (Proposal memory proposal) {
+        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = markets.length;
+        if (liquidationThresholds.length != marketCount) {
+            revert ISpokePoolManager.InvalidArrayLength();
+        }
+        proposal = _newProposal(marketCount + 4);
+
+        VToken[] memory listed = _listedMarkets(comptroller, markets);
+        uint256[] memory zeroCaps = new uint256[](listed.length);
+        _add(
+            proposal,
+            comptroller,
+            "setActionsPaused(address[],uint8[],bool)",
+            abi.encode(listed, _exitPausedActions(), true)
+        );
+        _add(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
+        _add(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
+        for (uint256 i; i < marketCount; ++i) {
+            _addExitCollateralFactor(proposal, manager, comptroller, markets[i], liquidationThresholds[i]);
+        }
+        _add(proposal, address(manager), "startWindDown(address)", abi.encode(comptroller));
+    }
+
+    /**
+     * @dev Builds an exit's second proposal
+     * @param manager The manager
+     * @param comptroller The pool's comptroller
+     * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
+     * @return proposal The proposal's actions
+     */
+    function _forceCloseProposal(
+        SpokePoolManager manager,
+        address comptroller
+    ) private view returns (Proposal memory proposal) {
+        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = markets.length;
+        proposal = _newProposal(marketCount);
+        bool hasBorrows;
+        for (uint256 i; i < marketCount; ++i) {
+            VToken vToken = markets[i];
+            if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+                continue;
+            }
+            if (!manager.isLoanMarket(address(vToken))) {
+                _add(proposal, comptroller, "setCollateralFactor(address,uint256,uint256)", abi.encode(vToken, 0, 0));
+            } else if (vToken.totalBorrows() != 0) {
+                hasBorrows = true;
+                _add(proposal, comptroller, "setForcedLiquidation(address,bool)", abi.encode(vToken, true));
+            }
+        }
+        if (!hasBorrows) {
+            revert ISpokePoolManager.NoOutstandingBorrows();
+        }
+    }
+
+    /**
      * @dev Adds each new market's listing with its seed, and each new loan market's Hub registration
      * @param proposal The proposal to add to
      * @param manager The manager
@@ -170,6 +281,38 @@ library SpokeProposalBuilder {
                 _addHubRegistration(proposal, manager, comptroller, markets[i].asset, vTokens[i]);
             }
         }
+    }
+
+    /**
+     * @dev Adds the collateral factor an exit's first proposal sets on a listed collateral market: zero, with the
+     * liquidation threshold lowered to the given value
+     * @param proposal The proposal to add to
+     * @param manager The manager
+     * @param comptroller The pool's comptroller
+     * @param market The market; loan markets and unlisted markets are skipped
+     * @param liquidationThreshold The market's new liquidation threshold, scaled by 1e18
+     * @custom:error InvalidLiquidationThreshold is thrown when the threshold is above the market's current one
+     */
+    function _addExitCollateralFactor(
+        Proposal memory proposal,
+        SpokePoolManager manager,
+        address comptroller,
+        VToken market,
+        uint256 liquidationThreshold
+    ) private view {
+        if (manager.isLoanMarket(address(market)) || !SpokeComptroller(comptroller).isMarketListed(market)) {
+            return;
+        }
+        (, , uint256 currentLiquidationThreshold) = SpokeComptroller(comptroller).markets(address(market));
+        if (liquidationThreshold > currentLiquidationThreshold) {
+            revert ISpokePoolManager.InvalidLiquidationThreshold(address(market));
+        }
+        _add(
+            proposal,
+            comptroller,
+            "setCollateralFactor(address,uint256,uint256)",
+            abi.encode(market, 0, liquidationThreshold)
+        );
     }
 
     /**
@@ -245,7 +388,8 @@ library SpokeProposalBuilder {
 
     /**
      * @dev Adds the grants a new pool needs on its comptroller: the six setters the registry drives while listing,
-     * the allowlist functions no wildcard grants the executor, and the setters the manager drives for the deployer
+     * the allowlist and forced-liquidation functions no wildcard grants the executor, and the setters the
+     * manager drives for the deployer
      * @param proposal The proposal to add to
      * @param manager The manager
      * @param comptroller The pool's comptroller
@@ -264,6 +408,7 @@ library SpokeProposalBuilder {
 
         _addGrant(proposal, acm, comptroller, "setSupplyAllowlistEnabled(address,bool)", executor);
         _addGrant(proposal, acm, comptroller, "setAllowedSupplier(address,address,bool)", executor);
+        _addGrant(proposal, acm, comptroller, "setForcedLiquidation(address,bool)", executor);
 
         _addGrant(proposal, acm, comptroller, "setCollateralFactor(address,uint256,uint256)", address(manager));
         _addGrant(proposal, acm, comptroller, "setMarketSupplyCaps(address[],uint256[])", address(manager));
@@ -277,6 +422,41 @@ library SpokeProposalBuilder {
      */
     function _executor(SpokePoolManager manager) private view returns (address) {
         return manager.GOVERNOR_BRAVO().proposalTimelocks(manager.NORMAL_PROPOSAL());
+    }
+
+    /**
+     * @dev Returns the listed markets of a pool
+     * @param comptroller The pool's comptroller
+     * @param markets The pool's markets, listed or not
+     * @return listed The listed markets
+     */
+    function _listedMarkets(
+        address comptroller,
+        VToken[] memory markets
+    ) private view returns (VToken[] memory listed) {
+        uint256 marketCount = markets.length;
+        listed = new VToken[](marketCount);
+        uint256 listedCount;
+        for (uint256 i; i < marketCount; ++i) {
+            if (SpokeComptroller(comptroller).isMarketListed(markets[i])) {
+                listed[listedCount++] = markets[i];
+            }
+        }
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            mstore(listed, listedCount)
+        }
+    }
+
+    /**
+     * @dev Returns the actions an exit's first proposal pauses: minting, borrowing and entering markets
+     * @return actions The actions
+     */
+    function _exitPausedActions() private pure returns (Action[] memory actions) {
+        actions = new Action[](3);
+        actions[0] = Action.MINT;
+        actions[1] = Action.BORROW;
+        actions[2] = Action.ENTER_MARKET;
     }
 
     /**

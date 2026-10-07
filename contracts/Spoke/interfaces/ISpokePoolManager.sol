@@ -49,6 +49,20 @@ interface ISpokePoolManager {
     event MinSeedUsdUpdated(uint256 oldMinSeedUsd, uint256 newMinSeedUsd);
 
     /**
+     * @notice Emitted when the repayment window is changed
+     * @param oldRepaymentWindow The previous window, in seconds
+     * @param newRepaymentWindow The new window, in seconds
+     */
+    event RepaymentWindowUpdated(uint256 oldRepaymentWindow, uint256 newRepaymentWindow);
+
+    /**
+     * @notice Emitted when the residual debt a wound-down pool may hold is changed
+     * @param oldMaxResidualDebtUsd The previous maximum, in USD scaled by 1e18
+     * @param newMaxResidualDebtUsd The new maximum, in USD scaled by 1e18
+     */
+    event MaxResidualDebtUsdUpdated(uint256 oldMaxResidualDebtUsd, uint256 newMaxResidualDebtUsd);
+
+    /**
      * @notice Emitted when the most markets a request may add is changed
      * @param oldMaxMarketsPerRequest The previous maximum
      * @param newMaxMarketsPerRequest The new maximum
@@ -120,6 +134,48 @@ interface ISpokePoolManager {
      * @param tierId The pool's new tier
      */
     event TierChanged(address indexed comptroller, uint256 indexed tierId);
+
+    /**
+     * @notice Emitted when a deployer asks to exit its pool
+     * @param comptroller The pool's comptroller
+     */
+    event ExitRequested(address indexed comptroller);
+
+    /**
+     * @notice Emitted when the Venus team approves an exit and its first proposal is submitted
+     * @param comptroller The pool's comptroller
+     * @param proposalId The exit's first proposal
+     */
+    event ExitProposed(address indexed comptroller, uint256 proposalId);
+
+    /**
+     * @notice Emitted when an exit's first proposal executes and the repayment window opens
+     * @param comptroller The pool's comptroller
+     */
+    event WindDownStarted(address indexed comptroller);
+
+    /**
+     * @notice Emitted when the proposal that force-closes the remaining borrows is submitted
+     * @param comptroller The pool's comptroller
+     * @param proposalId The exit's second proposal
+     */
+    event ForceCloseProposed(address indexed comptroller, uint256 proposalId);
+
+    /**
+     * @notice Emitted when a wound-down pool's stake is unlocked
+     * @param comptroller The pool's comptroller
+     * @param deployer The pool's deployer
+     * @param amount The XVS unlocked
+     */
+    event StakeReleased(address indexed comptroller, address indexed deployer, uint256 amount);
+
+    /**
+     * @notice Emitted when a pool is handed over to the DAO and its stake is unlocked
+     * @param comptroller The pool's comptroller
+     * @param deployer The pool's deployer
+     * @param amount The XVS unlocked
+     */
+    event PoolHandedOver(address indexed comptroller, address indexed deployer, uint256 amount);
 
     /**
      * @notice Thrown when `completeRequest` is called by an account other than the factory
@@ -208,7 +264,7 @@ interface ISpokePoolManager {
     error TransferAmountMismatch(address token);
 
     /**
-     * @notice Thrown when the caller is not the pool's deployer
+     * @notice Thrown when the caller is not the pool's deployer, or the deployer's rights have ended
      * @param comptroller The pool's comptroller
      * @param caller The caller
      */
@@ -244,17 +300,38 @@ interface ISpokePoolManager {
      */
     error InvalidPoolStatus(address comptroller);
 
+    /// @notice Thrown when the repayment window has not elapsed
+    error RepaymentWindowNotElapsed();
+
+    /**
+     * @notice Thrown when a pool's borrows and bad debt exceed `maxResidualDebtUsd`
+     * @param debtUsd The pool's borrows and bad debt, in USD scaled by 1e18
+     */
+    error OutstandingDebt(uint256 debtUsd);
+
     /**
      * @notice Thrown when a pool changes tier while a market still has bad debt
      * @param vToken The market
      */
     error BadDebtOutstanding(address vToken);
 
+    /// @notice Thrown when the liquidation thresholds of an exit do not match the pool's markets
+    error InvalidArrayLength();
+
+    /**
+     * @notice Thrown when an exit would raise a market's liquidation threshold
+     * @param vToken The market
+     */
+    error InvalidLiquidationThreshold(address vToken);
+
+    /// @notice Thrown when no loan market has borrows left to force-close
+    error NoOutstandingBorrows();
+
     /**
      * @notice Requests a new pool of a tier, or new markets in the caller's pool. A request for a new pool locks the
      *   tier's stake of the caller's XVSVault stake, and every request escrows each market's seed from the caller. The
      *   stake and seeds are returned if the request is rejected; otherwise the seeds list the markets and the stake
-     *   stays locked for the pool
+     *   stays locked until the pool is wound down or handed over
      * @param comptroller The pool to add the markets to, or zero for a new pool
      * @param tierId The tier of a new pool; ignored for new markets, which follow their pool's tier
      * @param params The requested pool; only `params.markets` is used for new markets. The Venus team may change the
@@ -263,8 +340,9 @@ interface ISpokePoolManager {
      * @custom:event Emits RequestSubmitted; the vault emits StakeLocked for a new pool
      * @custom:error TooManyMarkets is thrown when the request has more than `maxMarketsPerRequest` markets
      * @custom:error InvalidTier is thrown when the tier of a new pool is not set
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, MissingSpokeSource or ExceedsTierLimit is thrown
      *   when the markets do not fit the tier
      * @custom:error SeedBelowMinimum is thrown when a seed is worth less than `minSeedUsd`
@@ -285,13 +363,13 @@ interface ISpokePoolManager {
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
      * @custom:event The comptroller emits NewCollateralFactor and NewLiquidationThreshold
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      * @custom:error NotCollateralMarket is thrown when the market is a loan market
      * @custom:error ExceedsTierLimit is thrown when either value is beyond the tier's maximum, or the liquidation
      *   threshold is below the tier's minimum
      * @custom:error The comptroller's `setCollateralFactor` errors, such as MarketNotListed for a market of another pool
-     * @custom:access Only the pool's deployer
+     * @custom:access Only the pool's deployer, until the Venus team approves its exit
      */
     function setCollateralFactor(
         address comptroller,
@@ -308,12 +386,12 @@ interface ISpokePoolManager {
      * @param vTokens The markets
      * @param newSupplyCaps The new supply caps, in each market's underlying
      * @custom:event The comptroller emits NewSupplyCap for each market
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      * @custom:error MarketNotInPool is thrown when a market is not listed in the pool
      * @custom:error ExceedsTierLimit is thrown when the loan markets' caps exceed the tier's liquidity
      * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
-     * @custom:access Only the pool's deployer
+     * @custom:access Only the pool's deployer, until the Venus team approves its exit
      */
     function setMarketSupplyCaps(
         address comptroller,
@@ -328,11 +406,11 @@ interface ISpokePoolManager {
      * @param vTokens The loan markets
      * @param newBorrowCaps The new borrow caps, in each market's underlying
      * @custom:event The comptroller emits NewBorrowCap for each market
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      * @custom:error NotLoanMarket is thrown when a market is not a loan market of the pool
      * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
-     * @custom:access Only the pool's deployer
+     * @custom:access Only the pool's deployer, until the Venus team approves its exit
      */
     function setMarketBorrowCaps(
         address comptroller,
@@ -346,12 +424,25 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param newTierId The requested tier
      * @custom:event Emits TierChangeRequested
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error InvalidTier is thrown when the tier is not set or is the pool's current tier
      * @custom:access Only the pool's deployer
      */
     function requestTierChange(address comptroller, uint256 newTierId) external;
+
+    /**
+     * @notice Asks the Venus team to wind the deployer's pool down. The deployer keeps its rights until the team
+     *   approves the exit with `proposeExit`
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits ExitRequested
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
+     * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
+     * @custom:access Only the pool's deployer
+     */
+    function requestExit(address comptroller) external;
 
     /**
      * @notice Proposes a request to GovernorBravo with its final parameters, agreed with the project off-chain. A
@@ -406,6 +497,54 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function setPoolTier(address comptroller, uint256 newTierId) external;
+
+    /**
+     * @notice Approves a pool's exit, ending the deployer's rights, and submits the exit's first proposal. It pauses
+     *   minting, borrowing and entering markets and zeroes the supply and borrow caps on every market, sets each
+     *   collateral market's collateral factor to zero and its liquidation threshold to the given value, and starts the
+     *   repayment window. Borrowers can still repay, redeem and be liquidated. Called again if that proposal fails
+     * @param comptroller The pool's comptroller
+     * @param liquidationThresholds The new liquidation threshold of each market, in `getAllMarkets` order, scaled by
+     *   1e18; each at most the market's current one. Entries of loan markets and unlisted markets are ignored
+     * @param description The proposal's description
+     * @return proposalId The id of the proposal
+     * @custom:event Emits ExitProposed
+     * @custom:error InvalidPoolStatus is thrown unless the deployer asked to exit and the exit is not winding down yet
+     * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's markets
+     * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function proposeExit(
+        address comptroller,
+        uint256[] calldata liquidationThresholds,
+        string calldata description
+    ) external returns (uint256 proposalId);
+
+    /**
+     * @notice Submits the exit's second proposal once the repayment window has elapsed with borrows left: collateral
+     *   factors and liquidation thresholds go to zero and forced liquidation is enabled on every loan market with
+     *   borrows, so liquidators can close them in full. Called again if that proposal fails
+     * @param comptroller The pool's comptroller
+     * @param description The proposal's description
+     * @return proposalId The id of the proposal
+     * @custom:event Emits ForceCloseProposed
+     * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
+     * @custom:error RepaymentWindowNotElapsed is thrown before the repayment window ends
+     * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function proposeForceClose(address comptroller, string calldata description) external returns (uint256 proposalId);
+
+    /**
+     * @notice Unlocks a wound-down pool's stake once its borrows and bad debt are worth at most `maxResidualDebtUsd`.
+     *   The pool stays paused
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits StakeReleased; the vault emits StakeUnlocked
+     * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
+     * @custom:error OutstandingDebt is thrown when the pool's borrows and bad debt exceed `maxResidualDebtUsd`
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function releaseStake(address comptroller) external;
 
     /**
      * @notice Freezes or unfreezes a pool deployer's functions, e.g. while a compromised or misbehaving project is
@@ -468,6 +607,22 @@ interface ISpokePoolManager {
     function setMinSeedUsd(uint256 newMinSeedUsd) external;
 
     /**
+     * @notice Sets the time borrowers have to repay after an exit's first proposal executes
+     * @param newRepaymentWindow The new window, in seconds
+     * @custom:event Emits RepaymentWindowUpdated
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setRepaymentWindow(uint256 newRepaymentWindow) external;
+
+    /**
+     * @notice Sets the borrows and bad debt a wound-down pool may still hold when its stake is released
+     * @param newMaxResidualDebtUsd The new maximum, in USD scaled by 1e18
+     * @custom:event Emits MaxResidualDebtUsdUpdated
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setMaxResidualDebtUsd(uint256 newMaxResidualDebtUsd) external;
+
+    /**
      * @notice Sets the most markets a request may add. It should keep the largest request's proposal within
      *   GovernorBravo's action limit
      * @param newMaxMarketsPerRequest The new maximum
@@ -475,6 +630,26 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setMaxMarketsPerRequest(uint256 newMaxMarketsPerRequest) external;
+
+    /**
+     * @notice Opens the repayment window of an approved exit. Called by the exit's first proposal as its last action
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits WindDownStarted
+     * @custom:error InvalidPoolStatus is thrown when the exit is not approved
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function startWindDown(address comptroller) external;
+
+    /**
+     * @notice Hands a pool over to the DAO as an official pool: the deployer's rights end and its stake is unlocked,
+     *   while the pool keeps running. The same proposal should revoke the manager's roles on the pool and point each
+     *   market's `shortfall` at whatever recovers its bad debt from then on
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits PoolHandedOver; the vault emits StakeUnlocked
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist, is closed or was handed over
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function releaseToDao(address comptroller) external;
 
     /**
      * @notice Completes a proposed request once the factory deployed its contracts: records the new pool and starts its
