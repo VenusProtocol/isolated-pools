@@ -142,7 +142,7 @@ interface ISpokePoolManager {
     event ExitRequested(address indexed comptroller);
 
     /**
-     * @notice Emitted when the Venus team approves an exit and its first proposal is submitted
+     * @notice Emitted when the Venus team starts an exit by submitting its first proposal
      * @param comptroller The pool's comptroller
      * @param proposalId The exit's first proposal
      */
@@ -384,7 +384,7 @@ interface ISpokePoolManager {
      * @custom:error ExceedsTierLimit is thrown when either value is beyond the tier's maximum, or the liquidation
      *   threshold is below the tier's minimum
      * @custom:error The comptroller's `setCollateralFactor` errors, such as MarketNotListed for a market of another pool
-     * @custom:access Only the pool's deployer, until the Venus team approves its exit
+     * @custom:access Only the pool's deployer, until the Venus team starts its exit
      */
     function setCollateralFactor(
         address comptroller,
@@ -406,7 +406,7 @@ interface ISpokePoolManager {
      * @custom:error MarketNotInPool is thrown when a market is not listed in the pool
      * @custom:error ExceedsTierLimit is thrown when the loan markets' caps exceed the tier's liquidity
      * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
-     * @custom:access Only the pool's deployer, until the Venus team approves its exit
+     * @custom:access Only the pool's deployer, until the Venus team starts its exit
      */
     function setMarketSupplyCaps(
         address comptroller,
@@ -425,7 +425,7 @@ interface ISpokePoolManager {
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
      * @custom:error NotLoanMarket is thrown when a market is not a loan market of the pool
      * @custom:error InvalidArrayLength is thrown by the comptroller when the arrays are empty or differ in length
-     * @custom:access Only the pool's deployer, until the Venus team approves its exit
+     * @custom:access Only the pool's deployer, until the Venus team starts its exit
      */
     function setMarketBorrowCaps(
         address comptroller,
@@ -514,17 +514,19 @@ interface ISpokePoolManager {
     function setPoolTier(address comptroller, uint256 newTierId) external;
 
     /**
-     * @notice Approves a pool's exit, ending the deployer's rights, and submits the exit's first proposal. It pauses
-     *   minting, borrowing and entering markets and zeroes the supply and borrow caps on every market, sets each
-     *   collateral market's collateral factor to zero and its liquidation threshold to the given value, and starts the
-     *   repayment window. Borrowers can still repay, redeem and be liquidated. Called again if that proposal fails
+     * @notice Starts a pool's exit, whether or not its deployer asked for it with `requestExit`, ending the deployer's
+     *   rights, and submits the exit's first proposal. It pauses minting, borrowing and entering markets and zeroes the
+     *   supply and borrow caps on every market, sets each collateral market's collateral factor to zero and its
+     *   liquidation threshold to the given value, and starts the repayment window. Borrowers can still repay, redeem
+     *   and be liquidated. Called again if that proposal fails
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds The new liquidation threshold of each market, in `getAllMarkets` order, scaled by
      *   1e18; each at most the market's current one. Entries of loan markets and unlisted markets are ignored
      * @param description The proposal's description
      * @return proposalId The id of the proposal
      * @custom:event Emits ExitProposed
-     * @custom:error InvalidPoolStatus is thrown unless the deployer asked to exit and the exit is not winding down yet
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist or is already winding down, closed or
+     *   handed over
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
      * @custom:access Controlled by AccessControlManager, granted to the Venus team

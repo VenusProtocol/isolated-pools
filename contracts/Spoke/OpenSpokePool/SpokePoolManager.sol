@@ -294,7 +294,8 @@ contract SpokePoolManager is
         _checkAccessAllowed("proposeExit(address,uint256[],string)");
 
         Pool storage pool = pools[comptroller];
-        if (pool.status != PoolStatus.ExitRequested && pool.status != PoolStatus.ExitApproved) {
+        PoolStatus status = pool.status;
+        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested && status != PoolStatus.ExitApproved) {
             revert InvalidPoolStatus(comptroller);
         }
         (address[] memory targets, string[] memory signatures, bytes[] memory calldatas) = SpokeProposalBuilder
