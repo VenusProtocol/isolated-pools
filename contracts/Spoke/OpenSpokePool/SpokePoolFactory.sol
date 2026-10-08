@@ -12,11 +12,12 @@ import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
+import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 
 /**
  * @title SpokePoolFactory
  * @author Venus
- * @notice Deploys the contracts of an open spoke pool when a proposal `SpokePoolManager` submitted executes. `createPool`
+ * @notice Deploys the contracts of an open spoke pool when a proposal `SpokePoolProposer` submitted executes. `createPool`
  * puts a new pool's comptroller and markets behind the spoke beacons, points the comptroller at both oracles and
  * nominates the proposal's executor as its owner; `addMarkets` deploys new markets of an existing pool. Both then
  * complete the request in the manager. Every proxy is created with CREATE2 from a salt derived from the request id, so
@@ -26,7 +27,7 @@ contract SpokePoolFactory {
     /// @notice Loop limit every comptroller the factory deploys is initialized with
     uint256 public constant MAX_LOOPS_LIMIT = 100;
 
-    /// @notice The manager that proposes requests and completes them
+    /// @notice The manager that completes requests
     SpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
     /// @notice Beacon the comptroller proxies point at
@@ -38,8 +39,8 @@ contract SpokePoolFactory {
     /// @notice ProtocolShareReserve every market sends its income to
     address payable public immutable PROTOCOL_SHARE_RESERVE;
 
-    /// @notice The `shortfall` of every market, through which bad debt is covered
-    address public immutable SHORTFALL_RECEIVER;
+    /// @notice The `shortfall` of every market, through which bad debt is recovered
+    address public immutable SHORTFALL;
 
     /**
      * @notice Emitted when a pool is deployed for a request
@@ -58,11 +59,11 @@ contract SpokePoolFactory {
     error Unauthorized(address sender, address calledContract, string methodSignature);
 
     /**
-     * @param spokePoolManager The manager that proposes requests and completes them
+     * @param spokePoolManager The manager that completes requests
      * @param comptrollerBeacon Beacon the comptroller proxies point at
      * @param vTokenBeacon Beacon the vToken proxies point at
      * @param protocolShareReserve ProtocolShareReserve every market sends its income to
-     * @param shortfallReceiver The `shortfall` of every market, through which bad debt is covered
+     * @param shortfall The `shortfall` of every market
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
      */
     constructor(
@@ -70,19 +71,19 @@ contract SpokePoolFactory {
         address comptrollerBeacon,
         address vTokenBeacon,
         address payable protocolShareReserve,
-        address shortfallReceiver
+        address shortfall
     ) {
         ensureNonzeroAddress(address(spokePoolManager));
         ensureNonzeroAddress(comptrollerBeacon);
         ensureNonzeroAddress(vTokenBeacon);
         ensureNonzeroAddress(protocolShareReserve);
-        ensureNonzeroAddress(shortfallReceiver);
+        ensureNonzeroAddress(shortfall);
 
         SPOKE_POOL_MANAGER = spokePoolManager;
         COMPTROLLER_BEACON = comptrollerBeacon;
         VTOKEN_BEACON = vTokenBeacon;
         PROTOCOL_SHARE_RESERVE = protocolShareReserve;
-        SHORTFALL_RECEIVER = shortfallReceiver;
+        SHORTFALL = shortfall;
     }
 
     /*** Governance functions ***/
@@ -92,8 +93,8 @@ contract SpokePoolFactory {
      *   the manager
      * @dev The caller is the proposal's executor. The comptroller is owned by this contract while it sets the oracles,
      * then the executor is nominated and the proposal's next action calls `acceptOwnership`. Markets are owned by the
-     * executor from the start and name the shortfall receiver as their `shortfall`, so bad debt is only recovered through
-     * it. The manager sends the escrowed seeds to the executor, which lists the markets with them in the same proposal.
+     * executor from the start and name `SHORTFALL` as their `shortfall`, so bad debt is only recovered through it. The
+     * manager sends the request's seeds to the executor, which lists the markets with them in the same proposal.
      * @param requestId The request
      * @param params The pool parameters the proposal executes
      * @return comptroller The deployed comptroller
@@ -101,13 +102,13 @@ contract SpokePoolFactory {
      * @custom:event Emits PoolCreated
      * @custom:error Unauthorized is thrown when the AccessControlManager does not allow the caller
      * @custom:error InvalidRequestStatus, SeedsMismatch, InvalidPoolStatus or a market validation error is thrown by the
-     *   manager when the request is not proposed, the seeds are not the escrowed ones, or its markets no longer fit
+     *   manager when the request is not proposed, the seeds are not the ones pulled at proposal, or its markets no longer fit
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
-     *   manager's proposals
+     *   proposer's proposals
      */
     function createPool(
         uint256 requestId,
-        SpokePoolManager.PoolParams calldata params
+        SpokePoolManagerStorage.PoolParams calldata params
     ) external returns (address comptroller, address[] memory vTokens) {
         address accessControlManager = _checkAllowed("createPool(uint256,PoolParams)");
         SpokePoolManager manager = SPOKE_POOL_MANAGER;
@@ -126,23 +127,23 @@ contract SpokePoolFactory {
     /**
      * @notice Deploys the markets of a proposed request for new markets in an existing pool, and completes the request
      *   in the manager
-     * @dev The caller is the proposal's executor; the markets are owned by it, name the shortfall receiver as their
-     * `shortfall`, and are listed with their seeds by the proposal's next actions
+     * @dev The caller is the proposal's executor; the markets are owned by it, name `SHORTFALL` as their `shortfall`,
+     * and are listed with their seeds by the proposal's next actions
      * @param requestId The request
      * @param comptroller The pool's comptroller
      * @param params The parameters the proposal executes; only `params.markets` is used
      * @return vTokens The deployed markets, in the order of `params.markets`
      * @custom:error Unauthorized is thrown when the AccessControlManager does not allow the caller
      * @custom:error InvalidRequestStatus, SeedsMismatch, RequestPoolMismatch, InvalidPoolStatus or a market validation
-     *   error is thrown by the manager when the request is not proposed for this pool, the seeds are not the escrowed
-     *   ones, the pool is no longer live or the markets no longer fit
+     *   error is thrown by the manager when the request is not proposed for this pool, the seeds are not the ones
+     *   pulled at proposal, the pool is no longer live or the markets no longer fit
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
-     *   manager's proposals
+     *   proposer's proposals
      */
     function addMarkets(
         uint256 requestId,
         address comptroller,
-        SpokePoolManager.PoolParams calldata params
+        SpokePoolManagerStorage.PoolParams calldata params
     ) external returns (address[] memory vTokens) {
         address accessControlManager = _checkAllowed("addMarkets(uint256,address,PoolParams)");
         vTokens = _deployMarkets(requestId, comptroller, params.markets, accessControlManager);
@@ -184,7 +185,7 @@ contract SpokePoolFactory {
     function _deployMarkets(
         uint256 requestId,
         address comptroller,
-        SpokePoolManager.MarketParams[] calldata markets,
+        SpokePoolManagerStorage.MarketParams[] calldata markets,
         address accessControlManager
     ) internal returns (address[] memory vTokens) {
         uint256 marketCount = markets.length;
@@ -196,7 +197,7 @@ contract SpokePoolFactory {
     }
 
     /**
-     * @dev Initializes one market, owned by the caller and naming the shortfall receiver as its `shortfall`
+     * @dev Initializes one market, owned by the caller and naming `SHORTFALL` as its `shortfall`
      * @param vToken The market's proxy
      * @param comptroller The pool's comptroller
      * @param market The market's parameters
@@ -205,7 +206,7 @@ contract SpokePoolFactory {
     function _initializeMarket(
         address vToken,
         address comptroller,
-        SpokePoolManager.MarketParams memory market,
+        SpokePoolManagerStorage.MarketParams memory market,
         address accessControlManager
     ) internal {
         VToken(vToken).initialize(
@@ -218,10 +219,7 @@ contract SpokePoolFactory {
             market.decimals,
             msg.sender,
             accessControlManager,
-            VTokenInterface.RiskManagementInit({
-                shortfall: SHORTFALL_RECEIVER,
-                protocolShareReserve: PROTOCOL_SHARE_RESERVE
-            }),
+            VTokenInterface.RiskManagementInit({ shortfall: SHORTFALL, protocolShareReserve: PROTOCOL_SHARE_RESERVE }),
             market.reserveFactor
         );
     }

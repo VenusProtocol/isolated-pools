@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { SpokePoolFactory } from "./SpokePoolFactory.sol";
-
 /**
  * @title SpokePoolManagerStorage
  * @author Venus
- * @notice Storage layout for the `SpokePoolManager` contract: its enums, structs, constants and state variables.
+ * @notice Storage layout for the `SpokePoolManager` contract: its enums, structs and state variables.
  */
 // solhint-disable-next-line max-states-count
 contract SpokePoolManagerStorage {
@@ -27,7 +25,7 @@ contract SpokePoolManagerStorage {
         ExitProposed,
         WindingDown,
         Closed,
-        HandedOver
+        TakenOver
     }
 
     /// @notice Limits a pool of a tier is created and tuned within
@@ -67,7 +65,7 @@ contract SpokePoolManagerStorage {
         uint256 borrowCap;
         // Reserve factor, scaled by 1e18
         uint256 reserveFactor;
-        // Initial supply escrowed from the project when the request is proposed, minted when the market is listed
+        // Initial supply pulled from the project when the request is proposed, minted when the market is listed
         uint256 seed;
         // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury. 0.1e18 burns 10%, as in
         // most Venus market listings
@@ -100,9 +98,9 @@ contract SpokePoolManagerStorage {
         // XVS locked for the request; zero for a request that adds markets
         uint256 stakeAmount;
         uint256 proposalId;
-        // Underlying asset of each market's seed escrowed for the proposal, in market order
+        // Underlying asset of each market's seed the manager holds for the proposal, in market order
         address[] seedAssets;
-        // Amount of each market's escrowed seed, in market order
+        // Amount of each market's seed, in market order
         uint256[] seedAmounts;
     }
 
@@ -110,8 +108,8 @@ contract SpokePoolManagerStorage {
     struct Pool {
         address deployer;
         PoolStatus status;
-        // True while the Venus team has frozen the deployer's functions
-        bool deployerFrozen;
+        // True while the Venus team has paused the deployer's actions
+        bool deployerActionsPaused;
         uint256 tierId;
         // XVS still locked for the pool
         uint256 lockedStake;
@@ -127,20 +125,8 @@ contract SpokePoolManagerStorage {
         uint256 scheduledAt;
     }
 
-    /// @notice GovernorBravo `ProposalType.NORMAL`, the route the manager proposes on
-    uint8 public constant NORMAL_PROPOSAL = 0;
-
-    /// @dev GovernorBravo `ProposalState.Canceled`
-    uint8 internal constant PROPOSAL_CANCELED = 2;
-
-    /// @dev GovernorBravo `ProposalState.Defeated`
-    uint8 internal constant PROPOSAL_DEFEATED = 3;
-
-    /// @dev GovernorBravo `ProposalState.Expired`
-    uint8 internal constant PROPOSAL_EXPIRED = 6;
-
     /// @notice The factory that deploys pools
-    SpokePoolFactory public factory;
+    address public factory;
 
     /// @notice The Hub adapter loan markets are registered with
     address public spokeAdapter;
@@ -171,10 +157,10 @@ contract SpokePoolManagerStorage {
     /// @notice Pools by comptroller
     mapping(address => Pool) public pools;
 
-    /// @notice Whether a market created through the manager is a loan market
+    /// @notice Whether a market created through the manager is a loan market, recorded when it is listed
     mapping(address => bool) public isLoanMarket;
 
-    /// @notice Requests by id; the getter leaves out the escrowed seeds, and the requested parameters are in
+    /// @notice Requests by id; the getter leaves out the seeds, and the requested parameters are in
     ///   `RequestSubmitted`
     mapping(uint256 => Request) public requests;
 
@@ -192,5 +178,5 @@ contract SpokePoolManagerStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[34] private __gap;
+    uint256[35] private __gap;
 }
