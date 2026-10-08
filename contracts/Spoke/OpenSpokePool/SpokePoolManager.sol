@@ -112,7 +112,7 @@ contract SpokePoolManager is
         if (comptroller == address(0)) {
             stakeAmount = _ensureTier(tierId).stakeAmount;
         } else {
-            tierId = _ensureLiveDeployer(comptroller).tierId;
+            tierId = _ensureDeployer(comptroller).tierId;
         }
         _validateMarkets(comptroller, tiers[tierId], params.markets);
 
@@ -140,17 +140,55 @@ contract SpokePoolManager is
         uint256 newCollateralFactorMantissa,
         uint256 newLiquidationThresholdMantissa
     ) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        if (isLoanMarket[address(vToken)]) {
-            revert NotCollateralMarket(address(vToken));
+        Tier storage tier = _ensureDeployerCollateralMarket(comptroller, vToken);
+        _checkCollateralParams(tier, newCollateralFactorMantissa, newLiquidationThresholdMantissa);
+        (, , uint256 liquidationThreshold) = SpokeComptroller(comptroller).markets(address(vToken));
+        if (newLiquidationThresholdMantissa < liquidationThreshold) {
+            revert InvalidLiquidationThreshold(address(vToken));
         }
-        _checkCollateralParams(tiers[pool.tierId], newCollateralFactorMantissa, newLiquidationThresholdMantissa);
 
         SpokeComptroller(comptroller).setCollateralFactor(
             vToken,
             newCollateralFactorMantissa,
             newLiquidationThresholdMantissa
         );
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function scheduleLiquidationThresholdDecrease(
+        address comptroller,
+        VToken vToken,
+        uint256 newLiquidationThresholdMantissa
+    ) external {
+        Tier storage tier = _ensureDeployerCollateralMarket(comptroller, vToken);
+        (, uint256 collateralFactor, uint256 liquidationThreshold) = SpokeComptroller(comptroller).markets(
+            address(vToken)
+        );
+        _checkCollateralParams(tier, collateralFactor, newLiquidationThresholdMantissa);
+        if (newLiquidationThresholdMantissa >= liquidationThreshold) {
+            revert InvalidLiquidationThreshold(address(vToken));
+        }
+
+        pendingLiquidationThresholds[address(vToken)] = PendingLiquidationThreshold(
+            newLiquidationThresholdMantissa,
+            block.timestamp
+        );
+
+        emit LiquidationThresholdDecreaseScheduled(comptroller, address(vToken), newLiquidationThresholdMantissa);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function applyLiquidationThresholdDecrease(address comptroller, VToken vToken) external {
+        Tier storage tier = _ensureDeployerCollateralMarket(comptroller, vToken);
+        PendingLiquidationThreshold memory pending = pendingLiquidationThresholds[address(vToken)];
+        if (pending.scheduledAt == 0 || block.timestamp < pending.scheduledAt + liquidationThresholdDelay) {
+            revert LiquidationThresholdDelayNotElapsed(address(vToken));
+        }
+        (, uint256 collateralFactor, ) = SpokeComptroller(comptroller).markets(address(vToken));
+        _checkCollateralParams(tier, collateralFactor, pending.liquidationThreshold);
+        delete pendingLiquidationThresholds[address(vToken)];
+
+        SpokeComptroller(comptroller).setCollateralFactor(vToken, collateralFactor, pending.liquidationThreshold);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -193,7 +231,7 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function requestTierChange(address comptroller, uint256 newTierId) external {
-        Pool storage pool = _ensureLiveDeployer(comptroller);
+        Pool storage pool = _ensureDeployer(comptroller);
         _ensureTier(newTierId);
         if (newTierId == pool.tierId) {
             revert InvalidTier(newTierId);
@@ -204,7 +242,7 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function requestExit(address comptroller) external {
-        _ensureLiveDeployer(comptroller).status = PoolStatus.ExitRequested;
+        _ensureDeployer(comptroller);
         emit ExitRequested(comptroller);
     }
 
@@ -294,13 +332,12 @@ contract SpokePoolManager is
         _checkAccessAllowed("proposeExit(address,uint256[],string)");
 
         Pool storage pool = pools[comptroller];
-        PoolStatus status = pool.status;
-        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested && status != PoolStatus.ExitApproved) {
+        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitProposed) {
             revert InvalidPoolStatus(comptroller);
         }
         (address[] memory targets, string[] memory signatures, bytes[] memory calldatas) = SpokeProposalBuilder
             .buildExitProposal(this, comptroller, liquidationThresholds);
-        pool.status = PoolStatus.ExitApproved;
+        pool.status = PoolStatus.ExitProposed;
         proposalId = _propose(targets, signatures, calldatas, description);
 
         emit ExitProposed(comptroller, proposalId);
@@ -410,6 +447,13 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
+    function setLiquidationThresholdDelay(uint256 newDelay) external {
+        _checkAccessAllowed("setLiquidationThresholdDelay(uint256)");
+        emit LiquidationThresholdDelayUpdated(liquidationThresholdDelay, newDelay);
+        liquidationThresholdDelay = newDelay;
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function setMaxResidualDebtUsd(uint256 newMaxResidualDebtUsd) external {
         _checkAccessAllowed("setMaxResidualDebtUsd(uint256)");
         emit MaxResidualDebtUsdUpdated(maxResidualDebtUsd, newMaxResidualDebtUsd);
@@ -427,7 +471,7 @@ contract SpokePoolManager is
     function startWindDown(address comptroller) external {
         _checkAccessAllowed("startWindDown(address)");
 
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitApproved);
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitProposed);
         pool.status = PoolStatus.WindingDown;
         pool.windDownStartedAt = block.timestamp;
 
@@ -482,7 +526,12 @@ contract SpokePoolManager is
             if (request.comptroller != comptroller) {
                 revert RequestPoolMismatch(requestId, request.comptroller);
             }
-            _ensurePoolStatus(comptroller, PoolStatus.Live);
+            // The pool may have changed during the vote; its new markets are not listed yet
+            _validateMarkets(
+                comptroller,
+                tiers[_ensurePoolStatus(comptroller, PoolStatus.Live).tierId],
+                params.markets
+            );
             emit MarketsAdded(requestId, comptroller, vTokens);
         }
 
@@ -840,21 +889,23 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Returns a live pool after checking the caller holds its deployer rights
+     * @dev Returns a pool's tier after checking the caller holds its deployer rights and the market is not a loan market
      * @param comptroller The pool's comptroller
-     * @return pool The pool's storage
+     * @param vToken The market
+     * @return The pool's tier
      * @custom:error NotDeployer or DeployerFrozen is thrown as in `_ensureDeployer`
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live
+     * @custom:error NotCollateralMarket is thrown when the market is a loan market
      */
-    function _ensureLiveDeployer(address comptroller) internal view returns (Pool storage pool) {
-        pool = _ensureDeployer(comptroller);
-        if (pool.status != PoolStatus.Live) {
-            revert InvalidPoolStatus(comptroller);
+    function _ensureDeployerCollateralMarket(address comptroller, VToken vToken) internal view returns (Tier storage) {
+        Pool storage pool = _ensureDeployer(comptroller);
+        if (isLoanMarket[address(vToken)]) {
+            revert NotCollateralMarket(address(vToken));
         }
+        return tiers[pool.tierId];
     }
 
     /**
-     * @dev Returns a pool after checking the caller holds its deployer rights
+     * @dev Returns a live pool after checking the caller holds its deployer rights
      * @param comptroller The pool's comptroller
      * @return pool The pool's storage
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
@@ -862,9 +913,7 @@ contract SpokePoolManager is
      */
     function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
         pool = pools[comptroller];
-        if (
-            pool.deployer != msg.sender || (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested)
-        ) {
+        if (pool.deployer != msg.sender || pool.status != PoolStatus.Live) {
             revert NotDeployer(comptroller, msg.sender);
         }
         if (pool.deployerFrozen) {

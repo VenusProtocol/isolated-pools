@@ -23,8 +23,7 @@ contract SpokePoolManagerStorage {
     enum PoolStatus {
         None,
         Live,
-        ExitRequested,
-        ExitApproved,
+        ExitProposed,
         WindingDown,
         Closed,
         HandedOver
@@ -121,6 +120,14 @@ contract SpokePoolManagerStorage {
         uint256 windDownStartedAt;
     }
 
+    /// @notice A deployer's decrease of a collateral market's liquidation threshold, waiting out its delay
+    struct PendingLiquidationThreshold {
+        // The new liquidation threshold, scaled by 1e18
+        uint256 liquidationThreshold;
+        // When the deployer scheduled it; zero when no decrease is scheduled
+        uint256 scheduledAt;
+    }
+
     /// @notice GovernorBravo `ProposalType.NORMAL`, the route the manager proposes on
     uint8 public constant NORMAL_PROPOSAL = 0;
 
@@ -174,10 +181,16 @@ contract SpokePoolManagerStorage {
     /// @notice Requests by id; the getter leaves out the escrowed seeds, which `RequestSubmitted` carries
     mapping(uint256 => Request) public requests;
 
+    /// @notice Time a deployer waits before a lower liquidation threshold takes effect, in seconds
+    uint256 public liquidationThresholdDelay;
+
+    /// @notice Scheduled liquidation-threshold decreases by market
+    mapping(address => PendingLiquidationThreshold) public pendingLiquidationThresholds;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[37] private __gap;
+    uint256[35] private __gap;
 }
