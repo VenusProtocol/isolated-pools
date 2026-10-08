@@ -349,7 +349,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         const stale = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);
         await ethers.provider.send("hardhat_mine", ["0x100000"]); // ~1M blocks
 
-        // Stored state has not moved yet: `totalAssets` reads `getCash`/`totalBorrows` as stored.
+        // Stored state has not moved yet: `totalAssets` reads `exchangeRateStored`.
         expect(await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address)).to.equal(stale);
         await f.adapter.accrue(f.vUSDT.address);
         const fresh = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);

@@ -53,9 +53,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(await market.exchangeRateStored()).to.be.gt(0);
       expect(await market.totalSupply()).to.be.gt(0);
       expect(await market.getCash()).to.be.gt(0);
-      expect(await market.totalBorrows()).to.equal(0);
       expect(await market.totalReserves()).to.equal(0);
-      expect(await market.badDebt()).to.equal(0);
       expect(await market.blocksOrSecondsPerYear()).to.equal(42_048_000);
       expect(await market.balanceOf(f.spokeSource.address)).to.equal(0);
     });

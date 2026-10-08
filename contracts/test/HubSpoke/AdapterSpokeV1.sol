@@ -31,18 +31,17 @@ import { ISpokeComptroller } from "./interfaces/external/ISpokeComptroller.sol";
  *      4. {onlyDelegateCall} reverts when a mutating function is invoked directly on the adapter,
  *         preventing accidents that would orphan vTokens here.
  *
- *      **Why this is not `AdapterCoreV1`.** The two speak nearly the same selectors and disagree on
- *      every number that matters. Five differences, each verified against `isolated-pools`:
+ *      **Written-off debt stays in the mark.** {totalAssets} values the position at the market's own
+ *      exchange rate, as `AdapterCoreV1` does. That rate keeps `badDebt` in its numerator, so a
+ *      write-off in `healAccount` does not lower it. The written-off amount is not cash, so the
+ *      market cannot pay every supplier in full until its `shortfall` calls `badDebtRecovered`,
+ *      which lowers `badDebt` and raises cash by the same amount without moving the rate. Until
+ *      then, suppliers who exit first are paid at the full rate out of the cash that remains, and
+ *      {maxWithdraw} is bounded by that cash.
  *
- *      - **NAV excludes `badDebt`.** The market's exchange rate keeps `badDebt` in its numerator, so
- *        it does not fall when `healAccount` writes a loss off; the loss surfaces only as redemptions
- *        failing for want of cash. Valuing at that rate would report unrecoverable value, and inside
- *        the Hub the loss would then land by exit order — early LPs out at the pre-loss share price,
- *        the last one absorbing everything. {totalAssets} therefore values the position off the
- *        components with `badDebt` excluded, which marks every LP down at the same instant. The mark
- *        is pro-rata (`balance / totalSupply`), so it stays correct whether or not the Hub is the
- *        market's only supplier. A Shortfall auction that later recovers the debt raises cash and
- *        lowers `badDebt` by the same amount, so the mark recovers on its own.
+ *      **Why this is not `AdapterCoreV1`.** The two speak nearly the same selectors and disagree on
+ *      the numbers below. Four differences, each verified against `isolated-pools`:
+ *
  *      - **Liquidity is cash NET of reserves**, and both it and the position are floored to a whole
  *        number of vTokens, because {withdraw} redeems by vToken COUNT rather than by underlying
  *        amount. Naming the burn instead of letting `redeemUnderlying` derive it is what keeps a
@@ -129,8 +128,8 @@ contract AdapterSpokeV1 is IResourceAdapter {
      * @notice The deposit is too small to mint a single vToken, so the market would keep the
      *         underlying and issue nothing for it.
      * @dev Reverting hands the leg back to the YieldGroup's deposit cascade, which routes around it;
-     *      minting zero would strand the amount silently. Only reachable for a sub-one-vToken-unit
-     *      remainder, which {maxDeposit} already declines to advertise.
+     *      minting zero would strand the amount silently. Reachable when the Hub cascade leaves this
+     *      market a remainder under one vToken unit (about 1e10 wei for an 18-decimal underlying).
      * @param resource Market that would have minted zero.
      * @param amount Underlying units offered.
      * @param minimum Underlying units needed to mint one vToken.
@@ -228,24 +227,21 @@ contract AdapterSpokeV1 is IResourceAdapter {
     }
 
     /// @inheritdoc IResourceAdapter
-    /// @dev The position's RECOVERABLE value: its pro-rata share of `cash + totalBorrows -
-    ///      totalReserves`, i.e. the market's exchange rate with `badDebt` excluded from the
-    ///      numerator, and never above what the market itself would pay for the same tokens. See the
-    ///      contract NatSpec for why the market's own rate is unusable as the basis, and
-    ///      {_recoverableValue} for why it is still needed as a ceiling.
+    /// @dev `balance x exchangeRateStored`: the market's own valuation of the tokens, and what
+    ///      redeeming all of them would pay at the stored rate if the market had the cash. Includes
+    ///      the position's share of `badDebt`; see the contract NatSpec.
     function totalAssets(address resource, address holder) external view override returns (uint256) {
         uint256 vBal = IVTokenIsolated(resource).balanceOf(holder);
         if (vBal == 0) return 0;
-        return _recoverableValue(resource, vBal, IVTokenIsolated(resource).exchangeRateStored());
+        return (vBal * IVTokenIsolated(resource).exchangeRateStored()) / EXP_SCALE;
     }
 
     /// @inheritdoc IResourceAdapter
     /// @dev Honors, in order: the market's supply allowlist (against `msg.sender`, the prospective
     ///      supplier — see the contract NatSpec), its MINT pause, and its supply cap. The headroom
     ///      math mirrors `preMintHook`'s `nextTotalSupply = totalSupply x exchangeRate + mintAmount`
-    ///      check and so uses the market's own (badDebt-inclusive) exchange rate, NOT the valuation
-    ///      basis {totalAssets} uses. Room below one vToken unit is reported as zero, because a
-    ///      deposit of it would mint nothing.
+    ///      check. Room below one vToken unit is reported as zero, because a deposit of it would
+    ///      mint nothing.
     function maxDeposit(address resource) external view override returns (uint256) {
         ISpokeComptroller comptrollerContract = ISpokeComptroller(IVTokenIsolated(resource).comptroller());
         if (
@@ -278,7 +274,7 @@ contract AdapterSpokeV1 is IResourceAdapter {
     }
 
     /// @inheritdoc IResourceAdapter
-    /// @dev Two constraints: the position's recoverable value, and the market's payable cash
+    /// @dev Two constraints: the position's value, and the market's payable cash
     ///      (`getCash - totalReserves` — reserves sit inside cash but are not redeemable, and
     ///      `_redeemFresh` gates on the difference). Subtracting reserves also makes this figure
     ///      invariant across the reserve sweep `accrueInterest` performs, which lowers cash and
@@ -287,11 +283,11 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      Both are expressed as a whole number of vTokens and valued back into underlying, because
     ///      {withdraw} redeems by count: an amount at or below `truncate(exchangeRate x t)` is
     ///      coverable by `t` tokens, so flooring at `t` is what makes the bound executable rather
-    ///      than merely arithmetically true. The position side gets its floor from
-    ///      {_recoverableValue}, which is capped at the market's own valuation of the same tokens;
-    ///      the cash side is floored to the tokens the market can pay for. Flooring is exact rather
-    ///      than conservative — no margin is withheld — so the last vToken stays withdrawable, which
-    ///      is what lets a market be drained to zero and deregistered.
+    ///      than merely arithmetically true. The position side is `truncate(exchangeRate x vBal)`,
+    ///      already floored at the tokens held; the cash side is floored to the tokens the market
+    ///      can pay for. Flooring is exact rather than conservative — no margin is withheld — so the
+    ///      last vToken stays withdrawable, which is what lets a market be drained to zero and
+    ///      deregistered.
     ///
     ///      Reads stored state, so the figure is exact only for a caller that has already settled
     ///      this market's interest in the same transaction — the Hub's routing paths all do, via
@@ -307,7 +303,7 @@ contract AdapterSpokeV1 is IResourceAdapter {
         uint256 exchangeRate = IVTokenIsolated(resource).exchangeRateStored();
         if (exchangeRate == 0) return 0;
 
-        uint256 ourValue = _recoverableValue(resource, vBal, exchangeRate);
+        uint256 ourValue = (vBal * exchangeRate) / EXP_SCALE;
         if (ourValue == 0) return 0;
 
         uint256 cash = IVTokenIsolated(resource).getCash();
@@ -376,50 +372,7 @@ contract AdapterSpokeV1 is IResourceAdapter {
         }
     }
 
-    // ============================== Private — view ===========================
-
-    /**
-     * @notice Value `vBal` vTokens at the market's backing EXCLUDING written-off debt, capped at the
-     *         market's own valuation of the same tokens.
-     * @dev `vBal x (cash + totalBorrows - totalReserves) / totalSupply`, in one rounding step. This
-     *      is `exchangeRateStored` with `badDebt` dropped from the numerator.
-     *
-     *      The cap exists because of that single step. The market reaches the same figure in TWO —
-     *      it floors the backing into a `1e18` mantissa, then floors `vBal x mantissa` back into
-     *      underlying — and each floor discards a remainder this one keeps. With no `badDebt` the
-     *      numerators are identical, so the one-step figure can land a unit ABOVE
-     *      `balanceOfUnderlying`, the most the market will ever pay for these tokens. That is value
-     *      no redeem can reach, and a bound taken from it is one no redeem can cover.
-     *
-     *      Capping does not reintroduce the `badDebt` over-mark the contract NatSpec describes:
-     *      `badDebt` sits in the numerator of the market's rate, so whenever it is non-zero the cap
-     *      is the looser of the two and the recoverable figure is kept. The cap binds only where the
-     *      two bases agree on the value and disagree on the rounding.
-     * @param resource Market holding the position.
-     * @param vBal vToken units held (caller has already established this is non-zero).
-     * @param exchangeRate Market's stored exchange rate, scaled by `1e18`, read by the caller.
-     * @return value Recoverable underlying value of the position.
-     */
-    function _recoverableValue(
-        address resource,
-        uint256 vBal,
-        uint256 exchangeRate
-    ) private view returns (uint256 value) {
-        uint256 supply = IVTokenIsolated(resource).totalSupply();
-        // Unreachable while `vBal` is non-zero, which every caller has already established. Kept as
-        // a division guard rather than an assumption about a contract this one does not own.
-        if (supply == 0) return 0;
-
-        uint256 backing = IVTokenIsolated(resource).getCash() + IVTokenIsolated(resource).totalBorrows();
-        uint256 reserves = IVTokenIsolated(resource).totalReserves();
-        // The market keeps `cash >= totalReserves` (both the redeem and borrow paths check cash net
-        // of reserves), so this only guards a pathological state rather than an expected one.
-        if (backing <= reserves) return 0;
-
-        uint256 recoverable = (vBal * (backing - reserves)) / supply;
-        uint256 marketValue = (vBal * exchangeRate) / EXP_SCALE;
-        return recoverable < marketValue ? recoverable : marketValue;
-    }
+    // ============================== Private — pure ===========================
 
     /**
      * @notice Underlying value of exactly one vToken, rounded up.
