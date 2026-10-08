@@ -239,7 +239,7 @@ for (const isTimeBased of [false, true]) {
         .setActionsPaused([vWBTC.address], [ACTION_LIQUIDATE, ACTION_EXIT_MARKET], true);
 
       const PoolLens = await ethers.getContractFactory<PoolLens__factory>("PoolLens");
-      poolLens = await PoolLens.deploy(isTimeBased, slotsPerYear);
+      poolLens = await PoolLens.deploy(isTimeBased, slotsPerYear, ethers.constants.AddressZero);
     });
 
     describe(`${description}PoolView Tests`, () => {
