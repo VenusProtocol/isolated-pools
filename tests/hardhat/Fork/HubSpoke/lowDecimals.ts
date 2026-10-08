@@ -109,24 +109,31 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       await expect(withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 })).to.not.be.reverted;
     });
 
-    it("drains the position to zero, so the resource can be removed", async () => {
-      // KNOWN FAILURE - reports a real limit of `AdapterSpokeV1` below a 1e18 rate, not a test
-      // artifact.
+    it("strands the sub-unit dust it cannot value, so the resource cannot be removed", async () => {
+      // A known limit of `AdapterSpokeV1` below a 1e18 rate, shared with `AdapterCoreV1` on any market
+      // with the same decimal pairing, and asserted the same way on the hub side.
       //
       // `maxWithdraw` rounds the position's value down to whole base units of the underlying. Below
       // 1e18 a vToken is worth less than one base unit, so withdrawing the certified amount can leave
       // up to `ceil(1e18 / rate) - 1` vTokens behind, together worth less than one base unit.
-      // `maxWithdraw` reports zero for them, and `removeResource` gates on a zero receipt balance, so
-      // the resource cannot be removed. The adapter's NatSpec says its flooring keeps the last vToken
-      // withdrawable, which holds only at a rate of 1e18 or above, such as the 1e28 of an 18-decimal
-      // market.
+      // `maxWithdraw` and `totalAssets` report zero for them, while `removeResource` gates on the raw
+      // receipt balance, so the resource stays registered. An 18-decimal market lists at 1e28 and
+      // never reaches this.
       await deposit(trxAmt("100000"));
 
       const liquid: BigNumber = await f.adapter.maxWithdraw(vTRX.address, trxSource.address);
       await withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 });
 
-      expect(await f.adapter.receiptBalance(vTRX.address, trxSource.address)).to.equal(0);
-      await expect(trxSource.connect(f.timelock).removeResource(vTRX.address)).to.not.be.reverted;
+      const rate: BigNumber = await vTRX.exchangeRateStored();
+      const perUnit = EXP_SCALE.add(rate).sub(1).div(rate);
+      const left: BigNumber = await f.adapter.receiptBalance(vTRX.address, trxSource.address);
+      expect(left).to.be.gt(0);
+      expect(left).to.be.lt(perUnit);
+      expect(await f.adapter.maxWithdraw(vTRX.address, trxSource.address)).to.equal(0);
+      expect(await f.adapter.totalAssets(vTRX.address, trxSource.address)).to.equal(0);
+      await expect(trxSource.connect(f.timelock).removeResource(vTRX.address))
+        .to.be.revertedWithCustomError(trxSource, "ResourceHasBalance")
+        .withArgs(vTRX.address, left);
     });
 
     it("reports capacity in the underlying's own units, not the vToken's", async () => {

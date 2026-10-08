@@ -150,6 +150,7 @@ export const YIELD_GROUP_ABI = [
   "function lowerResourceCap(address resource, uint256 newCap)",
   "function pauseResource(address resource)",
   "function resourceCap(address resource) view returns (uint256)",
+  "error ResourceHasBalance(address resource, uint256 balance)",
 ];
 
 /// The slice of `ProtocolShareReserve` this suite touches. It holds one pool registry, which is what
