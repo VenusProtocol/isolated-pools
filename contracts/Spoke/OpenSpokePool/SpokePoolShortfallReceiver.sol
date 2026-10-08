@@ -18,7 +18,9 @@ import { SpokePoolManager } from "./SpokePoolManager.sol";
  * @author Venus
  * @notice The `shortfall` of every open spoke pool market. Whitelisted coverers repay a market's bad debt with their own
  * funds and are paid XVS from the pool's locked stake, worth the repaid amount times `coverIncentiveMantissa` at
- * ResilientOracle prices. As the market's bad debt falls, the Hub's position in it recovers.
+ * ResilientOracle prices, or whatever is left of the stake. Once the stake is gone, a cover pays nothing, which is how
+ * Venus repays the rest with its own funds, such as USDT swept from the RiskFund. As the market's bad debt falls, the
+ * Hub's position in it recovers.
  * @dev Must hold the manager's `seizeStake` role
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
@@ -96,15 +98,15 @@ contract SpokePoolShortfallReceiver is AccessControlledV8, ReentrancyGuardUpgrad
     }
 
     /**
-     * @notice Repays bad debt of a market with the caller's funds and pays the caller XVS from the pool's locked stake
+     * @notice Repays bad debt of a market with the caller's funds and pays the caller XVS from the pool's locked stake:
+     *   the incentive's worth, or what is left of the stake when that is less, so nothing once the stake is gone
      * @param vToken The market with bad debt
      * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
      * @return xvsAmountToSeize The XVS seized from the pool's stake and paid to the caller
-     * @custom:event Emits BadDebtCovered; the market emits BadDebtRecovered, the manager StakeSeized
+     * @custom:event Emits BadDebtCovered; the market emits BadDebtRecovered, the manager StakeSeized when XVS is paid
      * @custom:error MarketNotInPool is thrown when the market is not listed in its pool
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     * @custom:error InvalidPoolStatus or InsufficientLockedStake is thrown by the manager when the pool was not created
-     *   through it, or the XVS owed exceeds the pool's locked stake
+     * @custom:error InvalidPoolStatus is thrown by the manager when XVS is owed and the pool was not created through it
      * @custom:access Controlled by AccessControlManager, granted to the whitelisted bad debt coverers
      */
     function coverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 xvsAmountToSeize) {
@@ -118,8 +120,14 @@ contract SpokePoolShortfallReceiver is AccessControlledV8, ReentrancyGuardUpgrad
         xvsAmountToSeize =
             (amount * oracle.getUnderlyingPrice(address(vToken)) * coverIncentiveMantissa) /
             (oracle.getPrice(XVS) * EXP_SCALE);
+        (, , , , uint256 lockedStake, ) = SPOKE_POOL_MANAGER.pools(comptroller);
+        if (xvsAmountToSeize > lockedStake) {
+            xvsAmountToSeize = lockedStake;
+        }
 
-        SPOKE_POOL_MANAGER.seizeStake(comptroller, xvsAmountToSeize, msg.sender);
+        if (xvsAmountToSeize != 0) {
+            SPOKE_POOL_MANAGER.seizeStake(comptroller, xvsAmountToSeize, msg.sender);
+        }
         _transferIn(IERC20Upgradeable(vToken.underlying()), msg.sender, address(vToken), amount);
         vToken.badDebtRecovered(amount);
 

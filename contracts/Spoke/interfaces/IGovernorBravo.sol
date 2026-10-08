@@ -40,4 +40,10 @@ interface IGovernorBravo {
      * @return The route's timelock
      */
     function proposalTimelocks(uint256 proposalType) external view returns (address);
+
+    /**
+     * @notice Returns the most actions a proposal may have
+     * @return The maximum
+     */
+    function proposalMaxOperations() external view returns (uint256);
 }

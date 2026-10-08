@@ -101,17 +101,15 @@ contract SpokePoolFactory {
      * @dev The caller is the proposal's executor. The comptroller is owned by this contract while it sets the oracles,
      * then the executor is nominated and the proposal's next action calls `acceptOwnership`. Markets are owned by the
      * executor from the start and name the shortfall receiver as their `shortfall`, so bad debt is only recovered through
-     * it. The manager pulls the seeds from the project to the executor, which lists the markets with them in the same
-     * proposal.
+     * it. The manager sends the escrowed seeds to the executor, which lists the markets with them in the same proposal.
      * @param requestId The request
      * @param params The pool parameters the proposal executes
      * @return comptroller The deployed comptroller
      * @return vTokens The deployed markets, in the order of `params.markets`
      * @custom:event Emits PoolCreated
      * @custom:error Unauthorized is thrown when the AccessControlManager does not allow the caller
-     * @custom:error InvalidRequestStatus, InvalidPoolStatus or a market validation error is thrown by the manager when
-     *   the request is not proposed or its markets no longer fit; the manager's seed transfer reverts when the project has
-     *   not approved it
+     * @custom:error InvalidRequestStatus, SeedsMismatch, InvalidPoolStatus or a market validation error is thrown by the
+     *   manager when the request is not proposed, the seeds are not the escrowed ones, or its markets no longer fit
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
      *   manager's proposals
      */
@@ -143,9 +141,9 @@ contract SpokePoolFactory {
      * @param params The parameters the proposal executes; only `params.markets` is used
      * @return vTokens The deployed markets, in the order of `params.markets`
      * @custom:error Unauthorized is thrown when the AccessControlManager does not allow the caller
-     * @custom:error InvalidRequestStatus, RequestPoolMismatch, InvalidPoolStatus or a market validation error is thrown
-     *   by the manager when the request is not proposed for this pool, the pool is no longer live or the markets no
-     *   longer fit; the manager's seed transfer reverts when the project has not approved it
+     * @custom:error InvalidRequestStatus, SeedsMismatch, RequestPoolMismatch, InvalidPoolStatus or a market validation
+     *   error is thrown by the manager when the request is not proposed for this pool, the seeds are not the escrowed
+     *   ones, the pool is no longer live or the markets no longer fit
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
      *   manager's proposals
      */

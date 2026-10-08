@@ -9,7 +9,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
 import { VToken } from "../../VToken.sol";
-import { SpokeProposalBuilder } from "../../lib/SpokeProposalBuilder.sol";
+import { SpokeProposalBuilder, MAX_ACTIONS_PER_MARKET, POOL_CREATION_ACTIONS } from "../../lib/SpokeProposalBuilder.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
@@ -24,8 +24,8 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * @author Venus
  * @notice Entry point of open spoke pools. A project stakes XVS in the XVSVault and requests a pool of a tier: the
  * manager locks the tier's stake in the vault. A pool's deployer requests new markets the same way. The Venus team
- * proposes an approved request to GovernorBravo on the Normal route with its final parameters; the proposal deploys,
- * lists and funds the pool or the markets, pulling each market's seed from the project as it executes. The deployer then tunes the
+ * proposes an approved request to GovernorBravo on the Normal route with its final parameters, escrowing each market's
+ * seed from the project; the proposal deploys, lists and funds the pool or the markets. The deployer then tunes the
  * pool within its tier through the manager, which holds the pool-specific ACM roles the deployer does not, and can
  * sunset a market by zeroing its caps and collateral factor. The team also proposes the pool's exit.
  * @dev The manager must hold GovernorBravo's Normal proposal threshold in votes (delegated, or whitelisted) and the
@@ -59,32 +59,45 @@ contract SpokePoolManager is
     /// @notice The receiver of the seed vTokens that are not burned
     address public immutable TREASURY;
 
+    /// @notice Most markets a pool may have. A pool-creation proposal listing this many fits GovernorBravo's action
+    ///   limit, so every proposal of a pool does: its market additions, exit and force close
+    uint256 public immutable MAX_POOL_MARKETS;
+
     /**
      * @param xvsVault The vault project stakes are locked in
      * @param governorBravo The governor the manager proposes through
      * @param poolRegistry The registry spoke pools are listed in
      * @param resilientOracle The oracle every pool prices with
      * @param treasury The receiver of the seed vTokens that are not burned
+     * @param maxPoolMarkets The most markets a pool may have; 12 at most with GovernorBravo's 100 actions
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
+     * @custom:error TooManyMarkets is thrown when a pool-creation proposal with `maxPoolMarkets` markets would exceed
+     *   GovernorBravo's action limit
      */
     constructor(
         IXVSVault xvsVault,
         IGovernorBravo governorBravo,
         address poolRegistry,
         ResilientOracleInterface resilientOracle,
-        address treasury
+        address treasury,
+        uint256 maxPoolMarkets
     ) {
         ensureNonzeroAddress(address(xvsVault));
         ensureNonzeroAddress(address(governorBravo));
         ensureNonzeroAddress(poolRegistry);
         ensureNonzeroAddress(address(resilientOracle));
         ensureNonzeroAddress(treasury);
+        uint256 maxCount = (governorBravo.proposalMaxOperations() - POOL_CREATION_ACTIONS) / MAX_ACTIONS_PER_MARKET;
+        if (maxPoolMarkets > maxCount) {
+            revert TooManyMarkets(maxPoolMarkets, maxCount);
+        }
 
         XVS_VAULT = xvsVault;
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         RESILIENT_ORACLE = resilientOracle;
         TREASURY = treasury;
+        MAX_POOL_MARKETS = maxPoolMarkets;
 
         _disableInitializers();
     }
@@ -107,7 +120,6 @@ contract SpokePoolManager is
         uint256 tierId,
         PoolParams calldata params
     ) external nonReentrant returns (uint256 requestId) {
-        _checkMarketCount(params.markets.length);
         uint256 stakeAmount;
         if (comptroller == address(0)) {
             stakeAmount = _ensureTier(tierId).stakeAmount;
@@ -267,7 +279,7 @@ contract SpokePoolManager is
         uint256 requestId,
         PoolParams calldata params,
         string calldata description
-    ) external returns (uint256 proposalId) {
+    ) external nonReentrant returns (uint256 proposalId) {
         _checkAccessAllowed("propose(uint256,PoolParams,string)");
 
         Request storage request = _ensureOpenRequest(requestId);
@@ -275,8 +287,10 @@ contract SpokePoolManager is
         if (comptroller != address(0)) {
             _ensurePoolStatus(comptroller, PoolStatus.Live);
         }
-        _checkMarketCount(params.markets.length);
         _validateMarkets(comptroller, tiers[request.tierId], params.markets);
+        // A failed proposal's seeds go back before the final ones are escrowed
+        _sendSeeds(request, request.project);
+        _escrowSeeds(request, params.markets);
 
         address[] memory targets;
         string[] memory signatures;
@@ -304,10 +318,12 @@ contract SpokePoolManager is
 
         Request storage request = _ensureOpenRequest(requestId);
         request.status = RequestStatus.Rejected;
+        address project = request.project;
         uint256 stakeAmount = request.stakeAmount;
         if (stakeAmount != 0) {
-            XVS_VAULT.unlock(request.project, stakeAmount);
+            XVS_VAULT.unlock(project, stakeAmount);
         }
+        _sendSeeds(request, project);
 
         emit RequestRejected(requestId);
     }
@@ -491,13 +507,6 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setMaxMarketsPerRequest(uint256 newMaxMarketsPerRequest) external {
-        _checkAccessAllowed("setMaxMarketsPerRequest(uint256)");
-        emit MaxMarketsPerRequestUpdated(maxMarketsPerRequest, newMaxMarketsPerRequest);
-        maxMarketsPerRequest = newMaxMarketsPerRequest;
-    }
-
-    /// @inheritdoc ISpokePoolManager
     function startWindDown(address comptroller) external {
         _checkAccessAllowed("startWindDown(address)");
 
@@ -540,6 +549,7 @@ contract SpokePoolManager is
         if (request.status != RequestStatus.Proposed) {
             revert InvalidRequestStatus(requestId);
         }
+        _checkSeeds(requestId, request, params.markets);
 
         request.status = RequestStatus.Executed;
         address requestPool = request.comptroller;
@@ -567,12 +577,11 @@ contract SpokePoolManager is
 
         uint256 marketCount = vTokens.length;
         for (uint256 i; i < marketCount; ++i) {
-            MarketParams calldata market = params.markets[i];
-            if (market.isLoanMarket) {
+            if (params.markets[i].isLoanMarket) {
                 isLoanMarket[vTokens[i]] = true;
             }
-            _transferIn(IERC20Upgradeable(market.asset), project, executor, market.seed);
         }
+        _sendSeeds(request, executor);
     }
 
     /*** Shortfall receiver functions ***/
@@ -596,6 +605,37 @@ contract SpokePoolManager is
     }
 
     /*** Internal functions ***/
+
+    /**
+     * @dev Pulls each market's seed from a request's project into the manager and records it
+     * @param request The request's storage
+     * @param markets The markets whose seeds are escrowed
+     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
+     */
+    function _escrowSeeds(Request storage request, MarketParams[] calldata markets) internal {
+        address project = request.project;
+        uint256 marketCount = markets.length;
+        for (uint256 i; i < marketCount; ++i) {
+            MarketParams calldata market = markets[i];
+            request.seedAssets.push(market.asset);
+            request.seedAmounts.push(market.seed);
+            _transferIn(IERC20Upgradeable(market.asset), project, address(this), market.seed);
+        }
+    }
+
+    /**
+     * @dev Sends a request's escrowed seeds out of the manager and clears the record; nothing for a pending request
+     * @param request The request's storage
+     * @param to The receiver
+     */
+    function _sendSeeds(Request storage request, address to) internal {
+        uint256 seedCount = request.seedAssets.length;
+        for (uint256 i; i < seedCount; ++i) {
+            IERC20Upgradeable(request.seedAssets[i]).safeTransfer(to, request.seedAmounts[i]);
+        }
+        delete request.seedAssets;
+        delete request.seedAmounts;
+    }
 
     /**
      * @dev Pulls an exact amount of an asset, rejecting assets that deliver less
@@ -652,21 +692,30 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Validates a request's markets against a tier: each market as in `_validateMarket`, assets unique and not
-     * already in the pool, a loan market in a new pool, and the loan markets' supply caps, together with the pool's,
-     * within the tier's liquidity in USD
+     * @dev Validates a request's markets against a tier: the pool, with them, at most `MAX_POOL_MARKETS` markets; each
+     * market as in `_validateMarket`, assets unique and not already in the pool, a loan market in a new pool, and the loan markets'
+     * supply caps, together with the pool's, within the tier's liquidity in USD
      * @param comptroller The pool the markets are added to, or zero for a new pool
      * @param tier The tier
      * @param markets The markets
+     * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
      * @custom:error DuplicateAsset is thrown when two markets share an asset, or the pool already has the asset
      * @custom:error NoLoanMarket is thrown when a new pool has no loan market
      * @custom:error ExceedsTierLimit is thrown when a parameter or the loan liquidity is beyond the tier
      * @custom:error InvalidMarketParams, SeedBelowMinimum or MissingSpokeSource is thrown as in `_validateMarket`
      */
     function _validateMarkets(address comptroller, Tier storage tier, MarketParams[] calldata markets) internal view {
-        uint256 liquidityUsd = comptroller == address(0) ? 0 : _loanLiquidityUsd(comptroller);
-        bool hasLoanMarket = comptroller != address(0);
         uint256 marketCount = markets.length;
+        uint256 poolMarketCount = marketCount;
+        uint256 liquidityUsd;
+        if (comptroller != address(0)) {
+            poolMarketCount += SpokeComptroller(comptroller).getAllMarkets().length;
+            liquidityUsd = _loanLiquidityUsd(comptroller);
+        }
+        if (poolMarketCount > MAX_POOL_MARKETS) {
+            revert TooManyMarkets(poolMarketCount, MAX_POOL_MARKETS);
+        }
+        bool hasLoanMarket = comptroller != address(0);
         for (uint256 i; i < marketCount; ++i) {
             MarketParams calldata market = markets[i];
             // A nested loop is fine here: a request has only a few markets
@@ -821,18 +870,6 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Reverts when a request adds more markets than `maxMarketsPerRequest`
-     * @param count The markets the request adds
-     * @custom:error TooManyMarkets is thrown when `count` exceeds `maxMarketsPerRequest`
-     */
-    function _checkMarketCount(uint256 count) internal view {
-        uint256 maxCount = maxMarketsPerRequest;
-        if (count > maxCount) {
-            revert TooManyMarkets(count, maxCount);
-        }
-    }
-
-    /**
      * @dev Returns a tier after checking it is set
      * @param tierId The tier
      * @return tier The tier's storage
@@ -842,6 +879,25 @@ contract SpokePoolManager is
         tier = tiers[tierId];
         if (tier.stakeAmount == 0) {
             revert InvalidTier(tierId);
+        }
+    }
+
+    /**
+     * @dev Checks that the executed markets carry exactly the request's escrowed seeds, in order
+     * @param requestId The request
+     * @param request The request's storage
+     * @param markets The executed markets
+     * @custom:error SeedsMismatch is thrown when an asset or seed differs
+     */
+    function _checkSeeds(uint256 requestId, Request storage request, MarketParams[] calldata markets) internal view {
+        uint256 marketCount = markets.length;
+        if (marketCount != request.seedAssets.length) {
+            revert SeedsMismatch(requestId);
+        }
+        for (uint256 i; i < marketCount; ++i) {
+            if (markets[i].asset != request.seedAssets[i] || markets[i].seed != request.seedAmounts[i]) {
+                revert SeedsMismatch(requestId);
+            }
         }
     }
 

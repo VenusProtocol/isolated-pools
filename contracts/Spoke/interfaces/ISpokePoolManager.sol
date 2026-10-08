@@ -70,13 +70,6 @@ interface ISpokePoolManager {
     event MaxResidualDebtUsdUpdated(uint256 oldMaxResidualDebtUsd, uint256 newMaxResidualDebtUsd);
 
     /**
-     * @notice Emitted when the most markets a request may add is changed
-     * @param oldMaxMarketsPerRequest The previous maximum
-     * @param newMaxMarketsPerRequest The new maximum
-     */
-    event MaxMarketsPerRequestUpdated(uint256 oldMaxMarketsPerRequest, uint256 newMaxMarketsPerRequest);
-
-    /**
      * @notice Emitted when a project submits a request
      * @param requestId The request
      * @param project The project that submitted it
@@ -243,6 +236,13 @@ interface ISpokePoolManager {
     error RequestPoolMismatch(uint256 requestId, address comptroller);
 
     /**
+     * @notice Thrown when the executed markets' assets or seeds differ from the ones escrowed when the request was
+     *   proposed
+     * @param requestId The request
+     */
+    error SeedsMismatch(uint256 requestId);
+
+    /**
      * @notice Thrown when a request's proposal can still execute
      * @param proposalId The proposal
      */
@@ -252,8 +252,9 @@ interface ISpokePoolManager {
     error NoLoanMarket();
 
     /**
-     * @notice Thrown when a request adds more markets than `maxMarketsPerRequest`
-     * @param count The markets the request adds
+     * @notice Thrown when a pool would have more than `MAX_POOL_MARKETS` markets, or `MAX_POOL_MARKETS` is too large for
+     *   a pool-creation proposal to fit GovernorBravo's action limit
+     * @param count The pool's markets, or the requested maximum
      * @param maxCount The maximum
      */
     error TooManyMarkets(uint256 count, uint256 maxCount);
@@ -373,15 +374,15 @@ interface ISpokePoolManager {
     /**
      * @notice Requests a new pool of a tier, or new markets in the caller's pool. A request for a new pool locks the
      *   tier's stake of the caller's XVSVault stake, which is unlocked if the request is rejected and otherwise stays
-     *   locked until the pool is wound down or handed over. No other tokens move until the request's proposal executes,
-     *   which pulls each market's seed from the caller, so the caller must approve the manager for the seeds
+     *   locked until the pool is wound down or handed over. No other tokens move until the Venus team proposes the
+     *   request, which escrows each market's seed from the caller, so the caller must approve the manager for the seeds
      * @param comptroller The pool to add the markets to, or zero for a new pool
      * @param tierId The tier of a new pool; ignored for new markets, which follow their pool's tier
      * @param params The requested pool; only `params.markets` is used for new markets. The Venus team may change the
      *   parameters within the tier when it proposes the request
      * @return requestId The id of the request
      * @custom:event Emits RequestSubmitted; the vault emits StakeLocked for a new pool
-     * @custom:error TooManyMarkets is thrown when the request has more than `maxMarketsPerRequest` markets
+     * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
      * @custom:error InvalidTier is thrown when the tier of a new pool is not set
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
@@ -553,15 +554,16 @@ interface ISpokePoolManager {
      *   markets gets one that deploys, lists and registers the markets. A request whose proposal was canceled, defeated
      *   or expired can be proposed again
      * @param requestId The request
-     * @param params The final parameters; only `params.markets` is used for new markets. The project must have
-     *   approved the manager for each market's seed by the time the proposal executes
+     * @param params The final parameters; only `params.markets` is used for new markets. Each market's seed is escrowed
+     *   from the project, which must have approved the manager for it; a failed proposal's seeds are returned first
      * @param description The proposal's description
      * @return proposalId The id of the proposal
      * @custom:event Emits RequestProposed
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor proposed
      * @custom:error ProposalNotFailed is thrown when the request's proposal can still execute
      * @custom:error InvalidPoolStatus is thrown when the pool of a request for new markets is not live
-     * @custom:error TooManyMarkets is thrown when there are more than `maxMarketsPerRequest` markets
+     * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
+     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
      * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum, MissingSpokeSource or
      *   ExceedsTierLimit is thrown when the markets do not fit the tier
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
@@ -573,8 +575,8 @@ interface ISpokePoolManager {
     ) external returns (uint256 proposalId);
 
     /**
-     * @notice Rejects a request that is pending, or whose proposal was canceled, defeated or expired, and unlocks its
-     *   stake
+     * @notice Rejects a request that is pending, or whose proposal was canceled, defeated or expired, unlocks its stake
+     *   and returns its escrowed seeds
      * @param requestId The request
      * @custom:event Emits RequestRejected; the vault emits StakeUnlocked for a request for a new pool
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor proposed
@@ -745,15 +747,6 @@ interface ISpokePoolManager {
     function setMaxResidualDebtUsd(uint256 newMaxResidualDebtUsd) external;
 
     /**
-     * @notice Sets the most markets a request may add. It should keep the largest request's proposal within
-     *   GovernorBravo's action limit
-     * @param newMaxMarketsPerRequest The new maximum
-     * @custom:event Emits MaxMarketsPerRequestUpdated
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setMaxMarketsPerRequest(uint256 newMaxMarketsPerRequest) external;
-
-    /**
      * @notice Opens the repayment window of a proposed exit. Called by the exit's first proposal as its last action
      * @param comptroller The pool's comptroller
      * @custom:event Emits WindDownStarted
@@ -776,8 +769,8 @@ interface ISpokePoolManager {
     /**
      * @notice Completes a proposed request once the factory deployed its contracts. It checks the markets against the
      *   tier and, for new markets, the pool's current markets; records the new pool and starts its deployer's rights, or
-     *   records the new markets; then pulls each market's seed from the project to the proposal's executor, which lists
-     *   the markets with them in the same proposal
+     *   records the new markets; then sends the escrowed seeds to the proposal's executor, which lists the markets with
+     *   them in the same proposal
      * @param requestId The request
      * @param comptroller The new pool's comptroller, or the pool the markets were added to
      * @param params The parameters the proposal executes
@@ -786,13 +779,12 @@ interface ISpokePoolManager {
      * @custom:event Emits PoolActivated for a new pool, MarketsAdded otherwise
      * @custom:error OnlyFactory is thrown when the caller is not the factory
      * @custom:error InvalidRequestStatus is thrown when the request is not proposed
+     * @custom:error SeedsMismatch is thrown when the markets' assets or seeds differ from the escrowed ones
      * @custom:error RequestPoolMismatch is thrown when the markets were deployed for another pool than the request's
      * @custom:error InvalidPoolStatus is thrown when a new pool's comptroller is already a pool, or the request's pool is
      *   no longer live
-     * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum, MissingSpokeSource or
-     *   ExceedsTierLimit is thrown when the markets no longer fit, as in `submitRequest`
-     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount; the seed's
-     *   transfer reverts when the project has not approved the manager for it or does not hold it
+     * @custom:error TooManyMarkets, NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum,
+     *   MissingSpokeSource or ExceedsTierLimit is thrown when the markets no longer fit, as in `submitRequest`
      * @custom:access Only the factory
      */
     function completeRequest(

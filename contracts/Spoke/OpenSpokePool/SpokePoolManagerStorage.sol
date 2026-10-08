@@ -67,7 +67,7 @@ contract SpokePoolManagerStorage {
         uint256 borrowCap;
         // Reserve factor, scaled by 1e18
         uint256 reserveFactor;
-        // Initial supply pulled from the project when the proposal executes, minted when the market is listed
+        // Initial supply escrowed from the project when the request is proposed, minted when the market is listed
         uint256 seed;
         // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury. 0.1e18 burns 10%, as in
         // most Venus market listings
@@ -100,6 +100,10 @@ contract SpokePoolManagerStorage {
         // XVS locked for the request; zero for a request that adds markets
         uint256 stakeAmount;
         uint256 proposalId;
+        // Underlying asset of each market's seed escrowed for the proposal, in market order
+        address[] seedAssets;
+        // Amount of each market's escrowed seed, in market order
+        uint256[] seedAmounts;
     }
 
     /// @notice A pool created through the manager
@@ -152,9 +156,6 @@ contract SpokePoolManagerStorage {
     ///   it, and bad debt worth less than one unit of XVS cannot be covered
     uint256 public maxResidualDebtUsd;
 
-    /// @notice Most markets a request may add, so its proposal fits GovernorBravo's action limit
-    uint256 public maxMarketsPerRequest;
-
     /// @notice Number of requests submitted; also the id of the latest one
     uint256 public requestCount;
 
@@ -173,7 +174,8 @@ contract SpokePoolManagerStorage {
     /// @notice Whether a market created through the manager is a loan market
     mapping(address => bool) public isLoanMarket;
 
-    /// @notice Requests by id; the requested parameters are in `RequestSubmitted`
+    /// @notice Requests by id; the getter leaves out the escrowed seeds, and the requested parameters are in
+    ///   `RequestSubmitted`
     mapping(uint256 => Request) public requests;
 
     /// @notice Time a deployer waits before a lower liquidation threshold takes effect, in seconds

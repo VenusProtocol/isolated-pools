@@ -8,9 +8,19 @@ import { SpokePoolManager } from "../Spoke/OpenSpokePool/SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "../Spoke/OpenSpokePool/SpokePoolManagerStorage.sol";
 import { SpokeComptroller } from "../Spoke/SpokeComptroller.sol";
 import { ISpokePoolManager } from "../Spoke/interfaces/ISpokePoolManager.sol";
-import { IYieldGroup } from "../Spoke/interfaces/IYieldGroup.sol";
 import { VToken } from "../VToken.sol";
 import { EXP_SCALE } from "./constants.sol";
+
+/// @dev Most actions a proposal adds per new market: a loan market's listing and Hub registration
+uint256 constant MAX_ACTIONS_PER_MARKET = 7;
+
+/// @dev Actions of a pool-creation proposal besides its markets': the 12 role grants, `createPool`, `acceptOwnership` and
+/// `addPool`
+uint256 constant POOL_CREATION_ACTIONS = 15;
+
+/// @dev Actions of an exit's first proposal besides one per collateral market: three pauses, two cap resets and
+/// `startWindDown`
+uint256 constant EXIT_ACTIONS = 6;
 
 /**
  * @title SpokeProposalBuilder
@@ -45,18 +55,10 @@ library SpokeProposalBuilder {
         "addMarkets(uint256,address,(string,uint256,uint256,uint256,"
         "(address,address,string,string,uint8,bool,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)[]))";
 
-    /// @dev Most actions a proposal adds per new market: a loan market's listing and Hub registration
-    uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
-
-    /// @dev Actions of a pool-creation proposal besides its markets': the 12 role grants, `createPool`, `acceptOwnership`
-    /// and `addPool`
-    uint256 internal constant POOL_CREATION_ACTIONS = 15;
-
     /**
      * @notice Builds the actions of a request's pool-creation proposal, in execution order: the pool's role grants,
      *   `createPool`, the comptroller's `acceptOwnership`, `addPool`, each market's listing with its seed, and each loan
      *   market's Hub registration
-     * @dev Hub source withdraw queues are read now, so a change to them before this proposal executes is overwritten
      * @param manager The manager
      * @param requestId The request
      * @param params The pool to create
@@ -75,7 +77,6 @@ library SpokeProposalBuilder {
     /**
      * @notice Builds the actions of a request's proposal that adds markets to its pool, in execution order:
      *   `addMarkets`, each market's listing with its seed, and each loan market's Hub registration
-     * @dev Hub source withdraw queues are read now, so a change to them before this proposal executes is overwritten
      * @param manager The manager
      * @param requestId The request
      * @param comptroller The pool's comptroller
@@ -207,16 +208,13 @@ library SpokeProposalBuilder {
         if (liquidationThresholds.length != marketCount) {
             revert ISpokePoolManager.InvalidArrayLength();
         }
-        proposal = _newProposal(marketCount + 4);
+        proposal = _newProposal(marketCount + EXIT_ACTIONS);
 
         VToken[] memory listed = _listedMarkets(comptroller, markets);
         uint256[] memory zeroCaps = new uint256[](listed.length);
-        _add(
-            proposal,
-            comptroller,
-            "setActionsPaused(address[],uint8[],bool)",
-            abi.encode(listed, _exitPausedActions(), true)
-        );
+        _addPause(proposal, comptroller, listed, Action.MINT);
+        _addPause(proposal, comptroller, listed, Action.BORROW);
+        _addPause(proposal, comptroller, listed, Action.ENTER_MARKET);
         _add(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
         _add(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
         for (uint256 i; i < marketCount; ++i) {
@@ -360,7 +358,7 @@ library SpokeProposalBuilder {
 
     /**
      * @dev Adds the Hub registration of one loan market: only the asset's Hub source may supply it, and the source takes
-     * it as a resource and appends it to its withdraw queue. The Hub operator funds it with `reallocate`
+     * it as a resource. The Hub operator adds it to the source's withdraw queue and funds it with `reallocate`
      * @param proposal The proposal to add to
      * @param manager The manager
      * @param comptroller The pool's comptroller
@@ -378,12 +376,8 @@ library SpokeProposalBuilder {
         _add(proposal, comptroller, "setSupplyAllowlistEnabled(address,bool)", abi.encode(vToken, true));
         _add(proposal, comptroller, "setAllowedSupplier(address,address,bool)", abi.encode(vToken, source, true));
         _add(proposal, source, "addResource(address,address)", abi.encode(vToken, manager.spokeAdapter()));
-        _add(
-            proposal,
-            source,
-            "setInnerWithdrawQueue(address[])",
-            abi.encode(_append(IYieldGroup(source).innerWithdrawQueue(), vToken))
-        );
+        // The withdraw queue is left to the Hub operator: YieldGroup cannot append to it, and a queue read at propose
+        // time would revert this proposal, or drop a resource, if the queue changed during the vote
     }
 
     /**
@@ -449,14 +443,21 @@ library SpokeProposalBuilder {
     }
 
     /**
-     * @dev Returns the actions an exit's first proposal pauses: minting, borrowing and entering markets
-     * @return actions The actions
+     * @dev Adds a pause of one action on markets of a pool
+     * @param proposal The proposal to add to
+     * @param comptroller The pool's comptroller
+     * @param markets The markets
+     * @param action The action to pause
      */
-    function _exitPausedActions() private pure returns (Action[] memory actions) {
-        actions = new Action[](3);
-        actions[0] = Action.MINT;
-        actions[1] = Action.BORROW;
-        actions[2] = Action.ENTER_MARKET;
+    function _addPause(
+        Proposal memory proposal,
+        address comptroller,
+        VToken[] memory markets,
+        Action action
+    ) private pure {
+        Action[] memory actions = new Action[](1);
+        actions[0] = action;
+        _add(proposal, comptroller, "setActionsPaused(address[],uint8[],bool)", abi.encode(markets, actions, true));
     }
 
     /**
@@ -475,21 +476,6 @@ library SpokeProposalBuilder {
         address account
     ) private pure {
         _add(proposal, acm, GIVE_CALL_PERMISSION, abi.encode(comptroller, role, account));
-    }
-
-    /**
-     * @dev Returns a copy of `list` with `item` appended
-     * @param list The list to copy
-     * @param item The item to append
-     * @return extended The extended list
-     */
-    function _append(address[] memory list, address item) private pure returns (address[] memory extended) {
-        uint256 length = list.length;
-        extended = new address[](length + 1);
-        for (uint256 i; i < length; ++i) {
-            extended[i] = list[i];
-        }
-        extended[length] = item;
     }
 
     /**
