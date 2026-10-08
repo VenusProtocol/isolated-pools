@@ -23,6 +23,7 @@ contract SpokePoolManagerStorage {
     enum PoolStatus {
         None,
         Live,
+        ExitRequested,
         ExitProposed,
         WindingDown,
         Closed,
@@ -66,7 +67,7 @@ contract SpokePoolManagerStorage {
         uint256 borrowCap;
         // Reserve factor, scaled by 1e18
         uint256 reserveFactor;
-        // Initial supply escrowed from the project, minted when the market is listed
+        // Initial supply pulled from the project when the proposal executes, minted when the market is listed
         uint256 seed;
         // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury. 0.1e18 burns 10%, as in
         // most Venus market listings
@@ -99,12 +100,6 @@ contract SpokePoolManagerStorage {
         // XVS locked for the request; zero for a request that adds markets
         uint256 stakeAmount;
         uint256 proposalId;
-        // Hash of the parameters the request was proposed with
-        bytes32 paramsHash;
-        // Underlying asset of each market's seed, in market order
-        address[] seedAssets;
-        // Amount of each market's seed, in market order
-        uint256[] seedAmounts;
     }
 
     /// @notice A pool created through the manager
@@ -178,7 +173,7 @@ contract SpokePoolManagerStorage {
     /// @notice Whether a market created through the manager is a loan market
     mapping(address => bool) public isLoanMarket;
 
-    /// @notice Requests by id; the getter leaves out the escrowed seeds, which `RequestSubmitted` carries
+    /// @notice Requests by id; the requested parameters are in `RequestSubmitted`
     mapping(uint256 => Request) public requests;
 
     /// @notice Time a deployer waits before a lower liquidation threshold takes effect, in seconds
