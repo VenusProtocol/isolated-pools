@@ -63,6 +63,13 @@ interface ISpokePoolManager {
     event LiquidationThresholdDelayUpdated(uint256 oldDelay, uint256 newDelay);
 
     /**
+     * @notice Emitted when the time a scheduled liquidation-threshold decrease stays applicable is changed
+     * @param oldBufferPeriod The previous buffer period, in seconds
+     * @param newBufferPeriod The new buffer period, in seconds
+     */
+    event LiquidationThresholdBufferPeriodUpdated(uint256 oldBufferPeriod, uint256 newBufferPeriod);
+
+    /**
      * @notice Emitted when the residual debt a wound-down pool may hold is changed
      * @param oldMaxResidualDebtUsd The previous maximum, in USD scaled by 1e18
      * @param newMaxResidualDebtUsd The new maximum, in USD scaled by 1e18
@@ -132,6 +139,14 @@ interface ISpokePoolManager {
         address indexed vToken,
         uint256 liquidationThreshold
     );
+
+    /**
+     * @notice Emitted when a deployer raises a collateral market's liquidation threshold, cancelling its scheduled
+     *   decrease
+     * @param comptroller The pool's comptroller
+     * @param vToken The market
+     */
+    event LiquidationThresholdDecreaseCancelled(address indexed comptroller, address indexed vToken);
 
     /**
      * @notice Emitted when a deployer asks to move its pool to another tier
@@ -277,6 +292,12 @@ interface ISpokePoolManager {
      */
     error MissingSpokeSource(address asset);
 
+    /**
+     * @notice Thrown when a collateral asset does not have bounded pricing enabled in the DeviationBoundedOracle
+     * @param asset The asset
+     */
+    error BoundedPricingDisabled(address asset);
+
     /// @notice Thrown when a parameter is beyond the pool's tier
     error ExceedsTierLimit();
 
@@ -339,6 +360,12 @@ interface ISpokePoolManager {
     error LiquidationThresholdDelayNotElapsed(address vToken);
 
     /**
+     * @notice Thrown when a market's scheduled liquidation-threshold decrease was not applied within its buffer period
+     * @param vToken The market
+     */
+    error LiquidationThresholdDecreaseExpired(address vToken);
+
+    /**
      * @notice Thrown when a pool's borrows and bad debt exceed `maxResidualDebtUsd`
      * @param debtUsd The pool's borrows and bad debt, in USD scaled by 1e18
      */
@@ -389,6 +416,7 @@ interface ISpokePoolManager {
      * @custom:error InsufficientLockedStake is thrown while the pool's locked stake is below its tier's stake
      * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, MissingSpokeSource or ExceedsTierLimit is thrown
      *   when the markets do not fit the tier
+     * @custom:error BoundedPricingDisabled is thrown when a collateral asset has no bounded pricing
      * @custom:error SeedBelowMinimum is thrown when a seed is worth less than `minSeedUsd`
      * @custom:access Not restricted for a new pool; only the pool's deployer for new markets
      */
@@ -401,11 +429,14 @@ interface ISpokePoolManager {
     /**
      * @notice Sets the collateral factor and liquidation threshold of a collateral market of the deployer's pool,
      *   within the pool's tier. The liquidation threshold can only stay or rise here; a lower one goes through
-     *   `scheduleLiquidationThresholdDecrease`, so borrowers can adjust before it takes effect
+     *   `scheduleLiquidationThresholdDecrease`, so borrowers can adjust before it takes effect. A higher liquidation
+     *   threshold cancels the market's scheduled decrease
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
+     * @custom:event Emits LiquidationThresholdDecreaseCancelled when a higher liquidation threshold cancels a scheduled
+     *   decrease
      * @custom:event The comptroller emits NewCollateralFactor and NewLiquidationThreshold
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerFrozen is thrown while the Venus team has frozen the deployer's functions
@@ -427,7 +458,8 @@ interface ISpokePoolManager {
     /**
      * @notice Schedules a lower liquidation threshold for a collateral market of the deployer's pool, within the pool's
      *   tier. The deployer applies it with `applyLiquidationThresholdDecrease` once `liquidationThresholdDelay` has
-     *   passed. It replaces any scheduled decrease of the market and restarts the delay
+     *   passed and within `liquidationThresholdBufferPeriod` after that. It replaces any scheduled decrease of the
+     *   market and restarts the delay
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
      * @param newLiquidationThresholdMantissa The new liquidation threshold, scaled by 1e18
@@ -449,7 +481,8 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Applies a collateral market's scheduled liquidation-threshold decrease once its delay has elapsed
+     * @notice Applies a collateral market's scheduled liquidation-threshold decrease once its delay has elapsed and
+     *   before its buffer period ends
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
      * @custom:event The comptroller emits NewLiquidationThreshold
@@ -459,6 +492,7 @@ interface ISpokePoolManager {
      * @custom:error NotCollateralMarket is thrown when the market is a loan market
      * @custom:error LiquidationThresholdDelayNotElapsed is thrown when no decrease is scheduled or its delay has not
      *   elapsed
+     * @custom:error LiquidationThresholdDecreaseExpired is thrown when the buffer period after the delay has ended
      * @custom:error ExceedsTierLimit is thrown when the market's collateral factor or the new liquidation threshold no
      *   longer fits the pool's tier
      * @custom:error The comptroller's `setCollateralFactor` errors, such as MarketNotListed for a market of another pool
@@ -564,8 +598,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool of a request for new markets is not live
      * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
-     * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum, MissingSpokeSource or
-     *   ExceedsTierLimit is thrown when the markets do not fit the tier
+     * @custom:error NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum, MissingSpokeSource,
+     *   BoundedPricingDisabled or ExceedsTierLimit is thrown when the markets do not fit the tier
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function propose(
@@ -739,6 +773,15 @@ interface ISpokePoolManager {
     function setLiquidationThresholdDelay(uint256 newDelay) external;
 
     /**
+     * @notice Sets the time after `liquidationThresholdDelay` during which a scheduled liquidation-threshold decrease
+     *   can be applied
+     * @param newBufferPeriod The new buffer period, in seconds
+     * @custom:event Emits LiquidationThresholdBufferPeriodUpdated
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setLiquidationThresholdBufferPeriod(uint256 newBufferPeriod) external;
+
+    /**
      * @notice Sets the borrows and bad debt a wound-down pool may still hold when its stake is released
      * @param newMaxResidualDebtUsd The new maximum, in USD scaled by 1e18
      * @custom:event Emits MaxResidualDebtUsdUpdated
@@ -784,7 +827,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when a new pool's comptroller is already a pool, or the request's pool is
      *   no longer live
      * @custom:error TooManyMarkets, NoLoanMarket, DuplicateAsset, InvalidMarketParams, SeedBelowMinimum,
-     *   MissingSpokeSource or ExceedsTierLimit is thrown when the markets no longer fit, as in `submitRequest`
+     *   MissingSpokeSource, BoundedPricingDisabled or ExceedsTierLimit is thrown when the markets no longer fit, as in
+     *   `submitRequest`
      * @custom:access Only the factory
      */
     function completeRequest(

@@ -5,6 +5,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
@@ -56,6 +57,9 @@ contract SpokePoolManager is
     /// @notice The oracle every pool prices with, and the manager values seeds, caps and debt with
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
+    /// @notice The oracle every pool bounds collateral prices with; a collateral asset needs bounded pricing enabled
+    IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
+
     /// @notice The receiver of the seed vTokens that are not burned
     address public immutable TREASURY;
 
@@ -68,6 +72,7 @@ contract SpokePoolManager is
      * @param governorBravo The governor the manager proposes through
      * @param poolRegistry The registry spoke pools are listed in
      * @param resilientOracle The oracle every pool prices with
+     * @param deviationBoundedOracle The oracle every pool bounds collateral prices with
      * @param treasury The receiver of the seed vTokens that are not burned
      * @param maxPoolMarkets The most markets a pool may have; 12 at most with GovernorBravo's 100 actions
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
@@ -79,6 +84,7 @@ contract SpokePoolManager is
         IGovernorBravo governorBravo,
         address poolRegistry,
         ResilientOracleInterface resilientOracle,
+        IDeviationBoundedOracle deviationBoundedOracle,
         address treasury,
         uint256 maxPoolMarkets
     ) {
@@ -86,6 +92,7 @@ contract SpokePoolManager is
         ensureNonzeroAddress(address(governorBravo));
         ensureNonzeroAddress(poolRegistry);
         ensureNonzeroAddress(address(resilientOracle));
+        ensureNonzeroAddress(address(deviationBoundedOracle));
         ensureNonzeroAddress(treasury);
         uint256 maxCount = (governorBravo.proposalMaxOperations() - POOL_CREATION_ACTIONS) / MAX_ACTIONS_PER_MARKET;
         if (maxPoolMarkets > maxCount) {
@@ -96,6 +103,7 @@ contract SpokePoolManager is
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         RESILIENT_ORACLE = resilientOracle;
+        DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
         TREASURY = treasury;
         MAX_POOL_MARKETS = maxPoolMarkets;
 
@@ -157,6 +165,13 @@ contract SpokePoolManager is
         if (newLiquidationThresholdMantissa < liquidationThreshold) {
             revert InvalidLiquidationThreshold(address(vToken));
         }
+        if (
+            newLiquidationThresholdMantissa > liquidationThreshold &&
+            pendingLiquidationThresholds[address(vToken)].scheduledAt != 0
+        ) {
+            delete pendingLiquidationThresholds[address(vToken)];
+            emit LiquidationThresholdDecreaseCancelled(comptroller, address(vToken));
+        }
 
         SpokeComptroller(comptroller).setCollateralFactor(
             vToken,
@@ -192,8 +207,12 @@ contract SpokePoolManager is
     function applyLiquidationThresholdDecrease(address comptroller, VToken vToken) external {
         Tier storage tier = _ensureDeployerCollateralMarket(comptroller, vToken);
         PendingLiquidationThreshold memory pending = pendingLiquidationThresholds[address(vToken)];
-        if (pending.scheduledAt == 0 || block.timestamp < pending.scheduledAt + liquidationThresholdDelay) {
+        uint256 readyAt = pending.scheduledAt + liquidationThresholdDelay;
+        if (pending.scheduledAt == 0 || block.timestamp < readyAt) {
             revert LiquidationThresholdDelayNotElapsed(address(vToken));
+        }
+        if (block.timestamp > readyAt + liquidationThresholdBufferPeriod) {
+            revert LiquidationThresholdDecreaseExpired(address(vToken));
         }
         (, uint256 collateralFactor, ) = SpokeComptroller(comptroller).markets(address(vToken));
         _checkCollateralParams(tier, collateralFactor, pending.liquidationThreshold);
@@ -500,6 +519,13 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
+    function setLiquidationThresholdBufferPeriod(uint256 newBufferPeriod) external {
+        _checkAccessAllowed("setLiquidationThresholdBufferPeriod(uint256)");
+        emit LiquidationThresholdBufferPeriodUpdated(liquidationThresholdBufferPeriod, newBufferPeriod);
+        liquidationThresholdBufferPeriod = newBufferPeriod;
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function setMaxResidualDebtUsd(uint256 newMaxResidualDebtUsd) external {
         _checkAccessAllowed("setMaxResidualDebtUsd(uint256)");
         emit MaxResidualDebtUsdUpdated(maxResidualDebtUsd, newMaxResidualDebtUsd);
@@ -702,7 +728,8 @@ contract SpokePoolManager is
      * @custom:error DuplicateAsset is thrown when two markets share an asset, or the pool already has the asset
      * @custom:error NoLoanMarket is thrown when a new pool has no loan market
      * @custom:error ExceedsTierLimit is thrown when a parameter or the loan liquidity is beyond the tier
-     * @custom:error InvalidMarketParams, SeedBelowMinimum or MissingSpokeSource is thrown as in `_validateMarket`
+     * @custom:error InvalidMarketParams, SeedBelowMinimum, MissingSpokeSource or BoundedPricingDisabled is thrown as in
+     *   `_validateMarket`
      */
     function _validateMarkets(address comptroller, Tier storage tier, MarketParams[] calldata markets) internal view {
         uint256 marketCount = markets.length;
@@ -744,8 +771,8 @@ contract SpokePoolManager is
     /**
      * @dev Validates one market against a tier: an asset priced by the ResilientOracle, a seed within the supply cap and
      * worth at least `minSeedUsd`, a seed burn share of at most 1e18, a nonzero initial exchange rate, and either a loan market with a Hub source and
-     * no collateral parameters, or a collateral market with no borrow cap and a collateral factor and liquidation
-     * threshold within the tier
+     * no collateral parameters, or a collateral market with no borrow cap, a collateral factor and liquidation
+     * threshold within the tier, and bounded pricing enabled in the DeviationBoundedOracle
      * @param tier The tier
      * @param market The market
      * @return liquidityUsd The USD value of a loan market's supply cap, scaled by 1e18; zero for a collateral market
@@ -754,6 +781,7 @@ contract SpokePoolManager is
      * @custom:error SeedBelowMinimum is thrown when the seed is worth less than `minSeedUsd`
      * @custom:error MissingSpokeSource is thrown when a loan asset has no Hub source
      * @custom:error ExceedsTierLimit is thrown when a collateral parameter is beyond the tier
+     * @custom:error BoundedPricingDisabled is thrown when a collateral asset has no bounded pricing
      */
     function _validateMarket(
         Tier storage tier,
@@ -784,6 +812,9 @@ contract SpokePoolManager is
             revert InvalidMarketParams(market.asset);
         }
         _checkCollateralParams(tier, market.collateralFactor, market.liquidationThreshold);
+        if (!DEVIATION_BOUNDED_ORACLE.isBoundedPricingEnabled(market.asset)) {
+            revert BoundedPricingDisabled(market.asset);
+        }
     }
 
     /**

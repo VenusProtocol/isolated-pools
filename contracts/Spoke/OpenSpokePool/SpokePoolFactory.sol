@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
 import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
-import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 
 import { ComptrollerInterface } from "../../ComptrollerInterface.sol";
 import { InterestRateModel } from "../../InterestRateModel.sol";
@@ -39,9 +38,6 @@ contract SpokePoolFactory {
     /// @notice ProtocolShareReserve every market sends its income to
     address payable public immutable PROTOCOL_SHARE_RESERVE;
 
-    /// @notice The oracle every comptroller bounds collateral prices with
-    IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
-
     /// @notice The `shortfall` of every market, through which bad debt is covered
     address public immutable SHORTFALL_RECEIVER;
 
@@ -67,7 +63,6 @@ contract SpokePoolFactory {
      * @param vTokenBeacon Beacon the vToken proxies point at
      * @param protocolShareReserve ProtocolShareReserve every market sends its income to
      * @param shortfallReceiver The `shortfall` of every market, through which bad debt is covered
-     * @param deviationBoundedOracle The oracle every comptroller bounds collateral prices with
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
      */
     constructor(
@@ -75,22 +70,19 @@ contract SpokePoolFactory {
         address comptrollerBeacon,
         address vTokenBeacon,
         address payable protocolShareReserve,
-        address shortfallReceiver,
-        IDeviationBoundedOracle deviationBoundedOracle
+        address shortfallReceiver
     ) {
         ensureNonzeroAddress(address(spokePoolManager));
         ensureNonzeroAddress(comptrollerBeacon);
         ensureNonzeroAddress(vTokenBeacon);
         ensureNonzeroAddress(protocolShareReserve);
         ensureNonzeroAddress(shortfallReceiver);
-        ensureNonzeroAddress(address(deviationBoundedOracle));
 
         SPOKE_POOL_MANAGER = spokePoolManager;
         COMPTROLLER_BEACON = comptrollerBeacon;
         VTOKEN_BEACON = vTokenBeacon;
         PROTOCOL_SHARE_RESERVE = protocolShareReserve;
         SHORTFALL_RECEIVER = shortfallReceiver;
-        DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
     }
 
     /*** Governance functions ***/
@@ -123,7 +115,7 @@ contract SpokePoolFactory {
         comptroller = address(new BeaconProxy{ salt: _salt(requestId, 0) }(COMPTROLLER_BEACON, ""));
         SpokeComptroller(comptroller).initialize(MAX_LOOPS_LIMIT, accessControlManager);
         SpokeComptroller(comptroller).setPriceOracle(manager.RESILIENT_ORACLE());
-        SpokeComptroller(comptroller).setDeviationBoundedOracle(DEVIATION_BOUNDED_ORACLE);
+        SpokeComptroller(comptroller).setDeviationBoundedOracle(manager.DEVIATION_BOUNDED_ORACLE());
         vTokens = _deployMarkets(requestId, comptroller, params.markets, accessControlManager);
         SpokeComptroller(comptroller).transferOwnership(msg.sender);
 
