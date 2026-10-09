@@ -128,7 +128,9 @@ describe("SpokeComptroller: errors, events and access control", () => {
     it("rejects a nonzero collateral factor while the price is zero", async () => {
       fixture.setSpotPrice(marketA, 0);
 
-      await expect(comptroller.setCollateralFactor(marketA.vToken.address, parseUnits("0.5", 18), ONE))
+      await expect(
+        comptroller.setCollateralFactor(marketA.vToken.address, parseUnits("0.5", 18), parseUnits("0.8", 18)),
+      )
         .to.be.revertedWithCustomError(comptroller, "PriceError")
         .withArgs(marketA.vToken.address);
     });
@@ -303,7 +305,7 @@ describe("SpokeComptroller: errors, events and access control", () => {
       );
 
       await comptroller.setMarketSupplyCaps([marketA.vToken.address], [0]);
-      await comptroller.setCollateralFactor(marketA.vToken.address, parseUnits("0.5", 18), ONE);
+      await comptroller.setCollateralFactor(marketA.vToken.address, parseUnits("0.5", 18), parseUnits("0.8", 18));
       await expect(comptroller.unlistMarket(marketA.vToken.address)).to.be.revertedWithCustomError(
         comptroller,
         "CollateralFactorIsNotZero",

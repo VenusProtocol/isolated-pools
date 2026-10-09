@@ -53,11 +53,11 @@ contract SpokeComptrollerStorage {
         bool isListed;
         //  Multiplier representing the most one can borrow against their collateral in this market.
         //  For instance, 0.9 to allow borrowing 90% of collateral value.
-        //  Must be between 0 and 1, and stored as a mantissa.
+        //  Must be at most `MAX_COLLATERAL_FACTOR_MANTISSA`, stored as a mantissa.
         uint256 collateralFactorMantissa;
         //  Multiplier representing the collateralization after which the borrow is eligible
         //  for liquidation. For instance, 0.8 liquidate when the borrow is 80% of collateral
-        //  value. Must be between 0 and collateral factor, stored as a mantissa.
+        //  value. Must be between the collateral factor and 1, stored as a mantissa.
         uint256 liquidationThresholdMantissa;
         // Per-market mapping of "accounts in this asset"
         mapping(address => bool) accountMembership;

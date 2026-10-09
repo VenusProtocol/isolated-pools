@@ -247,7 +247,8 @@ contract SpokeComptroller is
     /**
      * @notice Removes asset from sender's account liquidity calculation; disabling them as collateral
      * @dev Sender must not have an outstanding borrow balance in the asset,
-     *  or be providing necessary collateral for an outstanding borrow.
+     *  or be providing necessary collateral for an outstanding borrow. Leaving a market the sender holds no tokens in
+     *  prices no market, so it works while a price feed is broken.
      * @param vTokenAddress The address of the asset to be removed
      * @return error Always NO_ERROR for compatibility with Venus core tooling
      * @custom:event MarketExited is emitted on success
@@ -275,7 +276,7 @@ contract SpokeComptroller is
 
         Market storage marketToExit = markets[address(vToken)];
 
-        /* Return true if the sender is not already ‘in’ the market */
+        /* Return NO_ERROR if the sender is not already ‘in’ the market */
         if (!marketToExit.accountMembership[msg.sender]) {
             return NO_ERROR;
         }
@@ -296,8 +297,8 @@ contract SpokeComptroller is
             }
         }
 
-        // We *must* have found the asset in the list or our redundant data structure is broken
-        assert(assetIndex < len);
+        // Membership and this list are kept in sync, so the asset is always found. Were they ever out of sync,
+        // `assetIndex` would equal `len` and the write below would revert on the out-of-bounds index.
 
         // copy last item in list to location of item to be removed, reduce length by 1
         VToken[] storage storedList = accountAssets[msg.sender];
@@ -313,6 +314,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Checks if the account should be allowed to mint tokens in the given market
+     * @dev No minimum amount is enforced. The vToken rounds the minted amount down, so a mint worth less than one
+     *   vToken unit takes the underlying and mints nothing. Callers that need a minimum have to enforce it.
      * @param vToken The market to verify the mint against
      * @param minter The account which would get the minted tokens
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
@@ -321,7 +324,8 @@ contract SpokeComptroller is
      * @custom:error SupplyNotAllowed error is thrown if the market's supply allowlist is enabled and the minter is
      *   not on it
      * @custom:error SupplyCapExceeded error is thrown if the total supply exceeds the cap after minting
-     * @custom:access Not restricted
+     * @custom:access Not restricted while the market's supply allowlist is disabled, otherwise the minter has to be
+     *   on it
      */
     function preMintHook(address vToken, address minter, uint256 mintAmount) external override {
         _checkActionPauseState(vToken, Action.MINT);
@@ -692,11 +696,14 @@ contract SpokeComptroller is
     /**
      * @notice Seizes all the remaining collateral, makes msg.sender repay the existing
      *   borrows, and treats the rest of the debt as bad debt (for each market).
-     *   The sender has to repay a certain percentage of the debt, computed as `maxClearableDebt / borrows`: see the
-     *   note on `AccountLiquiditySnapshot.maxClearableDebt`.
+     *   The sender repays `maxClearableDebt / borrows` of each borrow, with each repayment rounded up: see the note on
+     *   `AccountLiquiditySnapshot.maxClearableDebt`. The heal is all-or-nothing: every seizure and repayment runs in
+     *   this one call, so a pause that blocks any of them reverts the whole heal.
      * @param user account to heal
      * @custom:error LiquidationNotAllowed is thrown if the liquidation allowlist is enabled and the caller is not on it
-     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from
+     * @custom:error ActionPaused error is thrown if liquidations are paused in any market the account borrows from,
+     *   seizing is paused in any entered market where the account holds vTokens, or repayments are paused in any
+     *   market where the heal repays a nonzero amount
      * @custom:error CollateralExceedsThreshold error is thrown when the collateral is too big for healing
      * @custom:error CollateralCoversDebt is thrown when the collateral can clear the whole debt, which leaves nothing
      *   to heal
@@ -736,11 +743,12 @@ contract SpokeComptroller is
             revert CollateralCoversDebt(snapshot.borrows, snapshot.maxClearableDebt);
         }
 
-        // percentage = maxClearableDebt / borrows. One blended share applies to every borrow, so what the caller
-        // pays in total is the sum over the collateral markets of each market's value at its own liquidation
-        // incentive. The discount is exact in aggregate; it is not attributed per piece of collateral.
-        Exp memory percentage = div_(Exp({ mantissa: snapshot.maxClearableDebt }), Exp({ mantissa: snapshot.borrows }));
-
+        // Every borrow is repaid at the same share, maxClearableDebt / borrows, so in total the caller pays
+        // maxClearableDebt, rounded up: the collateral's value with each market discounted at its own incentive. The
+        // discount holds for the position as a whole; it is not attributed to each piece of collateral.
+        // Each repayment is computed in one division and rounded up, so this step's rounding falls on the caller, not
+        // on the market's suppliers. It cannot exceed borrowBalance, because the check above keeps maxClearableDebt at
+        // or below borrows, and the shortfall check keeps borrows above zero.
         for (uint256 i; i < userAssetsCount; ++i) {
             VToken market = userAssets[i];
 
@@ -756,7 +764,11 @@ contract SpokeComptroller is
                 // way checks it otherwise: `healBorrow` never reaches `preLiquidateHook`, and when it repays nothing it
                 // reaches no hook at all.
                 _checkActionPauseState(address(market), Action.LIQUIDATE);
-                market.healBorrow(msg.sender, user, mul_ScalarTruncate(percentage, borrowBalance));
+                market.healBorrow(
+                    msg.sender,
+                    user,
+                    (borrowBalance * snapshot.maxClearableDebt + snapshot.borrows - 1) / snapshot.borrows
+                );
             }
         }
     }
@@ -877,6 +889,9 @@ contract SpokeComptroller is
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
      * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is lower than collateral factor
+     *   or greater than 1
+     * @custom:error UnsafeLiquidationParams is thrown when the new liquidation threshold times the market's effective
+     *   liquidation incentive is 1 or more
      * @custom:error PriceError is thrown when the oracle returns an invalid price for the asset
      * @custom:access Controlled by AccessControlManager
      */
@@ -893,7 +908,7 @@ contract SpokeComptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        // Check collateral factor <= 0.9
+        // Check collateral factor <= 0.95
         if (newCollateralFactorMantissa > MAX_COLLATERAL_FACTOR_MANTISSA) {
             revert InvalidCollateralFactor();
         }
@@ -907,6 +922,8 @@ contract SpokeComptroller is
         if (newLiquidationThresholdMantissa < newCollateralFactorMantissa) {
             revert InvalidLiquidationThreshold();
         }
+
+        _ensureSafeLiquidationParams(newLiquidationThresholdMantissa, _liquidationIncentive(address(vToken)));
 
         // If collateral factor != 0, fail if price == 0
         if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(address(vToken)) == 0) {
@@ -940,6 +957,11 @@ contract SpokeComptroller is
      * and would let a pool be registered one that pays every default-share market's liquidator less than it repaid.
      * A market whose share is raised above the default still needs an incentive of its own;
      * `setMarketLiquidationIncentive` bounds that from one side and `VToken.setProtocolSeizeShare` from the other.
+     *
+     * `setCollateralFactor` and `setMarketLiquidationIncentive` require `liquidationThreshold * incentive < 1` for the
+     * market they change. This setter does not recheck the markets that fall back to this value: that needs a loop over
+     * every market, which does not fit under the contract size limit at this contract's optimizer setting. Give every
+     * market with a nonzero liquidation threshold an incentive of its own, so this value never applies to one.
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @custom:event Emits NewLiquidationIncentive on success
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive is below
@@ -1003,7 +1025,7 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows to or above borrow cap will revert.
+     * @notice Set the given borrow caps for the given vToken markets. Borrowing that brings total borrows plus bad debt above the borrow cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A borrow cap of type(uint256).max corresponds to unlimited borrowing.
      * @dev Borrow caps smaller than the current total borrows are accepted. This way, new borrows will not be allowed
@@ -1032,7 +1054,7 @@ contract SpokeComptroller is
     }
 
     /**
-     * @notice Set the given supply caps for the given vToken markets. Supply that brings total Supply to or above supply cap will revert.
+     * @notice Set the given supply caps for the given vToken markets. Supply that brings total supply above the supply cap will revert.
      * @dev This function is restricted by the AccessControlManager
      * @dev A supply cap of type(uint256).max corresponds to unlimited supply.
      * @dev Supply caps smaller than the current total supplies are accepted. This way, new supplies will not be allowed
@@ -1206,6 +1228,8 @@ contract SpokeComptroller is
      * @custom:error MarketNotListed is thrown if the market is not listed
      * @custom:error InvalidLiquidationIncentive is thrown if the new incentive would leave the liquidator with less
      *   collateral than the debt it repaid
+     * @custom:error UnsafeLiquidationParams is thrown when the market's liquidation threshold times the new incentive
+     *   is 1 or more
      * @custom:access Controlled by AccessControlManager
      */
     function setMarketLiquidationIncentive(address vToken, uint256 newLiquidationIncentiveMantissa) external {
@@ -1225,6 +1249,8 @@ contract SpokeComptroller is
         if (newLiquidationIncentiveMantissa < MANTISSA_ONE + VToken(vToken).protocolSeizeShareMantissa()) {
             revert InvalidLiquidationIncentive();
         }
+
+        _ensureSafeLiquidationParams(markets[vToken].liquidationThresholdMantissa, newLiquidationIncentiveMantissa);
 
         uint256 oldLiquidationIncentiveMantissa = liquidationIncentives[vToken];
         liquidationIncentives[vToken] = newLiquidationIncentiveMantissa;
@@ -1457,19 +1483,11 @@ contract SpokeComptroller is
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
         uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
-        Exp memory ratio;
 
-        numerator = mul_(
-            Exp({ mantissa: _liquidationIncentive(vTokenCollateral) }),
-            Exp({ mantissa: priceBorrowedMantissa })
-        );
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
-
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+        // Every factor is multiplied before the one division, so the result is rounded down once. Upstream rounds the
+        // ratio to 18 decimals first and then scales it by the repayment, which scales the rounding loss up with it.
+        uint256 seizeTokens = (actualRepayAmount * _liquidationIncentive(vTokenCollateral) * priceBorrowedMantissa) /
+            (priceCollateralMantissa * exchangeRateMantissa);
 
         return (NO_ERROR, seizeTokens);
     }
@@ -1512,6 +1530,8 @@ contract SpokeComptroller is
 
     /**
      * @notice Update the prices of all the tokens associated with the provided account
+     * @dev Refreshes the resilient oracle only. The borrow, redeem, transfer and exit checks, which use bounded
+     *   prices, update the deviation-bounded oracle's protection state themselves before they read those prices.
      * @param account Address of the account to get associated tokens with
      */
     function updatePrices(address account) public {
@@ -1679,8 +1699,9 @@ contract SpokeComptroller is
             revert MarketNotListed(address(vToken));
         }
 
-        /* If the redeemer is not 'in' the market, then we can bypass the liquidity check */
-        if (!market.accountMembership[redeemer]) {
+        // Redeeming nothing, or from a market the redeemer is not in, cannot lower its liquidity. Skipping the check
+        // also skips pricing, so an account can leave a market it holds nothing in while some market's feed is broken.
+        if (redeemTokens == 0 || !market.accountMembership[redeemer]) {
             return;
         }
 
@@ -1855,10 +1876,12 @@ contract SpokeComptroller is
      * @dev Retrieves the two prices that value a market's collateral and its debt, and checks they are nonzero.
      *  Under the collateral factor both come from `deviationBoundedOracle`: while protection is active for the asset
      *  it values collateral at the low end of the asset's recent price window and debt at the high end, and it returns
-     *  spot on both legs otherwise, including for an asset it holds no configuration for. A deviating print can
-     *  therefore only ever shrink an account's borrowing capacity, never inflate it. Under the liquidation threshold
-     *  both legs are spot, because those snapshots route an unhealthy account between `liquidateAccount` and
-     *  `healAccount` and set how much of its debt healing repays, which has to track the live price.
+     *  spot on both legs otherwise, including for an asset it holds no configuration for. A print that triggers
+     *  protection can therefore only shrink an account's borrowing capacity, never inflate it. While protection is
+     *  off, a move too small to trigger it is priced at spot, as the upstream Comptroller prices every check, so
+     *  capacity follows it up or down. Under the liquidation threshold both legs are spot, because those snapshots
+     *  route an unhealthy account between `liquidateAccount` and `healAccount` and set how much of its debt healing
+     *  repays, which has to track the live price.
      * @param asset Address for asset to query prices for
      * @param weighting Which risk parameter weights the position being valued
      * @return collateralPrice Price valuing the collateral held in the market
@@ -1936,6 +1959,21 @@ contract SpokeComptroller is
     function _checkSenderIs(address expectedSender) internal view {
         if (msg.sender != expectedSender) {
             revert UnexpectedSender(expectedSender, msg.sender);
+        }
+    }
+
+    /**
+     * @dev Reverts unless `liquidationThreshold * liquidationIncentive < 1`, the same bound the core pool enforces.
+     *   Repaying debt worth R seizes collateral worth R * incentive, which lowers the weighted collateral by
+     *   R * incentive * threshold, so the shortfall changes by R * (threshold * incentive - 1). Below 1 every
+     *   liquidation shrinks the shortfall. From 1 up it no longer does, and repeated liquidations can drain the
+     *   collateral and leave bad debt.
+     * @param liquidationThreshold The market's liquidation threshold, scaled by 1e18
+     * @param liquidationIncentive The market's liquidation incentive, scaled by 1e18
+     */
+    function _ensureSafeLiquidationParams(uint256 liquidationThreshold, uint256 liquidationIncentive) internal pure {
+        if (liquidationThreshold * liquidationIncentive >= MANTISSA_ONE * MANTISSA_ONE) {
+            revert UnsafeLiquidationParams(liquidationThreshold, liquidationIncentive);
         }
     }
 

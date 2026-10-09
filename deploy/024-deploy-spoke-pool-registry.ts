@@ -114,6 +114,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //    any non-core pool whose vToken that one registry does not know, so pointing it here would break `reduceReserves`
   //    and, more seriously, every liquidation in the existing isolated pools. That change ships from its own repo and
   //    has to be live before this registry is wired into it.
+  //
+  // Shortfall has the same single-registry limit, and nothing here works around it. `startAuction` requires the
+  // comptroller to be in the one `poolRegistry` Shortfall stores, which is the isolated-pools registry, so it reverts
+  // for this pool. Bad debt that `healAccount` records in this pool cannot be auctioned through Shortfall.
 };
 
 func.tags = [DEPLOYMENT_NAME, "HubSpoke"];
