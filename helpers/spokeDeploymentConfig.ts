@@ -121,3 +121,19 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
 // A network with no entry has no spoke pool, which is the normal case: the deploy script logs and returns rather than
 // failing, so `--tags HubSpoke` stays runnable everywhere.
 export const getSpokePoolConfig = (networkName: string): PoolConfig | undefined => spokePoolConfig[networkName];
+
+// The `maxLoopsLimit` `025-deploy-spoke-comptroller.ts` initializes the comptroller with. It caps how many markets the
+// pool can list, and so how many one account can enter, and every liquidation path walks all of them. Measured on a
+// bscmainnet fork, `liquidateAccount` reaches the 2^24 per-transaction gas cap at about 59 entered markets when every
+// market has borrows, and at about 94 when they are collateral-only. `setMaxLoopsLimit` can only raise the limit, so
+// measure again before raising it.
+const SPOKE_MAX_LOOPS_LIMIT = 50;
+
+// Networks whose comptroller was initialized before the limit above was set. The deploy script reads the live value
+// back and stops on a mismatch, and the limit cannot be lowered, so these record what is deployed.
+const deployedSpokeMaxLoopsLimit: Record<string, number> = {
+  bsctestnet: 100,
+};
+
+export const getSpokeMaxLoopsLimit = (networkName: string): number =>
+  deployedSpokeMaxLoopsLimit[networkName] ?? SPOKE_MAX_LOOPS_LIMIT;

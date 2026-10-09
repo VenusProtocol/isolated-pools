@@ -12,6 +12,7 @@ import {
   toAddress,
   verifyDeployment,
 } from "../helpers/deploymentUtils";
+import { getSpokeMaxLoopsLimit } from "../helpers/spokeDeploymentConfig";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
@@ -20,13 +21,12 @@ const POOL_ID = "HubSpoke";
 // Deployed by `024-deploy-spoke-pool-registry.ts`, which explains why this pool does not share the isolated-pools one.
 const POOL_REGISTRY_NAME = "SpokePoolRegistry";
 
-const MAX_LOOPS_LIMIT = 100;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
+  const expectedMaxLoopsLimit = getSpokeMaxLoopsLimit(hre.getNetworkName());
 
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager || "AccessControlManager");
   const ownerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer");
@@ -80,7 +80,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const SpokeComptroller = await ethers.getContractFactory("SpokeComptroller");
   const proxyArgs = [
     spokeComptrollerBeacon.address,
-    SpokeComptroller.interface.encodeFunctionData("initialize", [MAX_LOOPS_LIMIT, accessControlManager]),
+    SpokeComptroller.interface.encodeFunctionData("initialize", [expectedMaxLoopsLimit, accessControlManager]),
   ];
   const comptrollerProxy: DeployResult = await deploy(`Comptroller_${POOL_ID}`, {
     contract: "BeaconProxy",
@@ -136,11 +136,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const maxLoopsLimit = await readBackUntil(
     async () => (await comptroller.maxLoopsLimit()).toString(),
-    value => value === MAX_LOOPS_LIMIT.toString(),
+    value => value === expectedMaxLoopsLimit.toString(),
   );
-  if (maxLoopsLimit !== MAX_LOOPS_LIMIT.toString()) {
+  if (maxLoopsLimit !== expectedMaxLoopsLimit.toString()) {
     throw new Error(
-      `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${MAX_LOOPS_LIMIT}`,
+      `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${expectedMaxLoopsLimit}`,
     );
   }
   console.log(`Verified comptroller max loops limit: ${maxLoopsLimit}`);

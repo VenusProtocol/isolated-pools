@@ -88,7 +88,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     it("initializes the proxy against the live ACM and leaves the pool unconfigured", async () => {
       const spoke = await ethers.getContractAt("SpokeComptroller", await deployed("Comptroller_HubSpoke"));
       expect(await spoke.accessControlManager()).to.equal(bscmainnet.ACM);
-      expect(await spoke.maxLoopsLimit()).to.equal(100);
+      expect(await spoke.maxLoopsLimit()).to.equal(50);
       // Everything the listing VIP owns is still unset, which is what makes the order of that VIP
       // load-bearing rather than cosmetic.
       expect(await spoke.oracle()).to.equal(ethers.constants.AddressZero);

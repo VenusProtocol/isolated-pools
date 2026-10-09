@@ -23,7 +23,7 @@ import { bscmainnet } from "./constants";
 /// assertions lean on are the same on every run.
 export const BLOCK_NUMBER = 116_847_000;
 
-const MAX_LOOPS_LIMIT = 100;
+const MAX_LOOPS_LIMIT = 50;
 
 /// Longer than any run. See `relaxPriceStaleness`.
 const STALE_PERIOD = 10 * 365 * 24 * 60 * 60;
