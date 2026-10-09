@@ -32,9 +32,11 @@ contract SpokeHandler is CommonBase, StdUtils {
     bytes32 public constant LIQUIDATOR_PAYOUT = "liquidatorPayout";
     bytes32 public constant NO_SHORTFALL = "noShortfall";
     bytes32 public constant LENS_REWARDS = "lensRewards";
+    bytes32 public constant UNLISTED_MARKET = "unlistedMarket";
 
     SpokeComptroller internal comptroller;
     VToken[3] internal markets;
+    VToken internal unlistedMarket;
     MockPriceOracle internal oracle;
     RewardsDistributor internal distributor;
     SpokePoolLens internal lens;
@@ -55,10 +57,13 @@ contract SpokeHandler is CommonBase, StdUtils {
     uint256 public probesHealAccepted;
     uint256 public probesBothRejected;
     uint256 public claims;
+    uint256 public unlistedProbes;
+    uint256 public collateralFactorSets;
 
     constructor(
         SpokeComptroller comptroller_,
         VToken[3] memory markets_,
+        VToken unlistedMarket_,
         MockPriceOracle oracle_,
         RewardsDistributor distributor_,
         SpokePoolLens lens_,
@@ -67,6 +72,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     ) {
         comptroller = comptroller_;
         markets = markets_;
+        unlistedMarket = unlistedMarket_;
         oracle = oracle_;
         distributor = distributor_;
         lens = lens_;
@@ -387,6 +393,62 @@ contract SpokeHandler is CommonBase, StdUtils {
         comptroller.setMarketLiquidationIncentive(address(market), bound(incentive, floor, ceiling));
     }
 
+    /// @notice Pushes supply, market entry, borrow and redeem at a market the pool does not list. Every one of them
+    /// has to be rejected, whatever the caller holds
+    /// @dev Only the market-entry leg isolates the listing check: an unlisted market also has no supply or borrow cap
+    /// set, which stops a mint or a borrow first
+    function useUnlistedMarket(uint256 accountSeed, uint256 amount, uint256 actionSeed) external {
+        address account = _account(accountSeed);
+        amount = bound(amount, 1e6, 1_000_000e18);
+        address[] memory one = new address[](1);
+        one[0] = address(unlistedMarket);
+        _fund(account, unlistedMarket, amount);
+
+        bool accepted;
+        vm.startPrank(account);
+        uint256 action = actionSeed % 4;
+        if (action == 0) {
+            try unlistedMarket.mint(amount) {
+                accepted = true;
+            } catch {}
+        } else if (action == 1) {
+            try comptroller.enterMarkets(one) {
+                accepted = true;
+            } catch {}
+        } else if (action == 2) {
+            try unlistedMarket.borrow(amount) {
+                accepted = true;
+            } catch {}
+        } else {
+            try unlistedMarket.redeemUnderlying(amount) {
+                accepted = true;
+            } catch {}
+        }
+        vm.stopPrank();
+
+        ++unlistedProbes;
+        if (accepted) _flag(UNLISTED_MARKET, "an action succeeded on a market the pool does not list");
+    }
+
+    /// @notice Calls `setCollateralFactor` with values the setter is meant to refuse as well as ones it accepts, so
+    /// `invariant_collateralFactorBoundsHold` sees what actually reached storage. Every other action bounds its
+    /// inputs to the valid range, which leaves the bounds themselves untested
+    /// @dev The candidates sit on the bounds rather than being drawn from a range, so a short run still offers the
+    /// setter a threshold under the factor, a factor over 0.95 and a threshold over 1
+    function setCollateralFactorUnbounded(uint256 marketSeed, uint256 factorSeed, uint256 thresholdSeed) external {
+        uint256[7] memory candidates = [uint256(0), 0.5e18, 0.7e18, 0.9e18, 0.95e18, 0.96e18, 1.01e18];
+        VToken market = markets[1 + (marketSeed % 2)];
+        try
+            comptroller.setCollateralFactor(
+                market,
+                candidates[factorSeed % candidates.length],
+                candidates[thresholdSeed % candidates.length]
+            )
+        {
+            ++collateralFactorSets;
+        } catch {}
+    }
+
     // ----- rules checked after a call succeeds -----
 
     function _checkNoShortfall(address account, string memory action) internal {
@@ -544,6 +606,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         handler = new SpokeHandler(
             comptroller,
             [markets[0], markets[1], markets[2]],
+            unlistedMarket,
             oracle,
             distributor,
             lens,
@@ -552,7 +615,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         );
         targetContract(address(handler));
 
-        bytes4[] memory actions = new bytes4[](20);
+        bytes4[] memory actions = new bytes4[](22);
         actions[0] = SpokeHandler.supply.selector;
         actions[1] = SpokeHandler.enterMarket.selector;
         actions[2] = SpokeHandler.exitMarket.selector;
@@ -573,6 +636,8 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         actions[17] = SpokeHandler.setSupplyAllowlist.selector;
         actions[18] = SpokeHandler.setAllowedSupplier.selector;
         actions[19] = SpokeHandler.setMarketLiquidationIncentive.selector;
+        actions[20] = SpokeHandler.useUnlistedMarket.selector;
+        actions[21] = SpokeHandler.setCollateralFactorUnbounded.selector;
         // Without this the fuzzer also spends calls on the handler's getters.
         targetSelector(FuzzSelector({ addr: address(handler), selectors: actions }));
     }
@@ -650,6 +715,13 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         assertEq(handler.violations(handler.LENS_REWARDS()), "");
     }
 
+    /// @notice No supply, market entry, borrow or redeem succeeds on a market the pool does not list
+    function invariant_unlistedMarketIsNeverUsable() public view {
+        assertEq(handler.violations(handler.UNLISTED_MARKET()), "");
+        (bool isListed, , ) = comptroller.markets(address(unlistedMarket));
+        assertFalse(isListed, "the unlisted probe market became listed");
+    }
+
     // ----- rules checked against state -----
 
     /// @notice Borrowing power under bounded prices is never above the same position at spot
@@ -659,6 +731,36 @@ contract SpokeInvariantTest is SpokeFuzzBase {
                 _borrowingNet(accounts[i]),
                 _spotBorrowingNet(accounts[i]),
                 "bounded pricing raised borrowing power"
+            );
+        }
+    }
+
+    /// @notice Every market keeps a collateral factor at or under 0.95, the value of `MAX_COLLATERAL_FACTOR_MANTISSA`,
+    /// and a liquidation threshold between that factor and 1
+    /// @dev What this harness actually exercises is the threshold against the factor. `setCollateralFactor` also
+    /// refuses a threshold whose product with the incentive reaches 1, and at the pool incentive of 1.1 that caps the
+    /// threshold, and with it the factor, at 0.909. So the 0.95 cap and the threshold's own 1 are never the binding
+    /// check here; they are covered by `tests/hardhat/Spoke/errorsAndEvents.ts`
+    function invariant_collateralFactorBoundsHold() public view {
+        for (uint256 m; m < MARKET_COUNT; ++m) {
+            (, uint256 collateralFactor, uint256 liquidationThreshold) = comptroller.markets(address(markets[m]));
+            assertLe(collateralFactor, 0.95e18, "collateral factor above the maximum");
+            assertGe(liquidationThreshold, collateralFactor, "liquidation threshold below the collateral factor");
+            assertLe(liquidationThreshold, 1e18, "liquidation threshold above 1");
+        }
+    }
+
+    /// @notice A market with no incentive of its own is seized at the pool-wide incentive, and one with its own
+    /// incentive at that value
+    /// @dev The expected pool-wide value is the constant, not `liquidationIncentiveMantissa()`: that getter reads the
+    /// caller's own market incentive and falls back the same way, so comparing the two would assert nothing
+    function invariant_zeroMarketIncentiveFallsBackToPool() public view {
+        for (uint256 m; m < MARKET_COUNT; ++m) {
+            uint256 own = comptroller.liquidationIncentives(address(markets[m]));
+            assertEq(
+                comptroller.effectiveLiquidationIncentive(address(markets[m])),
+                own == 0 ? POOL_LIQUIDATION_INCENTIVE : own,
+                "market incentive did not resolve to the pool-wide value"
             );
         }
     }
@@ -774,6 +876,8 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         console.log("mints", handler.mints(), "borrows", handler.borrows());
         console.log("redeems", handler.redeems(), "liquidateBorrow", handler.liquidations());
         console.log("liquidateAccount", handler.liquidateAccounts(), "healAccount", handler.heals());
+        console.log("unlisted-market probes", handler.unlistedProbes());
+        console.log("collateral factor sets accepted", handler.collateralFactorSets());
         console.log("probe: liquidateAccount accepted", handler.probesLiquidateAccountAccepted());
         console.log("probe: healAccount accepted", handler.probesHealAccepted());
         console.log("probe: both rejected", handler.probesBothRejected(), "claims", handler.claims());
