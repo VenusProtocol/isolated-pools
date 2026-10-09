@@ -276,7 +276,7 @@ contract SpokeComptroller is
 
         Market storage marketToExit = markets[address(vToken)];
 
-        /* Return true if the sender is not already ‘in’ the market */
+        /* Return NO_ERROR if the sender is not already ‘in’ the market */
         if (!marketToExit.accountMembership[msg.sender]) {
             return NO_ERROR;
         }
@@ -324,7 +324,8 @@ contract SpokeComptroller is
      * @custom:error SupplyNotAllowed error is thrown if the market's supply allowlist is enabled and the minter is
      *   not on it
      * @custom:error SupplyCapExceeded error is thrown if the total supply exceeds the cap after minting
-     * @custom:access Not restricted
+     * @custom:access Not restricted while the market's supply allowlist is disabled, otherwise the minter has to be
+     *   on it
      */
     function preMintHook(address vToken, address minter, uint256 mintAmount) external override {
         _checkActionPauseState(vToken, Action.MINT);
@@ -888,6 +889,7 @@ contract SpokeComptroller is
      * @custom:error MarketNotListed error is thrown when the market is not listed
      * @custom:error InvalidCollateralFactor error is thrown when collateral factor is too high
      * @custom:error InvalidLiquidationThreshold error is thrown when liquidation threshold is lower than collateral factor
+     *   or greater than 1
      * @custom:error UnsafeLiquidationParams is thrown when the new liquidation threshold times the market's effective
      *   liquidation incentive is 1 or more
      * @custom:error PriceError is thrown when the oracle returns an invalid price for the asset
