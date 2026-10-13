@@ -23,8 +23,8 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * pool and moves its state.
  * @dev The proposer must hold XVSVault votes, delegated to it, of at least GovernorBravo's Normal proposal threshold:
  * GovernorBravo has no proposer whitelist, and anyone can cancel the proposer's proposals while its votes are below
- * the threshold. GovernorBravo allows one live proposal per proposer, so the proposals run one after another. The
- * proposer sits behind a proxy so the delegated votes stay at one address across upgrades. It needs the manager's
+ * the threshold. GovernorBravo allows one pending or active proposal per proposer, so the votes run one after another.
+ * The proposer sits behind a proxy so the delegated votes stay at one address across upgrades. It needs the manager's
  * `recordRequestProposal`, `recordExitProposal` and `recordForceCloseProposal` roles. The manager's checks run after the
  * actions are built and submitted, in the same transaction, so an error from building can surface before them.
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
@@ -185,9 +185,9 @@ contract SpokePoolProposer is AccessControlledV8 {
     /**
      * @notice Starts a pool's exit, whether or not its deployer asked for it, ending the deployer's rights, and submits
      *   the exit's first proposal. It pauses minting, borrowing and entering markets and zeroes the supply and borrow
-     *   caps on every market, sets each collateral market's collateral factor to zero and its liquidation threshold to
-     *   the given value, and starts the repayment window. Borrowers can still repay, redeem and be liquidated. Called
-     *   again if that proposal fails
+     *   caps on every listed market, sets each collateral market's collateral factor to zero and its liquidation
+     *   threshold to the given value, and starts the repayment window. Borrowers can still repay and be liquidated, and
+     *   redeem once repaid. It can be called again, e.g. if that proposal fails
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds The new liquidation threshold of each market, in `getAllMarkets` order, scaled by
      *   1e18; each at most the market's current one. Entries of loan markets and unlisted markets are ignored
@@ -196,8 +196,8 @@ contract SpokePoolProposer is AccessControlledV8 {
      * @custom:event The manager emits ExitProposed
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
-     * @custom:error The manager's `recordExitProposal` errors: InvalidPoolStatus when the pool is already winding down,
-     *   closed or taken over. A comptroller that is not a pool fails while the actions are built
+     * @custom:error The manager's `recordExitProposal` errors: InvalidPoolStatus when the pool is unknown, winding down,
+     *   closed or taken over. An address that is not a comptroller reverts while the actions are built
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeExit(
@@ -214,7 +214,7 @@ contract SpokePoolProposer is AccessControlledV8 {
     /**
      * @notice Submits the exit's second proposal once the repayment window has elapsed with borrows left: collateral
      *   factors and liquidation thresholds go to zero and forced liquidation is enabled on every loan market with
-     *   borrows, so liquidators can close them in full. Called again if that proposal fails
+     *   borrows, so liquidators can close them in full. It can be called again, e.g. if that proposal fails
      * @param comptroller The pool's comptroller
      * @param description The proposal's description
      * @return proposalId The id of the proposal
@@ -498,8 +498,9 @@ contract SpokePoolProposer is AccessControlledV8 {
     }
 
     /**
-     * @dev Adds the Hub registration of one loan market: only the asset's Hub source may supply it, and the source takes
-     * it as a resource. The Hub operator adds it to the source's withdraw queue and funds it with `reallocate`
+     * @dev Adds the Hub registration of one loan market: only the asset's Hub source can be credited with supply, and the
+     * source takes the market as a resource. The Hub operator adds it to the source's withdraw queue and funds it with
+     * `reallocate`
      * @param proposal The proposal to add to
      * @param comptroller The pool's comptroller
      * @param asset The market's underlying asset

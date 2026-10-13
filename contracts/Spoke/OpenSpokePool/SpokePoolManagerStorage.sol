@@ -38,8 +38,8 @@ contract SpokePoolManagerStorage {
         uint256 maxCollateralFactor;
         // Upper bound on a collateral market's liquidation threshold, scaled by 1e18
         uint256 maxLiquidationThreshold;
-        // Lower bound on a collateral market's liquidation threshold, scaled by 1e18; stops a deployer from
-        // force-liquidating its borrowers by dropping the threshold to zero
+        // Lower bound on a collateral market's liquidation threshold, scaled by 1e18; a nonzero bound stops a deployer
+        // from force-liquidating its borrowers by dropping the threshold to zero
         uint256 minLiquidationThreshold;
     }
 
@@ -53,7 +53,7 @@ contract SpokePoolManagerStorage {
         string symbol;
         // ERC-20 decimals of the vToken; 8 in Venus markets
         uint8 decimals;
-        // Whether the Hub funds the market and the project borrows from it; otherwise the market is collateral
+        // Whether the Hub funds the market and borrowers borrow from it; otherwise the market is collateral
         bool isLoanMarket;
         // Collateral factor, scaled by 1e18; zero for a loan market
         uint256 collateralFactor;
@@ -139,7 +139,7 @@ contract SpokePoolManagerStorage {
 
     /// @notice Borrows and bad debt a wound-down pool may still hold when its stake is released, in USD scaled by 1e18.
     ///   Interest rounding can leave `totalBorrows` above the sum of the accounts' borrows with no account left to repay
-    ///   it, and bad debt worth less than one unit of XVS cannot be covered
+    ///   it, and bad debt too small to be worth covering can be left
     uint256 public maxResidualDebtUsd;
 
     /// @notice Number of requests submitted; also the id of the latest one
@@ -157,7 +157,7 @@ contract SpokePoolManagerStorage {
     /// @notice Pools by comptroller
     mapping(address => Pool) public pools;
 
-    /// @notice Whether a market created through the manager is a loan market, recorded when it is listed
+    /// @notice Whether a market created through the manager is a loan market, recorded when its request completes
     mapping(address => bool) public isLoanMarket;
 
     /// @notice Requests by id; the getter leaves out the seeds, and the requested parameters are in

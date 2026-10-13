@@ -27,6 +27,9 @@ import { SpokePoolManager } from "./SpokePoolManager.sol";
 contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice Highest bad debt cover incentive, scaled by 1e18: XVS worth 150% of the debt
+    uint256 public constant MAX_COVER_INCENTIVE_MANTISSA = 1.5e18;
+
     /// @notice The manager whose pools' locked stake pays coverers
     SpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
@@ -87,7 +90,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
      */
     error TransferAmountMismatch(address token);
 
-    /// @notice Thrown when the bad debt cover incentive is below 1e18
+    /// @notice Thrown when the bad debt cover incentive is below 1e18 or above `MAX_COVER_INCENTIVE_MANTISSA`
     error InvalidCoverIncentive();
 
     /**
@@ -129,6 +132,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
      * @custom:error MarketNotInPool is thrown when the market is not listed in its pool
      * @custom:error InsufficientLockedStake is thrown by the manager when the payout exceeds the pool's locked stake
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
+     * @custom:error The market reverts when the amount exceeds its bad debt
      * @custom:access Controlled by AccessControlManager, granted to the whitelisted bad debt coverers
      */
     function coverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 xvsAmountToSeize) {
@@ -153,12 +157,13 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
      * @notice Sets the XVS paid per unit of bad debt covered, relative to its USD value
      * @param newCoverIncentiveMantissa The new incentive, scaled by 1e18; 1.1e18 pays XVS worth 110% of the debt
      * @custom:event Emits CoverIncentiveUpdated
-     * @custom:error InvalidCoverIncentive is thrown when the incentive is below 1e18
+     * @custom:error InvalidCoverIncentive is thrown when the incentive is below 1e18 or above
+     *   `MAX_COVER_INCENTIVE_MANTISSA`
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setCoverIncentive(uint256 newCoverIncentiveMantissa) external {
         _checkAccessAllowed("setCoverIncentive(uint256)");
-        if (newCoverIncentiveMantissa < MANTISSA_ONE) {
+        if (newCoverIncentiveMantissa < MANTISSA_ONE || newCoverIncentiveMantissa > MAX_COVER_INCENTIVE_MANTISSA) {
             revert InvalidCoverIncentive();
         }
         emit CoverIncentiveUpdated(coverIncentiveMantissa, newCoverIncentiveMantissa);
@@ -173,6 +178,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
      * @custom:event Emits BadDebtRepaid; the market emits BadDebtRecovered
      * @custom:error MarketNotInPool is thrown when the market is not listed in its pool
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
+     * @custom:error The market reverts when the amount exceeds its bad debt
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {

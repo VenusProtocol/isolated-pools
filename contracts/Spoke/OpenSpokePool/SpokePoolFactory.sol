@@ -101,8 +101,10 @@ contract SpokePoolFactory {
      * @return vTokens The deployed markets, in the order of `params.markets`
      * @custom:event Emits PoolCreated
      * @custom:error Unauthorized is thrown when the AccessControlManager does not allow the caller
-     * @custom:error InvalidRequestStatus, SeedsMismatch, InvalidPoolStatus or a market validation error is thrown by the
-     *   manager when the request is not proposed, the seeds are not the ones pulled at proposal, or its markets no longer fit
+     * @custom:error InvalidRequestStatus, SeedsMismatch, RequestPoolMismatch, InvalidPoolStatus or a market validation
+     *   error is thrown by the manager when the request is not proposed, the seeds are not the ones pulled at proposal,
+     *   the request is for new markets or its markets no longer fit
+     * @custom:error OnlyFactory is thrown by the manager when this contract is no longer its factory
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
      *   proposer's proposals
      */
@@ -137,6 +139,7 @@ contract SpokePoolFactory {
      * @custom:error InvalidRequestStatus, SeedsMismatch, RequestPoolMismatch, InvalidPoolStatus or a market validation
      *   error is thrown by the manager when the request is not proposed for this pool, the seeds are not the ones
      *   pulled at proposal, the pool is no longer live or the markets no longer fit
+     * @custom:error OnlyFactory is thrown by the manager when this contract is no longer its factory
      * @custom:access Controlled by the manager's AccessControlManager, granted to the timelock that executes the
      *   proposer's proposals
      */

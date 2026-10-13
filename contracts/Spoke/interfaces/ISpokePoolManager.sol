@@ -119,9 +119,14 @@ interface ISpokePoolManager {
     /**
      * @notice Emitted when a tier is set
      * @param tierId The tier
-     * @param tier The tier's stake and limits
+     * @param oldTier The tier's previous stake and limits; all zero for a new tier
+     * @param newTier The tier's new stake and limits
      */
-    event TierUpdated(uint256 indexed tierId, SpokePoolManagerStorage.Tier tier);
+    event TierUpdated(
+        uint256 indexed tierId,
+        SpokePoolManagerStorage.Tier oldTier,
+        SpokePoolManagerStorage.Tier newTier
+    );
 
     /**
      * @notice Emitted when the factory is changed
@@ -248,10 +253,13 @@ interface ISpokePoolManager {
     /*** Errors ***/
 
     /**
-     * @notice Thrown when a tier is not set, or is not a valid tier for the call
+     * @notice Thrown when a tier is not set, has inconsistent limits, or is not a valid tier for the call
      * @param tierId The tier
      */
     error InvalidTier(uint256 tierId);
+
+    /// @notice Thrown when a request is proposed while `minSeedUsd` is zero
+    error MinSeedUsdNotSet();
 
     /**
      * @notice Thrown when the caller is not the pool's deployer, or the deployer's rights have ended
@@ -431,11 +439,12 @@ interface ISpokePoolManager {
      *   request, which pulls each market's seed from the caller, so the caller must approve the manager for the seeds
      * @param comptroller The pool to add the markets to, or zero for a new pool
      * @param tierId The tier of a new pool; ignored for new markets, which follow their pool's tier
-     * @param params The requested pool; only `params.markets` is used for new markets. The Venus team may change the
-     *   parameters within the tier when it proposes the request
+     * @param params The requested pool; only `params.markets` is used for new markets. The Venus team sets the final
+     *   parameters when it proposes the request, and the markets are checked against the tier again then
      * @return requestId The id of the request
      * @custom:event Emits RequestSubmitted; the vault emits StakeLocked for a new pool
      * @custom:error InvalidTier is thrown when the tier of a new pool is not set
+     * @custom:error The vault's `lock` errors for a new pool, such as when the caller's free stake is too small
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
      * @custom:error DeployerActionsPaused is thrown while the Venus team has paused the deployer's actions
      * @custom:error InsufficientLockedStake is thrown while the pool's locked stake is below its tier's stake
@@ -459,7 +468,8 @@ interface ISpokePoolManager {
     ) external returns (uint256 requestId);
 
     /**
-     * @notice Sends a rejected request's seeds to its project
+     * @notice Sends a rejected request's seeds to its project; nothing is sent for a request rejected before it was
+     *   proposed or whose seeds were already sent
      * @param requestId The rejected request
      * @custom:event Emits SeedsClaimed
      * @custom:error InvalidRequestStatus is thrown when the request is not rejected
@@ -544,8 +554,8 @@ interface ISpokePoolManager {
 
     /**
      * @notice Sets supply caps of markets of the deployer's pool. A loan market's supply cap is the liquidity the Hub
-     *   supplies it up to, so raising one must keep the loan markets' caps together within the tier's liquidity in
-     *   USD. Lowering caps, or changing collateral caps, which are not bounded, is never blocked
+     *   supplies it up to, so a call that raises one must keep the loan markets' caps, in USD at current prices, within
+     *   the tier's liquidity. Collateral caps are not bounded
      * @param comptroller The pool's comptroller
      * @param vTokens The markets
      * @param newSupplyCaps The new supply caps, in each market's underlying
@@ -566,8 +576,8 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Sets borrow caps of loan markets of the deployer's pool. Borrows are already bounded by the liquidity
-     *   the tier allows, so the caps are not bounded further
+     * @notice Sets borrow caps of loan markets of the deployer's pool. Borrows are limited by the Hub's liquidity, which
+     *   the loan market's supply cap bounds, so borrow caps have no tier limit
      * @param comptroller The pool's comptroller
      * @param vTokens The loan markets
      * @param newBorrowCaps The new borrow caps, in each market's underlying
@@ -649,16 +659,17 @@ interface ISpokePoolManager {
      * @custom:event Emits TierChanged; the vault emits StakeLocked or StakeUnlocked
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error InvalidTier is thrown when the tier is not set or is the pool's current tier
-     * @custom:error DeployerActionsPaused is thrown while the deployer's actions are paused
      * @custom:error ExceedsTierLimit is thrown when a risk parameter or the loan liquidity does not fit the new tier
      * @custom:error BadDebtOutstanding is thrown when a market has bad debt
+     * @custom:error The vault's `lock` errors when the new tier's stake is higher, such as when the deployer's free
+     *   stake is too small
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function setPoolTier(address comptroller, uint256 newTierId) external;
 
     /**
      * @notice Pauses or resumes a pool deployer's actions, e.g. while a compromised or misbehaving project is
-     *   investigated. The pool itself keeps running and its stake stays locked
+     *   investigated. The pool itself keeps running, and pausing does not unlock its stake
      * @param comptroller The pool's comptroller
      * @param paused True to pause the deployer's actions
      * @custom:event Emits DeployerActionsPausedUpdated
@@ -668,8 +679,9 @@ interface ISpokePoolManager {
     function setDeployerActionsPaused(address comptroller, bool paused) external;
 
     /**
-     * @notice Turns down a pool's exit and makes the pool live again with its deployer's rights: an exit the deployer
-     *   requested, or a proposed exit whose proposal failed. An exit proposal still pending then reverts on execution
+     * @notice Turns down a pool's requested or proposed exit and makes the pool live again with its deployer's rights.
+     *   An old exit proposal executed later reverts in `startWindDown`, but not if the exit was proposed again: the
+     *   Venus team lets the old proposal fail or cancels it before proposing the exit again
      * @param comptroller The pool's comptroller
      * @custom:event Emits ExitRejected
      * @custom:error InvalidPoolStatus is thrown when the pool's exit is neither requested nor proposed
@@ -681,7 +693,8 @@ interface ISpokePoolManager {
      * @notice Unlocks a wound-down pool's stake once its borrows and bad debt are worth at most `maxResidualDebtUsd`.
      *   Interest is accrued in every market first. The pool stays paused
      * @param comptroller The pool's comptroller
-     * @custom:event Emits StakeReleased; the vault emits StakeUnlocked, and each market AccrueInterest
+     * @custom:event Emits StakeReleased; the vault emits StakeUnlocked when stake is left, and each market
+     *   AccrueInterest
      * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
      * @custom:error OutstandingDebt is thrown when the pool's borrows and bad debt exceed `maxResidualDebtUsd`
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
@@ -697,7 +710,8 @@ interface ISpokePoolManager {
      * @param tierId The tier to set: `tierCount` adds a tier, a lower id updates that tier
      * @param tier The tier's stake and limits
      * @custom:event Emits TierUpdated
-     * @custom:error InvalidTier is thrown when the id is above `tierCount`
+     * @custom:error InvalidTier is thrown when the id is above `tierCount`, the max liquidation threshold is above 1e18,
+     *   or the max collateral factor or min liquidation threshold is above the max liquidation threshold
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setTier(uint256 tierId, SpokePoolManagerStorage.Tier calldata tier) external;
@@ -743,6 +757,7 @@ interface ISpokePoolManager {
      * @notice Sets the time a deployer waits before a lower liquidation threshold takes effect
      * @param newDelay The new delay, in seconds
      * @custom:event Emits LiquidationThresholdDelayUpdated
+     * @custom:error ZeroValueNotAllowed is thrown when the delay is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setLiquidationThresholdDelay(uint256 newDelay) external;
@@ -752,6 +767,7 @@ interface ISpokePoolManager {
      *   can be applied
      * @param newBufferPeriod The new buffer period, in seconds
      * @custom:event Emits LiquidationThresholdBufferPeriodUpdated
+     * @custom:error ZeroValueNotAllowed is thrown when the buffer period is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setLiquidationThresholdBufferPeriod(uint256 newBufferPeriod) external;
@@ -760,6 +776,7 @@ interface ISpokePoolManager {
      * @notice Sets the time borrowers have to repay after an exit's first proposal executes
      * @param newRepaymentWindow The new window, in seconds
      * @custom:event Emits RepaymentWindowUpdated
+     * @custom:error ZeroValueNotAllowed is thrown when the window is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setRepaymentWindow(uint256 newRepaymentWindow) external;
@@ -787,7 +804,7 @@ interface ISpokePoolManager {
      *   exit: once the team proposes an exit the pool is being closed. The same proposal should revoke the manager's
      *   roles on the pool and point each market's `shortfall` at whatever recovers its bad debt from then on
      * @param comptroller The pool's comptroller
-     * @custom:event Emits PoolTakenOver; the vault emits StakeUnlocked
+     * @custom:event Emits PoolTakenOver; the vault emits StakeUnlocked when stake is left
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
@@ -798,7 +815,8 @@ interface ISpokePoolManager {
     /**
      * @notice Records the proposal `SpokePoolProposer` submitted for a request. The request must be pending, or its
      *   last proposal must have failed; its markets must fit the request's tier, or for new markets the live pool's
-     *   current tier. A failed proposal's seeds go back to the project, then each final market's seed is pulled from it
+     *   current tier, and must burn part of every seed. A failed proposal's seeds go back to the project, then each
+     *   final market's seed is pulled from it
      * @param requestId The request
      * @param markets The final markets the proposal lists
      * @param proposalId The proposal
@@ -807,6 +825,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor proposed
      * @custom:error ProposalNotFailed is thrown when the request's last proposal can still execute
      * @custom:error InvalidPoolStatus is thrown when the pool of a request for new markets is not live
+     * @custom:error MinSeedUsdNotSet is thrown when `minSeedUsd` is zero
+     * @custom:error InvalidMarketParams is thrown when a market's seed burn share is zero
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
      * @custom:error The market errors of `submitRequest`, such as ExceedsTierLimit, when the markets do not fit
      * @custom:access Controlled by AccessControlManager, granted to `SpokePoolProposer`
@@ -818,8 +838,8 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Records an exit's first proposal and ends the deployer's rights. A pool whose exit proposal failed can
-     *   have its exit proposed again
+     * @notice Records an exit's first proposal and ends the deployer's rights. An exit can be proposed again, e.g.
+     *   after its proposal failed
      * @param comptroller The pool's comptroller
      * @param proposalId The proposal
      * @custom:event Emits ExitProposed
@@ -882,6 +902,7 @@ interface ISpokePoolManager {
      * @param to The receiver of the XVS
      * @custom:event Emits StakeSeized; the vault emits Claim and LockedStakeSeized
      * @custom:error InsufficientLockedStake is thrown when the amount exceeds the pool's locked stake
+     * @custom:error The vault's `seizeLocked` errors, such as while the vault is paused
      * @custom:access Controlled by AccessControlManager, granted to `SpokePoolShortfall`
      */
     function seizeStake(address comptroller, uint256 amount, address to) external;

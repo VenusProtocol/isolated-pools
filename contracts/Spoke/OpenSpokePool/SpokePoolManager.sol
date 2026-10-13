@@ -7,6 +7,7 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
 import { VToken } from "../../VToken.sol";
@@ -56,8 +57,8 @@ contract SpokePoolManager is
     /// @notice The oracle every pool bounds collateral prices with; a collateral asset needs bounded pricing enabled
     IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
 
-    /// @notice Most markets a pool may have. `SpokePoolProposer` checks that a pool-creation proposal listing this many
-    ///   fits GovernorBravo's action limit, so every proposal of a pool does
+    /// @notice Most markets a pool may have. `SpokePoolProposer` checks at deployment that a pool-creation proposal with
+    ///   this many markets fits GovernorBravo's action limit
     uint256 public immutable MAX_POOL_MARKETS;
 
     /**
@@ -324,9 +325,6 @@ contract SpokePoolManager is
         if (newTierId == pool.tierId) {
             revert InvalidTier(newTierId);
         }
-        if (pool.deployerActionsPaused) {
-            revert DeployerActionsPaused(comptroller);
-        }
         _checkPoolFitsTier(comptroller, tier);
 
         uint256 newStake = tier.stakeAmount;
@@ -388,13 +386,18 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setTier(uint256 tierId, Tier calldata tier) external {
         _checkAccessAllowed("setTier(uint256,Tier)");
-        if (tierId > tierCount) {
+        if (
+            tierId > tierCount ||
+            tier.maxLiquidationThreshold > MANTISSA_ONE ||
+            tier.maxCollateralFactor > tier.maxLiquidationThreshold ||
+            tier.minLiquidationThreshold > tier.maxLiquidationThreshold
+        ) {
             revert InvalidTier(tierId);
         }
         if (tierId == tierCount) {
             ++tierCount;
         }
-        emit TierUpdated(tierId, tier);
+        emit TierUpdated(tierId, tiers[tierId], tier);
         tiers[tierId] = tier;
     }
 
@@ -432,6 +435,7 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setLiquidationThresholdDelay(uint256 newDelay) external {
         _checkAccessAllowed("setLiquidationThresholdDelay(uint256)");
+        ensureNonzeroValue(newDelay);
         emit LiquidationThresholdDelayUpdated(liquidationThresholdDelay, newDelay);
         liquidationThresholdDelay = newDelay;
     }
@@ -439,6 +443,7 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setLiquidationThresholdBufferPeriod(uint256 newBufferPeriod) external {
         _checkAccessAllowed("setLiquidationThresholdBufferPeriod(uint256)");
+        ensureNonzeroValue(newBufferPeriod);
         emit LiquidationThresholdBufferPeriodUpdated(liquidationThresholdBufferPeriod, newBufferPeriod);
         liquidationThresholdBufferPeriod = newBufferPeriod;
     }
@@ -446,6 +451,7 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setRepaymentWindow(uint256 newRepaymentWindow) external {
         _checkAccessAllowed("setRepaymentWindow(uint256)");
+        ensureNonzeroValue(newRepaymentWindow);
         emit RepaymentWindowUpdated(repaymentWindow, newRepaymentWindow);
         repaymentWindow = newRepaymentWindow;
     }
@@ -600,14 +606,23 @@ contract SpokePoolManager is
      * the manager and records it, rejecting assets that deliver a different amount
      * @param request The request's storage
      * @param markets The final markets
+     * @custom:error MinSeedUsdNotSet is thrown when `minSeedUsd` is zero
+     * @custom:error InvalidMarketParams is thrown when a market's seed burn share is zero
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
      */
     function _pullSeeds(Request storage request, MarketParams[] calldata markets) internal {
+        // Seeds protect new markets from share inflation; checked here as the team sets the final seed burn shares
+        if (minSeedUsd == 0) {
+            revert MinSeedUsdNotSet();
+        }
         address project = request.project;
         _sendSeeds(request, project);
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
             MarketParams calldata market = markets[i];
+            if (market.seedBurnShare == 0) {
+                revert InvalidMarketParams(market.asset);
+            }
             request.seedAssets.push(market.asset);
             request.seedAmounts.push(market.seed);
             IERC20Upgradeable asset = IERC20Upgradeable(market.asset);
