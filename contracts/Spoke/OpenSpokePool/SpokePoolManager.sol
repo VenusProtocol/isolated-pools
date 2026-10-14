@@ -280,7 +280,7 @@ contract SpokePoolManager is
             Pool storage pool = pools[comptroller];
             pool.deployer = request.deployer;
             pool.status = PoolStatus.Live;
-            pool.tierId = request.pool.tierId;
+            pool.tierId = uint16(request.pool.tierId);
             pool.lockedStake = request.pool.stake;
             emit PoolActivated(requestId, comptroller, request.deployer);
         }
@@ -315,7 +315,7 @@ contract SpokePoolManager is
 
         uint256 newStake = tiers[tierId].stakeAmount;
         uint256 lockedStake = pool.lockedStake;
-        pool.tierId = tierId;
+        pool.tierId = uint16(tierId);
         pool.lockedStake = newStake;
         if (newStake > lockedStake) {
             XVS_VAULT.lock(pool.deployer, newStake - lockedStake);
@@ -455,7 +455,7 @@ contract SpokePoolManager is
 
         Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitProposed);
         pool.status = PoolStatus.WindingDown;
-        pool.windDownStartedAt = block.timestamp;
+        pool.windDownStartedAt = uint64(block.timestamp);
 
         emit WindDownStarted(comptroller);
     }
@@ -520,6 +520,7 @@ contract SpokePoolManager is
         _checkAccessAllowed("setTier(uint256,Tier)");
         if (
             tierId > tierCount ||
+            tierId > type(uint16).max ||
             tier.maxLiquidationThreshold > MANTISSA_ONE ||
             tier.maxCollateralFactor > tier.maxLiquidationThreshold ||
             tier.minLiquidationThreshold > tier.maxLiquidationThreshold

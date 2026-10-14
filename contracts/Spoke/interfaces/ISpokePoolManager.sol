@@ -756,7 +756,7 @@ interface ISpokePoolManager {
      * @param tierId The tier: `tierCount` adds one
      * @param tier The tier's terms
      * @custom:event Emits TierUpdated
-     * @custom:error InvalidTier is thrown when the id is above `tierCount` or the limits are inconsistent
+     * @custom:error InvalidTier is thrown when the id is above `tierCount` or 65535, or the limits are inconsistent
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setTier(uint256 tierId, SpokePoolManagerStorage.Tier calldata tier) external;

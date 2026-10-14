@@ -145,9 +145,10 @@ contract SpokePoolManagerStorage {
         address deployer;
         PoolStatus status;
         bool deployerPaused;
-        uint256 tierId;
+        // Packed into the deployer's slot; `setTier` keeps tier ids within uint16
+        uint16 tierId;
+        uint64 windDownStartedAt;
         uint256 lockedStake;
-        uint256 windDownStartedAt;
     }
 
     /// @notice Builds and submits the manager's proposals
