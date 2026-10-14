@@ -13,6 +13,7 @@ import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { PROPOSAL_TYPE_NORMAL } from "../interfaces/IGovernorBravo.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
+import { ISpokePoolProposer } from "../interfaces/ISpokePoolProposer.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 
@@ -23,13 +24,14 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * after deploying its contracts before the vote as in Venus market listings, and an exit's two proposals.
  * @dev Only the manager calls it. It submits the proposals itself, so the GovernorBravo votes are delegated to it;
  * GovernorBravo allows one live proposal per proposer, so the votes run one after another. The proposals grant no
- * roles: the onboarding VIP gives wildcard ACM grants once, for every pool, to the pool registry on the setters it calls
- * while listing (`setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`, `setCollateralFactor`,
- * `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal Timelock on `setSupplyAllowlistEnabled`,
- * `setAllowedSupplier` and `setForcedLiquidation` (it already holds wildcards for the other setters), and to the Risk
- * Stewards on `setCollateralFactor`, `setMarketSupplyCaps` and `setMarketBorrowCaps`
+ * roles: the onboarding VIP gives wildcard ACM grants once, for every pool, to the pool registry on the setters it
+ * calls while listing (`setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`,
+ * `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal Timelock on
+ * `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource` (it
+ * already holds wildcards for the other comptroller setters), and to the Risk Stewards on `setCollateralFactor`,
+ * `setMarketSupplyCaps` and `setMarketBorrowCaps`
  */
-contract SpokePoolProposer {
+contract SpokePoolProposer is ISpokePoolProposer {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
     struct Proposal {
         address[] targets;
@@ -76,12 +78,12 @@ contract SpokePoolProposer {
      * @notice Thrown when the caller is not the manager
      * @param caller The caller
      */
-    error OnlyManager(address caller);
+    error NotManager(address caller);
 
     /// @dev Reverts unless the caller is the manager
     modifier onlyManager() {
         if (msg.sender != address(SPOKE_POOL_MANAGER)) {
-            revert OnlyManager(msg.sender);
+            revert NotManager(msg.sender);
         }
         _;
     }
@@ -139,7 +141,8 @@ contract SpokePoolProposer {
      * @return proposalId The proposal
      * @return comptroller The pool's comptroller
      * @return vTokens The deployed markets, in the request's market order
-     * @custom:error OnlyManager is thrown when the caller is not the manager
+     * @custom:error NotManager is thrown when the caller is not the manager
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
     function proposeRequest(
@@ -147,10 +150,10 @@ contract SpokePoolProposer {
         string calldata description
     ) external onlyManager returns (uint256 proposalId, address comptroller, address[] memory vTokens) {
         SpokePoolManagerStorage.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
-        bool isPoolRequest = request.requestType == SpokePoolManagerStorage.RequestType.Pool;
         address executor = SPOKE_POOL_MANAGER.GOVERNOR_BRAVO().proposalTimelocks(PROPOSAL_TYPE_NORMAL);
+        // Only a pool request's first proposal has no comptroller yet
         comptroller = request.comptroller;
-        if (isPoolRequest && comptroller == address(0)) {
+        if (comptroller == address(0)) {
             comptroller = _deployComptroller(executor);
         }
         vTokens = _deployMarkets(comptroller, request.markets, executor);
@@ -161,7 +164,7 @@ contract SpokePoolProposer {
                 MAX_ACTIONS_PER_MARKET *
                 request.markets.length
         );
-        if (isPoolRequest) {
+        if (request.requestType == SpokePoolManagerStorage.RequestType.Pool) {
             _addPoolListing(proposal, comptroller, request.pool);
         } else if (request.requestType == SpokePoolManagerStorage.RequestType.PoolConfig) {
             _addPoolConfig(proposal, comptroller, request.poolConfig);
@@ -181,15 +184,17 @@ contract SpokePoolProposer {
 
     /**
      * @notice Submits an exit's first proposal: pause minting, borrowing and entering markets, zero the caps of every
-     *   listed market, zero each collateral market's collateral factor and lower its liquidation threshold, then start
-     *   the wind-down in the manager
+     *   listed market, zero each collateral market's collateral factor and set its liquidation threshold no higher than
+     *   now, then start the wind-down in the manager. A pool without listed markets only starts the wind-down
      * @param comptroller The pool's comptroller
-     * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order
+     * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
+     *   for loan markets
      * @param description The proposal's description
      * @return The proposal
-     * @custom:error OnlyManager is thrown when the caller is not the manager
+     * @custom:error NotManager is thrown when the caller is not the manager
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's listed markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
     function proposeExit(
@@ -197,28 +202,31 @@ contract SpokePoolProposer {
         uint256[] calldata liquidationThresholds,
         string calldata description
     ) external onlyManager returns (uint256) {
-        VToken[] memory listed = _listedMarkets(comptroller, SpokeComptroller(comptroller).getAllMarkets());
+        (VToken[] memory listed, uint256[] memory currentThresholds) = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         if (liquidationThresholds.length != marketCount) {
             revert ISpokePoolManager.InvalidArrayLength();
         }
         Proposal memory proposal = _newProposal(marketCount + EXIT_ACTIONS);
 
-        uint256[] memory zeroCaps = new uint256[](marketCount);
-        Action[] memory pausedActions = new Action[](3);
-        pausedActions[0] = Action.MINT;
-        pausedActions[1] = Action.BORROW;
-        pausedActions[2] = Action.ENTER_MARKET;
-        _addAction(
-            proposal,
-            comptroller,
-            "setActionsPaused(address[],uint8[],bool)",
-            abi.encode(listed, pausedActions, true)
-        );
-        _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
-        _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
+        // The comptroller rejects empty market arrays
+        if (marketCount != 0) {
+            uint256[] memory zeroCaps = new uint256[](marketCount);
+            Action[] memory pausedActions = new Action[](3);
+            pausedActions[0] = Action.MINT;
+            pausedActions[1] = Action.BORROW;
+            pausedActions[2] = Action.ENTER_MARKET;
+            _addAction(
+                proposal,
+                comptroller,
+                "setActionsPaused(address[],uint8[],bool)",
+                abi.encode(listed, pausedActions, true)
+            );
+            _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
+            _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
+        }
         for (uint256 i; i < marketCount; ++i) {
-            _addZeroCollateralFactor(proposal, comptroller, listed[i], liquidationThresholds[i]);
+            _addZeroCollateralFactor(proposal, comptroller, listed[i], liquidationThresholds[i], currentThresholds[i]);
         }
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "startWindDown(address)", abi.encode(comptroller));
         return _propose(proposal, description);
@@ -230,15 +238,16 @@ contract SpokePoolProposer {
      * @param comptroller The pool's comptroller
      * @param description The proposal's description
      * @return The proposal
-     * @custom:error OnlyManager is thrown when the caller is not the manager
+     * @custom:error NotManager is thrown when the caller is not the manager
      * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
     function proposeForceClose(
         address comptroller,
         string calldata description
     ) external onlyManager returns (uint256) {
-        VToken[] memory markets = _listedMarkets(comptroller, SpokeComptroller(comptroller).getAllMarkets());
+        (VToken[] memory markets, ) = _listedMarkets(comptroller);
         uint256 marketCount = markets.length;
         Proposal memory proposal = _newProposal(marketCount);
         bool hasBorrows;
@@ -433,56 +442,64 @@ contract SpokePoolProposer {
     }
 
     /**
-     * @dev Adds a listed collateral market's zero collateral factor, with its lowered liquidation threshold. Loan
-     * markets are skipped
+     * @dev Adds a listed collateral market's zero collateral factor, with a liquidation threshold no higher than now.
+     * Loan markets are skipped
      * @param proposal The proposal to add to
      * @param comptroller The pool's comptroller
-     * @param market The listed market
+     * @param vToken The listed market
      * @param liquidationThreshold The market's new liquidation threshold
+     * @param currentLiquidationThreshold The market's current liquidation threshold
      * @custom:error InvalidLiquidationThreshold is thrown when the threshold is above the market's current one
      */
     function _addZeroCollateralFactor(
         Proposal memory proposal,
         address comptroller,
-        VToken market,
-        uint256 liquidationThreshold
+        VToken vToken,
+        uint256 liquidationThreshold,
+        uint256 currentLiquidationThreshold
     ) internal view {
-        if (SPOKE_POOL_MANAGER.isLoanMarket(address(market))) {
+        if (SPOKE_POOL_MANAGER.isLoanMarket(address(vToken))) {
             return;
         }
-        (, , uint256 currentLiquidationThreshold) = SpokeComptroller(comptroller).markets(address(market));
         if (liquidationThreshold > currentLiquidationThreshold) {
-            revert ISpokePoolManager.InvalidLiquidationThreshold(address(market));
+            revert ISpokePoolManager.InvalidLiquidationThreshold(address(vToken));
         }
         _addAction(
             proposal,
             comptroller,
             "setCollateralFactor(address,uint256,uint256)",
-            abi.encode(market, 0, liquidationThreshold)
+            abi.encode(vToken, 0, liquidationThreshold)
         );
     }
 
     /**
-     * @dev Returns a pool's listed markets
+     * @dev Returns a pool's listed markets and their liquidation thresholds
      * @param comptroller The pool's comptroller
-     * @param markets The pool's markets, listed or not
-     * @return listed The listed markets
+     * @return listed The listed markets, in `getAllMarkets` order
+     * @return liquidationThresholds Each listed market's liquidation threshold
      */
     function _listedMarkets(
-        address comptroller,
-        VToken[] memory markets
-    ) internal view returns (VToken[] memory listed) {
+        address comptroller
+    ) internal view returns (VToken[] memory listed, uint256[] memory liquidationThresholds) {
+        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = markets.length;
         listed = new VToken[](marketCount);
+        liquidationThresholds = new uint256[](marketCount);
         uint256 listedCount;
         for (uint256 i; i < marketCount; ++i) {
-            if (SpokeComptroller(comptroller).isMarketListed(markets[i])) {
-                listed[listedCount++] = markets[i];
+            (bool isListed, , uint256 liquidationThreshold) = SpokeComptroller(comptroller).markets(
+                address(markets[i])
+            );
+            if (isListed) {
+                listed[listedCount] = markets[i];
+                liquidationThresholds[listedCount] = liquidationThreshold;
+                ++listedCount;
             }
         }
         // solhint-disable-next-line no-inline-assembly
         assembly {
             mstore(listed, listedCount)
+            mstore(liquidationThresholds, listedCount)
         }
     }
 

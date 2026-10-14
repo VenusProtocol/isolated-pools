@@ -3,8 +3,8 @@ pragma solidity ^0.8.25;
 
 import { VToken } from "../../VToken.sol";
 import { SpokePoolManagerStorage } from "../OpenSpokePool/SpokePoolManagerStorage.sol";
-import { SpokePoolProposer } from "../OpenSpokePool/SpokePoolProposer.sol";
-import { SpokePoolValidator } from "../OpenSpokePool/SpokePoolValidator.sol";
+import { ISpokePoolProposer } from "./ISpokePoolProposer.sol";
+import { ISpokePoolValidator } from "./ISpokePoolValidator.sol";
 
 /**
  * @title ISpokePoolManager
@@ -44,8 +44,9 @@ interface ISpokePoolManager {
      * @notice Emitted when a request's proposal is submitted
      * @param requestId The request
      * @param proposalId The proposal
+     * @param vTokens The markets deployed for the proposal, in the request's market order
      */
-    event RequestProposed(uint256 indexed requestId, uint256 proposalId);
+    event RequestProposed(uint256 indexed requestId, uint256 proposalId, address[] vTokens);
 
     /**
      * @notice Emitted when a new pool's request is settled and its deployer's rights start
@@ -140,7 +141,7 @@ interface ISpokePoolManager {
     event ExitRejected(address indexed comptroller);
 
     /**
-     * @notice Emitted when a wound-down pool's stake is unlocked
+     * @notice Emitted when a winding-down pool is closed and its stake unlocked
      * @param comptroller The pool's comptroller
      * @param deployer The pool's deployer
      * @param amount The XVS unlocked
@@ -170,14 +171,14 @@ interface ISpokePoolManager {
      * @param oldProposer The previous proposer
      * @param newProposer The new proposer
      */
-    event ProposerUpdated(SpokePoolProposer indexed oldProposer, SpokePoolProposer indexed newProposer);
+    event ProposerUpdated(ISpokePoolProposer indexed oldProposer, ISpokePoolProposer indexed newProposer);
 
     /**
      * @notice Emitted when the validator is changed
      * @param oldValidator The previous validator
      * @param newValidator The new validator
      */
-    event ValidatorUpdated(SpokePoolValidator indexed oldValidator, SpokePoolValidator indexed newValidator);
+    event ValidatorUpdated(ISpokePoolValidator indexed oldValidator, ISpokePoolValidator indexed newValidator);
 
     /**
      * @notice Emitted when an asset's Hub source is changed
@@ -215,7 +216,7 @@ interface ISpokePoolManager {
     event WindDownPeriodUpdated(uint256 oldWindDownPeriod, uint256 newWindDownPeriod);
 
     /**
-     * @notice Emitted when the residual debt a wound-down pool may hold is changed
+     * @notice Emitted when the residual debt a winding-down pool may hold is changed
      * @param oldMaxResidualPoolDebtUsd The previous maximum, in USD
      * @param newMaxResidualPoolDebtUsd The new maximum, in USD
      */
@@ -282,8 +283,13 @@ interface ISpokePoolManager {
      */
     error InvalidMarketParams(address asset);
 
-    /// @notice Thrown when a new pool's close factor or liquidation incentive is zero
+    /// @notice Thrown when a new pool's close factor or liquidation incentive is zero, or new pool defaults are outside
+    ///   the comptroller's bounds
     error InvalidPoolParams();
+
+    /// @notice Thrown when new market defaults have a zero interest rate model, a reserve factor above 1e18, or a seed
+    ///   burn share outside (0, 1e18]
+    error InvalidMarketDefaults();
 
     /**
      * @notice Thrown when a market's new interest rate model is zero
@@ -376,14 +382,14 @@ interface ISpokePoolManager {
      * @notice Thrown when a pool's borrows and bad debt exceed `maxResidualPoolDebtUsd`
      * @param debtUsd The pool's borrows and bad debt, in USD
      */
-    error OutstandingDebt(uint256 debtUsd);
+    error ResidualDebtExceeded(uint256 debtUsd);
 
     /*** Requests ***/
 
     /**
      * @notice Requests a new pool of a tier, approved by the caller. Locks the tier's stake from the caller's XVSVault
-     *   stake and pulls each market's seed, which is not returned if the request is rejected. Venus's parameters come
-     *   from `poolDefaults` and `marketDefaults`
+     *   stake and pulls each market's seed, which is never returned, even if the request is rejected or canceled.
+     *   Venus's parameters come from `poolDefaults` and `marketDefaults`
      * @param tierId The pool's tier
      * @param name The pool's name in the registry
      * @param markets The pool's markets
@@ -410,7 +416,7 @@ interface ISpokePoolManager {
      * @return requestId The request
      * @custom:event Emits RequestSubmitted
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
@@ -433,7 +439,7 @@ interface ISpokePoolManager {
      * @return requestId The request
      * @custom:event Emits RequestSubmitted
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
@@ -453,7 +459,7 @@ interface ISpokePoolManager {
      * @return requestId The request
      * @custom:event Emits RequestSubmitted
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
@@ -466,7 +472,7 @@ interface ISpokePoolManager {
      * @notice Replaces the content of an open request, which the deployer must approve again. Only the fields of the
      *   request's type are used. Markets keep their asset and seed, which the manager holds
      * @param requestId The request
-     * @param params A `PoolRequest` request's pool parameters, or a `PoolConfigRequest` request's changes
+     * @param params A pool request's pool parameters, or a pool config request's changes
      * @param markets The markets of a pool or markets request
      * @param interestRateModels The interest rate models of a pool config request
      * @custom:event Emits RequestUpdated
@@ -495,8 +501,9 @@ interface ISpokePoolManager {
     function approveRequest(uint256 requestId) external;
 
     /**
-     * @notice Proposes an approved request to GovernorBravo; the proposer deploys its contracts first. A request whose
-     *   proposal failed can be proposed again, on the same comptroller and with new markets
+     * @notice Proposes an approved request to GovernorBravo; the proposer deploys its contracts first, and the new loan
+     *   markets are recorded. A request whose proposal failed can be proposed again, on the same comptroller and with
+     *   new markets. Tier requests are applied with `setPoolTier` instead
      * @param requestId The request
      * @param description The proposal's description
      * @return proposalId The proposal
@@ -504,13 +511,14 @@ interface ISpokePoolManager {
      * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
      * @custom:error RequestNotApproved is thrown when the deployer has not approved the request
      * @custom:error The validator's `verifyRequest` errors
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeRequest(uint256 requestId, string calldata description) external returns (uint256 proposalId);
 
     /**
-     * @notice Settles a request from its executing proposal: records a new pool and the new markets, and sends the
-     *   seeds to the caller, which lists the markets with them
+     * @notice Settles a request from its executing proposal: activates a new pool and sends the seeds to the caller,
+     *   which lists the markets with them
      * @param requestId The request
      * @custom:event Emits PoolActivated for a new pool, and RequestSettled
      * @custom:error InvalidRequestStatus is thrown when the request is not proposed
@@ -558,8 +566,8 @@ interface ISpokePoolManager {
     /*** Live pools ***/
 
     /**
-     * @notice Publishes a collateral market's new collateral factor and liquidation threshold to the RiskOracle, for
-     *   the CollateralFactorsRiskSteward to apply
+     * @notice Publishes a collateral market's new collateral factor and liquidation threshold to the RiskOracle;
+     *   anyone can then apply it through the RiskStewardReceiver, within the CollateralFactorsRiskSteward's limits
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newCollateralFactor The new collateral factor
@@ -570,6 +578,7 @@ interface ISpokePoolManager {
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:error The validator's `checkCollateralFactor` errors
+     * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
      */
     function updateCollateralFactor(
@@ -580,7 +589,8 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Publishes a market's new supply cap to the RiskOracle, for the MarketCapsRiskSteward to apply
+     * @notice Publishes a market's new supply cap to the RiskOracle; anyone can then apply it through the
+     *   RiskStewardReceiver, within the MarketCapsRiskSteward's limits
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newSupplyCap The new supply cap
@@ -590,13 +600,15 @@ interface ISpokePoolManager {
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:error The validator's `checkSupplyCap` errors
+     * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
      */
     function updateSupplyCap(address comptroller, VToken vToken, uint256 newSupplyCap) external;
 
     /**
-     * @notice Publishes a loan market's new borrow cap to the RiskOracle, for the MarketCapsRiskSteward to apply. The
-     *   tier does not bound it: the tier bounds the loan liquidity through supply caps, and borrows cannot exceed it
+     * @notice Publishes a loan market's new borrow cap to the RiskOracle; anyone can then apply it through the
+     *   RiskStewardReceiver, within the MarketCapsRiskSteward's limits. The tier does not bound it: the tier bounds the
+     *   loan markets' supply caps, which borrows draw from
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newBorrowCap The new borrow cap
@@ -606,12 +618,14 @@ interface ISpokePoolManager {
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:error The validator's `checkLoanMarket` errors
+     * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
      */
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external;
 
     /**
-     * @notice Locks more of the deployer's stake so the pool's locked stake matches its tier's stake again
+     * @notice Locks more of the deployer's stake so the pool's locked stake matches its tier's stake again; does
+     *   nothing when it already does
      * @param comptroller The pool's comptroller
      * @custom:event Emits StakeToppedUp; the vault emits StakeLocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
@@ -636,7 +650,7 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param amount The XVS to pay
      * @param to The receiver
-     * @custom:event Emits StakeSeized; the vault emits LockedStakeSeized
+     * @custom:event Emits StakeSeized; the vault emits Claim and LockedStakeSeized
      * @custom:error InsufficientLockedStake is thrown when the amount exceeds the locked stake
      * @custom:access Controlled by AccessControlManager, granted to `SpokePoolShortfall`
      */
@@ -645,30 +659,31 @@ interface ISpokePoolManager {
     /*** Exits ***/
 
     /**
-     * @notice Asks the Venus team to exit the caller's pool; its rights stay until the exit is proposed
+     * @notice Asks the Venus team to exit the caller's pool, even while the deployer is paused or under-staked. The
+     *   deployer's risk updates stay open until the exit is proposed; new requests wait for `rejectExit`
      * @param comptroller The pool's comptroller
      * @custom:event Emits ExitRequested
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
-     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      * @custom:access Only the pool's deployer
      */
     function requestExit(address comptroller) external;
 
     /**
      * @notice Starts a pool's exit, ending its deployer's rights, and submits its first proposal: pause minting,
-     *   borrowing and entering markets, zero the caps, zero the collateral factors and lower the liquidation thresholds,
-     *   then start the wind-down. It can be called again, e.g. after that proposal fails
+     *   borrowing and entering markets, zero the caps, zero the collateral factors and set liquidation thresholds no
+     *   higher than now, then start the wind-down; a pool without listed markets only starts the wind-down. It can be
+     *   called again, e.g. after that proposal fails
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
      * @param description The proposal's description
      * @return proposalId The proposal
      * @custom:event Emits ExitProposed
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live or exiting
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor with its exit requested or proposed
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's listed markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeExit(
@@ -696,13 +711,14 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
      * @custom:error WindDownPeriodNotElapsed is thrown before the wind-down period ends
      * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
+     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeForceClose(address comptroller, string calldata description) external returns (uint256 proposalId);
 
     /**
-     * @notice Turns down a requested or proposed exit; the pool is live again. A pending exit proposal must be left to
-     *   fail or be canceled
+     * @notice Turns down a requested or proposed exit; the pool is live again. A queued exit proposal fails at
+     *   `startWindDown` while the pool is live, but executes if the exit is proposed again, so cancel it first
      * @param comptroller The pool's comptroller
      * @custom:event Emits ExitRejected
      * @custom:error InvalidPoolStatus is thrown when the pool's exit is neither requested nor proposed
@@ -711,18 +727,20 @@ interface ISpokePoolManager {
     function rejectExit(address comptroller) external;
 
     /**
-     * @notice Unlocks a wound-down pool's stake once its borrows and bad debt are within `maxResidualPoolDebtUsd`
+     * @notice Closes a winding-down pool and unlocks its stake once its borrows and bad debt are within
+     *   `maxResidualPoolDebtUsd`; the wind-down period need not have elapsed
      * @param comptroller The pool's comptroller
      * @custom:event Emits StakeReleased; the vault emits StakeUnlocked
      * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
-     * @custom:error The validator's `checkResidualDebt` errors
+     * @custom:error The validator's `accrueAndCheckResidualDebt` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function releaseStake(address comptroller) external;
 
     /**
      * @notice Makes a live pool an official Venus pool run by governance: the deployer's rights end and its stake is
-     *   unlocked. The same proposal should point each market's `shortfall` at its new bad debt recovery
+     *   unlocked. The same proposal should point each market's `shortfall` away from `SpokePoolShortfall`, which can no
+     *   longer pay recoverers from the unlocked stake
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolTakenOverByGovernance; the vault emits StakeUnlocked
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
@@ -733,7 +751,8 @@ interface ISpokePoolManager {
     /*** Configuration ***/
 
     /**
-     * @notice Adds the next tier or updates one; pools are checked against the new terms from then on
+     * @notice Adds the next tier or updates one; pools are checked against the new terms from then on. A tier with no
+     *   stake cannot be requested
      * @param tierId The tier: `tierCount` adds one
      * @param tier The tier's terms
      * @custom:event Emits TierUpdated
@@ -749,7 +768,7 @@ interface ISpokePoolManager {
      * @custom:error ZeroAddressNotAllowed is thrown when the proposer is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function setProposer(SpokePoolProposer newProposer) external;
+    function setProposer(ISpokePoolProposer newProposer) external;
 
     /**
      * @notice Sets the validator
@@ -758,10 +777,11 @@ interface ISpokePoolManager {
      * @custom:error ZeroAddressNotAllowed is thrown when the validator is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function setValidator(SpokePoolValidator newValidator) external;
+    function setValidator(ISpokePoolValidator newValidator) external;
 
     /**
-     * @notice Sets the Hub source (YieldGroup) that funds an asset's loan markets; zero disables them
+     * @notice Sets the Hub source (YieldGroup) that funds an asset's loan markets; zero blocks new loan markets of the
+     *   asset
      * @param asset The loan asset
      * @param source The YieldGroup
      * @custom:event Emits SpokeSourceUpdated
@@ -774,6 +794,8 @@ interface ISpokePoolManager {
      * @notice Sets the pool-wide parameters of new pools
      * @param params The new parameters
      * @custom:event Emits PoolDefaultsUpdated
+     * @custom:error InvalidPoolParams is thrown when the close factor or liquidation incentive is outside the
+     *   comptroller's bounds
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setPoolDefaults(SpokePoolManagerStorage.PoolParams calldata params) external;
@@ -782,6 +804,8 @@ interface ISpokePoolManager {
      * @notice Sets Venus's parameters of new markets
      * @param params The new parameters
      * @custom:event Emits MarketDefaultsUpdated
+     * @custom:error InvalidMarketDefaults is thrown when the interest rate model is zero, the reserve factor is above
+     *   1e18, or the seed burn share is zero or above 1e18
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setMarketDefaults(SpokePoolManagerStorage.ProtocolMarketParams calldata params) external;
@@ -796,7 +820,7 @@ interface ISpokePoolManager {
     function setWindDownPeriod(uint256 newWindDownPeriod) external;
 
     /**
-     * @notice Sets the borrows and bad debt a wound-down pool may hold when its stake is released
+     * @notice Sets the borrows and bad debt a winding-down pool may hold when its stake is released
      * @param newMaxResidualPoolDebtUsd The new maximum, in USD
      * @custom:event Emits MaxResidualPoolDebtUsdUpdated
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
@@ -804,7 +828,8 @@ interface ISpokePoolManager {
     function setMaxResidualPoolDebtUsd(uint256 newMaxResidualPoolDebtUsd) external;
 
     /**
-     * @notice Sends tokens held by the manager, such as the seeds of rejected requests
+     * @notice Sends tokens held by the manager, such as the seeds of rejected or canceled requests; seeds of open
+     *   requests are needed by `settleRequest`
      * @param token The token
      * @param to The receiver
      * @param amount The amount
@@ -822,4 +847,18 @@ interface ISpokePoolManager {
      * @return The request
      */
     function getRequest(uint256 requestId) external view returns (SpokePoolManagerStorage.Request memory);
+
+    /**
+     * @notice Returns a pool
+     * @param comptroller The pool's comptroller
+     * @return The pool
+     */
+    function getPool(address comptroller) external view returns (SpokePoolManagerStorage.Pool memory);
+
+    /**
+     * @notice Returns a tier's terms
+     * @param tierId The tier
+     * @return The terms
+     */
+    function getTier(uint256 tierId) external view returns (SpokePoolManagerStorage.Tier memory);
 }

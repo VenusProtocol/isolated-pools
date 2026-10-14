@@ -16,10 +16,10 @@ import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { IGovernorBravo, PROPOSAL_STATE_CANCELED, PROPOSAL_STATE_DEFEATED, PROPOSAL_STATE_EXPIRED } from "../interfaces/IGovernorBravo.sol";
 import { IRiskOracle } from "../interfaces/IRiskOracle.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
+import { ISpokePoolProposer } from "../interfaces/ISpokePoolProposer.sol";
+import { ISpokePoolValidator } from "../interfaces/ISpokePoolValidator.sol";
 import { IXVSVault } from "../interfaces/IXVSVault.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
-import { SpokePoolProposer } from "./SpokePoolProposer.sol";
-import { SpokePoolValidator } from "./SpokePoolValidator.sol";
 
 /**
  * @title SpokePoolManager
@@ -27,9 +27,10 @@ import { SpokePoolValidator } from "./SpokePoolValidator.sol";
  * @notice Entry point of open spoke pools. A deployer stakes XVS in the XVSVault and requests a pool of a tier: the
  * manager locks the tier's stake, pulls the markets' seeds and stores the request. The Venus team may update it, the
  * deployer approves it, and the team proposes it through `SpokePoolProposer`; the proposal calls `settleRequest`,
- * which starts the deployer's rights. A deployer requests new markets, pool parameters or another tier the same way,
- * tunes risk parameters within its tier through the Risk Stewards, and can ask to exit. `SpokePoolValidator` checks
- * requests and updates against the tiers, and `SpokePoolShortfall` pays bad debt recoverers from the locked stake.
+ * which starts the deployer's rights. A deployer requests new markets or pool parameters the same way, and another
+ * tier, which the team applies with `setPoolTier`. It tunes risk parameters within its tier through the Risk Stewards,
+ * and can ask to exit. `SpokePoolValidator` checks requests and updates against the tiers, and `SpokePoolShortfall`
+ * pays bad debt recoverers from the locked stake.
  * @dev Needs the XVSVault `lock`, `unlock` and `seizeLocked` roles and to be a RiskOracle authorized sender. The
  * GovernorBravo votes the proposals need are delegated to the proposer
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
@@ -50,6 +51,11 @@ contract SpokePoolManager is
 
     /// @notice Highest USD value of a market's seed
     uint256 public constant MAX_SEED_USD = 150e18;
+
+    /// @dev Bounds for close factor and liquidation incentive
+    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18;
+    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18;
+    uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
 
     /// @dev RiskOracle update types the Risk Stewards apply
     string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
@@ -143,7 +149,7 @@ contract SpokePoolManager is
         pool.stake = stake;
         pool.name = name;
         pool.params = poolDefaults;
-        _storeMarkets(request, markets);
+        _storeMarketsAndPullSeeds(request, markets);
         _verifyRequest(requestId);
         XVS_VAULT.lock(msg.sender, stake);
     }
@@ -154,12 +160,9 @@ contract SpokePoolManager is
         DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
         _ensureActiveDeployer(comptroller);
-        if (markets.length == 0) {
-            revert InvalidArrayLength();
-        }
         Request storage request;
         (requestId, request) = _newRequest(RequestType.Markets, comptroller);
-        _storeMarkets(request, markets);
+        _storeMarketsAndPullSeeds(request, markets);
         _verifyRequest(requestId);
     }
 
@@ -179,6 +182,10 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function requestTier(address comptroller, uint256 tierId) external returns (uint256 requestId) {
         Pool storage pool = _ensureActiveDeployer(comptroller);
+        // A pool with its exit requested cannot be moved by `setPoolTier`
+        if (pool.status != PoolStatus.Live) {
+            revert InvalidPoolStatus(comptroller);
+        }
         if (tiers[tierId].stakeAmount == 0 || tierId == pool.tierId) {
             revert InvalidTier(tierId);
         }
@@ -196,7 +203,7 @@ contract SpokePoolManager is
     ) external {
         _checkAccessAllowed("updateRequest(uint256,PoolParams,MarketParams[],MarketInterestRateModel[])");
 
-        Request storage request = _ensureOpenRequest(requestId);
+        Request storage request = _ensureEditableRequest(requestId);
         RequestType requestType = request.requestType;
         uint256 marketCount = markets.length;
         if (marketCount != request.markets.length) {
@@ -222,7 +229,7 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function approveRequest(uint256 requestId) external {
-        Request storage request = _ensureOpenRequest(requestId);
+        Request storage request = _ensureEditableRequest(requestId);
         if (msg.sender != request.deployer) {
             revert NotDeployer(msg.sender);
         }
@@ -232,24 +239,29 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function proposeRequest(
-        uint256 requestId,
-        string calldata description
-    ) external nonReentrant returns (uint256 proposalId) {
+    function proposeRequest(uint256 requestId, string calldata description) external returns (uint256 proposalId) {
         _checkAccessAllowed("proposeRequest(uint256,string)");
 
-        Request storage request = _ensureOpenRequest(requestId);
+        Request storage request = _ensureEditableRequest(requestId);
         if (!request.approved) {
             revert RequestNotApproved(requestId);
         }
         _verifyRequest(requestId);
         address[] memory vTokens;
-        (proposalId, request.comptroller, vTokens) = SpokePoolProposer(proposer).proposeRequest(requestId, description);
-        request.vTokens = vTokens;
+        (proposalId, request.comptroller, vTokens) = ISpokePoolProposer(proposer).proposeRequest(
+            requestId,
+            description
+        );
         request.status = RequestStatus.Proposed;
         request.proposalId = proposalId;
+        uint256 marketCount = vTokens.length;
+        for (uint256 i; i < marketCount; ++i) {
+            if (request.markets[i].isLoanMarket) {
+                isLoanMarket[vTokens[i]] = true;
+            }
+        }
 
-        emit RequestProposed(requestId, proposalId);
+        emit RequestProposed(requestId, proposalId, vTokens);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -261,7 +273,7 @@ contract SpokePoolManager is
             revert InvalidRequestStatus(requestId);
         }
         _verifyRequest(requestId);
-        request.status = RequestStatus.Executed;
+        request.status = RequestStatus.Settled;
 
         address comptroller = request.comptroller;
         if (request.requestType == RequestType.Pool) {
@@ -275,9 +287,6 @@ contract SpokePoolManager is
         uint256 marketCount = request.markets.length;
         for (uint256 i; i < marketCount; ++i) {
             MarketParams storage market = request.markets[i];
-            if (market.isLoanMarket) {
-                isLoanMarket[request.vTokens[i]] = true;
-            }
             IERC20Upgradeable(market.asset).safeTransfer(msg.sender, market.seed);
         }
 
@@ -285,7 +294,7 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setPoolTier(uint256 requestId) external nonReentrant {
+    function setPoolTier(uint256 requestId) external {
         _checkAccessAllowed("setPoolTier(uint256)");
 
         Request storage request = requests[requestId];
@@ -301,8 +310,8 @@ contract SpokePoolManager is
         if (request.tier.termsHash != _tierHash(tierId)) {
             revert InvalidTier(tierId);
         }
-        SpokePoolValidator(validator).checkPoolFitsTier(comptroller, tierId);
-        request.status = RequestStatus.Executed;
+        ISpokePoolValidator(validator).checkPoolFitsTier(comptroller, tierId);
+        request.status = RequestStatus.Settled;
 
         uint256 newStake = tiers[tierId].stakeAmount;
         uint256 lockedStake = pool.lockedStake;
@@ -319,30 +328,21 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function rejectRequest(uint256 requestId) external nonReentrant {
+    function rejectRequest(uint256 requestId) external {
         _checkAccessAllowed("rejectRequest(uint256)");
 
-        Request storage request = _ensureOpenRequest(requestId);
-        request.status = RequestStatus.Rejected;
-        uint256 stake = request.pool.stake;
-        if (stake != 0) {
-            XVS_VAULT.unlock(request.deployer, stake);
-        }
+        _closeRequest(_ensureEditableRequest(requestId), RequestStatus.Rejected);
 
         emit RequestRejected(requestId);
     }
 
     /// @inheritdoc ISpokePoolManager
     function cancelRequest(uint256 requestId) external nonReentrant {
-        Request storage request = _ensureOpenRequest(requestId);
+        Request storage request = _ensureEditableRequest(requestId);
         if (msg.sender != request.deployer) {
             revert NotDeployer(msg.sender);
         }
-        request.status = RequestStatus.Canceled;
-        uint256 stake = request.pool.stake;
-        if (stake != 0) {
-            XVS_VAULT.unlock(msg.sender, stake);
-        }
+        _closeRequest(request, RequestStatus.Canceled);
 
         emit RequestCanceled(requestId);
     }
@@ -357,7 +357,7 @@ contract SpokePoolManager is
         uint256 newLiquidationThreshold
     ) external {
         _ensureActiveDeployer(comptroller);
-        SpokePoolValidator(validator).checkCollateralFactor(
+        ISpokePoolValidator(validator).checkCollateralFactor(
             comptroller,
             address(vToken),
             newCollateralFactor,
@@ -369,26 +369,20 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function updateSupplyCap(address comptroller, VToken vToken, uint256 newSupplyCap) external {
         _ensureActiveDeployer(comptroller);
-        SpokePoolValidator(validator).checkSupplyCap(comptroller, address(vToken), newSupplyCap);
+        ISpokePoolValidator(validator).checkSupplyCap(comptroller, address(vToken), newSupplyCap);
         _publishUpdate(SUPPLY_CAP_UPDATE, vToken, abi.encode(newSupplyCap));
     }
 
     /// @inheritdoc ISpokePoolManager
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external {
         _ensureActiveDeployer(comptroller);
-        SpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
+        ISpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
         _publishUpdate(BORROW_CAP_UPDATE, vToken, abi.encode(newBorrowCap));
     }
 
     /// @inheritdoc ISpokePoolManager
-    function topUpStake(address comptroller) external nonReentrant {
-        Pool storage pool = pools[comptroller];
-        if (pool.deployer != msg.sender) {
-            revert NotDeployer(msg.sender);
-        }
-        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
-            revert InvalidPoolStatus(comptroller);
-        }
+    function topUpStake(address comptroller) external {
+        Pool storage pool = _ensureDeployer(comptroller);
         uint256 required = tiers[pool.tierId].stakeAmount;
         uint256 lockedStake = pool.lockedStake;
         if (lockedStake >= required) {
@@ -432,7 +426,7 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function requestExit(address comptroller) external {
-        _ensureActiveDeployer(comptroller).status = PoolStatus.ExitRequested;
+        _ensureDeployer(comptroller).status = PoolStatus.ExitRequested;
         emit ExitRequested(comptroller);
     }
 
@@ -446,12 +440,11 @@ contract SpokePoolManager is
 
         Pool storage pool = pools[comptroller];
         PoolStatus status = pool.status;
-        // `ExitProposed` is accepted so the exit can be proposed again when its earlier proposal fails
         if (status != PoolStatus.Live && status != PoolStatus.ExitRequested && status != PoolStatus.ExitProposed) {
             revert InvalidPoolStatus(comptroller);
         }
         pool.status = PoolStatus.ExitProposed;
-        proposalId = SpokePoolProposer(proposer).proposeExit(comptroller, liquidationThresholds, description);
+        proposalId = ISpokePoolProposer(proposer).proposeExit(comptroller, liquidationThresholds, description);
 
         emit ExitProposed(comptroller, proposalId);
     }
@@ -475,7 +468,7 @@ contract SpokePoolManager is
         if (block.timestamp < pool.windDownStartedAt + windDownPeriod) {
             revert WindDownPeriodNotElapsed();
         }
-        proposalId = SpokePoolProposer(proposer).proposeForceClose(comptroller, description);
+        proposalId = ISpokePoolProposer(proposer).proposeForceClose(comptroller, description);
 
         emit ForceCloseProposed(comptroller, proposalId);
     }
@@ -498,7 +491,7 @@ contract SpokePoolManager is
         _checkAccessAllowed("releaseStake(address)");
 
         Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        SpokePoolValidator(validator).checkResidualDebt(comptroller);
+        ISpokePoolValidator(validator).accrueAndCheckResidualDebt(comptroller);
         pool.status = PoolStatus.Closed;
         uint256 amount = _unlockStake(pool);
 
@@ -541,18 +534,18 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setProposer(SpokePoolProposer newProposer) external {
+    function setProposer(ISpokePoolProposer newProposer) external {
         _checkAccessAllowed("setProposer(address)");
         ensureNonzeroAddress(address(newProposer));
-        emit ProposerUpdated(SpokePoolProposer(proposer), newProposer);
+        emit ProposerUpdated(ISpokePoolProposer(proposer), newProposer);
         proposer = address(newProposer);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setValidator(SpokePoolValidator newValidator) external {
+    function setValidator(ISpokePoolValidator newValidator) external {
         _checkAccessAllowed("setValidator(address)");
         ensureNonzeroAddress(address(newValidator));
-        emit ValidatorUpdated(SpokePoolValidator(validator), newValidator);
+        emit ValidatorUpdated(ISpokePoolValidator(validator), newValidator);
         validator = address(newValidator);
     }
 
@@ -567,6 +560,13 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setPoolDefaults(PoolParams calldata params) external {
         _checkAccessAllowed("setPoolDefaults(PoolParams)");
+        if (
+            params.closeFactor < MIN_CLOSE_FACTOR_MANTISSA ||
+            params.closeFactor > MAX_CLOSE_FACTOR_MANTISSA ||
+            params.liquidationIncentive < MIN_LIQUIDATION_INCENTIVE_MANTISSA
+        ) {
+            revert InvalidPoolParams();
+        }
         emit PoolDefaultsUpdated(poolDefaults, params);
         poolDefaults = params;
     }
@@ -574,6 +574,14 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function setMarketDefaults(ProtocolMarketParams calldata params) external {
         _checkAccessAllowed("setMarketDefaults(ProtocolMarketParams)");
+        if (
+            params.interestRateModel == address(0) ||
+            params.reserveFactor > MANTISSA_ONE ||
+            params.seedBurnPercent == 0 ||
+            params.seedBurnPercent > MANTISSA_ONE
+        ) {
+            revert InvalidMarketDefaults();
+        }
         emit MarketDefaultsUpdated(marketDefaults, params);
         marketDefaults = params;
     }
@@ -608,14 +616,25 @@ contract SpokePoolManager is
         return requests[requestId];
     }
 
+    /// @inheritdoc ISpokePoolManager
+    function getPool(address comptroller) external view returns (Pool memory) {
+        return pools[comptroller];
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function getTier(uint256 tierId) external view returns (Tier memory) {
+        return tiers[tierId];
+    }
+
     /*** Internal functions ***/
 
     /**
-     * @dev Stores a new pending request from the caller, approved by it, once the caller's latest request is closed
+     * @dev Stores a new pending request from the caller, approved by it
      * @param requestType What the request asks for
      * @param comptroller The pool; zero for a new pool
      * @return requestId The request's id
      * @return request The request's storage
+     * @custom:error OpenRequestExists is thrown while the caller's latest request is pending or proposed
      */
     function _newRequest(
         RequestType requestType,
@@ -643,7 +662,7 @@ contract SpokePoolManager is
      * @param request The request's storage
      * @param markets The deployer's markets
      */
-    function _storeMarkets(Request storage request, DeployerMarketParams[] calldata markets) internal {
+    function _storeMarketsAndPullSeeds(Request storage request, DeployerMarketParams[] calldata markets) internal {
         ProtocolMarketParams memory defaults = marketDefaults;
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
@@ -720,6 +739,19 @@ contract SpokePoolManager is
     }
 
     /**
+     * @dev Closes an open request; a pool request's stake is unlocked, and its seeds stay with the manager
+     * @param request The request's storage
+     * @param status The closing status
+     */
+    function _closeRequest(Request storage request, RequestStatus status) internal {
+        request.status = status;
+        uint256 stake = request.pool.stake;
+        if (stake != 0) {
+            XVS_VAULT.unlock(request.deployer, stake);
+        }
+    }
+
+    /**
      * @dev Unlocks whatever stake is still locked for a pool
      * @param pool The pool's storage
      * @return amount The amount unlocked
@@ -737,7 +769,7 @@ contract SpokePoolManager is
      * @param requestId The request
      */
     function _verifyRequest(uint256 requestId) internal view {
-        SpokePoolValidator(validator).verifyRequest(requestId);
+        ISpokePoolValidator(validator).verifyRequest(requestId);
     }
 
     /**
@@ -750,12 +782,13 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Returns a request after checking it is open: pending, or proposed with a proposal that can no longer execute
+     * @dev Returns a request after checking it can still be updated, approved, proposed, rejected or canceled: it is
+     * pending, or proposed with a proposal that can no longer execute
      * @param requestId The request
      * @return request The request's storage
      * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
      */
-    function _ensureOpenRequest(uint256 requestId) internal view returns (Request storage request) {
+    function _ensureEditableRequest(uint256 requestId) internal view returns (Request storage request) {
         request = requests[requestId];
         if (request.status == RequestStatus.Proposed) {
             uint8 state = GOVERNOR_BRAVO.state(request.proposalId);
@@ -770,16 +803,14 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Returns a pool after checking the caller is its deployer with its rights in force: the pool is live, with or
-     * without an exit requested, the deployer is not paused, and its tier's stake is locked
+     * @dev Returns a pool after checking the caller is its deployer and the pool is live, with or without an exit
+     * requested
      * @param comptroller The pool's comptroller
      * @return pool The pool's storage
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
-     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      */
-    function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
+    function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
         pool = pools[comptroller];
         if (pool.deployer != msg.sender) {
             revert NotDeployer(msg.sender);
@@ -787,6 +818,18 @@ contract SpokePoolManager is
         if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
             revert InvalidPoolStatus(comptroller);
         }
+    }
+
+    /**
+     * @dev Returns a pool after checking the caller is its deployer with its rights in force: `_ensureDeployer`'s
+     * checks, the deployer is not paused, and its tier's stake is locked
+     * @param comptroller The pool's comptroller
+     * @return pool The pool's storage
+     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
+     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     */
+    function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
+        pool = _ensureDeployer(comptroller);
         if (pool.deployerPaused) {
             revert DeployerPaused(comptroller);
         }

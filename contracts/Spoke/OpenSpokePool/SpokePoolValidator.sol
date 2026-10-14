@@ -9,16 +9,18 @@ import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
+import { ISpokePoolValidator } from "../interfaces/ISpokePoolValidator.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 
 /**
  * @title SpokePoolValidator
  * @author Venus
- * @notice Checks `SpokePoolManager` requests and deployer updates against the pool tiers, as `ComptrollerLens` does
- * for the core pool's Comptroller. It reads the manager's state and reverts with the manager's errors
+ * @notice Checks `SpokePoolManager` requests and deployer updates against the pool tiers. It is split out of the
+ * manager for bytecode size, as `ComptrollerLens` is from the core pool's Comptroller, reads the manager's state and
+ * reverts with the manager's errors
  */
-contract SpokePoolValidator {
+contract SpokePoolValidator is ISpokePoolValidator {
     /// @notice The manager whose requests and pools are checked
     SpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
@@ -35,23 +37,22 @@ contract SpokePoolValidator {
      * @notice Accrues interest in every market of a pool and checks its borrows and bad debt, in USD, are within the
      *   manager's `maxResidualPoolDebtUsd`
      * @param comptroller The pool's comptroller
-     * @custom:error OutstandingDebt is thrown when the borrows and bad debt exceed `maxResidualPoolDebtUsd`
+     * @custom:error ResidualDebtExceeded is thrown when the borrows and bad debt exceed `maxResidualPoolDebtUsd`
      */
-    function checkResidualDebt(address comptroller) external {
+    function accrueAndCheckResidualDebt(address comptroller) external {
         ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
         VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = markets.length;
         uint256 debtUsd;
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = markets[i];
-            vToken.accrueInterest();
-            uint256 debt = vToken.totalBorrows() + vToken.badDebt();
+            uint256 debt = vToken.totalBorrowsCurrent() + vToken.badDebt();
             if (debt != 0) {
                 debtUsd += (debt * oracle.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
             }
         }
         if (debtUsd > SPOKE_POOL_MANAGER.maxResidualPoolDebtUsd()) {
-            revert ISpokePoolManager.OutstandingDebt(debtUsd);
+            revert ISpokePoolManager.ResidualDebtExceeded(debtUsd);
         }
     }
 
@@ -60,7 +61,9 @@ contract SpokePoolValidator {
      * @param requestId The request
      * @custom:error InvalidRequestType is thrown for a tier request
      * @custom:error InvalidPoolParams is thrown when a new pool's close factor or liquidation incentive is zero
-     * @custom:error InvalidPoolStatus is thrown when a live pool's request is for a pool that is not live
+     * @custom:error InvalidTier is thrown when a pool request's stake is no longer its tier's
+     * @custom:error InvalidPoolStatus is thrown when a markets or pool config request's pool is not live
+     * @custom:error InvalidArrayLength is thrown when a markets request has no market
      * @custom:error MarketNotListed is thrown when an interest rate model is for a market outside the pool
      * @custom:error InvalidInterestRateModel is thrown when an interest rate model is zero
      * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
@@ -74,21 +77,29 @@ contract SpokePoolValidator {
         SpokePoolManagerStorage.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         SpokePoolManagerStorage.RequestType requestType = request.requestType;
         if (requestType == SpokePoolManagerStorage.RequestType.Pool) {
-            SpokePoolManagerStorage.PoolParams memory params = request.pool.params;
-            if (params.closeFactor == 0 || params.liquidationIncentive == 0) {
+            SpokePoolManagerStorage.PoolRequest memory pool = request.pool;
+            if (pool.params.closeFactor == 0 || pool.params.liquidationIncentive == 0) {
                 revert ISpokePoolManager.InvalidPoolParams();
             }
+            SpokePoolManagerStorage.Tier memory tier = SPOKE_POOL_MANAGER.getTier(pool.tierId);
+            // The new pool starts with the stake locked at request, so it must still be the tier's
+            if (pool.stake != tier.stakeAmount) {
+                revert ISpokePoolManager.InvalidTier(pool.tierId);
+            }
             // The comptroller of a proposed new pool has no listed markets yet
-            _checkMarkets(address(0), request.pool.tierId, request.markets);
+            _checkMarkets(address(0), tier, request.markets);
             return;
         }
         address comptroller = request.comptroller;
-        (, SpokePoolManagerStorage.PoolStatus status, , uint256 tierId, , ) = SPOKE_POOL_MANAGER.pools(comptroller);
-        if (status != SpokePoolManagerStorage.PoolStatus.Live) {
+        SpokePoolManagerStorage.Pool memory livePool = SPOKE_POOL_MANAGER.getPool(comptroller);
+        if (livePool.status != SpokePoolManagerStorage.PoolStatus.Live) {
             revert ISpokePoolManager.InvalidPoolStatus(comptroller);
         }
         if (requestType == SpokePoolManagerStorage.RequestType.Markets) {
-            _checkMarkets(comptroller, tierId, request.markets);
+            if (request.markets.length == 0) {
+                revert ISpokePoolManager.InvalidArrayLength();
+            }
+            _checkMarkets(comptroller, SPOKE_POOL_MANAGER.getTier(livePool.tierId), request.markets);
         } else if (requestType == SpokePoolManagerStorage.RequestType.PoolConfig) {
             SpokePoolManagerStorage.MarketInterestRateModel[] memory models = request.poolConfig.interestRateModels;
             uint256 modelCount = models.length;
@@ -112,7 +123,7 @@ contract SpokePoolValidator {
      * @custom:error BadDebtOutstanding is thrown when a market has bad debt
      */
     function checkPoolFitsTier(address comptroller, uint256 tierId) external view {
-        SpokePoolManagerStorage.Tier memory tier = _tier(tierId);
+        SpokePoolManagerStorage.Tier memory tier = SPOKE_POOL_MANAGER.getTier(tierId);
         VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
@@ -157,13 +168,16 @@ contract SpokePoolValidator {
         if (collateralFactor > liquidationThreshold) {
             revert ISpokePoolManager.InvalidLiquidationThreshold(vToken);
         }
-        (, , , uint256 tierId, , ) = SPOKE_POOL_MANAGER.pools(comptroller);
-        _checkCollateralParams(_tier(tierId), collateralFactor, liquidationThreshold);
+        _checkCollateralParams(
+            SPOKE_POOL_MANAGER.getTier(SPOKE_POOL_MANAGER.getPool(comptroller).tierId),
+            collateralFactor,
+            liquidationThreshold
+        );
     }
 
     /**
      * @notice Checks a deployer's new supply cap: a loan market's raise must keep the loan markets' caps, in USD,
-     *   within the tier's liquidity. Collateral caps are not bounded
+     *   within the tier. Collateral caps are not bounded
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newSupplyCap The new supply cap
@@ -179,8 +193,8 @@ contract SpokePoolValidator {
         uint256 raiseUsd = ((newSupplyCap - supplyCap) *
             SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getUnderlyingPrice(vToken)) / EXP_SCALE;
         uint256 liquidityUsd = _loanLiquidityUsd(comptroller, SpokeComptroller(comptroller).getAllMarkets());
-        (, , , uint256 tierId, , ) = SPOKE_POOL_MANAGER.pools(comptroller);
-        if (liquidityUsd + raiseUsd > _tier(tierId).maxLiquidityUsd) {
+        uint256 tierId = SPOKE_POOL_MANAGER.getPool(comptroller).tierId;
+        if (liquidityUsd + raiseUsd > SPOKE_POOL_MANAGER.getTier(tierId).maxLiquidityUsd) {
             revert ISpokePoolManager.ExceedsTierLimit();
         }
     }
@@ -203,15 +217,14 @@ contract SpokePoolValidator {
      * @dev Checks new markets against a tier: the pool's market count, each market, and the loan liquidity together
      * with the pool's
      * @param comptroller The pool, or zero for a new pool
-     * @param tierId The tier
+     * @param tier The tier
      * @param markets The new markets
      */
     function _checkMarkets(
         address comptroller,
-        uint256 tierId,
+        SpokePoolManagerStorage.Tier memory tier,
         SpokePoolManagerStorage.MarketParams[] memory markets
     ) internal view {
-        SpokePoolManagerStorage.Tier memory tier = _tier(tierId);
         uint256 marketCount = markets.length;
         uint256 poolMarketCount = marketCount;
         VToken[] memory poolMarkets;
@@ -264,7 +277,8 @@ contract SpokePoolValidator {
     }
 
     /**
-     * @dev Checks one new market against a tier
+     * @dev Checks one new market against a tier. A zero interest rate model or initial exchange rate is left to
+     * `VToken.initialize`, which rejects it when the proposer deploys the market, before the vote
      * @param tier The tier
      * @param market The market
      * @return liquidityUsd A loan market's supply cap in USD; zero for a collateral market
@@ -277,9 +291,7 @@ contract SpokePoolValidator {
         if (
             bytes(market.name).length == 0 ||
             bytes(market.symbol).length == 0 ||
-            market.interestRateModel == address(0) ||
             market.decimals == 0 ||
-            market.initialExchangeRate == 0 ||
             market.seed > market.supplyCap ||
             market.seedBurnPercent == 0 ||
             market.seedBurnPercent > MANTISSA_ONE
@@ -336,21 +348,6 @@ contract SpokePoolValidator {
                     EXP_SCALE;
             }
         }
-    }
-
-    /**
-     * @dev Returns a tier's terms
-     * @param tierId The tier
-     * @return tier The terms
-     */
-    function _tier(uint256 tierId) internal view returns (SpokePoolManagerStorage.Tier memory tier) {
-        (
-            tier.stakeAmount,
-            tier.maxLiquidityUsd,
-            tier.maxCollateralFactor,
-            tier.maxLiquidationThreshold,
-            tier.minLiquidationThreshold
-        ) = SPOKE_POOL_MANAGER.tiers(tierId);
     }
 
     /**

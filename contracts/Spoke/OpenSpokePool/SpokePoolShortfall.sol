@@ -20,8 +20,8 @@ import { SpokePoolManager } from "./SpokePoolManager.sol";
  * @notice The `shortfall` of every open spoke pool market, so a market's bad debt is only recovered through it.
  * Whitelisted recoverers repay bad debt with their own funds and are paid XVS from the pool's locked stake, worth the
  * repaid amount times `badDebtRecoveryIncentiveMantissa` at ResilientOracle prices; a recovery whose payout exceeds the
- * stake left reverts, so recoverers recover a smaller amount. Venus repays what the stake cannot cover with its own
- * funds, such as USDT swept from the RiskFund. As a market's bad debt falls, the Hub's position in it recovers.
+ * stake left reverts, so recoverers recover a smaller amount. Venus can repay what the stake cannot cover with
+ * `repayBadDebt`. Repaid bad debt becomes cash in the market, so the Hub's position in it becomes redeemable.
  * @dev Needs the manager's `seizeStake` role
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
@@ -123,6 +123,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
      *   emits StakeSeized and the vault Claim and LockedStakeSeized
      * @custom:error MarketNotListed is thrown when the market is not listed in its pool
      * @custom:error InsufficientLockedStake is thrown by the manager when the payout exceeds the pool's locked stake
+     * @custom:error The vault's `seizeLocked` errors, such as while the vault is paused
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
      * @custom:error The market reverts when the amount exceeds its bad debt
      * @custom:access Controlled by AccessControlManager, granted to the whitelisted bad debt recoverers
@@ -130,10 +131,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 xvsAmountToSeize) {
         _checkAccessAllowed("recoverBadDebt(address,uint256)");
 
-        address comptroller = address(vToken.comptroller());
-        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-            revert ISpokePoolManager.MarketNotListed(address(vToken));
-        }
+        address comptroller = _ensureListed(vToken);
         ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
         xvsAmountToSeize =
             (amount * oracle.getUnderlyingPrice(address(vToken)) * badDebtRecoveryIncentiveMantissa) /
@@ -183,10 +181,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
         _checkAccessAllowed("repayBadDebt(address,uint256)");
 
-        address comptroller = address(vToken.comptroller());
-        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-            revert ISpokePoolManager.MarketNotListed(address(vToken));
-        }
+        address comptroller = _ensureListed(vToken);
         _repayBadDebt(vToken, amount);
 
         emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
@@ -208,5 +203,19 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
             revert ISpokePoolManager.TransferAmountMismatch(address(underlying));
         }
         vToken.badDebtRecovered(amount);
+    }
+
+    /**
+     * @dev Returns a market's comptroller after checking the market is listed in it, so a fake vToken cannot claim a
+     * pool's stake
+     * @param vToken The market
+     * @return comptroller The market's comptroller
+     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
+     */
+    function _ensureListed(VToken vToken) internal view returns (address comptroller) {
+        comptroller = address(vToken.comptroller());
+        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+            revert ISpokePoolManager.MarketNotListed(address(vToken));
+        }
     }
 }

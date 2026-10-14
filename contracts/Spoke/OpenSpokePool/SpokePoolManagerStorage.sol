@@ -22,7 +22,7 @@ contract SpokePoolManagerStorage {
         Pending,
         Proposed,
         Rejected,
-        Executed,
+        Settled,
         Canceled
     }
 
@@ -50,10 +50,10 @@ contract SpokePoolManagerStorage {
     /// @notice Parameters of a new market set by the deployer
     struct DeployerMarketParams {
         address asset;
-        string name;
-        string symbol;
         // Funded by the Hub and borrowable; otherwise a collateral market
         bool isLoanMarket;
+        string name;
+        string symbol;
         uint256 collateralFactor;
         uint256 liquidationThreshold;
         uint256 supplyCap;
@@ -73,9 +73,9 @@ contract SpokePoolManagerStorage {
     /// @notice A new market: the deployer's parameters followed by Venus's
     struct MarketParams {
         address asset;
+        bool isLoanMarket;
         string name;
         string symbol;
-        bool isLoanMarket;
         uint256 collateralFactor;
         uint256 liquidationThreshold;
         uint256 supplyCap;
@@ -134,10 +134,8 @@ contract SpokePoolManagerStorage {
         address comptroller;
         uint256 proposalId;
         PoolRequest pool;
-        // Pool and markets requests; the manager holds their seeds
+        // Pool and markets requests; the manager holds their seeds until settlement
         MarketParams[] markets;
-        // Deployed for the latest proposal, in `markets` order
-        address[] vTokens;
         PoolConfigRequest poolConfig;
         TierRequest tier;
     }
@@ -161,7 +159,7 @@ contract SpokePoolManagerStorage {
     /// @notice Time after an exit's first proposal executes before its force close can be proposed, in seconds
     uint256 public windDownPeriod;
 
-    /// @notice Borrows and bad debt, in USD, a wound-down pool may still hold when its stake is released
+    /// @notice Borrows and bad debt, in USD, a winding-down pool may still hold when its stake is released
     uint256 public maxResidualPoolDebtUsd;
 
     /// @notice Pool-wide parameters of new pools
@@ -176,14 +174,14 @@ contract SpokePoolManagerStorage {
     /// @notice Number of tiers; ids run from 0 to `tierCount - 1`
     uint256 public tierCount;
 
-    /// @notice Tiers by id
-    mapping(uint256 => Tier) public tiers;
+    /// @notice Tiers by id; read them with `getTier`
+    mapping(uint256 => Tier) internal tiers;
 
     /// @notice The Hub source (YieldGroup) that funds loan markets of an asset
     mapping(address => address) public spokeSources;
 
-    /// @notice Pools by comptroller
-    mapping(address => Pool) public pools;
+    /// @notice Pools by comptroller; read them with `getPool`
+    mapping(address => Pool) internal pools;
 
     /// @notice Whether a market created through the manager is a loan market
     mapping(address => bool) public isLoanMarket;
@@ -191,7 +189,7 @@ contract SpokePoolManagerStorage {
     /// @notice Requests by id; read them with `getRequest`
     mapping(uint256 => Request) internal requests;
 
-    /// @notice Each deployer's latest request; a deployer submits another only once it is closed
+    /// @notice Each deployer's latest request; a deployer submits another only while it is neither pending nor proposed
     mapping(address => uint256) public latestRequestIds;
 
     /**
