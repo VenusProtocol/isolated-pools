@@ -4,7 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { readBackAddress, sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
+import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "../helpers/deploymentUtils";
 
 const DEPLOYMENT_NAME = "SpokePoolProposer";
 
@@ -27,16 +27,27 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const vTokenBeacon = await toAddress("SpokeVTokenBeacon");
   const protocolShareReserve = await toAddress("ProtocolShareReserve");
   const shortfall = await toAddress("SpokePoolShortfall");
+  const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
 
   const args = [manager, treasury, spokeAdapter, comptrollerBeacon, vTokenBeacon, protocolShareReserve, shortfall];
+  const proxyAdmin = await hre.artifacts.readArtifact(
+    "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+  );
+  // Behind a proxy so the delegated votes stay at one address across upgrades; it has no initializer
   const deployment: DeployResult = await deploy(DEPLOYMENT_NAME, {
     from: deployer,
     args,
+    proxy: {
+      owner,
+      proxyContract: "OptimizedTransparentUpgradeableProxy",
+      viaAdminContract: { name: "DefaultProxyAdmin", artifact: proxyAdmin },
+      upgradeIndex: 0,
+    },
     log: true,
     autoMine: true,
     skipIfAlreadyDeployed: true,
   });
-  await verifyDeployment(hre, DEPLOYMENT_NAME, deployment, args);
+  await verifyProxyDeployment(hre, DEPLOYMENT_NAME, deployment, args);
 
   const proposer = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [

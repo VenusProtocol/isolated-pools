@@ -23,13 +23,15 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * @notice Builds and submits `SpokePoolManager`'s GovernorBravo proposals on the Normal route: a request's proposal,
  * after deploying its contracts before the vote as in Venus market listings, and an exit's two proposals.
  * @dev Only the manager calls it. It submits the proposals itself, so the GovernorBravo votes are delegated to it;
- * GovernorBravo allows one live proposal per proposer, so the votes run one after another. The proposals grant no
+ * GovernorBravo allows one live proposal per proposer, so the votes run one after another. It sits behind a proxy so
+ * the delegated votes stay at one address across upgrades; it keeps no storage, so it needs no initializer. The proposals grant no
  * roles: the onboarding VIP gives wildcard ACM grants once, for every pool, to the pool registry on the setters it
  * calls while listing (`setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`,
  * `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal Timelock on
  * `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource` (it
  * already holds wildcards for the other comptroller setters), and to the Risk Stewards on `setCollateralFactor`,
  * `setMarketSupplyCaps` and `setMarketBorrowCaps`
+ * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolProposer is ISpokePoolProposer {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
