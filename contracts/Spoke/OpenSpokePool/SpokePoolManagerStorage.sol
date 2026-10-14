@@ -4,17 +4,26 @@ pragma solidity 0.8.25;
 /**
  * @title SpokePoolManagerStorage
  * @author Venus
- * @notice Storage layout for the `SpokePoolManager` contract: its enums, structs and state variables.
+ * @notice Storage layout of `SpokePoolManager`
  */
 // solhint-disable-next-line max-states-count
 contract SpokePoolManagerStorage {
+    /// @notice What a request asks for
+    enum RequestType {
+        Pool,
+        Markets,
+        PoolConfig,
+        Tier
+    }
+
     /// @notice Lifecycle of a request
     enum RequestStatus {
         None,
         Pending,
         Proposed,
         Rejected,
-        Executed
+        Executed,
+        Canceled
     }
 
     /// @notice Lifecycle of a pool
@@ -25,127 +34,146 @@ contract SpokePoolManagerStorage {
         ExitProposed,
         WindingDown,
         Closed,
-        TakenOver
+        TakenOverByGovernance
     }
 
-    /// @notice Limits a pool of a tier is created and tuned within
+    /// @notice Stake and risk limits of a pool tier
     struct Tier {
-        // XVS locked in the vault for a pool of this tier
         uint256 stakeAmount;
-        // Upper bound on the summed USD value of the loan markets' supply caps, scaled by 1e18
+        // Upper bound on the summed USD value of the loan markets' supply caps
         uint256 maxLiquidityUsd;
-        // Upper bound on a collateral market's collateral factor, scaled by 1e18
         uint256 maxCollateralFactor;
-        // Upper bound on a collateral market's liquidation threshold, scaled by 1e18
         uint256 maxLiquidationThreshold;
-        // Lower bound on a collateral market's liquidation threshold, scaled by 1e18; a nonzero bound stops a deployer
-        // from force-liquidating its borrowers by dropping the threshold to zero
         uint256 minLiquidationThreshold;
     }
 
-    /// @notice Parameters of one market of a requested pool
+    /// @notice Parameters of a new market set by the deployer
+    struct DeployerMarketParams {
+        address asset;
+        string name;
+        string symbol;
+        // Funded by the Hub and borrowable; otherwise a collateral market
+        bool isLoanMarket;
+        uint256 collateralFactor;
+        uint256 liquidationThreshold;
+        uint256 supplyCap;
+        uint256 borrowCap;
+        // Initial supply, pulled from the deployer with the request
+        uint256 seed;
+    }
+
+    /// @notice Parameters of a new market set by Venus
+    struct ProtocolMarketParams {
+        address interestRateModel;
+        uint256 reserveFactor;
+        // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury
+        uint256 seedBurnPercent;
+    }
+
+    /// @notice A new market: the deployer's parameters followed by Venus's
     struct MarketParams {
         address asset;
-        address interestRateModel;
-        // ERC-20 name of the vToken
         string name;
-        // ERC-20 symbol of the vToken
         string symbol;
-        // ERC-20 decimals of the vToken; 8 in Venus markets
-        uint8 decimals;
-        // Whether the Hub funds the market and borrowers borrow from it; otherwise the market is collateral
         bool isLoanMarket;
-        // Collateral factor, scaled by 1e18; zero for a loan market
         uint256 collateralFactor;
-        // Liquidation threshold, scaled by 1e18; zero for a loan market
         uint256 liquidationThreshold;
-        // Supply cap in the underlying; for a loan market, the liquidity the Hub supplies up to
         uint256 supplyCap;
-        // Borrow cap in the underlying; zero for a collateral market
         uint256 borrowCap;
-        // Reserve factor, scaled by 1e18
-        uint256 reserveFactor;
-        // Initial supply pulled from the project when the request is proposed, minted when the market is listed
         uint256 seed;
-        // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury. 0.1e18 burns 10%, as in
-        // most Venus market listings
-        uint256 seedBurnShare;
-        // Exchange rate the market is listed at, scaled by 1e18; 10^(18 + underlying decimals - vToken decimals)
-        // makes one vToken worth one unit of the underlying, as in Venus market listings
+        address interestRateModel;
+        uint8 decimals;
+        uint256 reserveFactor;
+        uint256 seedBurnPercent;
         uint256 initialExchangeRate;
     }
 
-    /// @notice Parameters of a requested pool; a request that adds markets to a pool only uses `markets`
+    /// @notice Pool-wide parameters
     struct PoolParams {
-        string name;
-        // Close factor, scaled by 1e18
         uint256 closeFactor;
-        // Pool-wide liquidation incentive, scaled by 1e18
         uint256 liquidationIncentive;
-        // Collateral below which only batch liquidations apply, in USD scaled by 1e18
         uint256 minLiquidatableCollateral;
-        MarketParams[] markets;
     }
 
-    /// @notice A project's request for a new pool, or a deployer's request for new markets in its pool
-    struct Request {
-        // The project that submitted the request and becomes, or is, the pool's deployer
-        address project;
-        RequestStatus status;
-        // The pool the markets are added to; zero for a request for a new pool
-        address comptroller;
+    /// @notice A new interest rate model for a listed market
+    struct MarketInterestRateModel {
+        address vToken;
+        address interestRateModel;
+    }
+
+    /// @notice Content of a pool request
+    struct PoolRequest {
         uint256 tierId;
-        // XVS locked for the request; zero for a request that adds markets
-        uint256 stakeAmount;
+        // XVS locked with the request
+        uint256 stake;
+        string name;
+        PoolParams params;
+    }
+
+    /// @notice Content of a pool config request; a zero pool parameter is left as it is
+    struct PoolConfigRequest {
+        PoolParams params;
+        MarketInterestRateModel[] interestRateModels;
+    }
+
+    /// @notice Content of a tier request
+    struct TierRequest {
+        uint256 tierId;
+        // The tier's terms when requested; the move applies only while they hold
+        bytes32 termsHash;
+    }
+
+    /// @notice A deployer's request; only the sections of its type are set
+    struct Request {
+        RequestType requestType;
+        RequestStatus status;
+        // Cleared by a team update until the deployer approves again
+        bool approved;
+        address deployer;
+        // Zero for a pool request until it is first proposed
+        address comptroller;
         uint256 proposalId;
-        // Underlying asset of each market's seed the manager holds for the proposal, in market order
-        address[] seedAssets;
-        // Amount of each market's seed, in market order
-        uint256[] seedAmounts;
+        PoolRequest pool;
+        // Pool and markets requests; the manager holds their seeds
+        MarketParams[] markets;
+        // Deployed for the latest proposal, in `markets` order
+        address[] vTokens;
+        PoolConfigRequest poolConfig;
+        TierRequest tier;
     }
 
     /// @notice A pool created through the manager
     struct Pool {
         address deployer;
         PoolStatus status;
-        // True while the Venus team has paused the deployer's actions
-        bool deployerActionsPaused;
+        bool deployerPaused;
         uint256 tierId;
-        // XVS still locked for the pool
         uint256 lockedStake;
-        // When the exit's first proposal executed and the repayment window opened
         uint256 windDownStartedAt;
     }
 
-    /// @notice A deployer's decrease of a collateral market's liquidation threshold, waiting out its delay
-    struct PendingLiquidationThreshold {
-        // The new liquidation threshold, scaled by 1e18
-        uint256 liquidationThreshold;
-        // When the deployer scheduled it; zero when no decrease is scheduled
-        uint256 scheduledAt;
-    }
+    /// @notice Builds and submits the manager's proposals
+    address public proposer;
 
-    /// @notice The factory that deploys pools
-    address public factory;
+    /// @notice Checks requests and deployer updates against the tiers
+    address public validator;
 
-    /// @notice The Hub adapter loan markets are registered with
-    address public spokeAdapter;
+    /// @notice Time after an exit's first proposal executes before its force close can be proposed, in seconds
+    uint256 public windDownPeriod;
 
-    /// @notice Minimum USD value of each seed, scaled by 1e18
-    uint256 public minSeedUsd;
+    /// @notice Borrows and bad debt, in USD, a wound-down pool may still hold when its stake is released
+    uint256 public maxResidualPoolDebtUsd;
 
-    /// @notice Time borrowers have to repay after an exit's first proposal executes, in seconds
-    uint256 public repaymentWindow;
+    /// @notice Pool-wide parameters of new pools
+    PoolParams public poolDefaults;
 
-    /// @notice Borrows and bad debt a wound-down pool may still hold when its stake is released, in USD scaled by 1e18.
-    ///   Interest rounding can leave `totalBorrows` above the sum of the accounts' borrows with no account left to repay
-    ///   it, and bad debt too small to be worth covering can be left
-    uint256 public maxResidualDebtUsd;
+    /// @notice Venus's parameters of new markets
+    ProtocolMarketParams public marketDefaults;
 
-    /// @notice Number of requests submitted; also the id of the latest one
+    /// @notice Number of requests; also the latest request id
     uint256 public requestCount;
 
-    /// @notice Number of tiers set; tier ids run from 0 to `tierCount - 1`
+    /// @notice Number of tiers; ids run from 0 to `tierCount - 1`
     uint256 public tierCount;
 
     /// @notice Tiers by id
@@ -157,26 +185,19 @@ contract SpokePoolManagerStorage {
     /// @notice Pools by comptroller
     mapping(address => Pool) public pools;
 
-    /// @notice Whether a market created through the manager is a loan market, recorded when its request completes
+    /// @notice Whether a market created through the manager is a loan market
     mapping(address => bool) public isLoanMarket;
 
-    /// @notice Requests by id; the getter leaves out the seeds, and the requested parameters are in
-    ///   `RequestSubmitted`
-    mapping(uint256 => Request) public requests;
+    /// @notice Requests by id; read them with `getRequest`
+    mapping(uint256 => Request) internal requests;
 
-    /// @notice Time a deployer waits before a lower liquidation threshold takes effect, in seconds
-    uint256 public liquidationThresholdDelay;
-
-    /// @notice Scheduled liquidation-threshold decreases by market
-    mapping(address => PendingLiquidationThreshold) public pendingLiquidationThresholds;
-
-    /// @notice Time after `liquidationThresholdDelay` during which a scheduled decrease can be applied, in seconds
-    uint256 public liquidationThresholdBufferPeriod;
+    /// @notice Each deployer's latest request; a deployer submits another only once it is closed
+    mapping(address => uint256) public latestRequestIds;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[35] private __gap;
+    uint256[32] private __gap;
 }

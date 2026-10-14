@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { IERC20MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
@@ -9,29 +10,28 @@ import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfa
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
-import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
 import { VToken } from "../../VToken.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
-import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { IGovernorBravo, PROPOSAL_STATE_CANCELED, PROPOSAL_STATE_DEFEATED, PROPOSAL_STATE_EXPIRED } from "../interfaces/IGovernorBravo.sol";
+import { IRiskOracle } from "../interfaces/IRiskOracle.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { IXVSVault } from "../interfaces/IXVSVault.sol";
-import { SpokePoolFactory } from "./SpokePoolFactory.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
+import { SpokePoolProposer } from "./SpokePoolProposer.sol";
+import { SpokePoolValidator } from "./SpokePoolValidator.sol";
 
 /**
  * @title SpokePoolManager
  * @author Venus
- * @notice Entry point of open spoke pools for projects. A project stakes XVS in the XVSVault and requests a pool of a
- * tier: the manager locks the tier's stake in the vault. A pool's deployer requests new markets the same way, and
- * tunes its pool within its tier: the manager checks the deployer and the tier and writes to the pool's comptroller
- * with the pool-specific ACM roles it holds. The deployer can sunset a market by zeroing its caps and collateral
- * factor. The manager keeps every request's and pool's state: `SpokePoolProposer` puts requests and exits to a vote
- * and records them here, `SpokePoolFactory` completes a request when its proposal executes, and `SpokePoolShortfall`
- * pays bad debt coverers from a pool's locked stake.
- * @dev The manager needs the XVSVault `lock`, `unlock` and `seizeLocked` roles. Public variable getters are not in
- * `ISpokePoolManager`: they live in the sibling base `SpokePoolManagerStorage`.
+ * @notice Entry point of open spoke pools. A deployer stakes XVS in the XVSVault and requests a pool of a tier: the
+ * manager locks the tier's stake, pulls the markets' seeds and stores the request. The Venus team may update it, the
+ * deployer approves it, and the team proposes it through `SpokePoolProposer`; the proposal calls `settleRequest`,
+ * which starts the deployer's rights. A deployer requests new markets, pool parameters or another tier the same way,
+ * tunes risk parameters within its tier through the Risk Stewards, and can ask to exit. `SpokePoolValidator` checks
+ * requests and updates against the tiers, and `SpokePoolShortfall` pays bad debt recoverers from the locked stake.
+ * @dev Needs the XVSVault `lock`, `unlock` and `seizeLocked` roles and to be a RiskOracle authorized sender. The
+ * GovernorBravo votes the proposals need are delegated to the proposer
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolManager is
@@ -42,10 +42,24 @@ contract SpokePoolManager is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice The vault project stakes are locked in
+    /// @notice ERC-20 decimals of a new market's vToken
+    uint8 public constant VTOKEN_DECIMALS = 8;
+
+    /// @notice Lowest USD value of a market's seed
+    uint256 public constant MIN_SEED_USD = 90e18;
+
+    /// @notice Highest USD value of a market's seed
+    uint256 public constant MAX_SEED_USD = 150e18;
+
+    /// @dev RiskOracle update types the Risk Stewards apply
+    string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
+    string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
+    string internal constant BORROW_CAP_UPDATE = "borrowCap";
+
+    /// @notice The vault deployer stakes are locked in
     IXVSVault public immutable XVS_VAULT;
 
-    /// @notice The governor the pools' proposals are submitted to; the manager reads their states
+    /// @notice The governor the proposals are submitted to
     IGovernorBravo public immutable GOVERNOR_BRAVO;
 
     /// @notice The registry spoke pools are listed in
@@ -54,20 +68,23 @@ contract SpokePoolManager is
     /// @notice The oracle every pool prices with
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
-    /// @notice The oracle every pool bounds collateral prices with; a collateral asset needs bounded pricing enabled
+    /// @notice The oracle every pool bounds collateral prices with
     IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
 
-    /// @notice Most markets a pool may have. `SpokePoolProposer` checks at deployment that a pool-creation proposal with
-    ///   this many markets fits GovernorBravo's action limit
+    /// @notice The oracle deployer updates are published to
+    IRiskOracle public immutable RISK_ORACLE;
+
+    /// @notice Most markets a pool may have
     uint256 public immutable MAX_POOL_MARKETS;
 
     /**
-     * @param xvsVault The vault project stakes are locked in
-     * @param governorBravo The governor the pools' proposals are submitted to
+     * @param xvsVault The vault deployer stakes are locked in
+     * @param governorBravo The governor the proposals are submitted to
      * @param poolRegistry The registry spoke pools are listed in
      * @param resilientOracle The oracle every pool prices with
      * @param deviationBoundedOracle The oracle every pool bounds collateral prices with
-     * @param maxPoolMarkets The most markets a pool may have; 12 at most with GovernorBravo's 100 actions
+     * @param riskOracle The oracle deployer updates are published to
+     * @param maxPoolMarkets Most markets a pool may have; the proposer checks a pool-creation proposal fits it
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
      */
     constructor(
@@ -76,6 +93,7 @@ contract SpokePoolManager is
         address poolRegistry,
         ResilientOracleInterface resilientOracle,
         IDeviationBoundedOracle deviationBoundedOracle,
+        IRiskOracle riskOracle,
         uint256 maxPoolMarkets
     ) {
         ensureNonzeroAddress(address(xvsVault));
@@ -83,12 +101,14 @@ contract SpokePoolManager is
         ensureNonzeroAddress(poolRegistry);
         ensureNonzeroAddress(address(resilientOracle));
         ensureNonzeroAddress(address(deviationBoundedOracle));
+        ensureNonzeroAddress(address(riskOracle));
 
         XVS_VAULT = xvsVault;
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         RESILIENT_ORACLE = resilientOracle;
         DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
+        RISK_ORACLE = riskOracle;
         MAX_POOL_MARKETS = maxPoolMarkets;
 
         _disableInitializers();
@@ -104,173 +124,271 @@ contract SpokePoolManager is
         __ReentrancyGuard_init();
     }
 
-    /*** Project functions ***/
+    /*** Requests ***/
 
     /// @inheritdoc ISpokePoolManager
-    function submitRequest(
-        address comptroller,
+    function requestPool(
         uint256 tierId,
-        PoolParams calldata params
+        string calldata name,
+        DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        uint256 stakeAmount;
-        if (comptroller == address(0)) {
-            stakeAmount = _ensureTier(tierId).stakeAmount;
-        } else {
-            tierId = _ensureDeployer(comptroller).tierId;
+        uint256 stake = tiers[tierId].stakeAmount;
+        if (stake == 0) {
+            revert InvalidTier(tierId);
         }
-        _validateMarkets(comptroller, tierId, params.markets);
-
-        requestId = ++requestCount;
-        Request storage request = requests[requestId];
-        request.project = msg.sender;
-        request.status = RequestStatus.Pending;
-        request.comptroller = comptroller;
-        request.tierId = tierId;
-        request.stakeAmount = stakeAmount;
-        if (stakeAmount != 0) {
-            XVS_VAULT.lock(msg.sender, stakeAmount);
-        }
-
-        emit RequestSubmitted(requestId, msg.sender, comptroller, tierId, params);
+        Request storage request;
+        (requestId, request) = _newRequest(RequestType.Pool, address(0));
+        PoolRequest storage pool = request.pool;
+        pool.tierId = tierId;
+        pool.stake = stake;
+        pool.name = name;
+        pool.params = poolDefaults;
+        _storeMarkets(request, markets);
+        _verifyRequest(requestId);
+        XVS_VAULT.lock(msg.sender, stake);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function claimSeeds(uint256 requestId) external nonReentrant {
-        Request storage request = _ensureRequestStatus(requestId, RequestStatus.Rejected);
-        _sendSeeds(request, request.project);
-
-        emit SeedsClaimed(requestId);
-    }
-
-    /*** Deployer functions ***/
-
-    /// @inheritdoc ISpokePoolManager
-    function setCollateralFactor(
+    function requestMarkets(
         address comptroller,
-        VToken vToken,
-        uint256 newCollateralFactorMantissa,
-        uint256 newLiquidationThresholdMantissa
-    ) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        (, uint256 liquidationThreshold) = _collateralMarket(comptroller, vToken);
-        _checkCollateralParams(tiers[pool.tierId], newCollateralFactorMantissa, newLiquidationThresholdMantissa);
-        if (newLiquidationThresholdMantissa < liquidationThreshold) {
-            revert InvalidLiquidationThreshold(address(vToken));
-        }
-
-        SpokeComptroller(comptroller).setCollateralFactor(
-            vToken,
-            newCollateralFactorMantissa,
-            newLiquidationThresholdMantissa
-        );
-        if (
-            newLiquidationThresholdMantissa > liquidationThreshold &&
-            pendingLiquidationThresholds[address(vToken)].scheduledAt != 0
-        ) {
-            delete pendingLiquidationThresholds[address(vToken)];
-            emit LiquidationThresholdDecreaseCancelled(comptroller, address(vToken));
-        }
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function scheduleLiquidationThresholdDecrease(
-        address comptroller,
-        VToken vToken,
-        uint256 newLiquidationThresholdMantissa
-    ) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        (uint256 collateralFactor, uint256 liquidationThreshold) = _collateralMarket(comptroller, vToken);
-        _checkCollateralParams(tiers[pool.tierId], collateralFactor, newLiquidationThresholdMantissa);
-        if (
-            newLiquidationThresholdMantissa >= liquidationThreshold ||
-            newLiquidationThresholdMantissa < collateralFactor
-        ) {
-            revert InvalidLiquidationThreshold(address(vToken));
-        }
-
-        pendingLiquidationThresholds[address(vToken)] = PendingLiquidationThreshold(
-            newLiquidationThresholdMantissa,
-            block.timestamp
-        );
-
-        emit LiquidationThresholdDecreaseScheduled(comptroller, address(vToken), newLiquidationThresholdMantissa);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function applyLiquidationThresholdDecrease(address comptroller, VToken vToken) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        PendingLiquidationThreshold memory pending = pendingLiquidationThresholds[address(vToken)];
-        uint256 readyAt = pending.scheduledAt + liquidationThresholdDelay;
-        if (pending.scheduledAt == 0 || block.timestamp < readyAt) {
-            revert LiquidationThresholdDelayNotElapsed(address(vToken));
-        }
-        if (block.timestamp > readyAt + liquidationThresholdBufferPeriod) {
-            revert LiquidationThresholdDecreaseExpired(address(vToken));
-        }
-        delete pendingLiquidationThresholds[address(vToken)];
-
-        (uint256 collateralFactor, ) = _collateralMarket(comptroller, vToken);
-        _checkCollateralParams(tiers[pool.tierId], collateralFactor, pending.liquidationThreshold);
-        SpokeComptroller(comptroller).setCollateralFactor(vToken, collateralFactor, pending.liquidationThreshold);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setMarketSupplyCaps(
-        address comptroller,
-        VToken[] calldata vTokens,
-        uint256[] calldata newSupplyCaps
-    ) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        uint256 marketCount = vTokens.length;
-        if (marketCount != newSupplyCaps.length) {
+        DeployerMarketParams[] calldata markets
+    ) external nonReentrant returns (uint256 requestId) {
+        _ensureActiveDeployer(comptroller);
+        if (markets.length == 0) {
             revert InvalidArrayLength();
         }
-        bool loanCapRaised;
-        for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = vTokens[i];
-            if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-                revert MarketNotInPool(address(vToken));
-            }
-            if (
-                isLoanMarket[address(vToken)] &&
-                newSupplyCaps[i] > SpokeComptroller(comptroller).supplyCaps(address(vToken))
-            ) {
-                loanCapRaised = true;
-            }
-        }
-
-        SpokeComptroller(comptroller).setMarketSupplyCaps(vTokens, newSupplyCaps);
-
-        if (
-            loanCapRaised &&
-            _loanLiquidityUsd(comptroller, SpokeComptroller(comptroller).getAllMarkets()) >
-            tiers[pool.tierId].maxLiquidityUsd
-        ) {
-            revert ExceedsTierLimit();
-        }
+        Request storage request;
+        (requestId, request) = _newRequest(RequestType.Markets, comptroller);
+        _storeMarkets(request, markets);
+        _verifyRequest(requestId);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setMarketBorrowCaps(
+    function requestPoolConfigUpdate(
         address comptroller,
-        VToken[] calldata vTokens,
-        uint256[] calldata newBorrowCaps
+        PoolParams calldata params,
+        MarketInterestRateModel[] calldata interestRateModels
+    ) external returns (uint256 requestId) {
+        _ensureActiveDeployer(comptroller);
+        Request storage request;
+        (requestId, request) = _newRequest(RequestType.PoolConfig, comptroller);
+        _storePoolConfig(request, params, interestRateModels);
+        _verifyRequest(requestId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function requestTier(address comptroller, uint256 tierId) external returns (uint256 requestId) {
+        Pool storage pool = _ensureActiveDeployer(comptroller);
+        if (tiers[tierId].stakeAmount == 0 || tierId == pool.tierId) {
+            revert InvalidTier(tierId);
+        }
+        Request storage request;
+        (requestId, request) = _newRequest(RequestType.Tier, comptroller);
+        request.tier = TierRequest(tierId, _tierHash(tierId));
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function updateRequest(
+        uint256 requestId,
+        PoolParams calldata params,
+        MarketParams[] calldata markets,
+        MarketInterestRateModel[] calldata interestRateModels
     ) external {
-        _ensureDeployer(comptroller);
-        uint256 marketCount = vTokens.length;
+        _checkAccessAllowed("updateRequest(uint256,PoolParams,MarketParams[],MarketInterestRateModel[])");
+
+        Request storage request = _ensureOpenRequest(requestId);
+        RequestType requestType = request.requestType;
+        uint256 marketCount = markets.length;
+        if (marketCount != request.markets.length) {
+            revert InvalidArrayLength();
+        }
         for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = vTokens[i];
-            if (!isLoanMarket[address(vToken)] || !SpokeComptroller(comptroller).isMarketListed(vToken)) {
-                revert NotLoanMarket(address(vToken));
+            MarketParams storage market = request.markets[i];
+            if (markets[i].asset != market.asset || markets[i].seed != market.seed) {
+                revert InvalidSeed(market.asset);
             }
+            request.markets[i] = markets[i];
+        }
+        if (requestType == RequestType.Pool) {
+            request.pool.params = params;
+        } else if (requestType == RequestType.PoolConfig) {
+            _storePoolConfig(request, params, interestRateModels);
+        }
+        request.approved = false;
+        _verifyRequest(requestId);
+
+        emit RequestUpdated(requestId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function approveRequest(uint256 requestId) external {
+        Request storage request = _ensureOpenRequest(requestId);
+        if (msg.sender != request.deployer) {
+            revert NotDeployer(msg.sender);
+        }
+        request.approved = true;
+
+        emit RequestApproved(requestId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function proposeRequest(
+        uint256 requestId,
+        string calldata description
+    ) external nonReentrant returns (uint256 proposalId) {
+        _checkAccessAllowed("proposeRequest(uint256,string)");
+
+        Request storage request = _ensureOpenRequest(requestId);
+        if (!request.approved) {
+            revert RequestNotApproved(requestId);
+        }
+        _verifyRequest(requestId);
+        address[] memory vTokens;
+        (proposalId, request.comptroller, vTokens) = SpokePoolProposer(proposer).proposeRequest(requestId, description);
+        request.vTokens = vTokens;
+        request.status = RequestStatus.Proposed;
+        request.proposalId = proposalId;
+
+        emit RequestProposed(requestId, proposalId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function settleRequest(uint256 requestId) external nonReentrant {
+        _checkAccessAllowed("settleRequest(uint256)");
+
+        Request storage request = requests[requestId];
+        if (request.status != RequestStatus.Proposed) {
+            revert InvalidRequestStatus(requestId);
+        }
+        _verifyRequest(requestId);
+        request.status = RequestStatus.Executed;
+
+        address comptroller = request.comptroller;
+        if (request.requestType == RequestType.Pool) {
+            Pool storage pool = pools[comptroller];
+            pool.deployer = request.deployer;
+            pool.status = PoolStatus.Live;
+            pool.tierId = request.pool.tierId;
+            pool.lockedStake = request.pool.stake;
+            emit PoolActivated(requestId, comptroller, request.deployer);
+        }
+        uint256 marketCount = request.markets.length;
+        for (uint256 i; i < marketCount; ++i) {
+            MarketParams storage market = request.markets[i];
+            if (market.isLoanMarket) {
+                isLoanMarket[request.vTokens[i]] = true;
+            }
+            IERC20Upgradeable(market.asset).safeTransfer(msg.sender, market.seed);
         }
 
-        SpokeComptroller(comptroller).setMarketBorrowCaps(vTokens, newBorrowCaps);
+        emit RequestSettled(requestId, comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setPoolTier(uint256 requestId) external nonReentrant {
+        _checkAccessAllowed("setPoolTier(uint256)");
+
+        Request storage request = requests[requestId];
+        if (request.status != RequestStatus.Pending) {
+            revert InvalidRequestStatus(requestId);
+        }
+        if (request.requestType != RequestType.Tier) {
+            revert InvalidRequestType(requestId);
+        }
+        address comptroller = request.comptroller;
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
+        uint256 tierId = request.tier.tierId;
+        if (request.tier.termsHash != _tierHash(tierId)) {
+            revert InvalidTier(tierId);
+        }
+        SpokePoolValidator(validator).checkPoolFitsTier(comptroller, tierId);
+        request.status = RequestStatus.Executed;
+
+        uint256 newStake = tiers[tierId].stakeAmount;
+        uint256 lockedStake = pool.lockedStake;
+        pool.tierId = tierId;
+        pool.lockedStake = newStake;
+        if (newStake > lockedStake) {
+            XVS_VAULT.lock(pool.deployer, newStake - lockedStake);
+        } else if (newStake < lockedStake) {
+            XVS_VAULT.unlock(pool.deployer, lockedStake - newStake);
+        }
+
+        emit PoolTierUpdated(comptroller, tierId);
+        emit RequestSettled(requestId, comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function rejectRequest(uint256 requestId) external nonReentrant {
+        _checkAccessAllowed("rejectRequest(uint256)");
+
+        Request storage request = _ensureOpenRequest(requestId);
+        request.status = RequestStatus.Rejected;
+        uint256 stake = request.pool.stake;
+        if (stake != 0) {
+            XVS_VAULT.unlock(request.deployer, stake);
+        }
+
+        emit RequestRejected(requestId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function cancelRequest(uint256 requestId) external nonReentrant {
+        Request storage request = _ensureOpenRequest(requestId);
+        if (msg.sender != request.deployer) {
+            revert NotDeployer(msg.sender);
+        }
+        request.status = RequestStatus.Canceled;
+        uint256 stake = request.pool.stake;
+        if (stake != 0) {
+            XVS_VAULT.unlock(msg.sender, stake);
+        }
+
+        emit RequestCanceled(requestId);
+    }
+
+    /*** Live pools ***/
+
+    /// @inheritdoc ISpokePoolManager
+    function updateCollateralFactor(
+        address comptroller,
+        VToken vToken,
+        uint256 newCollateralFactor,
+        uint256 newLiquidationThreshold
+    ) external {
+        _ensureActiveDeployer(comptroller);
+        SpokePoolValidator(validator).checkCollateralFactor(
+            comptroller,
+            address(vToken),
+            newCollateralFactor,
+            newLiquidationThreshold
+        );
+        _publishUpdate(COLLATERAL_FACTORS_UPDATE, vToken, abi.encode(newCollateralFactor, newLiquidationThreshold));
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function updateSupplyCap(address comptroller, VToken vToken, uint256 newSupplyCap) external {
+        _ensureActiveDeployer(comptroller);
+        SpokePoolValidator(validator).checkSupplyCap(comptroller, address(vToken), newSupplyCap);
+        _publishUpdate(SUPPLY_CAP_UPDATE, vToken, abi.encode(newSupplyCap));
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external {
+        _ensureActiveDeployer(comptroller);
+        SpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
+        _publishUpdate(BORROW_CAP_UPDATE, vToken, abi.encode(newBorrowCap));
     }
 
     /// @inheritdoc ISpokePoolManager
     function topUpStake(address comptroller) external nonReentrant {
-        Pool storage pool = _ensureCallerIsDeployer(comptroller);
+        Pool storage pool = pools[comptroller];
+        if (pool.deployer != msg.sender) {
+            revert NotDeployer(msg.sender);
+        }
+        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
+            revert InvalidPoolStatus(comptroller);
+        }
         uint256 required = tiers[pool.tierId].stakeAmount;
         uint256 lockedStake = pool.lockedStake;
         if (lockedStake >= required) {
@@ -284,72 +402,82 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function requestTierChange(address comptroller, uint256 newTierId) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        _ensureTier(newTierId);
-        if (newTierId == pool.tierId) {
-            revert InvalidTier(newTierId);
-        }
-
-        emit TierChangeRequested(comptroller, newTierId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function requestExit(address comptroller) external {
-        _ensureDeployer(comptroller).status = PoolStatus.ExitRequested;
-        emit ExitRequested(comptroller);
-    }
-
-    /*** Venus team functions ***/
-
-    /// @inheritdoc ISpokePoolManager
-    function rejectRequest(uint256 requestId) external nonReentrant {
-        _checkAccessAllowed("rejectRequest(uint256)");
-
-        Request storage request = _ensureOpenRequest(requestId);
-        request.status = RequestStatus.Rejected;
-        uint256 stakeAmount = request.stakeAmount;
-        if (stakeAmount != 0) {
-            XVS_VAULT.unlock(request.project, stakeAmount);
-        }
-
-        emit RequestRejected(requestId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setPoolTier(address comptroller, uint256 newTierId) external nonReentrant {
-        _checkAccessAllowed("setPoolTier(address,uint256)");
-
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
-        Tier storage tier = _ensureTier(newTierId);
-        if (newTierId == pool.tierId) {
-            revert InvalidTier(newTierId);
-        }
-        _checkPoolFitsTier(comptroller, tier);
-
-        uint256 newStake = tier.stakeAmount;
-        uint256 lockedStake = pool.lockedStake;
-        pool.tierId = newTierId;
-        pool.lockedStake = newStake;
-        if (newStake > lockedStake) {
-            XVS_VAULT.lock(pool.deployer, newStake - lockedStake);
-        } else if (newStake < lockedStake) {
-            XVS_VAULT.unlock(pool.deployer, lockedStake - newStake);
-        }
-
-        emit TierChanged(comptroller, newTierId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setDeployerActionsPaused(address comptroller, bool paused) external {
-        _checkAccessAllowed("setDeployerActionsPaused(address,bool)");
+    function setDeployerPaused(address comptroller, bool paused) external {
+        _checkAccessAllowed("setDeployerPaused(address,bool)");
 
         Pool storage pool = pools[comptroller];
         if (pool.status == PoolStatus.None) {
             revert InvalidPoolStatus(comptroller);
         }
-        emit DeployerActionsPausedUpdated(comptroller, paused);
-        pool.deployerActionsPaused = paused;
+        emit DeployerPausedUpdated(comptroller, paused);
+        pool.deployerPaused = paused;
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function seizeStake(address comptroller, uint256 amount, address to) external {
+        _checkAccessAllowed("seizeStake(address,uint256,address)");
+
+        Pool storage pool = pools[comptroller];
+        uint256 lockedStake = pool.lockedStake;
+        if (amount > lockedStake) {
+            revert InsufficientLockedStake(amount, lockedStake);
+        }
+        pool.lockedStake = lockedStake - amount;
+        XVS_VAULT.seizeLocked(pool.deployer, amount, to);
+
+        emit StakeSeized(comptroller, to, amount);
+    }
+
+    /*** Exits ***/
+
+    /// @inheritdoc ISpokePoolManager
+    function requestExit(address comptroller) external {
+        _ensureActiveDeployer(comptroller).status = PoolStatus.ExitRequested;
+        emit ExitRequested(comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function proposeExit(
+        address comptroller,
+        uint256[] calldata liquidationThresholds,
+        string calldata description
+    ) external returns (uint256 proposalId) {
+        _checkAccessAllowed("proposeExit(address,uint256[],string)");
+
+        Pool storage pool = pools[comptroller];
+        PoolStatus status = pool.status;
+        // `ExitProposed` is accepted so the exit can be proposed again when its earlier proposal fails
+        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested && status != PoolStatus.ExitProposed) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        pool.status = PoolStatus.ExitProposed;
+        proposalId = SpokePoolProposer(proposer).proposeExit(comptroller, liquidationThresholds, description);
+
+        emit ExitProposed(comptroller, proposalId);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function startWindDown(address comptroller) external {
+        _checkAccessAllowed("startWindDown(address)");
+
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitProposed);
+        pool.status = PoolStatus.WindingDown;
+        pool.windDownStartedAt = block.timestamp;
+
+        emit WindDownStarted(comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function proposeForceClose(address comptroller, string calldata description) external returns (uint256 proposalId) {
+        _checkAccessAllowed("proposeForceClose(address,string)");
+
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
+        if (block.timestamp < pool.windDownStartedAt + windDownPeriod) {
+            revert WindDownPeriodNotElapsed();
+        }
+        proposalId = SpokePoolProposer(proposer).proposeForceClose(comptroller, description);
+
+        emit ForceCloseProposed(comptroller, proposalId);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -370,18 +498,29 @@ contract SpokePoolManager is
         _checkAccessAllowed("releaseStake(address)");
 
         Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        uint256 debtUsd = _poolDebtUsd(comptroller);
-        if (debtUsd > maxResidualDebtUsd) {
-            revert OutstandingDebt(debtUsd);
-        }
-
+        SpokePoolValidator(validator).checkResidualDebt(comptroller);
         pool.status = PoolStatus.Closed;
         uint256 amount = _unlockStake(pool);
 
         emit StakeReleased(comptroller, pool.deployer, amount);
     }
 
-    /*** Governance functions ***/
+    /// @inheritdoc ISpokePoolManager
+    function takeOverByGovernance(address comptroller) external {
+        _checkAccessAllowed("takeOverByGovernance(address)");
+
+        Pool storage pool = pools[comptroller];
+        PoolStatus status = pool.status;
+        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        pool.status = PoolStatus.TakenOverByGovernance;
+        uint256 amount = _unlockStake(pool);
+
+        emit PoolTakenOverByGovernance(comptroller, pool.deployer, amount);
+    }
+
+    /*** Configuration ***/
 
     /// @inheritdoc ISpokePoolManager
     function setTier(uint256 tierId, Tier calldata tier) external {
@@ -402,11 +541,19 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setFactory(SpokePoolFactory newFactory) external {
-        _checkAccessAllowed("setFactory(address)");
-        ensureNonzeroAddress(address(newFactory));
-        emit FactoryUpdated(SpokePoolFactory(factory), newFactory);
-        factory = address(newFactory);
+    function setProposer(SpokePoolProposer newProposer) external {
+        _checkAccessAllowed("setProposer(address)");
+        ensureNonzeroAddress(address(newProposer));
+        emit ProposerUpdated(SpokePoolProposer(proposer), newProposer);
+        proposer = address(newProposer);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setValidator(SpokePoolValidator newValidator) external {
+        _checkAccessAllowed("setValidator(address)");
+        ensureNonzeroAddress(address(newValidator));
+        emit ValidatorUpdated(SpokePoolValidator(validator), newValidator);
+        validator = address(newValidator);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -418,234 +565,158 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setSpokeAdapter(address adapter) external {
-        _checkAccessAllowed("setSpokeAdapter(address)");
-        ensureNonzeroAddress(adapter);
-        emit SpokeAdapterUpdated(spokeAdapter, adapter);
-        spokeAdapter = adapter;
+    function setPoolDefaults(PoolParams calldata params) external {
+        _checkAccessAllowed("setPoolDefaults(PoolParams)");
+        emit PoolDefaultsUpdated(poolDefaults, params);
+        poolDefaults = params;
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setMinSeedUsd(uint256 newMinSeedUsd) external {
-        _checkAccessAllowed("setMinSeedUsd(uint256)");
-        emit MinSeedUsdUpdated(minSeedUsd, newMinSeedUsd);
-        minSeedUsd = newMinSeedUsd;
+    function setMarketDefaults(ProtocolMarketParams calldata params) external {
+        _checkAccessAllowed("setMarketDefaults(ProtocolMarketParams)");
+        emit MarketDefaultsUpdated(marketDefaults, params);
+        marketDefaults = params;
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setLiquidationThresholdDelay(uint256 newDelay) external {
-        _checkAccessAllowed("setLiquidationThresholdDelay(uint256)");
-        ensureNonzeroValue(newDelay);
-        emit LiquidationThresholdDelayUpdated(liquidationThresholdDelay, newDelay);
-        liquidationThresholdDelay = newDelay;
+    function setWindDownPeriod(uint256 newWindDownPeriod) external {
+        _checkAccessAllowed("setWindDownPeriod(uint256)");
+        ensureNonzeroValue(newWindDownPeriod);
+        emit WindDownPeriodUpdated(windDownPeriod, newWindDownPeriod);
+        windDownPeriod = newWindDownPeriod;
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setLiquidationThresholdBufferPeriod(uint256 newBufferPeriod) external {
-        _checkAccessAllowed("setLiquidationThresholdBufferPeriod(uint256)");
-        ensureNonzeroValue(newBufferPeriod);
-        emit LiquidationThresholdBufferPeriodUpdated(liquidationThresholdBufferPeriod, newBufferPeriod);
-        liquidationThresholdBufferPeriod = newBufferPeriod;
+    function setMaxResidualPoolDebtUsd(uint256 newMaxResidualPoolDebtUsd) external {
+        _checkAccessAllowed("setMaxResidualPoolDebtUsd(uint256)");
+        emit MaxResidualPoolDebtUsdUpdated(maxResidualPoolDebtUsd, newMaxResidualPoolDebtUsd);
+        maxResidualPoolDebtUsd = newMaxResidualPoolDebtUsd;
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setRepaymentWindow(uint256 newRepaymentWindow) external {
-        _checkAccessAllowed("setRepaymentWindow(uint256)");
-        ensureNonzeroValue(newRepaymentWindow);
-        emit RepaymentWindowUpdated(repaymentWindow, newRepaymentWindow);
-        repaymentWindow = newRepaymentWindow;
+    function sweepToken(address token, address to, uint256 amount) external {
+        _checkAccessAllowed("sweepToken(address,address,uint256)");
+        ensureNonzeroAddress(to);
+        IERC20Upgradeable(token).safeTransfer(to, amount);
+        emit SweepToken(token, to, amount);
     }
 
-    /// @inheritdoc ISpokePoolManager
-    function setMaxResidualDebtUsd(uint256 newMaxResidualDebtUsd) external {
-        _checkAccessAllowed("setMaxResidualDebtUsd(uint256)");
-        emit MaxResidualDebtUsdUpdated(maxResidualDebtUsd, newMaxResidualDebtUsd);
-        maxResidualDebtUsd = newMaxResidualDebtUsd;
-    }
+    /*** Views ***/
 
     /// @inheritdoc ISpokePoolManager
-    function startWindDown(address comptroller) external {
-        _checkAccessAllowed("startWindDown(address)");
-
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitProposed);
-        pool.status = PoolStatus.WindingDown;
-        pool.windDownStartedAt = block.timestamp;
-
-        emit WindDownStarted(comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function takeOverPool(address comptroller) external {
-        _checkAccessAllowed("takeOverPool(address)");
-
-        Pool storage pool = pools[comptroller];
-        PoolStatus status = pool.status;
-        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested) {
-            revert InvalidPoolStatus(comptroller);
-        }
-        pool.status = PoolStatus.TakenOver;
-        uint256 amount = _unlockStake(pool);
-
-        emit PoolTakenOver(comptroller, pool.deployer, amount);
-    }
-
-    /*** Proposer functions ***/
-
-    /// @inheritdoc ISpokePoolManager
-    function recordRequestProposal(
-        uint256 requestId,
-        MarketParams[] calldata markets,
-        uint256 proposalId
-    ) external nonReentrant {
-        _checkAccessAllowed("recordRequestProposal(uint256,MarketParams[],uint256)");
-        _ensureCallerProposed(proposalId);
-
-        Request storage request = _ensureOpenRequest(requestId);
-        _validateRequestMarkets(request, markets);
-        _pullSeeds(request, markets);
-        request.status = RequestStatus.Proposed;
-        request.proposalId = proposalId;
-
-        emit RequestProposed(requestId, proposalId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function recordExitProposal(address comptroller, uint256 proposalId) external {
-        _checkAccessAllowed("recordExitProposal(address,uint256)");
-        _ensureCallerProposed(proposalId);
-
-        Pool storage pool = pools[comptroller];
-        PoolStatus status = pool.status;
-        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested && status != PoolStatus.ExitProposed) {
-            revert InvalidPoolStatus(comptroller);
-        }
-        pool.status = PoolStatus.ExitProposed;
-
-        emit ExitProposed(comptroller, proposalId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function recordForceCloseProposal(address comptroller, uint256 proposalId) external {
-        _checkAccessAllowed("recordForceCloseProposal(address,uint256)");
-        _ensureCallerProposed(proposalId);
-
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        if (block.timestamp < pool.windDownStartedAt + repaymentWindow) {
-            revert RepaymentWindowNotElapsed();
-        }
-
-        emit ForceCloseProposed(comptroller, proposalId);
-    }
-
-    /*** Factory functions ***/
-
-    /// @inheritdoc ISpokePoolManager
-    function completeRequest(
-        uint256 requestId,
-        address comptroller,
-        PoolParams calldata params,
-        address[] calldata vTokens,
-        address executor
-    ) external nonReentrant {
-        if (msg.sender != factory) {
-            revert OnlyFactory(msg.sender);
-        }
-        Request storage request = _ensureRequestStatus(requestId, RequestStatus.Proposed);
-        _checkSeeds(requestId, request, params.markets);
-
-        request.status = RequestStatus.Executed;
-        address requestPool = request.comptroller;
-        if (requestPool != address(0) && requestPool != comptroller) {
-            revert RequestPoolMismatch(requestId, requestPool);
-        }
-        // The pool and its tier may have changed during the vote; the new markets are not listed yet
-        uint256 tierId = _validateRequestMarkets(request, params.markets);
-
-        address project = request.project;
-        if (requestPool == address(0)) {
-            Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.None);
-            pool.deployer = project;
-            pool.status = PoolStatus.Live;
-            pool.tierId = tierId;
-            pool.lockedStake = request.stakeAmount;
-            emit PoolActivated(requestId, comptroller, project);
-        } else {
-            emit MarketsAdded(requestId, comptroller, vTokens);
-        }
-
-        uint256 marketCount = vTokens.length;
-        for (uint256 i; i < marketCount; ++i) {
-            if (params.markets[i].isLoanMarket) {
-                isLoanMarket[vTokens[i]] = true;
-            }
-        }
-        _sendSeeds(request, executor);
-    }
-
-    /*** Shortfall functions ***/
-
-    /// @inheritdoc ISpokePoolManager
-    function seizeStake(address comptroller, uint256 amount, address to) external {
-        _checkAccessAllowed("seizeStake(address,uint256,address)");
-
-        Pool storage pool = pools[comptroller];
-        uint256 lockedStake = pool.lockedStake;
-        if (amount > lockedStake) {
-            revert InsufficientLockedStake(amount, lockedStake);
-        }
-        pool.lockedStake = lockedStake - amount;
-        XVS_VAULT.seizeLocked(pool.deployer, amount, to);
-
-        emit StakeSeized(comptroller, to, amount);
+    function getRequest(uint256 requestId) external view returns (Request memory) {
+        return requests[requestId];
     }
 
     /*** Internal functions ***/
 
     /**
-     * @dev Returns a failed proposal's seeds to a request's project, then pulls each market's seed from the project into
-     * the manager and records it, rejecting assets that deliver a different amount
-     * @param request The request's storage
-     * @param markets The final markets
-     * @custom:error MinSeedUsdNotSet is thrown when `minSeedUsd` is zero
-     * @custom:error InvalidMarketParams is thrown when a market's seed burn share is zero
-     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount than requested
+     * @dev Stores a new pending request from the caller, approved by it, once the caller's latest request is closed
+     * @param requestType What the request asks for
+     * @param comptroller The pool; zero for a new pool
+     * @return requestId The request's id
+     * @return request The request's storage
      */
-    function _pullSeeds(Request storage request, MarketParams[] calldata markets) internal {
-        // Seeds protect new markets from share inflation; checked here as the team sets the final seed burn shares
-        if (minSeedUsd == 0) {
-            revert MinSeedUsdNotSet();
+    function _newRequest(
+        RequestType requestType,
+        address comptroller
+    ) internal returns (uint256 requestId, Request storage request) {
+        uint256 latestRequestId = latestRequestIds[msg.sender];
+        RequestStatus latestStatus = requests[latestRequestId].status;
+        if (latestStatus == RequestStatus.Pending || latestStatus == RequestStatus.Proposed) {
+            revert OpenRequestExists(latestRequestId);
         }
-        address project = request.project;
-        _sendSeeds(request, project);
+        requestId = ++requestCount;
+        latestRequestIds[msg.sender] = requestId;
+        request = requests[requestId];
+        request.requestType = requestType;
+        request.status = RequestStatus.Pending;
+        request.approved = true;
+        request.deployer = msg.sender;
+        request.comptroller = comptroller;
+
+        emit RequestSubmitted(requestId, requestType, msg.sender, comptroller);
+    }
+
+    /**
+     * @dev Adds the deployer's markets to a request with Venus's parameters, and pulls each market's seed
+     * @param request The request's storage
+     * @param markets The deployer's markets
+     */
+    function _storeMarkets(Request storage request, DeployerMarketParams[] calldata markets) internal {
+        ProtocolMarketParams memory defaults = marketDefaults;
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
-            MarketParams calldata market = markets[i];
-            if (market.seedBurnShare == 0) {
-                revert InvalidMarketParams(market.asset);
-            }
-            request.seedAssets.push(market.asset);
-            request.seedAmounts.push(market.seed);
-            IERC20Upgradeable asset = IERC20Upgradeable(market.asset);
-            uint256 balanceBefore = asset.balanceOf(address(this));
-            asset.safeTransferFrom(project, address(this), market.seed);
-            if (asset.balanceOf(address(this)) - balanceBefore != market.seed) {
-                revert TransferAmountMismatch(market.asset);
-            }
+            DeployerMarketParams calldata params = markets[i];
+            MarketParams storage market = request.markets.push();
+            market.asset = params.asset;
+            market.name = params.name;
+            market.symbol = params.symbol;
+            market.isLoanMarket = params.isLoanMarket;
+            market.collateralFactor = params.collateralFactor;
+            market.liquidationThreshold = params.liquidationThreshold;
+            market.supplyCap = params.supplyCap;
+            market.borrowCap = params.borrowCap;
+            market.seed = params.seed;
+            market.interestRateModel = defaults.interestRateModel;
+            market.decimals = VTOKEN_DECIMALS;
+            market.reserveFactor = defaults.reserveFactor;
+            market.seedBurnPercent = defaults.seedBurnPercent;
+            // One vToken per unit of the underlying
+            market.initialExchangeRate =
+                uint256(10) ** (18 + IERC20MetadataUpgradeable(params.asset).decimals() - VTOKEN_DECIMALS);
+            _pullSeed(params.asset, params.seed);
         }
     }
 
     /**
-     * @dev Sends the seeds the manager holds for a request and clears the record; nothing when it holds none
-     * @param request The request's storage
-     * @param to The receiver
+     * @dev Pulls a market's seed from the caller after checking its USD value
+     * @param asset The market's asset
+     * @param seed The seed
+     * @custom:error InvalidSeed is thrown when the seed is worth less than `MIN_SEED_USD` or more than `MAX_SEED_USD`
+     * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      */
-    function _sendSeeds(Request storage request, address to) internal {
-        uint256 seedCount = request.seedAssets.length;
-        for (uint256 i; i < seedCount; ++i) {
-            IERC20Upgradeable(request.seedAssets[i]).safeTransfer(to, request.seedAmounts[i]);
+    function _pullSeed(address asset, uint256 seed) internal {
+        uint256 seedUsd = (seed * RESILIENT_ORACLE.getPrice(asset)) / EXP_SCALE;
+        if (seedUsd < MIN_SEED_USD || seedUsd > MAX_SEED_USD) {
+            revert InvalidSeed(asset);
         }
-        delete request.seedAssets;
-        delete request.seedAmounts;
+        IERC20Upgradeable token = IERC20Upgradeable(asset);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        token.safeTransferFrom(msg.sender, address(this), seed);
+        if (token.balanceOf(address(this)) - balanceBefore != seed) {
+            revert TransferAmountMismatch(asset);
+        }
+    }
+
+    /**
+     * @dev Replaces a pool config request's content
+     * @param request The request's storage
+     * @param params The pool-wide parameter changes
+     * @param interestRateModels The new interest rate models
+     */
+    function _storePoolConfig(
+        Request storage request,
+        PoolParams calldata params,
+        MarketInterestRateModel[] calldata interestRateModels
+    ) internal {
+        PoolConfigRequest storage config = request.poolConfig;
+        config.params = params;
+        delete config.interestRateModels;
+        uint256 modelCount = interestRateModels.length;
+        for (uint256 i; i < modelCount; ++i) {
+            config.interestRateModels.push(interestRateModels[i]);
+        }
+    }
+
+    /**
+     * @dev Publishes a deployer's market update to the RiskOracle
+     * @param updateType The update type, which selects the Risk Steward that applies it
+     * @param vToken The market
+     * @param newValue The ABI-encoded new value
+     */
+    function _publishUpdate(string memory updateType, VToken vToken, bytes memory newValue) internal {
+        RISK_ORACLE.publishRiskParameterUpdate("", newValue, updateType, address(vToken), 0, 0, "");
     }
 
     /**
@@ -662,69 +733,67 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Accrues interest in every market of a pool, then returns its borrows and bad debt in USD; markets without
-     * either are not priced
-     * @param comptroller The pool's comptroller
-     * @return debtUsd The borrows and bad debt, in USD scaled by 1e18
+     * @dev Checks a request against its pool and tier through the validator
+     * @param requestId The request
      */
-    function _poolDebtUsd(address comptroller) internal returns (uint256 debtUsd) {
-        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = markets[i];
-            vToken.accrueInterest();
-            uint256 debt = vToken.totalBorrows() + vToken.badDebt();
-            if (debt != 0) {
-                debtUsd += (debt * RESILIENT_ORACLE.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
-            }
-        }
+    function _verifyRequest(uint256 requestId) internal view {
+        SpokePoolValidator(validator).verifyRequest(requestId);
     }
 
     /**
-     * @dev Returns a tier after checking it is set
+     * @dev Returns the hash of a tier's id and current terms, which a tier request commits to
      * @param tierId The tier
-     * @return tier The tier's storage
-     * @custom:error InvalidTier is thrown when the tier is not set
+     * @return The hash
      */
-    function _ensureTier(uint256 tierId) internal view returns (Tier storage tier) {
-        tier = tiers[tierId];
-        if (tier.stakeAmount == 0) {
-            revert InvalidTier(tierId);
+    function _tierHash(uint256 tierId) internal view returns (bytes32) {
+        return keccak256(abi.encode(tierId, tiers[tierId]));
+    }
+
+    /**
+     * @dev Returns a request after checking it is open: pending, or proposed with a proposal that can no longer execute
+     * @param requestId The request
+     * @return request The request's storage
+     * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
+     */
+    function _ensureOpenRequest(uint256 requestId) internal view returns (Request storage request) {
+        request = requests[requestId];
+        if (request.status == RequestStatus.Proposed) {
+            uint8 state = GOVERNOR_BRAVO.state(request.proposalId);
+            if (
+                state != PROPOSAL_STATE_CANCELED && state != PROPOSAL_STATE_DEFEATED && state != PROPOSAL_STATE_EXPIRED
+            ) {
+                revert InvalidRequestStatus(requestId);
+            }
+        } else if (request.status != RequestStatus.Pending) {
+            revert InvalidRequestStatus(requestId);
         }
     }
 
     /**
-     * @dev Returns a pool after checking the caller holds its deployer rights and may use them
+     * @dev Returns a pool after checking the caller is its deployer with its rights in force: the pool is live, with or
+     * without an exit requested, the deployer is not paused, and its tier's stake is locked
      * @param comptroller The pool's comptroller
      * @return pool The pool's storage
-     * @custom:error NotDeployer is thrown as in `_ensureCallerIsDeployer`
-     * @custom:error DeployerActionsPaused is thrown while the Venus team has paused the deployer's actions
-     * @custom:error InsufficientLockedStake is thrown while the pool's locked stake is below its tier's stake
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
+     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
      */
-    function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
-        pool = _ensureCallerIsDeployer(comptroller);
-        if (pool.deployerActionsPaused) {
-            revert DeployerActionsPaused(comptroller);
-        }
-        uint256 required = tiers[pool.tierId].stakeAmount;
-        if (pool.lockedStake < required) {
-            revert InsufficientLockedStake(required, pool.lockedStake);
-        }
-    }
-
-    /**
-     * @dev Returns a pool after checking the caller is its deployer and still holds its rights: the pool is live, or
-     *   live with an exit requested
-     * @param comptroller The pool's comptroller
-     * @return pool The pool's storage
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer or its rights have ended
-     */
-    function _ensureCallerIsDeployer(address comptroller) internal view returns (Pool storage pool) {
+    function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
         pool = pools[comptroller];
-        if (
-            pool.deployer != msg.sender || (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested)
-        ) {
-            revert NotDeployer(comptroller, msg.sender);
+        if (pool.deployer != msg.sender) {
+            revert NotDeployer(msg.sender);
+        }
+        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        if (pool.deployerPaused) {
+            revert DeployerPaused(comptroller);
+        }
+        // Falls short after `setTier` raises the stake or `seizeStake` takes part of it, until `topUpStake`
+        uint256 requiredStake = tiers[pool.tierId].stakeAmount;
+        if (pool.lockedStake < requiredStake) {
+            revert InsufficientLockedStake(requiredStake, pool.lockedStake);
         }
     }
 
@@ -739,296 +808,6 @@ contract SpokePoolManager is
         pool = pools[comptroller];
         if (pool.status != status) {
             revert InvalidPoolStatus(comptroller);
-        }
-    }
-
-    /**
-     * @dev Returns a request after checking its status
-     * @param requestId The request
-     * @param status The status the request must be in
-     * @return request The request's storage
-     * @custom:error InvalidRequestStatus is thrown when the request is in another status
-     */
-    function _ensureRequestStatus(
-        uint256 requestId,
-        RequestStatus status
-    ) internal view returns (Request storage request) {
-        request = requests[requestId];
-        if (request.status != status) {
-            revert InvalidRequestStatus(requestId);
-        }
-    }
-
-    /**
-     * @dev Returns a request after checking it is open: pending, or proposed with a proposal that can no longer execute
-     * @param requestId The request
-     * @return request The request's storage
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor proposed
-     * @custom:error ProposalNotFailed is thrown when the request's proposal can still execute
-     */
-    function _ensureOpenRequest(uint256 requestId) internal view returns (Request storage request) {
-        request = requests[requestId];
-        if (request.status == RequestStatus.Proposed) {
-            uint8 state = GOVERNOR_BRAVO.state(request.proposalId);
-            if (
-                state != PROPOSAL_STATE_CANCELED && state != PROPOSAL_STATE_DEFEATED && state != PROPOSAL_STATE_EXPIRED
-            ) {
-                revert ProposalNotFailed(request.proposalId);
-            }
-        } else if (request.status != RequestStatus.Pending) {
-            revert InvalidRequestStatus(requestId);
-        }
-    }
-
-    /**
-     * @dev Checks that a proposal is the caller's latest GovernorBravo proposal, so only a proposal the caller
-     * submitted is recorded
-     * @param proposalId The proposal
-     * @custom:error NotLatestProposal is thrown when the caller's latest proposal is another one
-     */
-    function _ensureCallerProposed(uint256 proposalId) internal view {
-        if (proposalId == 0 || GOVERNOR_BRAVO.latestProposalIds(msg.sender) != proposalId) {
-            revert NotLatestProposal(proposalId);
-        }
-    }
-
-    /**
-     * @dev Checks a request's markets against the tier they join: the request's tier for a new pool, or the live pool's
-     * current tier for new markets
-     * @param request The request's storage
-     * @param markets The markets
-     * @return tierId The tier
-     * @custom:error InvalidPoolStatus is thrown when the pool of a request for new markets is not live
-     * @custom:error The errors of `_validateMarkets`
-     */
-    function _validateRequestMarkets(
-        Request storage request,
-        MarketParams[] calldata markets
-    ) internal view returns (uint256 tierId) {
-        address comptroller = request.comptroller;
-        tierId = request.tierId;
-        if (comptroller != address(0)) {
-            tierId = _ensurePoolStatus(comptroller, PoolStatus.Live).tierId;
-        }
-        _validateMarkets(comptroller, tierId, markets);
-    }
-
-    /**
-     * @dev Checks a request's markets against a tier, as described in `submitRequest`
-     * @param comptroller The pool the markets are added to, or zero for a new pool
-     * @param tierId The tier
-     * @param markets The markets
-     * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
-     * @custom:error NoLoanMarket is thrown when a new pool has no loan market
-     * @custom:error ExceedsTierLimit is thrown when the loan markets' supply caps, together with the pool's, are beyond
-     *   the tier's liquidity
-     * @custom:error The errors of `_checkNewAsset` and `_validateMarket`
-     */
-    function _validateMarkets(address comptroller, uint256 tierId, MarketParams[] calldata markets) internal view {
-        Tier storage tier = tiers[tierId];
-        uint256 marketCount = markets.length;
-        uint256 poolMarketCount = marketCount;
-        uint256 liquidityUsd;
-        if (comptroller != address(0)) {
-            VToken[] memory poolMarkets = SpokeComptroller(comptroller).getAllMarkets();
-            poolMarketCount += poolMarkets.length;
-            liquidityUsd = _loanLiquidityUsd(comptroller, poolMarkets);
-        }
-        if (poolMarketCount > MAX_POOL_MARKETS) {
-            revert TooManyMarkets(poolMarketCount, MAX_POOL_MARKETS);
-        }
-        bool hasLoanMarket = comptroller != address(0);
-        for (uint256 i; i < marketCount; ++i) {
-            MarketParams calldata market = markets[i];
-            _checkNewAsset(comptroller, markets, i);
-            liquidityUsd += _validateMarket(tier, market);
-            hasLoanMarket = hasLoanMarket || market.isLoanMarket;
-        }
-        if (!hasLoanMarket) {
-            revert NoLoanMarket();
-        }
-        if (liquidityUsd > tier.maxLiquidityUsd) {
-            revert ExceedsTierLimit();
-        }
-    }
-
-    /**
-     * @dev Checks that a request's market has an asset no earlier market of the request has, and that the pool does not
-     * already list
-     * @param comptroller The pool the markets are added to, or zero for a new pool
-     * @param markets The request's markets
-     * @param index The market to check
-     * @custom:error DuplicateAsset is thrown when the asset is taken
-     */
-    function _checkNewAsset(address comptroller, MarketParams[] calldata markets, uint256 index) internal view {
-        address asset = markets[index].asset;
-        // A nested loop is fine here: a pool has at most `MAX_POOL_MARKETS` markets
-        for (uint256 j; j < index; ++j) {
-            if (markets[j].asset == asset) {
-                revert DuplicateAsset(asset);
-            }
-        }
-        if (
-            comptroller != address(0) &&
-            PoolRegistryInterface(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)
-        ) {
-            revert DuplicateAsset(asset);
-        }
-    }
-
-    /**
-     * @dev Checks one market against a tier, as described in `submitRequest`
-     * @param tier The tier
-     * @param market The market
-     * @return liquidityUsd The USD value of a loan market's supply cap, scaled by 1e18; zero for a collateral market
-     * @custom:error InvalidMarketParams is thrown when the market's parameters do not fit its kind, its seed or its
-     *   seed burn share
-     * @custom:error SeedBelowMinimum is thrown when the seed is worth less than `minSeedUsd`
-     * @custom:error MissingSpokeSource is thrown when a loan asset has no Hub source
-     * @custom:error ExceedsTierLimit is thrown when a collateral parameter is beyond the tier
-     * @custom:error BoundedPricingDisabled is thrown when a collateral asset has no bounded pricing
-     */
-    function _validateMarket(
-        Tier storage tier,
-        MarketParams calldata market
-    ) internal view returns (uint256 liquidityUsd) {
-        if (
-            market.seed == 0 ||
-            market.seed > market.supplyCap ||
-            market.seedBurnShare > MANTISSA_ONE ||
-            market.initialExchangeRate == 0
-        ) {
-            revert InvalidMarketParams(market.asset);
-        }
-        uint256 price = RESILIENT_ORACLE.getPrice(market.asset);
-        if ((market.seed * price) / EXP_SCALE < minSeedUsd) {
-            revert SeedBelowMinimum(market.asset);
-        }
-        if (market.isLoanMarket) {
-            if (market.collateralFactor != 0 || market.liquidationThreshold != 0) {
-                revert InvalidMarketParams(market.asset);
-            }
-            if (spokeSources[market.asset] == address(0)) {
-                revert MissingSpokeSource(market.asset);
-            }
-            return (market.supplyCap * price) / EXP_SCALE;
-        }
-        if (market.borrowCap != 0 || market.collateralFactor > market.liquidationThreshold) {
-            revert InvalidMarketParams(market.asset);
-        }
-        _checkCollateralParams(tier, market.collateralFactor, market.liquidationThreshold);
-        if (!DEVIATION_BOUNDED_ORACLE.isBoundedPricingEnabled(market.asset)) {
-            revert BoundedPricingDisabled(market.asset);
-        }
-    }
-
-    /**
-     * @dev Checks a live pool against a tier: every listed collateral market's collateral factor and liquidation
-     * threshold within the tier, the loan markets' supply caps within the tier's liquidity in USD, and no bad debt
-     * @param comptroller The pool's comptroller
-     * @param tier The tier
-     * @custom:error ExceedsTierLimit is thrown when a risk parameter or the loan liquidity does not fit the tier
-     * @custom:error BadDebtOutstanding is thrown when a market has bad debt
-     */
-    function _checkPoolFitsTier(address comptroller, Tier storage tier) internal view {
-        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = markets[i];
-            if (!isLoanMarket[address(vToken)]) {
-                (bool isListed, uint256 collateralFactor, uint256 liquidationThreshold) = SpokeComptroller(comptroller)
-                    .markets(address(vToken));
-                if (isListed) {
-                    _checkCollateralParams(tier, collateralFactor, liquidationThreshold);
-                }
-            }
-            if (vToken.badDebt() != 0) {
-                revert BadDebtOutstanding(address(vToken));
-            }
-        }
-        if (_loanLiquidityUsd(comptroller, markets) > tier.maxLiquidityUsd) {
-            revert ExceedsTierLimit();
-        }
-    }
-
-    /**
-     * @dev Returns the summed USD value of a pool's loan market supply caps. An uncapped (`type(uint256).max`) loan
-     * market overflows and reverts, since it cannot fit any tier
-     * @param comptroller The pool's comptroller
-     * @param markets The pool's markets
-     * @return liquidityUsd The value, scaled by 1e18
-     */
-    function _loanLiquidityUsd(
-        address comptroller,
-        VToken[] memory markets
-    ) internal view returns (uint256 liquidityUsd) {
-        uint256 marketCount = markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            address vToken = address(markets[i]);
-            if (isLoanMarket[vToken]) {
-                liquidityUsd +=
-                    (SpokeComptroller(comptroller).supplyCaps(vToken) * RESILIENT_ORACLE.getUnderlyingPrice(vToken)) /
-                    EXP_SCALE;
-            }
-        }
-    }
-
-    /**
-     * @dev Returns a collateral market's collateral factor and liquidation threshold
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @return collateralFactor The collateral factor, scaled by 1e18; zero for a market outside the pool
-     * @return liquidationThreshold The liquidation threshold, scaled by 1e18; zero for a market outside the pool
-     * @custom:error NotCollateralMarket is thrown when the market is a loan market
-     */
-    function _collateralMarket(
-        address comptroller,
-        VToken vToken
-    ) internal view returns (uint256 collateralFactor, uint256 liquidationThreshold) {
-        if (isLoanMarket[address(vToken)]) {
-            revert NotCollateralMarket(address(vToken));
-        }
-        (, collateralFactor, liquidationThreshold) = SpokeComptroller(comptroller).markets(address(vToken));
-    }
-
-    /**
-     * @dev Checks a collateral factor and liquidation threshold against a tier's bounds
-     * @param tier The tier
-     * @param collateralFactor The collateral factor, scaled by 1e18
-     * @param liquidationThreshold The liquidation threshold, scaled by 1e18
-     * @custom:error ExceedsTierLimit is thrown when either value is above the tier's maximum, or the liquidation
-     *   threshold is below the tier's minimum
-     */
-    function _checkCollateralParams(
-        Tier storage tier,
-        uint256 collateralFactor,
-        uint256 liquidationThreshold
-    ) internal view {
-        if (
-            collateralFactor > tier.maxCollateralFactor ||
-            liquidationThreshold > tier.maxLiquidationThreshold ||
-            liquidationThreshold < tier.minLiquidationThreshold
-        ) {
-            revert ExceedsTierLimit();
-        }
-    }
-
-    /**
-     * @dev Checks that the executed markets carry exactly the seeds the manager holds for the request, in order
-     * @param requestId The request
-     * @param request The request's storage
-     * @param markets The executed markets
-     * @custom:error SeedsMismatch is thrown when an asset or seed differs
-     */
-    function _checkSeeds(uint256 requestId, Request storage request, MarketParams[] calldata markets) internal view {
-        uint256 marketCount = markets.length;
-        if (marketCount != request.seedAssets.length) {
-            revert SeedsMismatch(requestId);
-        }
-        for (uint256 i; i < marketCount; ++i) {
-            if (markets[i].asset != request.seedAssets[i] || markets[i].seed != request.seedAmounts[i]) {
-                revert SeedsMismatch(requestId);
-            }
         }
     }
 }
