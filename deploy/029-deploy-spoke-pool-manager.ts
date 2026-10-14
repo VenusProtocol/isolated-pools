@@ -14,8 +14,8 @@ import {
 
 const DEPLOYMENT_NAME = "SpokePoolManager";
 
-// `SpokePoolProposer`'s constructor rejects a value whose pool-creation proposal would not fit GovernorBravo's action
-// limit: 12 at most with 100 actions
+// `SpokePoolProposer`'s constructor rejects a manager whose pool-creation proposal with this many markets would not fit
+// GovernorBravo's action limit: 13 at most with 100 actions
 const MAX_POOL_MARKETS = 10;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -31,8 +31,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const poolRegistry = await toAddress("SpokePoolRegistry");
   const resilientOracle = await toAddress("ResilientOracle");
   const deviationBoundedOracle = await toAddress("DeviationBoundedOracle");
+  const riskOracle = await toAddress(preconfiguredAddresses.RiskOracle);
 
-  const args = [xvsVault, governorBravo, poolRegistry, resilientOracle, deviationBoundedOracle, MAX_POOL_MARKETS];
+  const args = [
+    xvsVault,
+    governorBravo,
+    poolRegistry,
+    resilientOracle,
+    deviationBoundedOracle,
+    riskOracle,
+    MAX_POOL_MARKETS,
+  ];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
@@ -63,6 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       await readBackAddress(() => manager.DEVIATION_BOUNDED_ORACLE(), deviationBoundedOracle),
       deviationBoundedOracle,
     ],
+    ["RISK_ORACLE", await readBackAddress(() => manager.RISK_ORACLE(), riskOracle), riskOracle],
     [
       "access control manager",
       await readBackAddress(() => manager.accessControlManager(), accessControlManager),

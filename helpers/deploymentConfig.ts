@@ -220,6 +220,7 @@ export const preconfiguredAddresses = {
     SwapRouter_CorePool: venusProtocolBscTestnet.SwapRouterCorePool.address,
     Unitroller: venusProtocolBscTestnet.Unitroller.address,
     Shortfall: "0x503574a82fE2A9f968d355C8AAc1Ba0481859369",
+    RiskOracle: "0x4DEA4D1A9F6101D4adacE89f16064D780D2F241d",
   },
   bscmainnet: {
     VTreasury: venusProtocolBscMainnet.VTreasury.address,
@@ -234,6 +235,7 @@ export const preconfiguredAddresses = {
     SwapRouter_CorePool: venusProtocolBscMainnet.SwapRouterCorePool.address,
     Unitroller: venusProtocolBscMainnet.Unitroller.address,
     Shortfall: "0xf37530A8a810Fcb501AA0Ecd0B0699388F0F2209",
+    RiskOracle: "0x0E3E51958b0Daa8C57c949675975CBEDd7b5a1a1",
   },
   sepolia: {
     VTreasury: venusProtocolSepolia.VTreasuryV8.address,
