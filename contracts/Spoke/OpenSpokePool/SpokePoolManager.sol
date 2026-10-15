@@ -569,7 +569,8 @@ contract SpokePoolManager is
             params.interestRateModel == address(0) ||
             params.reserveFactor > MANTISSA_ONE ||
             params.seedBurnPercent == 0 ||
-            params.seedBurnPercent > MANTISSA_ONE
+            params.seedBurnPercent > MANTISSA_ONE ||
+            params.reduceReservesBlockDelta == 0
         ) {
             revert InvalidMarketDefaults();
         }
@@ -677,6 +678,7 @@ contract SpokePoolManager is
             market.decimals = VTOKEN_DECIMALS;
             market.reserveFactor = defaults.reserveFactor;
             market.seedBurnPercent = defaults.seedBurnPercent;
+            market.reduceReservesBlockDelta = defaults.reduceReservesBlockDelta;
             // One vToken per unit of the underlying
             market.initialExchangeRate =
                 uint256(10) ** (18 + IERC20MetadataUpgradeable(params.asset).decimals() - VTOKEN_DECIMALS);

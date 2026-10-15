@@ -259,7 +259,8 @@ contract SpokePoolValidator is ISpokePoolValidator {
             market.decimals == 0 ||
             market.seed > market.supplyCap ||
             market.seedBurnPercent == 0 ||
-            market.seedBurnPercent > MANTISSA_ONE
+            market.seedBurnPercent > MANTISSA_ONE ||
+            market.reduceReservesBlockDelta == 0
         ) {
             revert ISpokePoolManager.InvalidMarketParams(asset);
         }

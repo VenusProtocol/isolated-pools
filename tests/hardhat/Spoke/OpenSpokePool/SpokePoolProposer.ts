@@ -32,7 +32,7 @@ const REQUEST_ID = 3;
 const DESCRIPTION = "# Open spoke pool";
 const PROPOSAL_MAX_OPERATIONS = 100;
 /// (100 - POOL_CREATION_ACTIONS) / MAX_ACTIONS_PER_MARKET
-const MAX_FITTING_MARKETS = 13;
+const MAX_FITTING_MARKETS = 12;
 const POOL_PARAMS = {
   closeFactor: e18("0.5"),
   liquidationIncentive: e18("1.1"),
@@ -112,7 +112,8 @@ describe("SpokePoolProposer", () => {
     expect(proposalType).to.equal(0);
   };
 
-  /// The four actions that list a market with `seed`, mint its vTokens to the executor and split them.
+  /// The five actions that list a market with `seed`, mint its vTokens to the executor, split them and set its reserve
+  /// sweep interval.
   const listingActions = (
     asset: string,
     vToken: string,
@@ -139,6 +140,7 @@ describe("SpokePoolProposer", () => {
     ),
     action(vToken, "transfer(address,uint256)", ["address", "uint256"], [constants.AddressZero, burned]),
     action(vToken, "transfer(address,uint256)", ["address", "uint256"], [treasury.address, kept]),
+    action(vToken, "setReduceReservesBlockDelta(uint256)", ["uint256"], [market.reduceReservesBlockDelta]),
   ];
 
   const hubActions = (comptroller: string, vToken: string) => [

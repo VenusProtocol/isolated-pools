@@ -112,7 +112,12 @@ describe("SpokePoolManager", () => {
   let btc: MockToken;
   let manager: SpokePoolManager;
   let proposal: string;
-  let marketDefaults: { interestRateModel: string; reserveFactor: BigNumberish; seedBurnPercent: BigNumberish };
+  let marketDefaults: {
+    interestRateModel: string;
+    reserveFactor: BigNumberish;
+    seedBurnPercent: BigNumberish;
+    reduceReservesBlockDelta: BigNumberish;
+  };
 
   /// A collateral market's deployer parameters, with a $100 seed
   const usdtMarket = (overrides: object = {}) => ({
@@ -264,6 +269,7 @@ describe("SpokePoolManager", () => {
       interestRateModel: interestRateModel.address,
       reserveFactor: e18("0.1"),
       seedBurnPercent: e18("0.5"),
+      reduceReservesBlockDelta: 28800,
     };
 
     acm.isAllowedToCall.returns(true);
@@ -1775,14 +1781,12 @@ describe("SpokePoolManager", () => {
         interestRateModel: otherInterestRateModel.address,
         reserveFactor: e18("1"),
         seedBurnPercent: e18("1"),
+        reduceReservesBlockDelta: 1,
       };
 
       await expect(manager.setMarketDefaults(params))
         .to.emit(manager, "MarketDefaultsUpdated")
-        .withArgs(
-          [marketDefaults.interestRateModel, marketDefaults.reserveFactor, marketDefaults.seedBurnPercent],
-          [params.interestRateModel, params.reserveFactor, params.seedBurnPercent],
-        );
+        .withArgs(Object.values(marketDefaults), Object.values(params));
       expectFields(await manager.marketDefaults(), params);
     });
 
@@ -1791,6 +1795,7 @@ describe("SpokePoolManager", () => {
       ["a reserve factor above 100%", () => ({ reserveFactor: e18("1").add(1) })],
       ["a zero seed burn share", () => ({ seedBurnPercent: 0 })],
       ["a seed burn share above 100%", () => ({ seedBurnPercent: e18("1").add(1) })],
+      ["a zero reduce reserves block delta", () => ({ reduceReservesBlockDelta: 0 })],
     ];
     for (const [description, overrides] of invalidDefaults) {
       it(`reverts on ${description}`, async () => {

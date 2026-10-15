@@ -27,8 +27,9 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * every pool, to the pool registry on the setters it calls while listing (`setCloseFactor`, `setLiquidationIncentive`,
  * `setMinLiquidatableCollateral`, `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal
  * Timelock on `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups'
- * `addResource` (it already holds wildcards for the other comptroller setters), and to the Risk Stewards on
- * `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps` and the vTokens' `setInterestRateModel`
+ * `addResource` (it already holds wildcards for the other comptroller setters and the vTokens'
+ * `setReduceReservesBlockDelta`), and to the Risk Stewards on `setCollateralFactor`, `setMarketSupplyCaps`,
+ * `setMarketBorrowCaps` and the vTokens' `setInterestRateModel`
  */
 contract SpokePoolProposer is ISpokePoolProposer {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
@@ -40,7 +41,7 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /// @notice Most actions a proposal adds per new market: a loan market's listing and Hub registration
-    uint256 public constant MAX_ACTIONS_PER_MARKET = 7;
+    uint256 public constant MAX_ACTIONS_PER_MARKET = 8;
 
     /// @notice Most actions of a request's proposal besides its markets': a new pool's `acceptOwnership`, `addPool`
     ///   and `settleRequest`
@@ -309,9 +310,9 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /**
-     * @dev Adds one market's listing: the executor approves the seed, `addMarket` mints the seed's vTokens to it, and
-     * it burns the market's seed burn percent of them and sends the rest to the treasury. The vToken amount is exact
-     * because a new market mints at its initial exchange rate
+     * @dev Adds one market's listing: the executor approves the seed, `addMarket` mints the seed's vTokens to it, it
+     * burns the market's seed burn percent of them and sends the rest to the treasury, and it sets the market's reserve
+     * sweep interval. The vToken amount is exact because a new market mints at its initial exchange rate
      * @param proposal The proposal to add to
      * @param registry The registry the pool is listed in
      * @param market The market's parameters
@@ -347,6 +348,12 @@ contract SpokePoolProposer is ISpokePoolProposer {
         uint256 burned = (minted * market.seedBurnPercent) / EXP_SCALE;
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), burned));
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(TREASURY, minted - burned));
+        _addAction(
+            proposal,
+            vToken,
+            "setReduceReservesBlockDelta(uint256)",
+            abi.encode(market.reduceReservesBlockDelta)
+        );
     }
 
     /**

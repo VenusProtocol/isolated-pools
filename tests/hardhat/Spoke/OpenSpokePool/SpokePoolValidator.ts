@@ -287,6 +287,7 @@ describe("SpokePoolValidator", () => {
         ["a seed above the supply cap", { seed: e18("1000").add(1) }],
         ["a zero seed burn share", { seedBurnPercent: 0 }],
         ["a seed burn share above 100%", { seedBurnPercent: e18("1").add(1) }],
+        ["a zero reduce reserves block delta", { reduceReservesBlockDelta: 0 }],
       ];
       for (const [description, overrides] of invalidParams) {
         it(`reverts on ${description}`, async () => {

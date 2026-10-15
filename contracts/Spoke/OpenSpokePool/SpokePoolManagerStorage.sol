@@ -67,6 +67,7 @@ contract SpokePoolManagerStorage {
         uint256 reserveFactor;
         // Share of the seed's vTokens burned, scaled by 1e18; the rest goes to the treasury
         uint256 seedBurnPercent;
+        uint256 reduceReservesBlockDelta;
     }
 
     /// @notice A new market: the deployer's parameters followed by Venus's
@@ -84,6 +85,7 @@ contract SpokePoolManagerStorage {
         uint8 decimals;
         uint256 reserveFactor;
         uint256 seedBurnPercent;
+        uint256 reduceReservesBlockDelta;
         uint256 initialExchangeRate;
     }
 

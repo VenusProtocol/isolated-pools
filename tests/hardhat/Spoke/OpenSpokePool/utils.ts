@@ -47,6 +47,7 @@ export function collateralMarket(asset: string, overrides: object = {}) {
     decimals: 8,
     reserveFactor: e18("0.1"),
     seedBurnPercent: e18("0.5"),
+    reduceReservesBlockDelta: 28800,
     initialExchangeRate: parseUnits("1", 28),
     ...overrides,
   };

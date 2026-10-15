@@ -376,8 +376,8 @@ interface ISpokePoolManager {
      */
     error ResidualDebtExceeded(uint256 debtUsd);
 
-    /// @notice Thrown when new market defaults have a zero interest rate model, a reserve factor above 1e18, or a seed
-    ///   burn share outside (0, 1e18]
+    /// @notice Thrown when new market defaults have a zero interest rate model, a reserve factor above 1e18, a seed
+    ///   burn share outside (0, 1e18], or a zero reduce reserves block delta
     error InvalidMarketDefaults();
 
     /*** Requests ***/
@@ -806,7 +806,7 @@ interface ISpokePoolManager {
      * @param params The new parameters
      * @custom:event Emits MarketDefaultsUpdated
      * @custom:error InvalidMarketDefaults is thrown when the interest rate model is zero, the reserve factor is above
-     *   1e18, or the seed burn share is zero or above 1e18
+     *   1e18, the seed burn share is zero or above 1e18, or the reduce reserves block delta is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setMarketDefaults(SpokePoolManagerStorage.ProtocolMarketParams calldata params) external;
