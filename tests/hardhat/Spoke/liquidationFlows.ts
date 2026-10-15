@@ -241,6 +241,25 @@ describe("SpokeComptroller: liquidation flows against real vTokens", () => {
       ).to.be.revertedWithCustomError(comptroller, "InvalidLiquidationIncentive");
     });
 
+    it("floors the pool-wide incentive at 1e18 plus the seize share a new market starts with", async () => {
+      // `MIN_POOL_LIQUIDATION_INCENTIVE_MANTISSA` restates `VToken`'s internal default share instead of reading it.
+      // The share here comes from a real market that was never changed, so this fails if the two drift apart.
+      const floor = ONE.add(await collateral.protocolSeizeShareMantissa());
+      expect(await comptroller.liquidationIncentives(collateral.address)).to.equal(0);
+
+      await expect(comptroller.setLiquidationIncentive(floor.sub(1))).to.be.revertedWithCustomError(
+        comptroller,
+        "InvalidLiquidationIncentive",
+      );
+      await comptroller.setLiquidationIncentive(floor);
+
+      // With no incentive of its own the market falls back to the pool-wide value, so at that floor the liquidator
+      // still recovers exactly what it repaid.
+      await borrowed.connect(liquidator).liquidateBorrow(borrower.address, REPAY_AMOUNT, collateral.address);
+
+      expect(await collateral.balanceOf(liquidator.address)).to.equal(REPAY_AMOUNT);
+    });
+
     it("bounds a market's protocol seize share against that market's own incentive", async () => {
       await comptroller.setLiquidationIncentive(parseUnits("1.1", 18));
       await comptroller.setMarketLiquidationIncentive(collateral.address, parseUnits("1.15", 18));

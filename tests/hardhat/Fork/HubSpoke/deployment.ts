@@ -52,9 +52,9 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
 
     it("deploys a pool registry of its own rather than reusing this chain's", async () => {
       // `getAllPools` on the live registry is what the indexer, the frontend pool list and the risk
-      // tooling iterate. A hub-funded pool whose supply, borrow and liquidation sides are all
-      // restricted does not belong in that directory, and once it is in there every one of those
-      // consumers needs a special case keyed on its address.
+      // tooling iterate. A hub-funded pool whose liquidity market only the Hub may supply does not
+      // belong in that directory, and once it is in there every one of those consumers needs a
+      // special case keyed on its address.
       const registryAddress = await deployed("SpokePoolRegistry");
       expect(registryAddress).to.not.equal(bscmainnet.POOL_REGISTRY);
 

@@ -9,8 +9,8 @@ import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "
 // A registry of its own, never the isolated-pools `PoolRegistry`. The registry is the directory every consumer reads to
 // answer "which pools exist": `getAllPools` drives the indexer, the frontend pool list and the risk tooling, and
 // `getVTokenForAsset` is what ProtocolShareReserve uses as a membership check. Registering a hub-funded spoke pool in
-// the isolated-pools directory would hand all of them a pool whose supply, borrow and liquidation sides are restricted
-// to known accounts, and every one of those consumers would then need a special case keyed on this pool's address.
+// the isolated-pools directory would hand all of them a pool whose liquidity market only the Hub may supply, and every
+// one of those consumers would then need a special case keyed on this pool's address.
 // A separate registry gives them that separation for free, and keeps the two products independently upgradeable and
 // independently permissioned: ACM roles are `keccak256(contractAddress, roleString)`, so a grant on this registry
 // cannot reach the isolated pools, and a grant on theirs cannot reach this pool.

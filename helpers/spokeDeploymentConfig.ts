@@ -18,9 +18,9 @@ import { convertToUnit } from "./utils";
 // `Comptroller_Stablecoins` from `VToken_vUSDT_Stablecoins`.
 export const SPOKE_POOL_ID = "HubSpoke";
 
-// Risk parameters mirror the isolated pools' Stablecoins pool on the same network. The spoke pool restricts who may
-// supply, borrow and liquidate; it does not take more risk per market, so there is no reason for the curve, the
-// collateral factor or the caps to differ from the isolated stablecoin markets they sit beside.
+// Risk parameters mirror the isolated pools' Stablecoins pool on the same network. The spoke pool can restrict who
+// may supply and who may liquidate, not who may borrow; it does not take more risk per market, so there is no reason
+// for the curve, the collateral factor or the caps to differ from the isolated stablecoin markets they sit beside.
 export const spokePoolConfig: Record<string, PoolConfig> = {
   hardhat: {
     id: SPOKE_POOL_ID,
