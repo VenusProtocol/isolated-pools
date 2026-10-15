@@ -84,6 +84,9 @@ contract SpokePoolValidator is ISpokePoolValidator {
     function verifyRequest(uint256 requestId) external view {
         SpokePoolManagerStorage.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         SpokePoolManagerStorage.RequestType requestType = request.requestType;
+        if (requestType == SpokePoolManagerStorage.RequestType.Tier) {
+            revert ISpokePoolManager.InvalidRequestType(requestId);
+        }
         if (requestType == SpokePoolManagerStorage.RequestType.Pool) {
             SpokePoolManagerStorage.PoolRequest memory pool = request.pool;
             if (pool.params.closeFactor == 0 || pool.params.liquidationIncentive == 0) {
@@ -103,23 +106,10 @@ contract SpokePoolValidator is ISpokePoolValidator {
         if (livePool.status != SpokePoolManagerStorage.PoolStatus.Live) {
             revert ISpokePoolManager.InvalidPoolStatus(comptroller);
         }
-        if (requestType == SpokePoolManagerStorage.RequestType.Markets) {
-            if (request.markets.length == 0) {
-                revert ISpokePoolManager.InvalidArrayLength();
-            }
-            _checkMarkets(comptroller, SPOKE_POOL_MANAGER.getTier(livePool.tierId), request.markets);
-        } else if (requestType == SpokePoolManagerStorage.RequestType.PoolConfig) {
-            SpokePoolManagerStorage.MarketInterestRateModel[] memory models = request.poolConfig.interestRateModels;
-            uint256 modelCount = models.length;
-            for (uint256 i; i < modelCount; ++i) {
-                _checkMarketListed(comptroller, models[i].vToken);
-                if (models[i].interestRateModel == address(0)) {
-                    revert ISpokePoolManager.InvalidInterestRateModel(models[i].vToken);
-                }
-            }
-        } else {
-            revert ISpokePoolManager.InvalidRequestType(requestId);
+        if (request.markets.length == 0) {
+            revert ISpokePoolManager.InvalidArrayLength();
         }
+        _checkMarkets(comptroller, SPOKE_POOL_MANAGER.getTier(livePool.tierId), request.markets);
     }
 
     /// @inheritdoc ISpokePoolValidator

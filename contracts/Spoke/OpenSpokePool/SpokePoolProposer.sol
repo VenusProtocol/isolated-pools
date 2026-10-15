@@ -28,7 +28,7 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * `setMinLiquidatableCollateral`, `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal
  * Timelock on `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups'
  * `addResource` (it already holds wildcards for the other comptroller setters), and to the Risk Stewards on
- * `setCollateralFactor`, `setMarketSupplyCaps` and `setMarketBorrowCaps`
+ * `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps` and the vTokens' `setInterestRateModel`
  */
 contract SpokePoolProposer is ISpokePoolProposer {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
@@ -42,10 +42,9 @@ contract SpokePoolProposer is ISpokePoolProposer {
     /// @notice Most actions a proposal adds per new market: a loan market's listing and Hub registration
     uint256 public constant MAX_ACTIONS_PER_MARKET = 7;
 
-    /// @notice Most actions of a request's proposal besides its markets' and interest rate models': a live pool's
-    ///   three parameter changes and `settleRequest`; a new pool's `acceptOwnership`, `addPool` and `settleRequest`
-    ///   take fewer
-    uint256 public constant POOL_CREATION_ACTIONS = 4;
+    /// @notice Most actions of a request's proposal besides its markets': a new pool's `acceptOwnership`, `addPool`
+    ///   and `settleRequest`
+    uint256 public constant POOL_CREATION_ACTIONS = 3;
 
     /// @notice Actions of an exit's first proposal besides one per collateral market
     uint256 public constant EXIT_ACTIONS = 4;
@@ -147,15 +146,10 @@ contract SpokePoolProposer is ISpokePoolProposer {
         vTokens = _deployMarkets(comptroller, request.markets, executor);
 
         Proposal memory proposal = _newProposal(
-            POOL_CREATION_ACTIONS +
-                request.poolConfig.interestRateModels.length +
-                MAX_ACTIONS_PER_MARKET *
-                request.markets.length
+            POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * request.markets.length
         );
         if (request.requestType == SpokePoolManagerStorage.RequestType.Pool) {
             _addPoolListing(proposal, comptroller, request.pool);
-        } else if (request.requestType == SpokePoolManagerStorage.RequestType.PoolConfig) {
-            _addPoolConfig(proposal, comptroller, request.poolConfig);
         }
         // Settled before the markets are listed: it sends the seeds to the timelock, which lists the markets with them
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
@@ -468,44 +462,6 @@ contract SpokePoolProposer is ISpokePoolProposer {
         proposal.signatures[index] = signature;
         proposal.calldatas[index] = data;
         proposal.length = index + 1;
-    }
-
-    /**
-     * @dev Adds a live pool's changes: each nonzero pool-wide parameter and each new interest rate model
-     * @param proposal The proposal to add to
-     * @param comptroller The pool's comptroller
-     * @param config The changes
-     */
-    function _addPoolConfig(
-        Proposal memory proposal,
-        address comptroller,
-        SpokePoolManagerStorage.PoolConfigRequest memory config
-    ) internal pure {
-        SpokePoolManagerStorage.PoolParams memory params = config.params;
-        if (params.closeFactor != 0) {
-            _addAction(proposal, comptroller, "setCloseFactor(uint256)", abi.encode(params.closeFactor));
-        }
-        if (params.liquidationIncentive != 0) {
-            _addAction(
-                proposal,
-                comptroller,
-                "setLiquidationIncentive(uint256)",
-                abi.encode(params.liquidationIncentive)
-            );
-        }
-        if (params.minLiquidatableCollateral != 0) {
-            _addAction(
-                proposal,
-                comptroller,
-                "setMinLiquidatableCollateral(uint256)",
-                abi.encode(params.minLiquidatableCollateral)
-            );
-        }
-        uint256 modelCount = config.interestRateModels.length;
-        for (uint256 i; i < modelCount; ++i) {
-            SpokePoolManagerStorage.MarketInterestRateModel memory model = config.interestRateModels[i];
-            _addAction(proposal, model.vToken, "setInterestRateModel(address)", abi.encode(model.interestRateModel));
-        }
     }
 
     /**

@@ -12,7 +12,6 @@ contract SpokePoolManagerStorage {
     enum RequestType {
         Pool,
         Markets,
-        PoolConfig,
         Tier
     }
 
@@ -95,12 +94,6 @@ contract SpokePoolManagerStorage {
         uint256 minLiquidatableCollateral;
     }
 
-    /// @notice A new interest rate model for a listed market
-    struct MarketInterestRateModel {
-        address vToken;
-        address interestRateModel;
-    }
-
     /// @notice Content of a pool request
     struct PoolRequest {
         uint256 tierId;
@@ -108,12 +101,6 @@ contract SpokePoolManagerStorage {
         uint256 stake;
         string name;
         PoolParams params;
-    }
-
-    /// @notice Content of a pool config request; a zero pool parameter is left as it is
-    struct PoolConfigRequest {
-        PoolParams params;
-        MarketInterestRateModel[] interestRateModels;
     }
 
     /// @notice Content of a tier request
@@ -136,7 +123,6 @@ contract SpokePoolManagerStorage {
         PoolRequest pool;
         // Pool and markets requests; the manager holds their seeds until settlement
         MarketParams[] markets;
-        PoolConfigRequest poolConfig;
         TierRequest tier;
     }
 

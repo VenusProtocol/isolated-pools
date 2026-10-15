@@ -21,10 +21,8 @@ interface ISpokePoolValidator {
      * @custom:error InvalidRequestType is thrown for a tier request
      * @custom:error InvalidPoolParams is thrown when a new pool's close factor or liquidation incentive is zero
      * @custom:error InvalidTier is thrown when a pool request's stake is no longer its tier's
-     * @custom:error InvalidPoolStatus is thrown when a markets or pool config request's pool is not live
+     * @custom:error InvalidPoolStatus is thrown when a markets request's pool is not live
      * @custom:error InvalidArrayLength is thrown when a markets request has no market
-     * @custom:error MarketNotListed is thrown when an interest rate model is for a market outside the pool
-     * @custom:error InvalidInterestRateModel is thrown when an interest rate model is zero
      * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
      * @custom:error DuplicateAsset is thrown when a market's asset is already in the request or the pool
      * @custom:error InvalidMarketParams is thrown when a market's parameters are missing or do not fit its kind or seed

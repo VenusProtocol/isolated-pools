@@ -310,12 +310,6 @@ interface ISpokePoolManager {
     error MarketNotListed(address vToken);
 
     /**
-     * @notice Thrown when a market's new interest rate model is zero
-     * @param vToken The market
-     */
-    error InvalidInterestRateModel(address vToken);
-
-    /**
      * @notice Thrown when a request is not of a type the function accepts
      * @param requestId The request
      */
@@ -435,28 +429,6 @@ interface ISpokePoolManager {
     ) external returns (uint256 requestId);
 
     /**
-     * @notice Requests new pool-wide parameters or interest rate models in the caller's pool
-     * @param comptroller The pool's comptroller
-     * @param params The new pool-wide parameters; zero leaves a parameter as it is
-     * @param interestRateModels The new interest rate models
-     * @return requestId The request
-     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's; the vault
-     *   emits StakeLocked or StakeUnlocked
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live
-     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
-     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
-     * @custom:error The validator's `verifyRequest` errors
-     * @custom:access Only the pool's deployer
-     */
-    function requestPoolConfigUpdate(
-        address comptroller,
-        SpokePoolManagerStorage.PoolParams calldata params,
-        SpokePoolManagerStorage.MarketInterestRateModel[] calldata interestRateModels
-    ) external returns (uint256 requestId);
-
-    /**
      * @notice Requests moving the caller's pool to another tier at its current terms, even while the pool's locked
      *   stake is below its tier's
      * @param comptroller The pool's comptroller
@@ -476,9 +448,8 @@ interface ISpokePoolManager {
      * @notice Replaces the content of an open request, which the deployer must approve again. Only the fields of the
      *   request's type are used. Markets keep their asset and seed, which the manager holds
      * @param requestId The request
-     * @param params A pool request's pool parameters, or a pool config request's changes
+     * @param params A pool request's pool parameters
      * @param markets The markets of a pool or markets request
-     * @param interestRateModels The interest rate models of a pool config request
      * @custom:event Emits RequestUpdated
      * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
      * @custom:error InvalidRequestType is thrown for a tier request
@@ -490,8 +461,7 @@ interface ISpokePoolManager {
     function updateRequest(
         uint256 requestId,
         SpokePoolManagerStorage.PoolParams calldata params,
-        SpokePoolManagerStorage.MarketParams[] calldata markets,
-        SpokePoolManagerStorage.MarketInterestRateModel[] calldata interestRateModels
+        SpokePoolManagerStorage.MarketParams[] calldata markets
     ) external;
 
     /**
@@ -632,9 +602,30 @@ interface ISpokePoolManager {
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external;
 
     /**
+     * @notice Publishes a loan market's new interest rate model to the RiskOracle. The IRMRiskSteward never applies one
+     *   directly: the RiskStewardReceiver registers it behind its timelock, and a whitelisted executor applies or
+     *   rejects it. Executors should apply only vetted, non-upgradeable models, since a reverting model stops the
+     *   market accruing interest, and with it redeems and liquidations
+     * @param comptroller The pool's comptroller
+     * @param vToken The market
+     * @param newInterestRateModel The new interest rate model
+     * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
+     *   tier's, and the vault emits StakeLocked or StakeUnlocked
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
+     * @custom:error ZeroAddressNotAllowed is thrown when the new interest rate model is zero
+     * @custom:error The validator's `checkLoanMarket` errors
+     * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
+     * @custom:access Only the pool's deployer
+     */
+    function updateInterestRateModel(address comptroller, VToken vToken, address newInterestRateModel) external;
+
+    /**
      * @notice Locks or unlocks the difference between a pool's locked stake and its tier's current stake, as the
-     *   deployer's markets and pool config requests and risk updates do, so a tier cut is released and a tier raise or
-     *   a seizure is locked without waiting for one
+     *   deployer's markets requests and risk updates do, so a tier cut is released and a tier raise or a seizure is
+     *   locked without waiting for one
      * @param comptroller The pool's comptroller
      * @custom:event Emits LockedStakeUpdated when the locked stake changes; the vault emits StakeLocked or
      *   StakeUnlocked

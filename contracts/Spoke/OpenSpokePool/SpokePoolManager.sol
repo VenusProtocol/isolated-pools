@@ -28,10 +28,10 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * @notice Entry point of open spoke pools. A deployer stakes XVS in the XVSVault and requests a pool of a tier: the
  * manager locks the tier's stake, pulls the markets' seeds and stores the request. The Venus team may update it, the
  * deployer approves it, and the team proposes it through `SpokePoolProposer`; the proposal calls `settleRequest`,
- * which starts the deployer's rights. A deployer requests new markets or pool parameters the same way, and another
- * tier, which the team applies with `setPoolTier`. It tunes risk parameters within its tier through the Risk Stewards,
- * and can ask to exit. `SpokePoolValidator` checks requests and updates against the tiers, and `SpokePoolShortfall`
- * pays bad debt recoverers from the locked stake.
+ * which starts the deployer's rights. A deployer requests new markets the same way, and another tier, which the team
+ * applies with `setPoolTier`. It tunes risk parameters within its tier, and its loan markets' interest rate models,
+ * through the Risk Stewards, and can ask to exit. `SpokePoolValidator` checks requests and updates against the tiers,
+ * and `SpokePoolShortfall` pays bad debt recoverers from the locked stake.
  * @dev Needs the XVSVault `lock`, `unlock` and `seizeLocked` roles and to be a RiskOracle authorized sender. It submits
  * the proposals `SpokePoolProposer` builds, so the GovernorBravo votes they need are delegated to it; GovernorBravo
  * allows one live proposal per proposer, so the votes run one after another
@@ -63,6 +63,7 @@ contract SpokePoolManager is
     string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
     string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
     string internal constant BORROW_CAP_UPDATE = "borrowCap";
+    string internal constant INTEREST_RATE_MODEL_UPDATE = "interestRateModel";
 
     /// @notice The vault deployer stakes are locked in
     IXVSVault public immutable XVS_VAULT;
@@ -169,19 +170,6 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function requestPoolConfigUpdate(
-        address comptroller,
-        PoolParams calldata params,
-        MarketInterestRateModel[] calldata interestRateModels
-    ) external returns (uint256 requestId) {
-        _ensureActiveDeployerAndSyncStake(comptroller);
-        Request storage request;
-        (requestId, request) = _newRequest(RequestType.PoolConfig, comptroller);
-        _storePoolConfig(request, params, interestRateModels);
-        _verifyRequest(requestId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
     function requestTier(address comptroller, uint256 tierId) external returns (uint256 requestId) {
         // Not synced, so a deployer whose free stake cannot cover a raised stake can still ask for a cheaper tier;
         // `setPoolTier` syncs to the new tier's stake
@@ -202,16 +190,10 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
-    function updateRequest(
-        uint256 requestId,
-        PoolParams calldata params,
-        MarketParams[] calldata markets,
-        MarketInterestRateModel[] calldata interestRateModels
-    ) external {
-        _checkAccessAllowed("updateRequest(uint256,PoolParams,MarketParams[],MarketInterestRateModel[])");
+    function updateRequest(uint256 requestId, PoolParams calldata params, MarketParams[] calldata markets) external {
+        _checkAccessAllowed("updateRequest(uint256,PoolParams,MarketParams[])");
 
         Request storage request = _ensureEditableRequest(requestId);
-        RequestType requestType = request.requestType;
         uint256 marketCount = markets.length;
         if (marketCount != request.markets.length) {
             revert InvalidArrayLength();
@@ -223,10 +205,8 @@ contract SpokePoolManager is
             }
             request.markets[i] = markets[i];
         }
-        if (requestType == RequestType.Pool) {
+        if (request.requestType == RequestType.Pool) {
             request.pool.params = params;
-        } else if (requestType == RequestType.PoolConfig) {
-            _storePoolConfig(request, params, interestRateModels);
         }
         request.approved = false;
         _verifyRequest(requestId);
@@ -381,6 +361,14 @@ contract SpokePoolManager is
         _ensureActiveDeployerAndSyncStake(comptroller);
         ISpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
         _publishUpdate(BORROW_CAP_UPDATE, vToken, abi.encode(newBorrowCap));
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function updateInterestRateModel(address comptroller, VToken vToken, address newInterestRateModel) external {
+        _ensureActiveDeployerAndSyncStake(comptroller);
+        ensureNonzeroAddress(newInterestRateModel);
+        ISpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
+        _publishUpdate(INTEREST_RATE_MODEL_UPDATE, vToken, abi.encode(newInterestRateModel));
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -756,26 +744,6 @@ contract SpokePoolManager is
         }
 
         emit LockedStakeUpdated(comptroller, lockedStake, requiredStake);
-    }
-
-    /**
-     * @dev Replaces a pool config request's content
-     * @param request The request's storage
-     * @param params The pool-wide parameter changes
-     * @param interestRateModels The new interest rate models
-     */
-    function _storePoolConfig(
-        Request storage request,
-        PoolParams calldata params,
-        MarketInterestRateModel[] calldata interestRateModels
-    ) internal {
-        PoolConfigRequest storage config = request.poolConfig;
-        config.params = params;
-        delete config.interestRateModels;
-        uint256 modelCount = interestRateModels.length;
-        for (uint256 i; i < modelCount; ++i) {
-            config.interestRateModels.push(interestRateModels[i]);
-        }
     }
 
     /**
