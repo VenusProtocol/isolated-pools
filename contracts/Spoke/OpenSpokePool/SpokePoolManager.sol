@@ -14,12 +14,12 @@ import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/
 import { VToken } from "../../VToken.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
-import { IGovernorBravo, PROPOSAL_STATE_CANCELED, PROPOSAL_STATE_DEFEATED, PROPOSAL_STATE_EXPIRED } from "../interfaces/IGovernorBravo.sol";
-import { IRiskOracle } from "../interfaces/IRiskOracle.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolProposer } from "../interfaces/ISpokePoolProposer.sol";
 import { ISpokePoolValidator } from "../interfaces/ISpokePoolValidator.sol";
-import { IXVSVault } from "../interfaces/IXVSVault.sol";
+import { IGovernorBravo, PROPOSAL_STATE_CANCELED, PROPOSAL_STATE_DEFEATED, PROPOSAL_STATE_EXPIRED } from "../interfaces/external/IGovernorBravo.sol";
+import { IRiskOracle } from "../interfaces/external/IRiskOracle.sol";
+import { IXVSVault } from "../interfaces/external/IXVSVault.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 
 /**

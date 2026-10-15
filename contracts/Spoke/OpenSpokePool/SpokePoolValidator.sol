@@ -9,10 +9,10 @@ import { VToken } from "../../VToken.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
-import { IRiskOracle } from "../interfaces/IRiskOracle.sol";
-import { IRiskStewardReceiver } from "../interfaces/IRiskStewardReceiver.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolValidator } from "../interfaces/ISpokePoolValidator.sol";
+import { IRiskOracle } from "../interfaces/external/IRiskOracle.sol";
+import { IRiskStewardReceiver } from "../interfaces/external/IRiskStewardReceiver.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 

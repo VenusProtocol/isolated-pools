@@ -11,9 +11,9 @@ import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { EXP_SCALE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
-import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/IGovernorBravo.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolProposer } from "../interfaces/ISpokePoolProposer.sol";
+import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/external/IGovernorBravo.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 

@@ -243,7 +243,7 @@ describe("SpokePoolManager", () => {
       otherInterestRateModel,
     ] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
-    vault = await smock.fake<IXVSVault>("contracts/Spoke/interfaces/IXVSVault.sol:IXVSVault");
+    vault = await smock.fake<IXVSVault>("contracts/Spoke/interfaces/external/IXVSVault.sol:IXVSVault");
     governor = await smock.fake<IGovernorBravo>("IGovernorBravo");
     oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
     boundedOracle = await smock.fake<IDeviationBoundedOracle>("IDeviationBoundedOracle");
