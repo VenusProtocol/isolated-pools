@@ -871,4 +871,11 @@ interface ISpokePoolManager {
      * @return The terms
      */
     function getTier(uint256 tierId) external view returns (SpokePoolManagerStorage.Tier memory);
+
+    /**
+     * @notice Returns a deployer's pools, in activation order, including closed and taken-over ones
+     * @param deployer The deployer
+     * @return The pools' comptrollers
+     */
+    function getPools(address deployer) external view returns (address[] memory);
 }

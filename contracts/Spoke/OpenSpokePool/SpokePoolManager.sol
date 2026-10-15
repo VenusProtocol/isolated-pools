@@ -291,6 +291,7 @@ contract SpokePoolManager is
             pool.status = PoolStatus.Live;
             pool.tierId = uint16(request.pool.tierId);
             pool.lockedStake = request.pool.stake;
+            deployerPools[request.deployer].push(comptroller);
             emit PoolActivated(requestId, comptroller, request.deployer);
         }
         uint256 marketCount = request.markets.length;
@@ -626,6 +627,11 @@ contract SpokePoolManager is
     /// @inheritdoc ISpokePoolManager
     function getTier(uint256 tierId) external view returns (Tier memory) {
         return tiers[tierId];
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function getPools(address deployer) external view returns (address[] memory) {
+        return deployerPools[deployer];
     }
 
     /*** Internal functions ***/

@@ -193,10 +193,13 @@ contract SpokePoolManagerStorage {
     /// @notice Each deployer's latest request; a deployer submits another only while it is neither pending nor proposed
     mapping(address => uint256) public latestRequestIds;
 
+    /// @notice Each deployer's pools, in activation order; closed and taken-over pools stay listed
+    mapping(address => address[]) internal deployerPools;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[32] private __gap;
+    uint256[31] private __gap;
 }
