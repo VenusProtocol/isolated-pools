@@ -12,10 +12,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
 
   const manager = await toAddress("SpokePoolManager");
+  const riskStewardReceiver = await toAddress(preconfiguredAddresses.RiskStewardReceiver);
 
-  const args = [manager];
+  const args = [manager, riskStewardReceiver];
   const deployment: DeployResult = await deploy(DEPLOYMENT_NAME, {
     from: deployer,
     args,
@@ -26,11 +28,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await verifyDeployment(hre, DEPLOYMENT_NAME, deployment, args);
 
   const validator = await ethers.getContract(DEPLOYMENT_NAME);
-  const actual = await readBackAddress(() => validator.SPOKE_POOL_MANAGER(), manager);
-  if (!sameAddress(actual, manager)) {
-    throw new Error(`${DEPLOYMENT_NAME} SPOKE_POOL_MANAGER is ${actual}, expected ${manager}`);
+  const checks: [string, string, string][] = [
+    ["SPOKE_POOL_MANAGER", await readBackAddress(() => validator.SPOKE_POOL_MANAGER(), manager), manager],
+    [
+      "RISK_STEWARD_RECEIVER",
+      await readBackAddress(() => validator.RISK_STEWARD_RECEIVER(), riskStewardReceiver),
+      riskStewardReceiver,
+    ],
+  ];
+  for (const [label, actual, expected] of checks) {
+    if (!sameAddress(actual, expected)) {
+      throw new Error(`${DEPLOYMENT_NAME} ${label} is ${actual}, expected ${expected}`);
+    }
+    console.log(`Verified ${DEPLOYMENT_NAME} ${label}: ${actual}`);
   }
-  console.log(`Verified ${DEPLOYMENT_NAME} SPOKE_POOL_MANAGER: ${actual}`);
 };
 
 func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];

@@ -161,7 +161,7 @@ contract SpokePoolManager is
         address comptroller,
         DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        _ensureActiveDeployer(comptroller);
+        _ensureActiveDeployerAndSyncStake(comptroller);
         Request storage request;
         (requestId, request) = _newRequest(RequestType.Markets, comptroller);
         _storeMarketsAndPullSeeds(request, markets);
@@ -174,7 +174,7 @@ contract SpokePoolManager is
         PoolParams calldata params,
         MarketInterestRateModel[] calldata interestRateModels
     ) external returns (uint256 requestId) {
-        _ensureActiveDeployer(comptroller);
+        _ensureActiveDeployerAndSyncStake(comptroller);
         Request storage request;
         (requestId, request) = _newRequest(RequestType.PoolConfig, comptroller);
         _storePoolConfig(request, params, interestRateModels);
@@ -183,7 +183,7 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function requestTier(address comptroller, uint256 tierId) external returns (uint256 requestId) {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
+        Pool storage pool = _ensureActiveDeployerAndSyncStake(comptroller);
         // A pool with its exit requested cannot be moved by `setPoolTier`
         if (pool.status != PoolStatus.Live) {
             revert InvalidPoolStatus(comptroller);
@@ -317,15 +317,8 @@ contract SpokePoolManager is
         ISpokePoolValidator(validator).checkPoolFitsTier(comptroller, tierId);
         request.status = RequestStatus.Settled;
 
-        uint256 newStake = tiers[tierId].stakeAmount;
-        uint256 lockedStake = pool.lockedStake;
         pool.tierId = uint16(tierId);
-        pool.lockedStake = newStake;
-        if (newStake > lockedStake) {
-            XVS_VAULT.lock(pool.deployer, newStake - lockedStake);
-        } else if (newStake < lockedStake) {
-            XVS_VAULT.unlock(pool.deployer, lockedStake - newStake);
-        }
+        _syncLockedStake(comptroller, pool);
 
         emit PoolTierUpdated(comptroller, tierId);
         emit RequestSettled(requestId, comptroller);
@@ -360,7 +353,7 @@ contract SpokePoolManager is
         uint256 newCollateralFactor,
         uint256 newLiquidationThreshold
     ) external {
-        _ensureActiveDeployer(comptroller);
+        _ensureActiveDeployerAndSyncStake(comptroller);
         ISpokePoolValidator(validator).checkCollateralFactor(
             comptroller,
             address(vToken),
@@ -372,31 +365,16 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function updateSupplyCap(address comptroller, VToken vToken, uint256 newSupplyCap) external {
-        _ensureActiveDeployer(comptroller);
+        _ensureActiveDeployerAndSyncStake(comptroller);
         ISpokePoolValidator(validator).checkSupplyCap(comptroller, address(vToken), newSupplyCap);
         _publishUpdate(SUPPLY_CAP_UPDATE, vToken, abi.encode(newSupplyCap));
     }
 
     /// @inheritdoc ISpokePoolManager
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external {
-        _ensureActiveDeployer(comptroller);
+        _ensureActiveDeployerAndSyncStake(comptroller);
         ISpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
         _publishUpdate(BORROW_CAP_UPDATE, vToken, abi.encode(newBorrowCap));
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function topUpStake(address comptroller) external {
-        Pool storage pool = _ensureDeployer(comptroller);
-        uint256 required = tiers[pool.tierId].stakeAmount;
-        uint256 lockedStake = pool.lockedStake;
-        if (lockedStake >= required) {
-            return;
-        }
-        uint256 amount = required - lockedStake;
-        pool.lockedStake = required;
-        XVS_VAULT.lock(msg.sender, amount);
-
-        emit StakeToppedUp(comptroller, amount);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -781,6 +759,46 @@ contract SpokePoolManager is
     }
 
     /**
+     * @dev Returns a pool after checking the caller is its deployer with its rights in force (`_ensureDeployer`'s
+     * checks and the deployer is not paused), then syncs the pool's locked stake to its tier's with `_syncLockedStake`
+     * @param comptroller The pool's comptroller
+     * @return pool The pool's storage
+     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
+     */
+    function _ensureActiveDeployerAndSyncStake(address comptroller) internal returns (Pool storage pool) {
+        pool = _ensureDeployer(comptroller);
+        if (pool.deployerPaused) {
+            revert DeployerPaused(comptroller);
+        }
+        _syncLockedStake(comptroller, pool);
+    }
+
+    /**
+     * @dev Locks or unlocks the difference between a pool's locked stake and its tier's current stake, so a tier
+     * change or a seizure is followed without a separate top-up
+     * @param comptroller The pool's comptroller
+     * @param pool The pool's storage
+     * @custom:event Emits LockedStakeUpdated when the locked stake changes
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
+     */
+    function _syncLockedStake(address comptroller, Pool storage pool) internal {
+        uint256 lockedStake = pool.lockedStake;
+        uint256 requiredStake = tiers[pool.tierId].stakeAmount;
+        if (requiredStake == lockedStake) {
+            return;
+        }
+        pool.lockedStake = requiredStake;
+        if (requiredStake > lockedStake) {
+            XVS_VAULT.lock(pool.deployer, requiredStake - lockedStake);
+        } else {
+            XVS_VAULT.unlock(pool.deployer, lockedStake - requiredStake);
+        }
+
+        emit LockedStakeUpdated(comptroller, lockedStake, requiredStake);
+    }
+
+    /**
      * @dev Checks a request against its pool and tier through the validator
      * @param requestId The request
      */
@@ -833,26 +851,6 @@ contract SpokePoolManager is
         }
         if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
             revert InvalidPoolStatus(comptroller);
-        }
-    }
-
-    /**
-     * @dev Returns a pool after checking the caller is its deployer with its rights in force: `_ensureDeployer`'s
-     * checks, the deployer is not paused, and its tier's stake is locked
-     * @param comptroller The pool's comptroller
-     * @return pool The pool's storage
-     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
-     */
-    function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
-        pool = _ensureDeployer(comptroller);
-        if (pool.deployerPaused) {
-            revert DeployerPaused(comptroller);
-        }
-        // Falls short after `setTier` raises the stake or `seizeStake` takes part of it, until `topUpStake`
-        uint256 requiredStake = tiers[pool.tierId].stakeAmount;
-        if (pool.lockedStake < requiredStake) {
-            revert InsufficientLockedStake(requiredStake, pool.lockedStake);
         }
     }
 

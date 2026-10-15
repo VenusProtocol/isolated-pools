@@ -8,6 +8,8 @@ import { VToken } from "../../VToken.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
+import { IRiskOracle } from "../interfaces/IRiskOracle.sol";
+import { IRiskStewardReceiver } from "../interfaces/IRiskStewardReceiver.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolValidator } from "../interfaces/ISpokePoolValidator.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
@@ -21,16 +23,25 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * reverts with the manager's errors
  */
 contract SpokePoolValidator is ISpokePoolValidator {
+    /// @dev RiskOracle update type of the supply caps the manager publishes
+    string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
+
     /// @notice The manager whose requests and pools are checked
     SpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
+    /// @notice The receiver that applies the manager's published updates, which tells which are not applied yet
+    IRiskStewardReceiver public immutable RISK_STEWARD_RECEIVER;
+
     /**
      * @param spokePoolManager The manager whose requests and pools are checked
-     * @custom:error ZeroAddressNotAllowed is thrown when the manager is zero
+     * @param riskStewardReceiver The receiver that applies the manager's published updates
+     * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
      */
-    constructor(SpokePoolManager spokePoolManager) {
+    constructor(SpokePoolManager spokePoolManager, IRiskStewardReceiver riskStewardReceiver) {
         ensureNonzeroAddress(address(spokePoolManager));
+        ensureNonzeroAddress(address(riskStewardReceiver));
         SPOKE_POOL_MANAGER = spokePoolManager;
+        RISK_STEWARD_RECEIVER = riskStewardReceiver;
     }
 
     /**
@@ -139,7 +150,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
                 revert ISpokePoolManager.BadDebtOutstanding(address(vToken));
             }
         }
-        if (_loanLiquidityUsd(comptroller, markets) > tier.maxLiquidityUsd) {
+        if (_loanLiquidityUsd(comptroller, markets, address(0)) > tier.maxLiquidityUsd) {
             revert ISpokePoolManager.ExceedsTierLimit();
         }
     }
@@ -177,7 +188,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
 
     /**
      * @notice Checks a deployer's new supply cap: a loan market's raise must keep the loan markets' caps, in USD,
-     *   within the tier. Collateral caps are not bounded
+     *   within the tier, counting the raises published but not applied yet. Collateral caps are not bounded
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newSupplyCap The new supply cap
@@ -190,11 +201,12 @@ contract SpokePoolValidator is ISpokePoolValidator {
         if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken) || newSupplyCap <= supplyCap) {
             return;
         }
-        uint256 raiseUsd = ((newSupplyCap - supplyCap) *
-            SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getUnderlyingPrice(vToken)) / EXP_SCALE;
-        uint256 liquidityUsd = _loanLiquidityUsd(comptroller, SpokeComptroller(comptroller).getAllMarkets());
+        // The new cap replaces the market's earlier one, applied or not
+        uint256 liquidityUsd = _loanLiquidityUsd(comptroller, SpokeComptroller(comptroller).getAllMarkets(), vToken) +
+            (newSupplyCap * SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getUnderlyingPrice(vToken)) /
+            EXP_SCALE;
         uint256 tierId = SPOKE_POOL_MANAGER.getPool(comptroller).tierId;
-        if (liquidityUsd + raiseUsd > SPOKE_POOL_MANAGER.getTier(tierId).maxLiquidityUsd) {
+        if (liquidityUsd > SPOKE_POOL_MANAGER.getTier(tierId).maxLiquidityUsd) {
             revert ISpokePoolManager.ExceedsTierLimit();
         }
     }
@@ -242,7 +254,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
             liquidityUsd += _checkMarket(tier, markets[i]);
         }
         if (liquidityUsd != 0 && comptroller != address(0)) {
-            liquidityUsd += _loanLiquidityUsd(comptroller, poolMarkets);
+            liquidityUsd += _loanLiquidityUsd(comptroller, poolMarkets, address(0));
         }
         if (liquidityUsd > tier.maxLiquidityUsd) {
             revert ISpokePoolManager.ExceedsTierLimit();
@@ -328,26 +340,54 @@ contract SpokePoolValidator is ISpokePoolValidator {
     }
 
     /**
-     * @dev Returns the summed USD value of a pool's loan market supply caps; an uncapped loan market overflows and
-     * reverts, since it fits no tier
+     * @dev Returns the summed USD value of a pool's loan market supply caps, each the higher of its applied cap and a
+     * raise published but not applied yet, so raises published together are checked against the tier as a whole. An
+     * uncapped loan market overflows and reverts, since it fits no tier
      * @param comptroller The pool's comptroller
      * @param markets The pool's markets
+     * @param excluded A market left out, or zero
      * @return liquidityUsd The value
      */
     function _loanLiquidityUsd(
         address comptroller,
-        VToken[] memory markets
+        VToken[] memory markets,
+        address excluded
     ) internal view returns (uint256 liquidityUsd) {
         ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
+        IRiskOracle riskOracle = SPOKE_POOL_MANAGER.RISK_ORACLE();
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(markets[i]);
-            if (SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
-                liquidityUsd +=
-                    (SpokeComptroller(comptroller).supplyCaps(vToken) * oracle.getUnderlyingPrice(vToken)) /
-                    EXP_SCALE;
+            if (vToken != excluded && SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
+                uint256 supplyCap = SpokeComptroller(comptroller).supplyCaps(vToken);
+                // The higher one: a pending cut may never be applied, and then the applied cap stays
+                uint256 pendingSupplyCap = _pendingSupplyCap(riskOracle, vToken);
+                if (pendingSupplyCap > supplyCap) {
+                    supplyCap = pendingSupplyCap;
+                }
+                liquidityUsd += (supplyCap * oracle.getUnderlyingPrice(vToken)) / EXP_SCALE;
             }
         }
+    }
+
+    /**
+     * @dev Returns a market's latest supply cap published to the RiskOracle while the receiver has not applied,
+     * rejected or expired it, or zero. One never processed counts until a newer cap replaces it, even once too old to
+     * apply
+     * @param riskOracle The RiskOracle
+     * @param vToken The market
+     * @return The published supply cap
+     */
+    function _pendingSupplyCap(IRiskOracle riskOracle, address vToken) internal view returns (uint256) {
+        uint256 updateId = riskOracle.getLatestUpdateIdByTypeAndMarket(SUPPLY_CAP_UPDATE, vToken);
+        if (updateId == 0) {
+            return 0;
+        }
+        IRiskStewardReceiver.UpdateStatus status = RISK_STEWARD_RECEIVER.updates(updateId).status;
+        if (status != IRiskStewardReceiver.UpdateStatus.None && status != IRiskStewardReceiver.UpdateStatus.Pending) {
+            return 0;
+        }
+        return abi.decode(riskOracle.getUpdateById(updateId).newValue, (uint256));
     }
 
     /**

@@ -78,11 +78,12 @@ interface ISpokePoolManager {
     /*** Live pool events ***/
 
     /**
-     * @notice Emitted when a deployer locks more XVS to match its tier's stake again
+     * @notice Emitted when a pool's locked stake follows its tier's stake, on a deployer action or a tier move
      * @param comptroller The pool's comptroller
-     * @param amount The XVS locked
+     * @param oldLockedStake The previous locked stake
+     * @param newLockedStake The new locked stake
      */
-    event StakeToppedUp(address indexed comptroller, uint256 amount);
+    event LockedStakeUpdated(address indexed comptroller, uint256 oldLockedStake, uint256 newLockedStake);
 
     /**
      * @notice Emitted when a pool moves to another tier
@@ -333,8 +334,8 @@ interface ISpokePoolManager {
     error DeployerPaused(address comptroller);
 
     /**
-     * @notice Thrown when the locked stake is below the tier's stake, or below a payout from it
-     * @param required The tier's stake, or the payout
+     * @notice Thrown when a payout exceeds a pool's locked stake
+     * @param required The payout
      * @param available The pool's locked stake
      */
     error InsufficientLockedStake(uint256 required, uint256 available);
@@ -414,11 +415,11 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param markets The new markets
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted
+     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
      * @custom:error InvalidArrayLength is thrown when no market is requested
      * @custom:error InvalidSeed is thrown when a seed is worth less than `MIN_SEED_USD` or more than `MAX_SEED_USD`
@@ -437,12 +438,12 @@ interface ISpokePoolManager {
      * @param params The new pool-wide parameters; zero leaves a parameter as it is
      * @param interestRateModels The new interest rate models
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted
+     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error The validator's `verifyRequest` errors
      * @custom:access Only the pool's deployer
      */
@@ -457,11 +458,11 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param tierId The tier
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted
+     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
      * @custom:error InvalidTier is thrown when the tier is not set or is the pool's tier
      * @custom:access Only the pool's deployer
@@ -531,7 +532,8 @@ interface ISpokePoolManager {
      * @notice Settles a tier request while the tier keeps the requested terms and the pool fits it. The locked
      *   stake becomes the new tier's stake
      * @param requestId The request
-     * @custom:event Emits PoolTierUpdated and RequestSettled; the vault emits StakeLocked or StakeUnlocked
+     * @custom:event Emits LockedStakeUpdated, PoolTierUpdated and RequestSettled; the vault emits StakeLocked or
+     *   StakeUnlocked
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidRequestType is thrown when the request is not a tier request
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
@@ -572,11 +574,12 @@ interface ISpokePoolManager {
      * @param vToken The market
      * @param newCollateralFactor The new collateral factor
      * @param newLiquidationThreshold The new liquidation threshold
-     * @custom:event The RiskOracle emits UpdatePublished
+     * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
+     *   tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error The validator's `checkCollateralFactor` errors
      * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
@@ -594,11 +597,12 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newSupplyCap The new supply cap
-     * @custom:event The RiskOracle emits UpdatePublished
+     * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
+     *   tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error The validator's `checkSupplyCap` errors
      * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
@@ -612,28 +616,17 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param vToken The market
      * @param newBorrowCap The new borrow cap
-     * @custom:event The RiskOracle emits UpdatePublished
+     * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
+     *   tier's
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error InsufficientLockedStake is thrown while the locked stake is below the tier's stake
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error The validator's `checkLoanMarket` errors
      * @custom:error The RiskOracle's `publishRiskParameterUpdate` errors, such as UpdateTypeNotActive
      * @custom:access Only the pool's deployer
      */
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external;
-
-    /**
-     * @notice Locks more of the deployer's stake so the pool's locked stake matches its tier's stake again; does
-     *   nothing when it already does
-     * @param comptroller The pool's comptroller
-     * @custom:event Emits StakeToppedUp; the vault emits StakeLocked
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
-     * @custom:error The vault's `lock` errors, such as when the deployer's free stake is too small
-     * @custom:access Only the pool's deployer
-     */
-    function topUpStake(address comptroller) external;
 
     /**
      * @notice Pauses or resumes a deployer's actions; the pool keeps running and its stake stays locked
