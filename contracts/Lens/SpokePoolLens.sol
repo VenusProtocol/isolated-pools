@@ -21,7 +21,8 @@ import { SpokeComptrollerViewInterface } from "../Spoke/SpokeComptrollerInterfac
  * @notice Reads pool and market state specific to a spoke pool
  *
  * @dev Spoke pools expose additional state that is not included in the shared PoolLens data, including the
- * deviation-bounded oracle, the supply and liquidation allowlists, liquidation thresholds and liquidation incentives.
+ * deviation-bounded oracle and the bounded prices it reports, the supply and liquidation allowlists, liquidation
+ * thresholds and liquidation incentives.
  * Those reads are named `spoke*` or `getSpokePool*` and return spoke-shaped structs.
  *
  * The rest of the surface mirrors `PoolLens` under the same names and struct shapes, so that reading a spoke pool
@@ -59,17 +60,24 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     }
 
     /**
-     * @dev Mirrors `PoolLens.VTokenMetadata` with spoke-pool-specific fields.
+     * @dev Mirrors `PoolLens.VTokenMetadata` with spoke-pool-specific fields. Unlike `PoolLens`, which reports the
+     *  stored figures, the exchange rate, total borrows and total reserves include interest accrued up to the
+     *  current block or second.
      */
     struct SpokeVTokenMetadata {
         address vToken;
+        /// @notice The exchange rate `exchangeRateCurrent` would return, scaled by 1e18
         uint256 exchangeRateCurrent;
         uint256 supplyRatePerBlockOrTimestamp;
         uint256 borrowRatePerBlockOrTimestamp;
         uint256 reserveFactorMantissa;
         uint256 supplyCaps;
         uint256 borrowCaps;
+        /// @notice Total borrows including interest accrued up to the current block or second
         uint256 totalBorrows;
+        /// @notice Total reserves including their share of that interest. Accrual may also move reserves to the
+        ///  protocol share reserve, lowering reserves and cash by the same amount. Neither this field nor `totalCash`
+        ///  shows that move, and the exchange rate does not depend on it
         uint256 totalReserves;
         uint256 totalSupply;
         uint256 totalCash;
@@ -103,6 +111,23 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         bool allowlistEnabled;
         /// @notice Whether the account is allowlisted for the market
         bool accountAllowlisted;
+    }
+
+    /**
+     * @dev The prices a spoke pool values a market's underlying at. Collateral-factor checks (borrow, redeem,
+     *  transfer, exitMarket) use the bounded pair; liquidation-threshold checks use spot on both legs.
+     */
+    struct SpokeVTokenPrices {
+        address vToken;
+        /// @notice The oracle's spot price, the same figure `vTokenUnderlyingPrice` reports
+        uint256 spotPrice;
+        /// @notice The price collateral is valued at under the collateral factor. It can sit below spot only while
+        ///  the bounded oracle's protection is active for the asset. Zero while the pool has no bounded oracle, where
+        ///  every collateral-factor check reverts
+        uint256 boundedCollateralPrice;
+        /// @notice The price debt is valued at under the collateral factor. It can sit above spot only while the
+        ///  bounded oracle's protection is active for the asset. Zero while the pool has no bounded oracle
+        uint256 boundedDebtPrice;
     }
 
     /**
@@ -271,6 +296,23 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     ) external view returns (bool allowlistEnabled, bool accountAllowlisted) {
         SpokeComptrollerViewInterface spoke = SpokeComptrollerViewInterface(comptroller);
         return (spoke.isLiquidationAllowlistEnabled(), spoke.isAllowedLiquidator(liquidator));
+    }
+
+    /**
+     * @notice Returns the spot and bounded prices of each specified market's underlying
+     * @param vTokens The markets to read
+     * @return One entry per market, in the order given
+     */
+    function spokeVTokenPricesAll(VToken[] calldata vTokens) external view returns (SpokeVTokenPrices[] memory) {
+        uint256 len = vTokens.length;
+
+        SpokeVTokenPrices[] memory prices = new SpokeVTokenPrices[](len);
+
+        for (uint256 i; i < len; ++i) {
+            prices[i] = spokeVTokenPrices(vTokens[i]);
+        }
+
+        return prices;
     }
 
     /**
@@ -489,19 +531,20 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         );
 
         address underlying = vToken.underlying();
+        (uint256 exchangeRate, uint256 totalBorrows, uint256 totalReserves) = _accrued(vToken);
 
         return
             SpokeVTokenMetadata({
                 vToken: vTokenAddress,
-                exchangeRateCurrent: vToken.exchangeRateStored(),
+                exchangeRateCurrent: exchangeRate,
                 // Zero for an empty market, as `PoolLens` reports: the rate model divides by the market's supply.
                 supplyRatePerBlockOrTimestamp: vToken.totalSupply() > 0 ? vToken.supplyRatePerBlock() : 0,
                 borrowRatePerBlockOrTimestamp: vToken.borrowRatePerBlock(),
                 reserveFactorMantissa: vToken.reserveFactorMantissa(),
                 supplyCaps: pooledView.supplyCaps(vTokenAddress),
                 borrowCaps: pooledView.borrowCaps(vTokenAddress),
-                totalBorrows: vToken.totalBorrows(),
-                totalReserves: vToken.totalReserves(),
+                totalBorrows: totalBorrows,
+                totalReserves: totalReserves,
                 totalSupply: vToken.totalSupply(),
                 totalCash: vToken.getCash(),
                 isListed: isListed,
@@ -517,6 +560,29 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
                 forcedLiquidationEnabled: spokeView.isForcedLiquidationEnabled(vTokenAddress),
                 boundedPricingEnabled: _boundedPricingEnabled(spokeView, underlying)
             });
+    }
+
+    /**
+     * @notice Returns the spot and bounded prices of a market's underlying
+     * @dev The bounded pair is the one a collateral-factor check would read at this block, including protection
+     *  that the current spot price would trigger.
+     * @param vToken The market to read
+     * @return prices The market's prices
+     */
+    function spokeVTokenPrices(VToken vToken) public view returns (SpokeVTokenPrices memory prices) {
+        address comptroller = address(vToken.comptroller());
+
+        prices.vToken = address(vToken);
+        prices.spotPrice = ComptrollerViewInterface(comptroller).oracle().getUnderlyingPrice(address(vToken));
+
+        // Zero until the listing VIP sets it, and reading through it then would revert on a call into the zero
+        // address. The bounded prices stay zero, as no collateral-factor check can price the market either.
+        IDeviationBoundedOracle boundedOracle = SpokeComptrollerViewInterface(comptroller).deviationBoundedOracle();
+        if (address(boundedOracle) != address(0)) {
+            (prices.boundedCollateralPrice, prices.boundedDebtPrice) = boundedOracle.getBoundedPricesView(
+                address(vToken)
+            );
+        }
     }
 
     /**
@@ -734,6 +800,43 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 supplierTokens = VToken(vToken).balanceOf(supplier);
         uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
         return supplierDelta;
+    }
+
+    /**
+     * @dev Brings a market's exchange rate, borrows and reserves up to the current block or second without writing
+     *  anything, by repeating the arithmetic of `VToken.accrueInterest`. The move of reserves to the protocol share
+     *  reserve that accrual may also make is left out: it lowers cash and reserves equally, so the rate is unchanged.
+     * @param vToken The market to read
+     * @return exchangeRate The rate `exchangeRateCurrent` would return
+     * @return totalBorrows Total borrows after accrual
+     * @return totalReserves Total reserves after accrual
+     */
+    function _accrued(
+        VToken vToken
+    ) private view returns (uint256 exchangeRate, uint256 totalBorrows, uint256 totalReserves) {
+        totalBorrows = vToken.totalBorrows();
+        totalReserves = vToken.totalReserves();
+        uint256 cash = vToken.getCash();
+        uint256 badDebt = vToken.badDebt();
+
+        // The market's own clock, which need not count in the same unit as this lens.
+        uint256 slotDelta = vToken.getBlockNumberOrTimestamp() - vToken.accrualBlockNumber();
+        if (slotDelta != 0) {
+            uint256 borrowRate = vToken.interestRateModel().getBorrowRate(cash, totalBorrows, totalReserves, badDebt);
+            uint256 interest = mul_ScalarTruncate(mul_(Exp({ mantissa: borrowRate }), slotDelta), totalBorrows);
+            totalReserves = mul_ScalarTruncateAddUInt(
+                Exp({ mantissa: vToken.reserveFactorMantissa() }),
+                interest,
+                totalReserves
+            );
+            totalBorrows += interest;
+        }
+
+        uint256 totalSupply = vToken.totalSupply();
+        // A market with no supply reports its initial rate, which only the market itself exposes.
+        exchangeRate = totalSupply == 0
+            ? vToken.exchangeRateStored()
+            : ((cash + totalBorrows + badDebt - totalReserves) * EXP_SCALE) / totalSupply;
     }
 
     /**

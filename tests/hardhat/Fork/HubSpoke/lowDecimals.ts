@@ -53,9 +53,10 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     });
 
     it("settles a one-unit withdrawal the market would otherwise pay nothing for", async () => {
-      // At a rate of 1e16 a 1-unit request burns 100 vTokens and still truncates its payout to
-      // zero, which the market rejects outright with "redeemAmount is zero". The adapter raises the
-      // request to the smallest one that settles and still forwards exactly what was asked for.
+      // Below 1e18 a vToken is worth less than one base unit of TRX, and `redeemUnderlying(1)` sizes a
+      // burn whose payout truncates to zero, which the market rejects outright with "redeemAmount is
+      // zero". The adapter redeems by count instead: it burns the fewest vTokens worth at least the
+      // request and still forwards exactly what was asked for.
       await deposit(trxAmt("100000"));
 
       const before = await trx.balanceOf(f.supplier.address);
@@ -63,16 +64,16 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       await withdrawAsHub(1, f.supplier.address, { gasLimit: 3_000_000 });
 
       expect(await trx.balanceOf(f.supplier.address)).to.equal(before.add(1));
-      // The surplus the bump redeemed stays idle on the YieldGroup, where `totalAssets` counts it
-      // and the next withdrawal spends it first.
+      // Any surplus the rounded-up burn redeems stays idle on the YieldGroup, where `totalAssets`
+      // counts it and the next withdrawal spends it first.
       expect(await trx.balanceOf(trxSource.address)).to.be.gte(idleBefore);
     });
 
-    it("raises a request the market would pay nothing for, instead of reverting the withdrawal", async () => {
+    it("settles a request `redeemUnderlying` would pay nothing for, instead of reverting the withdrawal", async () => {
       await deposit(trxAmt("100000"));
       const rate: BigNumber = await vTRX.exchangeRateStored();
-      // The regime the bump exists for: one unit buys `floor(1e18 / rate)` vTokens, and those are
-      // worth less than one unit back, so the payout truncates away.
+      // The regime redeeming by count exists for: one unit buys `floor(1e18 / rate)` vTokens, and
+      // those are worth less than one unit back, so the payout truncates away.
       expect(EXP_SCALE.mod(rate), `rate ${rate} must not divide 1e18 evenly`).to.not.equal(0);
 
       const src = await impersonate(trxSource.address);
@@ -85,49 +86,54 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       const idleBefore = await trx.balanceOf(trxSource.address);
       await withdrawAsHub(1, f.outsider.address);
       expect(await trx.balanceOf(f.outsider.address)).to.equal(before.add(1));
-      // The over-redeemed remainder is retained as idle rather than left in the market or lost.
-      expect(await trx.balanceOf(trxSource.address)).to.be.gt(idleBefore);
+      // Whatever the rounded-up burn over-redeems is retained as idle rather than left in the market
+      // or lost. It can be nothing, when the fewest vTokens worth one unit pay out exactly one.
+      expect(await trx.balanceOf(trxSource.address)).to.be.gte(idleBefore);
     });
 
     it("certifies a bound the holder's own vTokens can actually settle", async () => {
-      // KNOWN FAILURE - reports a real defect in `AdapterSpokeV1.maxWithdraw`, not a test artifact.
-      //
-      // `maxWithdraw` bounds the answer by the position's PRO-RATA value,
-      // `vBal * (cash + totalBorrows - totalReserves) / totalSupply`, then certifies it against the
-      // market's payable cash and against the payout its own redeem arithmetic would produce. It
-      // never checks the third constraint: that the burn implied by that request fits inside the
-      // holder's OWN vToken balance. A redeem rounds its burn UP, so the last unit of the pro-rata
-      // value can need one more vToken than the holder owns, and `redeemUnderlying` then reverts
-      // with an arithmetic underflow while burning.
-      //
-      // Not a loss of funds - `redeem(balanceOf)` still exits the position - but the adapter only
-      // ever calls `redeemUnderlying`, so the Hub has no path to that last unit:
-      // `YieldGroupBase.withdraw` surfaces the skipped leg as `ResourceLiquidityInsufficient` and
-      // the whole withdrawal reverts. It also blocks the drain-to-zero that `removeResource`
-      // requires, which the adapter's own NatSpec states this flooring is designed to allow.
-      //
-      // Reachable when `vBal * backing` does not divide `totalSupply` evenly, which needs a second
-      // supplier - here the market's own listing seed. It shows up at a low exchange rate because
-      // one vToken is then worth a fraction of one underlying unit; at the 1e28 rate of an
-      // 18-decimal market the pro-rata truncation is far larger than one vToken and hides it.
+      // `maxWithdraw` values the position no higher than the market's own valuation of the same
+      // vTokens, and `withdraw` burns the fewest vTokens worth at least the amount. So the burn for
+      // a certified bound fits the holder's balance, even where one vToken is worth a fraction of
+      // one unit.
       await deposit(trxAmt("100000"));
 
       const rate: BigNumber = await vTRX.exchangeRateStored();
       const liquid: BigNumber = await f.adapter.maxWithdraw(vTRX.address, trxSource.address);
       const held: BigNumber = await vTRX.balanceOf(trxSource.address);
 
-      // The burn `redeemUnderlying(liquid)` performs, computed the way `_redeemFresh` does.
-      let burn = liquid.mul(EXP_SCALE).div(rate);
-      const probe = burn.mul(rate).div(EXP_SCALE);
-      if (!probe.isZero() && !probe.eq(liquid)) burn = burn.add(1);
-
+      // The burn `withdraw` performs for `liquid`, computed the way `_burnFor` does.
+      const burn = liquid.mul(EXP_SCALE).add(rate).sub(1).div(rate);
       expect(burn, `certified ${liquid} needs ${burn} vTokens, holder owns ${held}`).to.be.lte(held);
 
-      // And therefore the position can be emptied through the adapter, which is what
-      // `removeResource` gates on.
+      await expect(withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 })).to.not.be.reverted;
+    });
+
+    it("strands the sub-unit dust it cannot value, so the resource cannot be removed", async () => {
+      // A known limit of `AdapterSpokeV1` below a 1e18 rate, shared with `AdapterCoreV1` on any market
+      // with the same decimal pairing, and asserted the same way on the hub side.
+      //
+      // `maxWithdraw` rounds the position's value down to whole base units of the underlying. Below
+      // 1e18 a vToken is worth less than one base unit, so withdrawing the certified amount can leave
+      // up to `ceil(1e18 / rate) - 1` vTokens behind, together worth less than one base unit.
+      // `maxWithdraw` and `totalAssets` report zero for them, while `removeResource` gates on the raw
+      // receipt balance, so the resource stays registered. An 18-decimal market lists at 1e28 and
+      // never reaches this.
+      await deposit(trxAmt("100000"));
+
+      const liquid: BigNumber = await f.adapter.maxWithdraw(vTRX.address, trxSource.address);
       await withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 });
-      expect(await f.adapter.receiptBalance(vTRX.address, trxSource.address)).to.equal(0);
-      await expect(trxSource.connect(f.timelock).removeResource(vTRX.address)).to.not.be.reverted;
+
+      const rate: BigNumber = await vTRX.exchangeRateStored();
+      const perUnit = EXP_SCALE.add(rate).sub(1).div(rate);
+      const left: BigNumber = await f.adapter.receiptBalance(vTRX.address, trxSource.address);
+      expect(left).to.be.gt(0);
+      expect(left).to.be.lt(perUnit);
+      expect(await f.adapter.maxWithdraw(vTRX.address, trxSource.address)).to.equal(0);
+      expect(await f.adapter.totalAssets(vTRX.address, trxSource.address)).to.equal(0);
+      await expect(trxSource.connect(f.timelock).removeResource(vTRX.address))
+        .to.be.revertedWithCustomError(trxSource, "ResourceHasBalance")
+        .withArgs(vTRX.address, left);
     });
 
     it("reports capacity in the underlying's own units, not the vToken's", async () => {

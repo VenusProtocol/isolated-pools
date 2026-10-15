@@ -7,6 +7,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { InterestRateModels, getConfig, getTokenConfig } from "../helpers/deploymentConfig";
 import {
   getBlockOrTimestampBasedDeploymentInfo,
+  getProxyBeacon,
   readBackAddress,
   sameAddress,
   toAddress,
@@ -68,6 +69,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Both are the chain's live contracts, matching what the fork suite's listing model asserts of these markets. The
   // ProtocolShareReserve still resolves vTokens through a single pool registry, so `reduceReserves` on these markets
   // stays broken until that repo's multi-registry change is live, as `024-deploy-spoke-pool-registry.ts` notes.
+  // Shortfall has the same single-registry limit: `startAuction` reverts for this pool, so bad debt that `healAccount`
+  // records in these markets cannot be auctioned through it.
   const protocolShareReserve = (await ethers.getContract("ProtocolShareReserve")).address;
   const shortfall = preconfiguredAddresses.Shortfall ? await toAddress(preconfiguredAddresses.Shortfall) : AddressOne;
 
@@ -173,6 +176,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const vToken = await ethers.getContractAt("VToken", market.address);
     const checks: [string, string, string][] = [
       [
+        `${symbol} beacon`,
+        await readBackAddress(() => getProxyBeacon(market.address), spokeVTokenBeacon.address),
+        spokeVTokenBeacon.address,
+      ],
+      [
         `${symbol} comptroller`,
         await readBackAddress(() => vToken.comptroller(), comptroller.address),
         comptroller.address,
@@ -193,7 +201,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         throw new Error(`${label} is ${actual}, expected ${expected}`);
       }
     }
-    console.log(`Verified ${symbol} at ${market.address}: comptroller, underlying and rate model`);
+    console.log(`Verified ${symbol} at ${market.address}: beacon, comptroller, underlying and rate model`);
 
     await verifyDeployment(hre, `VToken_${symbol}`, market, args);
     console.log(`-----------------------------------------`);

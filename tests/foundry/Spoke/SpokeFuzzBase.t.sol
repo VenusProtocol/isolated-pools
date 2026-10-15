@@ -18,17 +18,12 @@ import { MockPriceOracle } from "../../../contracts/test/Mocks/MockPriceOracle.s
 
 /**
  * @notice Value a liquidator can lose to rounding, in the same 1e36 scale as `underlying amount * price`
- * @dev `liquidateCalculateSeizeTokens` truncates the incentive-weighted price ratio short by at most two units, and
- * each unit costs `repayAmount / 1e18` seized vTokens, plus one when the product is truncated. Converting the received
- * vTokens back to underlying truncates once more. The protocol's cut rounds down, which only helps the liquidator.
+ * @dev `liquidateCalculateSeizeTokens` rounds down once, so the seizure is short by less than one vToken. Converting
+ * the received vTokens back to underlying truncates once more. The protocol's cut rounds down, which only helps the
+ * liquidator.
  */
-function liquidationRoundingAllowance(
-    uint256 repayAmount,
-    uint256 exchangeRate,
-    uint256 collateralPrice
-) pure returns (uint256) {
-    uint256 lostVTokens = (2 * repayAmount) / 1e18 + 1;
-    return ((lostVTokens * exchangeRate) / 1e18 + 1) * collateralPrice;
+function liquidationRoundingAllowance(uint256 exchangeRate, uint256 collateralPrice) pure returns (uint256) {
+    return (exchangeRate / 1e18 + 1) * collateralPrice;
 }
 
 /// @notice Access control stand-in that allows every call, as the Hardhat spoke fixture does
@@ -90,6 +85,8 @@ abstract contract SpokeFuzzBase is Test {
     InterestRateModel internal rateModel;
     UpgradeableBeacon internal vTokenBeacon;
     VToken[MARKET_COUNT] internal markets;
+    /// @notice Deployed on the same beacon but never listed, so every pool action on it has to be rejected
+    VToken internal unlistedMarket;
 
     function setUp() public virtual {
         // Interest and the bounded oracle's cooldown both run on timestamps.
@@ -128,6 +125,8 @@ abstract contract SpokeFuzzBase is Test {
 
         comptroller.setSupplyAllowlistEnabled(address(markets[LIQUIDITY]), true);
         comptroller.setAllowedSupplier(address(markets[LIQUIDITY]), hub, true);
+
+        unlistedMarket = _deployMarket("UNL", 18, INITIAL_EXCHANGE_RATE);
     }
 
     function _listMarket(

@@ -32,9 +32,11 @@ contract SpokeHandler is CommonBase, StdUtils {
     bytes32 public constant LIQUIDATOR_PAYOUT = "liquidatorPayout";
     bytes32 public constant NO_SHORTFALL = "noShortfall";
     bytes32 public constant LENS_REWARDS = "lensRewards";
+    bytes32 public constant UNLISTED_MARKET = "unlistedMarket";
 
     SpokeComptroller internal comptroller;
     VToken[3] internal markets;
+    VToken internal unlistedMarket;
     MockPriceOracle internal oracle;
     RewardsDistributor internal distributor;
     SpokePoolLens internal lens;
@@ -55,10 +57,13 @@ contract SpokeHandler is CommonBase, StdUtils {
     uint256 public probesHealAccepted;
     uint256 public probesBothRejected;
     uint256 public claims;
+    uint256 public unlistedProbes;
+    uint256 public collateralFactorSets;
 
     constructor(
         SpokeComptroller comptroller_,
         VToken[3] memory markets_,
+        VToken unlistedMarket_,
         MockPriceOracle oracle_,
         RewardsDistributor distributor_,
         SpokePoolLens lens_,
@@ -67,6 +72,7 @@ contract SpokeHandler is CommonBase, StdUtils {
     ) {
         comptroller = comptroller_;
         markets = markets_;
+        unlistedMarket = unlistedMarket_;
         oracle = oracle_;
         distributor = distributor_;
         lens = lens_;
@@ -116,11 +122,13 @@ contract SpokeHandler is CommonBase, StdUtils {
     function exitMarket(uint256 accountSeed, uint256 marketSeed) external {
         address account = _account(accountSeed);
         VToken market = markets[marketSeed % 3];
-        // Only a member is liquidity-checked on exit, so only a member's result says anything about the check.
-        bool wasMember = comptroller.checkMembership(account, market);
+        // Only a member holding tokens is liquidity-checked on exit, so only that exit's result says anything about
+        // the check. Leaving a market the account holds nothing in cannot change its liquidity, even while it is
+        // over its limit.
+        bool checked = comptroller.checkMembership(account, market) && market.balanceOf(account) != 0;
         vm.prank(account);
         try comptroller.exitMarket(address(market)) {
-            if (wasMember) _checkNoShortfall(account, "exitMarket");
+            if (checked) _checkNoShortfall(account, "exitMarket");
         } catch {}
     }
 
@@ -257,7 +265,9 @@ contract SpokeHandler is CommonBase, StdUtils {
         address borrower = _smallUnderwaterAccount(borrowerSeed);
         if (borrower == address(0)) return;
         // Accrued here so the debt repaid below is the debt the comptroller sees after its own refresh.
-        for (uint256 i; i < 3; ++i) markets[i].accrueInterest();
+        for (uint256 i; i < 3; ++i) {
+            markets[i].accrueInterest();
+        }
         uint256 debt = markets[0].borrowBalanceStored(borrower);
         if (debt == 0 || liquidator == borrower) return;
 
@@ -377,7 +387,66 @@ contract SpokeHandler is CommonBase, StdUtils {
     function setMarketLiquidationIncentive(uint256 marketSeed, uint256 incentive) external {
         VToken market = markets[1 + (marketSeed % 2)];
         uint256 floor = 1e18 + market.protocolSeizeShareMantissa();
-        comptroller.setMarketLiquidationIncentive(address(market), bound(incentive, floor, 1.5e18));
+        // The largest incentive that keeps `liquidationThreshold * incentive` below 1, which the setter enforces
+        (, , uint256 liquidationThreshold) = comptroller.markets(address(market));
+        uint256 ceiling = (1e36 - 1) / liquidationThreshold;
+        comptroller.setMarketLiquidationIncentive(address(market), bound(incentive, floor, ceiling));
+    }
+
+    /// @notice Pushes supply, market entry, borrow and redeem at a market the pool does not list. Every one of them
+    /// has to be rejected, whatever the caller holds
+    /// @dev Only the market-entry leg isolates the listing check: an unlisted market also has no supply or borrow cap
+    /// set, which stops a mint or a borrow first
+    function useUnlistedMarket(uint256 accountSeed, uint256 amount, uint256 actionSeed) external {
+        address account = _account(accountSeed);
+        amount = bound(amount, 1e6, 1_000_000e18);
+        address[] memory one = new address[](1);
+        one[0] = address(unlistedMarket);
+        _fund(account, unlistedMarket, amount);
+
+        bool accepted;
+        vm.startPrank(account);
+        uint256 action = actionSeed % 4;
+        if (action == 0) {
+            try unlistedMarket.mint(amount) {
+                accepted = true;
+            } catch {}
+        } else if (action == 1) {
+            try comptroller.enterMarkets(one) {
+                accepted = true;
+            } catch {}
+        } else if (action == 2) {
+            try unlistedMarket.borrow(amount) {
+                accepted = true;
+            } catch {}
+        } else {
+            try unlistedMarket.redeemUnderlying(amount) {
+                accepted = true;
+            } catch {}
+        }
+        vm.stopPrank();
+
+        ++unlistedProbes;
+        if (accepted) _flag(UNLISTED_MARKET, "an action succeeded on a market the pool does not list");
+    }
+
+    /// @notice Calls `setCollateralFactor` with values the setter is meant to refuse as well as ones it accepts, so
+    /// `invariant_collateralFactorBoundsHold` sees what actually reached storage. Every other action bounds its
+    /// inputs to the valid range, which leaves the bounds themselves untested
+    /// @dev The candidates sit on the bounds rather than being drawn from a range, so a short run still offers the
+    /// setter a threshold under the factor, a factor over 0.95 and a threshold over 1
+    function setCollateralFactorUnbounded(uint256 marketSeed, uint256 factorSeed, uint256 thresholdSeed) external {
+        uint256[7] memory candidates = [uint256(0), 0.5e18, 0.7e18, 0.9e18, 0.95e18, 0.96e18, 1.01e18];
+        VToken market = markets[1 + (marketSeed % 2)];
+        try
+            comptroller.setCollateralFactor(
+                market,
+                candidates[factorSeed % candidates.length],
+                candidates[thresholdSeed % candidates.length]
+            )
+        {
+            ++collateralFactorSets;
+        } catch {}
     }
 
     // ----- rules checked after a call succeeds -----
@@ -399,7 +468,7 @@ contract SpokeHandler is CommonBase, StdUtils {
         uint256 collateralPrice = oracle.getUnderlyingPrice(address(collateral));
         uint256 exchangeRate = collateral.exchangeRateStored();
         uint256 receivedValue = ((tokensReceived * exchangeRate) / 1e18) * collateralPrice;
-        uint256 allowance = liquidationRoundingAllowance(repaid, exchangeRate, collateralPrice);
+        uint256 allowance = liquidationRoundingAllowance(exchangeRate, collateralPrice);
         if (receivedValue + allowance < repaid * oracle.getUnderlyingPrice(address(markets[0]))) {
             _flag(LIQUIDATOR_PAYOUT, "a liquidator received less collateral value than the debt it repaid");
         }
@@ -537,6 +606,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         handler = new SpokeHandler(
             comptroller,
             [markets[0], markets[1], markets[2]],
+            unlistedMarket,
             oracle,
             distributor,
             lens,
@@ -545,7 +615,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         );
         targetContract(address(handler));
 
-        bytes4[] memory actions = new bytes4[](20);
+        bytes4[] memory actions = new bytes4[](22);
         actions[0] = SpokeHandler.supply.selector;
         actions[1] = SpokeHandler.enterMarket.selector;
         actions[2] = SpokeHandler.exitMarket.selector;
@@ -566,6 +636,8 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         actions[17] = SpokeHandler.setSupplyAllowlist.selector;
         actions[18] = SpokeHandler.setAllowedSupplier.selector;
         actions[19] = SpokeHandler.setMarketLiquidationIncentive.selector;
+        actions[20] = SpokeHandler.useUnlistedMarket.selector;
+        actions[21] = SpokeHandler.setCollateralFactorUnbounded.selector;
         // Without this the fuzzer also spends calls on the handler's getters.
         targetSelector(FuzzSelector({ addr: address(handler), selectors: actions }));
     }
@@ -643,6 +715,13 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         assertEq(handler.violations(handler.LENS_REWARDS()), "");
     }
 
+    /// @notice No supply, market entry, borrow or redeem succeeds on a market the pool does not list
+    function invariant_unlistedMarketIsNeverUsable() public view {
+        assertEq(handler.violations(handler.UNLISTED_MARKET()), "");
+        (bool isListed, , ) = comptroller.markets(address(unlistedMarket));
+        assertFalse(isListed, "the unlisted probe market became listed");
+    }
+
     // ----- rules checked against state -----
 
     /// @notice Borrowing power under bounded prices is never above the same position at spot
@@ -656,11 +735,43 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         }
     }
 
+    /// @notice Every market keeps a collateral factor at or under 0.95, the value of `MAX_COLLATERAL_FACTOR_MANTISSA`,
+    /// and a liquidation threshold between that factor and 1
+    /// @dev What this harness actually exercises is the threshold against the factor. `setCollateralFactor` also
+    /// refuses a threshold whose product with the incentive reaches 1, and at the pool incentive of 1.1 that caps the
+    /// threshold, and with it the factor, at 0.909. So the 0.95 cap and the threshold's own 1 are never the binding
+    /// check here; they are covered by `tests/hardhat/Spoke/errorsAndEvents.ts`
+    function invariant_collateralFactorBoundsHold() public view {
+        for (uint256 m; m < MARKET_COUNT; ++m) {
+            (, uint256 collateralFactor, uint256 liquidationThreshold) = comptroller.markets(address(markets[m]));
+            assertLe(collateralFactor, 0.95e18, "collateral factor above the maximum");
+            assertGe(liquidationThreshold, collateralFactor, "liquidation threshold below the collateral factor");
+            assertLe(liquidationThreshold, 1e18, "liquidation threshold above 1");
+        }
+    }
+
+    /// @notice A market with no incentive of its own is seized at the pool-wide incentive, and one with its own
+    /// incentive at that value
+    /// @dev The expected pool-wide value is the constant, not `liquidationIncentiveMantissa()`: that getter reads the
+    /// caller's own market incentive and falls back the same way, so comparing the two would assert nothing
+    function invariant_zeroMarketIncentiveFallsBackToPool() public view {
+        for (uint256 m; m < MARKET_COUNT; ++m) {
+            uint256 own = comptroller.liquidationIncentives(address(markets[m]));
+            assertEq(
+                comptroller.effectiveLiquidationIncentive(address(markets[m])),
+                own == 0 ? POOL_LIQUIDATION_INCENTIVE : own,
+                "market incentive did not resolve to the pool-wide value"
+            );
+        }
+    }
+
     /// @notice Each market's vToken supply equals the sum of its holders' balances
     function invariant_vTokenSupplyEqualsHolderBalances() public view {
         for (uint256 m; m < MARKET_COUNT; ++m) {
             uint256 held;
-            for (uint256 i; i < accounts.length; ++i) held += markets[m].balanceOf(accounts[i]);
+            for (uint256 i; i < accounts.length; ++i) {
+                held += markets[m].balanceOf(accounts[i]);
+            }
             assertEq(held, markets[m].totalSupply(), "vToken supply does not match holder balances");
         }
     }
@@ -683,8 +794,9 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         assertLe(distributed, emitted, "rewards distributed beyond emission");
     }
 
-    /// @notice Every field `SpokePoolLens` reports for the pool and its markets equals the direct read
-    function invariant_lensMatchesPool() public view {
+    /// @notice Every field `SpokePoolLens` reports for the pool and its markets equals the direct read. The
+    /// exchange rate, borrows and reserves, which the lens accrues without writing, equal what accruing books
+    function invariant_lensMatchesPool() public {
         VToken[] memory all = comptroller.getAllMarkets();
         SpokePoolLens.SpokePoolData memory pool = lens.getSpokePoolData(
             poolRegistry,
@@ -710,11 +822,8 @@ contract SpokeInvariantTest is SpokeFuzzBase {
             assertEq(meta.liquidationThresholdMantissa, liquidationThreshold);
             assertEq(meta.supplyCaps, comptroller.supplyCaps(address(market)));
             assertEq(meta.borrowCaps, comptroller.borrowCaps(address(market)));
-            assertEq(meta.totalBorrows, market.totalBorrows());
-            assertEq(meta.totalReserves, market.totalReserves());
             assertEq(meta.totalSupply, market.totalSupply());
             assertEq(meta.totalCash, market.getCash());
-            assertEq(meta.exchangeRateCurrent, market.exchangeRateStored());
             assertEq(meta.underlyingAssetAddress, market.underlying());
             assertEq(
                 meta.effectiveLiquidationIncentiveMantissa,
@@ -723,6 +832,18 @@ contract SpokeInvariantTest is SpokeFuzzBase {
             assertEq(meta.ownLiquidationIncentiveMantissa, comptroller.liquidationIncentives(address(market)));
             assertEq(meta.supplyAllowlistEnabled, comptroller.isSupplyAllowlistEnabled(address(market)));
             assertEq(meta.forcedLiquidationEnabled, comptroller.isForcedLiquidationEnabled(address(market)));
+
+            // Last, since accruing can move cash out of the market. That move also lowers the market's reserves
+            // below the lens figure, which leaves it out, so reserves are pinned through the exchange rate.
+            assertEq(meta.exchangeRateCurrent, market.exchangeRateCurrent());
+            assertEq(meta.totalBorrows, market.totalBorrows());
+            if (meta.totalSupply != 0) {
+                assertEq(
+                    meta.exchangeRateCurrent,
+                    ((meta.totalCash + meta.totalBorrows + market.badDebt() - meta.totalReserves) * 1e18) /
+                        meta.totalSupply
+                );
+            }
         }
     }
 
@@ -755,6 +876,8 @@ contract SpokeInvariantTest is SpokeFuzzBase {
         console.log("mints", handler.mints(), "borrows", handler.borrows());
         console.log("redeems", handler.redeems(), "liquidateBorrow", handler.liquidations());
         console.log("liquidateAccount", handler.liquidateAccounts(), "healAccount", handler.heals());
+        console.log("unlisted-market probes", handler.unlistedProbes());
+        console.log("collateral factor sets accepted", handler.collateralFactorSets());
         console.log("probe: liquidateAccount accepted", handler.probesLiquidateAccountAccepted());
         console.log("probe: healAccount accepted", handler.probesHealAccepted());
         console.log("probe: both rejected", handler.probesBothRejected(), "claims", handler.claims());

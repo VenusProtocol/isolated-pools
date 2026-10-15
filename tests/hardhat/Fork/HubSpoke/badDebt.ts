@@ -51,80 +51,61 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       expect(badDebt).to.be.gt(0);
       // `_exchangeRateStored` keeps `badDebt` in its numerator, so the write-off moves value out of
       // `totalBorrows` and into `badDebt` and the rate does not budge. No supplier is marked down by
-      // the market, which is exactly why the adapter cannot value the position at this rate.
+      // the market, and the adapter values the position at this same rate.
       expect(await f.vUSDT.exchangeRateStored()).to.equal(rateBefore);
       expect(hubBefore).to.be.gt(0);
     });
 
-    it("marks the Hub down immediately, by its pro-rata share of the loss", async () => {
+    it("leaves the Hub's mark where it was", async () => {
       const { hubBefore } = await fundAndDefault(f);
-      const share = (await f.vUSDT.balanceOf(f.spokeSource.address)).mul(EXP_SCALE).div(await f.vUSDT.totalSupply());
 
       await healAs(f, f.liquidator);
-      const badDebt = await f.vUSDT.badDebt();
-      const hubAfter: BigNumber = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);
+      expect(await f.vUSDT.badDebt()).to.be.gt(0);
 
-      // The drop is the position's pro-rata share of the loss, to within the rounding of one
-      // division - not the whole loss, because the Hub is not the market's only supplier here.
-      const expectedDrop = badDebt.mul(share).div(EXP_SCALE);
-      // Two truncating divisions stand between this and the adapter's own single-step rounding, so
-      // the comparison is exact to the wei only up to that. The tolerance is ~1e-18 of the value.
-      expect(hubBefore.sub(hubAfter)).to.be.closeTo(expectedDrop, 1_000);
-      expect(hubAfter).to.be.lt(hubBefore);
+      // Neither the balance nor the rate moved, so neither did the mark. The written-off amount is
+      // repaid from the risk fund rather than marked down on the Hub.
+      expect(await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address)).to.equal(hubBefore);
     });
 
-    it("lands the loss on every Hub depositor at once, not on whoever exits last", async () => {
-      await fundAndDefault(f);
-
-      // Two more depositors, both in before the loss and holding equal stakes.
-      const each = usd("20000");
-      for (const who of [f.borrower, f.outsider]) {
-        await fundFrom(f.usdt, bscmainnet.USDT_HOLDER, who.address, each);
-        await f.usdt.connect(who).approve(f.hub.address, each);
-        await f.hub.connect(who).deposit(each, who.address);
-      }
-      const ppsBefore: BigNumber = await f.hub.convertToAssets(EXP_SCALE);
-
+    it("pays the first Hub depositor out in full while the debt is outstanding", async () => {
+      const deposited = usd("100000");
+      await fundAndDefault(f, deposited);
       await healAs(f, f.liquidator);
+      expect(await f.vUSDT.badDebt()).to.be.gt(0);
 
-      // One price per share moves for everyone in the same block. Nobody exits at the pre-loss
-      // price at the expense of whoever is left.
-      const ppsAfter: BigNumber = await f.hub.convertToAssets(EXP_SCALE);
-      expect(ppsAfter).to.be.lt(ppsBefore);
+      // The share price did not fall with the write-off, and the market still holds the cash to pay
+      // this exit at the full rate.
+      const shares = await f.hub.balanceOf(f.supplier.address);
+      const before = await f.usdt.balanceOf(f.supplier.address);
+      await f.hub.connect(f.supplier).redeem(shares, f.supplier.address, f.supplier.address);
 
-      const a: BigNumber = await f.hub.convertToAssets(await f.hub.balanceOf(f.borrower.address));
-      const b: BigNumber = await f.hub.convertToAssets(await f.hub.balanceOf(f.outsider.address));
-      // Not wei-identical: the two deposits landed in different blocks and the Hub's share price
-      // moves every block, so they bought marginally different share counts. What matters is that
-      // the loss did not fall on one of them - a nine-decimal relative agreement is far tighter than
-      // any exit-order effect would be.
-      expect(a.sub(b).abs()).to.be.lt(a.div(1_000_000_000));
-      expect(a).to.be.lt(each);
+      expect((await f.usdt.balanceOf(f.supplier.address)).sub(before)).to.be.gte(deposited);
     });
 
-    it("never values the position above what the market can actually pay", async () => {
+    it("values the position at the market's own rate, written-off debt included", async () => {
       await fundAndDefault(f);
       await healAs(f, f.liquidator);
 
       const value = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);
-      const naive = (await f.vUSDT.balanceOf(f.spokeSource.address))
+      const atMarketRate = (await f.vUSDT.balanceOf(f.spokeSource.address))
         .mul(await f.vUSDT.exchangeRateStored())
         .div(EXP_SCALE);
-      // The market's own rate would report `naive`, which includes debt nobody will ever repay.
-      expect(value).to.be.lt(naive);
+      // The rate the market mints and redeems at, so the mark is what the tokens are worth to the
+      // market itself.
+      expect(value).to.equal(atMarketRate);
 
-      // And a redeem still burns at the market's un-haircut rate, so an exit costs fewer tokens than
-      // this mark implies. The mark can understate what the position delivers, never overstate it.
+      // The written-off part of that value is not cash, so what can be withdrawn is bounded by the
+      // cash the market can pay, never by the mark alone.
       const liquid = await f.adapter.maxWithdraw(f.vUSDT.address, f.spokeSource.address);
       expect(liquid).to.be.lte(value);
       expect(liquid).to.be.lte((await f.vUSDT.getCash()).sub(await f.vUSDT.totalReserves()));
     });
 
-    it("recovers the mark when a Shortfall auction repays the debt", async () => {
+    it("restores cash, not the mark, when a Shortfall auction repays the debt", async () => {
       const { hubBefore } = await fundAndDefault(f);
       await healAs(f, f.liquidator);
       const badDebt = await f.vUSDT.badDebt();
-      const marked = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);
+      const cashBefore = await f.vUSDT.getCash();
 
       // What an auction settlement does on chain: the Shortfall contract delivers the underlying to
       // the market and calls back to lower `badDebt` and raise cash by the same amount.
@@ -134,9 +115,9 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       await f.vUSDT.connect(shortfall).badDebtRecovered(badDebt);
 
       expect(await f.vUSDT.badDebt()).to.equal(0);
-      const recovered = await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address);
-      expect(recovered).to.be.gt(marked);
-      expect(recovered).to.be.closeTo(hubBefore, 2);
+      expect(await f.vUSDT.getCash()).to.equal(cashBefore.add(badDebt));
+      // The rate's numerator is unchanged by the swap, so the mark is too.
+      expect(await f.adapter.totalAssets(f.vUSDT.address, f.spokeSource.address)).to.equal(hubBefore);
     });
 
     it("routes an under-threshold account to healAccount and refuses the other two paths", async () => {

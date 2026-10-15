@@ -23,7 +23,7 @@ import { bscmainnet } from "./constants";
 /// assertions lean on are the same on every run.
 export const BLOCK_NUMBER = 116_847_000;
 
-const MAX_LOOPS_LIMIT = 100;
+const MAX_LOOPS_LIMIT = 50;
 
 /// Longer than any run. See `relaxPriceStaleness`.
 const STALE_PERIOD = 10 * 365 * 24 * 60 * 60;
@@ -48,11 +48,14 @@ export const SPOKE_ROLES = {
   setMinLiquidatableCollateral: "setMinLiquidatableCollateral(uint256)",
   setMarketSupplyCaps: "setMarketSupplyCaps(address[],uint256[])",
   setMarketBorrowCaps: "setMarketBorrowCaps(address[],uint256[])",
-  setActionsPaused: "setActionsPaused(address[],uint8[],bool)",
+  // `uint256[]`, not the ABI's `uint8[]`: the contract checks this string, and the `uint8[]` form is
+  // a different role that nothing checks.
+  setActionsPaused: "setActionsPaused(address[],uint256[],bool)",
   setForcedLiquidation: "setForcedLiquidation(address,bool)",
   unlistMarket: "unlistMarket(address)",
-  // The five the fork of the shared Comptroller adds. None of these role strings exists on any
-  // other Venus contract, so no pre-existing grant covers them.
+  // Five of the six the fork of the shared Comptroller adds. None of these role strings exists on any
+  // other Venus contract, so no pre-existing grant covers them. The sixth, `enterMarketForAccount`, is
+  // left out because the listing grants it to nobody.
   setMarketLiquidationIncentive: "setMarketLiquidationIncentive(address,uint256)",
   setSupplyAllowlistEnabled: "setSupplyAllowlistEnabled(address,bool)",
   setAllowedSupplier: "setAllowedSupplier(address,address,bool)",
@@ -147,6 +150,7 @@ export const YIELD_GROUP_ABI = [
   "function lowerResourceCap(address resource, uint256 newCap)",
   "function pauseResource(address resource)",
   "function resourceCap(address resource) view returns (uint256)",
+  "error ResourceHasBalance(address resource, uint256 balance)",
 ];
 
 /// The slice of `ProtocolShareReserve` this suite touches. It holds one pool registry, which is what
@@ -238,7 +242,7 @@ async function deployIrm(acm: string, deployer: SignerWithAddress): Promise<Jump
   )) as JumpRateModelV2;
 }
 
-async function deployVToken(
+export async function deployVToken(
   deployer: SignerWithAddress,
   beacon: string,
   underlying: string,
@@ -258,7 +262,7 @@ async function deployVToken(
     irm,
     // 10 ** (18 + underlyingDecimals - vTokenDecimals), the rate every live isolated market is
     // listed at. For an 18-decimal underlying that is 1e28; for a 6-decimal one it is 1e16, i.e.
-    // BELOW `EXP_SCALE`, which is the regime `AdapterSpokeV1._bumpToSettleable` exists for.
+    // BELOW `EXP_SCALE`, where one vToken is worth less than one base unit of the underlying.
     initialExchangeRateMantissa ?? ethers.utils.parseUnits("1", 18 + underlyingDecimals - decimals),
     name,
     symbol,
@@ -615,9 +619,10 @@ export async function registerOnHub(f: SpokeForkFixture, absoluteCap: BigNumber,
 /**
  * List a market whose underlying has FEWER decimals than the vToken, so the market's exchange rate
  * starts below `EXP_SCALE`. TRX is the only asset in the live DeviationBoundedOracle's initialized
- * set that qualifies on this chain, and the regime matters: below `1e18` a redeem request can burn
- * plenty of vTokens and still truncate its payout to zero, which is the case
- * `AdapterSpokeV1._bumpToSettleable` exists for and which no 18-decimal market can reach.
+ * set that qualifies on this chain, and the regime matters: below `1e18` a `redeemUnderlying`
+ * request can burn plenty of vTokens and still truncate its payout to zero, which no 18-decimal
+ * market can reach. `AdapterSpokeV1` redeems by vToken count, and this market is where that is
+ * exercised.
  *
  * Returns the market, a spoke source whose asset is that underlying, and the Hub that owns it. A
  * YieldGroup rejects a Hub whose asset differs from its own, and this chain has no TRX Hub, so one
@@ -644,7 +649,7 @@ export async function addLowDecimalMarket(
     // exactly, so every redeem request lands on a whole number of units and the payout never
     // truncates. That is true of a market on its first block and of no market after it, because the
     // first wei of interest takes the rate off the divisor. Listing at 3.7e16 puts the market where
-    // it spends its whole life, which is where `_bumpToSettleable` and `_redeemPayout` matter.
+    // it spends its whole life, which is where the rounding in `AdapterSpokeV1._burnFor` matters.
     BigNumber.from("37000000000000000"),
   );
 

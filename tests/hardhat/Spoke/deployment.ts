@@ -1,6 +1,7 @@
 import { expect } from "chai";
-import { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
+import hre, { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
 
+import deploySpokeComptroller from "../../../deploy/025-deploy-spoke-comptroller";
 import { getBlockOrTimestampBasedDeploymentInfo } from "../../../helpers/deploymentUtils";
 import { getRateModelName, getRateModelParams } from "../../../helpers/rateModelHelpers";
 import { getSpokePoolConfig } from "../../../helpers/spokeDeploymentConfig";
@@ -9,7 +10,7 @@ const EIP_170_LIMIT = 24576;
 const BEACON_ABI = ["function implementation() view returns (address)", "function owner() view returns (address)"];
 
 // `bytes32(uint256(keccak256("eip1967.proxy.beacon")) - 1)`, where a `BeaconProxy` keeps the beacon it delegates to.
-// There is no getter for it, and it is the only place the market records which beacon it will follow through upgrades.
+// There is no getter for it, and it is the only place the proxy records which beacon it will follow through upgrades.
 const EIP_1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
 
 // The markets the deploy scripts build on this network. `009-deploy-vtokens.ts` never sees these, which is why they
@@ -42,6 +43,9 @@ describe("SpokeComptroller: deployment", function () {
     const spokeImpl = (await deployments.get("SpokeComptrollerImpl")).address;
     const sharedImpl = (await deployments.get("ComptrollerImpl")).address;
 
+    const proxy = (await deployments.get("Comptroller_HubSpoke")).address;
+    const slot = await ethers.provider.getStorageAt(proxy, EIP_1967_BEACON_SLOT);
+    expect(ethers.utils.getAddress(ethers.utils.hexDataSlice(slot, 12))).to.equal(spokeBeacon.address);
     expect(await spokeBeacon.implementation()).to.equal(spokeImpl);
     // The shared beacon every other pool in this repo upgrades through must be untouched.
     expect(await sharedBeacon.implementation()).to.equal(sharedImpl);
@@ -129,7 +133,7 @@ describe("SpokeComptroller: deployment", function () {
 
     expect(await comptroller.poolRegistry()).to.equal((await deployments.get("SpokePoolRegistry")).address);
     expect(await comptroller.accessControlManager()).to.equal((await deployments.get("AccessControlManager")).address);
-    expect(await comptroller.maxLoopsLimit()).to.equal(100);
+    expect(await comptroller.maxLoopsLimit()).to.equal(50);
     expect(await comptroller.owner()).to.equal(deployer);
 
     // Spoke-only surface, which proves the proxy runs the fork rather than the shared implementation.
@@ -163,6 +167,30 @@ describe("SpokeComptroller: deployment", function () {
     const [, liquidity, shortfall] = await comptroller.getBorrowingPower(deployer);
     expect(liquidity).to.equal(0);
     expect(shortfall).to.equal(0);
+  });
+
+  it("refuses to hand over a comptroller proxy that follows another beacon", async () => {
+    // `skipIfAlreadyDeployed` hands back a recorded proxy without comparing its constructor arguments. This one follows
+    // a second beacon over the same implementation and is initialized the same way, so reading the beacon off the
+    // chain is the only check in 025 that can tell it apart.
+    const recorded = await deployments.get("Comptroller_HubSpoke");
+    const otherBeacon = await (
+      await ethers.getContractFactory("UpgradeableBeacon")
+    ).deploy((await deployments.get("SpokeComptrollerImpl")).address);
+    const initData = (await ethers.getContractFactory("SpokeComptroller")).interface.encodeFunctionData("initialize", [
+      100,
+      (await deployments.get("AccessControlManager")).address,
+    ]);
+    const proxy = await (await ethers.getContractFactory("BeaconProxy")).deploy(otherBeacon.address, initData);
+
+    await deployments.save("Comptroller_HubSpoke", { abi: recorded.abi, address: proxy.address });
+    try {
+      await expect(deploySpokeComptroller(hre)).to.be.rejectedWith(
+        "Refusing to transfer ownership: comptroller beacon",
+      );
+    } finally {
+      await deployments.save("Comptroller_HubSpoke", recorded);
+    }
   });
 
   describe("contract size", () => {

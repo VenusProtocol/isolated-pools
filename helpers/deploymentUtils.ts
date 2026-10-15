@@ -209,3 +209,13 @@ export const readBackUntil = async <T>(
 // `readBackUntil` for the common case, an address the caller already knows the expected value of.
 export const readBackAddress = (read: () => Promise<string>, expected: string): Promise<string> =>
   readBackUntil(read, value => sameAddress(value, expected));
+
+// `bytes32(uint256(keccak256("eip1967.proxy.beacon")) - 1)`. A `BeaconProxy` keeps the beacon it follows there and has
+// no getter for it.
+const EIP_1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
+
+// The beacon a `BeaconProxy` actually follows, read from the chain rather than taken from its deployment record.
+export const getProxyBeacon = async (proxy: string): Promise<string> =>
+  ethers.utils.getAddress(
+    ethers.utils.hexDataSlice(await ethers.provider.getStorageAt(proxy, EIP_1967_BEACON_SLOT), 12),
+  );

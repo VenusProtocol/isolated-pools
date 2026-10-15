@@ -271,6 +271,21 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
         parseUnits("155", 18),
       );
     });
+
+    it("rounds each repayment up, so the rounding never adds to the bad debt", async () => {
+      // At a debt price of 3 the 250 owed is worth 750, so 250 * 200/750 = 66.666... is repaid. Upstream rounds the
+      // share down to 18 decimals and then the repayment down again, which comes out 167 wei lower.
+      fixture.setSpotPrice(debtMarket, parseUnits("3", 18));
+      await givePositionWithDebt(parseUnits("250", 18));
+
+      await comptroller.connect(liquidator).healAccount(borrower.address);
+
+      expect(debtMarket.vToken.healBorrow).to.have.been.calledOnceWith(
+        liquidator.address,
+        borrower.address,
+        BigNumber.from("66666666666666666667"),
+      );
+    });
   });
 
   describe("liquidateCalculateSeizeTokens", () => {
@@ -290,6 +305,20 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
 
       expect(seizeFromA).to.equal(parseUnits("110", 18)); // market A's own 1.1
       expect(seizeFromB).to.equal(parseUnits("120", 18)); // pool-wide 1.2, market B has no value of its own
+    });
+
+    it("rounds once, after multiplying every factor", async () => {
+      // At a collateral price of 3, 100 repaid at A's 1.1 seizes 110 / 3 = 36.666... Upstream rounds 1.1 / 3 to 18
+      // decimals before scaling it by the repayment, which comes out 66 wei lower.
+      fixture.setSpotPrice(collateralA, parseUnits("3", 18));
+
+      const [, seizeTokens] = await comptroller.liquidateCalculateSeizeTokens(
+        debtMarket.vToken.address,
+        collateralA.vToken.address,
+        parseUnits("100", 18),
+      );
+
+      expect(seizeTokens).to.equal(BigNumber.from("36666666666666666666"));
     });
   });
 
@@ -449,6 +478,61 @@ describe("SpokeComptroller: per-market liquidation incentive", () => {
       await expect(comptroller.connect(liquidator).liquidateAccount(borrower.address, []))
         .to.be.revertedWithCustomError(comptroller, "DebtExceedsClearableAmount")
         .withArgs(parseUnits("250", 18), expected);
+    });
+  });
+
+  /// From `liquidationThreshold * incentive = 1` up, a liquidation no longer reduces the account's shortfall, so the
+  /// per-market setters keep the product below 1. 0.8 * 1.25 is exactly 1, which puts the boundary itself in reach.
+  describe("liquidation threshold times incentive", () => {
+    const BOUNDARY_INCENTIVE = parseUnits("1.25", 18);
+
+    it("setCollateralFactor rejects a threshold that brings it to 1 at the market's own incentive", async () => {
+      await comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE);
+
+      await expect(
+        comptroller.setCollateralFactor(collateralA.vToken.address, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD),
+      )
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(LIQUIDATION_THRESHOLD, BOUNDARY_INCENTIVE);
+
+      await setRiskWeights(comptroller, collateralA, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD.sub(1));
+      expect((await comptroller.markets(collateralA.vToken.address)).liquidationThresholdMantissa).to.equal(
+        LIQUIDATION_THRESHOLD.sub(1),
+      );
+    });
+
+    it("setCollateralFactor checks a market with no incentive of its own against the pool-wide one", async () => {
+      // B falls back to the pool-wide 1.2, so the smallest threshold that reaches 1 is 1e36 / 1.2e18 rounded up.
+      const threshold = ONE.mul(ONE).add(POOL_WIDE_INCENTIVE).sub(1).div(POOL_WIDE_INCENTIVE);
+
+      await expect(comptroller.setCollateralFactor(collateralB.vToken.address, COLLATERAL_FACTOR, threshold))
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(threshold, POOL_WIDE_INCENTIVE);
+
+      await setRiskWeights(comptroller, collateralB, COLLATERAL_FACTOR, threshold.sub(1));
+      expect((await comptroller.markets(collateralB.vToken.address)).liquidationThresholdMantissa).to.equal(
+        threshold.sub(1),
+      );
+    });
+
+    it("setMarketLiquidationIncentive rejects an incentive that brings it to 1 at the market's threshold", async () => {
+      await setRiskWeights(comptroller, collateralA, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD);
+
+      await expect(comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE))
+        .to.be.revertedWithCustomError(comptroller, "UnsafeLiquidationParams")
+        .withArgs(LIQUIDATION_THRESHOLD, BOUNDARY_INCENTIVE);
+
+      await comptroller.setMarketLiquidationIncentive(collateralA.vToken.address, BOUNDARY_INCENTIVE.sub(1));
+      expect(await comptroller.liquidationIncentives(collateralA.vToken.address)).to.equal(BOUNDARY_INCENTIVE.sub(1));
+    });
+
+    it("is not checked by setLiquidationIncentive for the markets that fall back to it", async () => {
+      // Checking would need a loop over every market, which does not fit under the contract size limit. Collateral
+      // markets get an incentive of their own instead, and the per-market setter does check that.
+      await setRiskWeights(comptroller, collateralB, COLLATERAL_FACTOR, LIQUIDATION_THRESHOLD);
+
+      await comptroller.setLiquidationIncentive(BOUNDARY_INCENTIVE);
+      expect(await comptroller.effectiveLiquidationIncentive(collateralB.vToken.address)).to.equal(BOUNDARY_INCENTIVE);
     });
   });
 });

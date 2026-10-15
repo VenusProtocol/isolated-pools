@@ -1,11 +1,11 @@
-import { MockContract, smock } from "@defi-wonderland/smock";
+import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
-import { SpokeComptroller, VToken } from "../../../typechain";
+import { IDeviationBoundedOracle, SpokeComptroller, VToken } from "../../../typechain";
 import {
   Action,
   ONE,
@@ -211,6 +211,46 @@ describe("SpokeComptroller: market membership", () => {
       await expect(comptroller.connect(account).exitMarket(marketA.vToken.address))
         .to.be.revertedWithCustomError(comptroller, "SnapshotError")
         .withArgs(marketA.vToken.address, account.address);
+    });
+
+    describe("while a market the account holds nothing in has a broken price feed", () => {
+      let boundedOracle: FakeContract<IDeviationBoundedOracle>;
+
+      beforeEach(async () => {
+        boundedOracle = fixture.boundedOracle as FakeContract<IDeviationBoundedOracle>;
+        // A collateral-factor check prices every market the account is in, and a zero bounded price fails it with
+        // `PriceError`. The account holds collateral in A and B, and nothing in C.
+        await givePosition(comptroller, account, [
+          { market: marketA, collateral: COLLATERAL },
+          { market: marketB, collateral: COLLATERAL },
+          { market: marketC },
+        ]);
+        boundedOracle.getBoundedPricesView.whenCalledWith(marketC.vToken.address).returns([0, 0]);
+      });
+
+      afterEach(() => {
+        // Fake behaviour outlives `loadFixture`, so the broken feed would otherwise carry into later tests.
+        boundedOracle.getBoundedPricesView.reset();
+        boundedOracle.getBoundedPricesView.returns([ONE, ONE]);
+      });
+
+      it("lets the account leave that market, which unblocks its other markets", async () => {
+        await expect(comptroller.preRedeemHook(marketA.vToken.address, account.address, ONE))
+          .to.be.revertedWithCustomError(comptroller, "PriceError")
+          .withArgs(marketC.vToken.address);
+
+        await expect(comptroller.connect(account).exitMarket(marketC.vToken.address))
+          .to.emit(comptroller, "MarketExited")
+          .withArgs(marketC.vToken.address, account.address);
+
+        await expect(comptroller.preRedeemHook(marketA.vToken.address, account.address, ONE)).to.not.be.reverted;
+      });
+
+      it("still prices every market when the account leaves one it holds tokens in", async () => {
+        await expect(comptroller.connect(account).exitMarket(marketB.vToken.address))
+          .to.be.revertedWithCustomError(comptroller, "PriceError")
+          .withArgs(marketC.vToken.address);
+      });
     });
   });
 

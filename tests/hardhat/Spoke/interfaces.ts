@@ -10,10 +10,11 @@ import { artifacts, ethers } from "hardhat";
  * These tests are the joint. Two different shapes, because the two views are in different states:
  *
  * - `ISpokeComptroller` is now bound to this repo's own `SpokeComptrollerViewInterface`, so there is
- *   no second copy of those declarations here to drift. What still has to hold is that the
- *   first-party interface matches the implementation, and that it keeps offering the exact members
- *   the hub's adapter compiles against - listed below as data, because the hub's own copy of them
- *   lives in a repo this suite cannot import.
+ *   no second copy of those declarations here to drift. It declares one getter of its own,
+ *   `isMarketListed`, which the view interface does not carry. What still has to hold is that both
+ *   match the implementation, and that they keep offering the exact members the hub's adapter
+ *   compiles against - listed below as data, because the hub's own copy of them lives in a repo
+ *   this suite cannot import.
  * - `IVTokenIsolated` is still a vendored copy, because binding it to `VTokenInterface` would change
  *   the adapter's call sites (`comptroller()` returns `ComptrollerInterface` here and `address`
  *   there). It is checked member for member against the real `VToken`.
@@ -27,13 +28,15 @@ import { artifacts, ethers } from "hardhat";
 
 /**
  * The exact members `AdapterSpokeV1` calls on a spoke pool, with the return types it decodes. This
- * list is the contract between the two repos; the hub declares the same four in its own
- * `ISpokeComptroller`. Removing one from `SpokeComptrollerViewInterface`, renaming it, or widening
- * what it returns breaks the hub's build, and this fails first.
+ * list is the contract between the two repos; the hub declares the same five in its own
+ * `ISpokeComptroller`. Removing one from `ISpokeComptroller` or the interface it extends, renaming
+ * it, or widening what it returns leaves the hub's adapter calling something the pool no longer
+ * answers, and this fails first.
  */
 const HUB_REQUIRES = [
   { sig: "supplyCaps(address)", returns: "uint256" },
   { sig: "actionPaused(address,uint8)", returns: "bool" },
+  { sig: "isMarketListed(address)", returns: "bool" },
   { sig: "isSupplyAllowlistEnabled(address)", returns: "bool" },
   { sig: "isAllowedSupplier(address,address)", returns: "bool" },
 ];
@@ -67,23 +70,28 @@ describe("HubSpoke: the hub-side interfaces against the compiled contracts", () 
   // selectors agree - but only as long as the enum stays at or below 256 members and keeps its
   // ordering, which is what makes this check worth running rather than assuming.
   conformance("SpokeComptrollerViewInterface", "SpokeComptroller");
+  // Reaches the one getter the check above cannot: `isMarketListed`, which the shim declares as
+  // `(address)` and the pool implements as `(VToken)`. The contract type encodes as `address`.
+  conformance("ISpokeComptroller", "SpokeComptroller");
   conformance("IVTokenIsolated", "VToken");
 
   it("keeps offering every member the hub's adapter compiles against", async () => {
-    const iface = new ethers.utils.Interface((await artifacts.readArtifact("SpokeComptrollerViewInterface")).abi);
+    const iface = new ethers.utils.Interface((await artifacts.readArtifact("ISpokeComptroller")).abi);
     const declared = new Set(Object.keys(iface.functions));
     for (const { sig, returns } of HUB_REQUIRES) {
-      expect(declared.has(sig), `SpokeComptrollerViewInterface no longer declares ${sig}`).to.be.true;
+      expect(declared.has(sig), `ISpokeComptroller no longer declares ${sig}`).to.be.true;
       expect((iface.functions[sig].outputs ?? []).map(o => o.type).join(","), `${sig} returns`).to.equal(returns);
     }
   });
 
   it("resolves the adapter's own interface name to those declarations", async () => {
-    // `ISpokeComptroller` is the name `AdapterSpokeV1` imports. It is an empty extension of the
-    // first-party interface, so the two ABIs are identical; if that shim ever grows a declaration
-    // of its own, this catches it.
+    // `ISpokeComptroller` is the name `AdapterSpokeV1` imports. It extends the first-party
+    // interface and adds `isMarketListed` alone; if that shim grows any other declaration of its
+    // own, this catches it.
     const shim = new ethers.utils.Interface((await artifacts.readArtifact("ISpokeComptroller")).abi);
     const first = new ethers.utils.Interface((await artifacts.readArtifact("SpokeComptrollerViewInterface")).abi);
-    expect(Object.keys(shim.functions).sort()).to.deep.equal(Object.keys(first.functions).sort());
+    expect(Object.keys(shim.functions).sort()).to.deep.equal(
+      [...Object.keys(first.functions), "isMarketListed(address)"].sort(),
+    );
   });
 });

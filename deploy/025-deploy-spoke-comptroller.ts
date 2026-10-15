@@ -4,7 +4,15 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
+import {
+  getProxyBeacon,
+  readBackAddress,
+  readBackUntil,
+  sameAddress,
+  toAddress,
+  verifyDeployment,
+} from "../helpers/deploymentUtils";
+import { getSpokeMaxLoopsLimit } from "../helpers/spokeDeploymentConfig";
 
 // Identifies the spoke pool in the artifact names below. Deliberately not read from `poolConfig`: the standard scripts
 // iterate that list and would deploy this pool behind the shared `ComptrollerBeacon`, claiming these names first.
@@ -13,13 +21,12 @@ const POOL_ID = "HubSpoke";
 // Deployed by `024-deploy-spoke-pool-registry.ts`, which explains why this pool does not share the isolated-pools one.
 const POOL_REGISTRY_NAME = "SpokePoolRegistry";
 
-const MAX_LOOPS_LIMIT = 100;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const { preconfiguredAddresses } = await getConfig(hre.getNetworkName());
+  const expectedMaxLoopsLimit = getSpokeMaxLoopsLimit(hre.getNetworkName());
 
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager || "AccessControlManager");
   const ownerAddress = await toAddress(preconfiguredAddresses.NormalTimelock || "account:deployer");
@@ -73,7 +80,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const SpokeComptroller = await ethers.getContractFactory("SpokeComptroller");
   const proxyArgs = [
     spokeComptrollerBeacon.address,
-    SpokeComptroller.interface.encodeFunctionData("initialize", [MAX_LOOPS_LIMIT, accessControlManager]),
+    SpokeComptroller.interface.encodeFunctionData("initialize", [expectedMaxLoopsLimit, accessControlManager]),
   ];
   const comptrollerProxy: DeployResult = await deploy(`Comptroller_${POOL_ID}`, {
     contract: "BeaconProxy",
@@ -102,6 +109,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Verified beacon implementation: ${beaconImplementation}`);
 
   const addressChecks: [string, string, string][] = [
+    // `skipIfAlreadyDeployed` hands back the recorded proxy without comparing its constructor arguments. The beacon it
+    // actually follows decides which implementation the pool runs, and which beacon an upgrade VIP has to target.
+    [
+      "comptroller beacon (SpokeComptrollerBeacon)",
+      await readBackAddress(() => getProxyBeacon(comptrollerProxy.address), spokeComptrollerBeacon.address),
+      spokeComptrollerBeacon.address,
+    ],
     [
       `comptroller pool registry (${POOL_REGISTRY_NAME})`,
       await readBackAddress(() => comptroller.poolRegistry(), poolRegistry.address),
@@ -122,11 +136,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const maxLoopsLimit = await readBackUntil(
     async () => (await comptroller.maxLoopsLimit()).toString(),
-    value => value === MAX_LOOPS_LIMIT.toString(),
+    value => value === expectedMaxLoopsLimit.toString(),
   );
-  if (maxLoopsLimit !== MAX_LOOPS_LIMIT.toString()) {
+  if (maxLoopsLimit !== expectedMaxLoopsLimit.toString()) {
     throw new Error(
-      `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${MAX_LOOPS_LIMIT}`,
+      `Refusing to transfer ownership: comptroller max loops limit is ${maxLoopsLimit}, expected ${expectedMaxLoopsLimit}`,
     );
   }
   console.log(`Verified comptroller max loops limit: ${maxLoopsLimit}`);

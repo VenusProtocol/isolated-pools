@@ -147,6 +147,15 @@ interface IResourceAdapter {
     function receiptBalance(address resource, address holder) external view returns (uint256 shares);
 
     /**
+     * @notice Human-readable name of `resource`, for display by off-chain consumers.
+     * @dev Not every resource is an ERC-20 with its own `name()` (e.g. an ERC-7540 vault keeps it on
+     *      its share token), so each adapter reads it from wherever its protocol exposes it.
+     * @param resource Underlying yield protocol address.
+     * @return name Display name of the resource.
+     */
+    function resourceName(address resource) external view returns (string memory name);
+
+    /**
      * @notice Revert if `resource` fails a protocol-specific precondition for registration.
      * @dev Called by `YieldGroup.addResource`. AdapterCoreV1 rejects a vToken whose Comptroller
      *      charges a non-zero `treasuryPercent` — that exit fee leaves the pool on every redeem

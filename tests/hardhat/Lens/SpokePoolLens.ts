@@ -341,6 +341,60 @@ describe("SpokePoolLens", function () {
       // Not the collateral factor under another name.
       expect(metadata.collateralFactorMantissa).to.equal(COLLATERAL_FACTOR);
     });
+
+    it("reports the exchange rate, borrows and reserves accrued up to the current block", async () => {
+      // The second market holds the live borrow, and the fixture mines blocks after its last accrual.
+      const market = f.spokeMarkets[1];
+      const metadata = await f.spokeLens.spokeVTokenMetadata(market.address);
+      const storedBorrows = await market.totalBorrows();
+      const interest = metadata.totalBorrows.sub(storedBorrows);
+
+      // Without interest the stored and accrued figures agree and the assertions below prove nothing.
+      expect(interest).to.be.gt(0);
+      expect(metadata.exchangeRateCurrent).to.be.gt(await market.exchangeRateStored());
+
+      expect(metadata.exchangeRateCurrent).to.equal(await market.callStatic.exchangeRateCurrent());
+      expect(metadata.totalBorrows).to.equal(await market.callStatic.totalBorrowsCurrent());
+      expect(metadata.totalReserves).to.equal(
+        (await market.totalReserves()).add(interest.mul(await market.reserveFactorMantissa()).div(parseUnits("1", 18))),
+      );
+    });
+  });
+
+  describe("spot and bounded prices", () => {
+    afterEach(() => {
+      f.boundedOracle.getBoundedPricesView.reset();
+      f.boundedOracle.getBoundedPricesView.returns([PRICE, PRICE]);
+    });
+
+    it("reports the bounded pair next to spot, per market in the order asked", async () => {
+      const [first, second] = f.spokeMarkets;
+      // Protection is active for the first market's asset: collateral at the window's low, debt at its high.
+      const windowLow = parseUnits("0.8", 18);
+      const windowHigh = parseUnits("1.25", 18);
+      f.boundedOracle.getBoundedPricesView.whenCalledWith(first.address).returns([windowLow, windowHigh]);
+
+      const prices = await f.spokeLens.spokeVTokenPricesAll([second.address, first.address]);
+
+      expect(prices.map(price => price.vToken)).to.deep.equal([second.address, first.address]);
+      expect(prices[1].spotPrice).to.equal((await f.spokeLens.vTokenUnderlyingPrice(first.address)).underlyingPrice);
+      expect(prices[1].boundedCollateralPrice).to.equal(windowLow);
+      expect(prices[1].boundedDebtPrice).to.equal(windowHigh);
+      // No protection for the second, so the oracle answers spot on both legs.
+      expect(prices[0].spotPrice).to.equal(PRICE);
+      expect(prices[0].boundedCollateralPrice).to.equal(PRICE);
+      expect(prices[0].boundedDebtPrice).to.equal(PRICE);
+    });
+
+    it("reports zero bounds for a market whose pool has no bounded oracle yet", async () => {
+      // Every collateral-factor check reverts in that window, so no bounded price applies. Reading through the
+      // zero address would revert the lens instead.
+      const prices = await f.spokeLens.spokeVTokenPrices(f.marketWithoutOracle.address);
+
+      expect(prices.vToken).to.equal(f.marketWithoutOracle.address);
+      expect(prices.boundedCollateralPrice).to.equal(0);
+      expect(prices.boundedDebtPrice).to.equal(0);
+    });
   });
 
   describe("the fields shared with PoolLens", () => {
@@ -350,15 +404,13 @@ describe("SpokePoolLens", function () {
         f.poolLens.vTokenMetadata(f.spokeMarkets[0].address),
       ]);
 
+      // The exchange rate, borrows and reserves are left out: `PoolLens` reports them stored, this lens accrued.
       expect(spokeSide.vToken).to.equal(pooledSide.vToken);
-      expect(spokeSide.exchangeRateCurrent).to.equal(pooledSide.exchangeRateCurrent);
       expect(spokeSide.supplyRatePerBlockOrTimestamp).to.equal(pooledSide.supplyRatePerBlockOrTimestamp);
       expect(spokeSide.borrowRatePerBlockOrTimestamp).to.equal(pooledSide.borrowRatePerBlockOrTimestamp);
       expect(spokeSide.reserveFactorMantissa).to.equal(pooledSide.reserveFactorMantissa);
       expect(spokeSide.supplyCaps).to.equal(pooledSide.supplyCaps);
       expect(spokeSide.borrowCaps).to.equal(pooledSide.borrowCaps);
-      expect(spokeSide.totalBorrows).to.equal(pooledSide.totalBorrows);
-      expect(spokeSide.totalReserves).to.equal(pooledSide.totalReserves);
       expect(spokeSide.totalSupply).to.equal(pooledSide.totalSupply);
       expect(spokeSide.totalCash).to.equal(pooledSide.totalCash);
       expect(spokeSide.isListed).to.equal(pooledSide.isListed);

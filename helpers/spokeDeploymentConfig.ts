@@ -18,9 +18,11 @@ import { convertToUnit } from "./utils";
 // `Comptroller_Stablecoins` from `VToken_vUSDT_Stablecoins`.
 export const SPOKE_POOL_ID = "HubSpoke";
 
-// Risk parameters mirror the isolated pools' Stablecoins pool on the same network. The spoke pool can restrict who
-// may supply and who may liquidate, not who may borrow; it does not take more risk per market, so there is no reason
-// for the curve, the collateral factor or the caps to differ from the isolated stablecoin markets they sit beside.
+// Risk parameters copy the isolated pools' Stablecoins pool on `bsctestnet`: its pool-wide values, and for every market
+// the rate curve, collateral factor, liquidation threshold, reserve factor and caps of its `vUSDT_Stablecoins` market,
+// with the caps scaled to each token's decimals. The spoke pool can restrict who may supply and who may liquidate, not
+// who may borrow; it does not take more risk per market, so there is no reason for these to differ from the isolated
+// stablecoin markets.
 export const spokePoolConfig: Record<string, PoolConfig> = {
   hardhat: {
     id: SPOKE_POOL_ID,
@@ -119,3 +121,19 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
 // A network with no entry has no spoke pool, which is the normal case: the deploy script logs and returns rather than
 // failing, so `--tags HubSpoke` stays runnable everywhere.
 export const getSpokePoolConfig = (networkName: string): PoolConfig | undefined => spokePoolConfig[networkName];
+
+// The `maxLoopsLimit` `025-deploy-spoke-comptroller.ts` initializes the comptroller with. It caps how many markets the
+// pool can list, and so how many one account can enter, and every liquidation path walks all of them. Measured on a
+// bscmainnet fork, `liquidateAccount` reaches the 2^24 per-transaction gas cap at about 59 entered markets when every
+// market has borrows, and at about 94 when they are collateral-only. `setMaxLoopsLimit` can only raise the limit, so
+// measure again before raising it.
+const SPOKE_MAX_LOOPS_LIMIT = 50;
+
+// Networks whose comptroller was initialized before the limit above was set. The deploy script reads the live value
+// back and stops on a mismatch, and the limit cannot be lowered, so these record what is deployed.
+const deployedSpokeMaxLoopsLimit: Record<string, number> = {
+  bsctestnet: 100,
+};
+
+export const getSpokeMaxLoopsLimit = (networkName: string): number =>
+  deployedSpokeMaxLoopsLimit[networkName] ?? SPOKE_MAX_LOOPS_LIMIT;
