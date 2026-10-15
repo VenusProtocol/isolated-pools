@@ -78,7 +78,8 @@ interface ISpokePoolManager {
     /*** Live pool events ***/
 
     /**
-     * @notice Emitted when a pool's locked stake follows its tier's stake, on a deployer action or a tier move
+     * @notice Emitted when a pool's locked stake follows its tier's stake, on the deployer's markets or pool config
+     *   request or risk update, a tier move or `syncLockedStake`
      * @param comptroller The pool's comptroller
      * @param oldLockedStake The previous locked stake
      * @param newLockedStake The new locked stake
@@ -454,15 +455,15 @@ interface ISpokePoolManager {
     ) external returns (uint256 requestId);
 
     /**
-     * @notice Requests moving the caller's pool to another tier at its current terms
+     * @notice Requests moving the caller's pool to another tier at its current terms, even while the pool's locked
+     *   stake is below its tier's
      * @param comptroller The pool's comptroller
      * @param tierId The tier
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
+     * @custom:event Emits RequestSubmitted
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
-     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      * @custom:error OpenRequestExists is thrown when the caller has a pending or proposed request
      * @custom:error InvalidTier is thrown when the tier is not set or is the pool's tier
      * @custom:access Only the pool's deployer
@@ -627,6 +628,20 @@ interface ISpokePoolManager {
      * @custom:access Only the pool's deployer
      */
     function updateBorrowCap(address comptroller, VToken vToken, uint256 newBorrowCap) external;
+
+    /**
+     * @notice Locks or unlocks the difference between a pool's locked stake and its tier's current stake, as the
+     *   deployer's markets and pool config requests and risk updates do, so a tier cut is released and a tier raise or
+     *   a seizure is locked without waiting for one
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits LockedStakeUpdated when the locked stake changes; the vault emits StakeLocked or
+     *   StakeUnlocked
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     * @custom:error DeployerPaused is thrown while the deployer's actions are paused
+     * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
+     * @custom:access Not restricted
+     */
+    function syncLockedStake(address comptroller) external;
 
     /**
      * @notice Pauses or resumes a deployer's actions; the pool keeps running and its stake stays locked

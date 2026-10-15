@@ -183,7 +183,12 @@ contract SpokePoolManager is
 
     /// @inheritdoc ISpokePoolManager
     function requestTier(address comptroller, uint256 tierId) external returns (uint256 requestId) {
-        Pool storage pool = _ensureActiveDeployerAndSyncStake(comptroller);
+        // Not synced, so a deployer whose free stake cannot cover a raised stake can still ask for a cheaper tier;
+        // `setPoolTier` syncs to the new tier's stake
+        Pool storage pool = _ensureDeployer(comptroller);
+        if (pool.deployerPaused) {
+            revert DeployerPaused(comptroller);
+        }
         // A pool with its exit requested cannot be moved by `setPoolTier`
         if (pool.status != PoolStatus.Live) {
             revert InvalidPoolStatus(comptroller);
@@ -375,6 +380,18 @@ contract SpokePoolManager is
         _ensureActiveDeployerAndSyncStake(comptroller);
         ISpokePoolValidator(validator).checkLoanMarket(comptroller, address(vToken));
         _publishUpdate(BORROW_CAP_UPDATE, vToken, abi.encode(newBorrowCap));
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function syncLockedStake(address comptroller) external {
+        Pool storage pool = pools[comptroller];
+        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        if (pool.deployerPaused) {
+            revert DeployerPaused(comptroller);
+        }
+        _syncLockedStake(comptroller, pool);
     }
 
     /// @inheritdoc ISpokePoolManager
