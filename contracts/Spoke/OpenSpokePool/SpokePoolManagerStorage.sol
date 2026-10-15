@@ -151,7 +151,7 @@ contract SpokePoolManagerStorage {
         uint256 lockedStake;
     }
 
-    /// @notice Builds and submits the manager's proposals
+    /// @notice Builds the proposals the manager submits
     address public proposer;
 
     /// @notice Checks requests and deployer updates against the tiers

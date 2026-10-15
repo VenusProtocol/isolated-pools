@@ -501,9 +501,9 @@ interface ISpokePoolManager {
     function approveRequest(uint256 requestId) external;
 
     /**
-     * @notice Proposes an approved request to GovernorBravo; the proposer deploys its contracts first, and the new loan
-     *   markets are recorded. A request whose proposal failed can be proposed again, on the same comptroller and with
-     *   new markets. Tier requests are applied with `setPoolTier` instead
+     * @notice Proposes an approved request to GovernorBravo; the proposer deploys its contracts and builds the
+     *   proposal first, and the new loan markets are recorded. A request whose proposal failed can be proposed again,
+     *   on the same comptroller and with new markets. Tier requests are applied with `setPoolTier` instead
      * @param requestId The request
      * @param description The proposal's description
      * @return proposalId The proposal
@@ -511,7 +511,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
      * @custom:error RequestNotApproved is thrown when the deployer has not approved the request
      * @custom:error The validator's `verifyRequest` errors
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
+     * @custom:error GovernorBravo's `propose` errors, such as while the manager has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeRequest(uint256 requestId, string calldata description) external returns (uint256 proposalId);
@@ -683,7 +683,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor with its exit requested or proposed
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's listed markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
+     * @custom:error GovernorBravo's `propose` errors, such as while the manager has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeExit(
@@ -711,7 +711,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
      * @custom:error WindDownPeriodNotElapsed is thrown before the wind-down period ends
      * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
+     * @custom:error GovernorBravo's `propose` errors, such as while the manager has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function proposeForceClose(address comptroller, string calldata description) external returns (uint256 proposalId);
@@ -762,7 +762,7 @@ interface ISpokePoolManager {
     function setTier(uint256 tierId, SpokePoolManagerStorage.Tier calldata tier) external;
 
     /**
-     * @notice Sets the proposer; the GovernorBravo votes must be delegated to it
+     * @notice Sets the proposer, which builds the proposals the manager submits
      * @param newProposer The new proposer
      * @custom:event Emits ProposerUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the proposer is zero

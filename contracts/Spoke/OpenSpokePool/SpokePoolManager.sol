@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { IERC20MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -31,8 +32,9 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * tier, which the team applies with `setPoolTier`. It tunes risk parameters within its tier through the Risk Stewards,
  * and can ask to exit. `SpokePoolValidator` checks requests and updates against the tiers, and `SpokePoolShortfall`
  * pays bad debt recoverers from the locked stake.
- * @dev Needs the XVSVault `lock`, `unlock` and `seizeLocked` roles and to be a RiskOracle authorized sender. The
- * GovernorBravo votes the proposals need are delegated to the proposer
+ * @dev Needs the XVSVault `lock`, `unlock` and `seizeLocked` roles and to be a RiskOracle authorized sender. It submits
+ * the proposals `SpokePoolProposer` builds, so the GovernorBravo votes they need are delegated to it; GovernorBravo
+ * allows one live proposal per proposer, so the votes run one after another
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolManager is
@@ -248,10 +250,12 @@ contract SpokePoolManager is
         }
         _verifyRequest(requestId);
         address[] memory vTokens;
-        (proposalId, request.comptroller, vTokens) = ISpokePoolProposer(proposer).proposeRequest(
+        bytes memory proposal;
+        (request.comptroller, vTokens, proposal) = ISpokePoolProposer(proposer).buildRequestProposal(
             requestId,
             description
         );
+        proposalId = _submitProposal(proposal);
         request.status = RequestStatus.Proposed;
         request.proposalId = proposalId;
         uint256 marketCount = vTokens.length;
@@ -444,7 +448,9 @@ contract SpokePoolManager is
             revert InvalidPoolStatus(comptroller);
         }
         pool.status = PoolStatus.ExitProposed;
-        proposalId = ISpokePoolProposer(proposer).proposeExit(comptroller, liquidationThresholds, description);
+        proposalId = _submitProposal(
+            ISpokePoolProposer(proposer).buildExitProposal(comptroller, liquidationThresholds, description)
+        );
 
         emit ExitProposed(comptroller, proposalId);
     }
@@ -468,7 +474,7 @@ contract SpokePoolManager is
         if (block.timestamp < pool.windDownStartedAt + windDownPeriod) {
             revert WindDownPeriodNotElapsed();
         }
-        proposalId = ISpokePoolProposer(proposer).proposeForceClose(comptroller, description);
+        proposalId = _submitProposal(ISpokePoolProposer(proposer).buildForceCloseProposal(comptroller, description));
 
         emit ForceCloseProposed(comptroller, proposalId);
     }
@@ -727,6 +733,15 @@ contract SpokePoolManager is
         for (uint256 i; i < modelCount; ++i) {
             config.interestRateModels.push(interestRateModels[i]);
         }
+    }
+
+    /**
+     * @dev Submits a proposal the proposer built
+     * @param proposal The ABI-encoded GovernorBravo `propose` call
+     * @return The proposal's id
+     */
+    function _submitProposal(bytes memory proposal) internal returns (uint256) {
+        return abi.decode(AddressUpgradeable.functionCall(address(GOVERNOR_BRAVO), proposal), (uint256));
     }
 
     /**

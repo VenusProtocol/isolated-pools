@@ -11,7 +11,7 @@ import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { EXP_SCALE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
-import { PROPOSAL_TYPE_NORMAL } from "../interfaces/IGovernorBravo.sol";
+import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/IGovernorBravo.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolProposer } from "../interfaces/ISpokePoolProposer.sol";
 import { SpokePoolManager } from "./SpokePoolManager.sol";
@@ -20,18 +20,15 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 /**
  * @title SpokePoolProposer
  * @author Venus
- * @notice Builds and submits `SpokePoolManager`'s GovernorBravo proposals on the Normal route: a request's proposal,
- * after deploying its contracts before the vote as in Venus market listings, and an exit's two proposals.
- * @dev Only the manager calls it. It submits the proposals itself, so the GovernorBravo votes are delegated to it;
- * GovernorBravo allows one live proposal per proposer, so the votes run one after another. It sits behind a proxy so
- * the delegated votes stay at one address across upgrades; it keeps no storage, so it needs no initializer. The proposals grant no
- * roles: the onboarding VIP gives wildcard ACM grants once, for every pool, to the pool registry on the setters it
- * calls while listing (`setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`,
- * `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal Timelock on
- * `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource` (it
- * already holds wildcards for the other comptroller setters), and to the Risk Stewards on `setCollateralFactor`,
- * `setMarketSupplyCaps` and `setMarketBorrowCaps`
- * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
+ * @notice Builds `SpokePoolManager`'s GovernorBravo proposals on the Normal route: a request's proposal, after
+ * deploying its contracts before the vote as in Venus market listings, and an exit's two proposals. Each is returned as
+ * an ABI-encoded `propose` call, which the manager, holding the delegated votes, submits.
+ * @dev Only the manager calls it. The proposals grant no roles: the onboarding VIP gives wildcard ACM grants once, for
+ * every pool, to the pool registry on the setters it calls while listing (`setCloseFactor`, `setLiquidationIncentive`,
+ * `setMinLiquidatableCollateral`, `setCollateralFactor`, `setMarketSupplyCaps`, `setMarketBorrowCaps`), to the Normal
+ * Timelock on `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups'
+ * `addResource` (it already holds wildcards for the other comptroller setters), and to the Risk Stewards on
+ * `setCollateralFactor`, `setMarketSupplyCaps` and `setMarketBorrowCaps`
  */
 contract SpokePoolProposer is ISpokePoolProposer {
     /// @dev Governance proposal actions being assembled, with room for a fixed number of them
@@ -45,8 +42,9 @@ contract SpokePoolProposer is ISpokePoolProposer {
     /// @notice Most actions a proposal adds per new market: a loan market's listing and Hub registration
     uint256 public constant MAX_ACTIONS_PER_MARKET = 7;
 
-    /// @notice Most actions of a request's proposal besides its markets' and interest rate models': a live pool's three
-    ///   parameter changes and `settleRequest`; a new pool's `acceptOwnership`, `addPool` and `settleRequest` take fewer
+    /// @notice Most actions of a request's proposal besides its markets' and interest rate models': a live pool's
+    ///   three parameter changes and `settleRequest`; a new pool's `acceptOwnership`, `addPool` and `settleRequest`
+    ///   take fewer
     uint256 public constant POOL_CREATION_ACTIONS = 4;
 
     /// @notice Actions of an exit's first proposal besides one per collateral market
@@ -55,7 +53,7 @@ contract SpokePoolProposer is ISpokePoolProposer {
     /// @notice Loop limit every comptroller the proposer deploys is initialized with
     uint256 public constant MAX_LOOPS_LIMIT = 100;
 
-    /// @notice The manager the proposer submits proposals for
+    /// @notice The manager the proposer builds proposals for
     SpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
     /// @notice The receiver of the seed vTokens that are not burned
@@ -91,7 +89,7 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /**
-     * @param spokePoolManager The manager the proposer submits proposals for
+     * @param spokePoolManager The manager the proposer builds proposals for
      * @param treasury The receiver of the seed vTokens that are not burned
      * @param spokeAdapter The Hub adapter loan markets are registered with
      * @param comptrollerBeacon Beacon the comptroller proxies point at
@@ -135,22 +133,21 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /**
-     * @notice Deploys a request's comptroller, on a new pool's first proposal, and markets, then submits its proposal.
+     * @notice Deploys a request's comptroller, on a new pool's first proposal, and markets, then builds its proposal.
      *   In order, it lists a new pool or sets a live pool's changes, settles the request, then lists each market with
      *   its seed and registers each loan market with the Hub
      * @param requestId The request
      * @param description The proposal's description
-     * @return proposalId The proposal
      * @return comptroller The pool's comptroller
      * @return vTokens The deployed markets, in the request's market order
+     * @return The ABI-encoded GovernorBravo `propose` call
      * @custom:error NotManager is thrown when the caller is not the manager
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
-    function proposeRequest(
+    function buildRequestProposal(
         uint256 requestId,
         string calldata description
-    ) external onlyManager returns (uint256 proposalId, address comptroller, address[] memory vTokens) {
+    ) external onlyManager returns (address comptroller, address[] memory vTokens, bytes memory) {
         SpokePoolManagerStorage.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         address executor = SPOKE_POOL_MANAGER.GOVERNOR_BRAVO().proposalTimelocks(PROPOSAL_TYPE_NORMAL);
         // Only a pool request's first proposal has no comptroller yet
@@ -181,29 +178,28 @@ contract SpokePoolProposer is ISpokePoolProposer {
                 _addHubRegistration(proposal, comptroller, request.markets[i].asset, vTokens[i]);
             }
         }
-        proposalId = _propose(proposal, description);
+        return (comptroller, vTokens, _encodeProposal(proposal, description));
     }
 
     /**
-     * @notice Submits an exit's first proposal: pause minting, borrowing and entering markets, zero the caps of every
+     * @notice Builds an exit's first proposal: pause minting, borrowing and entering markets, zero the caps of every
      *   listed market, zero each collateral market's collateral factor and set its liquidation threshold no higher than
      *   now, then start the wind-down in the manager. A pool without listed markets only starts the wind-down
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
      * @param description The proposal's description
-     * @return The proposal
+     * @return The ABI-encoded GovernorBravo `propose` call
      * @custom:error NotManager is thrown when the caller is not the manager
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's listed markets
      * @custom:error InvalidLiquidationThreshold is thrown when a threshold is above the market's current one
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
-    function proposeExit(
+    function buildExitProposal(
         address comptroller,
         uint256[] calldata liquidationThresholds,
         string calldata description
-    ) external onlyManager returns (uint256) {
+    ) external view onlyManager returns (bytes memory) {
         (VToken[] memory listed, uint256[] memory currentThresholds) = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         if (liquidationThresholds.length != marketCount) {
@@ -231,24 +227,23 @@ contract SpokePoolProposer is ISpokePoolProposer {
             _addZeroCollateralFactor(proposal, comptroller, listed[i], liquidationThresholds[i], currentThresholds[i]);
         }
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "startWindDown(address)", abi.encode(comptroller));
-        return _propose(proposal, description);
+        return _encodeProposal(proposal, description);
     }
 
     /**
-     * @notice Submits an exit's force-close proposal: zero every collateral market's collateral factor and liquidation
+     * @notice Builds an exit's force-close proposal: zero every collateral market's collateral factor and liquidation
      *   threshold, and enable forced liquidation on every loan market with borrows
      * @param comptroller The pool's comptroller
      * @param description The proposal's description
-     * @return The proposal
+     * @return The ABI-encoded GovernorBravo `propose` call
      * @custom:error NotManager is thrown when the caller is not the manager
      * @custom:error NoOutstandingBorrows is thrown when no loan market has borrows
-     * @custom:error GovernorBravo's `propose` errors, such as while the proposer has a pending or active proposal
      * @custom:access Only the manager
      */
-    function proposeForceClose(
+    function buildForceCloseProposal(
         address comptroller,
         string calldata description
-    ) external onlyManager returns (uint256) {
+    ) external view onlyManager returns (bytes memory) {
         (VToken[] memory markets, ) = _listedMarkets(comptroller);
         uint256 marketCount = markets.length;
         Proposal memory proposal = _newProposal(marketCount);
@@ -270,7 +265,7 @@ contract SpokePoolProposer is ISpokePoolProposer {
         if (!hasBorrows) {
             revert ISpokePoolManager.NoOutstandingBorrows();
         }
-        return _propose(proposal, description);
+        return _encodeProposal(proposal, description);
     }
 
     /**
@@ -323,34 +318,6 @@ contract SpokePoolProposer is ISpokePoolProposer {
                 market.reserveFactor
             );
         }
-    }
-
-    /**
-     * @dev Submits a proposal on the Normal route, shortening its action arrays in place to the actions added
-     * @param proposal The proposal
-     * @param description The proposal's description
-     * @return The proposal's id
-     */
-    function _propose(Proposal memory proposal, string calldata description) internal returns (uint256) {
-        address[] memory targets = proposal.targets;
-        string[] memory signatures = proposal.signatures;
-        bytes[] memory calldatas = proposal.calldatas;
-        uint256 length = proposal.length;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            mstore(targets, length)
-            mstore(signatures, length)
-            mstore(calldatas, length)
-        }
-        return
-            SPOKE_POOL_MANAGER.GOVERNOR_BRAVO().propose(
-                targets,
-                new uint256[](length),
-                signatures,
-                calldatas,
-                description,
-                PROPOSAL_TYPE_NORMAL
-            );
     }
 
     /**
@@ -541,6 +508,34 @@ contract SpokePoolProposer is ISpokePoolProposer {
             SpokePoolManagerStorage.MarketInterestRateModel memory model = config.interestRateModels[i];
             _addAction(proposal, model.vToken, "setInterestRateModel(address)", abi.encode(model.interestRateModel));
         }
+    }
+
+    /**
+     * @dev Returns a proposal as a GovernorBravo `propose` call on the Normal route, shortening its action arrays in
+     * place to the actions added
+     * @param proposal The proposal
+     * @param description The proposal's description
+     * @return The ABI-encoded call
+     */
+    function _encodeProposal(
+        Proposal memory proposal,
+        string calldata description
+    ) internal pure returns (bytes memory) {
+        address[] memory targets = proposal.targets;
+        string[] memory signatures = proposal.signatures;
+        bytes[] memory calldatas = proposal.calldatas;
+        uint256 length = proposal.length;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            mstore(targets, length)
+            mstore(signatures, length)
+            mstore(calldatas, length)
+        }
+        return
+            abi.encodeCall(
+                IGovernorBravo.propose,
+                (targets, new uint256[](length), signatures, calldatas, description, PROPOSAL_TYPE_NORMAL)
+            );
     }
 
     /**
