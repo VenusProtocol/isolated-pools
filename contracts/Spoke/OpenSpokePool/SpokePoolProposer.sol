@@ -411,6 +411,37 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /**
+     * @dev Returns a pool's listed markets and their liquidation thresholds
+     * @param comptroller The pool's comptroller
+     * @return listed The listed markets, in `getAllMarkets` order
+     * @return liquidationThresholds Each listed market's liquidation threshold
+     */
+    function _listedMarkets(
+        address comptroller
+    ) internal view returns (VToken[] memory listed, uint256[] memory liquidationThresholds) {
+        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = markets.length;
+        listed = new VToken[](marketCount);
+        liquidationThresholds = new uint256[](marketCount);
+        uint256 listedCount;
+        for (uint256 i; i < marketCount; ++i) {
+            (bool isListed, , uint256 liquidationThreshold) = SpokeComptroller(comptroller).markets(
+                address(markets[i])
+            );
+            if (isListed) {
+                listed[listedCount] = markets[i];
+                liquidationThresholds[listedCount] = liquidationThreshold;
+                ++listedCount;
+            }
+        }
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            mstore(listed, listedCount)
+            mstore(liquidationThresholds, listedCount)
+        }
+    }
+
+    /**
      * @dev Adds a listed collateral market's zero collateral factor, with a liquidation threshold no higher than now.
      * Loan markets are skipped
      * @param proposal The proposal to add to
@@ -442,34 +473,34 @@ contract SpokePoolProposer is ISpokePoolProposer {
     }
 
     /**
-     * @dev Returns a pool's listed markets and their liquidation thresholds
-     * @param comptroller The pool's comptroller
-     * @return listed The listed markets, in `getAllMarkets` order
-     * @return liquidationThresholds Each listed market's liquidation threshold
+     * @dev Returns an empty proposal with room for `capacity` actions
+     * @param capacity The most actions the proposal holds
+     * @return proposal The proposal
      */
-    function _listedMarkets(
-        address comptroller
-    ) internal view returns (VToken[] memory listed, uint256[] memory liquidationThresholds) {
-        VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = markets.length;
-        listed = new VToken[](marketCount);
-        liquidationThresholds = new uint256[](marketCount);
-        uint256 listedCount;
-        for (uint256 i; i < marketCount; ++i) {
-            (bool isListed, , uint256 liquidationThreshold) = SpokeComptroller(comptroller).markets(
-                address(markets[i])
-            );
-            if (isListed) {
-                listed[listedCount] = markets[i];
-                liquidationThresholds[listedCount] = liquidationThreshold;
-                ++listedCount;
-            }
-        }
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            mstore(listed, listedCount)
-            mstore(liquidationThresholds, listedCount)
-        }
+    function _newProposal(uint256 capacity) internal pure returns (Proposal memory proposal) {
+        proposal.targets = new address[](capacity);
+        proposal.signatures = new string[](capacity);
+        proposal.calldatas = new bytes[](capacity);
+    }
+
+    /**
+     * @dev Appends one action to a proposal
+     * @param proposal The proposal to append to
+     * @param target The contract the timelock calls
+     * @param signature The function signature the timelock calls
+     * @param data The ABI-encoded arguments
+     */
+    function _addAction(
+        Proposal memory proposal,
+        address target,
+        string memory signature,
+        bytes memory data
+    ) internal pure {
+        uint256 index = proposal.length;
+        proposal.targets[index] = target;
+        proposal.signatures[index] = signature;
+        proposal.calldatas[index] = data;
+        proposal.length = index + 1;
     }
 
     /**
@@ -536,36 +567,5 @@ contract SpokePoolProposer is ISpokePoolProposer {
                 IGovernorBravo.propose,
                 (targets, new uint256[](length), signatures, calldatas, description, PROPOSAL_TYPE_NORMAL)
             );
-    }
-
-    /**
-     * @dev Returns an empty proposal with room for `capacity` actions
-     * @param capacity The most actions the proposal holds
-     * @return proposal The proposal
-     */
-    function _newProposal(uint256 capacity) internal pure returns (Proposal memory proposal) {
-        proposal.targets = new address[](capacity);
-        proposal.signatures = new string[](capacity);
-        proposal.calldatas = new bytes[](capacity);
-    }
-
-    /**
-     * @dev Appends one action to a proposal
-     * @param proposal The proposal to append to
-     * @param target The contract the timelock calls
-     * @param signature The function signature the timelock calls
-     * @param data The ABI-encoded arguments
-     */
-    function _addAction(
-        Proposal memory proposal,
-        address target,
-        string memory signature,
-        bytes memory data
-    ) internal pure {
-        uint256 index = proposal.length;
-        proposal.targets[index] = target;
-        proposal.signatures[index] = signature;
-        proposal.calldatas[index] = data;
-        proposal.length = index + 1;
     }
 }

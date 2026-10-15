@@ -64,6 +64,15 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     );
 
     /**
+     * @notice Emitted when Venus repays a market's bad debt with its own funds
+     * @param comptroller The pool's comptroller
+     * @param vToken The market
+     * @param payer The account that repaid the bad debt
+     * @param amount The bad debt repaid, in the underlying
+     */
+    event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
+
+    /**
      * @notice Emitted when the bad debt recovery incentive is changed
      * @param oldBadDebtRecoveryIncentiveMantissa The previous incentive, scaled by 1e18
      * @param newBadDebtRecoveryIncentiveMantissa The new incentive, scaled by 1e18
@@ -72,15 +81,6 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
         uint256 oldBadDebtRecoveryIncentiveMantissa,
         uint256 newBadDebtRecoveryIncentiveMantissa
     );
-
-    /**
-     * @notice Emitted when Venus repays a market's bad debt with its own funds
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @param payer The account that repaid the bad debt
-     * @param amount The bad debt repaid, in the underlying
-     */
-    event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
 
     /// @notice Thrown when the recovery incentive is below 1e18 or above `MAX_BAD_DEBT_RECOVERY_INCENTIVE_MANTISSA`
     error InvalidBadDebtRecoveryIncentive();
@@ -147,6 +147,26 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     /*** Governance functions ***/
 
     /**
+     * @notice Repays bad debt of a market with Venus's own funds, such as USDT swept from the RiskFund; nothing is paid
+     *   from the pool's stake
+     * @param vToken The market with bad debt
+     * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
+     * @custom:event Emits BadDebtRepaid; the market emits BadDebtRecovered
+     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
+     * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
+     * @custom:error The market reverts when the amount exceeds its bad debt
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
+        _checkAccessAllowed("repayBadDebt(address,uint256)");
+
+        address comptroller = _ensureListed(vToken);
+        _repayBadDebt(vToken, amount);
+
+        emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
+    }
+
+    /**
      * @notice Sets the XVS paid per unit of bad debt recovered, relative to its USD value
      * @param newBadDebtRecoveryIncentiveMantissa The new incentive, scaled by 1e18; 1.1e18 pays XVS worth 110% of the
      *   debt
@@ -165,26 +185,6 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
         }
         emit BadDebtRecoveryIncentiveUpdated(badDebtRecoveryIncentiveMantissa, newBadDebtRecoveryIncentiveMantissa);
         badDebtRecoveryIncentiveMantissa = newBadDebtRecoveryIncentiveMantissa;
-    }
-
-    /**
-     * @notice Repays bad debt of a market with Venus's own funds, such as USDT swept from the RiskFund; nothing is paid
-     *   from the pool's stake
-     * @param vToken The market with bad debt
-     * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
-     * @custom:event Emits BadDebtRepaid; the market emits BadDebtRecovered
-     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
-     * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     * @custom:error The market reverts when the amount exceeds its bad debt
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
-        _checkAccessAllowed("repayBadDebt(address,uint256)");
-
-        address comptroller = _ensureListed(vToken);
-        _repayBadDebt(vToken, amount);
-
-        emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
     }
 
     /*** Internal functions ***/

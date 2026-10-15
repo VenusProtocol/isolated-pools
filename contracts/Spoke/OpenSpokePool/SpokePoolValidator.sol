@@ -329,17 +329,6 @@ contract SpokePoolValidator is ISpokePoolValidator {
     }
 
     /**
-     * @dev Checks a market is listed in a pool
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     */
-    function _checkMarketListed(address comptroller, address vToken) internal view {
-        if (!SpokeComptroller(comptroller).isMarketListed(VToken(vToken))) {
-            revert ISpokePoolManager.MarketNotListed(vToken);
-        }
-    }
-
-    /**
      * @dev Returns the summed USD value of a pool's loan market supply caps, each the higher of its applied cap and a
      * raise published but not applied yet, so raises published together are checked against the tier as a whole. An
      * uncapped loan market overflows and reverts, since it fits no tier
@@ -388,6 +377,17 @@ contract SpokePoolValidator is ISpokePoolValidator {
             return 0;
         }
         return abi.decode(riskOracle.getUpdateById(updateId).newValue, (uint256));
+    }
+
+    /**
+     * @dev Checks a market is listed in a pool
+     * @param comptroller The pool's comptroller
+     * @param vToken The market
+     */
+    function _checkMarketListed(address comptroller, address vToken) internal view {
+        if (!SpokeComptroller(comptroller).isMarketListed(VToken(vToken))) {
+            revert ISpokePoolManager.MarketNotListed(vToken);
+        }
     }
 
     /**

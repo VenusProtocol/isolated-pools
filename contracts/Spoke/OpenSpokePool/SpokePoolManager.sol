@@ -475,6 +475,18 @@ contract SpokePoolManager is
     }
 
     /// @inheritdoc ISpokePoolManager
+    function releaseStake(address comptroller) external {
+        _checkAccessAllowed("releaseStake(address)");
+
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
+        ISpokePoolValidator(validator).accrueAndCheckResidualDebt(comptroller);
+        pool.status = PoolStatus.Closed;
+        uint256 amount = _unlockStake(pool);
+
+        emit StakeReleased(comptroller, pool.deployer, amount);
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function rejectExit(address comptroller) external {
         _checkAccessAllowed("rejectExit(address)");
 
@@ -485,18 +497,6 @@ contract SpokePoolManager is
         pool.status = PoolStatus.Live;
 
         emit ExitRejected(comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function releaseStake(address comptroller) external {
-        _checkAccessAllowed("releaseStake(address)");
-
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        ISpokePoolValidator(validator).accrueAndCheckResidualDebt(comptroller);
-        pool.status = PoolStatus.Closed;
-        uint256 amount = _unlockStake(pool);
-
-        emit StakeReleased(comptroller, pool.deployer, amount);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -517,6 +517,22 @@ contract SpokePoolManager is
     /*** Configuration ***/
 
     /// @inheritdoc ISpokePoolManager
+    function setProposer(ISpokePoolProposer newProposer) external {
+        _checkAccessAllowed("setProposer(address)");
+        ensureNonzeroAddress(address(newProposer));
+        emit ProposerUpdated(ISpokePoolProposer(proposer), newProposer);
+        proposer = address(newProposer);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setValidator(ISpokePoolValidator newValidator) external {
+        _checkAccessAllowed("setValidator(address)");
+        ensureNonzeroAddress(address(newValidator));
+        emit ValidatorUpdated(ISpokePoolValidator(validator), newValidator);
+        validator = address(newValidator);
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function setTier(uint256 tierId, Tier calldata tier) external {
         _checkAccessAllowed("setTier(uint256,Tier)");
         if (
@@ -533,22 +549,6 @@ contract SpokePoolManager is
         }
         emit TierUpdated(tierId, tiers[tierId], tier);
         tiers[tierId] = tier;
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setProposer(ISpokePoolProposer newProposer) external {
-        _checkAccessAllowed("setProposer(address)");
-        ensureNonzeroAddress(address(newProposer));
-        emit ProposerUpdated(ISpokePoolProposer(proposer), newProposer);
-        proposer = address(newProposer);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setValidator(ISpokePoolValidator newValidator) external {
-        _checkAccessAllowed("setValidator(address)");
-        ensureNonzeroAddress(address(newValidator));
-        emit ValidatorUpdated(ISpokePoolValidator(validator), newValidator);
-        validator = address(newValidator);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -711,71 +711,6 @@ contract SpokePoolManager is
     }
 
     /**
-     * @dev Replaces a pool config request's content
-     * @param request The request's storage
-     * @param params The pool-wide parameter changes
-     * @param interestRateModels The new interest rate models
-     */
-    function _storePoolConfig(
-        Request storage request,
-        PoolParams calldata params,
-        MarketInterestRateModel[] calldata interestRateModels
-    ) internal {
-        PoolConfigRequest storage config = request.poolConfig;
-        config.params = params;
-        delete config.interestRateModels;
-        uint256 modelCount = interestRateModels.length;
-        for (uint256 i; i < modelCount; ++i) {
-            config.interestRateModels.push(interestRateModels[i]);
-        }
-    }
-
-    /**
-     * @dev Submits a proposal the proposer built
-     * @param proposal The ABI-encoded GovernorBravo `propose` call
-     * @return The proposal's id
-     */
-    function _submitProposal(bytes memory proposal) internal returns (uint256) {
-        return abi.decode(AddressUpgradeable.functionCall(address(GOVERNOR_BRAVO), proposal), (uint256));
-    }
-
-    /**
-     * @dev Publishes a deployer's market update to the RiskOracle
-     * @param updateType The update type, which selects the Risk Steward that applies it
-     * @param vToken The market
-     * @param newValue The ABI-encoded new value
-     */
-    function _publishUpdate(string memory updateType, VToken vToken, bytes memory newValue) internal {
-        RISK_ORACLE.publishRiskParameterUpdate("", newValue, updateType, address(vToken), 0, 0, "");
-    }
-
-    /**
-     * @dev Closes an open request; a pool request's stake is unlocked, and its seeds stay with the manager
-     * @param request The request's storage
-     * @param status The closing status
-     */
-    function _closeRequest(Request storage request, RequestStatus status) internal {
-        request.status = status;
-        uint256 stake = request.pool.stake;
-        if (stake != 0) {
-            XVS_VAULT.unlock(request.deployer, stake);
-        }
-    }
-
-    /**
-     * @dev Unlocks whatever stake is still locked for a pool
-     * @param pool The pool's storage
-     * @return amount The amount unlocked
-     */
-    function _unlockStake(Pool storage pool) internal returns (uint256 amount) {
-        amount = pool.lockedStake;
-        if (amount != 0) {
-            pool.lockedStake = 0;
-            XVS_VAULT.unlock(pool.deployer, amount);
-        }
-    }
-
-    /**
      * @dev Returns a pool after checking the caller is its deployer with its rights in force (`_ensureDeployer`'s
      * checks and the deployer is not paused), then syncs the pool's locked stake to its tier's with `_syncLockedStake`
      * @param comptroller The pool's comptroller
@@ -816,11 +751,94 @@ contract SpokePoolManager is
     }
 
     /**
+     * @dev Replaces a pool config request's content
+     * @param request The request's storage
+     * @param params The pool-wide parameter changes
+     * @param interestRateModels The new interest rate models
+     */
+    function _storePoolConfig(
+        Request storage request,
+        PoolParams calldata params,
+        MarketInterestRateModel[] calldata interestRateModels
+    ) internal {
+        PoolConfigRequest storage config = request.poolConfig;
+        config.params = params;
+        delete config.interestRateModels;
+        uint256 modelCount = interestRateModels.length;
+        for (uint256 i; i < modelCount; ++i) {
+            config.interestRateModels.push(interestRateModels[i]);
+        }
+    }
+
+    /**
+     * @dev Submits a proposal the proposer built
+     * @param proposal The ABI-encoded GovernorBravo `propose` call
+     * @return The proposal's id
+     */
+    function _submitProposal(bytes memory proposal) internal returns (uint256) {
+        return abi.decode(AddressUpgradeable.functionCall(address(GOVERNOR_BRAVO), proposal), (uint256));
+    }
+
+    /**
+     * @dev Closes an open request; a pool request's stake is unlocked, and its seeds stay with the manager
+     * @param request The request's storage
+     * @param status The closing status
+     */
+    function _closeRequest(Request storage request, RequestStatus status) internal {
+        request.status = status;
+        uint256 stake = request.pool.stake;
+        if (stake != 0) {
+            XVS_VAULT.unlock(request.deployer, stake);
+        }
+    }
+
+    /**
+     * @dev Publishes a deployer's market update to the RiskOracle
+     * @param updateType The update type, which selects the Risk Steward that applies it
+     * @param vToken The market
+     * @param newValue The ABI-encoded new value
+     */
+    function _publishUpdate(string memory updateType, VToken vToken, bytes memory newValue) internal {
+        RISK_ORACLE.publishRiskParameterUpdate("", newValue, updateType, address(vToken), 0, 0, "");
+    }
+
+    /**
+     * @dev Unlocks whatever stake is still locked for a pool
+     * @param pool The pool's storage
+     * @return amount The amount unlocked
+     */
+    function _unlockStake(Pool storage pool) internal returns (uint256 amount) {
+        amount = pool.lockedStake;
+        if (amount != 0) {
+            pool.lockedStake = 0;
+            XVS_VAULT.unlock(pool.deployer, amount);
+        }
+    }
+
+    /**
      * @dev Checks a request against its pool and tier through the validator
      * @param requestId The request
      */
     function _verifyRequest(uint256 requestId) internal view {
         ISpokePoolValidator(validator).verifyRequest(requestId);
+    }
+
+    /**
+     * @dev Returns a pool after checking the caller is its deployer and the pool is live, with or without an exit
+     * requested
+     * @param comptroller The pool's comptroller
+     * @return pool The pool's storage
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
+     */
+    function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
+        pool = pools[comptroller];
+        if (pool.deployer != msg.sender) {
+            revert NotDeployer(msg.sender);
+        }
+        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
+            revert InvalidPoolStatus(comptroller);
+        }
     }
 
     /**
@@ -850,24 +868,6 @@ contract SpokePoolManager is
             }
         } else if (request.status != RequestStatus.Pending) {
             revert InvalidRequestStatus(requestId);
-        }
-    }
-
-    /**
-     * @dev Returns a pool after checking the caller is its deployer and the pool is live, with or without an exit
-     * requested
-     * @param comptroller The pool's comptroller
-     * @return pool The pool's storage
-     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
-     */
-    function _ensureDeployer(address comptroller) internal view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        if (pool.deployer != msg.sender) {
-            revert NotDeployer(msg.sender);
-        }
-        if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
-            revert InvalidPoolStatus(comptroller);
         }
     }
 

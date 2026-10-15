@@ -64,6 +64,13 @@ interface ISpokePoolManager {
     event RequestSettled(uint256 indexed requestId, address indexed comptroller);
 
     /**
+     * @notice Emitted when a pool moves to another tier
+     * @param comptroller The pool's comptroller
+     * @param tierId The new tier
+     */
+    event PoolTierUpdated(address indexed comptroller, uint256 indexed tierId);
+
+    /**
      * @notice Emitted when a request is rejected
      * @param requestId The request
      */
@@ -85,13 +92,6 @@ interface ISpokePoolManager {
      * @param newLockedStake The new locked stake
      */
     event LockedStakeUpdated(address indexed comptroller, uint256 oldLockedStake, uint256 newLockedStake);
-
-    /**
-     * @notice Emitted when a pool moves to another tier
-     * @param comptroller The pool's comptroller
-     * @param tierId The new tier
-     */
-    event PoolTierUpdated(address indexed comptroller, uint256 indexed tierId);
 
     /**
      * @notice Emitted when a deployer's actions are paused or resumed
@@ -137,18 +137,18 @@ interface ISpokePoolManager {
     event ForceCloseProposed(address indexed comptroller, uint256 proposalId);
 
     /**
-     * @notice Emitted when the Venus team turns down a requested or proposed exit
-     * @param comptroller The pool's comptroller
-     */
-    event ExitRejected(address indexed comptroller);
-
-    /**
      * @notice Emitted when a winding-down pool is closed and its stake unlocked
      * @param comptroller The pool's comptroller
      * @param deployer The pool's deployer
      * @param amount The XVS unlocked
      */
     event StakeReleased(address indexed comptroller, address indexed deployer, uint256 amount);
+
+    /**
+     * @notice Emitted when the Venus team turns down a requested or proposed exit
+     * @param comptroller The pool's comptroller
+     */
+    event ExitRejected(address indexed comptroller);
 
     /**
      * @notice Emitted when governance takes a pool over and its stake is unlocked
@@ -159,14 +159,6 @@ interface ISpokePoolManager {
     event PoolTakenOverByGovernance(address indexed comptroller, address indexed deployer, uint256 amount);
 
     /*** Configuration events ***/
-
-    /**
-     * @notice Emitted when a tier is set
-     * @param tierId The tier
-     * @param oldTier The previous terms; zero for a new tier
-     * @param tier The new terms
-     */
-    event TierUpdated(uint256 indexed tierId, SpokePoolManagerStorage.Tier oldTier, SpokePoolManagerStorage.Tier tier);
 
     /**
      * @notice Emitted when the proposer is changed
@@ -181,6 +173,14 @@ interface ISpokePoolManager {
      * @param newValidator The new validator
      */
     event ValidatorUpdated(ISpokePoolValidator indexed oldValidator, ISpokePoolValidator indexed newValidator);
+
+    /**
+     * @notice Emitted when a tier is set
+     * @param tierId The tier
+     * @param oldTier The previous terms; zero for a new tier
+     * @param tier The new terms
+     */
+    event TierUpdated(uint256 indexed tierId, SpokePoolManagerStorage.Tier oldTier, SpokePoolManagerStorage.Tier tier);
 
     /**
      * @notice Emitted when an asset's Hub source is changed
@@ -248,22 +248,21 @@ interface ISpokePoolManager {
     error OpenRequestExists(uint256 requestId);
 
     /**
-     * @notice Thrown when a request is not in a status the function accepts, or its proposal can still execute
-     * @param requestId The request
+     * @notice Thrown when a seed is worth less than `MIN_SEED_USD` or more than `MAX_SEED_USD`, or an update changes a
+     *   market's asset or seed, which the manager already holds
+     * @param asset The market's asset
      */
-    error InvalidRequestStatus(uint256 requestId);
+    error InvalidSeed(address asset);
 
     /**
-     * @notice Thrown when a request is not of a type the function accepts
-     * @param requestId The request
+     * @notice Thrown when a transfer delivers a different amount than requested
+     * @param token The token
      */
-    error InvalidRequestType(uint256 requestId);
+    error TransferAmountMismatch(address token);
 
-    /**
-     * @notice Thrown when a request is proposed before its deployer approved it
-     * @param requestId The request
-     */
-    error RequestNotApproved(uint256 requestId);
+    /// @notice Thrown when a new pool's close factor or liquidation incentive is zero, or new pool defaults are outside
+    ///   the comptroller's bounds
+    error InvalidPoolParams();
 
     /**
      * @notice Thrown when a pool would have more markets than allowed, or `MAX_POOL_MARKETS` markets would not fit a
@@ -285,27 +284,6 @@ interface ISpokePoolManager {
      */
     error InvalidMarketParams(address asset);
 
-    /// @notice Thrown when a new pool's close factor or liquidation incentive is zero, or new pool defaults are outside
-    ///   the comptroller's bounds
-    error InvalidPoolParams();
-
-    /// @notice Thrown when new market defaults have a zero interest rate model, a reserve factor above 1e18, or a seed
-    ///   burn share outside (0, 1e18]
-    error InvalidMarketDefaults();
-
-    /**
-     * @notice Thrown when a market's new interest rate model is zero
-     * @param vToken The market
-     */
-    error InvalidInterestRateModel(address vToken);
-
-    /**
-     * @notice Thrown when a seed is worth less than `MIN_SEED_USD` or more than `MAX_SEED_USD`, or an update changes a
-     *   market's asset or seed, which the manager already holds
-     * @param asset The market's asset
-     */
-    error InvalidSeed(address asset);
-
     /**
      * @notice Thrown when a loan asset has no Hub source, or a collateral asset has no bounded pricing in the
      *   DeviationBoundedOracle
@@ -317,10 +295,31 @@ interface ISpokePoolManager {
     error ExceedsTierLimit();
 
     /**
-     * @notice Thrown when a transfer delivers a different amount than requested
-     * @param token The token
+     * @notice Thrown when a pool is not in a status the function accepts
+     * @param comptroller The pool's comptroller
      */
-    error TransferAmountMismatch(address token);
+    error InvalidPoolStatus(address comptroller);
+
+    /// @notice Thrown when an array is empty, or two arrays that must match differ in length
+    error InvalidArrayLength();
+
+    /**
+     * @notice Thrown when a market is not listed in the pool
+     * @param vToken The market
+     */
+    error MarketNotListed(address vToken);
+
+    /**
+     * @notice Thrown when a market's new interest rate model is zero
+     * @param vToken The market
+     */
+    error InvalidInterestRateModel(address vToken);
+
+    /**
+     * @notice Thrown when a request is not of a type the function accepts
+     * @param requestId The request
+     */
+    error InvalidRequestType(uint256 requestId);
 
     /**
      * @notice Thrown when the caller is not the deployer of the pool or request
@@ -335,23 +334,22 @@ interface ISpokePoolManager {
     error DeployerPaused(address comptroller);
 
     /**
-     * @notice Thrown when a payout exceeds a pool's locked stake
-     * @param required The payout
-     * @param available The pool's locked stake
+     * @notice Thrown when a request is not in a status the function accepts, or its proposal can still execute
+     * @param requestId The request
      */
-    error InsufficientLockedStake(uint256 required, uint256 available);
+    error InvalidRequestStatus(uint256 requestId);
 
     /**
-     * @notice Thrown when a pool is not in a status the function accepts
-     * @param comptroller The pool's comptroller
+     * @notice Thrown when a request is proposed before its deployer approved it
+     * @param requestId The request
      */
-    error InvalidPoolStatus(address comptroller);
+    error RequestNotApproved(uint256 requestId);
 
     /**
-     * @notice Thrown when a market is not listed in the pool
+     * @notice Thrown when a pool changes tier while a market has bad debt
      * @param vToken The market
      */
-    error MarketNotListed(address vToken);
+    error BadDebtOutstanding(address vToken);
 
     /**
      * @notice Thrown when an update does not apply to the market's type, collateral or loan
@@ -365,14 +363,12 @@ interface ISpokePoolManager {
      */
     error InvalidLiquidationThreshold(address vToken);
 
-    /// @notice Thrown when an array is empty, or two arrays that must match differ in length
-    error InvalidArrayLength();
-
     /**
-     * @notice Thrown when a pool changes tier while a market has bad debt
-     * @param vToken The market
+     * @notice Thrown when a payout exceeds a pool's locked stake
+     * @param required The payout
+     * @param available The pool's locked stake
      */
-    error BadDebtOutstanding(address vToken);
+    error InsufficientLockedStake(uint256 required, uint256 available);
 
     /// @notice Thrown when a force close is proposed before the wind-down period has elapsed
     error WindDownPeriodNotElapsed();
@@ -385,6 +381,10 @@ interface ISpokePoolManager {
      * @param debtUsd The pool's borrows and bad debt, in USD
      */
     error ResidualDebtExceeded(uint256 debtUsd);
+
+    /// @notice Thrown when new market defaults have a zero interest rate model, a reserve factor above 1e18, or a seed
+    ///   burn share outside (0, 1e18]
+    error InvalidMarketDefaults();
 
     /*** Requests ***/
 
@@ -725,16 +725,6 @@ interface ISpokePoolManager {
     function proposeForceClose(address comptroller, string calldata description) external returns (uint256 proposalId);
 
     /**
-     * @notice Turns down a requested or proposed exit; the pool is live again. A queued exit proposal fails at
-     *   `startWindDown` while the pool is live, but executes if the exit is proposed again, so cancel it first
-     * @param comptroller The pool's comptroller
-     * @custom:event Emits ExitRejected
-     * @custom:error InvalidPoolStatus is thrown when the pool's exit is neither requested nor proposed
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function rejectExit(address comptroller) external;
-
-    /**
      * @notice Closes a winding-down pool and unlocks its stake once its borrows and bad debt are within
      *   `maxResidualPoolDebtUsd`; the wind-down period need not have elapsed
      * @param comptroller The pool's comptroller
@@ -744,6 +734,16 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function releaseStake(address comptroller) external;
+
+    /**
+     * @notice Turns down a requested or proposed exit; the pool is live again. A queued exit proposal fails at
+     *   `startWindDown` while the pool is live, but executes if the exit is proposed again, so cancel it first
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits ExitRejected
+     * @custom:error InvalidPoolStatus is thrown when the pool's exit is neither requested nor proposed
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function rejectExit(address comptroller) external;
 
     /**
      * @notice Makes a live pool an official Venus pool run by governance: the deployer's rights end and its stake is
@@ -757,17 +757,6 @@ interface ISpokePoolManager {
     function takeOverByGovernance(address comptroller) external;
 
     /*** Configuration ***/
-
-    /**
-     * @notice Adds the next tier or updates one; pools are checked against the new terms from then on. A tier with no
-     *   stake cannot be requested
-     * @param tierId The tier: `tierCount` adds one
-     * @param tier The tier's terms
-     * @custom:event Emits TierUpdated
-     * @custom:error InvalidTier is thrown when the id is above `tierCount` or 65535, or the limits are inconsistent
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setTier(uint256 tierId, SpokePoolManagerStorage.Tier calldata tier) external;
 
     /**
      * @notice Sets the proposer, which builds the proposals the manager submits
@@ -786,6 +775,17 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setValidator(ISpokePoolValidator newValidator) external;
+
+    /**
+     * @notice Adds the next tier or updates one; pools are checked against the new terms from then on. A tier with no
+     *   stake cannot be requested
+     * @param tierId The tier: `tierCount` adds one
+     * @param tier The tier's terms
+     * @custom:event Emits TierUpdated
+     * @custom:error InvalidTier is thrown when the id is above `tierCount` or 65535, or the limits are inconsistent
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setTier(uint256 tierId, SpokePoolManagerStorage.Tier calldata tier) external;
 
     /**
      * @notice Sets the Hub source (YieldGroup) that funds an asset's loan markets; zero blocks new loan markets of the
