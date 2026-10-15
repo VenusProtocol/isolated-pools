@@ -2117,6 +2117,34 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x77734e70b6E88b4d82fE632a168EDf6e700912b6",
       },
+      {
+        isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 18,
+        tokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+      },
+      {
+        isMock: false,
+        name: "United Stables",
+        symbol: "U",
+        decimals: 18,
+        tokenAddress: "0xcE24439F2D9C6a2289F741120FE202248B666666",
+      },
+      {
+        isMock: false,
+        name: "Invesqo QQQ",
+        symbol: "QQQB",
+        decimals: 18,
+        tokenAddress: "0x205812CdBed920aFf76C6580abD681a46D11efc7",
+      },
+      {
+        isMock: false,
+        name: "SPY",
+        symbol: "SPYB",
+        decimals: 18,
+        tokenAddress: "0x7138b48df7D98D7e3cc221BfE7192D0a178182D8",
+      },
     ],
     poolConfig: [
       {

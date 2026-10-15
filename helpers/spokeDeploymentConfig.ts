@@ -18,11 +18,17 @@ import { convertToUnit } from "./utils";
 // `Comptroller_Stablecoins` from `VToken_vUSDT_Stablecoins`.
 export const SPOKE_POOL_ID = "HubSpoke";
 
-// Risk parameters copy the isolated pools' Stablecoins pool on `bsctestnet`: its pool-wide values, and for every market
-// the rate curve, collateral factor, liquidation threshold, reserve factor and caps of its `vUSDT_Stablecoins` market,
-// with the caps scaled to each token's decimals. The spoke pool can restrict who may supply and who may liquidate, not
-// who may borrow; it does not take more risk per market, so there is no reason for these to differ from the isolated
-// stablecoin markets.
+// On `hardhat` and `bsctestnet`, risk parameters copy the isolated pools' Stablecoins pool on `bsctestnet`: its
+// pool-wide values, and for every market the rate curve, collateral factor, liquidation threshold, reserve factor and
+// caps of its `vUSDT_Stablecoins` market, with the caps scaled to each token's decimals. The spoke pool can restrict who
+// may supply and who may liquidate, not who may borrow; it does not take more risk per market, so there is no reason
+// for these to differ from the isolated stablecoin markets.
+//
+// On `bscmainnet` they are the listing parameters of the "bStock index" pool.
+
+// Receives the seed vTokens `addMarket` mints, so the seed can never be redeemed.
+const SEED_RECEIVER = "0x000000000000000000000000000000000000dEaD";
+
 export const spokePoolConfig: Record<string, PoolConfig> = {
   hardhat: {
     id: SPOKE_POOL_ID,
@@ -113,6 +119,112 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
         borrowCap: convertToUnit(400_000, 6),
         vTokenReceiver: preconfiguredAddresses.bsctestnet.VTreasury,
         reduceReservesBlockDelta: "100",
+      },
+    ],
+  },
+  bscmainnet: {
+    id: SPOKE_POOL_ID,
+    name: "bStock index",
+    closeFactor: convertToUnit("0.5", 18),
+    liquidationIncentive: convertToUnit("1.1", 18),
+    minLiquidatableCollateral: convertToUnit("100", 18),
+    // All five underlyings carry 18 decimals, so every amount below is 1e18 scaled.
+    vtokens: [
+      // Liquidity side: supplied only by each Hub's Spoke source, borrowable, and never collateral.
+      {
+        name: "Venus USDT (bStock index)",
+        asset: "USDT",
+        symbol: `vUSDT_${SPOKE_POOL_ID}`,
+        rateModel: InterestRateModels.JumpRate.toString(),
+        baseRatePerYear: "14888916156458044",
+        multiplierPerYear: "37459988156559232",
+        jumpMultiplierPerYear: "998472797360528128",
+        kink_: convertToUnit("0.9", 18),
+        collateralFactor: "0",
+        liquidationThreshold: "0",
+        reserveFactor: convertToUnit("0.1", 18),
+        initialSupply: convertToUnit(10, 18),
+        supplyCap: convertToUnit(5_000_000, 18),
+        borrowCap: convertToUnit(5_000_000, 18),
+        vTokenReceiver: SEED_RECEIVER,
+        reduceReservesBlockDelta: "28800",
+      },
+      {
+        name: "Venus USDC (bStock index)",
+        asset: "USDC",
+        symbol: `vUSDC_${SPOKE_POOL_ID}`,
+        rateModel: InterestRateModels.JumpRate.toString(),
+        baseRatePerYear: "14888916156458044",
+        multiplierPerYear: "37459988156559232",
+        jumpMultiplierPerYear: "998472797360528128",
+        kink_: convertToUnit("0.9", 18),
+        collateralFactor: "0",
+        liquidationThreshold: "0",
+        reserveFactor: convertToUnit("0.1", 18),
+        initialSupply: convertToUnit(10, 18),
+        supplyCap: convertToUnit(5_000_000, 18),
+        borrowCap: convertToUnit(5_000_000, 18),
+        vTokenReceiver: SEED_RECEIVER,
+        reduceReservesBlockDelta: "28800",
+      },
+      {
+        name: "Venus U (bStock index)",
+        asset: "U",
+        symbol: `vU_${SPOKE_POOL_ID}`,
+        rateModel: InterestRateModels.JumpRate.toString(),
+        baseRatePerYear: "14888916156458044",
+        multiplierPerYear: "37459988156559232",
+        jumpMultiplierPerYear: "998472797360528128",
+        kink_: convertToUnit("0.9", 18),
+        collateralFactor: "0",
+        liquidationThreshold: "0",
+        reserveFactor: convertToUnit("0.1", 18),
+        initialSupply: convertToUnit(10, 18),
+        supplyCap: convertToUnit(5_000_000, 18),
+        borrowCap: convertToUnit(5_000_000, 18),
+        vTokenReceiver: SEED_RECEIVER,
+        reduceReservesBlockDelta: "28800",
+      },
+      // Collateral side: open to any supplier and not borrowable, through a 0 borrow cap and BORROW paused by the
+      // listing VIP. With nothing to borrow there is no interest to charge, hence a zero-rate model.
+      //
+      // The seed is $10 of each, converted at the price when the listing VIP is proposed. The VIP carries that amount;
+      // `028-deploy-spoke-vtokens.ts` does not read `initialSupply`.
+      {
+        name: "Venus QQQB (bStock index)",
+        asset: "QQQB",
+        symbol: `vQQQB_${SPOKE_POOL_ID}`,
+        rateModel: InterestRateModels.WhitePaper.toString(),
+        baseRatePerYear: "0",
+        multiplierPerYear: "0",
+        jumpMultiplierPerYear: "0",
+        kink_: "0",
+        collateralFactor: convertToUnit("0.8", 18),
+        liquidationThreshold: convertToUnit("0.85", 18),
+        reserveFactor: convertToUnit("0.1", 18),
+        initialSupply: "0",
+        supplyCap: convertToUnit(10_000, 18),
+        borrowCap: "0",
+        vTokenReceiver: SEED_RECEIVER,
+        reduceReservesBlockDelta: "28800",
+      },
+      {
+        name: "Venus SPYB (bStock index)",
+        asset: "SPYB",
+        symbol: `vSPYB_${SPOKE_POOL_ID}`,
+        rateModel: InterestRateModels.WhitePaper.toString(),
+        baseRatePerYear: "0",
+        multiplierPerYear: "0",
+        jumpMultiplierPerYear: "0",
+        kink_: "0",
+        collateralFactor: convertToUnit("0.8", 18),
+        liquidationThreshold: convertToUnit("0.85", 18),
+        reserveFactor: convertToUnit("0.1", 18),
+        initialSupply: "0",
+        supplyCap: convertToUnit(10_000, 18),
+        borrowCap: "0",
+        vTokenReceiver: SEED_RECEIVER,
+        reduceReservesBlockDelta: "28800",
       },
     ],
   },
