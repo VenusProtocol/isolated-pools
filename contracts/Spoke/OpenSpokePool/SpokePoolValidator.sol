@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
+import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { PoolRegistryInterface } from "../../Pool/PoolRegistryInterface.sol";
@@ -18,9 +19,9 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 /**
  * @title SpokePoolValidator
  * @author Venus
- * @notice Checks `SpokePoolManager` requests and deployer updates against the pool tiers. It is split out of the
- * manager for bytecode size, as `ComptrollerLens` is from the core pool's Comptroller, reads the manager's state and
- * reverts with the manager's errors
+ * @notice Checks `SpokePoolManager` requests and deployer updates against the pool tiers, reading the manager's state
+ * and reverting with the manager's errors. It is split out of the manager for bytecode size, as `ComptrollerLens` is
+ * from the core pool's Comptroller
  */
 contract SpokePoolValidator is ISpokePoolValidator {
     /// @dev RiskOracle update type of the supply caps the manager publishes
@@ -32,7 +33,21 @@ contract SpokePoolValidator is ISpokePoolValidator {
     /// @notice The receiver that applies the manager's published updates, which tells which are not applied yet
     IRiskStewardReceiver public immutable RISK_STEWARD_RECEIVER;
 
+    /// @notice The manager's pool registry
+    PoolRegistryInterface public immutable POOL_REGISTRY;
+
+    /// @notice The manager's ResilientOracle
+    ResilientOracleInterface public immutable RESILIENT_ORACLE;
+
+    /// @notice The manager's DeviationBoundedOracle
+    IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
+
+    /// @notice The RiskOracle the manager publishes deployer updates to
+    IRiskOracle public immutable RISK_ORACLE;
+
     /**
+     * @dev Copies the manager's registry and oracles, which are immutables of its implementation, so a manager upgrade
+     *   that changes them needs a new validator
      * @param spokePoolManager The manager whose requests and pools are checked
      * @param riskStewardReceiver The receiver that applies the manager's published updates
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
@@ -42,16 +57,14 @@ contract SpokePoolValidator is ISpokePoolValidator {
         ensureNonzeroAddress(address(riskStewardReceiver));
         SPOKE_POOL_MANAGER = spokePoolManager;
         RISK_STEWARD_RECEIVER = riskStewardReceiver;
+        POOL_REGISTRY = PoolRegistryInterface(spokePoolManager.POOL_REGISTRY());
+        RESILIENT_ORACLE = spokePoolManager.RESILIENT_ORACLE();
+        DEVIATION_BOUNDED_ORACLE = spokePoolManager.DEVIATION_BOUNDED_ORACLE();
+        RISK_ORACLE = spokePoolManager.RISK_ORACLE();
     }
 
-    /**
-     * @notice Accrues interest in every market of a pool and checks its borrows and bad debt, in USD, are within the
-     *   manager's `maxResidualPoolDebtUsd`
-     * @param comptroller The pool's comptroller
-     * @custom:error ResidualDebtExceeded is thrown when the borrows and bad debt exceed `maxResidualPoolDebtUsd`
-     */
+    /// @inheritdoc ISpokePoolValidator
     function accrueAndCheckResidualDebt(address comptroller) external {
-        ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
         VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = markets.length;
         uint256 debtUsd;
@@ -59,7 +72,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
             VToken vToken = markets[i];
             uint256 debt = vToken.totalBorrowsCurrent() + vToken.badDebt();
             if (debt != 0) {
-                debtUsd += (debt * oracle.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
+                debtUsd += (debt * RESILIENT_ORACLE.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
             }
         }
         if (debtUsd > SPOKE_POOL_MANAGER.maxResidualPoolDebtUsd()) {
@@ -67,23 +80,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
         }
     }
 
-    /**
-     * @notice Checks a request's content against the pool it is for and that pool's tier
-     * @param requestId The request
-     * @custom:error InvalidRequestType is thrown for a tier request
-     * @custom:error InvalidPoolParams is thrown when a new pool's close factor or liquidation incentive is zero
-     * @custom:error InvalidTier is thrown when a pool request's stake is no longer its tier's
-     * @custom:error InvalidPoolStatus is thrown when a markets or pool config request's pool is not live
-     * @custom:error InvalidArrayLength is thrown when a markets request has no market
-     * @custom:error MarketNotListed is thrown when an interest rate model is for a market outside the pool
-     * @custom:error InvalidInterestRateModel is thrown when an interest rate model is zero
-     * @custom:error TooManyMarkets is thrown when the pool would have more than `MAX_POOL_MARKETS` markets
-     * @custom:error DuplicateAsset is thrown when a market's asset is already in the request or the pool
-     * @custom:error InvalidMarketParams is thrown when a market's parameters are missing or do not fit its kind or seed
-     * @custom:error UnsupportedAsset is thrown when a loan asset has no Hub source or a collateral asset has no bounded
-     *   pricing
-     * @custom:error ExceedsTierLimit is thrown when a collateral parameter or the loan liquidity is beyond the tier
-     */
+    /// @inheritdoc ISpokePoolValidator
     function verifyRequest(uint256 requestId) external view {
         SpokePoolManagerStorage.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         SpokePoolManagerStorage.RequestType requestType = request.requestType;
@@ -125,14 +122,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
         }
     }
 
-    /**
-     * @notice Checks a live pool fits a tier: every listed collateral market's risk parameters, the loan liquidity,
-     *   and no bad debt
-     * @param comptroller The pool's comptroller
-     * @param tierId The tier
-     * @custom:error ExceedsTierLimit is thrown when a risk parameter or the loan liquidity does not fit the tier
-     * @custom:error BadDebtOutstanding is thrown when a market has bad debt
-     */
+    /// @inheritdoc ISpokePoolValidator
     function checkPoolFitsTier(address comptroller, uint256 tierId) external view {
         SpokePoolManagerStorage.Tier memory tier = SPOKE_POOL_MANAGER.getTier(tierId);
         VToken[] memory markets = SpokeComptroller(comptroller).getAllMarkets();
@@ -155,17 +145,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
         }
     }
 
-    /**
-     * @notice Checks a deployer's new collateral factor and liquidation threshold for a collateral market
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @param collateralFactor The new collateral factor
-     * @param liquidationThreshold The new liquidation threshold
-     * @custom:error MarketNotListed is thrown when the market is not listed in the pool
-     * @custom:error InvalidMarketType is thrown when the market is a loan market
-     * @custom:error InvalidLiquidationThreshold is thrown when the collateral factor is above the liquidation threshold
-     * @custom:error ExceedsTierLimit is thrown when either value is beyond the tier
-     */
+    /// @inheritdoc ISpokePoolValidator
     function checkCollateralFactor(
         address comptroller,
         address vToken,
@@ -186,24 +166,17 @@ contract SpokePoolValidator is ISpokePoolValidator {
         );
     }
 
-    /**
-     * @notice Checks a deployer's new supply cap: a loan market's raise must keep the loan markets' caps, in USD,
-     *   within the tier, counting the raises published but not applied yet. Collateral caps are not bounded
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @param newSupplyCap The new supply cap
-     * @custom:error MarketNotListed is thrown when the market is not listed in the pool
-     * @custom:error ExceedsTierLimit is thrown when a raise takes the loan liquidity beyond the tier
-     */
+    /// @inheritdoc ISpokePoolValidator
     function checkSupplyCap(address comptroller, address vToken, uint256 newSupplyCap) external view {
         _checkMarketListed(comptroller, vToken);
         uint256 supplyCap = SpokeComptroller(comptroller).supplyCaps(vToken);
         if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken) || newSupplyCap <= supplyCap) {
             return;
         }
-        // The new cap replaces the market's earlier one, applied or not
+        // The new cap stands in for the market's earlier ones: a registered raise that may still apply passed this
+        // check when published, and the other markets' raises count it
         uint256 liquidityUsd = _loanLiquidityUsd(comptroller, SpokeComptroller(comptroller).getAllMarkets(), vToken) +
-            (newSupplyCap * SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getUnderlyingPrice(vToken)) /
+            (newSupplyCap * RESILIENT_ORACLE.getUnderlyingPrice(vToken)) /
             EXP_SCALE;
         uint256 tierId = SPOKE_POOL_MANAGER.getPool(comptroller).tierId;
         if (liquidityUsd > SPOKE_POOL_MANAGER.getTier(tierId).maxLiquidityUsd) {
@@ -211,13 +184,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
         }
     }
 
-    /**
-     * @notice Checks a market is a listed loan market of the pool, the only kind whose borrow cap a deployer sets
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @custom:error MarketNotListed is thrown when the market is not listed in the pool
-     * @custom:error InvalidMarketType is thrown when the market is a collateral market
-     */
+    /// @inheritdoc ISpokePoolValidator
     function checkLoanMarket(address comptroller, address vToken) external view {
         _checkMarketListed(comptroller, vToken);
         if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
@@ -279,11 +246,7 @@ contract SpokePoolValidator is ISpokePoolValidator {
                 revert ISpokePoolManager.DuplicateAsset(asset);
             }
         }
-        if (
-            comptroller != address(0) &&
-            PoolRegistryInterface(SPOKE_POOL_MANAGER.POOL_REGISTRY()).getVTokenForAsset(comptroller, asset) !=
-            address(0)
-        ) {
+        if (comptroller != address(0) && POOL_REGISTRY.getVTokenForAsset(comptroller, asset) != address(0)) {
             revert ISpokePoolManager.DuplicateAsset(asset);
         }
     }
@@ -317,20 +280,20 @@ contract SpokePoolValidator is ISpokePoolValidator {
             if (SPOKE_POOL_MANAGER.spokeSources(asset) == address(0)) {
                 revert ISpokePoolManager.UnsupportedAsset(asset);
             }
-            return (market.supplyCap * SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getPrice(asset)) / EXP_SCALE;
+            return (market.supplyCap * RESILIENT_ORACLE.getPrice(asset)) / EXP_SCALE;
         }
         if (market.borrowCap != 0 || market.collateralFactor > market.liquidationThreshold) {
             revert ISpokePoolManager.InvalidMarketParams(asset);
         }
         _checkCollateralParams(tier, market.collateralFactor, market.liquidationThreshold);
-        if (!SPOKE_POOL_MANAGER.DEVIATION_BOUNDED_ORACLE().isBoundedPricingEnabled(asset)) {
+        if (!DEVIATION_BOUNDED_ORACLE.isBoundedPricingEnabled(asset)) {
             revert ISpokePoolManager.UnsupportedAsset(asset);
         }
     }
 
     /**
      * @dev Returns the summed USD value of a pool's loan market supply caps, each the higher of its applied cap and a
-     * raise published but not applied yet, so raises published together are checked against the tier as a whole. An
+     * cap the receiver may still apply, so raises published together are checked against the tier as a whole. An
      * uncapped loan market overflows and reverts, since it fits no tier
      * @param comptroller The pool's comptroller
      * @param markets The pool's markets
@@ -342,41 +305,47 @@ contract SpokePoolValidator is ISpokePoolValidator {
         VToken[] memory markets,
         address excluded
     ) internal view returns (uint256 liquidityUsd) {
-        ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        IRiskOracle riskOracle = SPOKE_POOL_MANAGER.RISK_ORACLE();
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(markets[i]);
             if (vToken != excluded && SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
                 uint256 supplyCap = SpokeComptroller(comptroller).supplyCaps(vToken);
                 // The higher one: a pending cut may never be applied, and then the applied cap stays
-                uint256 pendingSupplyCap = _pendingSupplyCap(riskOracle, vToken);
+                uint256 pendingSupplyCap = _pendingSupplyCap(vToken);
                 if (pendingSupplyCap > supplyCap) {
                     supplyCap = pendingSupplyCap;
                 }
-                liquidityUsd += (supplyCap * oracle.getUnderlyingPrice(vToken)) / EXP_SCALE;
+                liquidityUsd += (supplyCap * RESILIENT_ORACLE.getUnderlyingPrice(vToken)) / EXP_SCALE;
             }
         }
     }
 
     /**
-     * @dev Returns a market's latest supply cap published to the RiskOracle while the receiver has not applied,
-     * rejected or expired it, or zero. One never processed counts until a newer cap replaces it, even once too old to
-     * apply
-     * @param riskOracle The RiskOracle
+     * @dev Returns the higher of a market's supply caps the receiver may still apply, or zero: the latest one published
+     * to the RiskOracle while not processed, until a newer one is published, and the last one registered while pending,
+     * which the receiver still executes after a newer one is published, until the receiver resolves it. Either counts
+     * even once too old to apply
      * @param vToken The market
-     * @return The published supply cap
+     * @return pendingSupplyCap The supply cap
      */
-    function _pendingSupplyCap(IRiskOracle riskOracle, address vToken) internal view returns (uint256) {
-        uint256 updateId = riskOracle.getLatestUpdateIdByTypeAndMarket(SUPPLY_CAP_UPDATE, vToken);
-        if (updateId == 0) {
-            return 0;
+    function _pendingSupplyCap(address vToken) internal view returns (uint256 pendingSupplyCap) {
+        uint256 publishedId = RISK_ORACLE.getLatestUpdateIdByTypeAndMarket(SUPPLY_CAP_UPDATE, vToken);
+        if (
+            publishedId != 0 &&
+            RISK_STEWARD_RECEIVER.updates(publishedId).status == IRiskStewardReceiver.UpdateStatus.None
+        ) {
+            pendingSupplyCap = abi.decode(RISK_ORACLE.getUpdateById(publishedId).newValue, (uint256));
         }
-        IRiskStewardReceiver.UpdateStatus status = RISK_STEWARD_RECEIVER.updates(updateId).status;
-        if (status != IRiskStewardReceiver.UpdateStatus.None && status != IRiskStewardReceiver.UpdateStatus.Pending) {
-            return 0;
+        uint256 registeredId = RISK_STEWARD_RECEIVER.getLastRegisteredUpdate(SUPPLY_CAP_UPDATE, vToken);
+        if (
+            registeredId != 0 &&
+            RISK_STEWARD_RECEIVER.updates(registeredId).status == IRiskStewardReceiver.UpdateStatus.Pending
+        ) {
+            uint256 registeredSupplyCap = abi.decode(RISK_ORACLE.getUpdateById(registeredId).newValue, (uint256));
+            if (registeredSupplyCap > pendingSupplyCap) {
+                pendingSupplyCap = registeredSupplyCap;
+            }
         }
-        return abi.decode(riskOracle.getUpdateById(updateId).newValue, (uint256));
     }
 
     /**

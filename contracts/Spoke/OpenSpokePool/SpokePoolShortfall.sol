@@ -37,7 +37,8 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     /// @notice The XVS token, which pays recoverers
     address public immutable XVS;
 
-    /// @notice XVS paid per unit of bad debt recovered, relative to its USD value, scaled by 1e18
+    /// @notice XVS paid per unit of bad debt recovered, relative to its USD value, scaled by 1e18; zero until set, so
+    ///   recoverers are paid nothing before `setBadDebtRecoveryIncentive`
     uint256 public badDebtRecoveryIncentiveMantissa;
 
     /**
@@ -115,12 +116,12 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
     /**
      * @notice Repays bad debt of a market with the caller's funds and pays the caller XVS from the pool's locked stake,
      *   worth the repaid amount times `badDebtRecoveryIncentiveMantissa` at ResilientOracle prices. A payout that
-     *   rounds to zero takes nothing from the stake
+     *   rounds to zero, as before the incentive is set, takes nothing from the stake
      * @param vToken The market with bad debt
      * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
      * @return xvsAmountToSeize The XVS taken from the pool's stake and paid to the caller
-     * @custom:event Emits BadDebtRecovered; the market emits BadDebtRecovered, and for a nonzero payout the manager
-     *   emits StakeSeized and the vault Claim and LockedStakeSeized
+     * @custom:event Emits BadDebtRecovered; the market emits its own BadDebtRecovered, and for a nonzero payout the
+     *   manager emits StakeSeized and the vault Claim and LockedStakeSeized
      * @custom:error MarketNotListed is thrown when the market is not listed in its pool
      * @custom:error InsufficientLockedStake is thrown by the manager when the payout exceeds the pool's locked stake
      * @custom:error The vault's `seizeLocked` errors, such as while the vault is paused

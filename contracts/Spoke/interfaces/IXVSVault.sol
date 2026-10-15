@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title IXVSVault
  * @author Venus
- * @notice The XVSVault functions that hold a project's stake in place
+ * @notice The XVSVault functions that hold a deployer's stake in place
  */
 interface IXVSVault {
     /**

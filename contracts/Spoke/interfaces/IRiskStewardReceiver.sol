@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title IRiskStewardReceiver
  * @author Venus
- * @notice The RiskStewardReceiver function the open spoke pool validator reads to tell whether a published update is
+ * @notice The RiskStewardReceiver functions the open spoke pool validator reads to tell whether a published update is
  * still waiting to be applied
  */
 interface IRiskStewardReceiver {
@@ -33,4 +33,12 @@ interface IRiskStewardReceiver {
      * @return The registered update
      */
     function updates(uint256 updateId) external view returns (RegisteredUpdate memory);
+
+    /**
+     * @notice Returns the last registered update ID for a given update type and market
+     * @param updateType The human-readable identifier of the update type
+     * @param market The address of the market
+     * @return The last registered update ID
+     */
+    function getLastRegisteredUpdate(string calldata updateType, address market) external view returns (uint256);
 }

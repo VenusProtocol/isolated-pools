@@ -117,7 +117,7 @@ interface ISpokePoolManager {
     event ExitRequested(address indexed comptroller);
 
     /**
-     * @notice Emitted when an exit's first proposal is submitted
+     * @notice Emitted when an exit's first proposal is submitted, or submitted again
      * @param comptroller The pool's comptroller
      * @param proposalId The proposal
      */
@@ -416,7 +416,8 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @param markets The new markets
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
+     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's; the vault
+     *   emits StakeLocked or StakeUnlocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
@@ -439,7 +440,8 @@ interface ISpokePoolManager {
      * @param params The new pool-wide parameters; zero leaves a parameter as it is
      * @param interestRateModels The new interest rate models
      * @return requestId The request
-     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's
+     * @custom:event Emits RequestSubmitted, and LockedStakeUpdated when the locked stake follows the tier's; the vault
+     *   emits StakeLocked or StakeUnlocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
@@ -512,7 +514,7 @@ interface ISpokePoolManager {
      * @custom:event Emits RequestProposed
      * @custom:error InvalidRequestStatus is thrown when the request is not pending and has no failed proposal
      * @custom:error RequestNotApproved is thrown when the deployer has not approved the request
-     * @custom:error The validator's `verifyRequest` errors
+     * @custom:error The validator's `verifyRequest` errors, such as InvalidRequestType for a tier request
      * @custom:error GovernorBravo's `propose` errors, such as while the manager has a pending or active proposal
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
@@ -576,7 +578,7 @@ interface ISpokePoolManager {
      * @param newCollateralFactor The new collateral factor
      * @param newLiquidationThreshold The new liquidation threshold
      * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
-     *   tier's
+     *   tier's, and the vault emits StakeLocked or StakeUnlocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
@@ -599,7 +601,7 @@ interface ISpokePoolManager {
      * @param vToken The market
      * @param newSupplyCap The new supply cap
      * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
-     *   tier's
+     *   tier's, and the vault emits StakeLocked or StakeUnlocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
@@ -618,7 +620,7 @@ interface ISpokePoolManager {
      * @param vToken The market
      * @param newBorrowCap The new borrow cap
      * @custom:event The RiskOracle emits UpdatePublished; emits LockedStakeUpdated when the locked stake follows the
-     *   tier's
+     *   tier's, and the vault emits StakeLocked or StakeUnlocked
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused

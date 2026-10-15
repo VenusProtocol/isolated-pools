@@ -198,7 +198,7 @@ contract SpokePoolManager is
         }
         Request storage request;
         (requestId, request) = _newRequest(RequestType.Tier, comptroller);
-        request.tier = TierRequest(tierId, _tierHash(tierId));
+        request.tier = TierRequest(tierId, keccak256(abi.encode(tierId, tiers[tierId])));
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -316,7 +316,7 @@ contract SpokePoolManager is
         address comptroller = request.comptroller;
         Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
         uint256 tierId = request.tier.tierId;
-        if (request.tier.termsHash != _tierHash(tierId)) {
+        if (request.tier.termsHash != keccak256(abi.encode(tierId, tiers[tierId]))) {
             revert InvalidTier(tierId);
         }
         ISpokePoolValidator(validator).checkPoolFitsTier(comptroller, tierId);
@@ -715,6 +715,8 @@ contract SpokePoolManager is
      * checks and the deployer is not paused), then syncs the pool's locked stake to its tier's with `_syncLockedStake`
      * @param comptroller The pool's comptroller
      * @return pool The pool's storage
+     * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error InvalidPoolStatus is thrown when the pool is neither live nor live with an exit requested
      * @custom:error DeployerPaused is thrown while the deployer's actions are paused
      * @custom:error The vault's `lock` errors, such as when the deployer's free stake cannot cover the tier's stake
      */
@@ -839,15 +841,6 @@ contract SpokePoolManager is
         if (pool.status != PoolStatus.Live && pool.status != PoolStatus.ExitRequested) {
             revert InvalidPoolStatus(comptroller);
         }
-    }
-
-    /**
-     * @dev Returns the hash of a tier's id and current terms, which a tier request commits to
-     * @param tierId The tier
-     * @return The hash
-     */
-    function _tierHash(uint256 tierId) internal view returns (bytes32) {
-        return keccak256(abi.encode(tierId, tiers[tierId]));
     }
 
     /**
